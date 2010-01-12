@@ -1367,6 +1367,21 @@ def fix_atest_cmd(atest_basedir, cmd, ip):
     return ''.join([cmd, " -w ", ip])
 
 
+def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
+    """
+    @param ip: IP address of the server.
+    @param port: the port for remote session.
+    @param usrname: user name for remote login.
+    @param passwd: password.
+    @param prompt: shell/session prompt for the connection.
+    """
+    session = remote.remote_login('ssh', ip, port, usrname, passwd, prompt)
+    if not session:
+        raise error.TestError("Failed to login to the autotest server.")
+
+    return session
+
+
 def get_memory_info(lvms):
     """
     Get memory information from host and guests in format:
