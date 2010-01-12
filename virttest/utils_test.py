@@ -1350,6 +1350,23 @@ def dump_command_output(session, command, filename, timeout=30.0,
     f.close()
 
 
+def fix_atest_cmd(atest_basedir, cmd, ip):
+    """
+    fixes the command "autotest/cli/atest" for the external server tests.
+
+    e.g.
+    1. adding -w autotest server argument;
+    2. adding autotest/cli/atest prefix/basedir;
+    and etc..
+
+    @param atest_basedir: base dir of autotest/cli/atest
+    @param cmd: command to fix.
+    @param ip: ip of the autotest server to add to the command.
+    """
+    cmd = os.path.join(atest_basedir, cmd)
+    return ''.join([cmd, " -w ", ip])
+
+
 def get_memory_info(lvms):
     """
     Get memory information from host and guests in format:
