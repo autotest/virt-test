@@ -1152,6 +1152,10 @@ class VM(virt_vm.BaseVM):
                     ide_bus += 1
                 ide_unit ^= 1
 
+        soundhw = params.get("soundcards")
+        if soundhw:
+            qemu_cmd += " -soundhw %s" % soundhw
+
         # We may want to add {floppy_otps} parameter for -fda
         # {fat:floppy:}/path/. However vvfat is not usually recommended.
         floppy = params.get("floppy")
