@@ -1,4 +1,5 @@
-import os, logging
+import os, logging, sys
+from autotest.client.shared import error
 from virttest import utils_misc
 
 
@@ -78,3 +79,68 @@ def run_guest_test(test, params, env):
         logging.debug("guest test PASSED.")
     finally:
         session.close()
+
+
+def run_guest_test_background(test, params, env):
+    """
+    Wrapper of run_guest_test() and make it run in the background through
+    fork() and let it run in the child process.
+    1) Flush the stdio.
+    2) Build test params which is recevied from arguments and used by
+       run_guest_test()
+    3) Fork the process and let the run_guest_test() run in the child process
+    4) Catch the exception raise by run_guest_test() and exit the child with
+       non-zero return code.
+    5) If no exception caught, return 0
+
+    @param test: kvm test object
+    @param params: Dictionary with the test parameters
+    @param env: Dictionary with test environment.
+    """
+
+    def flush():
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+    logging.info("Running guest_test background ...")
+    flush()
+    pid = os.fork()
+    if pid:
+        # Parent process
+        return pid
+
+    flag_fname = "/tmp/guest_test-flag-file-pid-" + str(os.getpid())
+    open(flag_fname, 'w').close()
+    try:
+        # Launch guest_test
+        run_guest_test(test, params, env)
+        os.remove(flag_fname)
+    except error.TestFail, message_fail:
+        logging.info("[Guest_test Background FAIL] %s" % message_fail)
+        os.remove(flag_fname)
+        os._exit(1)
+    except error.TestError, message_error:
+        logging.info("[Guest_test Background ERROR] %s" % message_error)
+        os.remove(flag_fname)
+        os._exit(2)
+    except Exception:
+        os.remove(flag_fname)
+        os._exit(3)
+
+    logging.info("[Guest_test Background GOOD]")
+    os._exit(0)
+
+
+def wait_guest_test_background(pid):
+    """
+    Wait for background guest_test finish.
+
+    @param pid: Pid of the child process executing background guest_test
+    """
+    logging.info("Waiting for background guest_test to finish ...")
+
+    (pid, s) = os.waitpid(pid,0)
+    status = os.WEXITSTATUS(s)
+    if status != 0:
+        return False
+    return True
