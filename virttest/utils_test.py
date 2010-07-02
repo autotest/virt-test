@@ -232,11 +232,15 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             case of multi-host migration.
     """
     def mig_finished():
-        o = vm.monitor.info("migrate")
-        if isinstance(o, str):
-            return "status: active" not in o
-        else:
-            return o.get("status") != "active"
+        try:
+            o = vm.monitor.info("migrate")
+            if isinstance(o, str):
+                return "status: active" not in o
+            else:
+                return o.get("status") != "active"
+        except Exception:
+            pass
+
 
     def mig_succeeded():
         o = vm.monitor.info("migrate")
