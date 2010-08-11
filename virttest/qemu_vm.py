@@ -686,8 +686,9 @@ class VM(virt_vm.BaseVM):
             return cmd + dev
 
 
-        def add_nic(help_text, vlan, model=None, mac=None, device_id=None, netdev_id=None,
-                    nic_extra_params=None):
+        def add_nic(help_text, vlan, model=None, mac=None, device_id=None,
+                    netdev_id=None, nic_extra_params=None, pci_addr=None):
+            free_pci_addr = get_free_pci_addr(pci_addr)
             if model == 'none':
                 return ''
             if has_option(help_text, "netdev"):
@@ -702,6 +703,12 @@ class VM(virt_vm.BaseVM):
                 cmd = " -device %s" % model + netdev_vlan_str
                 if mac:
                     cmd += ",mac='%s'" % mac
+                # only pci domain=0,bus=0,function=0 is supported for now.
+                #
+                # libvirt gains the pci_slot, free_pci_addr here,
+                # value by parsing the xml file, i.e. counting all the
+                # pci devices and store the number.
+                cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                 if nic_extra_params:
                     cmd += ",%s" % nic_extra_params
             else:
@@ -1337,7 +1344,8 @@ class VM(virt_vm.BaseVM):
                 ifname = nic.get('ifname')
                 # Handle the '-net nic' part
                 qemu_cmd += add_nic(help_text, vlan, nic_model, mac,
-                                    device_id, netdev_id, nic_extra)
+                                    device_id, netdev_id, nic_extra,
+                                    nic_params.get("nic_pci_addr"))
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
                                     bootp, redirs, netdev_id, netdev_extra,
