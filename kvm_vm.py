@@ -297,34 +297,41 @@ class VM(virt_vm.BaseVM):
         def add_name(help, name):
             return " -name '%s'" % name
 
-        def add_human_monitor(help, filename):
-            if has_option(help, "chardev"):
-                # -chardev socket, id=monitor,path=\
-                #   /var/lib/libvirt/qemu/r6.monitor,server,nowait
-                # -mon chardev=monitor,mode=readline
-                id = "human_monitor_id_%s" % monitor_name
-                cmd = " -chardev socket,id=%s,path=%s,server,nowait" % \
-                      (id, filename)
-                cmd += " -mon chardev=%s,mode=readline" % id
-                return cmd
-            else:
+
+        def add_human_monitor(help, monitor_name, filename):
+            if not has_option(help, "chardev"):
                 return " -monitor unix:'%s',server,nowait" % filename
 
-        def add_qmp_monitor(help, filename):
-            if has_option(help, "qmp"):
-                if has_option(help, "chardev"):
-                    # -chardev socket, id=monitor,path=\
-                    #   /var/lib/libvirt/qemu/r6.monitor,server,nowait
-                    # -mon chardev=monitor,mode=control
-                    id = "qmp_monitor_id_%s" % monitor_name
-                    cmd = " -chardev socket,id=%s,path=%s,server,nowait" % \
-                          (id, filename)
-                    cmd += " -mon chardev=%s,mode=control" % id
-                    return cmd
-                else:
-                    return " -qmp unix:'%s',server,nowait" % filename
-            else:
-                return add_human_monitor(help, filename)
+            monitor_id = "hmp_id_%s" % monitor_name
+            cmd = " -chardev socket"
+            cmd += _add_option("id", monitor_id)
+            cmd += _add_option("path", filename)
+            cmd += _add_option("server", "NO_EQUAL_STRING")
+            cmd += _add_option("nowait", "NO_EQUAL_STRING")
+            cmd += " -mon chardev=%s" % monitor_id
+            cmd += _add_option("mode", "readline")
+            return cmd
+
+
+        def add_qmp_monitor(help, monitor_name, filename):
+            if not has_option(help, "qmp"):
+                logging.warn("Fallback to human monitor since qmp is"
+                             " unsupported")
+                return add_human_monitor(help, monitor_name, filename)
+
+            if not has_option(help, "chardev"):
+                return " -qmp unix:'%s',server,nowait" % filename
+
+            monitor_id = "qmp_id_%s" % monitor_name
+            cmd = " -chardev socket"
+            cmd += _add_option("id", monitor_id)
+            cmd += _add_option("path", filename)
+            cmd += _add_option("server", "NO_EQUAL_STRING")
+            cmd += _add_option("nowait", "NO_EQUAL_STRING")
+            cmd += " -mon chardev=%s" % monitor_id
+            cmd += _add_option("mode", "control")
+            return cmd
+
 
         def add_serial(help, filename):
             if has_option(help, "chardev"):
@@ -893,6 +900,7 @@ class VM(virt_vm.BaseVM):
 
         qemu_binary = virt_utils.get_path(root_dir, params.get("qemu_binary",
                                                               "qemu"))
+        self.qemu_binary = qemu_binary
         help = commands.getoutput("%s -help" % qemu_binary)
         support_cpu_model = commands.getoutput("%s -cpu ?list" % qemu_binary)
 
@@ -935,9 +943,11 @@ class VM(virt_vm.BaseVM):
             monitor_params = params.object_params(monitor_name)
             monitor_filename = vm.get_monitor_filename(monitor_name)
             if monitor_params.get("monitor_type") == "qmp":
-                qemu_cmd += add_qmp_monitor(help, monitor_filename)
+                qemu_cmd += add_qmp_monitor(help, monitor_name,
+                                            monitor_filename)
             else:
-                qemu_cmd += add_human_monitor(help, monitor_filename)
+                qemu_cmd += add_human_monitor(help, monitor_name,
+                                              monitor_filename)
 
 
         # Add serial console redirection
@@ -1583,12 +1593,19 @@ class VM(virt_vm.BaseVM):
                 while time.time() < end_time:
                     try:
                         if monitor_params.get("monitor_type") == "qmp":
-                            if not virt_utils.has_option("qmp"):
-                                break
-                            # Add a QMP monitor
-                            monitor = kvm_monitor.QMPMonitor(
-                                monitor_name,
-                                self.get_monitor_filename(monitor_name))
+                            if virt_utils.qemu_has_option("qmp",
+                                                          self.qemu_binary):
+                                # Add a QMP monitor
+                                monitor = kvm_monitor.QMPMonitor(
+                                    monitor_name,
+                                    self.get_monitor_filename(monitor_name))
+                            else:
+                                logging.warn("qmp monitor is unsupported, "
+                                             "using human monitor instead.")
+                                # Add a "human" monitor
+                                monitor = kvm_monitor.HumanMonitor(
+                                    monitor_name,
+                                    self.get_monitor_filename(monitor_name))
                         else:
                             # Add a "human" monitor
                             monitor = kvm_monitor.HumanMonitor(
