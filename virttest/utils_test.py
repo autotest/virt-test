@@ -234,6 +234,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
     def mig_finished():
         try:
             o = vm.monitor.info("migrate")
+            logging.debug("%s", o)
             if isinstance(o, str):
                 return "status: active" not in o
             else:
