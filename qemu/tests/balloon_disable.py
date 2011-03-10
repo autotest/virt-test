@@ -16,7 +16,10 @@ def run_balloon_disable(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=float(params.get("login_timeout", 240)))
-    output =  vm.monitor.info("balloon")
+    try:
+        output =  vm.monitor.info("balloon")
+    except qemu_monitor.QMPCmdError, e:
+        output = str(e)
     if "has not been activated" not in output:
         raise error.TestFail("Balloon driver still on when disable"
                             " it on command line")
