@@ -74,8 +74,14 @@ def run_migration(test, params, env):
                 func()
 
             # Migrate the VM
-            vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline,
-                       check)
+            ping_pong = params.get("ping_pong", 1)
+            for i in xrange(int(ping_pong)):
+                if i % 2 == 0:
+                    logging.info("Round %s ping..." % str(i / 2))
+                else:
+                    logging.info("Round %s pong..." % str(i / 2))
+                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                           offline, check)
 
             # run some functions after migrate finish.
             post_migrate = get_functions(params.get("post_migrate"), locals())
