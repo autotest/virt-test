@@ -33,9 +33,9 @@ class MemFill(object):
             return
 
         self.tmpdp = tempfile.mkdtemp()
+        tmpfs_size = mem + math.ceil(mem * TMPFS_OVERHEAD)
         ret_code = os.system("mount -o size=%dM tmpfs %s -t tmpfs" %
-                             ((mem+math.ceil(mem*TMPFS_OVERHEAD)),
-                             self.tmpdp))
+                             (tmpfs_size, self.tmpdp))
         if ret_code != 0:
             if os.getuid() != 0:
                 print ("FAIL: Unable to mount tmpfs "
@@ -48,7 +48,7 @@ class MemFill(object):
             self.npages = ((mem * 1024 * 1024) / PAGE_SIZE)
             self.random_key = random_key
             self.static_value = static_value
-            print "PASS: Initialization"
+            print "PASS: Initialization (tmpfs size: %dM)" % tmpfs_size
 
 
     def __del__(self):
