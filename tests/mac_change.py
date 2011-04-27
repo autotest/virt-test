@@ -1,6 +1,6 @@
 import logging
-from autotest.client.shared import error
-from virttest import utils_misc, utils_test
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.virt import virt_utils, virt_test_utils
 
 
 def run_mac_change(test, params, env):
@@ -11,7 +11,7 @@ def run_mac_change(test, params, env):
     2) Set new mac in guest and regain new IP.
     3) Re-log into guest with new MAC.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -23,12 +23,12 @@ def run_mac_change(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     old_mac = vm.get_mac_address(0)
     while True:
-        vm.virtnet.free_mac_address(0)
-        new_mac = vm.virtnet.generate_mac_address(0)
+        vm.free_mac_address(0)
+        new_mac = virt_utils.generate_mac_address(vm.instance, 0)
         if old_mac != new_mac:
             break
     logging.info("The initial MAC address is %s", old_mac)
-    interface = utils_test.get_linux_ifname(session_serial, old_mac)
+    interface = virt_test_utils.get_linux_ifname(session_serial, old_mac)
     # Start change MAC address
     logging.info("Changing MAC address to %s", new_mac)
     change_cmd = ("ifconfig %s down && ifconfig %s hw ether %s && "
@@ -45,7 +45,7 @@ def run_mac_change(test, params, env):
     session_serial.sendline(dhclient_cmd)
 
     # Re-log into the guest after changing mac address
-    if utils_misc.wait_for(session.is_responsive, 120, 20, 3):
+    if virt_utils.wait_for(session.is_responsive, 120, 20, 3):
         # Just warning when failed to see the session become dead,
         # because there is a little chance the ip does not change.
         logging.warn("The session is still responsive, settings may fail.")

@@ -1,6 +1,8 @@
-import logging, os, time
-from autotest.client import utils
-from virttest import utils_test
+import logging, threading, os, time
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.bin import utils
+from autotest_lib.client.tests.kvm.tests import file_transfer
+from autotest_lib.client.virt import virt_test_utils, virt_utils
 
 
 def run_nicdriver_unload(test, params, env):
@@ -13,7 +15,7 @@ def run_nicdriver_unload(test, params, env):
     4) Multi-session TCP transfer on test interface.
     5) Check whether the test interface should still work.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -22,7 +24,7 @@ def run_nicdriver_unload(test, params, env):
     vm.verify_alive()
     session_serial = vm.wait_for_serial_login(timeout=timeout)
 
-    ethname = utils_test.get_linux_ifname(session_serial,
+    ethname = virt_test_utils.get_linux_ifname(session_serial,
                                                vm.get_mac_address(0))
 
     # get ethernet driver from '/sys' directory.
@@ -39,9 +41,9 @@ def run_nicdriver_unload(test, params, env):
 
     try:
         threads = []
-        for _ in range(int(params.get("sessions_num", "10"))):
-            thread = utils.InterruptedThread(utils_test.run_file_transfer,
-                                             (test, params, env))
+        for t in range(int(params.get("sessions_num", "10"))):
+            thread = virt_utils.Thread(file_transfer.run_file_transfer,
+                                      (test, params, env))
             thread.start()
             threads.append(thread)
 
@@ -52,7 +54,7 @@ def run_nicdriver_unload(test, params, env):
             session_serial.cmd("modprobe -r %s" % driver)
             session_serial.cmd("modprobe %s" % driver)
             session_serial.cmd("ifconfig %s up" % ethname)
-    except Exception:
+    except:
         for thread in threads:
             thread.join(suppress_exception=True)
             raise

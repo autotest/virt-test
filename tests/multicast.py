@@ -1,7 +1,7 @@
 import logging, os, re
-from autotest.client.shared import error
-from autotest.client import utils
-from virttest import utils_test, aexpect
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.bin import utils
+from autotest_lib.client.virt import virt_test_utils, aexpect
 
 
 def run_multicast(test, params, env):
@@ -14,7 +14,7 @@ def run_multicast(test, params, env):
     4) Flood ping test with different size of packets.
     5) Final ping test and check if lose packet.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -53,7 +53,7 @@ def run_multicast(test, params, env):
     prefix = re.findall("\d+.\d+.\d+", mcast)[0]
     suffix = int(re.findall("\d+", mcast)[-1])
     # copy python script to guest for joining guest to multicast groups
-    mcast_path = os.path.join(test.virtdir, "scripts/multicast_guest.py")
+    mcast_path = os.path.join(test.bindir, "scripts/multicast_guest.py")
     vm.copy_files_to(mcast_path, "/tmp")
     output = session.cmd_output("python /tmp/multicast_guest.py %d %s %d" %
                                 (mgroup_count, prefix, suffix))
@@ -70,16 +70,16 @@ def run_multicast(test, params, env):
             mcast = "%s.%d" % (prefix, new_suffix)
 
             logging.info("Initial ping test, mcast: %s", mcast)
-            s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)
+            s, o = virt_test_utils.ping(mcast, 10, interface=ifname, timeout=20)
             if s != 0:
                 raise error.TestFail(" Ping return non-zero value %s" % o)
 
             logging.info("Flood ping test, mcast: %s", mcast)
-            utils_test.ping(mcast, None, interface=ifname, flood=True,
+            virt_test_utils.ping(mcast, None, interface=ifname, flood=True,
                                 output_func=None, timeout=flood_minutes*60)
 
             logging.info("Final ping test, mcast: %s", mcast)
-            s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)
+            s, o = virt_test_utils.ping(mcast, 10, interface=ifname, timeout=20)
             if s != 0:
                 raise error.TestFail("Ping failed, status: %s, output: %s" %
                                      (s, o))

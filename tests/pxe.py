@@ -1,6 +1,6 @@
 import logging
-from autotest.client.shared import error
-from virttest import aexpect
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.virt import aexpect
 
 def run_pxe(test, params, env):
     """
@@ -10,7 +10,7 @@ def run_pxe(test, params, env):
     2) Wait for some seconds.
     3) Check whether we could capture TFTP packets.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

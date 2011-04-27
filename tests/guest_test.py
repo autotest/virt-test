@@ -1,5 +1,5 @@
 import os, logging
-from virttest import utils_misc
+from autotest_lib.client.virt import virt_utils
 
 
 def run_guest_test(test, params, env):
@@ -11,7 +11,7 @@ def run_guest_test(test, params, env):
     3) Wait for script execution to complete.
     4) Pass/fail according to exit status of script.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -60,7 +60,7 @@ def run_guest_test(test, params, env):
             logging.info("Download resource finished.")
         else:
             session.cmd_output("del %s" % dst_rsc_path, internal_timeout=0)
-            script_path = utils_misc.get_path(test.virtdir, script)
+            script_path = virt_utils.get_path(test.bindir, script)
             vm.copy_files_to(script_path, dst_rsc_path, timeout=60)
 
         cmd = "%s %s %s" % (interpreter, dst_rsc_path, script_params)

@@ -1,6 +1,6 @@
 import logging, time, re
-from autotest.client.shared import error
-from virttest import utils_misc, utils_test, aexpect
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.virt import virt_utils, virt_test_utils, aexpect
 
 
 def run_vlan(test, params, env):
@@ -15,7 +15,7 @@ def run_vlan(test, params, env):
     5) Test maximal plumb/unplumb vlans.
     6) Recover the vlan config.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -53,7 +53,7 @@ def run_vlan(test, params, env):
         return session.cmd_status(rem_vlan_cmd % (iface, iface))
 
     def nc_transfer(src, dst):
-        nc_port = utils_misc.find_free_port(1025, 5334, vm_ip[dst])
+        nc_port = virt_utils.find_free_port(1025, 5334, vm_ip[dst])
         listen_cmd = params.get("listen_cmd")
         send_cmd = params.get("send_cmd")
 
@@ -87,7 +87,7 @@ def run_vlan(test, params, env):
             raise error.TestError("Could not log into guest(vm%d)" % i)
         logging.info("Logged in")
 
-        ifname.append(utils_test.get_linux_ifname(session[i],
+        ifname.append(virt_test_utils.get_linux_ifname(session[i],
                       vm[i].get_mac_address()))
         #get guest ip
         vm_ip.append(vm[i].get_address())
@@ -122,7 +122,7 @@ def run_vlan(test, params, env):
                 for i in range(2):
                     interface = ifname[i] + '.' + str(vlan)
                     dest = subnet +'.'+ str(vlan2)+ '.' + ip_unit[(i+1)%2]
-                    s, _ = utils_test.ping(dest, count=2,
+                    s, o = virt_test_utils.ping(dest, count=2,
                                               interface=interface,
                                               session=session[i], timeout=30)
                     if ((vlan == vlan2) ^ (s == 0)):
@@ -138,7 +138,7 @@ def run_vlan(test, params, env):
                 # does not have the other method to interrupt the process in
                 # the guest rather than close the session.
                 session_flood = vm[src].wait_for_login(timeout=60)
-                utils_test.ping(vlan_ip[dst], flood=True,
+                virt_test_utils.ping(vlan_ip[dst], flood=True,
                                    interface=ifname[src],
                                    session=session_flood, timeout=10)
                 session_flood.close()

@@ -1,6 +1,6 @@
 import logging, os
-from autotest.client import utils
-from virttest import postprocess_iozone
+from autotest_lib.client.bin import utils
+from autotest_lib.client.tests.iozone import postprocessing
 
 
 def run_iozone_windows(test, params, env):
@@ -27,14 +27,14 @@ def run_iozone_windows(test, params, env):
     c = params.get("iozone_cmd")
     t = int(params.get("iozone_timeout"))
     logging.info("Running IOzone command on guest, timeout %ss", t)
-    results = session.cmd_output(cmd=c, timeout=t)
+    results = session.cmd_output(cmd=c, timeout=t, print_func=logging.debug)
     utils.open_write_close(results_path, results)
 
     # Postprocess the results using the IOzone postprocessing module
     logging.info("Iteration succeed, postprocessing")
-    a = postprocess_iozone.IOzoneAnalyzer(list_files=[results_path],
-                                          output_dir=analysisdir)
+    a = postprocessing.IOzoneAnalyzer(list_files=[results_path],
+                                      output_dir=analysisdir)
     a.analyze()
-    p = postprocess_iozone.IOzonePlotter(results_file=results_path,
-                                         output_dir=analysisdir)
+    p = postprocessing.IOzonePlotter(results_file=results_path,
+                                     output_dir=analysisdir)
     p.plot_all()

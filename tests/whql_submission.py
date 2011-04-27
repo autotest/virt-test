@@ -1,6 +1,6 @@
 import logging, os, re
-from autotest.client.shared import error
-from virttest import aexpect, utils_misc, remote, rss_client
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.virt import virt_utils, rss_client, aexpect
 
 
 def run_whql_submission(test, params, env):
@@ -42,10 +42,10 @@ def run_whql_submission(test, params, env):
                                     "Microsoft Driver Test Manager\\Studio")
     dsso_test_binary = params.get("dsso_test_binary",
                                   "deps/whql_submission_15.exe")
-    dsso_test_binary = utils_misc.get_path(test.virtdir, dsso_test_binary)
+    dsso_test_binary = virt_utils.get_path(test.bindir, dsso_test_binary)
     dsso_delete_machine_binary = params.get("dsso_delete_machine_binary",
                                             "deps/whql_delete_machine_15.exe")
-    dsso_delete_machine_binary = utils_misc.get_path(test.virtdir,
+    dsso_delete_machine_binary = virt_utils.get_path(test.bindir,
                                                     dsso_delete_machine_binary)
     test_timeout = float(params.get("test_timeout", 600))
 
@@ -55,10 +55,10 @@ def run_whql_submission(test, params, env):
                                  filename, server_studio_path, timeout=60)
 
     # Open a shell session with the server
-    server_session = remote.remote_login("nc", server_address,
-                                              server_shell_port, "", "",
-                                              sessions[0].prompt,
-                                              sessions[0].linesep)
+    server_session = virt_utils.remote_login("nc", server_address,
+                                            server_shell_port, "", "",
+                                            sessions[0].prompt,
+                                            sessions[0].linesep)
     server_session.set_status_test_command(sessions[0].status_test_command)
 
     # Get the computer names of the server and clients
@@ -74,7 +74,7 @@ def run_whql_submission(test, params, env):
         server_session.cmd(cmd, print_func=logging.debug)
 
     # Reboot the client machines
-    sessions = utils_misc.parallel((vm.reboot, (session,))
+    sessions = virt_utils.parallel((vm.reboot, (session,))
                                   for vm, session in zip(vms, sessions))
 
     # Check the NICs again
@@ -185,7 +185,7 @@ def run_whql_submission(test, params, env):
     results = eval("".join(results.splitlines()))
 
     # Download logs and HTML reports from the server
-    for r in results:
+    for i, r in enumerate(results):
         if "report" in r:
             try:
                 rss_client.download(server_address,
@@ -254,7 +254,7 @@ def run_whql_submission(test, params, env):
     # Kill the client VMs and fail if the automation program did not terminate
     # on time
     if not done:
-        utils_misc.parallel(vm.destroy for vm in vms)
+        virt_utils.parallel(vm.destroy for vm in vms)
         raise error.TestFail("The automation program did not terminate "
                              "on time")
 

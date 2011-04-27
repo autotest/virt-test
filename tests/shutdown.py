@@ -1,9 +1,8 @@
-import time
-from autotest.client.shared import error
-from virttest import utils_misc
+import logging, time
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.virt import virt_utils
 
 
-@error.context_aware
 def run_shutdown(test, params, env):
     """
     KVM shutdown test:
@@ -22,21 +21,23 @@ def run_shutdown(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     try:
-        error.base_context("shutting down the VM")
         if params.get("shutdown_method") == "shell":
             # Send a shutdown command to the guest's shell
             session.sendline(vm.get_params().get("shutdown_command"))
-            error.context("waiting VM to go down (shutdown shell cmd)")
+            logging.info("Shutdown command sent; waiting for guest to go "
+                         "down...")
         elif params.get("shutdown_method") == "system_powerdown":
             # Sleep for a while -- give the guest a chance to finish booting
             time.sleep(float(params.get("sleep_before_powerdown", 10)))
             # Send a system_powerdown monitor command
             vm.monitor.cmd("system_powerdown")
-            error.context("waiting VM to go down "
-                          "(system_powerdown monitor cmd)")
+            logging.info("system_powerdown monitor command sent; waiting for "
+                         "guest to go down...")
 
-        if not utils_misc.wait_for(vm.is_dead, 240, 0, 1):
+        if not virt_utils.wait_for(vm.is_dead, 240, 0, 1):
             raise error.TestFail("Guest refuses to go down")
+
+        logging.info("Guest is down")
 
     finally:
         session.close()

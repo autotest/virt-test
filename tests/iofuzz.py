@@ -1,6 +1,6 @@
 import logging, re, random
-from autotest.client.shared import error
-from virttest import aexpect
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.virt import aexpect
 
 
 def run_iofuzz(test, params, env):
@@ -80,7 +80,7 @@ def run_iofuzz(test, params, env):
                     logging.debug("VM is alive, try to re-login")
                     try:
                         session = vm.wait_for_login(timeout=10)
-                    except Exception:
+                    except:
                         logging.debug("Could not re-login, reboot the guest")
                         session = vm.reboot(method="system_reset")
                 else:
@@ -126,7 +126,7 @@ def run_iofuzz(test, params, env):
                 inst.append(("write", [port, 0]))
 
             # Write random values to random ports of the range
-            for _ in range(fuzz_count * (end - beg + 1)):
+            for seq in range(fuzz_count * (end - beg + 1)):
                 inst.append(("write",
                              [r.randint(beg, end), r.randint(0,255)]))
 
