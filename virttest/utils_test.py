@@ -348,7 +348,9 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
     elif mig_failed():
         raise error.TestFail("Migration failed")
     else:
-        raise error.TestFail("Migration ended with unknown status")
+        status = vm.monitor.info("migrate")
+        raise error.TestFail("Migration ended with unknown status: %s" %
+                             status)
 
     if dest_host == 'localhost':
         if dest_vm.monitor.verify_status("paused"):
