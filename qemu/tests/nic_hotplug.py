@@ -70,10 +70,16 @@ def run_nic_hotplug(test, params, env):
         logging.info("Got the ip address of new nic: %s", ip)
 
         logging.info("Ping test the new nic ...")
-        s, o = utils_test.ping(ip, 100)
+        s, o = utils_test.ping(ip, 10, timeout=15)
         if s != 0:
             logging.error(o)
             raise error.TestFail("New nic failed ping test")
+        vm.monitor.cmd("stop")
+        vm.monitor.cmd("cont")
+        s, o = utils_test.ping(ip, 10, timeout=15)
+        if s != 0:
+            logging.error(o)
+            raise error.TestFail("New nic failed ping test after stop/cont")
 
         logging.info("Detaching the previously attached nic from vm")
         vm.hotunplug_nic(nic_name)
