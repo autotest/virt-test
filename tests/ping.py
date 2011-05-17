@@ -9,8 +9,7 @@ def run_ping(test, params, env):
 
     Packet Loss Test:
     1) Ping the guest with different size/interval of packets.
-
-    Stress Test:
+       Stress Test:
     1) Flood ping the guest.
     2) Check if the network is still usable.
 
@@ -18,6 +17,7 @@ def run_ping(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))

@@ -101,7 +101,9 @@ def run_ethtool(test, params, env):
                   (filename, params.get("filesize")))
         failure = (False, "Failed to create file using dd, cmd: %s" % dd_cmd)
         logging.info("Creating file in source host, cmd: %s", dd_cmd)
-        tcpdump_cmd = "tcpdump -lep -s 0 tcp -vv port ssh"
+        ethname = virt_test_utils.get_linux_ifname(session,
+                                                  vm.get_mac_address(0))
+        tcpdump_cmd = "tcpdump -lep -i %s -s 0 tcp -vv port ssh" % ethname
         if src == "guest":
             tcpdump_cmd += " and src %s" % guest_ip
             copy_files_from = vm.copy_files_from

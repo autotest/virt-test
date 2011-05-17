@@ -42,8 +42,8 @@ class HugePageConfig(object):
         """
         if self.vms < self.max_vms:
             self.vms = self.max_vms
-        # memory of all VMs plus qemu overhead of 64MB per guest
-        vmsm = (self.vms * self.mem) + (self.vms * 64)
+        # memory of all VMs plus qemu overhead of 128MB per guest
+        vmsm = (self.vms * self.mem) + (self.vms * 128)
         return int(vmsm * 1024 / self.hugepage_size)
 
 

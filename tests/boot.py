@@ -18,9 +18,13 @@ def run_boot(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
-    if params.get("reboot_method"):
-        if params["reboot_method"] == "system_reset":
-            time.sleep(int(params.get("sleep_before_reset", 10)))
-        session = vm.reboot(session, params["reboot_method"], 0, timeout)
-
-    session.close()
+    try:
+        if params.get("reboot_method"):
+            if params["reboot_method"] == "system_reset":
+                time.sleep(int(params.get("sleep_before_reset", 10)))
+            # Reboot the VM
+            for i in range(int(params.get("reboot_count", 1))):
+                session = vm.reboot(session, params["reboot_method"], 0,
+                                                                timeout)
+    finally:
+        session.close()
