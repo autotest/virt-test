@@ -4,7 +4,9 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, fcntl, re, commands, glob
+import time, os, logging, fcntl, re, commands, shelve, glob
+import rss_file_transfer
+import virt_test_utils
 from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
 import virt_utils, virt_vm, kvm_monitor, aexpect
@@ -44,11 +46,15 @@ class VM(virt_vm.BaseVM):
             self.uuid = None
 
 
+        self.init_pci_addr = int(params.get("init_pci_addr", 4))
         self.spice_port = 8000
         self.name = name
         self.params = params
         self.root_dir = root_dir
         self.address_cache = address_cache
+
+        kvm_version = virt_utils.get_version()
+        self.host_version = virt_test_utils.get_rh_host_version(kvm_version)
 
 
     def verify_alive(self):
@@ -150,6 +156,7 @@ class VM(virt_vm.BaseVM):
                nic_model -- string to pass as 'model' parameter for this
                NIC (e.g. e1000)
         """
+
         # Helper function for command line option wrappers
         def has_option(help, option):
             return bool(re.search(r"^-%s(\s|$)" % option, help, re.MULTILINE))
@@ -160,57 +167,168 @@ class VM(virt_vm.BaseVM):
         # parameter, and should add the requested command line option
         # accordingly.
 
+
+        def get_free_pci_addr(pci_addr=None):
+            """
+            return *hex* format free pci addr.
+
+            @param pci_addr: *decimal* formated, desired pci_add
+            """
+            if pci_addr is None:
+                pci_addr = self.init_pci_addr
+                while True:
+                    # actually when pci_addr > 20? errors may happen
+                    if pci_addr > 31:
+                        raise error.TestError("pci_addr got too big.")
+                    if pci_addr in self.pci_addr_list:
+                        pci_addr += 1
+                    else:
+                        self.pci_addr_list.append(pci_addr)
+                        return hex(pci_addr)
+            elif int(pci_addr) in self.pci_addr_list:
+                raise error.TestError("PCI address 0x%s is already in use."
+                                      " Recheck the config file." % pci_addr)
+            else:
+                self.pci_addr_list.append(int(pci_addr))
+                return hex(int(pci_addr))
+
+
         def add_name(help, name):
             return " -name '%s'" % name
 
         def add_human_monitor(help, filename):
-            return " -monitor unix:'%s',server,nowait" % filename
+            if has_option(help, "chardev"):
+                # -chardev socket, id=monitor,path=\
+                #   /var/lib/libvirt/qemu/r6.monitor,server,nowait
+                # -mon chardev=monitor,mode=readline
+                id = "human_monitor_id_%s" % monitor_name
+                cmd = " -chardev socket,id=%s,path=%s,server,nowait" % \
+                      (id, filename)
+                cmd += " -mon chardev=%s,mode=readline" % id
+                return cmd
+            else:
+                return " -monitor unix:'%s',server,nowait" % filename
 
         def add_qmp_monitor(help, filename):
-            return " -qmp unix:'%s',server,nowait" % filename
+            if has_option(help, "qmp"):
+                if has_option(help, "chardev"):
+                    # -chardev socket, id=monitor,path=\
+                    #   /var/lib/libvirt/qemu/r6.monitor,server,nowait
+                    # -mon chardev=monitor,mode=control
+                    id = "qmp_monitor_id_%s" % monitor_name
+                    cmd = " -chardev socket,id=%s,path=%s,server,nowait" % \
+                          (id, filename)
+                    cmd += " -mon chardev=%s,mode=control" % id
+                    return cmd
+                else:
+                    return " -qmp unix:'%s',server,nowait" % filename
+            else:
+                return add_human_monitor(help, filename)
 
         def add_serial(help, filename):
-            return " -serial unix:'%s',server,nowait" % filename
+            if has_option(help, "chardev"):
+                default_id = "serial_id_%s" % self.instance
+                cmd = " -chardev socket,id=%s,path=%s,server,nowait" % \
+                                          (default_id, filename)
+                cmd += " -device isa-serial,chardev=%s" % default_id
+                return cmd
+            else:
+                return " -serial unix:'%s',server,nowait" % filename
 
         def add_mem(help, mem):
             return " -m %s" % mem
 
-        def add_smp(help, smp):
-            return " -smp %s" % smp
+        def add_smp(help, smp,
+                    vcpu_cores="0", vcpu_threads="0", vcpu_sockets="0"):
+            smp_str = " -smp %s" % smp
+            # the value is not None, "", or "0"
+            if vcpu_cores and vcpu_cores !="0":
+                smp_str += ",cores=%s" % vcpu_cores
+            if vcpu_threads and vcpu_threads !="0":
+                smp_str += ",threads=%s" % vcpu_threads
+            if vcpu_sockets and vcpu_sockets !="0":
+                smp_str += ",sockets=%s" % vcpu_sockets
+            return smp_str
 
         def add_cdrom(help, filename, index=None):
             if has_option(help, "drive"):
                 cmd = " -drive file='%s',media=cdrom" % filename
-                if index is not None: cmd += ",index=%s" % index
+                if index is not None and index.isdigit():
+                    cmd += ",index=%s" % index
                 return cmd
             else:
                 return " -cdrom '%s'" % filename
 
         def add_drive(help, filename, index=None, format=None, cache=None,
-                      werror=None, serial=None, snapshot=False, boot=False):
+                      werror=None, serial=None, snapshot=False, boot=False,
+                      imgfmt="raw", aio=None, media="disk", ide_bus=None,
+                      ide_unit=None, vdisk=None, pci_addr=None,floppy_unit=None,
+                      readonly=False):
+            free_pci_addr = get_free_pci_addr(pci_addr)
+
+            dev = {"virtio" : "virtio-blk-pci",
+                   "ide" : "ide-drive"}
+
+            if format == "ide":
+                id ="ide0-%s-%s" % (ide_bus, ide_unit)
+                ide_bus = "ide." + str(ide_bus)
+            elif format == "virtio":
+                if media == "disk":
+                    vdisk += 1
+                blkdev_id ="virtio-disk%s" % vdisk
+                id = "virtio-disk%s" % vdisk
+            if media == "floppy":
+                id ="fdc0-0-%s" % floppy_unit
+            blkdev_id = "drive-%s" % id
+
+            # -drive part
             cmd = " -drive file='%s'" % filename
-            if index is not None:
+            if index is not None and index.isdigit():
                 cmd += ",index=%s" % index
-            if format:
-                cmd += ",if=%s" % format
-            if cache:
-                cmd += ",cache=%s" % cache
-            if werror:
-                cmd += ",werror=%s" % werror
-            if serial:
-                cmd += ",serial='%s'" % serial
-            if snapshot:
-                cmd += ",snapshot=on"
-            if boot:
-                cmd += ",boot=on"
+            if has_option(help, "device"):
+                cmd += ",if=none"
+                cmd += ",id=%s" % blkdev_id
+            else:
+                if format: cmd += ",if=%s" % format
+
+            if media != "floppy":
+                cmd += ",media=%s" % media
+            if cache: cmd += ",cache=%s" % cache
+            if werror: cmd += ",werror=%s" % werror
+            if serial: cmd += ",serial='%s'" % serial
+            if snapshot: cmd += ",snapshot=on"
+            if boot: cmd += ",boot=on"
+            if media == "cdrom" or readonly : cmd += ",readonly=on"
+            cmd += ",format=%s" % imgfmt
+            if ",aio=" in help and aio : cmd += ",aio=%s" % aio
+
+            # -device part
+            if has_option(help, "device") and media != "floppy":
+                cmd += " -device %s" % dev[format]
+                if format == "ide":
+                    cmd += ",bus=%s" % ide_bus
+                    cmd += ",unit=%s" % ide_unit
+                else:
+                    cmd += ",bus=pci.0,addr=%s" % free_pci_addr
+                cmd += ",drive=%s" % blkdev_id
+                cmd += ",id=%s" % id
+
+            # -global part
+            drivelist = ['driveA','driveB']
+            if has_option(help,"global") and media == "floppy" :
+                cmd += " -global isa-fdc.%s=drive-%s" \
+                          % (drivelist[floppy_unit],id)
             return cmd
 
-        def add_nic(help, vlan, model=None, mac=None, device_id=None, netdev_id=None,
-                    nic_extra_params=None):
+        def add_nic(help, vlan, model=None, mac=None, netdev_id=None,
+                    nic_extra_params=None, pci_addr=None, device_id=None):
+            free_pci_addr = get_free_pci_addr(pci_addr)
+
             if has_option(help, "netdev"):
                 netdev_vlan_str = ",netdev=%s" % netdev_id
             else:
                 netdev_vlan_str = ",vlan=%d" % vlan
+
             if has_option(help, "device"):
                 if not model:
                     model = "rtl8139"
@@ -218,7 +336,17 @@ class VM(virt_vm.BaseVM):
                     model = "virtio-net-pci"
                 cmd = " -device %s" % model + netdev_vlan_str
                 if mac:
-                    cmd += ",mac='%s'" % mac
+                    cmd += ",mac=%s" % mac
+
+                if has_option(help, "netdev"):
+                    cmd += ",id=%s" % "ndev00" + netdev_id
+
+                # only pci domain=0,bus=0,function=0 is supported for now.
+                #
+                # libvirt gains the pci_slot, free_pci_addr here,
+                # value by parsing the xml file, i.e. counting all the
+                # pci devices and store the number.
+                cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                 if nic_extra_params:
                     cmd += ",%s" % nic_extra_params
             else:
@@ -257,6 +385,14 @@ class VM(virt_vm.BaseVM):
         def add_floppy(help, filename):
             return " -fda '%s'" % filename
 
+        def add_usbdevice(help, filename):
+            if has_option(help, "device"):
+                id = virt_utils.generate_random_id()
+                return " -usb -device usb-tablet,id=%s%s" % (filename, id)
+            else:
+                return " -usbdevice %s" % filename
+
+
         def add_tftp(help, filename):
             # If the new syntax is supported, don't add -tftp
             if "[,tftp=" in help:
@@ -294,7 +430,27 @@ class VM(virt_vm.BaseVM):
             return " -uuid '%s'" % uuid
 
         def add_pcidevice(help, host):
-            return " -pcidevice host='%s'" % host
+            return " -pcidevice host=%s" % host
+
+        def add_spice(help, port, param):
+            if has_option(help,"spice"):
+                return " -spice port=%s,%s" % (port, param)
+            else:
+                return ""
+
+        def add_qxl_vga(help, qxl, vga, qxl_dev_nr=None):
+            str = ""
+            if has_option(help, "qxl"):
+               if qxl and qxl_dev_nr is not None:
+                  str += " -qxl %s" % qxl_dev_nr
+               if has_option(help, "vga") and vga and vga != "qxl":
+                  str += " -vga %s" % vga
+            elif has_option(help, "vga"):
+               if qxl:
+                   str += " -vga qxl"
+               elif vga:
+                   str += " -vga %s" % vga
+            return str
 
         def add_spice(help, port, param):
             if has_option(help,"spice"):
@@ -322,6 +478,29 @@ class VM(virt_vm.BaseVM):
         def add_initrd(help, filename):
             return " -initrd '%s'" % filename
 
+        def add_rtc(help):
+            # Pay attention that rtc-td-hack is for early version
+            # if "rtc " in help:
+            if has_option(help, "rtc"):
+                base = params.get("rtc_base", "utc")
+                clock = params.get("rtc_clock", "host")
+                drift = params.get("rtc_drift", "none")
+                return " -rtc base=%s,clock=%s,driftfix=%s" % (base, clock, drift)
+            else:
+                return " -rtc-td-hack"
+
+        def add_stable_abi(help):
+            if self.host_version == "rhel6.1":
+                return " -M rhel6.1.0"
+            elif self.host_version == "rhel6.0":
+                return " -M rhel6.0.0"
+            elif self.host_version == "rhel5.6":
+                return " -M rhel5.6.0"
+            elif self.host_version == "rhel5.5":
+                return " -M rhel5.5.0"
+            else:
+                return " "
+
         def add_kernel_cmdline(help, cmdline):
             return " -append %s" % cmdline
 
@@ -335,6 +514,31 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
+        def add_cpu_flags(help, cpu_model, flags=None, vendor_id=None):
+            if has_option(help, 'cpu'):
+                cmd = " -cpu %s" % cpu_model
+
+                if vendor_id:
+                    cmd += ",vendor=\"%s\"" % vendor_id
+                if flags:
+                    cmd += ",%s" % flags
+
+                return cmd
+            else:
+                return ""
+
+        def add_boot(help, boot_order, boot_once, boot_menu):
+            cmd = "-boot "
+            if has_option(help, "boot \[a\|c\|d\|n\]"):
+                cmd += "%s" % boot_once
+            elif has_option(help, "boot \[order=drives\]\[,once=drives\]\[,menu=on\|off\]"):
+                cmd += "order=%s,once=%s,menu=%s " % (boot_order, boot_once, boot_menu)
+            else:
+                cmd = ""
+            return cmd
+
+
+
         # End of command line option wrappers
 
         if name is None:
@@ -347,12 +551,26 @@ class VM(virt_vm.BaseVM):
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
 
+        # global counters
+        ide_bus = 0
+        ide_unit = 0
+        vdisk = 0
+        floppy_unit = 0
+        self.pci_addr_list = [0, 1, 2]
+        kvm_version = virt_utils.get_version()
+        self.host_version = virt_test_utils.get_rh_host_version(kvm_version)
+
         qemu_binary = virt_utils.get_path(root_dir, params.get("qemu_binary",
                                                               "qemu"))
         # Get the output of 'qemu -help' (log a message in case this call never
         # returns or causes some other kind of trouble)
         logging.debug("Getting output of 'qemu -help'")
         help = commands.getoutput("%s -help" % qemu_binary)
+
+        # Define the starting value of storage index
+        index_stg = int(params.get("index_stg", 2))
+        # Define the starting value of cdrom index
+        index_cd = int(params.get("index_cd", 0))
 
         # Start constructing the qemu command
         qemu_cmd = ""
@@ -372,6 +590,7 @@ class VM(virt_vm.BaseVM):
             else:
                 qemu_cmd += add_human_monitor(help, monitor_filename)
 
+
         # Add serial console redirection
         qemu_cmd += add_serial(help, vm.get_serial_console_filename())
 
@@ -379,15 +598,37 @@ class VM(virt_vm.BaseVM):
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
+
+            if params.get("index_enable") == "yes":
+                if image_params.get("drive_index") == "0":
+                    index = "0"
+                else:
+                    index_stg += 1
+                    index = str(index_stg)
+            else:
+                index = None
             qemu_cmd += add_drive(help,
-                             virt_vm.get_image_filename(image_params, root_dir),
-                                  image_params.get("drive_index"),
+                                  virt_vm.get_image_filename(image_params, root_dir),
+                                  index,
                                   image_params.get("drive_format"),
                                   image_params.get("drive_cache"),
                                   image_params.get("drive_werror"),
                                   image_params.get("drive_serial"),
                                   image_params.get("image_snapshot") == "yes",
-                                  image_params.get("image_boot") == "yes")
+                                  image_params.get("image_boot") == "yes",
+                                  image_params.get("image_format"),
+                                  image_params.get("image_aio", "native"),
+                                  "disk", ide_bus, ide_unit, vdisk,
+                                  image_params.get("drive_pci_addr")
+                                  )
+
+            # increase the bus and unit no for ide device
+            if params.get("drive_format") == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            else:
+                vdisk += 1
 
         redirs = []
         for redir_name in params.objects("redirs"):
@@ -407,12 +648,18 @@ class VM(virt_vm.BaseVM):
                 device_id = None
             # Handle the '-net nic' part
             try:
-                mac = vm.get_mac_address(vlan)
+                mac = self.get_mac_address(vlan)
             except virt_vm.VMAddressError:
                 mac = None
+            except IndexError:
+                mac = None
+            if len(self.netdev_id) < vlan+1:
+                self.netdev_id.append(virt_utils.generate_random_id())
             qemu_cmd += add_nic(help, vlan, nic_params.get("nic_model"), mac,
-                                device_id, netdev_id, nic_params.get("nic_extra_params"))
-            # Handle the '-net tap' or '-net user' or '-netdev' part
+                                self.netdev_id[vlan],
+                                nic_params.get("nic_extra_params"),
+                                nic_params.get("nic_pci_addr"))
+            # Handle the '-net tap' or '-net user' part
             script = nic_params.get("nic_script")
             downscript = nic_params.get("nic_downscript")
             tftp = nic_params.get("tftp")
@@ -435,22 +682,88 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_mem(help, mem)
 
         smp = params.get("smp")
-        if smp:
-            qemu_cmd += add_smp(help, smp)
+        vcpu_cores = params.get("vcpu_cores", "1")
+        if not vcpu_cores:
+            vcpu_cores = str(int(smp)/int(vcpu_cores)/int(vcpu_sockets))
 
+        vcpu_threads = params.get("vcpu_threads", "1")
+        if not vcpu_threads:
+            vcpu_threads = str(int(smp)/int(vcpu_cores)/int(vcpu_sockets))
+
+        vcpu_sockets = params.get("vcpu_sockets", smp)
+        if not vcpu_sockets:
+            vcpu_sockets = str(int(smp)/int(vcpu_cores)/int(vcpu_threads))
+
+        if smp:
+            qemu_cmd += add_smp(help, smp,
+                                vcpu_cores, vcpu_threads, vcpu_sockets)
+
+        # Add cdroms
         for cdrom in params.objects("cdroms"):
             cdrom_params = params.object_params(cdrom)
             iso = cdrom_params.get("cdrom")
             if iso:
-                qemu_cmd += add_cdrom(help, virt_utils.get_path(root_dir, iso),
-                                      cdrom_params.get("drive_index"))
+                iso = virt_utils.get_path(root_dir, iso)
+                if params.get("index_enable") == "yes":
+                    index_cd += 1
+                    index = str(index_cd)
+                else:
+                    index = None
+                if has_option(help, "device"):
+                    qemu_cmd += add_drive(help, iso, index, "ide", media="cdrom",
+                                          ide_bus=ide_bus, ide_unit=ide_unit)
+                else:
+                    qemu_cmd += add_cdrom(help, iso, index)
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
 
-        # We may want to add {floppy_otps} parameter for -fda
-        # {fat:floppy:}/path/. However vvfat is not usually recommended.
-        floppy = params.get("floppy")
-        if floppy:
-            floppy = virt_utils.get_path(root_dir, floppy)
-            qemu_cmd += add_floppy(help, floppy)
+        cpu_model = params.get("cpu_model", "qemu64")
+        if "2.6.32" in commands.getoutput("uname -r"):
+            cpu_model = "cpu64-rhel6"
+        flags = params.get("extra_flags")
+        x2apic = params.get("enable_x2apic")
+
+        if "el6" in commands.getoutput("uname -r") and x2apic=="yes":
+            flags += ",+x2apic"
+
+        qemu_cmd += add_cpu_flags(help, cpu_model, flags,
+                                  params.get("cpu_vendor_id"))
+
+        soundhw = params.get("soundcards")
+        if soundhw:
+            if "2.6.32" not in commands.getoutput("uname -r"):
+                qemu_cmd += " -soundhw %s" % soundhw
+
+        # We may want to add the floppy using the "-drive -global " format
+        # and the current script allow the nums of the floppies to be 2
+        # Readonly floppy is supported by adding the parameter of floppy_readonly
+        floppies = params.get("floppy")
+        floppies_readonly = params.get("floppy_readonly")
+        if floppies:
+            for floppy in floppies.split():
+                floppy = virt_utils.get_path(root_dir, floppy)
+                qemu_cmd += add_floppy(help, floppy)
+        if floppies and floppies_readonly:
+            floppy_list = floppies.split()
+            fl_readonly_list = floppies_readonly.split()
+            for index in range(len(fl_readonly_list)):
+                fl_readonly_list[index] = eval(fl_readonly_list[index])
+            if len(floppy_list) > 2 :
+                raise error.TestError("Only the maximum of 2 floppies"
+                                      " can be supported here")
+            for (floppy,fl_readonly) in zip(floppy_list,fl_readonly_list):
+                floppy = virt_utils.get_path(root_dir, floppy)
+                if has_option(help,"global"):
+                    qemu_cmd += add_drive(help,floppy,media="floppy",
+                        floppy_unit=floppy_unit,readonly=fl_readonly)
+                else:
+                    qemu_cmd += add_floppy(help, floppy)
+                floppy_unit ^= 1
+
+        usbdevice = params.get("usbdevice")
+        if usbdevice:
+            qemu_cmd += add_usbdevice(help, usbdevice)
 
         tftp = params.get("tftp")
         if tftp:
@@ -515,9 +828,23 @@ class VM(virt_vm.BaseVM):
             for pci_id in vm.pa_pci_ids:
                 qemu_cmd += add_pcidevice(help, pci_id)
 
+        qemu_cmd += add_rtc(help)
+        qemu_cmd += add_stable_abi(help)
+
+        if has_option(help, "boot"):
+            boot_order = params.get("boot_order", "cdn")
+            boot_once = params.get("boot_once", "c")
+            boot_menu = params.get("boot_menu", "off")
+            qemu_cmd += " %s " % add_boot(help, boot_order, boot_once, boot_menu)
+
+
         extra_params = params.get("extra_params")
         if extra_params:
             qemu_cmd += " %s" % extra_params
+
+        if has_option(help, "enable-kvm") and params.get("enable-kvm",
+                                                         "yes") == "yes":
+            qemu_cmd += " -enable-kvm "
 
         return qemu_cmd
 
@@ -563,6 +890,7 @@ class VM(virt_vm.BaseVM):
         params = self.params
         root_dir = self.root_dir
 
+        self.init_pci_addr = int(params.get("init_pci_addr", 4))
         # Verify the md5sum of the ISO images
         for cdrom in params.objects("cdroms"):
             cdrom_params = params.object_params(cdrom)
@@ -624,6 +952,10 @@ class VM(virt_vm.BaseVM):
                 self.vnc_port = virt_utils.find_free_port(5900, 6100)
 
             # Find available spice port, if needed
+            if params.get("spice"):
+                self.spice_port = virt_utils.find_free_port(8000, 8100)
+
+            # Find available spice port
             if params.get("spice"):
                 self.spice_port = virt_utils.find_free_port(8000, 8100)
 
@@ -719,6 +1051,8 @@ class VM(virt_vm.BaseVM):
                 while time.time() < end_time:
                     try:
                         if monitor_params.get("monitor_type") == "qmp":
+                            if not virt_utils.has_option("qmp"):
+                                break
                             # Add a QMP monitor
                             monitor = kvm_monitor.QMPMonitor(
                                 monitor_name,
@@ -734,7 +1068,9 @@ class VM(virt_vm.BaseVM):
                         logging.warn(e)
                         time.sleep(1)
                 else:
-                    self.destroy()
+                    logging.error("Could not connect to monitor '%s'" %
+                                  monitor_name)
+                    self.destroy(gracefully=False)
                     raise e
                 # Add this monitor to the list
                 self.monitors += [monitor]
@@ -872,6 +1208,16 @@ class VM(virt_vm.BaseVM):
         if self.monitors and not self.params.get("main_monitor"):
             return self.monitors[0]
 
+    @property
+    def qmp_monitor(self):
+        """
+        Return the first QMP monitor.
+        If no QMP monitor exist, return None.
+        """
+        for m in self.monitors:
+            if isinstance(m, kvm_monitor.QMPMonitor):
+                return m
+        return None
 
     def get_monitor_filename(self, monitor_name):
         """
@@ -921,6 +1267,20 @@ class VM(virt_vm.BaseVM):
         else:
             return "localhost"
 
+    def get_macaddr(self, nic_index=0):
+        """
+        Return the macaddr of guest nic.
+
+        @param nic_index: Index of the NIC
+        """
+        mac_filename = os.path.join(self.root_dir, "address_pool")
+        mac_shelve = shelve.open(mac_filename, writeback=False)
+        mac_pool = mac_shelve.get("macpool")
+        val = "%s:%s" % (self.instance, nic_index)
+        for key in mac_pool.keys():
+            if val in mac_pool[key]:
+                return key
+        return None
 
     def get_port(self, port, nic_index=0):
         """
@@ -965,7 +1325,10 @@ class VM(virt_vm.BaseVM):
         @param nic_index: Index of the NIC
         """
         nics = self.params.objects("nics")
-        nic_name = nics[nic_index]
+        try:
+            nic_name = nics[nic_index]
+        except IndexError:
+            return "t%d-%s" % (nic_index, self.instance[-11:])
         nic_params = self.params.object_params(nic_name)
         if nic_params.get("nic_ifname"):
             return nic_params.get("nic_ifname")

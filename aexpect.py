@@ -790,6 +790,7 @@ class Tail(Spawn):
             while True:
                 global _thread_kill_requested
                 if _thread_kill_requested:
+                    _thread_kill_requested = False
                     return
                 try:
                     # See if there's any data to read from the pipe

@@ -21,7 +21,9 @@ More specifically:
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, re, signal
+import time, os, logging, re, signal, threading, shelve, commands, string, imp
+from Queue import Queue
+from distutils import version
 from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
 from autotest_lib.client.tools import scan_results
@@ -54,12 +56,14 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
     @param timeout: Time to wait before giving up.
     @param serial: Whether to use a serial connection instead of a remote
             (ssh, rss) one.
+
     @return: A shell session object.
     """
+    login_type = 'remote'
     end_time = time.time() + timeout
     session = None
     if serial:
-        type = 'serial'
+        login_type = 'serial'
         logging.info("Trying to log into guest %s using serial connection,"
                      " timeout %ds", vm.name, timeout)
         time.sleep(start)
@@ -82,10 +86,23 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
             except (virt_utils.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             time.sleep(step)
+        if not session and vm.get_params().get("try_serial_login") == "yes":
+            login_type = "serial"
+            logging.info("Remote login failed, trying to login '%s' with "
+                         "serial, timeout %ds", vm.name, timeout)
+            time.sleep(start)
+            while time.time() < end_time:
+                try:
+                    session = vm.serial_login()
+                    break
+                except virt_utils.LoginError, e:
+                    logging.debug(e)
+                time.sleep(step)
     if not session:
         raise error.TestFail("Could not log into guest %s using %s connection" %
-                             (vm.name, type))
-    logging.info("Logged into guest %s using %s connection", vm.name, type)
+                             (vm.name, login_type))
+    logging.info("Logged into guest %s using %s connection", vm.name,
+                 login_type)
     return session
 
 
@@ -132,7 +149,7 @@ def reboot(vm, session, method="shell", sleep_before_reset=10, nic_index=0,
 
     # Wait for the session to become unresponsive and close it
     if not virt_utils.wait_for(lambda: not session.is_responsive(timeout=30),
-                              120, 0, 1):
+                              timeout, 0, 1):
         raise error.TestFail("Guest refuses to go down")
     session.close()
 
@@ -162,11 +179,15 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             case of multi-host migration.
     """
     def mig_finished():
-        o = vm.monitor.info("migrate")
-        if isinstance(o, str):
-            return "status: active" not in o
-        else:
-            return o.get("status") != "active"
+        try:
+            o = vm.monitor.info("migrate")
+            logging.debug("%s", o)
+            if isinstance(o, str):
+                return "status: active" not in o
+            else:
+                return o.get("status") != "active"
+        except:
+            pass
 
     def mig_succeeded():
         o = vm.monitor.info("migrate")
@@ -274,7 +295,8 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
     elif mig_failed():
         raise error.TestFail("Migration failed")
     else:
-        raise error.TestFail("Migration ended with unknown status")
+        status = vm.monitor.info("migrate")
+        raise error.TestFail("Migration end with stauts: %s" % status)
 
     if dest_host == 'localhost':
         if "paused" in dest_vm.monitor.info("status"):
@@ -282,7 +304,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             dest_vm.monitor.cmd("cont")
 
     # Kill the source VM
-    vm.destroy(gracefully=False)
+    vm.destroy(gracefully=False, free_mac_addresses=False)
 
     # Replace the source VM with the new cloned VM
     if (dest_host == 'localhost') and (env is not None):
@@ -340,7 +362,6 @@ def start_windows_service(session, service, timeout=120):
     else:
         raise error.TestError("Could not start service '%s'" % service)
 
-
 def get_time(session, time_command, time_filter_re, time_format):
     """
     Return the host time and guest time.  If the guest time cannot be fetched
@@ -349,6 +370,9 @@ def get_time(session, time_command, time_filter_re, time_format):
     Note that the shell session should be ready to receive commands
     (i.e. should "display" a command prompt and should be done with all
     previous commands).
+
+    Add ntp service way to get the time of guest. In this method, host_time is
+    the time of ntp server.
 
     @param session: A shell session.
     @param time_command: Command to issue to get the current guest time.
@@ -396,6 +420,77 @@ def get_time(session, time_command, time_filter_re, time_format):
 
     return (host_time, guest_time)
 
+def dump_command_output(session, command, file, timeout=30.0,
+                        internal_timeout=1.0, print_func=None):
+    """
+    @param session: a saved communication between host and guest.
+    @param command: will running in guest side.
+    @param file: redirect command output to the specify file
+    @param timeout: the duration (in seconds) to wait until a match is found.
+    @param internal_timeout: the timeout to pass to read_nonblocking.
+    @param print_func: a function to be used to print the data being read.
+    @return: Command output(string).
+    """
+
+    (status, output) = session.get_command_status_output(command, timeout,
+                                                internal_timeout, print_func)
+    if status != 0:
+        raise error.TestError("Failed to run command %s in guest." % command)
+    try:
+        f = open(file, "w")
+    except IOError:
+        raise error.TestError("Failed to open file opject: %s" % file)
+    f.write(output)
+    f.close()
+
+
+def fix_atest_cmd(atest_basedir, cmd, ip):
+    """
+    fixes the command "autotest/cli/atest" for the external server tests.
+
+    e.g.
+    1. adding -w autotest server argument;
+    2. adding autotest/cli/atest prefix/basedir;
+    and etc..
+
+    @param atest_basedir: base dir of autotest/cli/atest
+    @param cmd: command to fix.
+    @param ip: ip of the autotest server to add to the command.
+    """
+    cmd = os.path.join(atest_basedir, cmd)
+    return ''.join([cmd, " -w ", ip])
+
+
+def get_svr_tm_lst(session, cmd, timeout=1200):
+    """
+    get the test machine (IP) list in the autotest server.
+
+    @param session: session to the autotest server.
+    @param cmd: command to get the list.
+    """
+    (s, o)= session.get_command_status_output(cmd, timeout=timeout)
+    if s != 0:
+        raise error.TestError("Cannot get test machine list info.")
+
+    # since we just need to get the ip address from the output,
+    # we do not need a general ip filter here.
+    return re.findall("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", o)
+
+
+def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
+    """
+    @param ip: IP address of the server.
+    @param port: the port for remote session.
+    @param usrname: user name for remote login.
+    @param passwd: password.
+    @param prompt: shell/session prompt for the connection.
+    """
+    session = kvm_utils.remote_login("ssh", ip, port, usrname, passwd, prompt)
+    if not session:
+        raise error.TestError("Failed to login to the autotest server.")
+
+    return session
+
 
 def get_memory_info(lvms):
     """
@@ -430,16 +525,19 @@ def get_memory_info(lvms):
     return meminfo
 
 
-def run_autotest(vm, session, control_path, timeout, outputdir, params):
+def run_autotest(vm, session, control_path, timeout, outputdir, params,
+                 kvm_test=False):
     """
     Run an autotest control file inside a guest (linux only utility).
+    This function can start autotest on host or guest.
 
-    @param vm: VM object.
+    @param vm: machine object, can be VM, RemoteVM, RemoteHost.
     @param session: A shell session on the VM provided.
     @param control_path: A path to an autotest control file.
     @param timeout: Timeout under which the autotest control file must complete.
     @param outputdir: Path on host where we should copy the guest autotest
             results to.
+    @param kvm_test: whether include kvm test files in autotest package.
 
     The following params is used by the migration
     @param params: Test params used in the migration test
@@ -484,6 +582,92 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         session.cmd(e_cmd, timeout=120)
 
 
+    def generate_test_cfg(params):
+        guest_name = params.get("guest_name")
+        guest_name = '-'.join(guest_name.split('-')[0:-1])
+        if guest_name == '':
+            guest_name = params.get("guest_name")
+
+        drive_format = params.get("drive_format")
+        if drive_format == "virtio":
+            drive_format = "virtio_blk"
+
+        nic_model = params.get("nic_model")
+        if nic_model == "virtio":
+            nic_model = "virtio_nic"
+
+        fullname = params.get("name")
+        pages = "smallpages"
+        name = params.get("test_name")
+        if fullname:
+            p = re.compile(".*full\.(\w+)\..*%s\.(.+)\.%s"
+                            % (drive_format, params.get("image_format")))
+            m = p.match(fullname)
+            if m:
+                pages = m.group(1)
+                name = m.group(2)
+        test_cfg  = "include virtlab_tests.cfg\n"
+        test_cfg += "include cdkeys.cfg\n"
+        test_cfg += "nic_script = %s\n" % params.get("nic_script")
+        test_cfg += "pci_assignable = %s\n" % params.get("pci_assignable")
+        test_cfg += "display = %s\n" % params.get("display")
+        test_cfg += "hosttype = %s\n" % params.get("hosttype")
+        test_cfg += "image_name = %s\n" % params.get("image_name")
+        test_cfg += "image_boot = %s\n" % params.get("image_boot")
+        test_cfg += "dsthost = %s\n" % params.get("srchost")
+        test_cfg += "bridge = %s\n" % params.get("bridge")
+        test_cfg += "use_storage = %s\n" % params.get("use_storage")
+        test_cfg += "mig_timeout = %s\n" % params.get("mig_timeout")
+        test_cfg += "login_timeout = %s\n" % params.get("login_timeout")
+        test_cfg += "wait_augment_ratio = %s\n" % params.get("wait_augment_ratio")
+        test_cfg += "install_timeout = %s\n" % params.get("install_timeout")
+        test_cfg += "smp = %s\n" % params.get("smp")
+        test_cfg += "vcpu_cores = %s\n" % params.get("vcpu_cores")
+        test_cfg += "vcpu_threads = %s\n" % params.get("vcpu_threads")
+        test_cfg += "mem = %s\n" % params.get("mem")
+        test_cfg += "iterations = %s\n" % params.get("iterations")
+        test_cfg += "iscsi_dev = %s\n" % params.get("iscsi_dev")
+        test_cfg += "iscsi_number = %s\n" % params.get("iscsi_number")
+        # These params needs by cross_host test.
+        ## disable remote test.
+        test_cfg += "slaver_peer = yes\n"
+        ## don't start vms before images are ready.
+        test_cfg += "start_vm = no\n"
+        ## port for XMLRPC server.
+        if params.get("listen_port"):
+            test_cfg += "listen_port = %s\n" % params.get("listen_port")
+        test_cfg += "only %s\n" % pages
+        test_cfg += "only %s\n" % guest_name
+        test_cfg += "only %s\n" % params.get("platform")
+        test_cfg += "only %s\n" % drive_format
+        test_cfg += "only %s\n" % nic_model
+        test_cfg += "only %s\n" % params.get("image_format")
+        test_cfg += "only full\n"
+        if params.get("test_name"):
+            test_cfg += "only %s\n" % params.get("test_name")
+        else:
+            test_cfg += "only %s\n" % name
+        test_cfg += "variants:\n"
+        test_cfg += "    - repeat1:\n"
+        test_cfg += "pre_test:\n"
+        test_cfg += "    only repeat1\n"
+        test_cfg += "    iterations = 1\n"
+
+        return test_cfg
+
+
+    def build_config_file(autotest_path, config_string,
+                        config_filename= "tests.cfg"):
+        kvm_dir = os.path.join(autotest_path, 'tests/kvm')
+        kvm_tests = os.path.join(kvm_dir, config_filename)
+        try:
+            file = open(kvm_tests, 'w')
+        except IOError:
+            raise error.TestError("Failed to create config file kvm_tests.cfg")
+        file.write(config_string)
+        file.close()
+
+
     def get_results():
         """
         Copy autotest results present on the guest back to the host.
@@ -491,9 +675,13 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         logging.info("Trying to copy autotest results from guest")
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
         if not os.path.exists(guest_results_dir):
-            os.mkdir(guest_results_dir)
-        vm.copy_files_from("%s/results/default/*" % autotest_path,
-                           guest_results_dir)
+            try:
+                os.mkdir(guest_results_dir)
+            except OSError:
+                logging.warn("Directory %s existed already!", guest_results_dir)
+        if not vm.copy_files_from("%s/results/default/*" % autotest_path,
+                                  guest_results_dir):
+            logging.error("Could not copy autotest results from guest")
 
 
     def get_results_summary():
@@ -514,12 +702,11 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
             logging.error("Error processing guest autotest results: %s", e)
             return None
 
-
-    if not os.path.isfile(control_path):
+    if (not kvm_test) and (not os.path.isfile(control_path)):
         raise error.TestError("Invalid path to autotest control file: %s" %
                               control_path)
 
-    migrate_background = params.get("migrate_background") == "yes"
+    migrate_background = (params.get("migrate_background") == "yes")
     if migrate_background:
         mig_timeout = float(params.get("mig_timeout", "3600"))
         mig_protocol = params.get("migration_protocol", "tcp")
@@ -529,34 +716,51 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
     autotest_path = os.environ['AUTODIR']
+    if kvm_test:
+        test_cfg = generate_test_cfg(vm.params)
+        build_config_file(autotest_path, test_cfg,
+                        config_filename="tests.cfg.remote")
+        logging.info("Running kvm autotest on remote machine, timeout %ss",
+                    timeout)
 
     # tar the contents of bindir/autotest
     cmd = "tar cvjf %s %s/*" % (compressed_autotest_path, autotest_path)
-    # Until we have nested virtualization, we don't need the kvm test :)
-    cmd += " --exclude=%s/tests/kvm" % autotest_path
+    # yes, we need kvm test in host's autotest.
+    if not kvm_test:
+        cmd += " --exclude=%s/tests/kvm" % autotest_path
+    else:
+        cmd += " --exclude=%s/tests/kvm/env" % autotest_path
+        cmd += " --exclude=%s/tests/kvm/isos" % autotest_path
+        cmd += " --exclude=%s/tests/kvm/images" % autotest_path
     cmd += " --exclude=%s/results" % autotest_path
     cmd += " --exclude=%s/tmp" % autotest_path
     cmd += " --exclude=%s/control*" % autotest_path
     cmd += " --exclude=*.pyc"
     cmd += " --exclude=*.svn"
     cmd += " --exclude=*.git"
+    logging.info("Trying to package autotest.")
     utils.run(cmd)
 
     # Copy autotest.tar.bz2
-    copy_if_hash_differs(vm, compressed_autotest_path, compressed_autotest_path)
+    copy_if_hash_differs(vm, compressed_autotest_path,
+                        compressed_autotest_path)
 
     # Extract autotest.tar.bz2
     extract(vm, compressed_autotest_path, "/")
 
-    vm.copy_files_to(control_path, os.path.join(autotest_path, 'control'))
 
-    # Run the test
-    logging.info("Running autotest control file %s on guest, timeout %ss",
-                 os.path.basename(control_path), timeout)
+    if not kvm_test:
+        vm.copy_files_to(control_path,
+                                os.path.join(autotest_path, 'control'))
+        # Run the test
+        logging.info("Running autotest control file %s on guest, timeout %ss",
+                     os.path.basename(control_path), timeout)
     session.cmd("cd %s" % autotest_path)
     try:
         session.cmd("rm -f control.state")
         session.cmd("rm -rf results/*")
+        if kvm_test:
+            session.cmd("mv -f tests/kvm/tests.cfg.remote tests/kvm/tests.cfg")
     except aexpect.ShellError:
         pass
     try:
@@ -566,8 +770,13 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
             if migrate_background:
                 mig_timeout = float(params.get("mig_timeout", "3600"))
                 mig_protocol = params.get("migration_protocol", "tcp")
-
-                bg = virt_utils.Thread(session.cmd_output,
+                if kvm_test:
+                    bg = virt_utils.Thread(session.cmd_output,
+                              kwargs={'cmd': "bin/autotest tests/kvm/control",
+                                     'timeout': timeout,
+                                     'print_func': logging.info})
+                else:
+                    bg = virt_utils.Thread(session.cmd_output,
                                       kwargs={'cmd': "bin/autotest control",
                                               'timeout': timeout,
                                               'print_func': logging.info})
@@ -579,8 +788,12 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                                  "migration ...")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                session.cmd_output("bin/autotest control", timeout=timeout,
-                                   print_func=logging.info)
+                if kvm_test:
+                    session.cmd_output("bin/autotest tests/kvm/control",
+                                       timeout=timeout, print_func=logging.info)
+                else:
+                    session.cmd_output("bin/autotest control", timeout=timeout,
+                                       print_func=logging.info)
         finally:
             logging.info("------------- End of test output ------------")
             if migrate_background and bg:
@@ -620,6 +833,53 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
             e_msg = ("Tests %s failed during control file execution" %
                      " ".join(bad_results))
         raise error.TestFail(e_msg)
+
+
+class BackgroundTest(object):
+    """
+    This class would run a test in background through a dedicated thread.
+    """
+
+    def __init__(self, func, params, kwargs={}):
+        """
+        Initialize the object and set a few attributes.
+        """
+        self.thread = threading.Thread(target=self.launch,
+                                       args=(func, params, kwargs))
+        self.exception = None
+
+
+    def launch(self, func, params, kwargs):
+        """
+        Catch and record the exception.
+        """
+        try:
+            func(*params, **kwargs)
+        except Exception, e:
+            self.exception = e
+
+
+    def start(self):
+        """
+        Run func(params) in a dedicated thread
+        """
+        self.thread.start()
+
+
+    def join(self):
+        """
+        Wait for the join of thread and raise its exception if any.
+        """
+        self.thread.join()
+        if self.exception:
+            raise self.exception
+
+
+    def is_alive(self):
+        """
+        Check whether the test is still alive.
+        """
+        return self.thread.isAlive()
 
 
 def get_loss_ratio(output):
@@ -752,3 +1012,309 @@ def get_linux_ifname(session, mac_address):
         return ethname
     except:
         return None
+
+
+def get_rh_host_version(version_string):
+    """
+    Get the redhat production version of the host.
+
+    @version_string: `uname -r` or `cat /sys/module/kvm/version`
+
+    Return: rhel5.5, rhel5.6, rhel6.0 or rhel6.1, or other rh version tag
+    """
+    cur_version = version.LooseVersion(version_string)
+    logging.debug("Current version is: %s" % str(cur_version))
+
+    if version_string.startswith("kvm-") and version_string.find(".el5") > 0:
+        rhel5_end = version.LooseVersion("kvm-83-END.el5")
+        rhel5u6_start = version.LooseVersion("kvm-83-165.el5")
+        rhel5u5_start = version.LooseVersion("kvm-83-106.el5")
+
+        if cur_version >= rhel5u6_start and cur_version < rhel5_end:
+            return "rhel5.6"
+        elif cur_version >= rhel5u5_start and cur_version < rhel5u6_start:
+            return "rhel5.5"
+        else:
+            logging.warn("Unkown rhel5.x version: %s" % version_string)
+            return "Unknown-RH-Version"
+
+    elif version_string.startswith("2.6") and version_string.find(".el6") > 0:
+        rhel6_end = version.LooseVersion("2.6.32-END.el6")
+        rhel6u1_start = version.LooseVersion("2.6.32-72.el6")
+        rhel6_start = version.LooseVersion("2.6.31-0.el6")
+
+        if cur_version >= rhel6u1_start and cur_version < rhel6_end:
+            return "rhel6.1"
+        elif cur_version >= rhel6_start and cur_version < rhel6u1_start:
+            return "rhel6.0"
+        else:
+            logging.warn("Unknown rhel6.x version: %s" % version_string)
+            return "Unknown-RH-Version"
+    else:
+        logging.warn("Invalid redhat version string: %s" % version_string)
+        return "Invalid-RH-Version"
+
+def  vm_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout = 300):
+    """
+    For record the env information such as cpu utilization, meminfo while
+    run guest test in guest.
+    @vm: Guest Object
+    @monitor_cmd: monitor command running in backgroud
+    @test_cmd: test suit run command
+    @guest_path: path in guest to store the test result and monitor data
+    @timeout: longest time for monitor running
+    Return: tag the suffix of the results
+    """
+    def thread_kill(cmd, p_file):
+        fd = shelve.open(p_file)
+        s, o = commands.getstatusoutput("pstree -p %s" % fd["pid"])
+        tmp = re.split("\s+", cmd)[0]
+        pid = re.findall("%s.(\d+)" % tmp, o)[0]
+        s, o = commands.getstatusoutput("kill -9 %s" % pid)
+        fd.close()
+        return (s, o)
+
+    def monitor_thread(m_cmd, p_file, r_file):
+        fd = shelve.open(p_file)
+        fd["pid"] = os.getpid()
+        fd.close()
+        os.system("%s &> %s" % (m_cmd, r_file))
+
+    def test_thread(session, m_cmd, t_cmd, p_file, flag, timeout):
+        flag.put(True)
+        s, o = session.cmd_status_output(t_cmd, timeout)
+        if s != 0:
+            raise error.TestFail("Test failed or timeout: %s" % o)
+        if not flag.empty():
+            flag.get()
+            thread_kill(m_cmd, p_file)
+
+    kill_thread_flag = Queue(1)
+    session = wait_for_login(vm, 0, 300, 0, 2)
+    tag = vm.instance
+    pid_file = "/tmp/monitor_pid_%s" % tag
+    result_file = "/tmp/monitor_result_%s" % tag
+
+    monitor = threading.Thread(target=monitor_thread,args=(monitor_cmd,
+                              pid_file, result_file))
+    test_runner = threading.Thread(target=test_thread, args=(session,
+                                   monitor_cmd, test_cmd, pid_file,
+                                   kill_thread_flag, timeout))
+
+    monitor.start()
+    test_runner.start()
+    monitor.join(int(timeout))
+    if not kill_thread_flag.empty():
+        kill_thread_flag.get()
+        thread_kill(monitor_cmd, pid_file)
+
+    guest_result_file = "/tmp/guest_test_result_%s" % tag
+    guest_monitor_result_file = "/tmp/guest_test_monitor_result_%s" % tag
+    vm.copy_files_from(guest_path, guest_result_file)
+    vm.copy_files_from("%s_monitor" % guest_path, guest_monitor_result_file)
+    return tag
+
+def aton(str):
+    """
+    Transform a string to a number(include float and int). If the string is
+    not in the form of number, just return false.
+    @str: string to transfrom
+    Return: float, int or False for failed transform
+    """
+    substring = re.split("\.", str)
+    if len(substring) == 1:
+        if substring[0].isdigit():
+            return string.atoi(str)
+    elif len(substring) == 2:
+        if substring[0].isdigit() and substring[1].isdigit():
+            return string.atof(str)
+    return False
+
+def summary_up_result(result_file, ignore, row_head, column_mark):
+    """
+    Use to summary the monitor or other kinds of results. Now it calculate
+    the average value for each item in the results. It fit to the records that
+    in matrix form.
+    @result_file: files which need to calculate
+    @ignore: pattern for the comment in results which need to through away
+    @row_head: pattern for the items in row
+    @column_mark: pattern for the first line in matrix which used to generate
+    the items in column
+    Return: A dictionary with the average value of results
+    """
+    head_flag = False
+    result_dict = {}
+    column_list = {}
+    row_list = []
+    fd = open(result_file, "r")
+    for eachLine in fd:
+        if len(re.findall(ignore, eachLine)) == 0:
+            if len(re.findall(column_mark, eachLine)) != 0 and not head_flag:
+                column = 0
+                empty, row, eachLine = re.split(row_head, eachLine)
+                for i in re.split("\s+", eachLine):
+                    if i:
+                        result_dict[i] = {}
+                        column_list[column] = i
+                        column += 1
+                head_flag = True
+            elif len(re.findall(column_mark, eachLine)) == 0:
+                column = 0
+                empty, row, eachLine = re.split(row_head, eachLine)
+                row_flag = False
+                for i in row_list:
+                    if row == i:
+                        row_flag = True
+                if row_flag == False:
+                    row_list.append(row)
+                    for i in result_dict:
+                        result_dict[i][row] = []
+                for i in re.split("\s+", eachLine):
+                    if i:
+                        result_dict[column_list[column]][row].append(i)
+                        column += 1
+    fd.close()
+    # Calculate the average value
+    average_list = {}
+    for i in column_list:
+        average_list[column_list[i]] = {}
+        for j in row_list:
+            average_list[column_list[i]][j] = {}
+            check = result_dict[column_list[i]][j][0]
+            if aton(check) or aton(check) == 0.0:
+                count = 0
+                for k in result_dict[column_list[i]][j]:
+                    count += aton(k)
+                average_list[column_list[i]][j] = "%.2f" % (count / len(result_dict[column_list[i]][j]))
+
+    return average_list
+
+def create_image(cmd, img_name, img_fmt, base_img=None, base_fmt=None,
+       img_size=None, encrypted=None, preallocated=None, cluster_size=None):
+    """
+    Create image
+    @img_name: the name of the image to be created
+    @img_fmt: the format of the image to be created
+    @base_img: the base image name when create snapshot
+    @base_fmt: the format of base image
+    @img_size: image size
+    @encrypted: there are two value "off" and "on", default value is "off"
+    @preallocated: there are two value "metadata" and "off", default is "off"
+    @cluster_size: the qcow2 cluster size
+    """
+    cmd += " create"
+    if encrypted == "yes":
+        cmd += " -o encryption=on"
+    if base_img:
+        cmd += " -b %s" % base_img
+        if base_fmt:
+            cmd += " -F %s" % base_fmt
+    cmd += " -f %s" % img_fmt
+    cmd += " %s" % img_name
+    if img_size:
+        cmd += " %s" % img_size
+    if preallocated == "yes":
+        cmd += " -o preallocation=metadata"
+    if cluster_size is not None:
+        cmd += " -o cluster_size=%s" % cluster_size
+
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Could not create image:\n%s", str(e))
+        return None
+    return img_name
+
+def convert_image(cmd, img_name, img_fmt, convert_name, convert_fmt,
+                  compressed=None, encrypted=None):
+    """
+    Convert image:
+    @cmd: qemu-img cmd
+    @img_name: the name of the image to be converted
+    @img_fmt: the format of the image to be converted
+    @convert_name: the name of the image after convert
+    @convert_fmt: the format after convert
+    @compressed: indicates that target image must be compressed
+    @encrypted: there are two value "off" and "on", default value is "off"
+    """
+    cmd += " convert"
+    if compressed == "yes":
+        cmd += " -c"
+    if encrypted == "yes":
+        cmd += " -o encryption=on"
+    if img_fmt:
+        cmd += " -f %s" % img_fmt
+    cmd += " -O %s" % convert_fmt
+    cmd += " %s %s" % (img_name, convert_name)
+    logging.info("Convert image %s from %s to %s", img_name, img_fmt,
+                  convert_fmt)
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Could not convert image:\n%s", str(e))
+        return None
+    return convert_name
+
+def rebase_image(cmd, snapshot_img, base_img, base_fmt, snapshot_fmt=None,
+                 mode=None):
+    """
+    Rebase image
+    @cmd: qemu-img cmd
+    @snapshot_img: the snapshot name
+    @base_img: base image name
+    @base_fmt: base image format
+    @snapshot_fmt: the snapshot format
+    @mode: there are two value, "safe" and "unsafe", devault is "safe"
+    """
+    cmd += " rebase"
+    if snapshot_fmt:
+        cmd += " -f %s" % snapshot_fmt
+    if mode == "unsafe":
+        cmd += " -u"
+    cmd += " -b %s -F %s %s" % (base_img, base_fmt, snapshot_img)
+    logging.info("Rebase snapshot %s to %s..." % (snapshot_img, base_img))
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Could not rebase snapshot:\n%s", str(e))
+        return None
+    return base_img
+
+def commit_image(cmd, snapshot_img, snapshot_fmt):
+    """
+    Commit image
+    @cmd: qemu-img cmd
+    @snapshot_img: the name of the snapshot to be commited
+    @snapshot_fmt: the format of the snapshot
+    """
+    cmd += " commit"
+    cmd += " -f %s %s" % (snapshot_fmt, snapshot_img)
+    logging.info("Commit snapshot %s" % snapshot_img)
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Commit image failed\n%s", str(e))
+        return None
+
+    logging.info("commit %s to backing file" % snapshot_img)
+    return snapshot_img
+
+
+def run_sub_test(test, params, env, sub_type=None):
+    """
+    Call another test script in one test script.
+    @param test:   KVM test object.
+    @param params: Dictionary with the test parameters.
+    @param env:    Dictionary with test environment.
+    @sub_type: type of called test script.
+    """
+    if sub_type is None:
+        raise error.TestError("No sub test is found")
+    subtest_dir = os.path.join(test.bindir, "tests")
+    f, p, d = imp.find_module(sub_type, [subtest_dir])
+    test_module = imp.load_module(sub_type, f, p, d)
+    f.close()
+    # Run the test function
+    run_func = getattr(test_module, "run_%s" % sub_type)
+    run_func(test, params, env)
+

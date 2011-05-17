@@ -230,15 +230,15 @@ def preprocess(test, params, env):
 
     # Get the KVM kernel module version and write it as a keyval
     logging.debug("Fetching KVM module version...")
-    if os.path.exists("/dev/kvm"):
-        try:
-            kvm_version = open("/sys/module/kvm/version").read().strip()
-        except:
-            kvm_version = os.uname()[2]
+    if not os.path.exists("/dev/kvm"):
+        logging.debug("KVM module not loaded")
+
+    kvm_ver_cmd = params.get("kvm_ver_cmd")
+    if kvm_ver_cmd is not None:
+        kvm_version = commands.getoutput(kvm_ver_cmd)
     else:
         kvm_version = "Unknown"
-        logging.debug("KVM module not loaded")
-    logging.debug("KVM version: %s" % kvm_version)
+
     test.write_test_keyval({"kvm_version": kvm_version})
 
     # Get the KVM userspace version and write it as a keyval
@@ -252,6 +252,7 @@ def preprocess(test, params, env):
     else:
         kvm_userspace_version = "Unknown"
         logging.debug("Could not fetch KVM userspace version")
+
     logging.debug("KVM userspace version: %s" % kvm_userspace_version)
     test.write_test_keyval({"kvm_userspace_version": kvm_userspace_version})
 
@@ -265,9 +266,6 @@ def preprocess(test, params, env):
                         int(params.get("pre_command_timeout", "600")),
                         params.get("pre_command_noncritical") == "yes")
 
-    # Preprocess all VMs and images
-    process(test, params, env, preprocess_image, preprocess_vm)
-
     # Start the screendump thread
     if params.get("take_regular_screendumps") == "yes":
         logging.debug("Starting screendump thread")
@@ -276,6 +274,21 @@ def preprocess(test, params, env):
         _screendump_thread = threading.Thread(target=_take_screendumps,
                                               args=(test, params, env))
         _screendump_thread.start()
+
+    # Generate iscsi related paramters
+    if params.get("use_storage") == "iscsi":
+        images = re.split("/s+", params.get("images"))
+        if len(images) > params.get("iscsi_number"):
+            raise error.TestError("Don't have enough iscsi storage")
+        device = params.get("iscsi_dev")
+        count = 1
+        for i in images:
+           params["image_name_%s" % i] = "%s%s" % (device, count)
+           params["image_format_%s" % i] = "qcow2"
+           count += 1
+
+   # Preprocess all VMs and images
+    process(test, params, env, preprocess_image, preprocess_vm)
 
 
 @error.context_aware

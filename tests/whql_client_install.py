@@ -39,8 +39,8 @@ def run_whql_client_install(test, params, env):
                                             "deps/whql_delete_machine_15.exe")
     dsso_delete_machine_binary = virt_utils.get_path(test.bindir,
                                                     dsso_delete_machine_binary)
-    install_timeout = float(params.get("install_timeout", 600))
-    install_cmd = params.get("install_cmd")
+    install_timeout = float(params.get("whql_install_timeout", 600))
+    install_cmd = params.get("whql_install_cmd")
     wtt_services = params.get("wtt_services")
 
     # Stop WTT service(s) on client

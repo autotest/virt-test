@@ -454,6 +454,26 @@ def check_kvm_source_dir(source_dir):
         raise error.TestError("Unknown source dir layout, cannot proceed.")
 
 
+def get_version():
+    """
+    Trying to get the kvm version, if failed, return the kernel version.
+    """
+    logging.debug("Fetching KVM module version...")
+    if os.path.exists("/dev/kvm"):
+        kvm_version = os.uname()[2] # kernel version
+        try:
+            file = open("/sys/module/kvm/version", "r")
+            kvm_version = file.read().strip()
+            file.close()
+        except Exception:
+            pass
+
+        return kvm_version
+    else:
+        logging.warn("KVM module not loaded")
+        return "None"
+
+
 # Functions and classes used for logging into guests and transferring files
 
 class LoginError(Exception):
@@ -2307,3 +2327,14 @@ def install_host_kernel(job, params):
     else:
         logging.info('Chose %s, using the current kernel for the host',
                      install_type)
+
+def has_option(option, qemu_path="/usr/libexec/qemu-kvm"):
+    """
+    Helper function for command line option wrappers
+
+    @qemu_path: Path for qemu-kvm.
+    @option: Option need check.
+    """
+    help = commands.getoutput("%s -help" % qemu_path)
+    return bool(re.search(r"^-%s(\s|$)" % option, help, re.MULTILINE))
+

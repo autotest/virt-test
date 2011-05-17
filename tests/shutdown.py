@@ -34,7 +34,7 @@ def run_shutdown(test, params, env):
             logging.info("system_powerdown monitor command sent; waiting for "
                          "guest to go down...")
 
-        if not virt_utils.wait_for(vm.is_dead, 240, 0, 1):
+        if not virt_utils.wait_for(vm.is_dead, timeout, 0, 1):
             raise error.TestFail("Guest refuses to go down")
 
         logging.info("Guest is down")

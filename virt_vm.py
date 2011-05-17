@@ -199,6 +199,8 @@ def get_image_filename(params, root_dir):
     """
     image_name = params.get("image_name", "image")
     image_format = params.get("image_format", "qcow2")
+    if params.get("use_storage") == "iscsi":
+        return image_name
     if params.get("image_raw_device") == "yes":
         return image_name
     image_filename = "%s.%s" % (image_name, image_format)
@@ -231,9 +233,19 @@ def create_image(params, root_dir):
 
     size = params.get("image_size", "10G")
     qemu_img_cmd += " %s" % size
+    try:
+        utils.system(qemu_img_cmd)
+    except error.CmdError, e:
+        logging.error("Could not create image; qemu-img command failed:\n%s",
+                      str(e))
+        return None
 
-    utils.system(qemu_img_cmd)
-    logging.info("Image created in %r", image_filename)
+    if not os.path.exists(image_filename):
+        logging.error("Image could not be created for some reason; "
+                      "qemu-img command:\n%s" % qemu_img_cmd)
+        return None
+
+    logging.info("Image created in %s" % image_filename)
     return image_filename
 
 
@@ -466,7 +478,6 @@ class BaseVM(object):
         """
         return "/tmp/testlog-%s" % self.instance
 
-
     @error.context_aware
     def login(self, nic_index=0, timeout=10):
         """
@@ -660,13 +671,16 @@ class BaseVM(object):
         Get the cpu count of the VM.
         """
         session = self.login()
+        if not session:
+            return None
         try:
             return int(session.cmd(self.params.get("cpu_chk_cmd")))
         finally:
-            session.close()
+            if session:
+                session.close()
 
 
-    def get_memory_size(self, cmd=None):
+    def get_memory_size(self, cmd=None, timeout=60, re_str=None):
         """
         Get bootup memory size of the VM.
 
@@ -674,11 +688,15 @@ class BaseVM(object):
                 self.params.get("mem_chk_cmd") will be used.
         """
         session = self.login()
+        if not session:
+            return None
         try:
             if not cmd:
                 cmd = self.params.get("mem_chk_cmd")
-            mem_str = session.cmd(cmd)
-            mem = re.findall("([0-9]+)", mem_str)
+            if re_str is None:
+                re_str = self.params.get("mem_chk_re_str", "([0-9]+)")
+            mem_str = session.cmd(cmd, timeout)
+            mem = re.findall(re_str, mem_str)
             mem_size = 0
             for m in mem:
                 mem_size += int(m)
@@ -690,7 +708,8 @@ class BaseVM(object):
                 mem_size /= 1024
             return int(mem_size)
         finally:
-            session.close()
+            if session:
+                session.close()
 
 
     def get_current_memory_size(self):

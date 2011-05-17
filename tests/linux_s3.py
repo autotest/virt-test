@@ -19,7 +19,7 @@ def run_linux_s3(test, params, env):
     session.cmd("grep -q mem /sys/power/state")
 
     logging.info("Waiting for a while for X to start")
-    time.sleep(10)
+    time.sleep(30)
 
     src_tty = session.cmd_output("fgconsole").strip()
     logging.info("Current virtual terminal is %s", src_tty)
