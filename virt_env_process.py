@@ -451,10 +451,9 @@ def _take_screendumps(test, params, env):
                                    time.strftime("%Y-%m-%d_%H-%M-%S")))
             hash = utils.hash_file(temp_filename)
             if hash in cache:
-                try:
-                    os.link(cache[hash], screendump_filename)
-                except OSError:
-                    pass
+                # if the same screendump already exists,then do not save it
+                # into the screendump_dir in JPEG format
+                pass
             else:
                 try:
                     image = PIL.Image.open(temp_filename)
