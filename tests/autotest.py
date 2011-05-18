@@ -26,8 +26,6 @@ def run_autotest(test, params, env, machine=None, kvm_test=False):
     outputdir = test.outputdir
     virt_test_utils.run_autotest(machine, session, control_path, timeout,
                             outputdir, params, kvm_test)
-    virt_test_utils.run_autotest(machine, session, control_path, timeout,
-                                 outputdir, params, kvm_test)
 
 def run_autotest_background(test, params, env, test_name = "dbench",
                             test_control_file="control", machine=None,

@@ -5,7 +5,6 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 """
 
 import time, os, logging, fcntl, re, commands, shelve, glob
-import rss_file_transfer
 import virt_test_utils
 from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
@@ -1490,7 +1489,7 @@ class VM(virt_vm.BaseVM):
             elif protocol == "unix":
                 uri = "unix:%s" % clone.migration_file
             elif protocol == "exec":
-                uri = '"exec:nc localhost %s"' % clone.migration_port
+                uri = 'exec:nc localhost %s' % clone.migration_port
 
             if offline:
                 self.monitor.cmd("stop")
