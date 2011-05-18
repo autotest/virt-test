@@ -239,7 +239,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             elif mig_protocol == "unix":
                 uri = "unix:%s" % dest_vm.migration_file
             elif mig_protocol == "exec":
-                uri = '"exec:nc localhost %s"' % dest_vm.migration_port
+                uri = 'exec:nc localhost %s' % dest_vm.migration_port
 
             if offline:
                 vm.monitor.cmd("stop")
