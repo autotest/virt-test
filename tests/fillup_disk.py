@@ -1,5 +1,5 @@
 import logging
-from autotest.client.shared import error
+from autotest_lib.client.common_lib import error
 
 def run_fillup_disk(test, params, env):
     """
