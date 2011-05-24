@@ -1107,6 +1107,7 @@ def  vm_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout = 300):
     if not kill_thread_flag.empty():
         kill_thread_flag.get()
         thread_kill(monitor_cmd, pid_file)
+        thread_kill("sh", pid_file)
 
     guest_result_file = "/tmp/guest_test_result_%s" % tag
     guest_monitor_result_file = "/tmp/guest_test_monitor_result_%s" % tag
