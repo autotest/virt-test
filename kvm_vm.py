@@ -689,7 +689,7 @@ class VM(virt_vm.BaseVM):
         if mem:
             qemu_cmd += add_mem(help, mem)
 
-        smp = params.get("smp")
+        smp = params.get("smp", 1)
         vcpu_cores = params.get("vcpu_cores", "1")
         if not vcpu_cores:
             vcpu_cores = str(int(smp)/int(vcpu_cores)/int(vcpu_sockets))
