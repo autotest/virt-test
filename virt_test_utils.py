@@ -485,7 +485,7 @@ def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
     @param passwd: password.
     @param prompt: shell/session prompt for the connection.
     """
-    session = kvm_utils.remote_login("ssh", ip, port, usrname, passwd, prompt)
+    session = virt_utils.remote_login("ssh", ip, port, usrname, passwd, prompt)
     if not session:
         raise error.TestError("Failed to login to the autotest server.")
 
