@@ -1,6 +1,6 @@
-import logging
-from autotest.client.shared import error
-from virttest import utils_misc
+import logging, time, shutil
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.virt import virt_utils
 
 
 def run_watchdog(test, params, env):
@@ -15,8 +15,7 @@ def run_watchdog(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     relogin_timeout = int(params.get("relogin_timeout", 240))
-    watchdog_enable_cmd = "chkconfig watchdog on"
-    watchdog_start_cmd = "service watchdog start"
+    watchdog_enable_cmd = "chkconfig watchdog on && service watchdog start"
 
     def watchdog_action_reset():
         """
@@ -29,17 +28,15 @@ def run_watchdog(test, params, env):
         crash_cmd = "echo c > /proc/sysrq-trigger"
         session.sendline(crash_cmd)
 
-        if not utils_misc.wait_for(lambda: not session.is_responsive(),
+        if not virt_utils.wait_for(lambda: not session.is_responsive(),
                                    240, 0, 1):
             raise error.TestFail("Could not trigger crash")
 
         logging.info("Waiting for kernel watchdog_action to take place")
         session = vm.wait_for_login(timeout=relogin_timeout)
 
-    error.context("Enabling watchdog service")
-    session.cmd(watchdog_enable_cmd)
-    error.context("Starting watchdog service")
-    session.cmd(watchdog_start_cmd, timeout=320)
+    logging.info("Enabling watchdog service...")
+    session.cmd(watchdog_enable_cmd, timeout=320)
     watchdog_action_reset()
 
     # Close stablished session
