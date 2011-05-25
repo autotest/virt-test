@@ -451,25 +451,6 @@ class VM(virt_vm.BaseVM):
                    str += " -vga %s" % vga
             return str
 
-        def add_spice(help, port, param):
-            if has_option(help,"spice"):
-                return " -spice port=%s,%s" % (port, param)
-            else:
-                return ""
-
-        def add_qxl_vga(help, qxl, vga, qxl_dev_nr=None):
-            str = ""
-            if has_option(help, "qxl"):
-                if qxl and qxl_dev_nr is not None:
-                    str += " -qxl %s" % qxl_dev_nr
-                if has_option(help, "vga") and vga and vga != "qxl":
-                    str += " -vga %s" % vga
-            elif has_option(help, "vga"):
-                if qxl:
-                    str += " -vga qxl"
-                elif vga:
-                    str += " -vga %s" % vga
-            return str
 
         def add_kernel(help, filename):
             return " -kernel '%s'" % filename
