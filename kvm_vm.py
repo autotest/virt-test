@@ -510,7 +510,7 @@ class VM(virt_vm.BaseVM):
                 return " "
 
         def add_kernel_cmdline(help, cmdline):
-            return " -append %s" % cmdline
+            return " -append '%s'" % cmdline
 
         def add_testdev(help, filename):
             return (" -chardev file,id=testlog,path=%s"
