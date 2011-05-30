@@ -589,12 +589,15 @@ class VM(virt_vm.BaseVM):
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
-            if image_params.get("drive_format") == "ahci" and not have_ahci:
-                qemu_cmd += " -device ahci,id=ahci"
-                have_ahci = True
-            if image_params.get("drive_format") == "usb2" and not have_usb2:
-                qemu_cmd += " -device usb-ehci,id=ehci"
-                have_usb2 = True
+
+            if params.get("index_enable") == "yes":
+                if image_params.get("drive_index") == "0":
+                    index = "0"
+                else:
+                    index = str(index_stg)
+                    index_stg += 1
+            else:
+                index = None
             qemu_cmd += add_drive(help,
                                   virt_vm.get_image_filename(image_params, root_dir),
                                   index,
