@@ -602,8 +602,8 @@ class VM(virt_vm.BaseVM):
                 if image_params.get("drive_index") == "0":
                     index = "0"
                 else:
-                    index_stg += 1
                     index = str(index_stg)
+                    index_stg += 1
             else:
                 index = None
             qemu_cmd += add_drive(help,
