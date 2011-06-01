@@ -422,8 +422,7 @@ def _take_screendumps(test, params, env):
     delay = float(params.get("screendump_delay", 5))
     quality = int(params.get("screendump_quality", 30))
 
-    cache = {}
-
+    hash_pre = None
     while True:
         for vm in env.get_all_vms():
             if not vm.is_alive():
@@ -449,16 +448,16 @@ def _take_screendumps(test, params, env):
             screendump_filename = os.path.join(screendump_dir,
                     "%s_%s.jpg" % (vm.name,
                                    time.strftime("%Y-%m-%d_%H-%M-%S")))
-            hash = utils.hash_file(temp_filename)
-            if hash in cache:
-                # if the same screendump already exists,then do not save it
+            hash_var = utils.hash_file(temp_filename)
+            if hash_var == hash_pre:
+                # if the screendump is same with previous, then do not save it
                 # into the screendump_dir in JPEG format
                 pass
             else:
                 try:
                     image = PIL.Image.open(temp_filename)
                     image.save(screendump_filename, format="JPEG", quality=quality)
-                    cache[hash] = screendump_filename
+                    hash_pre = hash_var
                 except NameError:
                     pass
             os.unlink(temp_filename)
