@@ -247,17 +247,8 @@ class VM(virt_vm.BaseVM):
         def add_mem(help, mem):
             return " -m %s" % mem
 
-        def add_smp(help, smp,
-                    vcpu_cores="0", vcpu_threads="0", vcpu_sockets="0"):
-            smp_str = " -smp %s" % smp
-            # the value is not None, "", or "0"
-            if vcpu_cores and vcpu_cores !="0":
-                smp_str += ",cores=%s" % vcpu_cores
-            if vcpu_threads and vcpu_threads !="0":
-                smp_str += ",threads=%s" % vcpu_threads
-            if vcpu_sockets and vcpu_sockets !="0":
-                smp_str += ",sockets=%s" % vcpu_sockets
-            return smp_str
+        def add_smp(help, smp):
+            return " -smp %s" % smp
 
         def add_cdrom(help, filename, index=None, format=None):
             if has_option(help, "drive"):
