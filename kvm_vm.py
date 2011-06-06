@@ -269,65 +269,32 @@ class VM(virt_vm.BaseVM):
                 return " -cdrom '%s'" % filename
 
         def add_drive(help, filename, index=None, format=None, cache=None,
-                      werror=None, serial=None, snapshot=False, boot=False,
-                      imgfmt="raw", aio=None, media="disk", ide_bus=None,
-                      ide_unit=None, vdisk=None, pci_addr=None,floppy_unit=None,
-                      readonly=False):
-            free_pci_addr = get_free_pci_addr(pci_addr)
-
-            dev = {"virtio" : "virtio-blk-pci",
-                   "ide" : "ide-drive"}
-
-            if format == "ide":
-                id ="ide0-%s-%s" % (ide_bus, ide_unit)
-                ide_bus = "ide." + str(ide_bus)
-            elif format == "virtio":
-                if media == "disk":
-                    vdisk += 1
-                blkdev_id ="virtio-disk%s" % vdisk
-                id = "virtio-disk%s" % vdisk
-            if media == "floppy":
-                id ="fdc0-0-%s" % floppy_unit
-            blkdev_id = "drive-%s" % id
-
-            # -drive part
+                      werror=None, serial=None, snapshot=False, boot=False):
+            name = None;
+            dev = "";
+            if format == "ahci":
+                name = "ahci%s" % index
+                dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
+                format = "none"
+                index = None
             cmd = " -drive file='%s'" % filename
             if index is not None and index.isdigit():
                 cmd += ",index=%s" % index
-            if has_option(help, "device"):
-                cmd += ",if=none"
-                cmd += ",id=%s" % blkdev_id
-            else:
-                if format: cmd += ",if=%s" % format
-
-            if media != "floppy":
-                cmd += ",media=%s" % media
-            if cache: cmd += ",cache=%s" % cache
-            if werror: cmd += ",werror=%s" % werror
-            if serial: cmd += ",serial='%s'" % serial
-            if snapshot: cmd += ",snapshot=on"
-            if boot: cmd += ",boot=on"
-            if media == "cdrom" or readonly : cmd += ",readonly=on"
-            cmd += ",format=%s" % imgfmt
-            if ",aio=" in help and aio : cmd += ",aio=%s" % aio
-
-            # -device part
-            if has_option(help, "device") and media != "floppy":
-                cmd += " -device %s" % dev[format]
-                if format == "ide":
-                    cmd += ",bus=%s" % ide_bus
-                    cmd += ",unit=%s" % ide_unit
-                else:
-                    cmd += ",bus=pci.0,addr=%s" % free_pci_addr
-                cmd += ",drive=%s" % blkdev_id
-                cmd += ",id=%s" % id
-
-            # -global part
-            drivelist = ['driveA','driveB']
-            if has_option(help,"global") and media == "floppy" :
-                cmd += " -global isa-fdc.%s=drive-%s" \
-                          % (drivelist[floppy_unit],id)
-            return cmd
+            if format:
+                cmd += ",if=%s" % format
+            if cache:
+                cmd += ",cache=%s" % cache
+            if werror:
+                cmd += ",werror=%s" % werror
+            if serial:
+                cmd += ",serial='%s'" % serial
+            if snapshot:
+                cmd += ",snapshot=on"
+            if boot:
+                cmd += ",boot=on"
+            if name:
+                cmd += ",id=%s" % name
+            return cmd + dev
 
         def add_nic(help, vlan, model=None, mac=None, netdev_id=None,
                     nic_extra_params=None, pci_addr=None, device_id=None):
@@ -555,6 +522,8 @@ class VM(virt_vm.BaseVM):
         if root_dir is None:
             root_dir = self.root_dir
 
+        have_ahci = False
+
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
 
@@ -609,15 +578,9 @@ class VM(virt_vm.BaseVM):
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
-
-            if params.get("index_enable") == "yes":
-                if image_params.get("drive_index") == "0":
-                    index = "0"
-                else:
-                    index_stg += 1
-                    index = str(index_stg)
-            else:
-                index = None
+            if image_params.get("drive_format") == "ahci" and not have_ahci:
+                qemu_cmd += " -device ahci,id=ahci"
+                have_ahci = True
             qemu_cmd += add_drive(help,
                                   virt_vm.get_image_filename(image_params, root_dir),
                                   index,
