@@ -296,10 +296,6 @@ class VM(virt_vm.BaseVM):
                 cmd += ",id=%s" % name
             return cmd + dev
 
-        def add_nic(help, vlan, model=None, mac=None, netdev_id=None,
-                    nic_extra_params=None, pci_addr=None, device_id=None):
-            free_pci_addr = get_free_pci_addr(pci_addr)
-
             if has_option(help, "netdev"):
                 netdev_vlan_str = ",netdev=%s" % netdev_id
             else:
