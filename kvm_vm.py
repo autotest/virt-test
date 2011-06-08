@@ -681,17 +681,28 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_mem(help, mem)
 
         smp = params.get("smp", 1)
-        vcpu_cores = params.get("vcpu_cores", "1")
-        if not vcpu_cores:
-            vcpu_cores = str(int(smp)/int(vcpu_cores)/int(vcpu_sockets))
 
         vcpu_threads = params.get("vcpu_threads", "1")
+        vcpu_cores = params.get("vcpu_cores", smp)
+        vcpu_sockets = params.get("vcpu_sockets", "1")
+        guest_name = params.get("guest_name")
+
+        if int(smp) > 8 and vcpu_threads == "1":
+            vcpu_threads = "2"
+        if (vcpu_sockets and int(vcpu_sockets) > 2  and "Win" in
+                               re.findall("win", guest_name, re.I)):
+            vcpu_sockets = "2"
+
+        if not vcpu_cores:
+            vcpu_cores = str(int(smp)/int(vcpu_threads)/int(vcpu_sockets))
         if not vcpu_threads:
             vcpu_threads = str(int(smp)/int(vcpu_cores)/int(vcpu_sockets))
-
-        vcpu_sockets = params.get("vcpu_sockets", smp)
         if not vcpu_sockets:
             vcpu_sockets = str(int(smp)/int(vcpu_cores)/int(vcpu_threads))
+        if smp == "1":
+            vcpu_threads = "1"
+            vcpu_cores = "1"
+            vcpu_sockets = "1"
 
         if smp:
             qemu_cmd += add_smp(help, smp,
