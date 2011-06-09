@@ -679,9 +679,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                 os.mkdir(guest_results_dir)
             except OSError:
                 logging.warn("Directory %s existed already!", guest_results_dir)
-        if not vm.copy_files_from("%s/results/default/*" % autotest_path,
-                                  guest_results_dir):
-            logging.error("Could not copy autotest results from guest")
+        vm.copy_files_from("%s/results/default/*" % autotest_path,
+                           guest_results_dir)
 
 
     def get_results_summary():
