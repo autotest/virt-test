@@ -1611,7 +1611,7 @@ class VM(virt_vm.BaseVM):
 
         error.context("waiting for guest to go down", logging.info)
         if not virt_utils.wait_for(lambda:
-                                  not session.is_responsive(timeout=30),
+                                  not session.is_responsive(),
                                   120, 0, 1):
             raise virt_vm.VMRebootError("Guest refuses to go down")
         session.close()
