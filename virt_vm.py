@@ -238,6 +238,10 @@ def create_image(params, root_dir):
     image_filename = get_image_filename(params, root_dir)
     qemu_img_cmd += " %s" % image_filename
 
+    cluster_size = params.get("cluster_size")
+    if cluster_size:
+        qemu_img_cmd += " -o cluster_size=%s" % cluster_size
+
     size = params.get("image_size", "10G")
     qemu_img_cmd += " %s" % size
     try:
