@@ -432,6 +432,9 @@ def _take_screendumps(test, params, env):
             except kvm_monitor.MonitorError, e:
                 logging.warn(e)
                 continue
+            except AttributeError, e:
+                logging.warn(e)
+                continue
             if not os.path.exists(temp_filename):
                 logging.warn("VM '%s' failed to produce a screendump", vm.name)
                 continue
