@@ -27,10 +27,10 @@ def run_netperf(test, params, env):
     netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
     setup_cmd = params.get("setup_cmd")
 
-    firewall_flush = "iptables -F"
+    firewall_flush = "service iptables stop"
     session_serial.cmd_output(firewall_flush)
     try:
-        utils.run("iptables -F")
+        utils.run("service iptables stop")
     except:
         pass
 
