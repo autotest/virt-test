@@ -752,6 +752,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
     try:
         session.cmd("rm -f control.state")
         session.cmd("rm -rf results/*")
+        session.cmd("rm -rf tmp/*")
         if kvm_test:
             session.cmd("mv -f tests/kvm/tests.cfg.remote tests/kvm/tests.cfg")
     except aexpect.ShellError:
