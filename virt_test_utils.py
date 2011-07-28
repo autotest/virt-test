@@ -160,6 +160,36 @@ def reboot(vm, session, method="shell", sleep_before_reset=10, nic_index=0,
     logging.info("Guest is up again")
     return session
 
+def update_boot_option(vm, args_removed=None, args_added=None,
+                       need_reboot=True):
+    """
+    Update guest default kernel option.
+    """
+    if re.findall("win", vm.params.get("guest_name"), re.I):
+        # this function is only for linux, if we need to change
+        # windows guest's boot option, we can use a function like:
+        # update_win_bootloader(args_removed, args_added, reboot)
+        # (this function is not implement.)
+        # here we just:
+        return
+
+    login_timeout = int(vm.params.get("login_timeout"))
+    session = vm.wait_for_login(timeout=login_timeout)
+
+    logging.info("Update the kernel cmdline ...")
+    cmd = "grubby --update-kernel=`grubby --default-kernel` "
+    if args_removed:
+        cmd += '--remove-args="%s" ' % args_removed
+    if args_added:
+        cmd += '--args="%s"' % args_added
+    s, o = session.cmd_status_output(cmd)
+    if s != 0:
+        logging.error(o)
+        raise error.TestError("Fail to modify the kernel cmdline")
+
+    if need_reboot:
+        logging.info("Rebooting ...")
+        vm.reboot(session=session, timeout=login_timeout)
 
 def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             mig_cancel=False, offline=False, stable_check=False,
