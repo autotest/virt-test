@@ -23,6 +23,14 @@ def run_timedrift_with_stop(test, params, env):
     sleep_time = int(params.get("sleep_time", 30))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+
+    boot_option_added = params.get("boot_option_added")
+    boot_option_removed = params.get("boot_option_removed")
+    if boot_option_added or boot_option_removed:
+        utils_test.update_boot_option(vm,
+                                      args_removed=boot_option_removed,
+                                      args_added=boot_option_added)
+
     session = vm.wait_for_login(timeout=login_timeout)
 
     # Collect test parameters:
@@ -95,6 +103,11 @@ def run_timedrift_with_stop(test, params, env):
     finally:
         if session:
             session.close()
+        # remove flags add for this test.
+        if boot_option_added or boot_option_removed:
+            utils_test.update_boot_option(vm,
+                                          args_removed=boot_option_added,
+                                          args_added=boot_option_removed)
 
     # Report results
     host_delta = ht1 - ht0

@@ -28,8 +28,8 @@ def run_timedrift_with_cpu_offline(test, params, env):
     boot_option_removed = params.get("boot_option_removed")
     if boot_option_added or boot_option_removed:
         utils_test.update_boot_option(vm,
-                                           args_removed=boot_option_removed,
-                                           args_added=boot_option_added)
+                                      args_removed=boot_option_removed,
+                                      args_added=boot_option_added)
 
     session = vm.wait_for_login(timeout=login_timeout)
 
@@ -110,5 +110,5 @@ def run_timedrift_with_cpu_offline(test, params, env):
         # remove flags add for this test.
         if boot_option_added or boot_option_removed:
             utils_test.update_boot_option(vm,
-                                               args_removed=boot_option_added,
-                                               args_added=boot_option_removed)
+                                          args_removed=boot_option_added,
+                                          args_added=boot_option_removed)

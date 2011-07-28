@@ -54,6 +54,14 @@ def run_timedrift(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+
+    boot_option_added = params.get("boot_option_added")
+    boot_option_removed = params.get("boot_option_removed")
+    if boot_option_added or boot_option_removed:
+        utils_test.update_boot_option(vm,
+                                      args_removed=boot_option_removed,
+                                      args_added=boot_option_added)
+
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
@@ -164,6 +172,11 @@ def run_timedrift(test, params, env):
 
     finally:
         session.close()
+        # remove flags add for this test.
+        if boot_option_added or boot_option_removed:
+            utils_test.update_boot_option(vm,
+                                          args_removed=boot_option_added,
+                                          args_added=boot_option_removed)
 
     # Report results
     host_delta_total = ht2 - ht0
