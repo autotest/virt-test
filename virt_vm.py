@@ -1,7 +1,7 @@
 import os, logging, time, glob, re, shutil
 from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
-import virt_utils
+import virt_utils, virt_test_utils
 
 class VMError(Exception):
     pass
@@ -631,7 +631,7 @@ class BaseVM(object):
 
 
     def wait_for_login(self, nic_index=0, timeout=240, internal_timeout=10,
-                       serial=False):
+                       serial=False, restart_network=False):
         """
         Make multiple attempts to log into the guest via SSH/Telnet/Netcat.
 
@@ -640,6 +640,7 @@ class BaseVM(object):
         @param internal_timeout: Timeout to pass to login().
         @param serial: Whether to use a serial connection when remote login
                 (ssh, rss) failed.
+        @param restart_network: Whether to try to restart guest's network.
         @return: A ShellSession object.
         """
         logging.debug("Attempting to log into '%s' (timeout %ds)", self.name,
@@ -653,9 +654,10 @@ class BaseVM(object):
             time.sleep(2)
 
         # Timeout expired
-        if serial:
+        if serial or restart_network:
             # Try to login via serila console
-            return self.wait_for_serial_login(timeout, internal_timeout)
+            return self.wait_for_serial_login(timeout, internal_timeout,
+                                              restart_network)
         else:
             # Try one more time but don't catch exceptions
             return self.login(nic_index, internal_timeout)
@@ -743,12 +745,14 @@ class BaseVM(object):
         return self.serial_console
 
 
-    def wait_for_serial_login(self, timeout=240, internal_timeout=10):
+    def wait_for_serial_login(self, timeout=240, internal_timeout=10,
+                              restart_network=False):
         """
         Make multiple attempts to log into the guest via serial console.
 
         @param timeout: Time (seconds) to keep trying to log in.
         @param internal_timeout: Timeout to pass to serial_login().
+        @param restart_network: Whether try to restart guest's network.
         @return: A ShellSession object.
         """
         logging.debug("Attempting to log into '%s' via serial console "
@@ -756,7 +760,13 @@ class BaseVM(object):
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
-                return self.serial_login(internal_timeout)
+                session = self.serial_login(internal_timeout)
+                if restart_network:
+                    try:
+                        virt_test_utils.restart_guest_network(session)
+                    except:
+                        pass
+                return session
             except virt_utils.LoginError, e:
                 logging.debug(e)
             time.sleep(2)
