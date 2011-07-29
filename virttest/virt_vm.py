@@ -818,6 +818,7 @@ class BaseVM(object):
 
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
                        internal_timeout=LOGIN_TIMEOUT,
+                       serial=False,
                        username=None, password=None):
         """
         Make multiple attempts to log into the guest via SSH/Telnet/Netcat.
@@ -825,6 +826,8 @@ class BaseVM(object):
         @param nic_index: The index of the NIC to connect to.
         @param timeout: Time (seconds) to keep trying to log in.
         @param internal_timeout: Timeout to pass to login().
+        @param serial: Whether to use a serial connection when remote login
+                (ssh, rss) failed.
         @return: A ShellSession object.
         """
         error_messages = []
@@ -842,9 +845,14 @@ class BaseVM(object):
                     logging.debug(e)
                     error_messages.append(e)
             time.sleep(2)
-        # Timeout expired; try one more time but don't catch exceptions
-        return self.login(nic_index, internal_timeout,
-                          username, password)
+        # Timeout expired
+        if serial:
+            # Try to login via serila console
+            return self.wait_for_serial_login(timeout, internal_timeout,
+                                              username, password)
+        else:
+            # Try one more time but don't catch exceptions
+            return self.login(nic_index, internal_timeout, username, password)
 
 
     @error.context_aware
