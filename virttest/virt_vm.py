@@ -818,7 +818,7 @@ class BaseVM(object):
 
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
                        internal_timeout=LOGIN_TIMEOUT,
-                       serial=False,
+                       serial=False, restart_network=False,
                        username=None, password=None):
         """
         Make multiple attempts to log into the guest via SSH/Telnet/Netcat.
@@ -828,6 +828,7 @@ class BaseVM(object):
         @param internal_timeout: Timeout to pass to login().
         @param serial: Whether to use a serial connection when remote login
                 (ssh, rss) failed.
+        @param restart_network: Whether to try to restart guest's network.
         @return: A ShellSession object.
         """
         error_messages = []
@@ -846,9 +847,10 @@ class BaseVM(object):
                     error_messages.append(e)
             time.sleep(2)
         # Timeout expired
-        if serial:
+        if serial or restart_network:
             # Try to login via serila console
             return self.wait_for_serial_login(timeout, internal_timeout,
+                                              restart_network,
                                               username, password)
         else:
             # Try one more time but don't catch exceptions
@@ -952,12 +954,14 @@ class BaseVM(object):
 
     def wait_for_serial_login(self, timeout=LOGIN_WAIT_TIMEOUT,
                               internal_timeout=LOGIN_TIMEOUT,
+                              restart_network=False,
                               username=None, password=None):
         """
         Make multiple attempts to log into the guest via serial console.
 
         @param timeout: Time (seconds) to keep trying to log in.
         @param internal_timeout: Timeout to pass to serial_login().
+        @param restart_network: Whether try to restart guest's network.
         @return: A ShellSession object.
         """
         error_messages = []
@@ -966,7 +970,13 @@ class BaseVM(object):
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
-                return self.serial_login(internal_timeout)
+                session = self.serial_login(internal_timeout)
+                if restart_network:
+                    try:
+                        utils_net.restart_guest_network(session)
+                    except:
+                        pass
+                return session
             except remote.LoginError, e:
                 self.verify_alive()
                 e = str(e)
