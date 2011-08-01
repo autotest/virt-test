@@ -725,7 +725,7 @@ class VM(virt_vm.BaseVM):
 
         def add_net(help_text, vlan, nettype, ifname=None, tftp=None, bootfile=None,
                     hostfwd=[], netdev_id=None, netdev_extra_params=None,
-                    tapfd=None):
+                    tapfd=None, vhost=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -736,6 +736,8 @@ class VM(virt_vm.BaseVM):
                 return ''
             if has_option(help_text, "netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
+                if vhost:
+                    cmd += ",%s" % vhost
                 if netdev_extra_params:
                     cmd += "%s" % netdev_extra_params
             else:
@@ -1329,6 +1331,7 @@ class VM(virt_vm.BaseVM):
         for nic in vm.virtnet:
             nic_params = params.object_params(nic.nic_name)
             if nic_params.get('pci_assignable') == "no":
+                vhost = nic_params.get("vhost")
                 # setup nic parameters as needed
                 # add_netdev if netdev_id not set
                 nic = vm.add_nic(**dict(nic))
@@ -1361,7 +1364,7 @@ class VM(virt_vm.BaseVM):
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
                                     bootp, redirs, netdev_id, netdev_extra,
-                                    tapfd)
+                                    tapfd, vhost)
             else:
                 pci_id = vm.pa_pci_ids[iov]
                 qemu_cmd += add_pcidevice(help, pci_id, params=nic_params)
