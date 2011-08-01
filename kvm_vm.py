@@ -345,11 +345,13 @@ class VM(virt_vm.BaseVM):
                 cmd += ",id='%s'" % device_id
             return cmd
 
-        def add_net(help, vlan, mode, ifname=None, tftp=None, bootfile=None,
-                    hostfwd=[], netdev_id=None, netdev_extra_params=None,
-                    tapfd=None):
+        def add_net(help, vlan, mode, ifname=None, script=None,
+                    downscript=None, tftp=None, bootfile=None, hostfwd=[],
+                    netdev_id=None, vhost=None, netdev_extra_params=None):
             if has_option(help, "netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
+                if vhost:
+                    cmd += ",%s" % vhost
                 if netdev_extra_params:
                     cmd += ",%s" % netdev_extra_params
             else:
@@ -651,8 +653,8 @@ class VM(virt_vm.BaseVM):
                                 nic_params.get("nic_mode", "user"),
                                 vm.get_ifname(vlan), tftp,
                                 nic_params.get("bootp"), redirs, netdev_id,
-                                nic_params.get("netdev_extra_params"),
-                                tapfd)
+                                nic_params.get("vhost"),
+                                nic_params.get("netdev_extra_params"))
             # Proceed to next NIC
             vlan += 1
 
