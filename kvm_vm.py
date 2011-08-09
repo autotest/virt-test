@@ -657,13 +657,15 @@ class VM(virt_vm.BaseVM):
             else:
                 return " -redir tcp:%s::%s" % (host_port, guest_port)
 
+
         def add_vnc(help, vnc_port, vnc_password='no', extra_params=None):
             vnc_cmd = " -vnc :%d" % (vnc_port - 5900)
-            if "yes" in vnc_password:
+            if vnc_password == "yes":
                 vnc_cmd += ",password"
-            if extra_params is not None:
+            if extra_params:
                 vnc_cmd += ",%s" % extra_params
             return vnc_cmd
+
 
         def add_sdl(help):
             if has_option(help, "sdl"):
@@ -1265,11 +1267,9 @@ class VM(virt_vm.BaseVM):
 
         if params.get("display") == "vnc":
             vnc_extra_params = params.get("vnc_extra_params")
-            vnc_password = "no"
-            if params.get("vnc_password"):
-                vnc_password = params.get("vnc_password")
+            vnc_password = params.get("vnc_password", "no")
             qemu_cmd += add_vnc(help, self.vnc_port, vnc_password,
-                                                     vnc_extra_params)
+                                vnc_extra_params)
         elif params.get("display") == "sdl":
             qemu_cmd += add_sdl(help)
         elif params.get("display") == "nographic":
@@ -2034,7 +2034,7 @@ class VM(virt_vm.BaseVM):
         return self.vnc_port
 
 
-    def get_vcpu_pids(self,params):
+    def get_vcpu_pids(self):
         """
         Return the list of vcpu PIDs
 
