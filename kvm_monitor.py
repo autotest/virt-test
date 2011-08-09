@@ -291,7 +291,7 @@ class HumanMonitor(Monitor):
     #   about the monitor's capabilities.
 
 
-    def send_args_cmd(self, cmdline, timeout=20, convert=True):
+    def send_args_cmd(self, cmdlines, timeout=20, convert=True):
         """
         Send a command with/without parameter and return its output.
         Have same effect with cmd function.
@@ -305,17 +305,20 @@ class HumanMonitor(Monitor):
         @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
                 found after sending the command
         """
-        if not convert:
-            return self.cmd(cmdline, timeout)
-        if "=" in cmdline:
-            command = cmdline.split()[0]
-            cmdargs = " ".join(cmdline.split()[1:]).split(",")
-            for arg in cmdargs:
-                command += " " + arg.split("=")[-1]
-        else:
-             command = cmdline
-        return self.cmd(command, timeout)
-
+        cmd_output = ""
+        for cmdline in cmdlines.split(";"):
+            logging.info(cmdline)
+            if not convert:
+                return self.cmd(cmdline, timeout)
+            if "=" in cmdline:
+                command = cmdline.split()[0]
+                cmdargs = " ".join(cmdline.split()[1:]).split(",")
+                for arg in cmdargs:
+                    command += " " + arg.split("=")[-1]
+            else:
+                command = cmdline
+            cmd_output += self.cmd(command, timeout)
+        return cmd_output
 
     def quit(self):
         """
@@ -752,7 +755,7 @@ class QMPMonitor(Monitor):
     # Note: all of the following functions raise exceptions in a similar manner
     # to cmd().
 
-    def send_args_cmd(self, cmdline, timeout=20, convert=True):
+    def send_args_cmd(self, cmdlines, timeout=20, convert=True):
         """
         Send a command with/without parameters and return its output.
         Command with parameters should in following format e.g.:
@@ -766,35 +769,37 @@ class QMPMonitor(Monitor):
         @raise MonitorSendError: Raised if the command cannot be sent
         @raise MonitorProtocolError: Raised if no response is received
         """
-        command = cmdline.split()[0]
-        commands = self.cmd("query-commands")
-        if command not in str(commands):
-            if "=" in cmdline:
-                command = cmdline.split()[0]
-                cmdargs = " ".join(cmdline.split()[1:]).split(",")
-                for arg in cmdargs:
-                    command += " " + arg.split("=")[-1]
-            else:
-                 command = cmdline
-            return self.human_monitor_cmd(command)
-        cmdargs = " ".join(cmdline.split()[1:]).split(",")
-        args = {}
-        for arg in cmdargs:
-            opt = arg.split('=')
-            try:
+        cmd_output = []
+        for cmdline in cmdlines.split(";"):
+            command = cmdline.split()[0]
+            commands = self.cmd("query-commands")
+            if command not in str(commands):
+                if "=" in cmdline:
+                    command = cmdline.split()[0]
+                    cmdargs = " ".join(cmdline.split()[1:]).split(",")
+                    for arg in cmdargs:
+                        command += " " + arg.split("=")[-1]
+                else:
+                    command = cmdline
+                cmd_output.append(self.human_monitor_cmd(command))
+            cmdargs = " ".join(cmdline.split()[1:]).split(",")
+            args = {}
+            for arg in cmdargs:
+                opt = arg.split('=')
                 try:
-                    value = int(opt[1])
-                except ValueError:
-                    if "True" in opt[1] or "true" in opt[1]:
+                    if re.match("^[0-9]$", opt[1]):
+                        value = int(opt[1])
+                    elif "True" in opt[1] or "true" in opt[1]:
                         value = True
                     elif "false" in opt[1] or "False" in opt[1]:
                         value = False
                     else:
                         value = opt[1].strip()
-                args[opt[0].strip()] = value
-            except:
-                  logging.debug("Fail to create args, please check command")
-        return self.cmd(command, args, timeout=timeout)
+                    args[opt[0].strip()] = value
+                except:
+                    logging.debug("Fail to create args, please check command")
+            cmd_output.append(self.cmd(command, args, timeout=timeout))
+        return cmd_output
 
 
     def quit(self):
