@@ -2338,3 +2338,40 @@ def has_option(option, qemu_path="/usr/libexec/qemu-kvm"):
     help = commands.getoutput("%s -help" % qemu_path)
     return bool(re.search(r"^-%s(\s|$)" % option, help, re.MULTILINE))
 
+
+def BitList_to_String(data):
+    """
+    Transform from bit list to ASCII string.
+
+    @data: Bit list to be transformed
+    """
+    result = []
+    pos = 0
+    c = 0
+    while pos < len(data):
+        c += data[pos] << (7 - (pos % 8))
+        if (pos % 8) == 7:
+            result.append(c)
+            c = 0
+        pos += 1
+    return ''.join([ chr(c) for c in result ])
+
+
+def String_to_BitList(data):
+    """
+    Transform from ASCII string to bit list.
+
+    @data: String to be transformed
+    """
+    data = [ord(c) for c in data]
+    result = []
+    for ch in data:
+        i = 7
+        while i >= 0:
+            if ch & (1 << i) != 0:
+                result.append(1)
+            else:
+                result.append(0)
+            i -= 1
+    return result
+
