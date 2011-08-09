@@ -3246,64 +3246,39 @@ def open_tap(devname, ifname, vnet_hdr=True):
     return tapfd
 
 
-def add_to_bridge(ifname, brname):
+def BitList_to_String(data):
     """
-    Add a TAP device to bridge
+    Transform from bit list to ASCII string.
 
-    @param ifname: Name of TAP device
-    @param brname: Name of the bridge
+    @data: Bit list to be transformed
     """
-    ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
-    index = if_nametoindex(ifname)
-    if index == 0:
-        raise TAPNotExistError(ifname)
-    ifr = struct.pack("16si", brname, index)
-    try:
-        r = fcntl.ioctl(ctrl_sock, SIOCBRADDIF, ifr)
-    except IOError, details:
-        raise BRAddIfError(ifname, brname, details)
-    ctrl_sock.close()
+    result = []
+    pos = 0
+    c = 0
+    while pos < len(data):
+        c += data[pos] << (7 - (pos % 8))
+        if (pos % 8) == 7:
+            result.append(c)
+            c = 0
+        pos += 1
+    return ''.join([ chr(c) for c in result ])
 
 
-def bring_up_ifname(ifname):
+def String_to_BitList(data):
     """
-    Bring up an interface
+    Transform from ASCII string to bit list.
 
-    @param ifname: Name of the interface
+    @data: String to be transformed
     """
-    ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
-    ifr = struct.pack("16si", ifname, IFF_UP)
-    try:
-        fcntl.ioctl(ctrl_sock, SIOCSIFFLAGS, ifr)
-    except IOError:
-        raise TAPBringUpError(ifname)
-    ctrl_sock.close()
+    data = [ord(c) for c in data]
+    result = []
+    for ch in data:
+        i = 7
+        while i >= 0:
+            if ch & (1 << i) != 0:
+                result.append(1)
+            else:
+                result.append(0)
+            i -= 1
+    return result
 
-
-def if_set_macaddress(ifname, mac):
-    """
-    Set the mac address for an interface
-
-    @param ifname: Name of the interface
-    @mac: Mac address
-    """
-    ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
-
-    ifr = struct.pack("256s", ifname)
-    try:
-        mac_dev = fcntl.ioctl(ctrl_sock, SIOCGIFHWADDR, ifr)[18:24]
-        mac_dev = ":".join(["%02x" % ord(m) for m in mac_dev])
-    except IOError, e:
-        raise HwAddrGetError(ifname)
-
-    if mac_dev.lower() == mac.lower():
-        return
-
-    ifr = struct.pack("16sH14s", ifname, 1,
-                      "".join([chr(int(m, 16)) for m in mac.split(":")]))
-    try:
-        fcntl.ioctl(ctrl_sock, SIOCSIFHWADDR, ifr)
-    except IOError, e:
-        logging.info(e)
-        raise HwAddrSetError(ifname, mac)
-    ctrl_sock.close()
