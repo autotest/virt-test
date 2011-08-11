@@ -9,7 +9,7 @@ import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect, tarfile
 import struct, shutil
 from autotest_lib.client.bin import utils, os_dep
 from autotest_lib.client.common_lib import error, logging_config
-import rss_client, aexpect
+import rss_client, aexpect, virt_vm
 try:
     import koji
     KOJI_INSTALLED = True
@@ -1228,13 +1228,33 @@ def run_tests(parser, job):
 
     @return: True, if all tests ran passed, False if any of them failed.
     """
-    for i, d in enumerate(parser.get_dicts()):
-        logging.info("Test %4d:  %s" % (i + 1, d["shortname"]))
+    test_dicts = list(parser.get_dicts())
+    if len(test_dicts) > 0 and "prepare_case" in test_dicts[0].keys():
+        prepare_case = test_dicts[0]["prepare_case"]
+    else:
+        prepare_case = ['unattended_install', 'rh_kernel_update',
+                                           'disable_win_update']
+    for case in prepare_case:
+        del_list = {}
+        for d in test_dicts:
+            if case in d["name"]:
+                if "case_type" in d.keys() and d["case_type"] == "prepare":
+                    img_name = virt_vm.get_image_filename(d, ".")
+                    if img_name not in del_list.keys():
+                        del_list[img_name] = [d]
+                    else:
+                        del_list[img_name].append(d)
+        for img_l in del_list.keys():
+            if len(del_list[img_l]) > 1:
+                for d in del_list[img_l][:-1]:
+                    test_dicts.remove(d)
+    for i in range(len(test_dicts)):
+        logging.info("Test %4d:  %s" % (i + 1, test_dicts[i]["shortname"]))
 
     status_dict = {}
     failed = False
 
-    for dict in parser.get_dicts():
+    for dict in test_dicts:
         if dict.get("skip") == "yes":
             continue
         dependencies_satisfied = True
