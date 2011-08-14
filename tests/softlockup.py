@@ -1,6 +1,6 @@
 import logging, os, socket, time
-from autotest.client import utils
-from autotest.client.shared import error
+from autotest_lib.client.bin import utils
+
 
 def run_softlockup(test, params, env):
     """
@@ -12,7 +12,7 @@ def run_softlockup(test, params, env):
     3) Run for a relatively long time length. ex: 12, 18 or 24 hours.
     4) Output the test result and observe drift.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -32,18 +32,18 @@ def run_softlockup(test, params, env):
     vm = env.get_vm(params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))
     stress_dir = os.path.join(os.environ['AUTODIR'], "tests/stress")
-    monitor_dir = os.path.join(test.virtdir, 'deps')
+    monitor_dir = os.path.join(test.bindir, 'deps')
 
 
     def _kill_guest_programs(session, kill_stress_cmd, kill_monitor_cmd):
         logging.info("Kill stress and monitor on guest")
         try:
             session.cmd(kill_stress_cmd)
-        except Exception:
+        except:
             pass
         try:
             session.cmd(kill_monitor_cmd)
-        except Exception:
+        except:
             pass
 
 
@@ -105,11 +105,11 @@ def run_softlockup(test, params, env):
         # Opening firewall ports on guest
         try:
             session.cmd("iptables -F")
-        except Exception:
+        except:
             pass
 
         # Get required files and copy them from host to guest
-        monitor_path = os.path.join(test.virtdir, 'deps', 'heartbeat_slu.py')
+        monitor_path = os.path.join(test.bindir, 'deps', 'heartbeat_slu.py')
         stress_path = os.path.join(os.environ['AUTODIR'], "tests", "stress",
                                    "stress-1.0.4.tar.gz")
         vm.copy_files_to(monitor_path, "/tmp")
@@ -118,7 +118,7 @@ def run_softlockup(test, params, env):
         logging.info("Setup monitor client on guest")
         # Start heartbeat on guest
         session.cmd(params.get("client_setup_cmd") %
-                    ("/tmp", host_ip, monitor_log_file_client, monitor_port))
+                    ("/tmp", monitor_log_file_client, host_ip, monitor_port))
 
         logging.info("Build stress on guest")
         # Uncompress and build stress on guest
