@@ -77,6 +77,7 @@ class VM(virt_vm.BaseVM):
         self.params = params
         self.root_dir = root_dir
         self.address_cache = address_cache
+        self.index_in_use = {}
         # This usb_dev_dict member stores usb controller and device info,
         # It's dict, each key is an id of usb controller,
         # and key's value is a list, contains usb devices' ids which
@@ -1073,6 +1074,13 @@ class VM(virt_vm.BaseVM):
                 cmd = ""
             return cmd
 
+
+        def get_index(index):
+            while self.index_in_use.get(str(index)):
+                index += 1
+            return index
+
+
         def add_machine_type(help, machine_type, invalid_type=False):
             if has_option(help_text, "machine") or has_option(help_text, "M"):
                 output = utils.system_output("%s -M ?" % qemu_binary)
@@ -1187,6 +1195,12 @@ class VM(virt_vm.BaseVM):
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
 
+        # global counters
+        ide_bus = 0
+        ide_unit = 0
+        vdisk = 0
+        scsi_disk = 0
+
         qemu_binary = utils_misc.get_path(os.path.join(root_dir,
                                                        params.get("vm_type")),
                                           params.get("qemu_binary", "qemu"))
@@ -1195,6 +1209,12 @@ class VM(virt_vm.BaseVM):
         help_text = commands.getoutput("%s -help" % qemu_binary)
         support_cpu_model = commands.getoutput("%s -cpu ?" % qemu_binary)
         support_machine_type = commands.getoutput("%s -M ?" % qemu_binary)
+
+        index_global = 0
+        # init the dict index_in_use
+        for key in params.keys():
+            if 'drive_index' in key:
+                self.index_in_use[params.get(key)] = True
 
         device_help = ""
         if has_option(help_text, "device"):
