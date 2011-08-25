@@ -51,6 +51,7 @@ class VM(virt_vm.BaseVM):
         self.params = params
         self.root_dir = root_dir
         self.address_cache = address_cache
+        self.index_in_use = {}
 
         kvm_version = virt_utils.get_version()
         self.host_version = virt_test_utils.get_rh_host_version(kvm_version)
@@ -524,7 +525,10 @@ class VM(virt_vm.BaseVM):
                 cmd = ""
             return cmd
 
-
+        def get_index(index):
+            while self.index_in_use.get(str(index)):
+                index += 1
+            return index
 
         # End of command line option wrappers
 
@@ -554,10 +558,11 @@ class VM(virt_vm.BaseVM):
         logging.debug("Getting output of 'qemu -help'")
         help = commands.getoutput("%s -help" % qemu_binary)
 
-        # Define the starting value of storage index
-        index_stg = int(params.get("index_stg", 2))
-        # Define the starting value of cdrom index
-        index_cd = int(params.get("index_cd", 0))
+        index_global = 0
+        # init the dict index_in_use
+        for key in params.keys():
+            if 'drive_index' in key:
+                self.index_in_use[params.get(key)] = True
 
         # Start constructing the qemu command
         qemu_cmd = ""
@@ -587,11 +592,13 @@ class VM(virt_vm.BaseVM):
                 continue
 
             if params.get("index_enable") == "yes":
-                if image_params.get("drive_index") == "0":
-                    index = "0"
+                drive_index = image_params.get("drive_index")
+                if drive_index:
+                    index = drive_index
                 else:
-                    index = str(index_stg)
-                    index_stg += 1
+                    index_global = get_index(index_global)
+                    index = str(index_global)
+                    index_global += 1
             else:
                 index = None
             qemu_cmd += add_drive(help,
@@ -704,8 +711,13 @@ class VM(virt_vm.BaseVM):
             if iso:
                 iso = virt_utils.get_path(root_dir, iso)
                 if params.get("index_enable") == "yes":
-                    index_cd += 1
-                    index = str(index_cd)
+                    drive_index = cdrom_params.get("drive_index")
+                    if drive_index:
+                        index = drive_index
+                    else:
+                        index_global = get_index(index_global)
+                        index = str(index_global)
+                        index_global += 1
                 else:
                     index = None
                 if has_option(help, "device"):
