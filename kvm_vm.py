@@ -52,6 +52,7 @@ class VM(virt_vm.BaseVM):
         self.params = params
         self.root_dir = root_dir
         self.address_cache = address_cache
+        self.index_in_use = {}
 
         kvm_version = virt_utils.get_version()
         self.host_version = virt_test_utils.get_rh_host_version(kvm_version)
@@ -509,7 +510,10 @@ class VM(virt_vm.BaseVM):
                 cmd = ""
             return cmd
 
-
+        def get_index(index):
+            while self.index_in_use.get(str(index)):
+                index += 1
+            return index
 
         # End of command line option wrappers
 
@@ -539,10 +543,11 @@ class VM(virt_vm.BaseVM):
                                                               "qemu"))
         help = commands.getoutput("%s -help" % qemu_binary)
 
-        # Define the starting value of storage index
-        index_stg = int(params.get("index_stg", 2))
-        # Define the starting value of cdrom index
-        index_cd = int(params.get("index_cd", 0))
+        index_global = 0
+        # init the dict index_in_use
+        for key in params.keys():
+            if 'drive_index' in key:
+                self.index_in_use[params.get(key)] = True
 
         # Start constructing the qemu command
         qemu_cmd = ""
@@ -581,11 +586,13 @@ class VM(virt_vm.BaseVM):
                 continue
 
             if params.get("index_enable") == "yes":
-                if image_params.get("drive_index") == "0":
-                    index = "0"
+                drive_index = image_params.get("drive_index")
+                if drive_index:
+                    index = drive_index
                 else:
-                    index = str(index_stg)
-                    index_stg += 1
+                    index_global = get_index(index_global)
+                    index = str(index_global)
+                    index_global += 1
             else:
                 index = None
             qemu_cmd += add_drive(help,
@@ -701,9 +708,68 @@ class VM(virt_vm.BaseVM):
                 qemu_cmd += " -device usb-ehci,id=ehci"
                 have_usb2 = True
             if iso:
-                qemu_cmd += add_cdrom(help, virt_utils.get_path(root_dir, iso),
-                                      cdrom_params.get("drive_index"),
-                                      cdrom_params.get("cd_format"))
+                iso = virt_utils.get_path(root_dir, iso)
+                if params.get("index_enable") == "yes":
+                    drive_index = cdrom_params.get("drive_index")
+                    if drive_index:
+                        index = drive_index
+                    else:
+                        index_global = get_index(index_global)
+                        index = str(index_global)
+                        index_global += 1
+                else:
+                    index = None
+                if has_option(help, "device"):
+                    qemu_cmd += add_drive(help, iso, index, "ide", media="cdrom",
+                                          ide_bus=ide_bus, ide_unit=ide_unit)
+                else:
+                    qemu_cmd += add_cdrom(help, iso, index)
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+
+        cpu_model = params.get("cpu_model", "qemu64")
+        if "2.6.32" in commands.getoutput("uname -r"):
+            cpu_model = "cpu64-rhel6"
+        flags = params.get("extra_flags")
+        x2apic = params.get("enable_x2apic")
+
+        if "el6" in commands.getoutput("uname -r") and x2apic=="yes":
+            flags += ",+x2apic"
+
+        qemu_cmd += add_cpu_flags(help, cpu_model, flags,
+                                  params.get("cpu_vendor_id"))
+
+        soundhw = params.get("soundcards")
+        if soundhw:
+            if "2.6.32" not in commands.getoutput("uname -r"):
+                qemu_cmd += " -soundhw %s" % soundhw
+
+        # We may want to add the floppy using the "-drive -global " format
+        # and the current script allow the nums of the floppies to be 2
+        # Readonly floppy is supported by adding the parameter of floppy_readonly
+        floppies = params.get("floppy")
+        floppies_readonly = params.get("floppy_readonly")
+        if floppies:
+            for floppy in floppies.split():
+                floppy = virt_utils.get_path(root_dir, floppy)
+                qemu_cmd += add_floppy(help, floppy)
+        if floppies and floppies_readonly:
+            floppy_list = floppies.split()
+            fl_readonly_list = floppies_readonly.split()
+            for index in range(len(fl_readonly_list)):
+                fl_readonly_list[index] = eval(fl_readonly_list[index])
+            if len(floppy_list) > 2 :
+                raise error.TestError("Only the maximum of 2 floppies"
+                                      " can be supported here")
+            for (floppy,fl_readonly) in zip(floppy_list,fl_readonly_list):
+                floppy = virt_utils.get_path(root_dir, floppy)
+                if has_option(help,"global"):
+                    qemu_cmd += add_drive(help,floppy,media="floppy",
+                        floppy_unit=floppy_unit,readonly=fl_readonly)
+                else:
+                    qemu_cmd += add_floppy(help, floppy)
+                floppy_unit ^= 1
 
         usbdevice = params.get("usbdevice")
         if usbdevice:
