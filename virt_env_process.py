@@ -243,12 +243,9 @@ def preprocess(test, params, env):
 
     # Get the KVM userspace version and write it as a keyval
     logging.debug("Fetching KVM userspace version...")
-    qemu_path = virt_utils.get_path(test.bindir, params.get("qemu_binary",
-                                                           "qemu"))
-    version_line = commands.getoutput("%s -help | head -n 1" % qemu_path)
-    matches = re.findall("[Vv]ersion .*?,", version_line)
-    if matches:
-        kvm_userspace_version = " ".join(matches[0].split()[1:]).strip(",")
+    kvm_userspace_ver_cmd = params.get("kvm_userspace_ver_cmd")
+    if kvm_userspace_ver_cmd is not None:
+        kvm_userspace_version = commands.getoutput(kvm_userspace_ver_cmd)
     else:
         kvm_userspace_version = "Unknown"
         logging.debug("Could not fetch KVM userspace version")
