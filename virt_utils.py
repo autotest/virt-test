@@ -3302,3 +3302,9 @@ def String_to_BitList(data):
             i -= 1
     return result
 
+
+def get_mem_status(keywords):
+    for line in file('/proc/meminfo', 'r').readlines():
+        if line.startswith("%s" % keywords):
+            output = re.split('\s+', line)[1]
+    return output
