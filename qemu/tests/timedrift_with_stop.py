@@ -1,4 +1,4 @@
-import logging, time
+import logging, time, os, signal
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -36,6 +36,10 @@ def run_timedrift_with_stop(test, params, env):
     drift_threshold_single = float(params.get("drift_threshold_single", "3"))
     stop_iterations = int(params.get("stop_iterations", 1))
     stop_time = int(params.get("stop_time", 60))
+    stop_with_signal = params.get("stop_with_signal") == "yes"
+
+    # Get guest's pid.
+    pid = vm.get_pid()
 
     try:
         # Get initial time
@@ -51,10 +55,16 @@ def run_timedrift_with_stop(test, params, env):
             # Run current iteration
             logging.info("Stop %s second: iteration %d of %d...",
                          stop_time, (i + 1), stop_iterations)
-
-            vm.pause()
-            time.sleep(stop_time)
-            vm.resume()
+            if stop_with_signal:
+                logging.debug("Stop guest")
+                os.kill(pid, signal.SIGSTOP)
+                time.sleep(stop_time)
+                logging.debug("Continue guest")
+                os.kill(pid, signal.SIGCONT)
+            else:
+                vm.pause()
+                time.sleep(stop_time)
+                vm.resume()
 
             # Sleep for a while to wait the interrupt to be reinjected
             logging.info("Waiting for the interrupt to be reinjected ...")
