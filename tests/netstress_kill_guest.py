@@ -1,7 +1,7 @@
 import logging, os, signal, re, time
-from autotest.client.shared import error
-from autotest.client import utils
-from virttest import aexpect
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.bin import utils
+from autotest_lib.client.virt import aexpect, virt_utils
 
 
 def run_netstress_kill_guest(test, params, env):
@@ -61,8 +61,8 @@ def run_netstress_kill_guest(test, params, env):
 
         try:
             utils.run(firewall_flush)
-        except Exception:
-            logging.warning("Could not flush firewall rules on host")
+        except:
+            logging.warning("Could not flush firewall rules on guest")
 
         try:
             session_serial.cmd(firewall_flush)
@@ -81,7 +81,7 @@ def run_netstress_kill_guest(test, params, env):
 
         try:
             session_serial.cmd(clean_cmd)
-        except Exception:
+        except:
             pass
         session_serial.cmd(params.get("netserver_cmd") % "/tmp")
 
@@ -90,7 +90,7 @@ def run_netstress_kill_guest(test, params, env):
 
         server_netperf_cmd = params.get("netperf_cmd") % (netperf_dir, "TCP_STREAM",
                                         guest_ip, params.get("packet_size", "1500"))
-        guest_netperf_cmd = params.get("netperf_cmd") % ("/tmp", "TCP_STREAM",
+        quest_netperf_cmd = params.get("netperf_cmd") % ("/tmp", "TCP_STREAM",
                                        server_ip, params.get("packet_size", "1500"))
 
         tcpdump = env.get("tcpdump")
@@ -101,12 +101,12 @@ def run_netstress_kill_guest(test, params, env):
                 pid = int(utils.system_output("pidof tcpdump"))
                 logging.debug("Stopping the background tcpdump")
                 os.kill(pid, signal.SIGSTOP)
-            except Exception:
+            except:
                 pass
 
         try:
             logging.info("Start heavy network load host <=> guest.")
-            session_serial.sendline(guest_netperf_cmd)
+            session_serial.sendline(quest_netperf_cmd)
             utils.BgJob(server_netperf_cmd)
 
             #Wait for create big network usage.
@@ -121,29 +121,16 @@ def run_netstress_kill_guest(test, params, env):
                 os.kill(pid, signal.SIGCONT)
 
 
-    def send_cmd_safe(session_serial, cmd):
-        logging.debug("Sending command: %s", cmd)
-        session_serial.sendline(cmd)
-        got_prompt = False
-        while not got_prompt:
-            time.sleep(0.2)
-            session_serial.sendline()
-            try:
-                session_serial.read_up_to_prompt()
-                got_prompt = True
-            except aexpect.ExpectTimeoutError:
-                pass
-
-
     def netdriver_kill_problem(session_serial):
         modules = get_ethernet_driver(session_serial)
         logging.debug(modules)
         for _ in range(50):
             for module in modules:
-                send_cmd_safe(session_serial, "rmmod %s" % module)
+                session_serial.cmd("rmmod %s" % (module))
+                time.sleep(0.2)
             for module in modules:
-                send_cmd_safe(session_serial, "modprobe %s" % module)
-
+                session_serial.cmd("modprobe %s" % (module))
+                time.sleep(0.2)
         kill_and_check(vm)
 
 
