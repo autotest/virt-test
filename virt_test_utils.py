@@ -579,7 +579,10 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         @param vm: VM object.
         @param local_path: Local path.
         @param remote_path: Remote path.
+
+        @return: Whether the hash differs (True) or not (False).
         """
+        hash_differs = False
         local_hash = utils.hash_file(local_path)
         basename = os.path.basename(local_path)
         output = session.cmd_output("md5sum %s" % remote_path)
@@ -594,13 +597,18 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
             # temporary problem
             remote_hash = "0"
         if remote_hash != local_hash:
-            logging.debug("Copying %s to guest", basename)
+            hash_differs = True
+            logging.debug("Copying %s to guest "
+                          "(remote hash: %s, local hash:%s)",
+                          basename, remote_hash, local_hash)
             vm.copy_files_to(local_path, remote_path)
+        return hash_differs
 
 
-    def extract(vm, remote_path, dest_dir="."):
+    def extract(vm, remote_path, dest_dir):
         """
-        Extract a .tar.bz2 file on the guest.
+        Extract the autotest .tar.bz2 file on the guest, ensuring the final
+        destination path will be dest_dir.
 
         @param vm: VM object
         @param remote_path: Remote file path
@@ -608,116 +616,40 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         """
         basename = os.path.basename(remote_path)
         logging.debug("Extracting %s on VM %s", basename, vm.name)
-        e_cmd = "tar xjvf %s -C %s" % (remote_path, dest_dir)
-        session.cmd(e_cmd, timeout=120)
+        session.cmd("rm -rf %s" % dest_dir)
+        dirname = os.path.dirname(remote_path)
+        session.cmd("cd %s" % dirname)
+        session.cmd("mkdir -p %s" % os.path.dirname(dest_dir))
+        e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
+        output = session.cmd(e_cmd, timeout=120)
+        autotest_dirname = ""
+        for line in output.splitlines():
+            autotest_dirname = line.split("/")[0]
+            break
+        if autotest_dirname != os.path.basename(dest_dir):
+            session.cmd("cd %s" % os.path.dirname(dest_dir))
+            session.cmd("mv %s %s" %
+                        (autotest_dirname, os.path.basename(dest_dir)))
 
 
-    def generate_test_cfg(params):
-        guest_name = params.get("guest_name")
-        guest_name = '-'.join(guest_name.split('-')[0:-1])
-        if guest_name == '':
-            guest_name = params.get("guest_name")
-
-        drive_format = params.get("drive_format")
-        if drive_format == "virtio":
-            drive_format = "virtio_blk"
-
-        nic_model = params.get("nic_model")
-        if nic_model == "virtio":
-            nic_model = "virtio_nic"
-
-        fullname = params.get("name")
-        pages = "smallpages"
-        name = params.get("test_name")
-        if fullname:
-            p = re.compile(".*full\.(\w+)\..*%s\.(.+)\.%s"
-                            % (drive_format, params.get("image_format")))
-            m = p.match(fullname)
-            if m:
-                pages = m.group(1)
-                name = m.group(2)
-        test_cfg  = "include virtlab_tests.cfg\n"
-        test_cfg += "include cdkeys.cfg\n"
-        test_cfg += "nic_script = %s\n" % params.get("nic_script")
-        test_cfg += "pci_assignable = %s\n" % params.get("pci_assignable")
-        test_cfg += "display = %s\n" % params.get("display")
-        test_cfg += "hosttype = %s\n" % params.get("hosttype")
-        test_cfg += "image_name = %s\n" % params.get("image_name")
-        test_cfg += "image_boot = %s\n" % params.get("image_boot")
-        test_cfg += "dsthost = %s\n" % params.get("srchost")
-        test_cfg += "bridge = %s\n" % params.get("bridge")
-        test_cfg += "use_storage = %s\n" % params.get("use_storage")
-        test_cfg += "mig_timeout = %s\n" % params.get("mig_timeout")
-        test_cfg += "login_timeout = %s\n" % params.get("login_timeout")
-        test_cfg += "wait_augment_ratio = %s\n" % params.get("wait_augment_ratio")
-        test_cfg += "install_timeout = %s\n" % params.get("install_timeout")
-        test_cfg += "smp = %s\n" % params.get("smp")
-        test_cfg += "vcpu_cores = %s\n" % params.get("vcpu_cores")
-        test_cfg += "vcpu_threads = %s\n" % params.get("vcpu_threads")
-        test_cfg += "mem = %s\n" % params.get("mem")
-        test_cfg += "iterations = %s\n" % params.get("iterations")
-        test_cfg += "iscsi_dev = %s\n" % params.get("iscsi_dev")
-        test_cfg += "iscsi_number = %s\n" % params.get("iscsi_number")
-        # These params needs by cross_host test.
-        ## disable remote test.
-        test_cfg += "slaver_peer = yes\n"
-        ## don't start vms before images are ready.
-        test_cfg += "start_vm = no\n"
-        ## port for XMLRPC server.
-        if params.get("listen_port"):
-            test_cfg += "listen_port = %s\n" % params.get("listen_port")
-        test_cfg += "only %s\n" % pages
-        test_cfg += "only %s\n" % guest_name
-        test_cfg += "only %s\n" % params.get("platform")
-        test_cfg += "only %s\n" % drive_format
-        test_cfg += "only %s\n" % nic_model
-        test_cfg += "only %s\n" % params.get("image_format")
-        test_cfg += "only full\n"
-        if params.get("test_name"):
-            test_cfg += "only %s\n" % params.get("test_name")
-        else:
-            test_cfg += "only %s\n" % name
-        test_cfg += "variants:\n"
-        test_cfg += "    - repeat1:\n"
-        test_cfg += "pre_test:\n"
-        test_cfg += "    only repeat1\n"
-        test_cfg += "    iterations = 1\n"
-
-        return test_cfg
-
-
-    def build_config_file(autotest_path, config_string,
-                        config_filename= "tests.cfg"):
-        kvm_dir = os.path.join(autotest_path, 'tests/kvm')
-        kvm_tests = os.path.join(kvm_dir, config_filename)
-        try:
-            file = open(kvm_tests, 'w')
-        except IOError:
-            raise error.TestError("Failed to create config file kvm_tests.cfg")
-        file.write(config_string)
-        file.close()
-
-
-    def get_results():
+    def get_results(guest_autotest_path):
         """
         Copy autotest results present on the guest back to the host.
         """
         logging.debug("Trying to copy autotest results from guest")
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
         if not os.path.exists(guest_results_dir):
-            try:
-                os.mkdir(guest_results_dir)
-            except OSError:
-                logging.warn("Directory %s existed already!", guest_results_dir)
-        vm.copy_files_from("%s/results/default/*" % autotest_path,
+            os.mkdir(guest_results_dir)
+        vm.copy_files_from("%s/results/default/*" % guest_autotest_path,
                            guest_results_dir)
 
 
-    def get_results_summary():
+    def get_results_summary(guest_autotest_path):
         """
         Get the status of the tests that were executed on the host and close
         the session where autotest was being executed.
         """
+        session.cmd("cd %s" % guest_autotest_path)
         output = session.cmd_output("cat results/*/status")
         try:
             results = scan_results.parse_results(output)
@@ -740,24 +672,23 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         mig_timeout = float(params.get("mig_timeout", "3600"))
         mig_protocol = params.get("migration_protocol", "tcp")
 
-    compressed_autotest_path = os.path.relpath("/tmp/autotest.tar.bz2")
+    compressed_autotest_path = "/tmp/autotest.tar.bz2"
+    destination_autotest_path = "/usr/local/autotest"
 
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
-    autotest_path = os.path.relpath(os.environ['AUTODIR'])
+    autotest_path = os.environ['AUTODIR']
+    autotest_basename = os.path.basename(autotest_path)
+    autotest_parentdir = os.path.dirname(autotest_path)
 
     # tar the contents of bindir/autotest
-    cmd = "tar cvjf %s %s/*" % (compressed_autotest_path, autotest_path)
-    # yes, we need kvm test in host's autotest.
-    if not kvm_test:
-        cmd += " --exclude=%s/tests/kvm" % autotest_path
-    else:
-        cmd += " --exclude=%s/tests/kvm/env" % autotest_path
-        cmd += " --exclude=%s/tests/kvm/isos" % autotest_path
-        cmd += " --exclude=%s/tests/kvm/images" % autotest_path
-    cmd += " --exclude=%s/results" % autotest_path
-    cmd += " --exclude=%s/tmp" % autotest_path
-    cmd += " --exclude=%s/control*" % autotest_path
+    cmd = ("cd %s; tar cvjf %s %s/*" %
+           (autotest_parentdir, compressed_autotest_path, autotest_basename))
+    # Until we have nested virtualization, we don't need the kvm test :)
+    cmd += " --exclude=%s/tests/kvm" % autotest_basename
+    cmd += " --exclude=%s/results" % autotest_basename
+    cmd += " --exclude=%s/tmp" % autotest_basename
+    cmd += " --exclude=%s/control*" % autotest_basename
     cmd += " --exclude=*.pyc"
     cmd += " --exclude=*.svn"
     cmd += " --exclude=*.git"
@@ -765,20 +696,20 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
     utils.run(cmd)
 
     # Copy autotest.tar.bz2
-    copy_if_hash_differs(vm, compressed_autotest_path,
-                        compressed_autotest_path)
+    update = copy_if_hash_differs(vm, compressed_autotest_path,
+                                  compressed_autotest_path)
 
     # Extract autotest.tar.bz2
-    extract(vm, compressed_autotest_path, "/")
+    if update:
+        extract(vm, compressed_autotest_path, destination_autotest_path)
 
+    vm.copy_files_to(control_path,
+                     os.path.join(destination_autotest_path, 'control'))
 
-    if not kvm_test:
-        vm.copy_files_to(control_path,
-                                os.path.join(autotest_path, 'control'))
-        # Run the test
-        logging.info("Running autotest control file %s on guest, timeout %ss",
-                     os.path.basename(control_path), timeout)
-    session.cmd("cd %s" % autotest_path)
+    # Run the test
+    logging.info("Running autotest control file %s on guest, timeout %ss",
+                 os.path.basename(control_path), timeout)
+    session.cmd("cd %s" % destination_autotest_path)
     try:
         session.cmd("rm -f control.state")
         session.cmd("rm -rf results/*")
@@ -824,20 +755,20 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                 bg.join()
     except aexpect.ShellTimeoutError:
         if vm.is_alive():
-            get_results()
-            get_results_summary()
+            get_results(destination_autotest_path)
+            get_results_summary(destination_autotest_path)
             raise error.TestError("Timeout elapsed while waiting for job to "
                                   "complete")
         else:
             raise error.TestError("Autotest job on guest failed "
                                   "(VM terminated during job)")
     except aexpect.ShellProcessTerminatedError:
-        get_results()
+        get_results(destination_autotest_path)
         raise error.TestError("Autotest job on guest failed "
                               "(Remote session terminated during job)")
 
-    results = get_results_summary()
-    get_results()
+    results = get_results_summary(destination_autotest_path)
+    get_results(destination_autotest_path)
 
     # Make a list of FAIL/ERROR/ABORT results (make sure FAIL results appear
     # before ERROR results, and ERROR results appear before ABORT results)
