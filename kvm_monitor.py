@@ -461,6 +461,17 @@ class HumanMonitor(Monitor):
         return self.cmd("getfd %s" % name, fd=fd)
 
 
+    def getfd(self, fd, name):
+        """
+        Receives a file descriptor
+
+        @param fd: File descriptor to pass to QEMU
+        @param name: File descriptor name (internal to QEMU)
+        @return: The command's output
+        """
+        return self.cmd("getfd %s" % name, fd=fd)
+
+
 class QMPMonitor(Monitor):
     """
     Wraps QMP monitor commands.
