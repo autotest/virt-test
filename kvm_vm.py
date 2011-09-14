@@ -1695,3 +1695,17 @@ class VM(virt_vm.BaseVM):
         """
         return (self.__make_qemu_command() !=
                 self.__make_qemu_command(name, params, basedir))
+
+
+    def pause(self):
+        """
+        Pause the VM operation.
+        """
+        self.monitor.cmd("stop")
+
+
+    def resume(self):
+        """
+        Resume the VM operation in case it's stopped.
+        """
+        self.monitor.cmd("cont")
