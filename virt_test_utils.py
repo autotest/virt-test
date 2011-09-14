@@ -1307,3 +1307,28 @@ def run_sub_test(test, params, env, sub_type=None):
     run_func = getattr(test_module, "run_%s" % sub_type)
     run_func(test, params, env)
 
+def get_readable_cdroms(params, session):
+    """
+    Get the cdrom list which contain media in guest.
+
+    @param params: Dictionary with the test parameters.
+    @param session: A shell session on the VM provided.
+    """
+    get_cdrom_cmd = params.get("cdrom_get_cdrom_cmd")
+    check_cdrom_patttern = params.get("cdrom_check_cdrom_pattern")
+    o = session.get_command_output(get_cdrom_cmd)
+    cdrom_list = re.findall(check_cdrom_patttern, o)
+    logging.debug("Found cdroms on guest: %s" % cdrom_list)
+
+    readable_cdroms = []
+    test_cmd = params.get("cdrom_test_cmd")
+    for d in cdrom_list:
+        s, o = session.cmd_status_output(test_cmd % d)
+        if s == 0:
+            readable_cdroms.append(d)
+            break
+
+    if readable_cdroms:
+        return readable_cdroms
+
+    raise error.TestFail("Could not find a cdrom device contain media.")
