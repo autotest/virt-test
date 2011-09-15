@@ -523,26 +523,6 @@ def check_kvm_source_dir(source_dir):
         raise error.TestError("Unknown source dir layout, cannot proceed.")
 
 
-def get_version():
-    """
-    Trying to get the kvm version, if failed, return the kernel version.
-    """
-    logging.debug("Fetching KVM module version...")
-    if os.path.exists("/dev/kvm"):
-        kvm_version = os.uname()[2] # kernel version
-        try:
-            file = open("/sys/module/kvm/version", "r")
-            kvm_version = file.read().strip()
-            file.close()
-        except Exception:
-            pass
-
-        return kvm_version
-    else:
-        logging.warn("KVM module not loaded")
-        return "None"
-
-
 # Functions and classes used for logging into guests and transferring files
 
 class LoginError(Exception):
