@@ -988,47 +988,6 @@ def restart_guest_network(session, nic_name=None):
         session.sendline("killall dhclient && "
                          "dhclinet %s &" % ' '.join(if_list))
 
-
-def get_rh_host_version(version_string):
-    """
-    Get the redhat production version of the host.
-
-    @version_string: `uname -r` or `cat /sys/module/kvm/version`
-
-    Return: rhel5.5, rhel5.6, rhel6.0 or rhel6.1, or other rh version tag
-    """
-    cur_version = version.LooseVersion(version_string)
-    logging.debug("Current version is: %s" % str(cur_version))
-
-    if version_string.startswith("kvm-") and version_string.find(".el5") > 0:
-        rhel5_end = version.LooseVersion("kvm-83-END.el5")
-        rhel5u6_start = version.LooseVersion("kvm-83-165.el5")
-        rhel5u5_start = version.LooseVersion("kvm-83-106.el5")
-
-        if cur_version >= rhel5u6_start and cur_version < rhel5_end:
-            return "rhel5.6"
-        elif cur_version >= rhel5u5_start and cur_version < rhel5u6_start:
-            return "rhel5.5"
-        else:
-            logging.warn("Unkown rhel5.x version: %s" % version_string)
-            return "Unknown-RH-Version"
-
-    elif version_string.startswith("2.6") and version_string.find(".el6") > 0:
-        rhel6_end = version.LooseVersion("2.6.32-END.el6")
-        rhel6u1_start = version.LooseVersion("2.6.32-72.el6")
-        rhel6_start = version.LooseVersion("2.6.31-0.el6")
-
-        if cur_version >= rhel6u1_start and cur_version < rhel6_end:
-            return "rhel6.1"
-        elif cur_version >= rhel6_start and cur_version < rhel6u1_start:
-            return "rhel6.0"
-        else:
-            logging.warn("Unknown rhel6.x version: %s" % version_string)
-            return "Unknown-RH-Version"
-    else:
-        logging.warn("Invalid redhat version string: %s" % version_string)
-        return "Invalid-RH-Version"
-
 def  vm_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout = 300):
     """
     For record the env information such as cpu utilization, meminfo while
