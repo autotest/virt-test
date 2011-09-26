@@ -6,7 +6,7 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 
 import time, os, logging, fcntl, re, commands, shelve, glob
 import virt_test_utils
-from autotest_lib.client.common_lib import error
+from autotest_lib.client.common_lib import error, cartesian_config
 from autotest_lib.client.bin import utils
 import virt_utils, virt_vm, kvm_monitor, aexpect
 
@@ -53,8 +53,7 @@ class VM(virt_vm.BaseVM):
         self.address_cache = address_cache
         self.index_in_use = {}
 
-        kvm_version = virt_utils.get_version()
-        self.host_version = virt_test_utils.get_rh_host_version(kvm_version)
+        self.host_version = cartesian_config.get_host_verson(self.params)
 
 
     def verify_alive(self):
@@ -422,7 +421,7 @@ class VM(virt_vm.BaseVM):
                 vnc_cmd += ",password"
             if extra_params is not None:
                 vnc_cmd += ",%s" % extra_params
-            return vnc_cmd    
+            return vnc_cmd
 
         def add_sdl(help):
             if has_option(help, "sdl"):
@@ -476,18 +475,6 @@ class VM(virt_vm.BaseVM):
                 return " -rtc base=%s,clock=%s,driftfix=%s" % (base, clock, drift)
             else:
                 return " -rtc-td-hack"
-
-        def add_stable_abi(help):
-            if self.host_version == "rhel6.1":
-                return " -M rhel6.1.0"
-            elif self.host_version == "rhel6.0":
-                return " -M rhel6.0.0"
-            elif self.host_version == "rhel5.6":
-                return " -M rhel5.6.0"
-            elif self.host_version == "rhel5.5":
-                return " -M rhel5.5.0"
-            else:
-                return " "
 
         def add_kernel_cmdline(help, cmdline):
             return " -append %s" % cmdline
@@ -548,8 +535,7 @@ class VM(virt_vm.BaseVM):
         vdisk = 0
         floppy_unit = 0
         self.pci_addr_list = [0, 1, 2]
-        kvm_version = virt_utils.get_version()
-        self.host_version = virt_test_utils.get_rh_host_version(kvm_version)
+        self.host_version = cartesian_config.get_host_verson(self.params)
 
         qemu_binary = virt_utils.get_path(root_dir, params.get("qemu_binary",
                                                               "qemu"))
@@ -847,7 +833,6 @@ class VM(virt_vm.BaseVM):
                 qemu_cmd += add_pcidevice(help, pci_id)
 
         qemu_cmd += add_rtc(help)
-        qemu_cmd += add_stable_abi(help)
 
         if has_option(help, "boot"):
             boot_order = params.get("boot_order", "cdn")
