@@ -2,7 +2,7 @@ import os, time, commands, re, logging, glob, threading, shutil
 from autotest_lib.client.bin import utils
 from autotest_lib.client.common_lib import error
 import aexpect, virt_utils, kvm_monitor, ppm_utils, virt_test_setup
-import virt_vm, kvm_vm
+import virt_vm, kvm_vm, virt_test_utils
 try:
     import PIL.Image
 except ImportError:
@@ -80,6 +80,10 @@ def preprocess_vm(test, params, env, name):
         # Start the VM (or restart it if it's already up)
         vm.create(name, params, test.bindir,
                   migration_mode=params.get("migration_mode"))
+        # Update mac and IP info for assigned device
+        if params.get("pci_assignable") != "no":
+            virt_test_utils.update_mac_ip_address(vm, params)
+
     else:
         # Don't start the VM, just update its params
         vm.params = params

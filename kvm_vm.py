@@ -631,46 +631,48 @@ class VM(virt_vm.BaseVM):
             host_port = vm.redirs.get(guest_port)
             redirs += [(host_port, guest_port)]
 
-        vlan = 0
-        for nic_name in params.objects("nics"):
-            nic_params = params.object_params(nic_name)
-            try:
-                netdev_id = vm.netdev_id[vlan]
-                device_id = vm.device_id[vlan]
-            except IndexError:
-                netdev_id = None
-                device_id = None
-            # Handle the '-net nic' part
-            try:
-                mac = self.get_mac_address(vlan)
-            except virt_vm.VMAddressError:
-                mac = None
-            except IndexError:
-                mac = None
-            if len(self.netdev_id) < vlan+1:
-                self.netdev_id.append(virt_utils.generate_random_id())
-            qemu_cmd += add_nic(help, vlan, nic_params.get("nic_model"), mac,
-                                self.netdev_id[vlan],
-                                nic_params.get("nic_extra_params"),
-                                nic_params.get("nic_pci_addr"))
-            # Handle the '-net tap' or '-net user' part
-            script = nic_params.get("nic_script")
-            downscript = nic_params.get("nic_downscript")
-            tftp = nic_params.get("tftp")
-            if script:
-                script = virt_utils.get_path(root_dir, script)
-            if downscript:
-                downscript = virt_utils.get_path(root_dir, downscript)
-            if tftp:
-                tftp = virt_utils.get_path(root_dir, tftp)
-            qemu_cmd += add_net(help, vlan, nic_params.get("nic_mode", "user"),
-                                vm.get_ifname(vlan),
-                                script, downscript, tftp,
-                                nic_params.get("bootp"), redirs, netdev_id,
-                                nic_params.get("vhost"),
-                                nic_params.get("netdev_extra_params"))
-            # Proceed to next NIC
-            vlan += 1
+        if params.get('pci_assignable') == "no":
+            vlan = 0
+            for nic_name in params.objects("nics"):
+                nic_params = params.object_params(nic_name)
+                try:
+                    netdev_id = vm.netdev_id[vlan]
+                    device_id = vm.device_id[vlan]
+                except IndexError:
+                    netdev_id = None
+                    device_id = None
+                # Handle the '-net nic' part
+                try:
+                    mac = self.get_mac_address(vlan)
+                except virt_vm.VMAddressError:
+                    mac = None
+                except IndexError:
+                    mac = None
+                if len(self.netdev_id) < vlan+1:
+                    self.netdev_id.append(virt_utils.generate_random_id())
+                qemu_cmd += add_nic(help, vlan, nic_params.get("nic_model"), mac,
+                                    self.netdev_id[vlan],
+                                    nic_params.get("nic_extra_params"),
+                                    nic_params.get("nic_pci_addr"))
+                # Handle the '-net tap' or '-net user' part
+                script = nic_params.get("nic_script")
+                downscript = nic_params.get("nic_downscript")
+                tftp = nic_params.get("tftp")
+                if script:
+                    script = virt_utils.get_path(root_dir, script)
+                if downscript:
+                    downscript = virt_utils.get_path(root_dir, downscript)
+                if tftp:
+                    tftp = virt_utils.get_path(root_dir, tftp)
+                qemu_cmd += add_net(help, vlan, nic_params.get("nic_mode", "user"),
+                                    vm.get_ifname(vlan),
+                                    script, downscript, tftp,
+                                    nic_params.get("bootp"), redirs, netdev_id,
+                                    nic_params.get("netdev_extra_params"))
+                # Proceed to next NIC
+                vlan += 1
+        else:
+            qemu_cmd += " -net none"
 
         mem = params.get("mem")
         if mem:
@@ -982,17 +984,18 @@ class VM(virt_vm.BaseVM):
                 f.close()
 
             # Generate or copy MAC addresses for all NICs
-            num_nics = len(params.objects("nics"))
-            for vlan in range(num_nics):
-                nic_name = params.objects("nics")[vlan]
-                nic_params = params.object_params(nic_name)
-                mac = (nic_params.get("nic_mac") or
-                       mac_source and mac_source.get_mac_address(vlan))
-                if mac:
-                    virt_utils.set_mac_address(self.instance, vlan, mac)
-                else:
-                    virt_utils.generate_mac_address(self.instance, vlan)
-
+            pa_type = params.get("pci_assignable")
+            if pa_type == "no":
+                num_nics = len(params.objects("nics"))
+                for vlan in range(num_nics):
+                    nic_name = params.objects("nics")[vlan]
+                    nic_params = params.object_params(nic_name)
+                    mac = (nic_params.get("nic_mac") or
+                           mac_source and mac_source.get_mac_address(vlan))
+                    if mac:
+                        virt_utils.set_mac_address(self.instance, vlan, mac)
+                    else:
+                        virt_utils.generate_mac_address(self.instance, vlan)
             # Assign a PCI assignable device
             self.pci_assignable = None
             pa_type = params.get("pci_assignable")
@@ -1629,6 +1632,8 @@ class VM(virt_vm.BaseVM):
                                   120, 0, 1):
             raise virt_vm.VMRebootError("Guest refuses to go down")
         session.close()
+        if self.params.get("mac_changeable"):
+            virt_test_utils.update_mac_ip_address(self, self.params)
 
         error.context("logging in after reboot", logging.info)
         return self.wait_for_login(nic_index, timeout=timeout)
