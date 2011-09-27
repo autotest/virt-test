@@ -1,4 +1,5 @@
 from autotest_lib.client.virt import virt_utils, virt_test_utils
+from autotest_lib.client.virt.tests import file_transfer
 import time, logging
 
 def run_live_snapshot(test, params, env):
@@ -88,5 +89,21 @@ def run_live_snapshot(test, params, env):
         finally:
             bg.join()
 
+    def file_transfer_test():
+        try:
+            bg_cmd = file_transfer.run_file_transfer
+            args = (test, params, env)
+            bg = virt_test_utils.BackgroundTest(bg_cmd, args)
+            bg.start()
+            sleep_time = int(params.get("sleep_time"))
+            time.sleep(sleep_time)
+            create_snapshot(vm)
+            if bg.is_alive():
+                try:
+                    bg.join()
+                except:
+                    raise
+        finally:
+            session.close()
     subcommand = params.get("subcommand")
     eval("%s_test()" % subcommand)
