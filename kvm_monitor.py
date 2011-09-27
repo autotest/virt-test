@@ -782,23 +782,24 @@ class QMPMonitor(Monitor):
                 else:
                     command = cmdline
                 cmd_output.append(self.human_monitor_cmd(command))
-            cmdargs = " ".join(cmdline.split()[1:]).split(",")
-            args = {}
-            for arg in cmdargs:
-                opt = arg.split('=')
-                try:
-                    if re.match("^[0-9]$", opt[1]):
-                        value = int(opt[1])
-                    elif "True" in opt[1] or "true" in opt[1]:
-                        value = True
-                    elif "false" in opt[1] or "False" in opt[1]:
-                        value = False
-                    else:
-                        value = opt[1].strip()
-                    args[opt[0].strip()] = value
-                except:
-                    logging.debug("Fail to create args, please check command")
-            cmd_output.append(self.cmd(command, args, timeout=timeout))
+            else:
+                cmdargs = " ".join(cmdline.split()[1:]).split(",")
+                args = {}
+                for arg in cmdargs:
+                    opt = arg.split('=')
+                    try:
+                        if re.match("^[0-9]$", opt[1]):
+                            value = int(opt[1])
+                        elif "True" in opt[1] or "true" in opt[1]:
+                            value = True
+                        elif "false" in opt[1] or "False" in opt[1]:
+                            value = False
+                        else:
+                            value = opt[1].strip()
+                        args[opt[0].strip()] = value
+                    except:
+                        logging.debug("Fail to create args, please check cmd")
+                cmd_output.append(self.cmd(command, args, timeout=timeout))
         return cmd_output
 
 
