@@ -5,9 +5,8 @@ KVM test utility functions.
 """
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
-import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect, tarfile
-import struct, shutil
-from autotest_lib.client.bin import utils, os_dep
+import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect
+from autotest_lib.client.bin import utils, os_dep, kvm_control
 from autotest_lib.client.common_lib import error, logging_config
 import rss_client, aexpect, virt_vm
 try:
@@ -1702,6 +1701,26 @@ class PciAssignable(object):
 
         @return: True, if the setup was completed successfuly, False otherwise.
         """
+        # Check if the host support interrupt remapping
+        kvm_re_probe = False
+        o = utils.system_output("cat /var/log/dmesg")
+        ecap = re.findall("ecap\s+(.\w+)", o)
+        if ecap and int(ecap[0], 16) & 8 == 0:
+            kvm_re_probe = True
+
+        # Try to re probe kvm module with interrupt remapping support
+        if kvm_re_probe:
+            kvm_arch = kvm_control.get_kvm_arch()
+            utils.system("modprobe -r %s" % kvm_arch)
+            utils.system("modprobe -r kvm")
+            logging.info("Loading kvm with allow_unsafe_assigned_interrupts")
+            cmd = "modprobe kvm allow_unsafe_assigned_interrupts=1"
+            try:
+                utils.system(cmd)
+            except Exception:
+                logging.debug("Can not enable the interrupt remapping support")
+            utils.system("modprobe %s" % kvm_arch)
+
         re_probe = False
         s, o = commands.getstatusoutput('lsmod | grep %s' % self.driver)
         if s:
@@ -1718,6 +1737,7 @@ class PciAssignable(object):
             logging.info("Loading the driver '%s' with option '%s'",
                          self.driver, self.driver_option)
             s, o = commands.getstatusoutput(cmd)
+            utils.system("/etc/init.d/network restart", ignore_status=True)
             if s:
                 return False
             return True

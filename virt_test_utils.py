@@ -1332,3 +1332,21 @@ def get_readable_cdroms(params, session):
         return readable_cdroms
 
     raise error.TestFail("Could not find a cdrom device contain media.")
+def update_mac_ip_address(vm, params):
+    """
+    Get mac and ip address from guest and update the mac pool and 
+    address cache
+    @param vm: VM object
+    @param params: Dictionary with the test parameters.
+    """
+    network_query = params.get("network_query", "ifconfig")
+    mac_ip_filter = params.get("mac_ip_filter")
+    session = vm.wait_for_serial_login(timeout=360)
+    s, o = session.cmd_status_output(network_query)
+    macs_ips = re.findall(mac_ip_filter, o)
+    if len(macs_ips) < int(params.get("devices_requested")):
+        raise error.TestError("Not all device get ip: %s" % o)
+    for (mac, ip) in macs_ips:
+        vlan = macs_ips.index((mac, ip))
+        vm.address_cache[mac.lower()] = ip
+        virt_utils.set_mac_address(vm.instance, vlan, mac)
