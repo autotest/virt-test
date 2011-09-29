@@ -1,7 +1,8 @@
-import logging, os, signal
+import logging, os
 from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
 from autotest_lib.client.virt import aexpect, virt_utils
+from autotest_lib.client.virt import virt_test_utils
 
 def run_netperf(test, params, env):
     """
@@ -52,6 +53,9 @@ def run_netperf(test, params, env):
             env["tcpdump"].close()
         except Exception:
             pass
+
+    # initiate all interfaces on guest.
+    virt_test_utils.restart_guest_network(session_serial)
 
     def netperf(i=0):
         guest_ip = vm.get_address(i)
