@@ -904,6 +904,15 @@ class QMPMonitor(Monitor):
         cmdline = "screendump %s" % filename
         return self.human_monitor_cmd(cmdline)
 
+    def sendkey(self, keystr, hold_time=1):
+        """
+        Send key combination to VM.
+
+        @param keystr: Key combination string
+        @param hold_time: Hold time in ms (should normally stay 1 ms)
+        @return: The command's output
+        """
+        return self.human_monitor_cmd("sendkey %s %s" % (keystr, hold_time))
 
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
         """
