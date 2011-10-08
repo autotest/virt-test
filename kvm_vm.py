@@ -643,6 +643,7 @@ class VM(virt_vm.BaseVM):
                                     vm.get_ifname(vlan),
                                     script, downscript, tftp,
                                     nic_params.get("bootp"), redirs, netdev_id,
+                                    nic_params.get("vhost"),
                                     nic_params.get("netdev_extra_params"))
                 # Proceed to next NIC
                 vlan += 1
