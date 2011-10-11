@@ -611,44 +611,19 @@ class VM(virt_vm.BaseVM):
             for nic_name in params.objects("nics"):
                 nic_params = params.object_params(nic_name)
                 try:
-                    netdev_id = vm.netdev_id[vlan]
-                    device_id = vm.device_id[vlan]
-                except IndexError:
-                    netdev_id = None
-                    device_id = None
-                # Handle the '-net nic' part
-                try:
-                    mac = self.get_mac_address(vlan)
-                except virt_vm.VMAddressError:
-                    mac = None
-                except IndexError:
-                    mac = None
-                if len(self.netdev_id) < vlan+1:
-                    self.netdev_id.append(virt_utils.generate_random_id())
-                qemu_cmd += add_nic(help, vlan, nic_params.get("nic_model"), mac,
-                                    self.netdev_id[vlan],
-                                    nic_params.get("nic_extra_params"),
-                                    nic_params.get("nic_pci_addr"))
-                # Handle the '-net tap' or '-net user' part
-                script = nic_params.get("nic_script")
-                downscript = nic_params.get("nic_downscript")
-                tftp = nic_params.get("tftp")
-                if script:
-                    script = virt_utils.get_path(root_dir, script)
-                if downscript:
-                    downscript = virt_utils.get_path(root_dir, downscript)
-                if tftp:
-                    tftp = virt_utils.get_path(root_dir, tftp)
-                qemu_cmd += add_net(help, vlan, nic_params.get("nic_mode", "user"),
-                                    vm.get_ifname(vlan),
-                                    script, downscript, tftp,
-                                    nic_params.get("bootp"), redirs, netdev_id,
-                                    nic_params.get("vhost"),
-                                    nic_params.get("netdev_extra_params"))
-                # Proceed to next NIC
-                vlan += 1
-        else:
-            qemu_cmd += " -net none"
+                    tapfd = vm.tapfds[vlan]
+                except Exception:
+                    tapfd = None
+            else:
+                tapfd = None
+            qemu_cmd += add_net(help, vlan,
+                                nic_params.get("nic_mode", "user"),
+                                vm.get_ifname(vlan), tftp,
+                                nic_params.get("bootp"), redirs, netdev_id,
+                                nic_params.get("netdev_extra_params"),
+                                tapfd)
+            # Proceed to next NIC
+            vlan += 1
 
         mem = params.get("mem")
         if mem:
