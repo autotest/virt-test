@@ -6,6 +6,7 @@ KVM test utility functions.
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
 import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect
+import struct
 from autotest_lib.client.bin import utils, os_dep, kvm_control
 from autotest_lib.client.common_lib import error, logging_config
 import rss_client, aexpect, virt_vm
@@ -55,17 +56,12 @@ class NetError(Exception):
 
 
 class TAPModuleError(NetError):
-    def __init__(self, devname, action="open", details=None):
+    def __init__(self, devname):
         NetError.__init__(self, devname)
         self.devname = devname
-        self.details = details
 
     def __str__(self):
-        e_msg = "Can't %s %s" % (self.action, self.devname)
-        if self.details is not None:
-            e_msg += " : %s" % self.details
-        return e_msg
-
+        return "Can't open %s" % self.devname
 
 class TAPNotExistError(NetError):
     def __init__(self, ifname):
@@ -3308,3 +3304,124 @@ def get_mem_status(keywords):
         if line.startswith("%s" % keywords):
             output = re.split('\s+', line)[1]
     return output
+
+def if_nametoindex(ifname):
+    """
+    Map an interface name into its corresponding index.
+    Returns 0 on error, as 0 is not a valid index
+
+    @param ifname: interface name
+    """
+    index = 0
+    ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+    ifr = struct.pack("16si", ifname, 0)
+    r = fcntl.ioctl(ctrl_sock, SIOCGIFINDEX, ifr)
+    index = struct.unpack("16si", r)[1]
+    ctrl_sock.close()
+    return index
+
+
+def vnet_hdr_probe(tapfd):
+    """
+    Check if the IFF_VNET_HDR is support by tun.
+
+    @param tapfd: the file descriptor of /dev/net/tun
+    """
+    u = struct.pack("I", 0)
+    try:
+        r = fcntl.ioctl(tapfd, TUNGETFEATURES, u)
+    except OverflowError:
+        return False
+    flags = struct.unpack("I", r)[0]
+    if flags & IFF_VNET_HDR:
+        return True
+    else:
+        return False
+
+
+def open_tap(devname, ifname, vnet_hdr=True):
+    """
+    Open a tap device and returns its file descriptor which is used by
+    fd=<fd> parameter of qemu-kvm.
+
+    @param ifname: TAP interface name
+    @param vnet_hdr: Whether enable the vnet header
+    """
+    try:
+        tapfd = os.open(devname, os.O_RDWR)
+    except OSError, e:
+        raise TAPModuleError(devname, "open", e)
+    flags = IFF_TAP | IFF_NO_PI
+    if vnet_hdr and vnet_hdr_probe(tapfd):
+        flags |= IFF_VNET_HDR
+
+    ifr = struct.pack("16sh", ifname, flags)
+    try:
+        r = fcntl.ioctl(tapfd, TUNSETIFF, ifr)
+    except IOError, details:
+        raise TAPCreationError(ifname, details)
+    ifname = struct.unpack("16sh", r)[0].strip("\x00")
+    return tapfd
+
+
+def add_to_bridge(ifname, brname):
+    """
+    Add a TAP device to bridge
+
+    @param ifname: Name of TAP device
+    @param brname: Name of the bridge
+    """
+    ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+    index = if_nametoindex(ifname)
+    if index == 0:
+        raise TAPNotExistError(ifname)
+    ifr = struct.pack("16si", brname, index)
+    try:
+        r = fcntl.ioctl(ctrl_sock, SIOCBRADDIF, ifr)
+    except IOError, details:
+        raise BRAddIfError(ifname, brname, details)
+    ctrl_sock.close()
+
+
+def bring_up_ifname(ifname):
+    """
+    Bring up an interface
+
+    @param ifname: Name of the interface
+    """
+    ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+    ifr = struct.pack("16si", ifname, IFF_UP)
+    try:
+        fcntl.ioctl(ctrl_sock, SIOCSIFFLAGS, ifr)
+    except IOError:
+        raise TAPBringUpError(ifname)
+    ctrl_sock.close()
+
+
+def if_set_macaddress(ifname, mac):
+    """
+    Set the mac address for an interface
+
+    @param ifname: Name of the interface
+    @mac: Mac address
+    """
+    ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+
+    ifr = struct.pack("256s", ifname)
+    try:
+        mac_dev = fcntl.ioctl(ctrl_sock, SIOCGIFHWADDR, ifr)[18:24]
+        mac_dev = ":".join(["%02x" % ord(m) for m in mac_dev])
+    except IOError, e:
+        raise HwAddrGetError(ifname)
+
+    if mac_dev.lower() == mac.lower():
+        return
+
+    ifr = struct.pack("16sH14s", ifname, 1,
+                      "".join([chr(int(m, 16)) for m in mac.split(":")]))
+    try:
+        fcntl.ioctl(ctrl_sock, SIOCSIFHWADDR, ifr)
+    except IOError, e:
+        logging.info(e)
+        raise HwAddrSetError(ifname, mac)
+    ctrl_sock.close()
