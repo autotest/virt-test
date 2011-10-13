@@ -3118,6 +3118,9 @@ class VM(virt_vm.BaseVM):
         else:
             raise virt_vm.VMRebootError("Unknown reboot method: %s" % method)
 
+        if self.params.get("mac_changeable") == "yes":
+            utils_net.update_mac_ip_address(self, self.params)
+
         error.context("logging in after reboot", logging.info)
         return self.wait_for_login(nic_index, timeout=timeout)
 
