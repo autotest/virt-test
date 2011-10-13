@@ -1303,8 +1303,16 @@ def update_mac_ip_address(vm, params):
     session = vm.wait_for_serial_login(timeout=360)
     s, o = session.cmd_status_output(network_query)
     macs_ips = re.findall(mac_ip_filter, o)
-    if len(macs_ips) < int(params.get("devices_requested")):
-        raise error.TestError("Not all device get ip: %s" % o)
+    # Get nics number
+    if params.get("devices_requested") is not None:
+        nic_minimum = int(params.get("devices_requested"))
+    else:
+        nics =  params.get("nics")
+        nic_minimum = len(re.split("\s+", nics.strip()))
+
+    if len(macs_ips) < nic_minimum:
+        logging.warn("Not all nics get ip address")
+
     for (mac, ip) in macs_ips:
         vlan = macs_ips.index((mac, ip))
         vm.address_cache[mac.lower()] = ip
