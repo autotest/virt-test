@@ -1618,7 +1618,7 @@ class VM(virt_vm.BaseVM):
                                   120, 0, 1):
             raise virt_vm.VMRebootError("Guest refuses to go down")
         session.close()
-        if self.params.get("mac_changeable"):
+        if self.params.get("mac_changeable") == "yes":
             virt_test_utils.update_mac_ip_address(self, self.params)
 
         error.context("logging in after reboot", logging.info)
