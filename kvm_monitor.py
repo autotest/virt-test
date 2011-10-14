@@ -852,7 +852,7 @@ class QMPMonitor(Monitor):
                 for arg in cmdargs:
                     opt = arg.split('=')
                     try:
-                        if re.match("^[0-9]$", opt[1]):
+                        if re.match("^[0-9]+$", opt[1]):
                             value = int(opt[1])
                         elif "True" in opt[1] or "true" in opt[1]:
                             value = True
