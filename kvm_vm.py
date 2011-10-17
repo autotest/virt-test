@@ -259,10 +259,11 @@ class VM(virt_vm.BaseVM):
                 return " -cdrom '%s'" % filename
 
         def add_drive(help, filename, index=None, format=None, cache=None,
-                      werror=None, serial=None, snapshot=False, boot=False,
-                      imgfmt="raw", aio=None, media="disk", ide_bus=None,
-                      ide_unit=None, vdisk=None, pci_addr=None,floppy_unit=None,
-                      readonly=False):
+                      werror=None, rerror=None, serial=None, snapshot=False,
+                      boot=False, blkdebug=None,imgfmt="raw", aio=None,
+                      media="disk", ide_bus=None, ide_unit=None, vdisk=None,
+                      pci_addr=None,floppy_unit=None, readonly=False):
+
             free_pci_addr = get_free_pci_addr(pci_addr)
 
             dev = {"virtio" : "virtio-blk-pci",
@@ -281,7 +282,11 @@ class VM(virt_vm.BaseVM):
             blkdev_id = "drive-%s" % id
 
             # -drive part
-            cmd = " -drive file='%s'" % filename
+            if blkdebug is not None:
+                cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
+            else:
+                cmd = " -drive file='%s'" % filename
+
             if index is not None and index.isdigit():
                 cmd += ",index=%s" % index
             if has_option(help, "device"):
@@ -293,6 +298,8 @@ class VM(virt_vm.BaseVM):
             if media != "floppy":
                 cmd += ",media=%s" % media
             if cache: cmd += ",cache=%s" % cache
+            if rerror:
+                cmd += ",rerror=%s" % rerror
             if werror: cmd += ",werror=%s" % werror
             if serial: cmd += ",serial='%s'" % serial
             if snapshot: cmd += ",snapshot=on"
@@ -592,10 +599,12 @@ class VM(virt_vm.BaseVM):
                                   index,
                                   image_params.get("drive_format"),
                                   image_params.get("drive_cache"),
+                                  image_params.get("drive_rerror"),
                                   image_params.get("drive_werror"),
                                   image_params.get("drive_serial"),
                                   image_params.get("image_snapshot") == "yes",
                                   image_params.get("image_boot") == "yes",
+                  virt_vm.get_image_blkdebug_filename(image_params, root_dir),
                                   image_params.get("image_format"),
                                   image_params.get("image_aio", "native"),
                                   "disk", ide_bus, ide_unit, vdisk,
