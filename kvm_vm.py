@@ -278,43 +278,75 @@ class VM(virt_vm.BaseVM):
 
         def add_drive(help, filename, index=None, format=None, cache=None,
                       werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=False, blkdebug=None):
-            name = None;
-            dev = "";
-            if format == "ahci":
-                name = "ahci%s" % index
-                dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
-                format = "none"
-                index = None
-            if format == "usb2":
-                name = "usb2.%s" % index
-                dev += " -device usb-storage,bus=ehci.0,drive=%s" % name
-                dev += ",port=%d" % (int(index) + 1)
-                format = "none"
-                index = None
+                      boot=False, blkdebug=None,imgfmt="raw", aio=None,
+                      media="disk", ide_bus=None, ide_unit=None, vdisk=None,
+                      pci_addr=None,floppy_unit=None, readonly=False):
+
+            free_pci_addr = get_free_pci_addr(pci_addr)
+
+            dev = {"virtio" : "virtio-blk-pci",
+                   "ide" : "ide-drive"}
+
+            if format == "ide":
+                id ="ide0-%s-%s" % (ide_bus, ide_unit)
+                ide_bus = "ide." + str(ide_bus)
+            elif format == "virtio":
+                if media == "disk":
+                    vdisk += 1
+                blkdev_id ="virtio-disk%s" % vdisk
+                id = "virtio-disk%s" % vdisk
+            if media == "floppy":
+                id ="fdc0-0-%s" % floppy_unit
+            blkdev_id = "drive-%s" % id
+
+            # -drive part
             if blkdebug is not None:
                 cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
             else:
                 cmd = " -drive file='%s'" % filename
-            if index is not None:
+
+            if index is not None and index.isdigit():
                 cmd += ",index=%s" % index
-            if format:
-                cmd += ",if=%s" % format
-            if cache:
-                cmd += ",cache=%s" % cache
+            if has_option(help, "device"):
+                cmd += ",if=none"
+                cmd += ",id=%s" % blkdev_id
+            else:
+                if format: cmd += ",if=%s" % format
+
+            if media != "floppy":
+                cmd += ",media=%s" % media
+            if cache: cmd += ",cache=%s" % cache
             if rerror:
                 cmd += ",rerror=%s" % rerror
-            if werror:
-                cmd += ",werror=%s" % werror
-            if serial:
-                cmd += ",serial='%s'" % serial
-            if snapshot:
-                cmd += ",snapshot=on"
-            if boot:
-                cmd += ",boot=on"
-            if name:
-                cmd += ",id=%s" % name
-            return cmd + dev
+            if werror: cmd += ",werror=%s" % werror
+            if serial: cmd += ",serial='%s'" % serial
+            if snapshot: cmd += ",snapshot=on"
+            if boot: cmd += ",boot=on"
+            if media == "cdrom" or readonly : cmd += ",readonly=on"
+            cmd += ",format=%s" % imgfmt
+            if ",aio=" in help and aio : cmd += ",aio=%s" % aio
+
+            # -device part
+            if has_option(help, "device") and media != "floppy":
+                cmd += " -device %s" % dev[format]
+                if format == "ide":
+                    cmd += ",bus=%s" % ide_bus
+                    cmd += ",unit=%s" % ide_unit
+                else:
+                    cmd += ",bus=pci.0,addr=%s" % free_pci_addr
+                cmd += ",drive=%s" % blkdev_id
+                cmd += ",id=%s" % id
+
+            # -global part
+            drivelist = ['driveA','driveB']
+            if has_option(help,"global") and media == "floppy" :
+                cmd += " -global isa-fdc.%s=drive-%s" \
+                          % (drivelist[floppy_unit],id)
+            return cmd
+
+        def add_nic(help, vlan, model=None, mac=None, netdev_id=None,
+                    nic_extra_params=None, pci_addr=None, device_id=None):
+            free_pci_addr = get_free_pci_addr(pci_addr)
 
             if has_option(help, "netdev"):
                 netdev_vlan_str = ",netdev=%s" % netdev_id
@@ -597,7 +629,20 @@ class VM(virt_vm.BaseVM):
                                   image_params.get("drive_serial"),
                                   image_params.get("image_snapshot") == "yes",
                                   image_params.get("image_boot") == "yes",
-                    virt_vm.get_image_blkdebug_filename(image_params, root_dir))
+                  virt_vm.get_image_blkdebug_filename(image_params, root_dir),
+                                  image_params.get("image_format"),
+                                  image_params.get("image_aio", "native"),
+                                  "disk", ide_bus, ide_unit, vdisk,
+                                  image_params.get("drive_pci_addr")
+                                  )
+
+            # increase the bus and unit no for ide device
+            if params.get("drive_format") == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            else:
+                vdisk += 1
 
         redirs = []
         for redir_name in params.objects("redirs"):
