@@ -1957,7 +1957,7 @@ class KojiClient(object):
                 koji_command = command
                 break
             else:
-                koji_command_basename = os.path.basename(koji_command)
+                koji_command_basename = os.path.basename(command)
                 try:
                     koji_command = os_dep.command(koji_command_basename)
                     break
