@@ -723,9 +723,11 @@ class VM(virt_vm.BaseVM):
                 cmd += ",id='%s'" % device_id
             return cmd
 
-        def add_net(help_text, vlan, nettype, ifname=None, tftp=None, bootfile=None,
-                    hostfwd=[], netdev_id=None, netdev_extra_params=None,
-                    tapfd=None, vhost=None):
+
+        def add_net(help_text, vlan, nettype, ifname=None, tftp=None,
+                    bootfile=None, hostfwd=[], netdev_id=None,
+                    netdev_extra_params=None, tapfd=None, script=None,
+                    downscript=None, vhost=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -742,7 +744,7 @@ class VM(virt_vm.BaseVM):
                     cmd += "%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
-            if mode == "tap" and tapfd:
+            if mode == "tap" and tapfd is not None:
                 cmd += ",fd=%d" % tapfd
             elif mode == "user":
                 if tftp and "[,tftp=" in help_text:
@@ -752,6 +754,13 @@ class VM(virt_vm.BaseVM):
                 if "[,hostfwd=" in help_text:
                     for host_port, guest_port in hostfwd:
                         cmd += ",hostfwd=tcp::%s-:%s" % (host_port, guest_port)
+            else:
+                if ifname:
+                    cmd += ",ifname='%s'" % ifname
+                if script:
+                    cmd += ",script='%s'" % script
+                cmd += ",downscript='%s'" % (downscript or "no")
+
             return cmd
 
         def add_floppy(help_text, filename, index):
@@ -1331,7 +1340,14 @@ class VM(virt_vm.BaseVM):
         for nic in vm.virtnet:
             nic_params = params.object_params(nic.nic_name)
             if nic_params.get('pci_assignable') == "no":
+                script = nic_params.get("nic_script")
+                downscript = nic_params.get("nic_downscript")
                 vhost = nic_params.get("vhost")
+                script_dir = data_dir.get_data_dir()
+                if script:
+                    script = utils_misc.get_path(script_dir, script)
+                if downscript:
+                    downscript = utils_misc.get_path(script_dir, downscript)
                 # setup nic parameters as needed
                 # add_netdev if netdev_id not set
                 nic = vm.add_nic(**dict(nic))
@@ -1364,7 +1380,7 @@ class VM(virt_vm.BaseVM):
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
                                     bootp, redirs, netdev_id, netdev_extra,
-                                    tapfd, vhost)
+                                    tapfd, script, downscript, vhost)
             else:
                 pci_id = vm.pa_pci_ids[iov]
                 qemu_cmd += add_pcidevice(help, pci_id, params=nic_params)
