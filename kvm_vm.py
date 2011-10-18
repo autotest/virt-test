@@ -8,7 +8,7 @@ import time, os, logging, fcntl, re, commands, shelve, glob
 import virt_test_utils
 from autotest_lib.client.common_lib import error, cartesian_config
 from autotest_lib.client.bin import utils
-import virt_utils, virt_vm, kvm_monitor, aexpect
+import virt_utils, virt_vm, virt_test_setup, kvm_monitor, aexpect
 
 
 class VM(virt_vm.BaseVM):
@@ -42,6 +42,7 @@ class VM(virt_vm.BaseVM):
             self.pci_assignable = None
             self.netdev_id = []
             self.device_id = []
+            self.tapfds = []
             self.uuid = None
 
 
@@ -367,7 +368,8 @@ class VM(virt_vm.BaseVM):
 
         def add_net(help, vlan, mode, ifname=None, script=None,
                     downscript=None, tftp=None, bootfile=None, hostfwd=[],
-                    netdev_id=None, vhost=None, netdev_extra_params=None):
+                    netdev_id=None, vhost=None, netdev_extra_params=None,
+                    tapfd=None):
             if has_option(help, "netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if vhost:
@@ -376,10 +378,8 @@ class VM(virt_vm.BaseVM):
                     cmd += ",%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
-            if mode == "tap":
-                if ifname: cmd += ",ifname='%s'" % ifname
-                if script: cmd += ",script='%s'" % script
-                cmd += ",downscript='%s'" % (downscript or "no")
+            if mode == "tap" and tapfd is not None:
+                cmd += ",fd=%d" % tapfd
             elif mode == "user":
                 if tftp and "[,tftp=" in help:
                     cmd += ",tftp='%s'" % tftp
@@ -388,6 +388,13 @@ class VM(virt_vm.BaseVM):
                 if "[,hostfwd=" in help:
                     for host_port, guest_port in hostfwd:
                         cmd += ",hostfwd=tcp::%s-:%s" % (host_port, guest_port)
+            else:
+                if ifname:
+                    cmd += ",ifname='%s'" % ifname
+                if script:
+                    cmd += ",script='%s'" % script
+                cmd += ",downscript='%s'" % (downscript or "no")
+
             return cmd
 
         def add_floppy(help, filename):
@@ -649,22 +656,32 @@ class VM(virt_vm.BaseVM):
                                     self.netdev_id[vlan],
                                     nic_params.get("nic_extra_params"),
                                     nic_params.get("nic_pci_addr"))
+
                 # Handle the '-net tap' or '-net user' part
                 script = nic_params.get("nic_script")
                 downscript = nic_params.get("nic_downscript")
                 tftp = nic_params.get("tftp")
+                vhost = nic_params.get("vhost")
                 if script:
                     script = virt_utils.get_path(root_dir, script)
                 if downscript:
                     downscript = virt_utils.get_path(root_dir, downscript)
                 if tftp:
                     tftp = virt_utils.get_path(root_dir, tftp)
+                if nic_params.get("nic_mode") == "tap":
+                    try:
+                        tapfd = vm.tapfds[vlan]
+                    except:
+                        tapfd = None
+                else:
+                    tapfd = None
                 qemu_cmd += add_net(help, vlan, nic_params.get("nic_mode", "user"),
                                     vm.get_ifname(vlan),
                                     script, downscript, tftp,
                                     nic_params.get("bootp"), redirs, netdev_id,
-                                    nic_params.get("vhost"),
-                                    nic_params.get("netdev_extra_params"))
+                                    nic_params.get("netdev_extra_params"),
+                                    vhost, tapfd)
+
                 # Proceed to next NIC
                 vlan += 1
         else:
@@ -889,6 +906,10 @@ class VM(virt_vm.BaseVM):
         @raise VMBadPATypeError: If an unsupported PCI assignment type is
                 requested
         @raise VMPAError: If no PCI assignable devices could be assigned
+        @raise TAPCreationError: If fail to create tap fd
+        @raise BRAddIfError: If fail to add a tap to a bridge
+        @raise TAPBringUpError: If fail to bring up a tap
+        @raise PrivateBridgeError: If fail to bring the private bridge
         """
         error.context("creating '%s'" % self.name)
         self.destroy(free_mac_addresses=False)
@@ -953,12 +974,26 @@ class VM(virt_vm.BaseVM):
                 guest_port = int(redir_params.get("guest_port"))
                 self.redirs[guest_port] = host_ports[i]
 
-            # Generate netdev/device IDs for all NICs
+            # Generate netdev IDs for all NICs and create TAP fd
             self.netdev_id = []
-            self.device_id = []
+            self.tapfds = []
+            vlan = 0
+            
             for nic in params.objects("nics"):
                 self.netdev_id.append(virt_utils.generate_random_id())
                 self.device_id.append(virt_utils.generate_random_id())
+                nic_params = params.object_params(nic)
+                if nic_params.get("nic_mode") == "tap" and\
+                   nic_params.get("use_nic_scritps") == "no":
+                    ifname = self.get_ifname(vlan)
+                    brname = nic_params.get("bridge")
+                    if brname == "private":
+                        brname = virt_test_setup.PrivateBridgeConfig().brname
+                    tapfd = virt_utils.open_tap("/dev/net/tun", ifname)
+                    virt_utils.add_to_bridge(ifname, brname)
+                    virt_utils.bring_up_ifname(ifname)
+                    self.tapfds.append(tapfd)
+                vlan += 1
 
             # Find available VNC port, if needed
             if params.get("display") == "vnc":
@@ -1053,6 +1088,12 @@ class VM(virt_vm.BaseVM):
             logging.info("Running qemu command:\n%s", qemu_command)
             self.process = aexpect.run_bg(qemu_command, None,
                                                  logging.info, "(qemu) ")
+            for tapfd in self.tapfds:
+                try:
+                    os.close(tapfd)
+                # File descriptor is already closed
+                except OSError:
+                    pass
 
             # Make sure the process was started successfully
             if not self.process.is_alive():
