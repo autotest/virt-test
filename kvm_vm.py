@@ -572,8 +572,7 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
-        def add_cpu_flags(help, cpu_model, flags=None, vendor_id=None,
-                          family=None):
+        def add_cpu_flags(help, cpu_model, flags=None, vendor_id=None):
             if has_option(help, 'cpu'):
                 cmd = " -cpu %s" % cpu_model
 
@@ -581,32 +580,10 @@ class VM(virt_vm.BaseVM):
                     cmd += ",vendor=\"%s\"" % vendor_id
                 if flags:
                     cmd += ",%s" % flags
-                if family is not None:
-                    cmd += ",family=%s" % family
+
                 return cmd
             else:
-                # Okay, for the archaic qemu which has not device parameter,
-                # just return a usb uhci controller.
-                # If choose this kind of usb controller, it has no name/id,
-                # and only can be created once, so give it a special name.
-                self.usb_dev_dict["OLDVERSION_usb0"] = []
-                return " -usb"
-
-            if multifunction is True:
-                cmd += ",multifunction=on"
-            if masterbus:
-                cmd += ",mastbus=%s" % masterbus
-            if firstport:
-                cmd += ",firstport=%s" % firstport
-
-            # register this usb controller.
-            self.usb_dev_dict[usb_id] = []
-            return cmd
-
-        def get_index(index):
-            while self.index_in_use.get(str(index)):
-                index += 1
-            return index
+                return ""
 
         def add_usb(help, usb_id, usb_type, multifunction=False,
                     masterbus=None, firstport=None, freq=None):
@@ -867,7 +844,12 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_smp(help, smp,
                                 vcpu_cores, vcpu_threads, vcpu_sockets)
 
-        # Add cdroms
+        cpu_model = params.get("cpu_model")
+        if cpu_model:
+            vendor = params.get("cpu_model_vendor")
+            flags = params.get("cpu_model_flags")
+            qemu_cmd += add_cpu_flags(help, cpu_model, vendor, flags)
+
         for cdrom in params.objects("cdroms"):
             cdrom_params = params.object_params(cdrom)
             iso = cdrom_params.get("cdrom")
