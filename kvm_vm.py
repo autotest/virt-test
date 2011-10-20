@@ -850,6 +850,12 @@ class VM(virt_vm.BaseVM):
             flags = params.get("cpu_model_flags")
             qemu_cmd += add_cpu_flags(help, cpu_model, vendor, flags)
 
+        cpu_model = params.get("cpu_model")
+        if cpu_model:
+            vendor = params.get("cpu_model_vendor")
+            flags = params.get("cpu_model_flags")
+            qemu_cmd += add_cpu_flags(help, cpu_model, vendor, flags)
+
         for cdrom in params.objects("cdroms"):
             cdrom_params = params.object_params(cdrom)
             iso = cdrom_params.get("cdrom")
