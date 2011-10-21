@@ -1061,7 +1061,7 @@ def restart_guest_network(session, nic_name=None):
 
     if if_list:
         session.sendline("killall dhclient && "
-                         "dhclinet %s &" % ' '.join(if_list))
+                         "dhclient %s &" % ' '.join(if_list))
 
 def  vm_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout = 300):
     """
