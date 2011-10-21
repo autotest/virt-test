@@ -966,7 +966,274 @@ def get_linux_ifname(session, mac_address):
     except Exception:
         return None
 
-def run_virt_sub_test(test, params, env, sub_type=None):
+
+def restart_guest_network(session, nic_name=None):
+    """
+    Restart guest's network via serial console.
+
+    @param session: session to virtual machine
+    @nic_name: nic card name in guest to restart
+    """
+    if_list = []
+    if not nic_name:
+        # initiate all interfaces on guest.
+        o = session.cmd_output("ip link")
+        if_list = re.findall(r"\d+: (eth\d+):", o)
+    else:
+        if_list.append(nic_name)
+
+    if if_list:
+        session.sendline("killall dhclient && "
+                         "dhclient %s &" % ' '.join(if_list))
+
+def  vm_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout = 300):
+    """
+    For record the env information such as cpu utilization, meminfo while
+    run guest test in guest.
+    @vm: Guest Object
+    @monitor_cmd: monitor command running in backgroud
+    @test_cmd: test suit run command
+    @guest_path: path in guest to store the test result and monitor data
+    @timeout: longest time for monitor running
+    Return: tag the suffix of the results
+    """
+    def thread_kill(cmd, p_file):
+        fd = shelve.open(p_file)
+        s, o = commands.getstatusoutput("pstree -p %s" % fd["pid"])
+        tmp = re.split("\s+", cmd)[0]
+        pid = re.findall("%s.(\d+)" % tmp, o)[0]
+        s, o = commands.getstatusoutput("kill -9 %s" % pid)
+        fd.close()
+        return (s, o)
+
+    def monitor_thread(m_cmd, p_file, r_file):
+        fd = shelve.open(p_file)
+        fd["pid"] = os.getpid()
+        fd.close()
+        os.system("%s &> %s" % (m_cmd, r_file))
+
+    def test_thread(session, m_cmd, t_cmd, p_file, flag, timeout):
+        flag.put(True)
+        s, o = session.cmd_status_output(t_cmd, timeout)
+        if s != 0:
+            raise error.TestFail("Test failed or timeout: %s" % o)
+        if not flag.empty():
+            flag.get()
+            thread_kill(m_cmd, p_file)
+
+    kill_thread_flag = Queue(1)
+    session = wait_for_login(vm, 0, 300, 0, 2)
+    tag = vm.instance
+    pid_file = "/tmp/monitor_pid_%s" % tag
+    result_file = "/tmp/monitor_result_%s" % tag
+
+    monitor = threading.Thread(target=monitor_thread,args=(monitor_cmd,
+                              pid_file, result_file))
+    test_runner = threading.Thread(target=test_thread, args=(session,
+                                   monitor_cmd, test_cmd, pid_file,
+                                   kill_thread_flag, timeout))
+
+    monitor.start()
+    test_runner.start()
+    monitor.join(int(timeout))
+    if not kill_thread_flag.empty():
+        kill_thread_flag.get()
+        thread_kill(monitor_cmd, pid_file)
+        thread_kill("sh", pid_file)
+
+    guest_result_file = "/tmp/guest_test_result_%s" % tag
+    guest_monitor_result_file = "/tmp/guest_test_monitor_result_%s" % tag
+    vm.copy_files_from(guest_path, guest_result_file)
+    vm.copy_files_from("%s_monitor" % guest_path, guest_monitor_result_file)
+    return tag
+
+def aton(str):
+    """
+    Transform a string to a number(include float and int). If the string is
+    not in the form of number, just return false.
+    @str: string to transfrom
+    Return: float, int or False for failed transform
+    """
+    substring = re.split("\.", str)
+    if len(substring) == 1:
+        if substring[0].isdigit():
+            return string.atoi(str)
+    elif len(substring) == 2:
+        if substring[0].isdigit() and substring[1].isdigit():
+            return string.atof(str)
+    return False
+
+def summary_up_result(result_file, ignore, row_head, column_mark):
+    """
+    Use to summary the monitor or other kinds of results. Now it calculate
+    the average value for each item in the results. It fit to the records that
+    in matrix form.
+    @result_file: files which need to calculate
+    @ignore: pattern for the comment in results which need to through away
+    @row_head: pattern for the items in row
+    @column_mark: pattern for the first line in matrix which used to generate
+    the items in column
+    Return: A dictionary with the average value of results
+    """
+    head_flag = False
+    result_dict = {}
+    column_list = {}
+    row_list = []
+    fd = open(result_file, "r")
+    for eachLine in fd:
+        if len(re.findall(ignore, eachLine)) == 0:
+            if len(re.findall(column_mark, eachLine)) != 0 and not head_flag:
+                column = 0
+                empty, row, eachLine = re.split(row_head, eachLine)
+                for i in re.split("\s+", eachLine):
+                    if i:
+                        result_dict[i] = {}
+                        column_list[column] = i
+                        column += 1
+                head_flag = True
+            elif len(re.findall(column_mark, eachLine)) == 0:
+                column = 0
+                empty, row, eachLine = re.split(row_head, eachLine)
+                row_flag = False
+                for i in row_list:
+                    if row == i:
+                        row_flag = True
+                if row_flag == False:
+                    row_list.append(row)
+                    for i in result_dict:
+                        result_dict[i][row] = []
+                for i in re.split("\s+", eachLine):
+                    if i:
+                        result_dict[column_list[column]][row].append(i)
+                        column += 1
+    fd.close()
+    # Calculate the average value
+    average_list = {}
+    for i in column_list:
+        average_list[column_list[i]] = {}
+        for j in row_list:
+            average_list[column_list[i]][j] = {}
+            check = result_dict[column_list[i]][j][0]
+            if aton(check) or aton(check) == 0.0:
+                count = 0
+                for k in result_dict[column_list[i]][j]:
+                    count += aton(k)
+                average_list[column_list[i]][j] = "%.2f" % (count / len(result_dict[column_list[i]][j]))
+
+    return average_list
+
+def create_image(cmd, img_name, img_fmt, base_img=None, base_fmt=None,
+       img_size=None, encrypted=None, preallocated=None, cluster_size=None):
+    """
+    Create image
+    @img_name: the name of the image to be created
+    @img_fmt: the format of the image to be created
+    @base_img: the base image name when create snapshot
+    @base_fmt: the format of base image
+    @img_size: image size
+    @encrypted: there are two value "off" and "on", default value is "off"
+    @preallocated: there are two value "metadata" and "off", default is "off"
+    @cluster_size: the qcow2 cluster size
+    """
+    cmd += " create"
+    if encrypted == "yes":
+        cmd += " -o encryption=on"
+    if base_img:
+        cmd += " -b %s" % base_img
+        if base_fmt:
+            cmd += " -F %s" % base_fmt
+    cmd += " -f %s" % img_fmt
+    cmd += " %s" % img_name
+    if img_size:
+        cmd += " %s" % img_size
+    if preallocated == "yes":
+        cmd += " -o preallocation=metadata"
+    if cluster_size is not None:
+        cmd += " -o cluster_size=%s" % cluster_size
+
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Could not create image:\n%s", str(e))
+        return None
+    return img_name
+
+def convert_image(cmd, img_name, img_fmt, convert_name, convert_fmt,
+                  compressed=None, encrypted=None):
+    """
+    Convert image:
+    @cmd: qemu-img cmd
+    @img_name: the name of the image to be converted
+    @img_fmt: the format of the image to be converted
+    @convert_name: the name of the image after convert
+    @convert_fmt: the format after convert
+    @compressed: indicates that target image must be compressed
+    @encrypted: there are two value "off" and "on", default value is "off"
+    """
+    cmd += " convert"
+    if compressed == "yes":
+        cmd += " -c"
+    if encrypted == "yes":
+        cmd += " -o encryption=on"
+    if img_fmt:
+        cmd += " -f %s" % img_fmt
+    cmd += " -O %s" % convert_fmt
+    cmd += " %s %s" % (img_name, convert_name)
+    logging.info("Convert image %s from %s to %s", img_name, img_fmt,
+                  convert_fmt)
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Could not convert image:\n%s", str(e))
+        return None
+    return convert_name
+
+def rebase_image(cmd, snapshot_img, base_img, base_fmt, snapshot_fmt=None,
+                 mode=None):
+    """
+    Rebase image
+    @cmd: qemu-img cmd
+    @snapshot_img: the snapshot name
+    @base_img: base image name
+    @base_fmt: base image format
+    @snapshot_fmt: the snapshot format
+    @mode: there are two value, "safe" and "unsafe", devault is "safe"
+    """
+    cmd += " rebase"
+    if snapshot_fmt:
+        cmd += " -f %s" % snapshot_fmt
+    if mode == "unsafe":
+        cmd += " -u"
+    cmd += " -b %s -F %s %s" % (base_img, base_fmt, snapshot_img)
+    logging.info("Rebase snapshot %s to %s..." % (snapshot_img, base_img))
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Could not rebase snapshot:\n%s", str(e))
+        return None
+    return base_img
+
+def commit_image(cmd, snapshot_img, snapshot_fmt):
+    """
+    Commit image
+    @cmd: qemu-img cmd
+    @snapshot_img: the name of the snapshot to be commited
+    @snapshot_fmt: the format of the snapshot
+    """
+    cmd += " commit"
+    cmd += " -f %s %s" % (snapshot_fmt, snapshot_img)
+    logging.info("Commit snapshot %s" % snapshot_img)
+    try:
+        utils.system(cmd)
+    except error.CmdError, e:
+        raise error.TestFail("Commit image failed\n%s", str(e))
+        return None
+
+    logging.info("commit %s to backing file" % snapshot_img)
+    return snapshot_img
+
+
+def run_sub_test(test, params, env, sub_type=None):
     """
     Call another test script in one test script.
     @param test:   KVM test object.
