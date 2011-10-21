@@ -1531,7 +1531,7 @@ class PciAssignable(object):
     PF (physical Functions) or VF (Virtual Functions).
     """
     def __init__(self, type="vf", driver=None, driver_option=None,
-                 names=None, devices_requested=None),
+                 names=None, devices_requested=None,
                  host_set_flag=None, kvm_params=None):
         """
         Initialize parameter 'type' which could be:
