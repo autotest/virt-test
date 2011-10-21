@@ -2736,4 +2736,4 @@ def get_module_params(sys_path, module_name):
             module_params[full_dir] = tmp
     else:
         return None
-    return module_param
+    return module_params
