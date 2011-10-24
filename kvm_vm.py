@@ -280,28 +280,23 @@ class VM(virt_vm.BaseVM):
 
         def add_drive(help, filename, index=None, format=None, cache=None,
                       werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=False, blkdebug=None,imgfmt="raw", aio=None,
-                      media="disk", ide_bus=None, ide_unit=None, vdisk=None,
-                      pci_addr=None,floppy_unit=None, readonly=False):
-
-            free_pci_addr = get_free_pci_addr(pci_addr)
-
-            dev = {"virtio" : "virtio-blk-pci",
-                   "ide" : "ide-drive"}
-
-            if format == "ide":
-                id ="ide0-%s-%s" % (ide_bus, ide_unit)
-                ide_bus = "ide." + str(ide_bus)
-            elif format == "virtio":
-                if media == "disk":
-                    vdisk += 1
-                blkdev_id ="virtio-disk%s" % vdisk
-                id = "virtio-disk%s" % vdisk
-            if media == "floppy":
-                id ="fdc0-0-%s" % floppy_unit
-            blkdev_id = "drive-%s" % id
-
-            # -drive part
+                      boot=False, blkdebug=None, bus=None):
+            name = None;
+            dev = "";
+            if format == "ahci":
+                name = "ahci%s" % index
+                dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
+                format = "none"
+                index = None
+            if format == "usb2":
+                name = "usb2.%s" % index
+                dev += " -device usb-storage"
+                if bus:
+                    dev += ",bus=%s" % bus
+                dev += ",drive=%s" % name
+                dev += ",port=%d" % (int(index) + 1)
+                format = "none"
+                index = None
             if blkdebug is not None:
                 cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
             else:
@@ -522,33 +517,27 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
-        def add_cpu_flags(help, cpu_model, flags=None, vendor_id=None):
-            if has_option(help, 'cpu'):
-                cmd = " -cpu %s" % cpu_model
-
-                if vendor_id:
-                    cmd += ",vendor=\"%s\"" % vendor_id
-                if flags:
-                    cmd += ",%s" % flags
-
-                return cmd
+        def add_usb(help, usb_id, usb_type, multifunction=False,
+                    masterbus=None, firstport=None):
+            cmd = ""
+            if has_option(help, "device"):
+                if usb_type == "ehci":
+                    cmd = " -device usb-ehci,id=%s" % usb_id
+                if usb_type == "uhci":
+                    cmd = " -device ich9-usb-uhci1,id=%s" % usb_id
             else:
-                return ""
+                # Okay, for the archaic qemu which has not device parameter,
+                # just return a usb uhci controller.
+                return " -usb"
 
-        def add_boot(help, boot_order, boot_once, boot_menu):
-            cmd = "-boot "
-            if has_option(help, "boot \[a\|c\|d\|n\]"):
-                cmd += "%s" % boot_once
-            elif has_option(help, "boot \[order=drives\]\[,once=drives\]\[,menu=on\|off\]"):
-                cmd += "order=%s,once=%s,menu=%s " % (boot_order, boot_once, boot_menu)
-            else:
-                cmd = ""
+            if multifunction is True:
+                cmd += ",multifunction=on"
+            if masterbus:
+                cmd += ",mastbus=%s" % masterbus
+            if firstport:
+                cmd += ",firstport=%s" % firstport
+
             return cmd
-
-        def get_index(index):
-            while self.index_in_use.get(str(index)):
-                index += 1
-            return index
 
         # End of command line option wrappers
 
@@ -560,7 +549,6 @@ class VM(virt_vm.BaseVM):
             root_dir = self.root_dir
 
         have_ahci = False
-        have_usb2 = False
 
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
@@ -614,33 +602,43 @@ class VM(virt_vm.BaseVM):
         # Add serial console redirection
         qemu_cmd += add_serial(help, vm.get_serial_console_filename())
 
+        # Add USB controllers
+        for usb_name in params.objects("usbs"):
+            usb_params = params.object_params(usb_name)
+            qemu_cmd += add_usb(help, usb_name, usb_params.get("usb_type"),
+                                usb_params.get("multifunction") == "on",
+                                usb_params.get("masterbus"),
+                                usb_params.get("firstport"))
+
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
+            if image_params.get("drive_format") == "ahci" and not have_ahci:
+                qemu_cmd += " -device ahci,id=ahci"
+                have_ahci = True
 
-            if params.get("index_enable") == "yes":
-                drive_index = image_params.get("drive_index")
-                if drive_index:
-                    index = drive_index
-                else:
-                    index_global = get_index(index_global)
-                    index = str(index_global)
-                    index_global += 1
-            else:
-                index = None
+            bus = None
+            if image_params.get("drive_format") == "usb2":
+                for usb in params.objects("usbs"):
+                    usb_params = params.object_params(usb)
+                    if usb_params.get("usb_type") == "ehci":
+                        bus = "%s.0" % usb
+                        break
+
             qemu_cmd += add_drive(help,
-                                  virt_vm.get_image_filename(image_params, root_dir),
-                                  index,
-                                  image_params.get("drive_format"),
-                                  image_params.get("drive_cache"),
-                                  image_params.get("drive_rerror"),
-                                  image_params.get("drive_werror"),
-                                  image_params.get("drive_serial"),
-                                  image_params.get("image_snapshot") == "yes",
-                                  image_params.get("image_boot") == "yes",
+                    virt_vm.get_image_filename(image_params, root_dir),
+                    image_params.get("drive_index"),
+                    image_params.get("drive_format"),
+                    image_params.get("drive_cache"),
+                    image_params.get("drive_rerror"),
+                    image_params.get("drive_werror"),
+                    image_params.get("drive_serial"),
+                    image_params.get("image_snapshot") == "yes",
+                    image_params.get("image_boot") == "yes",
                     virt_vm.get_image_blkdebug_filename(image_params,
-                                                        self.virt_dir))
+                                                        self.virt_dir),
+                    bus)
 
         redirs = []
         for redir_name in params.objects("redirs"):
@@ -742,9 +740,6 @@ class VM(virt_vm.BaseVM):
             if cdrom_params.get("cd_format") == "ahci" and not have_ahci:
                 qemu_cmd += " -device ahci,id=ahci"
                 have_ahci = True
-            if cdrom_params.get("cd_format") == "usb2" and not have_usb2:
-                qemu_cmd += " -device usb-ehci,id=ehci"
-                have_usb2 = True
             if iso:
                 iso = virt_utils.get_path(root_dir, iso)
                 if params.get("index_enable") == "yes":
