@@ -279,6 +279,10 @@ def preprocess(test, params, env):
         h = virt_test_setup.HugePageConfig(params)
         h.setup()
 
+    if params.get("setup_thp") == "yes":
+        thp = virt_test_setup.TransparentHugePageConfig(test, params)
+        thp.setup()
+
     # Execute any pre_commands
     if params.get("pre_command"):
         process_command(test, params, env, params.get("pre_command"),
@@ -390,6 +394,10 @@ def postprocess(test, params, env):
     if params.get("setup_hugepages") == "yes":
         h = virt_test_setup.HugePageConfig(params)
         h.cleanup()
+
+    if params.get("setup_thp") == "yes":
+        thp = virt_test_setup.TransparentHugePageConfig(test, params)
+        thp.cleanup()
 
     # Execute any post_commands
     if params.get("post_command"):
