@@ -242,22 +242,30 @@ def create_image(params, root_dir):
            image_size -- the requested size of the image (a string
            qemu-img can understand, such as '10G')
     """
-    qemu_img_cmd = virt_utils.get_path(root_dir, params.get("qemu_img_binary",
-                                                           "qemu-img"))
-    qemu_img_cmd += " create"
-
     format = params.get("image_format", "qcow2")
-    qemu_img_cmd += " -f %s" % format
-
     image_filename = get_image_filename(params, root_dir)
-    qemu_img_cmd += " %s" % image_filename
-
     cluster_size = params.get("cluster_size")
-    if cluster_size:
-        qemu_img_cmd += " -o cluster_size=%s" % cluster_size
-
     size = params.get("image_size", "10G")
-    qemu_img_cmd += " %s" % size
+
+    if params.get("create_with_dd") == "yes":
+        size_num = re.findall("\d+", size)[0]
+        size_num = int(size_num)
+        if "G" in size:
+            size_num *= 1024
+        qemu_img_cmd = params.get("dd_create_cmd") % (image_filename, size_num)
+
+    else:
+        qemu_img_cmd = virt_utils.get_path(root_dir,
+                      params.get("qemu_img_binary","qemu-img"))
+        qemu_img_cmd += " create"
+        qemu_img_cmd += " -f %s" % format
+        qemu_img_cmd += " %s" % image_filename
+
+        if cluster_size:
+            qemu_img_cmd += " -o cluster_size=%s" % cluster_size
+
+        qemu_img_cmd += " %s" % size
+
     try:
         utils.system(qemu_img_cmd)
     except error.CmdError, e:
