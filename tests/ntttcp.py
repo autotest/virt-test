@@ -1,11 +1,9 @@
 import logging, os, glob, re, commands
-from autotest.client.shared import error
-from autotest.client.shared import utils
-from virttest import utils_misc, utils_test, remote
-from virttest import aexpect
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.common_lib import utils
+from autotest_lib.client.virt import virt_utils, aexpect, virt_test_utils
 
 _receiver_ready = False
-
 
 def run_ntttcp(test, params, env):
     """
@@ -40,8 +38,8 @@ def run_ntttcp(test, params, env):
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     if params.get('numa_node'):
         numa_node = int(params.get('numa_node'))
-        node = utils_misc.NumaNode(numa_node)
-        utils_test.pin_vm_threads(vm_sender, node)
+        node = virt_utils.NumaNode(numa_node)
+        virt_test_utils.pin_vm_threads(vm_sender, node)
 
     if not receiver_addr:
         vm_receiver = env.get_vm("vm2")
@@ -54,7 +52,7 @@ def run_ntttcp(test, params, env):
                 raise error.TestError("Can't get receiver(%s) ip address" %
                                       vm_sender.name)
             if params.get('numa_node'):
-                utils_test.pin_vm_threads(vm_receiver, node)
+                virt_test_utils.pin_vm_threads(vm_receiver, node)
         finally:
             if sess:
                 sess.close()
@@ -67,7 +65,7 @@ def run_ntttcp(test, params, env):
             # Don't install ntttcp if it's already installed
             error.context("NTttcp directory already exists")
             session.cmd(params.get("check_ntttcp_cmd"))
-        except aexpect.ShellCmdError:
+        except aexpect.ShellCmdError, e:
             ntttcp_install_cmd = params.get("ntttcp_install_cmd")
             error.context("Installing NTttcp on guest")
             session.cmd(ntttcp_install_cmd % (platform, platform), timeout=200)
@@ -85,17 +83,17 @@ def run_ntttcp(test, params, env):
             client = params.get("shell_client")
             port = int(params.get("shell_port"))
             log_filename = ("session-%s-%s.log" % (receiver_addr,
-                            utils_misc.generate_random_string(4)))
-            session = remote.remote_login(client, receiver_addr, port,
-                                               username, password, prompt,
-                                               linesep, log_filename, timeout)
+                            virt_utils.generate_random_string(4)))
+            session = virt_utils.remote_login(client, receiver_addr, port,
+                                             username, password, prompt,
+                                             linesep, log_filename, timeout)
             session.set_status_test_command("echo %errorlevel%")
         install_ntttcp(session)
         ntttcp_receiver_cmd = params.get("ntttcp_receiver_cmd")
         global _receiver_ready
         f = open(results_path + ".receiver", 'a')
         for b in buffers:
-            utils_misc.wait_for(lambda: not _wait(), timeout)
+            virt_utils.wait_for(lambda: not _wait(), timeout)
             _receiver_ready = True
             rbuf = params.get("fixed_rbuf", b)
             cmd = ntttcp_receiver_cmd % (session_num, receiver_addr, rbuf, buf_num)
@@ -124,7 +122,7 @@ def run_ntttcp(test, params, env):
             for b in buffers:
                 cmd = ntttcp_sender_cmd % (session_num, receiver_addr, b, buf_num)
                 # Wait until receiver ready
-                utils_misc.wait_for(_wait, timeout)
+                virt_utils.wait_for(_wait, timeout)
                 r = session.cmd_output(cmd, timeout=timeout,
                                        print_func=logging.debug)
                 _receiver_ready = False
@@ -135,13 +133,13 @@ def run_ntttcp(test, params, env):
 
     def parse_file(resultfile):
         """ Parse raw result files and generate files with standard format """
-        fileobj = open(resultfile, "r")
-        lst = []
+        file = open(resultfile, "r")
+        list= []
         found = False
-        for line in fileobj.readlines():
+        for line in file.readlines():
             o = re.findall("Send buffer size: (\d+)", line)
             if o:
-                bfr = o[0]
+                buffer = o[0]
             if "Total Throughput(Mbit/s)" in line:
                 found = True
             if found:
@@ -150,16 +148,16 @@ def run_ntttcp(test, params, env):
                     continue
                 try:
                     [float(i) for i in fields]
-                    lst.append([bfr, fields[-1]])
+                    list.append([buffer, fields[-1]])
                 except ValueError:
                     continue
                 found = False
-        return lst
+        return list
 
     try:
-        bg = utils.InterruptedThread(receiver, ())
+        bg = virt_utils.Thread(receiver, ())
         bg.start()
-        if bg.isAlive():
+        if bg.is_alive():
             sender()
             bg.join(suppress_exception=True)
         else:
@@ -169,14 +167,6 @@ def run_ntttcp(test, params, env):
             f = open("%s.RHS" % results_path, "w")
             raw = "  buf(k)| throughput(Mbit/s)"
             logging.info(raw)
-            f.write("#ver# %s\n#ver# host kernel: %s\n" %
-                    (commands.getoutput("rpm -q qemu-kvm"), os.uname()[2]))
-            desc = """#desc# The tests are sessions of "NTttcp", send buf number is %s. 'throughput' was taken from ntttcp's report.
-#desc# How to read the results:
-#desc# - The Throughput is measured in Mbit/sec.
-#desc#
-""" % (buf_num)
-            f.write(desc)
             f.write(raw + "\n")
             for j in parse_file(i):
                 raw = "%8s| %8s" % (j[0], j[1])
