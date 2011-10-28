@@ -3111,6 +3111,7 @@ class GnuSourceBuildHelper(object):
         self.build_dir = build_dir
         self.prefix = prefix
         self.configure_options = configure_options
+        self.install_debug_info = True
         self.include_pkg_config_path()
 
 
@@ -3281,6 +3282,8 @@ class GnuSourceBuildHelper(object):
         '''
         Runs appropriate steps for *building* this source code tree
         '''
+        if self.install_debug_info:
+            self.enable_debug_symbols()
         self.configure()
         self.make()
 
@@ -3335,8 +3338,8 @@ class GnuSourceBuildParamHelper(GnuSourceBuildHelper):
 
         # Support the install_debug_info feature, that automatically
         # adds/keeps debug information on generated libraries/binaries
-        if not self.params.get("install_debug_info", "yes") == "no":
-            self.enable_debug_symbols()
+        install_debug_info_cfg = self.params.get("install_debug_info", "yes")
+        self.install_debug_info = install_debug_info_cfg != "no"
 
 
 def install_host_kernel(job, params):
