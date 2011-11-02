@@ -1310,13 +1310,14 @@ def commit_image(cmd, snapshot_img, snapshot_fmt):
     return snapshot_img
 
 
-def run_sub_test(test, params, env, sub_type=None):
+def run_sub_test(test, params, env, sub_type=None, tag=None):
     """
     Call another test script in one test script.
     @param test:   KVM test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     @sub_type: type of called test script.
+    @param tag:  tag for get the sub_test params
     """
     if sub_type is None:
         raise error.TestError("No sub test is found")
@@ -1339,6 +1340,8 @@ def run_sub_test(test, params, env, sub_type=None):
     f.close()
     # Run the test function
     run_func = getattr(test_module, "run_%s" % sub_type)
+    if tag is not None:
+        params = params.object_params(tag)
     run_func(test, params, env)
 
 def get_readable_cdroms(params, session):
