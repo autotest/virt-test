@@ -327,7 +327,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
         raise error.TestFail("Migration end with stauts: %s" % status)
 
     if dest_host == 'localhost':
-        if "paused" in dest_vm.monitor.info("status"):
+        if dest_vm.monitor.verify_status("paused"):
             logging.debug("Destination VM is paused, resuming it")
             dest_vm.monitor.cmd("cont")
 
