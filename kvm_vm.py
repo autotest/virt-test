@@ -528,14 +528,18 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
-        def add_usb(help, usb_id, usb_type, multifunction=False,
-                    masterbus=None, firstport=None):
-            cmd = ""
-            if has_option(help, "device"):
-                if usb_type == "ehci":
-                    cmd = " -device usb-ehci,id=%s" % usb_id
-                if usb_type == "uhci":
-                    cmd = " -device ich9-usb-uhci1,id=%s" % usb_id
+        def add_cpu_flags(help, cpu_model, flags=None, vendor_id=None,
+                          family=None):
+            if has_option(help, 'cpu'):
+                cmd = " -cpu %s" % cpu_model
+
+                if vendor_id:
+                    cmd += ",vendor=\"%s\"" % vendor_id
+                if flags:
+                    cmd += ",%s" % flags
+                if family is not None:
+                    cmd += ",family=%s" % family
+                return cmd
             else:
                 # Okay, for the archaic qemu which has not device parameter,
                 # just return a usb uhci controller.
@@ -785,7 +789,8 @@ class VM(virt_vm.BaseVM):
             flags += ",+x2apic"
 
         qemu_cmd += add_cpu_flags(help, cpu_model, flags,
-                                  params.get("cpu_vendor_id"))
+                                  params.get("cpu_vendor_id"),
+                                  params.get("family"))
 
         soundhw = params.get("soundcards")
         if soundhw:
