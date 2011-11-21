@@ -334,36 +334,22 @@ class VM(virt_vm.BaseVM):
             if cache: cmd += ",cache=%s" % cache
             if rerror:
                 cmd += ",rerror=%s" % rerror
-            if werror: cmd += ",werror=%s" % werror
-            if serial: cmd += ",serial=%s" % serial
-            if snapshot: cmd += ",snapshot=on"
-            if boot: cmd += ",boot=on"
-            if media == "cdrom" or readonly : cmd += ",readonly=on"
-            cmd += ",format=%s" % imgfmt
-            if ",aio=" in help and aio : cmd += ",aio=%s" % aio
+            if werror:
+                cmd += ",werror=%s" % werror
+            if serial:
+                cmd += ",serial='%s'" % serial
+            if snapshot:
+                cmd += ",snapshot=on"
+            if boot:
+                cmd += ",boot=on"
+            if name:
+                cmd += ",id=%s" % name
+            return cmd + dev
 
-            # -device part
-            if has_option(help, "device") and media != "floppy":
-                cmd += " -device %s" % dev[format]
-                if format == "ide":
-                    cmd += ",bus=%s" % ide_bus
-                    cmd += ",unit=%s" % ide_unit
-                else:
-                    cmd += ",bus=pci.0,addr=%s" % free_pci_addr
-                cmd += ",drive=%s" % blkdev_id
-                cmd += ",id=%s" % id
-
-            # -global part
-            drivelist = ['driveA','driveB']
-            if has_option(help,"global") and media == "floppy" :
-                cmd += " -global isa-fdc.%s=drive-%s" \
-                          % (drivelist[floppy_unit],id)
-            return cmd
-
-        def add_nic(help, vlan, model=None, mac=None, netdev_id=None,
-                    nic_extra_params=None, pci_addr=None, device_id=None):
-            free_pci_addr = get_free_pci_addr(pci_addr)
-
+        def add_nic(help, vlan, model=None, mac=None, device_id=None, netdev_id=None,
+                    nic_extra_params=None):
+            if model == 'none':
+                return ''
             if has_option(help, "netdev"):
                 netdev_vlan_str = ",netdev=%s" % netdev_id
             else:
@@ -403,6 +389,8 @@ class VM(virt_vm.BaseVM):
                     downscript=None, tftp=None, bootfile=None, hostfwd=[],
                     netdev_id=None, vhost=None, netdev_extra_params=None,
                     tapfd=None):
+            if mode == 'none':
+                return ''
             if has_option(help, "netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if vhost:
