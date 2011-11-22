@@ -302,7 +302,7 @@ class VM(virt_vm.BaseVM):
             if rerror:
                 cmd += ",rerror=%s" % rerror
             if werror: cmd += ",werror=%s" % werror
-            if serial: cmd += ",serial='%s'" % serial
+            if serial: cmd += ",serial=%s" % serial
             if snapshot: cmd += ",snapshot=on"
             if boot: cmd += ",boot=on"
             if media == "cdrom" or readonly : cmd += ",readonly=on"
