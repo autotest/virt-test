@@ -247,7 +247,7 @@ def create_image(params, root_dir):
     cluster_size = params.get("cluster_size")
     size = params.get("image_size", "10G")
 
-    if params.get("create_with_dd") == "yes":
+    if params.get("create_with_dd") == "yes" and format == "raw":
         size_num = re.findall("\d+", size)[0]
         size_num = int(size_num)
         if "G" in size:
