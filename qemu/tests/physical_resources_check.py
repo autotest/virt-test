@@ -1,6 +1,6 @@
-import re, string, logging
+import re, string, logging, random
 from autotest.client.shared import error
-from virttest import qemu_monitor, storage, data_dir
+from virttest import qemu_monitor, storage, utils_misc, env_process, data_dir
 
 
 def run_physical_resources_check(test, params, env):
@@ -76,7 +76,7 @@ def run_physical_resources_check(test, params, env):
         f_fail = []
         if verify_cmd:
             actual = session.cmd_output(verify_cmd)
-            if not string.upper(expect) in actual:
+            if not re.findall(expect, actual, re.I):
                 fail_log =  "%s mismatch:\n" % name
                 fail_log += "    Assigned to VM: %s\n" % string.upper(expect)
                 fail_log += "    Reported by OS: %s" % actual
@@ -159,7 +159,24 @@ def run_physical_resources_check(test, params, env):
             return f_fail
 
 
-    vm = env.get_vm(params["main_vm"])
+    if params.get("catch_serial_cmd") is not None:
+        length = int(params.get("length", "20"))
+        id_leng = random.randint(0, length)
+        drive_serial = ""
+        convert_str = "!\"#$%&\'()*+./:;<=>?@[\\]^`{|}~"
+        drive_serial = utils_misc.generate_random_string(id_leng,
+                                      ignore_str=",", convert_str=convert_str)
+
+        params["drive_serial"] = drive_serial
+        params["start_vm"] = "yes"
+
+        vm = params["main_vm"]
+        vm_params = params.object_params(vm)
+        env_process.preprocess_vm(test, vm_params, env, vm)
+        vm = env.get_vm(vm)
+    else:
+        vm = env.get_vm(params["main_vm"])
+
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     chk_timeout = int(params.get("chk_timeout", 240))
