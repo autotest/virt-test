@@ -1489,21 +1489,23 @@ def generate_random_string(length, ignore_str=string.punctuation,
     """
     Return a random string using alphanumeric characters.
 
-    @length: length of the string that will be generated.
-    @ignore_str: string that will not include in string that generated.
-                 Please make it empty str if it is not used.
-    @convert_str: stirng that need to be covered with "\\". Please
-                  make it empty str if it is not used.
+    @param length: Length of the string that will be generated.
+    @param ignore_str: Characters that will not include in generated string.
+    @param convert_str: Characters that need to be escaped (prepend "\\").
+
+    @return: The generated random string.
     """
     r = random.SystemRandom()
     str = ""
     chars = string.letters + string.digits + string.punctuation
+    if not ignore_str:
+        ignore_str = ""
     for i in ignore_str:
         chars = chars.replace(i, "")
 
     while length > 0:
         tmp = r.choice(chars)
-        if tmp in convert_str:
+        if convert_str and (tmp in convert_str):
             tmp = "\\%s" % tmp
         str += tmp
         length -= 1
