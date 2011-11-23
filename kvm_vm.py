@@ -18,6 +18,17 @@ class VM(virt_vm.BaseVM):
 
     MIGRATION_PROTOS = ['tcp', 'unix', 'exec']
 
+    #
+    # By default we inherit all timeouts from the base VM class
+    #
+    LOGIN_TIMEOUT = virt_vm.BaseVM.LOGIN_TIMEOUT
+    LOGIN_WAIT_TIMEOUT = virt_vm.BaseVM.LOGIN_WAIT_TIMEOUT
+    COPY_FILES_TIMEOUT = virt_vm.BaseVM.COPY_FILES_TIMEOUT
+    MIGRATE_TIMEOUT = virt_vm.BaseVM.MIGRATE_TIMEOUT
+    REBOOT_TIMEOUT = virt_vm.BaseVM.REBOOT_TIMEOUT
+    CREATE_TIMEOUT = virt_vm.BaseVM.CREATE_TIMEOUT
+    CLOSE_SESSION_TIMEOUT = 30
+
     def __init__(self, name, params, root_dir, address_cache, state=None):
         """
         Initialize the object and set a few attributes.
@@ -897,8 +908,8 @@ class VM(virt_vm.BaseVM):
 
 
     @error.context_aware
-    def create(self, name=None, params=None, root_dir=None, timeout=5.0,
-               migration_mode=None, mac_source=None):
+    def create(self, name=None, params=None, root_dir=None,
+               timeout=CREATE_TIMEOUT, migration_mode=None, mac_source=None):
         """
         Start the VM by running a qemu command.
         All parameters are optional. If name, params or root_dir are not
@@ -1616,9 +1627,10 @@ class VM(virt_vm.BaseVM):
 
 
     @error.context_aware
-    def migrate(self, timeout=3600, protocol="tcp", cancel_delay=None,
-                offline=False, stable_check=False, clean=True,
-                save_path="/tmp", dest_host="localhost", remote_port=None):
+    def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
+                cancel_delay=None, offline=False, stable_check=False,
+                clean=True, save_path="/tmp", dest_host="localhost",
+                remote_port=None):
         """
         Migrate the VM.
 
@@ -1772,7 +1784,8 @@ class VM(virt_vm.BaseVM):
 
 
     @error.context_aware
-    def reboot(self, session=None, method="shell", nic_index=0, timeout=240):
+    def reboot(self, session=None, method="shell", nic_index=0,
+               timeout=REBOOT_TIMEOUT):
         """
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
@@ -1812,9 +1825,10 @@ class VM(virt_vm.BaseVM):
             raise virt_vm.VMRebootError("Unknown reboot method: %s" % method)
 
         error.context("waiting for guest to go down", logging.info)
-        if not virt_utils.wait_for(lambda:
-                                  not session.is_responsive(),
-                                  120, 0, 1):
+        if not virt_utils.wait_for(
+            lambda:
+                not session.is_responsive(timeout=self.CLOSE_SESSION_TIMEOUT),
+            timeout / 2, 0, 1):
             raise virt_vm.VMRebootError("Guest refuses to go down")
         session.close()
         if self.params.get("mac_changeable") == "yes":
