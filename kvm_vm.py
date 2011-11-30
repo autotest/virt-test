@@ -263,8 +263,8 @@ class VM(virt_vm.BaseVM):
                       werror=None, rerror=None, serial=None, snapshot=False,
                       boot=False, blkdebug=None,imgfmt="raw", aio=None,
                       media="disk", ide_bus=None, ide_unit=None, vdisk=None,
-                      pci_addr=None,floppy_unit=None, readonly=False):
-
+                      pci_addr=None,floppy_unit=None, readonly=False,
+                      physical_block_size=None, logical_block_size=None):
             free_pci_addr = get_free_pci_addr(pci_addr)
 
             dev = {"virtio" : "virtio-blk-pci",
@@ -317,6 +317,10 @@ class VM(virt_vm.BaseVM):
                     cmd += ",unit=%s" % ide_unit
                 else:
                     cmd += ",bus=pci.0,addr=%s" % free_pci_addr
+                    if physical_block_size:
+                        cmd += ",physical_block_size=%s" % physical_block_size
+                    if logical_block_size:
+                        cmd += ",logical_block_size=%s" % logical_block_size
                 cmd += ",drive=%s" % blkdev_id
                 cmd += ",id=%s" % id
 
@@ -617,7 +621,9 @@ class VM(virt_vm.BaseVM):
                                   image_params.get("image_format"),
                                   image_params.get("image_aio", "native"),
                                   "disk", ide_bus, ide_unit, vdisk,
-                                  image_params.get("drive_pci_addr")
+                                  image_params.get("drive_pci_addr"),
+                physical_block_size=image_params.get("physical_block_size"),
+                logical_block_size=image_params.get("logical_block_size")
                                   )
 
             # increase the bus and unit no for ide device
