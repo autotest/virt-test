@@ -140,8 +140,8 @@ class VMAddressVerificationError(VMAddressError):
         self.ip = ip
 
     def __str__(self):
-        return ("Cannot verify MAC-IP address mapping using arping: "
-                "%s ---> %s" % (self.mac, self.ip))
+        return ("Could not verify DHCP lease: "
+                "%s --> %s" % (self.mac, self.ip))
 
 
 class VMMACAddressMissingError(VMAddressError):
@@ -150,7 +150,7 @@ class VMMACAddressMissingError(VMAddressError):
         self.nic_index = nic_index
 
     def __str__(self):
-        return "No MAC address defined for NIC #%s" % self.nic_index
+        return "No MAC defined for NIC #%s" % self.nic_index
 
 
 class VMIPAddressMissingError(VMAddressError):
@@ -159,7 +159,7 @@ class VMIPAddressMissingError(VMAddressError):
         self.mac = mac
 
     def __str__(self):
-        return "Cannot find IP address for MAC address %s" % self.mac
+        return "No DHCP lease for MAC %s" % self.mac
 
 
 class VMAddNetDevError(VMError):
