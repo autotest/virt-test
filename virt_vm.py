@@ -19,14 +19,17 @@ class VMCreateError(VMError):
                 "output: %r)" % (self.cmd, self.status, self.output))
 
 
-class VMConfigMissingError(VMError):
-    def __init__(self, name, config):
-        VMError.__init(self, name, config)
+class VMStartError(VMError):
+    def __init__(self, name, reason):
+        VMError.__init__(self, name, reason=None)
         self.name = name
-        self.config = config
+        self.reason = reason
 
     def __str__(self):
-        return "Missing config '%s' for VM %s" % (self.config, self.name)
+        msg = "VM '%s' failed to start" % self.name
+        if self.reason is not None:
+            msg += ": %s" % self.reason
+        return msg
 
 
 class VMHashMismatchError(VMError):
