@@ -854,6 +854,16 @@ class QMPMonitor(Monitor):
         self.cmd("human-monitor-command", args)
 
 
+    def human_monitor_cmd(self, cmd=None):
+        """
+        Run human monitor command in QMP through human-monitor-command
+
+        @param cmd: human monitor command.
+        """
+        args = {"command-line": cmd}
+        self.cmd("human-monitor-command", args)
+
+
     def clear_events(self):
         """
         Clear the list of asynchronous events.
