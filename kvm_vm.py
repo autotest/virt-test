@@ -2210,16 +2210,14 @@ class VM(virt_vm.BaseVM):
         @param vm: VM object
         @param value: parameter that can specify block device.
         """
+        self.monitor.cmd("cont")
 
-        blocks_info = self.monitor.info("block")
-        if isinstance(blocks_info, str):
-            lock_str = "locked=1"
-            for block in blocks_info.splitlines():
-                if value in block and lock_str in block:
-                    return True
-        else:
-            for block in blocks_info:
-                if 'inserted' in block.keys() and\
-                 block['inserted']['file'] == value:
-                    return block['locked']
-        return False
+
+    def set_link(self, netdev_name, up):
+        """
+        Set link up/down.
+
+        @param name: Link name
+        @param up: Bool value, True=set up this link, False=Set down this link
+        """
+        self.monitor.set_link(netdev_name, up)
