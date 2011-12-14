@@ -303,6 +303,11 @@ class HumanMonitor(Monitor):
         """
         self.cmd("info status", debug=False)
 
+
+    def get_status(self):
+        return self.cmd("info status", debug=False)
+
+
     def verify_status(self, status):
         """
         Verify VM status
@@ -310,8 +315,7 @@ class HumanMonitor(Monitor):
         @param status: Optional VM status, 'running' or 'paused'
         @return: return True if VM status is same as we expected
         """
-        o = self.cmd("info status", debug=False)
-        return (status in o)
+        return (status in self.get_status())
 
     def get_status(self):
         return self.cmd("info status", debug=False)
