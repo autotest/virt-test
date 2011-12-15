@@ -488,6 +488,42 @@ def kill_process_tree(pid, sig=signal.SIGKILL):
     safe_kill(pid, signal.SIGCONT)
 
 
+def get_git_branch(repository, branch, srcdir, commit=None, lbranch=None):
+    """
+    Retrieves a given git code repository.
+
+    @param repository: Git repository URL
+    """
+    logging.info("Fetching git [REP '%s' BRANCH '%s' COMMIT '%s'] -> %s",
+                 repository, branch, commit, srcdir)
+    if not os.path.exists(srcdir):
+        os.makedirs(srcdir)
+    os.chdir(srcdir)
+
+    if os.path.exists(".git"):
+        utils.system("git reset --hard")
+    else:
+        utils.system("git init")
+
+    if not lbranch:
+        lbranch = branch
+
+    utils.system("git fetch -q -f -u -t %s %s:%s" %
+                 (repository, branch, lbranch))
+    utils.system("git checkout %s" % lbranch)
+    if commit:
+        utils.system("git checkout %s" % commit)
+
+    h = utils.system_output('git log --pretty=format:"%H" -1')
+    try:
+        desc = "tag %s" % utils.system_output("git describe")
+    except error.CmdError:
+        desc = "no tag found"
+
+    logging.info("Commit hash for %s is %s (%s)", repository, h.strip(), desc)
+    return srcdir
+
+
 def check_kvm_source_dir(source_dir):
     """
     Inspects the kvm source directory and verifies its disposition. In some
