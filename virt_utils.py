@@ -6,7 +6,7 @@ KVM test utility functions.
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
 import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect, tarfile
-import struct
+import struct, shutil
 from autotest_lib.client.bin import utils, os_dep, kvm_control
 from autotest_lib.client.common_lib import error, logging_config
 from autotest_lib.client.common_lib import logging_manager, git
@@ -2633,7 +2633,106 @@ def mount(src, mount_point, type, perm="rw"):
         return False
 
 
-class GitRepoParamHelper(git.GitRepoHelper):
+class GitRepoHelper(object):
+    '''
+    Helps to deal with git repos, mostly fetching content from a repo
+    '''
+    def __init__(self, uri, branch, destination_dir, commit=None, lbranch=None):
+        '''
+        Instantiates a new GitRepoHelper
+
+        @type uri: string
+        @param uri: git repository url
+        @type branch: string
+        @param branch: git remote branch
+        @type destination_dir: string
+        @param destination_dir: path of a dir where to save downloaded code
+        @type commit: string
+        @param commit: specific commit to download
+        @type lbranch: string
+        @param lbranch: git local branch name, if different from remote
+        '''
+        self.uri = uri
+        self.branch = branch
+        self.destination_dir = destination_dir
+        self.commit = commit
+        if lbranch is None:
+            self.lbranch = branch
+
+
+    def init(self):
+        '''
+        Initializes a directory for receiving a verbatim copy of git repo
+
+        This creates a directory if necessary, and either resets or inits
+        the repo
+        '''
+        if not os.path.exists(self.destination_dir):
+            logging.debug('Creating directory %s for git repo %s',
+                          self.destination_dir, self.uri)
+            os.makedirs(self.destination_dir)
+
+        os.chdir(self.destination_dir)
+
+        if os.path.exists('.git'):
+            logging.debug('Resetting previously existing git repo at %s for '
+                          'receiving git repo %s',
+                          self.destination_dir, self.uri)
+            utils.system('git reset --hard')
+        else:
+            logging.debug('Initializing new git repo at %s for receiving '
+                          'git repo %s',
+                          self.destination_dir, self.uri)
+            utils.system('git init')
+
+
+    def fetch(self):
+        '''
+        Performs a git fetch from the remote repo
+        '''
+        logging.info("Fetching git [REP '%s' BRANCH '%s'] -> %s",
+                     self.uri, self.branch, self.destination_dir)
+        os.chdir(self.destination_dir)
+        utils.system("git fetch -q -f -u -t %s %s:%s" % (self.uri,
+                                                         self.branch,
+                                                         self.lbranch))
+
+
+    def checkout(self):
+        '''
+        Performs a git checkout for a given branch and start point (commit)
+        '''
+        os.chdir(self.destination_dir)
+
+        logging.debug('Checking out local branch %s', self.lbranch)
+        utils.system("git checkout %s" % self.lbranch)
+
+        if self.commit is not None:
+            logging.debug('Checking out commit %s', self.commit)
+            utils.system("git checkout %s" % self.commit)
+
+        h = utils.system_output('git log --pretty=format:"%H" -1').strip()
+        try:
+            desc = "tag %s" % utils.system_output("git describe")
+        except error.CmdError:
+            desc = "no tag found"
+
+        logging.info("Commit hash for %s is %s (%s)", self.name, h, desc)
+
+
+    def execute(self):
+        '''
+        Performs all steps necessary to initialize and download a git repo
+
+        This includes the init, fetch and checkout steps in one single
+        utility method.
+        '''
+        self.init()
+        self.fetch()
+        self.checkout()
+
+
+class GitRepoParamHelper(GitRepoHelper):
     '''
     Helps to deal with git repos specified in cartersian config files
 
@@ -2646,7 +2745,6 @@ class GitRepoParamHelper(git.GitRepoHelper):
     Example for repo named foo:
 
     git_repo_foo_uri = git://git.foo.org/foo.git
-    git_repo_foo_base_uri = /home/user/code/foo
     git_repo_foo_branch = master
     git_repo_foo_lbranch = master
     git_repo_foo_commit = bb5fb8e678aabe286e74c4f2993dc2a9e550b627
@@ -2674,13 +2772,6 @@ class GitRepoParamHelper(git.GitRepoHelper):
         logging.debug('Parsing parameters for git repo %s, configuration '
                       'prefix is %s' % (self.name, config_prefix))
 
-        self.base_uri = self.params.get('%s_base_uri' % config_prefix)
-        if self.base_uri is None:
-            logging.debug('Git repo %s base uri is not set' % self.name)
-        else:
-            logging.debug('Git repo %s base uri: %s' % (self.name,
-                                                        self.base_uri))
-
         self.uri = self.params.get('%s_uri' % config_prefix)
         logging.debug('Git repo %s uri: %s' % (self.name, self.uri))
 
@@ -2697,8 +2788,6 @@ class GitRepoParamHelper(git.GitRepoHelper):
             logging.debug('Git repo %s commit is not set' % self.name)
         else:
             logging.debug('Git repo %s commit: %s' % (self.name, self.commit))
-
-        self.cmd = os_dep.command('git')
 
 
 class LocalSourceDirHelper(object):
@@ -3027,24 +3116,6 @@ class GnuSourceBuildInvalidSource(Exception):
     pass
 
 
-class SourceBuildFailed(Exception):
-    '''
-    Exception raised when building with parallel jobs fails
-
-    This serves as feedback for code using *BuildHelper
-    '''
-    pass
-
-
-class SourceBuildParallelFailed(Exception):
-    '''
-    Exception raised when building with parallel jobs fails
-
-    This serves as feedback for code using *BuildHelper
-    '''
-    pass
-
-
 class GnuSourceBuildHelper(object):
     '''
     Handles software installation of GNU-like source code
@@ -3069,7 +3140,6 @@ class GnuSourceBuildHelper(object):
         self.build_dir = build_dir
         self.prefix = prefix
         self.configure_options = configure_options
-        self.install_debug_info = True
         self.include_pkg_config_path()
 
 
@@ -3176,53 +3246,15 @@ class GnuSourceBuildHelper(object):
         utils.system(configure_command)
 
 
-    def make_parallel(self):
+    def make(self):
         '''
         Runs "make" using the correct number of parallel jobs
         '''
         parallel_make_jobs = utils.count_cpus()
         make_command = "make -j %s" % parallel_make_jobs
-        logging.info("Running parallel make on build dir")
+        logging.info("Running make on build dir")
         os.chdir(self.build_dir)
         utils.system(make_command)
-
-
-    def make_non_parallel(self):
-        '''
-        Runs "make", using a single job
-        '''
-        os.chdir(self.build_dir)
-        utils.system("make")
-
-
-    def make_clean(self):
-        '''
-        Runs "make clean"
-        '''
-        os.chdir(self.build_dir)
-        utils.system("make clean")
-
-
-    def make(self, failure_feedback=True):
-        '''
-        Runs a parallel make, falling back to a single job in failure
-
-        @param failure_feedback: return information on build failure by raising
-                                 the appropriate exceptions
-        @raise: SourceBuildParallelFailed if parallel build fails, or
-                SourceBuildFailed if single job build fails
-        '''
-        try:
-            self.make_parallel()
-        except error.CmdError:
-            try:
-                self.make_clean()
-                self.make_non_parallel()
-            except error.CmdError:
-                if failure_feedback:
-                    raise SourceBuildFailed
-            if failure_feedback:
-                raise SourceBuildParallelFailed
 
 
     def make_install(self):
@@ -3240,112 +3272,7 @@ class GnuSourceBuildHelper(object):
         '''
         Runs appropriate steps for *building* this source code tree
         '''
-        if self.install_debug_info:
-            self.enable_debug_symbols()
         self.configure()
-        self.make()
-
-
-class LinuxKernelBuildHelper(object):
-    '''
-    Handles Building Linux Kernel.
-    '''
-    def __init__(self, params, prefix, source):
-        '''
-        @type params: dict
-        @param params: dictionary containing the test parameters
-        @type source: string
-        @param source: source directory or tarball
-        @type prefix: string
-        @param prefix: installation prefix
-        '''
-        self.params = params
-        self.prefix = prefix
-        self.source = source
-        self._parse_params()
-
-
-    def _parse_params(self):
-        '''
-        Parses the params items for entries related to guest kernel
-        '''
-        configure_opt_key = '%s_config' % self.prefix
-        self.config = self.params.get(configure_opt_key, '')
-
-        build_image_key = '%s_build_image' % self.prefix
-        self.build_image = self.params.get(build_image_key,
-                                           'arch/x86/boot/bzImage')
-
-        build_target_key = '%s_build_target' % self.prefix
-        self.build_target = self.params.get(build_target_key, 'bzImage')
-
-        kernel_path_key = '%s_kernel_path' % self.prefix
-        default_kernel_path = os.path.join('/tmp/kvm_autotest_root/images',
-                                           self.build_target)
-        self.kernel_path = self.params.get(kernel_path_key,
-                                           default_kernel_path)
-
-        logging.info('Parsing Linux kernel build parameters for %s',
-                     self.prefix)
-
-
-    def make_guest_kernel(self):
-        '''
-        Runs "make", using a single job
-        '''
-        os.chdir(self.source)
-        logging.info("Building guest kernel")
-        logging.debug("Kernel config is %s" % self.config)
-        utils.get_file(self.config, '.config')
-
-        # FIXME currently no support for builddir
-        # run old config
-        utils.system('yes "" | make oldconfig > /dev/null')
-        parallel_make_jobs = utils.count_cpus()
-        make_command = "make -j %s %s" % (parallel_make_jobs, self.build_target)
-        logging.info("Running parallel make on src dir")
-        utils.system(make_command)
-
-
-    def make_clean(self):
-        '''
-        Runs "make clean"
-        '''
-        os.chdir(self.source)
-        utils.system("make clean")
-
-
-    def make(self, failure_feedback=True):
-        '''
-        Runs a parallel make
-
-        @param failure_feedback: return information on build failure by raising
-                                 the appropriate exceptions
-        @raise: SourceBuildParallelFailed if parallel build fails, or
-        '''
-        try:
-            self.make_clean()
-            self.make_guest_kernel()
-        except error.CmdError:
-            if failure_feedback:
-                raise SourceBuildParallelFailed
-
-
-    def cp_linux_kernel(self):
-        '''
-        Copying Linux kernel to target path
-        '''
-        os.chdir(self.source)
-        utils.force_copy(self.build_image, self.kernel_path)
-
-
-    install = cp_linux_kernel
-
-
-    def execute(self):
-        '''
-        Runs appropriate steps for *building* this source code tree
-        '''
         self.make()
 
 
@@ -3396,11 +3323,6 @@ class GnuSourceBuildParamHelper(GnuSourceBuildHelper):
         self.prefix = self.install_prefix
         self.configure_options = configure_options
         self.include_pkg_config_path()
-
-        # Support the install_debug_info feature, that automatically
-        # adds/keeps debug information on generated libraries/binaries
-        install_debug_info_cfg = self.params.get("install_debug_info", "yes")
-        self.install_debug_info = install_debug_info_cfg != "no"
 
 
 def install_host_kernel(job, params):
