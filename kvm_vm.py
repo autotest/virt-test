@@ -278,6 +278,12 @@ class VM(virt_vm.BaseVM):
                     vdisk += 1
                 blkdev_id ="virtio-disk%s" % vdisk
                 id = "virtio-disk%s" % vdisk
+            elif format == "usb2":
+                name = "usb2.%s" % index
+                dev += " -device usb-storage,bus=ehci.0,drive=%s" % name
+                dev += ",port=%d" % (int(index) + 1)
+                format = "none"
+                index = None
             if media == "floppy":
                 id ="fdc0-0-%s" % floppy_unit
             blkdev_id = "drive-%s" % id
@@ -607,6 +613,11 @@ class VM(virt_vm.BaseVM):
                     index_global += 1
             else:
                 index = None
+
+            if image_params.get("drive_format") == "usb2" and not have_usb2:
+                qemu_cmd += " -device usb-ehci,id=ehci"
+                have_usb2 = True
+
             qemu_cmd += add_drive(help,
                                   virt_vm.get_image_filename(image_params, root_dir),
                                   index,
