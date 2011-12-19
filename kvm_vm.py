@@ -297,7 +297,6 @@ class VM(virt_vm.BaseVM):
                       pci_addr=None,floppy_unit=None, readonly=False,
                       physical_block_size=None, logical_block_size=None,
                       bus=None, port=None):
-            free_pci_addr = get_free_pci_addr(pci_addr)
 
             dev = {"virtio" : "virtio-blk-pci",
                    "ide" : "ide-drive",
@@ -355,6 +354,7 @@ class VM(virt_vm.BaseVM):
                         cmd += ",bus=%s" % bus
                     cmd += ",port=%d" % int(port)
                 else:
+                    free_pci_addr = get_free_pci_addr(pci_addr)
                     cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                     if physical_block_size:
                         cmd += ",physical_block_size=%s" % physical_block_size
