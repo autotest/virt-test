@@ -268,7 +268,8 @@ class VM(virt_vm.BaseVM):
             free_pci_addr = get_free_pci_addr(pci_addr)
 
             dev = {"virtio" : "virtio-blk-pci",
-                   "ide" : "ide-drive"}
+                   "ide" : "ide-drive",
+                   "usb2": "usb-storage"}
 
             if format == "ide":
                 id ="ide0-%s-%s" % (ide_bus, ide_unit)
@@ -279,14 +280,7 @@ class VM(virt_vm.BaseVM):
                 blkdev_id ="virtio-disk%s" % vdisk
                 id = "virtio-disk%s" % vdisk
             elif format == "usb2":
-                name = "usb2.%s" % index
-                dev += " -device usb-storage"
-                if bus:
-                    dev += ",bus=%s" % bus
-                dev += ",drive=%s" % name
-                dev += ",port=%d" % (int(index) + 1)
-                format = "none"
-                index = None
+                id = "usb2.%s" % index
             if media == "floppy":
                 id ="fdc0-0-%s" % floppy_unit
             blkdev_id = "drive-%s" % id
@@ -324,6 +318,10 @@ class VM(virt_vm.BaseVM):
                 if format == "ide":
                     cmd += ",bus=%s" % ide_bus
                     cmd += ",unit=%s" % ide_unit
+                elif format == "usb2":
+                    if bus:
+                        cmd += ",bus=%s" % bus
+                    cmd += ",port=%d" % (int(index) + 1)
                 else:
                     cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                     if physical_block_size:
@@ -547,7 +545,7 @@ class VM(virt_vm.BaseVM):
             return index
 
         def add_usb(help, usb_id, usb_type, multifunction=False,
-                    masterbus=None, firstport=None):
+                    masterbus=None, firstport=None, pci_addr=None):
             cmd = ""
             if has_option(help, "device"):
                 if usb_type == "ehci":
@@ -565,6 +563,9 @@ class VM(virt_vm.BaseVM):
                 cmd += ",mastbus=%s" % masterbus
             if firstport:
                 cmd += ",firstport=%s" % firstport
+
+            free_pci_addr = get_free_pci_addr(pci_addr)
+            cmd += ",bus=pci.0,addr=%s" % free_pci_addr
 
             return cmd
 
