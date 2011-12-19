@@ -280,7 +280,10 @@ class VM(virt_vm.BaseVM):
                 id = "virtio-disk%s" % vdisk
             elif format == "usb2":
                 name = "usb2.%s" % index
-                dev += " -device usb-storage,bus=ehci.0,drive=%s" % name
+                dev += " -device usb-storage"
+                if bus:
+                    dev += ",bus=%s" % bus
+                dev += ",drive=%s" % name
                 dev += ",port=%d" % (int(index) + 1)
                 format = "none"
                 index = None
@@ -543,6 +546,28 @@ class VM(virt_vm.BaseVM):
                 index += 1
             return index
 
+        def add_usb(help, usb_id, usb_type, multifunction=False,
+                    masterbus=None, firstport=None):
+            cmd = ""
+            if has_option(help, "device"):
+                if usb_type == "ehci":
+                    cmd = " -device usb-ehci,id=%s" % usb_id
+                if usb_type == "uhci":
+                    cmd = " -device ich9-usb-uhci1,id=%s" % usb_id
+            else:
+                # Okay, for the archaic qemu which has not device parameter,
+                # just return a usb uhci controller.
+                return " -usb"
+
+            if multifunction is True:
+                cmd += ",multifunction=on"
+            if masterbus:
+                cmd += ",mastbus=%s" % masterbus
+            if firstport:
+                cmd += ",firstport=%s" % firstport
+
+            return cmd
+
         # End of command line option wrappers
 
         if name is None:
@@ -598,6 +623,14 @@ class VM(virt_vm.BaseVM):
         # Add serial console redirection
         qemu_cmd += add_serial(help, vm.get_serial_console_filename())
 
+        # Add USB controllers
+        for usb_name in params.objects("usbs"):
+            usb_params = params.object_params(usb_name)
+            qemu_cmd += add_usb(help, usb_name, usb_params.get("usb_type"),
+                                usb_params.get("multifunction") == "on",
+                                usb_params.get("masterbus"),
+                                usb_params.get("firstport"))
+
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
@@ -614,28 +647,32 @@ class VM(virt_vm.BaseVM):
             else:
                 index = None
 
-            if image_params.get("drive_format") == "usb2" and not have_usb2:
-                qemu_cmd += " -device usb-ehci,id=ehci"
-                have_usb2 = True
+            bus = None
+            if image_params.get("drive_format") == "usb2":
+                for usb in params.objects("usbs"):
+                    usb_params = params.object_params(usb)
+                    if usb_params.get("usb_type") == "ehci":
+                        bus = "%s.0" % usb
+                        break
 
             qemu_cmd += add_drive(help,
-                                  virt_vm.get_image_filename(image_params, root_dir),
-                                  index,
-                                  image_params.get("drive_format"),
-                                  image_params.get("drive_cache"),
-                                  image_params.get("drive_werror"),
-                                  image_params.get("drive_rerror"),
-                                  image_params.get("drive_serial"),
-                                  image_params.get("image_snapshot") == "yes",
-                                  image_params.get("image_boot") == "yes",
+                  virt_vm.get_image_filename(image_params, root_dir),
+                  index,
+                  image_params.get("drive_format"),
+                  image_params.get("drive_cache"),
+                  image_params.get("drive_werror"),
+                  image_params.get("drive_rerror"),
+                  image_params.get("drive_serial"),
+                  image_params.get("image_snapshot") == "yes",
+                  image_params.get("image_boot") == "yes",
                   virt_vm.get_image_blkdebug_filename(image_params, root_dir),
-                                  image_params.get("image_format"),
-                                  image_params.get("image_aio", "native"),
-                                  "disk", ide_bus, ide_unit, vdisk,
-                                  image_params.get("drive_pci_addr"),
-                physical_block_size=image_params.get("physical_block_size"),
-                logical_block_size=image_params.get("logical_block_size")
-                                  )
+                  image_params.get("image_format"),
+                  image_params.get("image_aio", "native"),
+                  "disk", ide_bus, ide_unit, vdisk,
+                  image_params.get("drive_pci_addr"),
+                  physical_block_size=image_params.get("physical_block_size"),
+                  logical_block_size=image_params.get("logical_block_size")
+                  )
 
             # increase the bus and unit no for ide device
             if params.get("drive_format") == "ide":
