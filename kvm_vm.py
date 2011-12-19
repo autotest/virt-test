@@ -56,6 +56,18 @@ class VM(virt_vm.BaseVM):
 
         self.host_version = cartesian_config.get_host_verson(self.params)
 
+        # This usb_dev_dict member stores usb controller and device info,
+        # It's dict, each key is an id of usb controller,
+        # and key's value is a list, contains usb devices' ids which
+        # attach to this controller.
+        # A filled usb_dev_dict may look like:
+        # { "usb1" : ["stg1", "stg2", "stg3", "stg4", "stg5", "stg6"],
+        #   "usb2" : ["stg7", "stg8"],
+        #   ...
+        # }
+        # This structure can used in usb hotplug/unplug test.
+        self.usb_dev_dict = {}
+
 
     def verify_alive(self):
         """
@@ -264,7 +276,8 @@ class VM(virt_vm.BaseVM):
                       boot=False, blkdebug=None,imgfmt="raw", aio=None,
                       media="disk", ide_bus=None, ide_unit=None, vdisk=None,
                       pci_addr=None,floppy_unit=None, readonly=False,
-                      physical_block_size=None, logical_block_size=None):
+                      physical_block_size=None, logical_block_size=None,
+                      bus=None, port=None):
             free_pci_addr = get_free_pci_addr(pci_addr)
 
             dev = {"virtio" : "virtio-blk-pci",
@@ -321,7 +334,7 @@ class VM(virt_vm.BaseVM):
                 elif format == "usb2":
                     if bus:
                         cmd += ",bus=%s" % bus
-                    cmd += ",port=%d" % (int(index) + 1)
+                    cmd += ",port=%d" % (int(port) + 1)
                 else:
                     cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                     if physical_block_size:
@@ -555,6 +568,9 @@ class VM(virt_vm.BaseVM):
             else:
                 # Okay, for the archaic qemu which has not device parameter,
                 # just return a usb uhci controller.
+                # If choose this kind of usb controller, it has no name/id,
+                # and only can be created once, so give it a special name.
+                self.usb_dev_dict["OLDVERSION_usb0"] = []
                 return " -usb"
 
             if multifunction is True:
@@ -567,6 +583,8 @@ class VM(virt_vm.BaseVM):
             free_pci_addr = get_free_pci_addr(pci_addr)
             cmd += ",bus=pci.0,addr=%s" % free_pci_addr
 
+            # register this usb controller.
+            self.usb_dev_dict[usb_id] = []
             return cmd
 
         # End of command line option wrappers
@@ -649,12 +667,20 @@ class VM(virt_vm.BaseVM):
                 index = None
 
             bus = None
+            port = None
             if image_params.get("drive_format") == "usb2":
+                # Find an available USB port.
                 for usb in params.objects("usbs"):
                     usb_params = params.object_params(usb)
-                    if usb_params.get("usb_type") == "ehci":
+                    max_port = int(usb_params.get("usb_max_port", 6))
+                    if (usb_params.get("usb_type") == "ehci" and
+                       len(self.usb_dev_dict.get(usb)) < max_port):
                         bus = "%s.0" % usb
+                        self.usb_dev_dict[usb].append(image_name)
+                        port = self.usb_dev_dict[usb].index(image_name)
                         break
+                if bus is None:
+                    raise virt_vm.VMUSBControllerPortFullError(self.name)
 
             qemu_cmd += add_drive(help,
                   virt_vm.get_image_filename(image_params, root_dir),
@@ -672,8 +698,8 @@ class VM(virt_vm.BaseVM):
                   "disk", ide_bus, ide_unit, vdisk,
                   image_params.get("drive_pci_addr"),
                   physical_block_size=image_params.get("physical_block_size"),
-                  logical_block_size=image_params.get("logical_block_size")
-                  )
+                  logical_block_size=image_params.get("logical_block_size"),
+                  bus=bus, port=port)
 
             # increase the bus and unit no for ide device
             if params.get("drive_format") == "ide":
