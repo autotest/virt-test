@@ -204,6 +204,25 @@ class VM(virt_vm.BaseVM):
                 self.pci_addr_list.append(int(pci_addr))
                 return hex(int(pci_addr))
 
+        def get_free_usb_port(dev, controller_type):
+            # Find an available USB port.
+            bus = None
+            port = None
+            for usb in params.objects("usbs"):
+                usb_params = params.object_params(usb)
+                if usb_params.get("usb_type") != controller_type:
+                    continue
+                max_port = int(usb_params.get("usb_max_port"))
+                if len(self.usb_dev_dict.get(usb)) < max_port:
+                    bus = "%s.0" % usb
+                    self.usb_dev_dict[usb].append(dev)
+                    # Usb port starts from 1, so add 1 directly here.
+                    port = self.usb_dev_dict[usb].index(dev) + 1
+                    break
+            if bus is None:
+                raise virt_vm.VMUSBControllerPortFullError(self.name)
+
+            return (bus, port)
 
         def add_name(help, name):
             return " -name '%s'" % name
@@ -334,7 +353,7 @@ class VM(virt_vm.BaseVM):
                 elif format == "usb2":
                     if bus:
                         cmd += ",bus=%s" % bus
-                    cmd += ",port=%d" % (int(port) + 1)
+                    cmd += ",port=%d" % int(port)
                 else:
                     cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                     if physical_block_size:
@@ -424,12 +443,28 @@ class VM(virt_vm.BaseVM):
         def add_floppy(help, filename):
             return " -fda '%s'" % filename
 
-        def add_usbdevice(help, filename):
+        def add_usbdevice(help, usb_dev, usb_type, controller_type,
+                          bus=None, port=None):
+            """
+            This function is used to add usb device except for usb storage.
+            """
+            cmd = ""
             if has_option(help, "device"):
-                id = virt_utils.generate_random_id()
-                return " -usb -device usb-tablet,id=%s%s" % (filename, id)
+                cmd = " -device %s" % usb_type
+                if device_id:
+                    cmd += ",id=usb-%s" % usb_dev
+                if bus:
+                    cmd += ",bus=%s" % bus
+                if port:
+                    cmd += ",port=%s" % port
             else:
-                return " -usbdevice %s" % filename
+                if "tablet" in usb_type:
+                    cmd = " -usbdevice %s" % usb_type
+                else:
+                    logging.error("This version of host only support"
+                                  " tablet device")
+
+            return cmd
 
 
         def add_tftp(help, filename):
@@ -669,18 +704,7 @@ class VM(virt_vm.BaseVM):
             bus = None
             port = None
             if image_params.get("drive_format") == "usb2":
-                # Find an available USB port.
-                for usb in params.objects("usbs"):
-                    usb_params = params.object_params(usb)
-                    max_port = int(usb_params.get("usb_max_port", 6))
-                    if (usb_params.get("usb_type") == "ehci" and
-                       len(self.usb_dev_dict.get(usb)) < max_port):
-                        bus = "%s.0" % usb
-                        self.usb_dev_dict[usb].append(image_name)
-                        port = self.usb_dev_dict[usb].index(image_name)
-                        break
-                if bus is None:
-                    raise virt_vm.VMUSBControllerPortFullError(self.name)
+                bus, port = get_free_usb_port(image_name, "ehci")
 
             qemu_cmd += add_drive(help,
                   virt_vm.get_image_filename(image_params, root_dir),
@@ -871,9 +895,14 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += add_floppy(help, floppy)
                 floppy_unit ^= 1
 
-        usbdevice = params.get("usbdevice")
-        if usbdevice:
-            qemu_cmd += add_usbdevice(help, usbdevice)
+        # Add usb devices
+        for usb_dev in params.objects("usb_devices"):
+            usb_dev_params = params.object_params(usb_dev)
+            usb_type = usb_dev_params.get("usb_type")
+            controller_type = usb_dev_params.get("usb_controller")
+            bus, port = get_free_usb_port(usb_dev, controller_type)
+            qemu_cmd += add_usbdevice(help, usb_dev, usb_type, controller_type,
+                                      bus, port)
 
         tftp = params.get("tftp")
         if tftp:
