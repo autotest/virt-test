@@ -1217,18 +1217,22 @@ class VM(virt_vm.BaseVM):
                 f.close()
 
             # Generate or copy MAC addresses for all NICs
-            pa_type = params.get("pci_assignable")
-            if pa_type == "no":
-                num_nics = len(params.objects("nics"))
-                for vlan in range(num_nics):
-                    nic_name = params.objects("nics")[vlan]
-                    nic_params = params.object_params(nic_name)
-                    mac = (nic_params.get("nic_mac") or
-                           mac_source and mac_source.get_mac_address(vlan))
-                    if mac:
-                        virt_utils.set_mac_address(self.instance, vlan, mac)
-                    else:
-                        virt_utils.generate_mac_address(self.instance, vlan)
+            num_nics = len(params.objects("nics"))
+            for vlan in range(num_nics):
+                nic_name = params.objects("nics")[vlan]
+                nic_params = params.object_params(nic_name)
+                mac = (nic_params.get("nic_mac") or
+                       mac_source and mac_source.get_mac_address(vlan))
+                if mac:
+                    virt_utils.set_mac_address(self.instance, vlan, mac)
+                else:
+                    mac = virt_utils.generate_mac_address(self.instance, vlan)
+
+                if nic_params.get("ip"):
+                    self.address_cache[mac] = nic_params.get("ip")
+                    logging.debug("(address cache) Adding static cache entry: "
+                                  "%s ---> %s" % (mac, nic_params.get("ip")))
+
             # Assign a PCI assignable device
             self.pci_assignable = None
             pa_type = params.get("pci_assignable")
