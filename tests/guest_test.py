@@ -159,7 +159,7 @@ def run_guest_test_background(test, params, env, test_name=""):
         logging.info("[Guest_test Background ERROR] %s" % message_error)
         os.remove(flag_fname)
         os._exit(2)
-    except:
+    except Exception:
         os.remove(flag_fname)
         os._exit(3)
 

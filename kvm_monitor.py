@@ -516,7 +516,7 @@ class QMPMonitor(Monitor):
                 if line:
                     try:
                         json.loads(line)
-                    except:
+                    except Exception:
                         # Found an incomplete or broken line -- keep reading
                         break
             else:
@@ -527,7 +527,7 @@ class QMPMonitor(Monitor):
         for line in s.splitlines():
             try:
                 objs += [json.loads(line)]
-            except:
+            except Exception:
                 pass
         # Keep track of asynchronous events
         self._events += [obj for obj in objs if "event" in obj]
@@ -799,7 +799,7 @@ class QMPMonitor(Monitor):
                         else:
                             value = opt[1].strip()
                         args[opt[0].strip()] = value
-                    except:
+                    except Exception:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))
         if len(cmdlines.split(";")) == 1:

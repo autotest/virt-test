@@ -74,7 +74,7 @@ def run_autotest_background(test, params, env, test_name = "dbench",
         logging.info("[Autotest Background ERROR] %s" % message_error)
         os.remove(flag_fname)
         os._exit(2)
-    except:
+    except Exception:
         os.remove(flag_fname)
         os._exit(3)
 

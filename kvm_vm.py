@@ -679,7 +679,7 @@ class VM(virt_vm.BaseVM):
                 if nic_params.get("nic_mode") == "tap":
                     try:
                         tapfd = vm.tapfds[vlan]
-                    except:
+                    except Exception:
                         tapfd = None
                 else:
                     tapfd = None

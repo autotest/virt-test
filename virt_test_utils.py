@@ -216,7 +216,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
                 return "status: active" not in o
             else:
                 return o.get("status") != "active"
-        except:
+        except Exception:
             pass
 
     def mig_succeeded():
@@ -306,7 +306,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
 
                 if (dest_host == 'localhost') and offline:
                     dest_vm.monitor.cmd("cont")
-        except:
+        except Exception:
             if dest_host == 'localhost':
                 dest_vm.destroy()
             raise
@@ -972,7 +972,7 @@ def raw_ping(command, timeout, session, output_func):
         else:
             try:
                 status = int(re.findall("\d+", o2)[0])
-            except:
+            except Exception:
                 status = -1
 
         return status, output
@@ -1040,7 +1040,7 @@ def get_linux_ifname(session, mac_address):
         ethname = re.findall("(\w+)\s+Link.*%s" % mac_address, output,
                              re.IGNORECASE)[0]
         return ethname
-    except:
+    except Exception:
         return None
 
 

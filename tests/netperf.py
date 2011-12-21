@@ -32,7 +32,7 @@ def run_netperf(test, params, env):
     session_serial.cmd_output(firewall_flush)
     try:
         utils.run("service iptables stop")
-    except:
+    except Exception:
         pass
 
     for i in params.get("netperf_files").split():
@@ -51,7 +51,7 @@ def run_netperf(test, params, env):
         try:
             logging.debug("Stopping the background tcpdump")
             env["tcpdump"].close()
-        except:
+        except Exception:
             pass
 
     # initiate all interfaces on guest.
@@ -76,7 +76,7 @@ def run_netperf(test, params, env):
                     netperf_output = utils.system_output(cmd,
                                                          retain_output=True)
                     result.write("%s\n" % netperf_output)
-                except:
+                except Exception:
                     logging.error("Test of protocol %s failed", p)
                     list_fail.append(p)
 

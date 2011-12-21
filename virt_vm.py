@@ -692,7 +692,7 @@ class BaseVM(object):
                 if restart_network:
                     try:
                         virt_test_utils.restart_guest_network(session)
-                    except:
+                    except Exception:
                         pass
                 return session
             except virt_utils.LoginError, e:

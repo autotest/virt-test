@@ -432,7 +432,7 @@ def pid_exists(pid):
     try:
         os.kill(pid, 0)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -445,7 +445,7 @@ def safe_kill(pid, signal):
     try:
         os.kill(pid, signal)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -734,7 +734,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
     try:
         _remote_login(session, username, password, prompt, timeout)
-    except:
+    except Exception:
         session.close()
         raise
     if log_filename:
@@ -1400,7 +1400,7 @@ class Thread(threading.Thread):
         try:
             try:
                 self._retval = self._target(*self._args, **self._kwargs)
-            except:
+            except Exception:
                 self._e = sys.exc_info()
                 raise
         finally:
@@ -1835,7 +1835,7 @@ class PciAssignable(object):
             if self.cleanup:
                 logging.info("Clean up host env for PCI assign test")
                 self.sr_iov_cleanup()
-        except:
+        except Exception:
             return
 
 
