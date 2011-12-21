@@ -1896,7 +1896,7 @@ class PciAssignable(object):
             if self.cleanup:
                 logging.info("Clean up host env for PCI assign test")
                 self.sr_iov_cleanup()
-        except:
+        except Exception:
             return
 
 

@@ -31,7 +31,7 @@ def run_netperf(test, params, env):
     firewall_flush = "service iptables stop"
     session_serial.cmd_output(firewall_flush)
     try:
-        utils.run("iptables -F")
+        utils.run("service iptables stop")
     except Exception:
         pass
 

@@ -214,7 +214,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
                 return "status: active" not in o
             else:
                 return o.get("status") != "active"
-        except:
+        except Exception:
             pass
 
     def mig_succeeded():
