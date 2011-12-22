@@ -84,7 +84,8 @@ def run_timedrift(test, params, env):
     drift_threshold = float(params.get("drift_threshold", "200"))
     drift_threshold_after_rest = float(params.get("drift_threshold_after_rest",
                                                   "200"))
-
+    test_duration = float(params.get("test_duration", "60"))
+    interval_gettime = float(params.get("interval_gettime", "20"))
     guest_load_sessions = []
     host_load_sessions = []
 
@@ -133,19 +134,22 @@ def run_timedrift(test, params, env):
             logging.info("Sleeping for %s seconds...", load_duration)
             time.sleep(load_duration)
 
-            # Get time delta after load
-            (ht1, gt1) = utils_test.get_time(session,
-                                             time_command,
-                                             time_filter_re,
-                                             time_format)
+            start_time = time.time()
+            while (time.time() - start_time) < test_duration:
+                # Get time delta after load
+                (ht1, gt1) = utils_test.get_time(session,
+                                                 time_command,
+                                                 time_filter_re,
+                                                 time_format)
 
-            # Report results
-            host_delta = ht1 - ht0
-            guest_delta = gt1 - gt0
-            drift = 100.0 * (host_delta - guest_delta) / host_delta
-            logging.info("Host duration: %.2f", host_delta)
-            logging.info("Guest duration: %.2f", guest_delta)
-            logging.info("Drift: %.2f%%", drift)
+                # Report results
+                host_delta = ht1 - ht0
+                guest_delta = gt1 - gt0
+                drift = 100.0 * (host_delta - guest_delta) / host_delta
+                logging.info("Host duration: %.2f", host_delta)
+                logging.info("Guest duration: %.2f", guest_delta)
+                logging.info("Drift: %.2f%%", drift)
+                time.sleep(interval_gettime)
 
         finally:
             logging.info("Cleaning up...")
