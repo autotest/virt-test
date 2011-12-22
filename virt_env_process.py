@@ -281,16 +281,22 @@ def preprocess(test, params, env):
         _screendump_thread.start()
 
     # Generate iscsi related paramters
-    if params.get("use_storage") == "iscsi":
+    use_storage = params.get("use_storage")
+    if (use_storage == "iscsi" or use_storage == "emulational_iscsi"):
         images = re.split("/s+", params.get("images"))
         if len(images) > params.get("iscsi_number"):
             raise error.TestError("Don't have enough iscsi storage")
         device = params.get("iscsi_dev")
-        count = 1
-        for i in images:
-           params["image_name_%s" % i] = "%s%s" % (device, count)
-           params["image_format_%s" % i] = "qcow2"
-           count += 1
+        if use_storage == "iscsi":
+            count = 1
+            for i in images:
+               params["image_name_%s" % i] = "%s%s" % (device, count)
+               params["image_format_%s" % i] = "qcow2"
+               count += 1
+        else:
+            # Emulational_iscsi uses the whole disk as image,
+            # no need to get the count like Real_iscsi.
+            params["image_name"] = device
 
    # Preprocess all VMs and images
     process(test, params, env, preprocess_image, preprocess_vm)
