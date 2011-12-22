@@ -246,7 +246,8 @@ def get_image_filename(params, root_dir):
     """
     image_name = params.get("image_name", "image")
     image_format = params.get("image_format", "qcow2")
-    if params.get("use_storage") == "iscsi":
+    use_storage = params.get("use_storage")
+    if (use_storage == "iscsi" or use_storage == "emulational_iscsi"):
         return image_name
     if params.get("image_raw_device") == "yes":
         return image_name
