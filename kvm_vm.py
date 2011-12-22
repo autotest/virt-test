@@ -1854,3 +1854,69 @@ class VM(virt_vm.BaseVM):
         """
         return (self.__make_qemu_command() !=
                 self.__make_qemu_command(name, params, basedir))
+
+
+    def get_block(self, p_dict={}):
+        """
+        Get specified block device from monitor's info block command.
+        The block device is defined by parameter in p_dict.
+
+        @param p_dict: Dictionary that contains parameters and its value used
+        to define specified block device.
+        """
+
+        blocks_info = self.monitor.info("block")
+        msg = "Block information get from monitor: %s" % blocks_info
+        logging.debug(msg)
+        if isinstance(blocks_info, str):
+            for block in blocks_info.splitlines():
+                match = True
+                for key, value in p_dict.iteritems():
+                    if value == True:
+                        check_str = "%s=1" % key
+                    elif value == False:
+                        check_str = "%s=0" % key
+                    else:
+                        check_str = "%s=%s" % (key, value)
+                    if check_str not in block:
+                        match = False
+                        break
+                if match:
+                    return block.split(":")[0]
+        else:
+            for block in blocks_info:
+                match = True
+                for key, value in p_dict.iteritems():
+                    if isinstance(value, bool):
+                        check_str = "u'%s': %s" % (key, value)
+                    else:
+                        check_str = "u'%s': u'%s'" % (key, value)
+                    if check_str not in str(block):
+                        match = False
+                        break
+                if match:
+                    return block['device']
+        return None
+
+
+    def check_block_locked(self, value):
+        """
+        Check whether specified block device is locked or not.
+        Return True, if device is locked, else False.
+
+        @param vm: VM object
+        @param value: parameter that can specify block device.
+        """
+
+        blocks_info = self.monitor.info("block")
+        if isinstance(blocks_info, str):
+            lock_str = "locked=1"
+            for block in blocks_info.splitlines():
+                if value in block and lock_str in block:
+                    return True
+        else:
+            for block in blocks_info:
+                if 'inserted' in block.keys() and\
+                 block['inserted']['file'] == value:
+                    return block['locked']
+        return False
