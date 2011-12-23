@@ -282,6 +282,16 @@ class HumanMonitor(Monitor):
         """
         self.cmd("info status", debug=False)
 
+    def verify_status(self, status):
+        """
+        Verify VM status
+
+        @param status: Optional VM status, 'running' or 'paused'
+        @return: return True if VM status is same as we expected
+        """
+        o = self.cmd("info status", debug=False)
+        if status=='paused' or status=='running':
+            return (status in o)
 
     # Command wrappers
     # Notes:
@@ -694,6 +704,20 @@ class QMPMonitor(Monitor):
         Make sure the monitor is responsive by sending a command.
         """
         self.cmd(cmd="query-status", debug=False)
+
+
+    def verify_status(self, status):
+        """
+        Verify VM status
+
+        @param status: Optional VM status, 'running' or 'paused'
+        @return: return True if VM status is same as we expected
+        """
+        o = str(self.cmd(cmd="query-status", debug=False))
+        if (status=='paused' and "u'running': False" in o):
+            return True
+        if (status=='running' and "u'running': True" in o):
+            return True
 
 
     def get_events(self):

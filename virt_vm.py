@@ -195,7 +195,8 @@ class VMMigrateStateMismatchError(VMMigrateError):
 class VMRebootError(VMError):
     pass
 
-
+class VMStatusError(VMError):
+    pass
 
 class VMUSBError(VMError):
     pass
