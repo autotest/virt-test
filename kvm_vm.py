@@ -1181,7 +1181,7 @@ class VM(virt_vm.BaseVM):
             self.netdev_id = []
             self.tapfds = []
             vlan = 0
-            
+
             for nic in params.objects("nics"):
                 self.netdev_id.append(virt_utils.generate_random_id())
                 self.device_id.append(virt_utils.generate_random_id())

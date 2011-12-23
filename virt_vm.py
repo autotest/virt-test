@@ -217,24 +217,6 @@ class VMRebootError(VMError):
 class VMStatusError(VMError):
     pass
 
-class VMRemoveError(VMError):
-    pass
-
-class VMUSBError(VMError):
-    pass
-
-class VMUSBControllerError(VMUSBError):
-    pass
-
-class VMUSBControllerPortFullError(VMUSBControllerError):
-    def __init__(self, name):
-        VMUSBControllerError.__init__(self, name)
-        self.name = name
-
-    def __str__(self):
-        return ("No available USB Controller port left for VM %s." % self.name)
-
-
 class VMUSBError(VMError):
     pass
 
