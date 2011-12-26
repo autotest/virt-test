@@ -665,9 +665,6 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("firstport", firstport)
             cmd += _add_option("freq", freq)
 
-            free_pci_addr = get_free_pci_addr(pci_addr)
-            cmd += ",bus=pci.0,addr=%s" % free_pci_addr
-
             # register this usb controller.
             self.usb_dev_dict[usb_id] = []
             return cmd
