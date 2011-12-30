@@ -1062,14 +1062,9 @@ class VM(virt_vm.BaseVM):
             for pci_id in vm.pa_pci_ids:
                 qemu_cmd += add_pcidevice(help, pci_id)
 
-        qemu_cmd += add_rtc(help)
-
-        if has_option(help, "boot"):
-            boot_order = params.get("boot_order", "cdn")
-            boot_once = params.get("boot_once", "c")
-            boot_menu = params.get("boot_menu", "off")
-            qemu_cmd += " %s " % add_boot(help, boot_order, boot_once, boot_menu)
-
+        kernel_params = params.get("kernel_params")
+        if kernel_params:
+            qemu_cmd += " --append '%s'" % kernel_params
 
         extra_params = params.get("extra_params")
         if extra_params:
