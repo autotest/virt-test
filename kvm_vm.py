@@ -1637,7 +1637,11 @@ class VM(virt_vm.BaseVM):
 
         netdev_peer_re = self.params.get("netdev_peer_re")
         if not netdev_peer_re:
-            raise virt_vm.VMConfigMissingError(self.name, "netdev_peer_re")
+            default_netdev_peer_re = "\s{2,}(.*?): .*?\\\s(.*?):"
+            logging.warning("Missing config netdev_peer_re for VM %s, "
+                            "using default %s", self.name,
+                            default_netdev_peer_re)
+            netdev_peer_re = default_netdev_peer_re
 
         pairs = re.findall(netdev_peer_re, network_info, re.S)
         for nic, tap in pairs:
