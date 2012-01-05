@@ -611,25 +611,8 @@ class VM(virt_vm.BaseVM):
             self.usb_dev_dict[usb_id] = []
             return cmd
 
-        def add_usbdevice(help, usb_dev, usb_type, controller_type,
-                          bus=None, port=None):
-            """
-            This function is used to add usb device except for usb storage.
-            """
-            cmd = ""
-            if has_option(help, "device"):
-                cmd = " -device %s" % usb_type
-                cmd += _add_option("id", "usb-%s" % usb_dev)
-                cmd += _add_option("bus", bus)
-                cmd += _add_option("port", port)
-            else:
-                if "tablet" in usb_type:
-                    cmd = " -usbdevice %s" % usb_type
-                else:
-                    logging.error("This version of host only support"
-                                  " tablet device")
-
-            return cmd
+        def add_machine_type(help, machine_type):
+            return " -M %s" % machine_type
 
         # End of command line option wrappers
 
@@ -1040,43 +1023,18 @@ class VM(virt_vm.BaseVM):
             for pci_id in vm.pa_pci_ids:
                 qemu_cmd += add_pcidevice(help, pci_id)
 
-        kernel_params = params.get("kernel_params")
-        if kernel_params:
-            qemu_cmd += " --append '%s'" % kernel_params
+        qemu_cmd += add_rtc(help)
 
-        p9_export_dir = params.get("9p_export_dir")
-        if p9_export_dir:
-            qemu_cmd += " -fsdev"
-            p9_fs_driver = params.get("9p_fs_driver")
-            if p9_fs_driver == "handle":
-                qemu_cmd += " handle,id=local1,path=" + p9_export_dir
-            elif p9_fs_driver == "proxy":
-                qemu_cmd += " proxy"
-            else:
-                p9_fs_driver = "local"
-                qemu_cmd += " local,id=local1,path=" + p9_export_dir
+        machine_type = params.get("machine_type")
+        if machine_type:
+            qemu_cmd += add_machine_type(help, machine_type)
 
-            # security model is needed only for local fs driver
-            if p9_fs_driver == "local":
-                p9_security_model = params.get("9p_security_model")
-                if not p9_security_model:
-                    p9_security_model = "none"
-                qemu_cmd += ",security_model=" + p9_security_model
-            elif p9_fs_driver == "proxy":
-                p9_socket_name = params.get("9p_socket_name")
-                if not p9_socket_name:
-                    raise virt_vm.VMImageMissingError("Socket name not defined")
-                qemu_cmd += p9_socket_name
+        if has_option(help, "boot"):
+            boot_order = params.get("boot_order", "cdn")
+            boot_once = params.get("boot_once", "c")
+            boot_menu = params.get("boot_menu", "off")
+            qemu_cmd += " %s " % add_boot(help, boot_order, boot_once, boot_menu)
 
-            p9_immediate_writeout = params.get("9p_immediate_writeout")
-            if p9_immediate_writeout == "yes":
-                qemu_cmd += ",writeout=immediate"
-
-            p9_readonly = params.get("9p_readonly")
-            if p9_readonly == "yes":
-                qemu_cmd += ",readonly"
-
-            qemu_cmd += " -device virtio-9p-pci,fsdev=local1,mount_tag=autotest_tag"
 
         extra_params = params.get("extra_params")
         if extra_params:
