@@ -793,22 +793,6 @@ class VM(virt_vm.BaseVM):
             if image_params.get("drive_format") == "usb2":
                 bus, port = get_free_usb_port(image_name, "ehci")
 
-            if params.get("index_enable") == "yes":
-                drive_index = image_params.get("drive_index")
-                if drive_index:
-                    index = drive_index
-                else:
-                    index_global = get_index(index_global)
-                    index = str(index_global)
-                    index_global += 1
-            else:
-                index = None
-
-            bus = None
-            port = None
-            if image_params.get("drive_format") == "usb2":
-                bus, port = get_free_usb_port(image_name, "ehci")
-
             qemu_cmd += add_drive(help,
                   virt_vm.get_image_filename(image_params, root_dir),
                   index,
@@ -1007,6 +991,24 @@ class VM(virt_vm.BaseVM):
             usb_type = usb_dev_params.get("usb_type")
             controller_type = usb_dev_params.get("usb_controller")
             bus, port = get_free_usb_port(usb_dev, controller_type)
+            qemu_cmd += add_usbdevice(help, usb_dev, usb_type, controller_type,
+                                      bus, port)
+
+        # Add usb devices
+        for usb_dev in params.objects("usb_devices"):
+            usb_dev_params = params.object_params(usb_dev)
+            usb_type = usb_dev_params.get("usb_type")
+            controller_type = usb_dev_params.get("usb_controller")
+
+            usb_controller_list = self.usb_dev_dict.keys()
+            if (len(usb_controller_list) == 1 and
+                "OLDVERSION_usb0" in usb_controller_list):
+                # old version of qemu-kvm doesn't support bus and port option.
+                bus = None
+                port = None
+            else:
+                bus, port = get_free_usb_port(usb_dev, controller_type)
+
             qemu_cmd += add_usbdevice(help, usb_dev, usb_type, controller_type,
                                       bus, port)
 
