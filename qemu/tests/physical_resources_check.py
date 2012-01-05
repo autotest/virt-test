@@ -131,6 +131,38 @@ def run_physical_resources_check(test, params, env):
         return f_fail
 
 
+    def verify_machine_type():
+        f_fail = []
+        pattern = params["mtype_pattern"]
+        cmd = params.get("check_machine_type_cmd")
+
+        if cmd is None:
+            return f_fail
+
+        s, o = session.cmd_status_output(cmd)
+        if s != 0:
+            raise error.TestError("Failed to get machine type from vm")
+
+        expect_mtype = re.findall(pattern, params['machine_type'])
+        actual_mtype = re.findall(pattern, o)
+        try:
+            if actual_mtype[0] != expect_mtype[0]:
+                fail_log =  "Machine type mismatch:\n"
+                fail_log += "    Assigned to VM: %s \n" % expect_mtype[0]
+                fail_log += "    Reported by OS: %s" % actual_mtype[0]
+                f_fail.append(fail_log)
+                logging.error(fail_log)
+            else:
+                logging.info("MachineType check pass. Expected: %s, Actual: %s" %
+                            (expect_mtype[0], actual_mtype[0]))
+            return f_fail
+        except IndexError, e:
+            fail_log = "Failed to get machine type, pls check script: %s" % e
+            f_fail.append(fail_log)
+            logging.error(fail_log)
+            return f_fail
+
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -248,6 +280,10 @@ def run_physical_resources_check(test, params, env):
             fail_log += "    VirtIO driver check output: '%s'" % chk_output
             n_fail.append(fail_log)
             logging.error(fail_log)
+
+    logging.info("Machine Type Check")
+    f_fail = verify_machine_type()
+    n_fail.extend(f_fail)
 
     if n_fail:
         session.close()
