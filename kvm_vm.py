@@ -631,6 +631,9 @@ class VM(virt_vm.BaseVM):
             self.usb_dev_dict[usb_id] = []
             return cmd
 
+        def add_machine_type(help, machine_type):
+            return " -M %s" % machine_type
+
         # End of command line option wrappers
 
         if name is None:
@@ -982,6 +985,10 @@ class VM(virt_vm.BaseVM):
                 qemu_cmd += add_pcidevice(help, pci_id)
 
         qemu_cmd += add_rtc(help)
+
+        machine_type = params.get("machine_type")
+        if machine_type:
+            qemu_cmd += add_machine_type(help, machine_type)
 
         if has_option(help, "boot"):
             boot_order = params.get("boot_order", "cdn")
