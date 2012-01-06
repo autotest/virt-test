@@ -508,16 +508,6 @@ class HumanMonitor(Monitor):
         """
         return self.cmd("mouse_button %d" % state)
 
-    def set_link(self, name, up):
-        """
-        Set link up/down.
-
-        @param name: Link name
-        @param up: 'on':set up this link, 'off': set down this link
-        @return: The response to the command
-        """
-        self.cmd("set_link %s %s" % (name, up))
-
 
     def getfd(self, fd, name):
         """
@@ -1049,7 +1039,6 @@ class QMPMonitor(Monitor):
 
         @param name: Link name
         @param up: Bool value, True=set up this link, False=Set down this link
-
         @return: The response to the command
         """
         return self.send_args_cmd("set_link name=%s,up=%s" % (name, str(up)))
