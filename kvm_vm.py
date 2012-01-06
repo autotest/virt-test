@@ -652,6 +652,12 @@ class VM(virt_vm.BaseVM):
 
         # Start constructing the qemu command
         qemu_cmd = ""
+        p9_fs_driver = params.get("9p_fs_driver")
+        if p9_fs_driver == "proxy":
+            p9_qemu_user = params.get("9p_qemu_user")
+            if p9_qemu_user:
+                qemu_cmd += "su - " + p9_qemu_user + " -c " + "\""
+
         # Enable the use of glibc's malloc_perturb feature
         if params.get("malloc_perturb", "no") == "yes":
             qemu_cmd += "MALLOC_PERTURB_=1 "
@@ -973,9 +979,9 @@ class VM(virt_vm.BaseVM):
             kernel = virt_utils.get_path(root_dir, kernel)
             qemu_cmd += add_kernel(help, kernel)
 
-        kernel_cmdline = params.get("kernel_cmdline")
-        if kernel_cmdline:
-            qemu_cmd += add_kernel_cmdline(help, kernel_cmdline)
+        kernel_params = params.get("kernel_params")
+        if kernel_params:
+            qemu_cmd += add_kernel_cmdline(help, kernel_params)
 
         initrd = params.get("initrd")
         if initrd:
@@ -1027,42 +1033,48 @@ class VM(virt_vm.BaseVM):
             for pci_id in vm.pa_pci_ids:
                 qemu_cmd += add_pcidevice(help, pci_id)
 
-        qemu_cmd += add_rtc(help)
+        p9_export_dir = params.get("9p_export_dir")
+        if p9_export_dir:
+            qemu_cmd += " -fsdev"
+            p9_fs_driver = params.get("9p_fs_driver")
+            if p9_fs_driver == "handle":
+                qemu_cmd += " handle,id=local1,path=" + p9_export_dir
+            elif p9_fs_driver == "proxy":
+                qemu_cmd += " proxy,id=local1,socket="
+            else:
+                p9_fs_driver = "local"
+                qemu_cmd += " local,id=local1,path=" + p9_export_dir
 
-        machine_type = params.get("machine_type")
-        if machine_type:
-            qemu_cmd += add_machine_type(help, machine_type)
+            # security model is needed only for local fs driver
+            if p9_fs_driver == "local":
+                p9_security_model = params.get("9p_security_model")
+                if not p9_security_model:
+                    p9_security_model = "none"
+                qemu_cmd += ",security_model=" + p9_security_model
+            elif p9_fs_driver == "proxy":
+                p9_socket_name = params.get("9p_socket_name")
+                if not p9_socket_name:
+                    raise virt_vm.VMImageMissingError("Socket name not defined")
+                qemu_cmd += p9_socket_name
 
-        if has_option(help, "boot"):
-            boot_order = params.get("boot_order", "cdn")
-            boot_once = params.get("boot_once", "c")
-            boot_menu = params.get("boot_menu", "off")
-            qemu_cmd += " %s " % add_boot(help, boot_order, boot_once, boot_menu)
+            p9_immediate_writeout = params.get("9p_immediate_writeout")
+            if p9_immediate_writeout == "yes":
+                qemu_cmd += ",writeout=immediate"
 
+            p9_readonly = params.get("9p_readonly")
+            if p9_readonly == "yes":
+                qemu_cmd += ",readonly"
+
+            qemu_cmd += " -device virtio-9p-pci,fsdev=local1,mount_tag=autotest_tag"
 
         extra_params = params.get("extra_params")
         if extra_params:
             qemu_cmd += " %s" % extra_params
 
-        guest_kernel = params.get("guest_kernel")
-        if guest_kernel:
-            if not os.path.exists(guest_kernel):
-                raise virt_vm.VMImageMissingError(guest_kernel)
-            qemu_cmd += add_kernel(help, guest_kernel)
-
-        guest_kernel_initrd = params.get("guest_initrd")
-        if guest_kernel_initrd:
-            if not os.path.exists(guest_kernel_initrd):
-                raise virt_vm.VMImageMissingError(guest_kernel_initrd)
-            qemu_cmd += add_initrd(help, guest_kernel_initrd)
-
-        default_cmdline = "selinux=0 console=ttyS0,115200 console=tty0"
-        guest_kernel_cmdline = params.get("guest_kernel_cmdline",
-                                          default_cmdline)
-
-        if guest_kernel_cmdline and guest_kernel:
-            qemu_cmd += add_kernel_cmdline(help, guest_kernel_cmdline)
-
+        # Terminate the su command.
+        if p9_fs_driver == "proxy":
+            if p9_qemu_user:
+                qemu_cmd += "\""
         return qemu_cmd
 
 
@@ -1281,6 +1293,32 @@ class VM(virt_vm.BaseVM):
                 else:
                     qemu_command += (' -incoming "exec:%s"' %
                                      migration_exec_cmd)
+
+            p9_fs_driver = params.get("9p_fs_driver")
+            if p9_fs_driver == "proxy":
+                os.chdir(self.root_dir)
+                proxy_helper_cmd = params.get("9p_proxy_binary")
+                if not proxy_helper_cmd:
+                    raise virt_vm.VMCreateError("Proxy command not specified")
+
+                p9_export_dir = params.get("9p_export_dir")
+                if not p9_export_dir:
+                    raise virt_vm.VMCreateError("Export dir not specified")
+
+                proxy_helper_cmd += " -p " + p9_export_dir
+                p9_socket_name = params.get("9p_socket_name")
+                p9_qemu_user = params.get("9p_qemu_user")
+                p9_qemu_group = params.get("9p_qemu_group")
+                qemu_user_uid = commands.getoutput('id -u ' + p9_qemu_user)
+                qemu_user_gid = commands.getoutput('id -g ' + p9_qemu_group)
+                proxy_helper_cmd += " -s " + p9_socket_name
+                proxy_helper_cmd += " -u " + qemu_user_uid
+                proxy_helper_cmd += " -g " + qemu_user_gid
+                proxy_helper_cmd += " -n"
+
+                logging.info("Running Proxy Helper:\n%s", proxy_helper_cmd)
+                self.process = aexpect.run_bg(proxy_helper_cmd, None,
+                                                     logging.info," ")
 
             logging.info("Running qemu command:\n%s", qemu_command)
             self.process = aexpect.run_bg(qemu_command, None,
