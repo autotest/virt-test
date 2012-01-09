@@ -1936,3 +1936,14 @@ class VM(virt_vm.BaseVM):
                  block['inserted']['file'] == value:
                     return block['locked']
         return False
+
+
+    def set_link(self, netdev_name, up):
+        """
+        Set link up/down.
+
+
+        @param name: Link name
+        @param up: Bool value, True=set up this link, False=Set down this link
+        """
+        self.monitor.set_link(netdev_name, up)
