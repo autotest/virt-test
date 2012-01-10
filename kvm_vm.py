@@ -611,7 +611,7 @@ class VM(virt_vm.BaseVM):
                 return ""
 
         def add_usb(help, usb_id, usb_type, multifunction=False,
-                    masterbus=None, firstport=None, freq=None):
+                    masterbus=None, firstport=None, pci_addr=None):
             if not has_option(help, "device"):
                 # Okay, for the archaic qemu which has not device parameter,
                 # just return a usb uhci controller.
@@ -623,6 +623,17 @@ class VM(virt_vm.BaseVM):
             device_help = commands.getoutput("%s -device \\?" % qemu_binary)
             if not bool(re.search(usb_type, device_help, re.M)):
                 raise virt_vm.VMDeviceNotSupportedError(self.name, usb_type)
+
+            cmd = " -device %s" % usb_type
+
+            if usb_id:
+                cmd += ",id=%s" % usb_id
+            if multifunction is True:
+                cmd += ",multifunction=on"
+            if masterbus:
+                cmd += ",mastbus=%s" % masterbus
+            if firstport:
+                cmd += ",firstport=%s" % firstport
 
             cmd = " -device %s" % usb_type
 

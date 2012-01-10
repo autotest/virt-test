@@ -239,9 +239,6 @@ class VMRebootError(VMError):
 class VMStatusError(VMError):
     pass
 
-class VMRemoveError(VMError):
-    pass
-
 class VMDeviceError(VMError):
     pass
 
