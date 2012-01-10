@@ -198,6 +198,19 @@ class VMRebootError(VMError):
 class VMStatusError(VMError):
     pass
 
+class VMDeviceError(VMError):
+    pass
+
+class VMDeviceNotSupportedError(VMDeviceError):
+    def __init__(self, name, device):
+        VMDeviceError.__init__(self, name, device)
+        self.name = name
+        self.device = device
+
+    def __str__(self):
+        return ("Device '%s' is not supported for vm '%s' on this Host." %
+                (self.device, self.name))
+
 class VMUSBError(VMError):
     pass
 
