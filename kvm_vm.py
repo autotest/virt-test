@@ -305,7 +305,8 @@ class VM(virt_vm.BaseVM):
                       media="disk", ide_bus=None, ide_unit=None, vdisk=None,
                       pci_addr=None,floppy_unit=None, readonly=False,
                       physical_block_size=None, logical_block_size=None,
-                      bus=None, port=None):
+                      bus=None, port=None, bootindex=None, removable=None,
+                      min_io_size=None, opt_io_size=None):
 
             dev = {"virtio" : "virtio-blk-pci",
                    "ide" : "ide-drive",
@@ -345,7 +346,7 @@ class VM(virt_vm.BaseVM):
             if rerror:
                 cmd += ",rerror=%s" % rerror
             if werror: cmd += ",werror=%s" % werror
-            if serial: cmd += ",serial=%s" % serial
+            cmd += _add_option("serial", serial)
             if snapshot: cmd += ",snapshot=on"
             if boot: cmd += ",boot=on"
             if media == "cdrom" or readonly : cmd += ",readonly=on"
@@ -359,9 +360,16 @@ class VM(virt_vm.BaseVM):
                     cmd += ",bus=%s" % ide_bus
                     cmd += ",unit=%s" % ide_unit
                 elif format == "usb2":
-                    if bus:
-                        cmd += ",bus=%s" % bus
-                    cmd += ",port=%d" % int(port)
+                    cmd += _add_option("bus", bus)
+                    cmd += _add_option("port", port)
+                    cmd += _add_option("serial", serial)
+                    cmd += _add_option("bootindex", bootindex)
+                    cmd += _add_option("removable", removable)
+                    cmd += _add_option("min_io_size", min_io_size)
+                    cmd += _add_option("opt_io_size", opt_io_size)
+                    cmd += _add_option("physical_block_size",
+                                       physical_block_size)
+                    cmd += _add_option("logical_block_size", logical_block_size)
                 else:
                     free_pci_addr = get_free_pci_addr(pci_addr)
                     cmd += ",bus=pci.0,addr=%s" % free_pci_addr
@@ -737,7 +745,12 @@ class VM(virt_vm.BaseVM):
                   image_params.get("drive_pci_addr"),
                   physical_block_size=image_params.get("physical_block_size"),
                   logical_block_size=image_params.get("logical_block_size"),
-                  bus=bus, port=port)
+                  bus=bus, port=port,
+                  bootindex=image_params.get("bootindex"),
+                  removable=image_params.get("removable"),
+                  min_io_size=image_params.get("min_io_size"),
+                  opt_io_size=image_params.get("opt_io_size"),
+                  )
 
             # increase the bus and unit no for ide device
             if params.get("drive_format") == "ide":
