@@ -346,67 +346,96 @@ class VM(virt_vm.BaseVM):
 
         def add_drive(help, filename, index=None, format=None, cache=None,
                       werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=False, blkdebug=None, bus=None, port=None,
-                      bootindex=None, removable=None, min_io_size=None,
-                      opt_io_size=None, physical_block_size=None,
-                      logical_block_size=None):
-            name = None
-            dev = ""
-            if format == "ahci":
-                name = "ahci%s" % index
-                dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
-                format = "none"
-                index = None
-            if format == "usb2":
-                name = "usb2.%s" % index
-                dev += " -device usb-storage"
-                dev += _add_option("bus", bus)
-                dev += _add_option("port", port)
-                dev += _add_option("serial", serial)
-                dev += _add_option("bootindex", bootindex)
-                dev += _add_option("removable", removable)
-                dev += _add_option("min_io_size", min_io_size)
-                dev += _add_option("opt_io_size", opt_io_size)
-                dev += _add_option("physical_block_size", physical_block_size)
-                dev += _add_option("logical_block_size", logical_block_size)
-                dev += _add_option("drive", name)
-                format = "none"
-                index = None
-            if format.startswith("scsi-"):
-                # handles scsi-{hd, cd, disk, block, generic} targets
-                name = "virtio-scsi%s" % index
-                dev += " -device %s,bus=virtio_scsi_pci.0" % format
-                dev += _add_option("drive", name)
-                dev += _add_option("logical_block_size", logical_block_size)
-                dev += _add_option("physical_block_size", physical_block_size)
-                dev += _add_option("min_io_size", min_io_size)
-                dev += _add_option("opt_io_size", opt_io_size)
-                dev += _add_option("bootindex", bootindex)
-                dev += _add_option("serial", serial)
-                dev += _add_option("removable", removable)
-                format = "none"
-                index = None
+                      boot=False, blkdebug=None,imgfmt="raw", aio=None,
+                      media="disk", ide_bus=None, ide_unit=None, vdisk=None,
+                      pci_addr=None,floppy_unit=None, readonly=False,
+                      physical_block_size=None, logical_block_size=None,
+                      bus=None, port=None, bootindex=None, removable=None,
+                      min_io_size=None, opt_io_size=None):
 
+            dev = {"virtio" : "virtio-blk-pci",
+                   "ide" : "ide-drive",
+                   "usb2": "usb-storage"}
+
+            if format == "ide":
+                id ="ide0-%s-%s" % (ide_bus, ide_unit)
+                ide_bus = "ide." + str(ide_bus)
+            elif format == "virtio":
+                if media == "disk":
+                    vdisk += 1
+                blkdev_id ="virtio-disk%s" % vdisk
+                id = "virtio-disk%s" % vdisk
+            elif format == "usb2":
+                id = "usb2.%s" % index
+            if media == "floppy":
+                id ="fdc0-0-%s" % floppy_unit
+            blkdev_id = "drive-%s" % id
+
+            # -drive part
             if blkdebug is not None:
                 cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
             else:
                 cmd = " -drive file='%s'" % filename
 
-            cmd += _add_option("index", index)
-            cmd += _add_option("if", format)
-            cmd += _add_option("cache", cache)
-            cmd += _add_option("rerror", rerror)
-            cmd += _add_option("werror", werror)
-            cmd += _add_option("serial", serial)
-            cmd += _add_option("snapshot", snapshot)
-            cmd += _add_option("boot", boot)
-            cmd += _add_option("id", name)
-            return cmd + dev
+            if index is not None and index.isdigit():
+                cmd += ",index=%s" % index
+            if has_option(help, "device"):
+                cmd += ",if=none"
+                cmd += ",id=%s" % blkdev_id
+            else:
+                if format: cmd += ",if=%s" % format
 
-        def add_nic(help, vlan, model=None, mac=None, device_id=None, netdev_id=None,
-                    nic_extra_params=None):
-            if model == 'none':
-                return ''
+            if media != "floppy":
+                cmd += ",media=%s" % media
+            if cache: cmd += ",cache=%s" % cache
+            if rerror:
+                cmd += ",rerror=%s" % rerror
+            if werror: cmd += ",werror=%s" % werror
+            cmd += _add_option("serial", serial)
+            if snapshot: cmd += ",snapshot=on"
+            if boot: cmd += ",boot=on"
+            if media == "cdrom" or readonly : cmd += ",readonly=on"
+            cmd += ",format=%s" % imgfmt
+            if ",aio=" in help and aio : cmd += ",aio=%s" % aio
+
+            # -device part
+            if has_option(help, "device") and media != "floppy":
+                cmd += " -device %s" % dev[format]
+                if format == "ide":
+                    cmd += ",bus=%s" % ide_bus
+                    cmd += ",unit=%s" % ide_unit
+                elif format == "usb2":
+                    cmd += _add_option("bus", bus)
+                    cmd += _add_option("port", port)
+                    cmd += _add_option("serial", serial)
+                    cmd += _add_option("bootindex", bootindex)
+                    cmd += _add_option("removable", removable)
+                    cmd += _add_option("min_io_size", min_io_size)
+                    cmd += _add_option("opt_io_size", opt_io_size)
+                    cmd += _add_option("physical_block_size",
+                                       physical_block_size)
+                    cmd += _add_option("logical_block_size", logical_block_size)
+                else:
+                    free_pci_addr = get_free_pci_addr(pci_addr)
+                    cmd += ",bus=pci.0,addr=%s" % free_pci_addr
+                    if physical_block_size:
+                        cmd += ",physical_block_size=%s" % physical_block_size
+                    if logical_block_size:
+                        cmd += ",logical_block_size=%s" % logical_block_size
+                cmd += ",drive=%s" % blkdev_id
+                cmd += ",id=%s" % id
+
+            # -global part
+            drivelist = ['driveA','driveB']
+            if has_option(help,"global") and media == "floppy" :
+                cmd += " -global isa-fdc.%s=drive-%s" \
+                          % (drivelist[floppy_unit],id)
+            return cmd
+
+        def add_nic(help, vlan, model=None, mac=None, netdev_id=None,
+                    nic_extra_params=None, pci_addr=None, device_id=None):
+            free_pci_addr = get_free_pci_addr(pci_addr)
+
             if has_option(help, "netdev"):
                 netdev_vlan_str = ",netdev=%s" % netdev_id
             else:
@@ -756,25 +785,36 @@ class VM(virt_vm.BaseVM):
                 bus, port = get_free_usb_port(image_name, "ehci")
 
             qemu_cmd += add_drive(help,
-                    virt_vm.get_image_filename(image_params, root_dir),
-                    image_params.get("drive_index"),
-                    image_params.get("drive_format"),
-                    image_params.get("drive_cache"),
-                    image_params.get("drive_werror"),
-                    image_params.get("drive_rerror"),
-                    image_params.get("drive_serial"),
-                    image_params.get("image_snapshot") == "yes",
-                    image_params.get("image_boot") == "yes",
-                    virt_vm.get_image_blkdebug_filename(image_params,
-                                                        self.virt_dir),
-                    bus,
-                    port,
-                    image_params.get("bootindex"),
-                    image_params.get("removable"),
-                    image_params.get("min_io_size"),
-                    image_params.get("opt_io_size"),
-                    image_params.get("physical_block_size"),
-                    image_params.get("logical_block_size"))
+                  virt_vm.get_image_filename(image_params, root_dir),
+                  index,
+                  image_params.get("drive_format"),
+                  image_params.get("drive_cache"),
+                  image_params.get("drive_werror"),
+                  image_params.get("drive_rerror"),
+                  image_params.get("drive_serial"),
+                  image_params.get("image_snapshot") == "yes",
+                  image_params.get("image_boot") == "yes",
+                  virt_vm.get_image_blkdebug_filename(image_params, root_dir),
+                  image_params.get("image_format"),
+                  image_params.get("image_aio", "native"),
+                  "disk", ide_bus, ide_unit, vdisk,
+                  image_params.get("drive_pci_addr"),
+                  physical_block_size=image_params.get("physical_block_size"),
+                  logical_block_size=image_params.get("logical_block_size"),
+                  bus=bus, port=port,
+                  bootindex=image_params.get("bootindex"),
+                  removable=image_params.get("removable"),
+                  min_io_size=image_params.get("min_io_size"),
+                  opt_io_size=image_params.get("opt_io_size"),
+                  )
+
+            # increase the bus and unit no for ide device
+            if params.get("drive_format") == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            else:
+                vdisk += 1
 
         redirs = []
         for redir_name in params.objects("redirs"):
