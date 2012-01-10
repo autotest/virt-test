@@ -55,6 +55,8 @@ class VM(virt_vm.BaseVM):
             self.device_id = []
             self.tapfds = []
             self.uuid = None
+            self.vcpu_threads = []
+            self.vhost_threads = []
 
 
         self.init_pci_addr = int(params.get("init_pci_addr", 4))
@@ -1393,6 +1395,12 @@ class VM(virt_vm.BaseVM):
                 raise e
 
             logging.debug("VM appears to be alive with PID %s", self.get_pid())
+
+            o = self.monitor.info("cpus")
+            self.vcpu_threads = re.findall("thread_id=(\d+)", o)
+            o = commands.getoutput("ps aux")
+            self.vhost_threads = re.findall("\w+\s+(\d+)\s.*\[vhost-%s\]" %
+                                            self.get_pid(), o)
 
             # Establish a session with the serial console -- requires a version
             # of netcat that supports -U
