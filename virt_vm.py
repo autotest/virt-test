@@ -256,12 +256,13 @@ def get_image_filename(params, root_dir):
     return image_filename
 
 
-def create_image(params, root_dir):
+def create_image(params, root_dir, check_output=False):
     """
     Create an image using qemu_image.
 
     @param params: Dictionary containing the test parameters.
     @param root_dir: Base directory for relative filenames.
+    @param check_output: Decide return command output or image name
 
     @note: params should contain:
            image_name -- the name of the image file, without extension
@@ -294,19 +295,25 @@ def create_image(params, root_dir):
         qemu_img_cmd += " %s" % size
 
     try:
-        utils.system(qemu_img_cmd)
+        result = utils.system_output(qemu_img_cmd)
     except error.CmdError, e:
         logging.error("Could not create image; qemu-img command failed:\n%s",
                       str(e))
-        return None
+        if not check_output:
+            result = None
+        else:
+            result = str(e)
 
-    if not os.path.exists(image_filename):
-        logging.error("Image could not be created for some reason; "
-                      "qemu-img command:\n%s" % qemu_img_cmd)
-        return None
+    if not check_output:
+        if not os.path.exists(image_filename):
+            logging.error("Image could not be created for some reason; "
+                          "qemu-img command:\n%s" % qemu_img_cmd)
+            result = None
+        else:
+            logging.info("Image created in %s" % image_filename)
+            result = image_filename
 
-    logging.info("Image created in %s" % image_filename)
-    return image_filename
+    return result
 
 
 def remove_image(params, root_dir):
