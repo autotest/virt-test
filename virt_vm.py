@@ -369,6 +369,8 @@ def create_image(params, root_dir, check_output=False):
 
         qemu_img_cmd += " %s" % size
 
+        qemu_img_cmd += " %s" % size
+
     return result
 
 
