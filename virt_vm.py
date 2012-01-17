@@ -337,49 +337,37 @@ def create_image(params, root_dir, check_output=False):
            image_cluster_size (optional) -- the cluster size for the image
            image_size -- the requested size of the image (a string
            qemu-img can understand, such as '10G')
+           create_with_dd -- use dd to create the image (raw format only)
     """
     format = params.get("image_format", "qcow2")
     image_filename = get_image_filename(params, root_dir)
-    cluster_size = params.get("cluster_size")
     size = params.get("image_size", "10G")
-
     if params.get("create_with_dd") == "yes" and format == "raw":
-        size_num = re.findall("\d+", size)[0]
-        size_num = int(size_num)
-        if "G" in size:
-            size_num *= 1024
-        qemu_img_cmd = params.get("dd_create_cmd") % (image_filename, size_num)
-
+        # maps K,M,G,T => (count, bs)
+        human = {'K': (1, 1),
+                 'M': (1, 1024),
+                 'G': (1024, 1024),
+                 'T': (1024, 1048576),
+                }
+        if human.has_key(size[-1]):
+            block_size = human[size[-1]][1]
+            size = int(size[:-1]) * human[size[-1]][0]
+        qemu_img_cmd = ("dd if=/dev/zero of=%s count=%s bs=%sK"
+                        % (image_filename, size, block_size))
     else:
         qemu_img_cmd = virt_utils.get_path(root_dir,
-                      params.get("qemu_img_binary","qemu-img"))
+                                    params.get("qemu_img_binary", "qemu-img"))
         qemu_img_cmd += " create"
+
         qemu_img_cmd += " -f %s" % format
+
+        image_cluster_size = params.get("image_cluster_size", None)
+        if image_cluster_size is not None:
+            qemu_img_cmd += " -o cluster_size=%s" % image_cluster_size
+
         qemu_img_cmd += " %s" % image_filename
 
-        if cluster_size:
-            qemu_img_cmd += " -o cluster_size=%s" % cluster_size
-
         qemu_img_cmd += " %s" % size
-
-    try:
-        result = utils.system_output(qemu_img_cmd)
-    except error.CmdError, e:
-        logging.error("Could not create image; qemu-img command failed:\n%s",
-                      str(e))
-        if not check_output:
-            result = None
-        else:
-            result = str(e)
-
-    if not check_output:
-        if not os.path.exists(image_filename):
-            logging.error("Image could not be created for some reason; "
-                          "qemu-img command:\n%s" % qemu_img_cmd)
-            result = None
-        else:
-            logging.info("Image created in %s" % image_filename)
-            result = image_filename
 
     return result
 
