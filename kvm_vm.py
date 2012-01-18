@@ -1907,12 +1907,12 @@ class VM(virt_vm.BaseVM):
         exec
         """
         # Make sure we only get one iteration
-        self.monitor.cmd("migrate_set_speed 1000g")
-        self.monitor.cmd("migrate_set_downtime 100000000")
-        self.monitor.migrate("exec:cat>%s" % path)
+        self.monitor.migrate_set_speed("1000g")
+        self.monitor.send_args_cmd("migrate_set_downtime value=100000000")
+        self.monitor.migrate("exec:cat>%s" % path, wait=True)
         # Restore the speed and downtime of migration
-        self.monitor.cmd("migrate_set_speed %d" % (32<<20))
-        self.monitor.cmd("migrate_set_downtime 0.03")
+        self.monitor.migrate_set_speed(32)
+        self.monitor.send_args_cmd("migrate_set_downtime value=0.03")
 
 
     def needs_restart(self, name, params, basedir):
