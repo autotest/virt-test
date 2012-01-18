@@ -412,9 +412,12 @@ class HumanMonitor(Monitor):
 
     def migrate_set_speed(self, value):
         """
-        Set maximum speed (in bytes/sec) for migrations.
+        Set maximum speed for migrations.
 
-        @param value: Speed in bytes/sec
+        @param value: Set speed in Gb, Mb, Kb, bytes/sec. By default, set
+        speed in Mb/sec. It also support numeber, which means set speed in
+        Mb/sec.
+
         @return: The command's output
         """
         return self.cmd("migrate_set_speed %s" % value)
@@ -834,6 +837,8 @@ class QMPMonitor(Monitor):
                     try:
                         if re.match("^[0-9]+$", opt[1]):
                             value = int(opt[1])
+                        elif re.match("^[0-9.]+$", opt[1]):
+                            value = float(opt[1])
                         elif "True" in opt[1] or "true" in opt[1]:
                             value = True
                         elif "false" in opt[1] or "False" in opt[1]:
@@ -914,12 +919,31 @@ class QMPMonitor(Monitor):
 
     def migrate_set_speed(self, value):
         """
-        Set maximum speed (in bytes/sec) for migrations.
+        Set maximum speed for migrations.
 
-        @param value: Speed in bytes/sec
+        @param value: Set speed in Gb, Mb, Kb, bytes/sec. By default, set speed
+         in Mb/sec. It also support numeber, which means set speed in Mb/sec.
+
         @return: The response to the command
         """
-        args = {"value": value}
+
+        # In qmp interface, we have to set speed in bytes/sec.
+        if isinstance(value, str):
+            if value.isdigit():
+                val = long(value) << 20
+            elif value.endswith(("g", "G")):
+                val = long(value.strip("gG")) << 30
+            elif value.endswith(("m", "M")):
+                val = long(value.strip("mM")) << 20
+            elif value.endswith(("k", "K")):
+                val = long(value.strip("kK")) << 10
+            elif value.endswith(("b", "B")):
+                val = long(value.srtip("bB"))
+            else:
+                logging.info("Not support value")
+        else:
+            val = value * (1 << 20)
+        args = {"value": val}
         return self.cmd("migrate_set_speed", args)
 
     def set_link(self, name, up):
