@@ -957,7 +957,7 @@ class QMPMonitor(Monitor):
                     try:
                         if re.match("^[0-9]+$", opt[1]):
                             value = int(opt[1])
-                        elif re.match("^[0-9.]+$", opt[1]):
+                        elif re.match("^[0-9]+.[0-9]*$", opt[1]):
                             value = float(opt[1])
                         elif "True" in opt[1] or "true" in opt[1]:
                             value = True
