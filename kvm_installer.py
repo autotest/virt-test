@@ -370,46 +370,11 @@ class KVMBaseInstaller(base_installer.BaseInstaller):
         qemu_fs_proxy_dst = os.path.join(self.test_bindir,
                                          self.QEMU_FS_PROXY_BIN)
 
-    def install(self):
-        self._clean_previous_installs()
-        self._get_packages()
-        self._install_packages()
-        self.install_unittests()
-        create_symlinks(test_bindir=self.test_bindir,
-                        bin_list=self.qemu_bin_paths,
-                        unittest=self.unittest_prefix)
-        self.reload_modules_if_needed()
-        if self.save_results:
-            virt_utils.archive_as_tarball(self.srcdir, self.results_dir)
-
-
-    def _get_rpm_names(self):
-        all_rpm_names = []
-        koji_client = virt_utils.KojiClient(cmd=self.koji_cmd)
-        for pkg_text in self.koji_pkgs:
-            pkg = virt_utils.KojiPkgSpec(pkg_text)
-            rpm_names = koji_client.get_pkg_rpm_names(pkg)
-            all_rpm_names += rpm_names
-        return all_rpm_names
-
-
-    def _get_rpm_file_names(self):
-        all_rpm_file_names = []
-        koji_client = virt_utils.KojiClient(cmd=self.koji_cmd)
-        for pkg_text in self.koji_pkgs:
-            pkg = virt_utils.KojiPkgSpec(pkg_text)
-            rpm_file_names = koji_client.get_pkg_rpm_file_names(pkg)
-            all_rpm_file_names += rpm_file_names
-        return all_rpm_file_names
-
-
-    def _install_packages(self):
-        """
-        Install all downloaded packages.
-        """
-        os.chdir(self.srcdir)
-        rpm_file_names = " ".join(self._get_rpm_file_names())
-        utils.system("yum --nogpgcheck -y localinstall %s" % rpm_file_names)
+        qemu_bin = self._qemu_bin_exists_at_prefix()
+        if qemu_bin is not None:
+            os.symlink(qemu_bin, qemu_dst)
+        else:
+            raise error.TestError('Invalid qemu path')
 
         qemu_img_bin = self._qemu_img_bin_exists_at_prefix()
         if qemu_img_bin is not None:
@@ -428,6 +393,7 @@ class KVMBaseInstaller(base_installer.BaseInstaller):
             os.symlink(qemu_fs_proxy_bin, qemu_fs_proxy_dst)
         else:
             raise error.TestError('Invalid qemu fs proxy path')
+
 
 
         @param test: kvm test object
