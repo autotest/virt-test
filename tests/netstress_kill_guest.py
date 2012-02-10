@@ -33,8 +33,8 @@ def run_netstress_kill_guest(test, params, env):
         @param session: session to machine
         """
         modules = []
-        out = session.cmd("ls -l --color=never "
-                          "/sys/class/net/*/device/driver/module")
+        cmd = params.get("nic_module_cmd")
+        out = session.cmd(cmd)
         for module in out.split("\n"):
             if not re.match("ls -l", module):
                 modules.append(module.split("/")[-1])
