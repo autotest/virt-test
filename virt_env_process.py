@@ -166,7 +166,7 @@ def process_command(test, params, env, command, command_timeout,
         else:
             raise
 
-def process(test, params, env, image_func, vm_func):
+def process(test, params, env, image_func, vm_func, pre_flag=True):
     """
     Pre- or post-process VMs and images according to the instructions in params.
     Call image_func for each image listed in params and vm_func for each VM.
@@ -176,18 +176,32 @@ def process(test, params, env, image_func, vm_func):
     @param env: The environment (a dict-like object).
     @param image_func: A function to call for each image.
     @param vm_func: A function to call for each VM.
+    @param pre_flag: A flag for judge call image_func before vm_func or not.
     """
-    # Get list of VMs specified for this test
-    for vm_name in params.objects("vms"):
-        vm_params = params.object_params(vm_name)
-        # Get list of images specified for this VM
-        for image_name in vm_params.objects("images"):
-            image_params = vm_params.object_params(image_name)
+    def _call_vm_func():
+        # Get list of VMs specified for this test
+        for vm_name in params.objects("vms"):
+            vm_params = params.object_params(vm_name)
+            # Call vm_func for each vm
+            vm_func(test, vm_params, env, vm_name)
+
+    def _call_image_func():
+        # Get list of images
+        for image_name in params.objects("images"):
+            image_params = params.object_params(image_name)
             # Call image_func for each image
             image_func(test, image_params)
-        # Call vm_func for each vm
-        vm_func(test, vm_params, env, vm_name)
 
+    if pre_flag:
+        _call_image_func()
+        pre_flag = False
+    else:
+        pre_flag = True
+
+    _call_vm_func()
+
+    if pre_flag:
+        _call_image_func()
 
 @error.context_aware
 def preprocess(test, params, env):
@@ -314,7 +328,8 @@ def postprocess(test, params, env):
     error.context("postprocessing")
 
     # Postprocess all VMs and images
-    process(test, params, env, postprocess_image, postprocess_vm)
+    process(test, params, env, postprocess_image, postprocess_vm,
+            pre_flag=False)
 
     # Terminate the screendump thread
     global _screendump_thread, _screendump_thread_termination_event
