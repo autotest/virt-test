@@ -1159,6 +1159,7 @@ class VM(virt_vm.BaseVM):
                 for vlan in range(num_nics):
                     self.free_mac_address(vlan)
 
+
     def remove(self):
         if self.is_alive():
             if not virsh_destroy(self.name, self.connect_uri):
@@ -1168,6 +1169,14 @@ class VM(virt_vm.BaseVM):
             raise virt_vm.VMRemoveError("VM removed fault")
 
         logging.debug("VM '%s' is removed", self.name)
+
+
+    def get_uuid(self):
+        """
+        Return VM's UUID.
+        """
+        return virsh_uuid(self.name, self.connect_uri)
+
 
     def get_address(self, index=0):
         """
