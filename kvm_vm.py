@@ -235,6 +235,30 @@ class VM(virt_vm.BaseVM):
             return ""
 
 
+        def _add_option(option, value):
+            """
+            Add option to qemu parameters.
+            """
+            if isinstance(value, bool):
+                if value:
+                    opt_str = "on"
+                else:
+                    opt_str = "off"
+                return ",%s=%s" % (option, opt_str)
+            elif isinstance(value, str):
+                # "EMPTY_STRING" and "NO_EQUAL_STRING" is used for testing
+                # illegal foramt of option.
+                # "EMPTY_STRING": set option as a empty string "".
+                # "NO_EQUAL_STRING": set option as a option string only,
+                #                    even without "=".
+                #       (In most case, qemu-kvm should recognize it as "<null>")
+                if value == "NO_EQUAL_STRING":
+                    return ",%s" % option
+                if value == "EMPTY_STRING":
+                    value = '""'
+                return ",%s=%s" % (option, str(value))
+            return ""
+
         def get_free_usb_port(dev, controller_type):
             # Find an available USB port.
             bus = None
@@ -507,30 +531,6 @@ class VM(virt_vm.BaseVM):
         def add_floppy(help, filename):
             return " -fda '%s'" % filename
 
-        def add_usbdevice(help, usb_dev, usb_type, controller_type,
-                          bus=None, port=None):
-            """
-            This function is used to add usb device except for usb storage.
-            """
-            cmd = ""
-            if has_option(help, "device"):
-                cmd = " -device %s" % usb_type
-                if device_id:
-                    cmd += ",id=usb-%s" % usb_dev
-                if bus:
-                    cmd += ",bus=%s" % bus
-                if port:
-                    cmd += ",port=%s" % port
-            else:
-                if "tablet" in usb_type:
-                    cmd = " -usbdevice %s" % usb_type
-                else:
-                    logging.error("This version of host only support"
-                                  " tablet device")
-
-            return cmd
-
-
         def add_tftp(help, filename):
             # If the new syntax is supported, don't add -tftp
             if "[,tftp=" in help:
@@ -676,6 +676,27 @@ class VM(virt_vm.BaseVM):
 
         def add_machine_type(help, machine_type):
             return " -M %s" % machine_type
+
+        def add_usbdevice(help, usb_dev, usb_type, controller_type,
+                          bus=None, port=None):
+            """
+            This function is used to add usb device except for usb storage.
+            """
+            cmd = ""
+            if has_option(help, "device"):
+                cmd = " -device %s" % usb_type
+                cmd += _add_option("id", "usb-%s" % usb_dev)
+                cmd += _add_option("bus", bus)
+                cmd += _add_option("port", port)
+            else:
+                if "tablet" in usb_type:
+                    cmd = " -usbdevice %s" % usb_type
+                else:
+                    logging.error("This version of host only support"
+                                  " tablet device")
+
+            return cmd
+
 
         # End of command line option wrappers
 
