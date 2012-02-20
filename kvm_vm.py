@@ -76,6 +76,7 @@ class VM(virt_vm.BaseVM):
         # }
         # This structure can used in usb hotplug/unplug test.
         self.usb_dev_dict = {}
+        self.driver_type = 'kvm'
 
         # This usb_dev_dict member stores usb controller and device info,
         # It's dict, each key is an id of usb controller,
