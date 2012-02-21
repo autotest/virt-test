@@ -418,6 +418,7 @@ variants:
                 migration_protocol = "unix"
             - exec:
                 migration_protocol = "exec"
+                migration_exec_cmd = "gzip"
             - mig_cancel:
                 migration_protocol = "tcp"
                 mig_cancel = True

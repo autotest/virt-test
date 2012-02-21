@@ -2073,7 +2073,11 @@ class VM(virt_vm.BaseVM):
         local = dest_host == "localhost"
 
         clone = self.clone()
-        if local:
+
+        # Check migration exec cmd first, to support migrate with
+        # gzip command.
+        migration_exec_cmd = clone.params.get("migration_exec_cmd")
+        if local and migration_exec_cmd != "gzip":
             error.context("creating destination VM")
             if stable_check:
                 # Pause the dest vm after creation
@@ -2091,7 +2095,19 @@ class VM(virt_vm.BaseVM):
             elif protocol == "unix":
                 uri = "unix:%s" % clone.migration_file
             elif protocol == "exec":
-                uri = 'exec:nc localhost %s' % clone.migration_port
+                if migration_exec_cmd != "gzip":
+                    uri = 'exec:nc localhost %s' % clone.migration_port
+                else:
+                    # Exec with gzip is a little different from other migrate
+                    # methods - first we ask the monitor the migration, then
+                    # the vm state is dumped to a compressed file, then we
+                    # start the dest vm with -incoming pointing to it.
+                    clone.exec_file = "/tmp/exec-%s.gz" % \
+                                virt_utils.generate_random_string(8)
+                    exec_cmd = "gzip -c -d %s" % clone.exec_file
+                    exec_uri = "exec:gzip -c > %s" % clone.exec_file
+
+                    self.monitor.migrate(exec_uri)
 
             if offline:
                 self.monitor.cmd("stop")
@@ -2109,6 +2125,13 @@ class VM(virt_vm.BaseVM):
                 return
 
             wait_for_migration()
+
+            if protocol == "exec" and migration_exec_cmd == "gzip":
+                error.context("creating destination VM")
+                clone.create(migration_mode=protocol,
+                             migration_exec_cmd=exec_cmd, mac_source=self)
+                error.context()
+
             self.verify_kernel_crash()
             self.verify_alive()
 
@@ -2161,6 +2184,12 @@ class VM(virt_vm.BaseVM):
             if self.is_alive():
                 self.monitor.cmd("cont")
             clone.destroy(gracefully=False)
+            if protocol == "exec" and migration_exec_cmd == "gzip":
+                try:
+                    logging.info("Removing migration file %s", clone.exec_file)
+                    os.remove(self.exec_file)
+                except Exception:
+                    pass
 
 
     @error.context_aware
