@@ -204,14 +204,39 @@ def process(test, params, env, image_func, vm_func, pre_flag=True):
     @param env: The environment (a dict-like object).
     @param image_func: A function to call for each image.
     @param vm_func: A function to call for each VM.
-    @param pre_flag: A flag for judge call image_func before vm_func or not.
+    @param vm_first: Call vm_func first or not.
     """
     def _call_vm_func():
-        # Get list of VMs specified for this test
         for vm_name in params.objects("vms"):
             vm_params = params.object_params(vm_name)
-            # Call vm_func for each vm
+            vm = env.get_vm(vm_name)
             vm_func(test, vm_params, env, vm_name)
+
+    def _call_image_func():
+        if params.objects("vms"):
+            for vm_name in params.objects("vms"):
+                vm_params = params.object_params(vm_name)
+                vm = env.get_vm(vm_name)
+                for image_name in vm_params.objects("images"):
+                    image_params = vm_params.object_params(image_name)
+                    # Call image_func for each image
+                    if vm is not None and vm.is_alive():
+                        vm.pause()
+                    image_func(test, image_params)
+                    if vm is not None and vm.is_alive():
+                        vm.resume()
+        else:
+            for image_name in params.objects("images"):
+                image_params = params.object_params(image_name)
+                image_func(test, image_params)
+
+    if not vm_first:
+        _call_image_func()
+
+    _call_vm_func()
+
+    if vm_first:
+        _call_image_func()
 
     def _call_image_func():
         # Get list of images
