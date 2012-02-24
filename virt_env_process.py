@@ -238,6 +238,14 @@ def process(test, params, env, image_func, vm_func, pre_flag=True):
     if vm_first:
         _call_image_func()
 
+    if not vm_first:
+        _call_image_func()
+
+    _call_vm_func()
+
+    if vm_first:
+        _call_image_func()
+
     def _call_image_func():
         # Get list of images
         for image_name in params.objects("images"):
