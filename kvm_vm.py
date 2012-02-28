@@ -214,16 +214,19 @@ class VM(virt_vm.BaseVM):
         # parameter, and should add the requested command line option
         # accordingly.
 
-        def _add_option(option, value):
+        def _add_option(option, value, option_type=None):
             """
             Add option to qemu parameters.
             """
-            fmt=",%s=%s"
-            if value and isinstance(value, bool):
-                if value:
+            fmt = ",%s=%s"
+            if option_type is bool:
+                # Decode value for bool parameter (supports True, False, None)
+                if value in ['yes', 'on', True]:
                     return fmt % (option, "on")
-                else:
+                elif value in ['no', 'off', False]:
                     return fmt % (option, "off")
+            elif value and isinstance(value, bool):
+                return fmt % (option, "on")
             elif value and isinstance(value, str):
                 # "EMPTY_STRING" and "NULL_STRING" is used for testing illegal
                 # foramt of option.
@@ -420,50 +423,15 @@ class VM(virt_vm.BaseVM):
                 cmd += ",rerror=%s" % rerror
             if werror: cmd += ",werror=%s" % werror
             cmd += _add_option("serial", serial)
-            if snapshot: cmd += ",snapshot=on"
-            if boot: cmd += ",boot=on"
-            if media == "cdrom" or readonly : cmd += ",readonly=on"
-            cmd += ",format=%s" % imgfmt
-            if ",aio=" in help and aio : cmd += ",aio=%s" % aio
+            cmd += _add_option("snapshot", snapshot, bool)
+            cmd += _add_option("boot", boot, bool)
+            cmd += _add_option("id", name)
+            return cmd + dev
 
-            # -device part
-            if has_option(help, "device") and media != "floppy":
-                cmd += " -device %s" % dev[format]
-                if format == "ide":
-                    cmd += ",bus=%s" % ide_bus
-                    cmd += ",unit=%s" % ide_unit
-                elif format == "usb2":
-                    cmd += _add_option("bus", bus)
-                    cmd += _add_option("port", port)
-                    cmd += _add_option("serial", serial)
-                    cmd += _add_option("bootindex", bootindex)
-                    cmd += _add_option("removable", removable)
-                    cmd += _add_option("min_io_size", min_io_size)
-                    cmd += _add_option("opt_io_size", opt_io_size)
-                    cmd += _add_option("physical_block_size",
-                                       physical_block_size)
-                    cmd += _add_option("logical_block_size", logical_block_size)
-                else:
-                    free_pci_addr = get_free_pci_addr(pci_addr)
-                    cmd += ",bus=pci.0,addr=%s" % free_pci_addr
-                    if physical_block_size:
-                        cmd += ",physical_block_size=%s" % physical_block_size
-                    if logical_block_size:
-                        cmd += ",logical_block_size=%s" % logical_block_size
-                cmd += ",drive=%s" % blkdev_id
-                cmd += ",id=%s" % id
-
-            # -global part
-            drivelist = ['driveA','driveB']
-            if has_option(help,"global") and media == "floppy" :
-                cmd += " -global isa-fdc.%s=drive-%s" \
-                          % (drivelist[floppy_unit],id)
-            return cmd
-
-        def add_nic(help, vlan, model=None, mac=None, netdev_id=None,
-                    nic_extra_params=None, pci_addr=None, device_id=None):
-            free_pci_addr = get_free_pci_addr(pci_addr)
-
+        def add_nic(help, vlan, model=None, mac=None, device_id=None, netdev_id=None,
+                    nic_extra_params=None):
+            if model == 'none':
+                return ''
             if has_option(help, "netdev"):
                 netdev_vlan_str = ",netdev=%s" % netdev_id
             else:
@@ -808,36 +776,25 @@ class VM(virt_vm.BaseVM):
                 bus, port = get_free_usb_port(image_name, "ehci")
 
             qemu_cmd += add_drive(help,
-                  virt_vm.get_image_filename(image_params, root_dir),
-                  index,
-                  image_params.get("drive_format"),
-                  image_params.get("drive_cache"),
-                  image_params.get("drive_werror"),
-                  image_params.get("drive_rerror"),
-                  image_params.get("drive_serial"),
-                  image_params.get("image_snapshot") == "yes",
-                  image_params.get("image_boot") == "yes",
-                  virt_vm.get_image_blkdebug_filename(image_params, root_dir),
-                  image_params.get("image_format"),
-                  image_params.get("image_aio", "native"),
-                  "disk", ide_bus, ide_unit, vdisk,
-                  image_params.get("drive_pci_addr"),
-                  physical_block_size=image_params.get("physical_block_size"),
-                  logical_block_size=image_params.get("logical_block_size"),
-                  bus=bus, port=port,
-                  bootindex=image_params.get("bootindex"),
-                  removable=image_params.get("removable"),
-                  min_io_size=image_params.get("min_io_size"),
-                  opt_io_size=image_params.get("opt_io_size"),
-                  )
-
-            # increase the bus and unit no for ide device
-            if params.get("drive_format") == "ide":
-                if ide_unit == 1:
-                    ide_bus += 1
-                ide_unit ^= 1
-            else:
-                vdisk += 1
+                    virt_vm.get_image_filename(image_params, root_dir),
+                    image_params.get("drive_index"),
+                    image_params.get("drive_format"),
+                    image_params.get("drive_cache"),
+                    image_params.get("drive_werror"),
+                    image_params.get("drive_rerror"),
+                    image_params.get("drive_serial"),
+                    image_params.get("image_snapshot"),
+                    image_params.get("image_boot"),
+                    virt_vm.get_image_blkdebug_filename(image_params,
+                                                        self.virt_dir),
+                    bus,
+                    port,
+                    image_params.get("bootindex"),
+                    image_params.get("removable"),
+                    image_params.get("min_io_size"),
+                    image_params.get("opt_io_size"),
+                    image_params.get("physical_block_size"),
+                    image_params.get("logical_block_size"))
 
         redirs = []
         for redir_name in params.objects("redirs"):
