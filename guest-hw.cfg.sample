@@ -48,6 +48,8 @@ variants:
         stress_boot: used_cpus = 10
         timedrift.with_load: used_cpus = 100
 
+# Blocks
+virtio-blk-pci_scsi = ""
 variants:
     - @ide:
         drive_format=ide
@@ -55,6 +57,11 @@ variants:
         drive_format=scsi
     - virtio_blk:
         drive_format=virtio
+        # For Block device based images(/dev/sdb), need to set scsi=off
+        # when using virtio_blk-pci. Bug 756677 .
+        Host_RHEL.6:
+            emulational_iscsi, iscsi:
+                virtio-blk-pci_scsi = "off"
         # Some older qemu might need image_boot=yes for virtio images to work.
         # Please uncomment the below if that is the case.
         #image_boot=yes
@@ -109,6 +116,17 @@ variants:
         driver_option = "max_vfs=7"
         # Number of devices that are going to be requested.
         devices_requested = 7
+        mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
+        mac_changeable = "yes"
+
+# Storage location
+variants:
+    - @local_stg:
+        use_storage = local_stg
+    - emulational_iscsi:
+        use_storage = emulational_iscsi
+    - iscsi:
+        use_storage = iscsi
 
 variants:
     - @smallpages:

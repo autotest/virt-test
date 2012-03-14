@@ -400,8 +400,80 @@ class VM(virt_vm.BaseVM):
                 id = "usb2.%s" % index
             if media == "floppy":
                 id ="fdc0-0-%s" % floppy_unit
-            blkdev_id = "drive-%s" % id
+            elif media == "cdrom":
+                readonly = True
+            if not has_option(help, "device"):
+                id = None
+            if id:
+                blkdev_id = "drive-%s" % id
+            else:
+                blkdev_id = None
+            if ",aio=" not in help:
+                aio = None
 
+            dev = ""
+            if format == "ahci":
+                blkdev_id = "ahci%s" % index
+                dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
+                format = "none"
+                index = None
+            elif format == "usb2":
+                blkdev_id = "usb2.%s" % index
+                dev += " -device usb-storage"
+                dev += _add_option("bus", bus)
+                dev += _add_option("port", port)
+                dev += _add_option("serial", serial)
+                dev += _add_option("bootindex", bootindex)
+                dev += _add_option("removable", removable)
+                dev += _add_option("min_io_size", min_io_size)
+                dev += _add_option("opt_io_size", opt_io_size)
+                dev += _add_option("physical_block_size", physical_block_size)
+                dev += _add_option("logical_block_size", logical_block_size)
+                dev += _add_option("drive", name)
+                format = "none"
+                index = None
+            elif format.startswith("scsi-"):
+                # handles scsi-{hd, cd, disk, block, generic} targets
+                blkdev_id = "virtio-scsi%s" % index
+                dev += " -device %s,bus=virtio_scsi_pci.0" % format
+                dev += _add_option("drive", name)
+                dev += _add_option("logical_block_size", logical_block_size)
+                dev += _add_option("physical_block_size", physical_block_size)
+                dev += _add_option("min_io_size", min_io_size)
+                dev += _add_option("opt_io_size", opt_io_size)
+                dev += _add_option("bootindex", bootindex)
+                dev += _add_option("serial", serial)
+                dev += _add_option("removable", removable)
+                format = "none"
+                index = None
+
+            elif has_option(help, "device") and media != "floppy":
+                dev += " -device %s" % dev_format[format]
+                if format == "ide":
+                    dev += ",bus=%s" % ide_bus
+                    dev += ",unit=%s" % ide_unit
+                elif format == "virtio":
+                    scsi = params.get("virtio-blk-pci_scsi")
+                    if scsi:
+                        cmd += ",scsi=%s" % scsi
+                    # This only affect on RHEL6.later host. Bug 756677
+                    free_pci_addr = get_free_pci_addr(pci_addr)
+                    dev += ",bus=pci.0,addr=%s" % free_pci_addr
+                    if physical_block_size:
+                        dev += ",physical_block_size=%s" % physical_block_size
+                    if logical_block_size:
+                        dev += ",logical_block_size=%s" % logical_block_size
+                dev += ",drive=%s" % blkdev_id
+                dev += ",id=%s" % id
+                format = "none"
+
+
+            # -global part
+            drivelist = ['driveA','driveB']
+            if has_option(help,"global") and media == "floppy" :
+                dev += " -global isa-fdc.%s=drive-%s" \
+                          % (drivelist[floppy_unit],id)
+                media = None
             # -drive part
             if blkdebug is not None:
                 cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
