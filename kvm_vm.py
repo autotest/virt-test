@@ -455,6 +455,10 @@ class VM(virt_vm.BaseVM):
                     dev += ",bus=%s" % ide_bus
                     dev += ",unit=%s" % ide_unit
                 elif format == "virtio":
+                    scsi = params.get("virtio-blk-pci_scsi")
+                    if scsi:
+                        cmd += ",scsi=%s" % scsi
+                    # This only affect on RHEL6.later host. Bug 756677
                     free_pci_addr = get_free_pci_addr(pci_addr)
                     dev += ",bus=pci.0,addr=%s" % free_pci_addr
                     if physical_block_size:
