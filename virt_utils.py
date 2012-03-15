@@ -2145,7 +2145,7 @@ class KojiClient(object):
         '''
         info = {}
         if pkg.build is not None:
-            info = self.session.getBuild(int(pkg.build))
+            info = self.session.getBuild(pkg.build)
         elif pkg.tag is not None and pkg.package is not None:
             builds = self.session.listTagged(pkg.tag,
                                              latest=True,
@@ -2340,6 +2340,7 @@ class KojiPkgSpec(object):
 
     The following sets of examples are interchangeable. Specifying all packages
     part of build number 1000:
+    (brew also accepts buildid like 'kernel-2.6.32-244.el6')
 
         >>> from kvm_utils import KojiPkgSpec
         >>> pkg = KojiPkgSpec('1000')
