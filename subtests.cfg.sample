@@ -3398,9 +3398,9 @@ variants:
 # URLs/Remote links for RHEL installation and update, put them together.
 unattended_install.url:
     RHEL.6.3.64:
-        url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-6/6.2/Server/x86_64/os
+        url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-6/6/Server/x86_64/os
     RHEL.6.3.32:
-        url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-6/6.2/Server/i386/os
+        url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-6/6/Server/i386/os
     RHEL.6.2.64:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.2/Server/x86_64/os/
     RHEL.6.2.32:
@@ -3409,10 +3409,14 @@ unattended_install.url:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.1/Server/x86_64/os/
     RHEL.6.1.32:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.1/Server/i386/os/
-    RHEL.5.8.64:
+    RHEL.5.9.64:
         url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-5-Server/tree-x86_64/
-    RHEL.5.8.32:
+    RHEL.5.9.32:
         url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-5-Server/tree-i386/
+    RHEL.5.8.64:
+        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-5-Server/U8/x86_64/os/
+    RHEL.5.8.32:
+        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-5-Server/U8/i386/os/
     RHEL.5.7.64:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-5-Server/U7/x86_64/os/
     RHEL.5.7.32:
@@ -3422,17 +3426,17 @@ unattended_install.url:
     RHEL.4.9.32:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-4/U9/AS/i386/tree/
     RHEL.3.9.64:
-        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-3/U9/AS/x86_64/tree/
+        url = http://tree.englab.nay.redhat.com/pub/rhel/released/RHEL-3/U9/x86_64/os/
     RHEL.3.9.32:
-        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-3/U9/AS/i386/tree/
+        url = http://tree.englab.nay.redhat.com/pub/rhel/released/RHEL-3/U9/i386/os/
 
 unattended_install.nfs:
     nfs_server = nfs.englab.nay.redhat.com
     nfs_dir = /pub/rhel/released/
     RHEL.6.3.64:
-        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6.2/Server/x86_64/os
+        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6/Server/x86_64/os
     RHEL.6.3.32:
-        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6.2/Server/i386/os
+        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6/Server/i386/os
     RHEL.6.2.64:
         nfs_dir += RHEL-6/6.2/Server/x86_64/os
     RHEL.6.2.32:
@@ -3441,10 +3445,14 @@ unattended_install.nfs:
         nfs_dir += RHEL-6/6.1/Server/x86_64/os
     RHEL.6.1.32:
         nfs_dir += RHEL-6/6.1/Server/i386/os
-    RHEL.5.8.64:
+    RHEL.5.9.64:
         nfs_dir = /pub/rhel/rel-eng/latest-RHEL-5-Server/tree-x86_64
-    RHEL.5.8.32:
+    RHEL.5.9.32:
         nfs_dir = /pub/rhel/rel-eng/latest-RHEL-5-Server/tree-i386
+    RHEL.5.8.64:
+        nfs_dir += RHEL-5-Server/U8/x86_64/os
+    RHEL.5.8.32:
+        nfs_dir += RHEL-5-Server/U8/i386/os
     RHEL.5.7.64:
         nfs_dir += RHEL-5-Server/U7/x86_64/os
     RHEL.5.7.32:
