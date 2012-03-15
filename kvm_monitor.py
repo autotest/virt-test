@@ -5,7 +5,7 @@ Interfaces to the QEMU monitor.
 """
 
 import socket, time, threading, logging, select, re
-import virt_utils
+import virt_utils, virt_passfd_setup
 try:
     import json
 except ImportError:
@@ -60,6 +60,9 @@ class Monitor:
     Common code for monitor classes.
     """
 
+    ACQUIRE_LOCK_TIMEOUT = 20
+    DATA_AVAILABLE_TIMEOUT = 0
+
     def __init__(self, name, filename):
         """
         Initialize the instance.
@@ -72,6 +75,7 @@ class Monitor:
         self.filename = filename
         self._lock = threading.RLock()
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self._passfd = None
 
         try:
             self._socket.connect(filename)
@@ -82,11 +86,7 @@ class Monitor:
     def __del__(self):
         # Automatically close the connection when the instance is garbage
         # collected
-        try:
-            self._socket.shutdown(socket.SHUT_RDWR)
-        except socket.error:
-            pass
-        self._socket.close()
+        self._close_sock()
 
 
     # The following two functions are defined to make sure the state is set
@@ -106,7 +106,15 @@ class Monitor:
         return self.name, self.filename, True
 
 
-    def _acquire_lock(self, timeout=20):
+    def _close_sock(self):
+        try:
+            self._socket.shutdown(socket.SHUT_RDWR)
+        except socket.error:
+            pass
+        self._socket.close()
+
+
+    def _acquire_lock(self, timeout=ACQUIRE_LOCK_TIMEOUT):
         end_time = time.time() + timeout
         while time.time() < end_time:
             if self._lock.acquire(False):
@@ -115,9 +123,12 @@ class Monitor:
         return False
 
 
-    def _data_available(self, timeout=0):
+    def _data_available(self, timeout=DATA_AVAILABLE_TIMEOUT):
         timeout = max(0, timeout)
-        return bool(select.select([self._socket], [], [], timeout)[0])
+        try:
+            return bool(select.select([self._socket], [], [], timeout)[0])
+        except socket.error, e:
+            raise MonitorSocketError("Verifying data on monitor socket", e)
 
 
     def _recvall(self):
@@ -150,6 +161,9 @@ class HumanMonitor(Monitor):
     Wraps "human monitor" commands.
     """
 
+    PROMPT_TIMEOUT = 20
+    CMD_TIMEOUT = 20
+
     def __init__(self, name, filename, suppress_exceptions=False):
         """
         Connect to the monitor socket and find the (qemu) prompt.
@@ -169,7 +183,7 @@ class HumanMonitor(Monitor):
             self.protocol = "human"
 
             # Find the initial (qemu) prompt
-            s, o = self._read_up_to_qemu_prompt(20)
+            s, o = self._read_up_to_qemu_prompt()
             if not s:
                 raise MonitorProtocolError("Could not find (qemu) prompt "
                                            "after connecting to monitor. "
@@ -179,6 +193,7 @@ class HumanMonitor(Monitor):
             self._help_str = self.cmd("help", debug=False)
 
         except MonitorError, e:
+            self._close_sock()
             if suppress_exceptions:
                 logging.warn(e)
             else:
@@ -187,7 +202,7 @@ class HumanMonitor(Monitor):
 
     # Private methods
 
-    def _read_up_to_qemu_prompt(self, timeout=20):
+    def _read_up_to_qemu_prompt(self, timeout=PROMPT_TIMEOUT):
         s = ""
         end_time = time.time() + timeout
         while self._data_available(end_time - time.time()):
@@ -211,7 +226,7 @@ class HumanMonitor(Monitor):
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
         """
-        if not self._acquire_lock(20):
+        if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
                                    "monitor command '%s'" % cmd)
 
@@ -229,7 +244,7 @@ class HumanMonitor(Monitor):
 
     # Public methods
 
-    def cmd(self, command, timeout=20, debug=True):
+    def cmd(self, command, timeout=CMD_TIMEOUT, debug=True, fd=None):
         """
         Send command to the monitor.
 
@@ -245,15 +260,21 @@ class HumanMonitor(Monitor):
         if debug:
             logging.debug("(monitor %s) Sending command '%s'",
                           self.name, command)
-        if not self._acquire_lock(20):
+        if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
                                    "monitor command '%s'" % command)
 
         try:
             # Read any data that might be available
             self._recvall()
-            # Send command
-            self._send(command)
+            if fd is not None:
+                if self._passfd is None:
+                    self._passfd = virt_passfd_setup.import_passfd()
+                # If command includes a file descriptor, use passfd module
+                self._passfd.sendfd(self._socket, fd, "%s\n" % (command))
+            else:
+                # Send command
+                self._send(command)
             # Read output
             s, o = self._read_up_to_qemu_prompt(timeout)
             # Remove command echo from output
@@ -292,12 +313,64 @@ class HumanMonitor(Monitor):
         o = self.cmd("info status", debug=False)
         return (status in o)
 
+    def get_status(self):
+        return self.cmd("info status", debug=False)
+
+
+    def verify_status(self, status):
+        """
+        Verify VM status
+
+        @param status: Optional VM status, 'running' or 'paused'
+        @return: return True if VM status is same as we expected
+        """
+        return (status in self.get_status())
+
+
     # Command wrappers
     # Notes:
     # - All of the following commands raise exceptions in a similar manner to
     #   cmd().
     # - A command wrapper should use self._help_str if it requires information
     #   about the monitor's capabilities.
+    def send_args_cmd(self, cmdlines, timeout=CMD_TIMEOUT, convert=True):
+        """
+        Send a command with/without parameters and return its output.
+        Have same effect with cmd function.
+        Implemented under the same name for both the human and QMP monitors.
+        Command with parameters should in following format e.g.:
+        'memsave val=0 size=10240 filename=memsave'
+        Command without parameter: 'sendkey ctrl-alt-f1'
+
+        @param cmdlines: Commands send to qemu which is seperated by ";". For
+                         command with parameters command should send in a string
+                         with this format:
+                         $command $arg_name=$arg_value $arg_name=$arg_value
+        @param timeout: Time duration to wait for (qemu) prompt after command
+        @param convert: If command need to convert. For commands such as:
+                        $command $arg_value
+        @return: The output of the command
+        @raise MonitorLockError: Raised if the lock cannot be acquired
+        @raise MonitorSendError: Raised if the command cannot be sent
+        @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
+                found after sending the command
+        """
+        cmd_output = ""
+        for cmdline in cmdlines.split(";"):
+            logging.info(cmdline)
+            if not convert:
+                return self.cmd(cmdline, timeout)
+            if "=" in cmdline:
+                command = cmdline.split()[0]
+                cmdargs = " ".join(cmdline.split()[1:]).split(",")
+                for arg in cmdargs:
+                    command += " " + arg.split("=")[-1]
+            else:
+                command = cmdline
+            cmd_output += self.cmd(command, timeout)
+        return cmd_output
+
+
 
 
     def send_args_cmd(self, cmdlines, timeout=20, convert=True):
@@ -423,6 +496,16 @@ class HumanMonitor(Monitor):
         return self.cmd("migrate_set_speed %s" % value)
 
 
+    def migrate_set_downtime(self, value):
+        """
+        Set maximum tolerated downtime (in seconds) for migration.
+
+        @param: value: maximum downtime (in seconds)
+        @return: The command's output
+        """
+        return self.cmd("migrate_set_downtime %s" % value)
+
+
     def sendkey(self, keystr, hold_time=1):
         """
         Send key combination to VM.
@@ -455,10 +538,26 @@ class HumanMonitor(Monitor):
         return self.cmd("mouse_button %d" % state)
 
 
+    def getfd(self, fd, name):
+        """
+        Receives a file descriptor
+
+        @param fd: File descriptor to pass to QEMU
+        @param name: File descriptor name (internal to QEMU)
+        @return: The command's output
+        """
+        return self.cmd("getfd %s" % name, fd=fd)
+
+
 class QMPMonitor(Monitor):
     """
     Wraps QMP monitor commands.
     """
+
+    READ_OBJECTS_TIMEOUT = 5
+    CMD_TIMEOUT = 20
+    RESPONSE_TIMEOUT = 20
+    PROMPT_TIMEOUT = 20
 
     def __init__(self, name, filename, suppress_exceptions=False):
         """
@@ -507,6 +606,7 @@ class QMPMonitor(Monitor):
             self.cmd("qmp_capabilities")
 
         except MonitorError, e:
+            self._close_sock()
             if suppress_exceptions:
                 logging.warn(e)
             else:
@@ -524,7 +624,7 @@ class QMPMonitor(Monitor):
         return obj
 
 
-    def _read_objects(self, timeout=5):
+    def _read_objects(self, timeout=READ_OBJECTS_TIMEOUT):
         """
         Read lines from the monitor and try to decode them.
         Stop when all available lines have been successfully decoded, or when
@@ -576,7 +676,7 @@ class QMPMonitor(Monitor):
             raise MonitorSocketError("Could not send data: %r" % data, e)
 
 
-    def _get_response(self, id=None, timeout=20):
+    def _get_response(self, id=None, timeout=RESPONSE_TIMEOUT):
         """
         Read a response from the QMP monitor.
 
@@ -596,7 +696,7 @@ class QMPMonitor(Monitor):
 
     # Public methods
 
-    def cmd(self, cmd, args=None, timeout=20, debug=True):
+    def cmd(self, cmd, args=None, timeout=CMD_TIMEOUT, debug=True):
         """
         Send a QMP monitor command and return the response.
 
@@ -617,7 +717,7 @@ class QMPMonitor(Monitor):
         if debug:
             logging.debug("(monitor %s) Sending command '%s'",
                           self.name, cmd)
-        if not self._acquire_lock(20):
+        if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
                                    "QMP command '%s'" % cmd)
 
@@ -651,7 +751,7 @@ class QMPMonitor(Monitor):
             self._lock.release()
 
 
-    def cmd_raw(self, data, timeout=20):
+    def cmd_raw(self, data, timeout=CMD_TIMEOUT):
         """
         Send a raw string to the QMP monitor and return the response.
         Unlike cmd(), return the raw response dict without performing any
@@ -664,7 +764,7 @@ class QMPMonitor(Monitor):
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if no response is received
         """
-        if not self._acquire_lock(20):
+        if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
                                    "data: %r" % data)
 
@@ -681,7 +781,7 @@ class QMPMonitor(Monitor):
             self._lock.release()
 
 
-    def cmd_obj(self, obj, timeout=20):
+    def cmd_obj(self, obj, timeout=CMD_TIMEOUT):
         """
         Transform a Python object to JSON, send the resulting string to the QMP
         monitor, and return the response.
@@ -695,10 +795,10 @@ class QMPMonitor(Monitor):
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if no response is received
         """
-        return self.cmd_raw(json.dumps(obj) + "\n")
+        return self.cmd_raw(json.dumps(obj) + "\n", timeout)
 
 
-    def cmd_qmp(self, cmd, args=None, id=None, timeout=20):
+    def cmd_qmp(self, cmd, args=None, id=None, timeout=CMD_TIMEOUT):
         """
         Build a QMP command from the passed arguments, send it to the monitor
         and return the response.
@@ -740,6 +840,7 @@ class QMPMonitor(Monitor):
             return True
         return False
 
+
     def get_events(self):
         """
         Return a list of the asynchronous events received since the last
@@ -748,7 +849,7 @@ class QMPMonitor(Monitor):
         @return: A list of events (the objects returned have an "event" key)
         @raise MonitorLockError: Raised if the lock cannot be acquired
         """
-        if not self._acquire_lock(20):
+        if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to read "
                                    "QMP events")
         try:
@@ -769,6 +870,7 @@ class QMPMonitor(Monitor):
             if e.get("event") == name:
                 return e
 
+
     def human_monitor_cmd(self, cmd=None, timeout=20):
         """
         Run human monitor command in QMP through human-monitor-command
@@ -778,13 +880,14 @@ class QMPMonitor(Monitor):
         args = {"command-line": cmd}
         return self.cmd("human-monitor-command", args, timeout)
 
+
     def clear_events(self):
         """
         Clear the list of asynchronous events.
 
         @raise MonitorLockError: Raised if the lock cannot be acquired
         """
-        if not self._acquire_lock(20):
+        if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to clear "
                                    "QMP event list")
         self._events = []
@@ -801,6 +904,59 @@ class QMPMonitor(Monitor):
     # Command wrappers
     # Note: all of the following functions raise exceptions in a similar manner
     # to cmd().
+    def send_args_cmd(self, cmdlines, timeout=CMD_TIMEOUT, convert=True):
+        """
+        Send a command with/without parameters and return its output.
+        Have same effect with cmd function.
+        Implemented under the same name for both the human and QMP monitors.
+        Command with parameters should in following format e.g.:
+        'memsave val=0 size=10240 filename=memsave'
+        Command without parameter: 'query-vnc'
+
+        @param cmdlines: Commands send to qemu which is seperated by ";". For
+                         command with parameters command should send in a string
+                         with this format:
+                         $command $arg_name=$arg_value $arg_name=$arg_value
+        @param timeout: Time duration to wait for (qemu) prompt after command
+        @param convert: If command need to convert. For commands not in standard
+                        format such as: $command $arg_value
+        @return: The response to the command
+        @raise MonitorLockError: Raised if the lock cannot be acquired
+        @raise MonitorSendError: Raised if the command cannot be sent
+        @raise MonitorProtocolError: Raised if no response is received
+        """
+        cmd_output = []
+        for cmdline in cmdlines.split(";"):
+            command = cmdline.split()[0]
+            commands = self.cmd("query-commands")
+            if command not in str(commands):
+                if "=" in cmdline:
+                    command = cmdline.split()[0]
+                    cmdargs = " ".join(cmdline.split()[1:]).split(",")
+                    for arg in cmdargs:
+                        command += " " + arg.split("=")[-1]
+                else:
+                    command = cmdline
+                cmd_output.append(self.human_monitor_cmd(command))
+            else:
+                cmdargs = " ".join(cmdline.split()[1:]).split(",")
+                args = {}
+                for arg in cmdargs:
+                    opt = arg.split('=')
+                    try:
+                        if re.match("^[0-9]+$", opt[1]):
+                            value = int(opt[1])
+                        elif "True" in opt[1] or "true" in opt[1]:
+                            value = True
+                        elif "false" in opt[1] or "False" in opt[1]:
+                            value = False
+                        else:
+                            value = opt[1].strip()
+                        args[opt[0].strip()] = value
+                    except:
+                        logging.debug("Fail to create args, please check cmd")
+                cmd_output.append(self.cmd(command, args, timeout=timeout))
+        return cmd_output
 
     def send_args_cmd(self, cmdlines, timeout=20, convert=True):
         """
@@ -946,12 +1102,14 @@ class QMPMonitor(Monitor):
         args = {"value": val}
         return self.cmd("migrate_set_speed", args)
 
+
     def set_link(self, name, up):
         """
         Set link up/down.
 
         @param name: Link name
         @param up: Bool value, True=set up this link, False=Set down this link
+
         @return: The response to the command
         """
-        return self.send_args_cmd("set_link name=%s,up=%s" % (name, (up=='on')))
+        return self.send_args_cmd("set_link name=%s,up=%s" % (name, str(up)))

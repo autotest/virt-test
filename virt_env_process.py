@@ -2,7 +2,7 @@ import os, time, commands, re, logging, glob, threading, shutil
 from autotest_lib.client.bin import utils
 from autotest_lib.client.common_lib import error
 import aexpect, virt_utils, kvm_monitor, ppm_utils, virt_test_setup
-import virt_vm, kvm_vm, virt_test_utils
+import virt_vm, kvm_vm, virt_test_utils, libvirt_vm, virt_video_maker
 try:
     import PIL.Image
 except ImportError:
@@ -29,11 +29,10 @@ def preprocess_image(test, params):
     create_image = False
 
     if params.get("force_create_image") == "yes":
-        logging.debug("'force_create_image' specified; creating image...")
+        logging.debug("Param 'force_create_image' specified, creating image")
         create_image = True
     elif (params.get("create_image") == "yes" and not
           os.path.exists(image_filename)):
-        logging.debug("Creating image...")
         create_image = True
 
     if create_image and not virt_vm.create_image(params, test.bindir):
@@ -50,50 +49,63 @@ def preprocess_vm(test, params, env, name):
     @param env: The environment (a dict-like object).
     @param name: The name of the VM object.
     """
-    logging.debug("Preprocessing VM '%s'..." % name)
+    logging.debug("Preprocessing VM '%s'", name)
     vm = env.get_vm(name)
+    vm_type = params.get('vm_type')
     if not vm:
-        logging.debug("VM object does not exist; creating it")
-        vm_type = params.get('vm_type')
+        logging.debug("VM object for '%s' does not exist, creating it", name)
         if vm_type == 'kvm':
             vm = kvm_vm.VM(name, params, test.bindir, env.get("address_cache"))
+        if vm_type == 'libvirt':
+            vm = libvirt_vm.VM(name, params, test.bindir, env.get("address_cache"))
         env.register_vm(name, vm)
+
+    remove_vm = False
+    if params.get("force_remove_vm") == "yes":
+        logging.debug("'force_remove_vm' specified; removing VM...")
+        remove_vm = True
+
+    if remove_vm:
+        vm.remove()
 
     start_vm = False
 
     if params.get("restart_vm") == "yes":
-        logging.debug("'restart_vm' specified; (re)starting VM...")
+        logging.debug("Param 'restart_vm' specified, (re)starting VM")
         start_vm = True
     elif params.get("migration_mode"):
-        logging.debug("Starting VM in incoming migration mode...")
+        logging.debug("Param 'migration_mode' specified, starting VM in "
+                      "incoming migration mode")
         start_vm = True
     elif params.get("start_vm") == "yes":
-        if not vm.is_alive():
-            logging.debug("VM is not alive; starting it...")
-            start_vm = True
-        if vm.needs_restart(name=name, params=params, basedir=test.bindir):
-            logging.debug("Current VM specs differ from requested one; "
-                          "restarting it...")
-            start_vm = True
+        # need to deal with libvirt VM differently than qemu
+        if vm_type == 'libvirt':
+            if not vm.is_alive():
+                logging.debug("VM is not alive; starting it...")
+                start_vm = True
+        else:
+            if not vm.is_alive():
+                logging.debug("VM is not alive, starting it")
+                start_vm = True
+            if vm.needs_restart(name=name, params=params, basedir=test.bindir):
+                logging.debug("Current VM specs differ from requested one; "
+                              "restarting it")
+                start_vm = True
 
     if start_vm:
-        # Start the VM (or restart it if it's already up)
-        vm.create(name, params, test.bindir,
-                  migration_mode=params.get("migration_mode"))
-        # Update mac and IP info for assigned device
-        if params.get("pci_assignable") != "no":
-            virt_test_utils.update_mac_ip_address(vm, params)
-
+        if vm_type == "libvirt" and params.get("type") != "unattended_install":
+            vm.params = params
+            vm.start()
+        else:
+            # Start the VM (or restart it if it's already up)
+            vm.create(name, params, test.bindir,
+                      migration_mode=params.get("migration_mode"))
+            # Update mac and IP info for assigned device
+            if params.get("pci_assignable") != "no":
+                virt_test_utils.update_mac_ip_address(vm, params)
     else:
         # Don't start the VM, just update its params
         vm.params = params
-
-    scrdump_filename = os.path.join(test.debugdir, "pre_%s.ppm" % name)
-    try:
-        if vm.monitor:
-            vm.monitor.screendump(scrdump_filename, debug=False)
-    except kvm_monitor.MonitorError, e:
-        logging.warn(e)
 
 
 def postprocess_image(test, params):
@@ -104,7 +116,12 @@ def postprocess_image(test, params):
     @param params: A dict containing image postprocessing parameters.
     """
     if params.get("check_image") == "yes":
-        virt_vm.check_image(params, test.bindir)
+        try:
+            virt_vm.check_image(params, test.bindir)
+        except Exception, e:
+            if params.get("restore_image_on_check_error", "no") == "yes":
+                virt_vm.backup_image(params, test.bindir, 'restore', True)
+            raise e
     if params.get("remove_image") == "yes":
         virt_vm.remove_image(params, test.bindir)
 
@@ -119,26 +136,40 @@ def postprocess_vm(test, params, env, name):
     @param env: The environment (a dict-like object).
     @param name: The name of the VM object.
     """
-    logging.debug("Postprocessing VM '%s'..." % name)
+    logging.debug("Postprocessing VM '%s'" % name)
     vm = env.get_vm(name)
     if not vm:
         return
 
-    scrdump_filename = os.path.join(test.debugdir, "post_%s.ppm" % name)
-    try:
-        if vm.monitor:
-            vm.monitor.screendump(scrdump_filename, debug=False)
-    except kvm_monitor.MonitorError, e:
-        logging.warn(e)
+    # Encode an HTML 5 compatible video from the screenshots produced?
+    screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
+    if (params.get("encode_video_files", "yes") == "yes" and
+        glob.glob("%s/*" % screendump_dir)):
+        logging.debug("Param 'encode_video_files' specified, trying to "
+                      "encode a video from the screenshots produced by "
+                      "vm %s", vm.name)
+        try:
+            video = virt_video_maker.GstPythonVideoMaker()
+            if (video.has_element('vp8enc') and video.has_element('webmmux')):
+                video_file = os.path.join(test.debugdir, "%s-%s.webm" %
+                                          (vm.name, test.iteration))
+            else:
+                video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
+                                          (vm.name, test.iteration))
+            video.start(screendump_dir, video_file)
+
+        except Exception, detail:
+            logging.info("Param 'encode_video_files' specified, but video "
+                         "creation failed for vm %s: %s", vm.name, detail)
 
     if params.get("kill_vm") == "yes":
         kill_vm_timeout = float(params.get("kill_vm_timeout", 0))
         if kill_vm_timeout:
-            logging.debug("'kill_vm' specified; waiting for VM to shut down "
-                          "before killing it...")
+            logging.debug("Param 'kill_vm' specified, waiting for VM to shut "
+                          "down before killing it")
             virt_utils.wait_for(vm.is_dead, kill_vm_timeout, 0, 1)
         else:
-            logging.debug("'kill_vm' specified; killing VM...")
+            logging.debug("Param 'kill_vm' specified, killing VM")
         vm.destroy(gracefully = params.get("kill_vm_gracefully") == "yes")
 
 
@@ -166,7 +197,8 @@ def process_command(test, params, env, command, command_timeout,
         else:
             raise
 
-def process(test, params, env, image_func, vm_func, pre_flag=True):
+
+def process(test, params, env, image_func, vm_func, vm_first=False):
     """
     Pre- or post-process VMs and images according to the instructions in params.
     Call image_func for each image listed in params and vm_func for each VM.
@@ -176,32 +208,40 @@ def process(test, params, env, image_func, vm_func, pre_flag=True):
     @param env: The environment (a dict-like object).
     @param image_func: A function to call for each image.
     @param vm_func: A function to call for each VM.
-    @param pre_flag: A flag for judge call image_func before vm_func or not.
+    @param vm_first: Call vm_func first or not.
     """
     def _call_vm_func():
-        # Get list of VMs specified for this test
         for vm_name in params.objects("vms"):
             vm_params = params.object_params(vm_name)
-            # Call vm_func for each vm
+            vm = env.get_vm(vm_name)
             vm_func(test, vm_params, env, vm_name)
 
     def _call_image_func():
-        # Get list of images
-        for image_name in params.objects("images"):
-            image_params = params.object_params(image_name)
-            # Call image_func for each image
-            image_func(test, image_params)
+        if params.objects("vms"):
+            for vm_name in params.objects("vms"):
+                vm_params = params.object_params(vm_name)
+                vm = env.get_vm(vm_name)
+                for image_name in vm_params.objects("images"):
+                    image_params = vm_params.object_params(image_name)
+                    # Call image_func for each image
+                    if vm is not None and vm.is_alive():
+                        vm.pause()
+                    image_func(test, image_params)
+                    if vm is not None and vm.is_alive():
+                        vm.resume()
+        else:
+            for image_name in params.objects("images"):
+                image_params = params.object_params(image_name)
+                image_func(test, image_params)
 
-    if pre_flag:
+    if not vm_first:
         _call_image_func()
-        pre_flag = False
-    else:
-        pre_flag = True
 
     _call_vm_func()
 
-    if pre_flag:
+    if vm_first:
         _call_image_func()
+
 
 @error.context_aware
 def preprocess(test, params, env):
@@ -214,6 +254,7 @@ def preprocess(test, params, env):
     @param env: The environment (a dict-like object).
     """
     error.context("preprocessing")
+
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
         env["address_cache"] = {}
@@ -222,7 +263,7 @@ def preprocess(test, params, env):
         del env["tcpdump"]
     if "tcpdump" not in env and params.get("run_tcpdump", "yes") == "yes":
         cmd = "%s -npvi any 'dst port 68'" % virt_utils.find_command("tcpdump")
-        logging.debug("Starting tcpdump (%s)...", cmd)
+        logging.debug("Starting tcpdump '%s'", cmd)
         env["tcpdump"] = aexpect.Tail(
             command=cmd,
             output_func=_update_address_cache,
@@ -242,38 +283,38 @@ def preprocess(test, params, env):
             continue
         if not vm.name in requested_vms:
             logging.debug("VM '%s' found in environment but not required for "
-                          "test; removing it..." % vm.name)
+                          "test, destroying it" % vm.name)
             vm.destroy()
             del env[key]
 
     # Get the KVM kernel module version and write it as a keyval
-    logging.debug("Fetching KVM module version...")
-    if not os.path.exists("/dev/kvm"):
-        logging.debug("KVM module not loaded")
-
-    kvm_ver_cmd = params.get("kvm_ver_cmd")
-    if kvm_ver_cmd is not None:
-        kvm_version = commands.getoutput(kvm_ver_cmd)
+    if os.path.exists("/dev/kvm"):
+        try:
+            kvm_version = open("/sys/module/kvm/version").read().strip()
+        except Exception:
+            kvm_version = os.uname()[2]
     else:
         kvm_version = "Unknown"
 
     test.write_test_keyval({"kvm_version": kvm_version})
 
     # Get the KVM userspace version and write it as a keyval
-    logging.debug("Fetching KVM userspace version...")
-    kvm_userspace_ver_cmd = params.get("kvm_userspace_ver_cmd")
-    if kvm_userspace_ver_cmd is not None:
-        kvm_userspace_version = commands.getoutput(kvm_userspace_ver_cmd)
+    qemu_path = virt_utils.get_path(test.bindir, params.get("qemu_binary",
+                                                           "qemu"))
+    version_line = commands.getoutput("%s -help | head -n 1" % qemu_path)
+    matches = re.findall("[Vv]ersion .*?,", version_line)
+    if matches:
+        kvm_userspace_version = " ".join(matches[0].split()[1:]).strip(",")
     else:
         kvm_userspace_version = "Unknown"
-        logging.debug("Could not fetch KVM userspace version")
-
     logging.debug("KVM userspace version: %s" % kvm_userspace_version)
     test.write_test_keyval({"kvm_userspace_version": kvm_userspace_version})
 
     if params.get("setup_hugepages") == "yes":
         h = virt_test_setup.HugePageConfig(params)
         h.setup()
+        if params.get("vm_type") == "libvirt":
+            libvirt_vm.libvirtd_restart()
 
     if params.get("setup_thp") == "yes":
         thp = virt_test_setup.TransparentHugePageConfig(test, params)
@@ -328,13 +369,12 @@ def postprocess(test, params, env):
     error.context("postprocessing")
 
     # Postprocess all VMs and images
-    process(test, params, env, postprocess_image, postprocess_vm,
-            pre_flag=False)
+    process(test, params, env, postprocess_image, postprocess_vm, vm_first=True)
 
     # Terminate the screendump thread
     global _screendump_thread, _screendump_thread_termination_event
     if _screendump_thread:
-        logging.debug("Terminating screendump thread...")
+        logging.debug("Terminating screendump thread")
         _screendump_thread_termination_event.set()
         _screendump_thread.join(10)
         _screendump_thread = None
@@ -346,8 +386,8 @@ def postprocess(test, params, env):
 
     # Should we convert PPM files to PNG format?
     if params.get("convert_ppm_files_to_png") == "yes":
-        logging.debug("'convert_ppm_files_to_png' specified; converting PPM "
-                      "files to PNG format...")
+        logging.debug("Param 'convert_ppm_files_to_png' specified, converting "
+                      "PPM files to PNG format")
         try:
             for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
                 if ppm_utils.image_verify_ppm_file(f):
@@ -358,24 +398,32 @@ def postprocess(test, params, env):
             pass
 
     # Should we keep the PPM files?
-    if params.get("keep_ppm_files") != "yes":
-        logging.debug("'keep_ppm_files' not specified; removing all PPM files "
-                      "from debug dir...")
+    if params.get("keep_ppm_files", "no") != "yes":
+        logging.debug("Param 'keep_ppm_files' not specified, removing all PPM "
+                      "files from debug dir")
         for f in glob.glob(os.path.join(test.debugdir, '*.ppm')):
             os.unlink(f)
 
     # Should we keep the screendump dirs?
-    if params.get("keep_screendumps") != "yes":
-        logging.debug("'keep_screendumps' not specified; removing screendump "
-                      "dirs...")
+    if params.get("keep_screendumps", "no") != "yes":
+        logging.debug("Param 'keep_screendumps' not specified, removing "
+                      "screendump dirs")
         for d in glob.glob(os.path.join(test.debugdir, "screendumps_*")):
             if os.path.isdir(d) and not os.path.islink(d):
                 shutil.rmtree(d, ignore_errors=True)
 
+    # Should we keep the video files?
+    if params.get("keep_video_files", "yes") != "yes":
+        logging.debug("Param 'keep_video_files' not specified, removing all .ogg "
+                      "and .webm files from debug dir")
+        for f in (glob.glob(os.path.join(test.debugdir, '*.ogg')) +
+                  glob.glob(os.path.join(test.debugdir, '*.webm'))):
+            os.unlink(f)
+
     # Kill all unresponsive VMs
     if params.get("kill_unresponsive_vms") == "yes":
-        logging.debug("'kill_unresponsive_vms' specified; killing all VMs "
-                      "that fail to respond to a remote login request...")
+        logging.debug("Param 'kill_unresponsive_vms' specified, killing all "
+                      "VMs that fail to respond to a remote login request")
         for vm in env.get_all_vms():
             if vm.is_alive():
                 try:
@@ -397,6 +445,8 @@ def postprocess(test, params, env):
     if params.get("setup_hugepages") == "yes":
         h = virt_test_setup.HugePageConfig(params)
         h.cleanup()
+        if params.get("vm_type") == "libvirt":
+            libvirt_vm.libvirtd_restart()
 
     if params.get("setup_thp") == "yes":
         thp = virt_test_setup.TransparentHugePageConfig(test, params)
@@ -430,7 +480,7 @@ def _update_address_cache(address_cache, line):
         if matches and address_cache.get("last_seen"):
             mac_address = matches[0].lower()
             if time.time() - address_cache.get("time_%s" % mac_address, 0) > 5:
-                logging.debug("(address cache) Adding cache entry: %s ---> %s",
+                logging.debug("(address cache) DHCP lease OK: %s --> %s",
                               mac_address, address_cache.get("last_seen"))
             address_cache[mac_address] = address_cache.get("last_seen")
             address_cache["time_%s" % mac_address] = time.time()
@@ -453,12 +503,17 @@ def _take_screendumps(test, params, env):
     quality = int(params.get("screendump_quality", 30))
 
     hash_pre = None
+    cache = {}
+    counter = {}
+
     while True:
         for vm in env.get_all_vms():
+            if vm not in counter.keys():
+                counter[vm] = 0
             if not vm.is_alive():
                 continue
             try:
-                vm.monitor.screendump(filename=temp_filename, debug=False)
+                vm.screendump(filename=temp_filename, debug=False)
             except kvm_monitor.MonitorError, e:
                 logging.warn(e)
                 continue
@@ -478,19 +533,28 @@ def _take_screendumps(test, params, env):
                 os.makedirs(screendump_dir)
             except OSError:
                 pass
-            screendump_filename = os.path.join(screendump_dir,
-                    "%s_%s.jpg" % (vm.name,
-                                   time.strftime("%Y-%m-%d_%H-%M-%S")))
-            hash_var = utils.hash_file(temp_filename)
-            if hash_var == hash_pre:
-                # if the screendump is same with previous, then do not save it
-                # into the screendump_dir in JPEG format
-                pass
+            counter[vm] += 1
+            screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
+                                               counter[vm])
+            hash = utils.hash_file(temp_filename)
+            if hash in cache:
+                try:
+                    os.link(cache[hash], screendump_filename)
+                except OSError:
+                    pass
             else:
                 try:
-                    image = PIL.Image.open(temp_filename)
-                    image.save(screendump_filename, format="JPEG", quality=quality)
-                    hash_pre = hash_var
+                    try:
+                        image = PIL.Image.open(temp_filename)
+                        image.save(screendump_filename, format="JPEG",
+                                   quality=quality)
+                        cache[hash] = screendump_filename
+                    except IOError, error_detail:
+                        logging.warning("VM '%s' failed to produce a "
+                                        "screendump: %s", vm.name, error_detail)
+                        # Decrement the counter as we in fact failed to
+                        # produce a converted screendump
+                        counter[vm] -= 1
                 except NameError:
                     pass
             os.unlink(temp_filename)

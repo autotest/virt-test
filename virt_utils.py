@@ -6,31 +6,53 @@ KVM test utility functions.
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
 import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect, tarfile
-import struct, shutil
+import struct, shutil, glob
 from autotest_lib.client.bin import utils, os_dep, kvm_control
 from autotest_lib.client.common_lib import error, logging_config
 from autotest_lib.client.common_lib import logging_manager, git
 import rss_client, aexpect, virt_vm
+import platform
+
 try:
     import koji
     KOJI_INSTALLED = True
 except ImportError:
     KOJI_INSTALLED = False
 
-# From include/linux/sockios.h
-SIOCSIFHWADDR = 0x8924
-SIOCGIFHWADDR = 0x8927
-SIOCSIFFLAGS = 0x8914
-SIOCGIFINDEX = 0x8933
-SIOCBRADDIF = 0x89a2
-# From linux/include/linux/if_tun.h
-TUNSETIFF = 0x400454ca
-TUNGETIFF = 0x800454d2
-TUNGETFEATURES = 0x800454cf
-IFF_UP = 0x1
-IFF_TAP = 0x0002
-IFF_NO_PI = 0x1000
-IFF_VNET_HDR = 0x4000
+ARCH = platform.machine()
+if ARCH == "ppc64":
+    # From include/linux/sockios.h
+    SIOCSIFHWADDR  = 0x8924
+    SIOCGIFHWADDR  = 0x8927
+    SIOCSIFFLAGS   = 0x8914
+    SIOCGIFINDEX   = 0x8933
+    SIOCBRADDIF    = 0x89a2
+    # From linux/include/linux/if_tun.h
+    TUNSETIFF      = 0x800454ca
+    TUNGETIFF      = 0x400454d2
+    TUNGETFEATURES = 0x400454cf
+    IFF_TAP        = 0x2
+    IFF_NO_PI      = 0x1000
+    IFF_VNET_HDR   = 0x4000
+    # From linux/include/linux/if.h
+    IFF_UP = 0x1
+else:
+    # From include/linux/sockios.h
+    SIOCSIFHWADDR = 0x8924
+    SIOCGIFHWADDR = 0x8927
+    SIOCSIFFLAGS = 0x8914
+    SIOCGIFINDEX = 0x8933
+    SIOCBRADDIF = 0x89a2
+    # From linux/include/linux/if_tun.h
+    TUNSETIFF = 0x400454ca
+    TUNGETIFF = 0x800454d2
+    TUNGETFEATURES = 0x800454cf
+    IFF_TAP = 0x0002
+    IFF_NO_PI = 0x1000
+    IFF_VNET_HDR = 0x4000
+    # From linux/include/linux/if.h
+    IFF_UP = 0x1
+
 
 def _lock_file(filename):
     f = open(filename, "w")
@@ -151,13 +173,17 @@ class Env(UserDict.IterableUserDict):
         if filename:
             self._filename = filename
             try:
-                f = open(filename, "r")
-                env = cPickle.load(f)
-                f.close()
-                if env.get("version", 0) >= version:
-                    self.data = env
+                if os.path.isfile(filename):
+                    f = open(filename, "r")
+                    env = cPickle.load(f)
+                    f.close()
+                    if env.get("version", 0) >= version:
+                        self.data = env
+                    else:
+                        logging.warn("Incompatible env file found. Not using it.")
+                        self.data = empty
                 else:
-                    logging.warn("Incompatible env file found. Not using it.")
+                    # No previous env file found, proceed...
                     self.data = empty
             # Almost any exception can be raised during unpickling, so let's
             # catch them all
@@ -297,15 +323,12 @@ def _generate_mac_address_prefix(mac_pool):
     """
     if "prefix" in mac_pool:
         prefix = mac_pool["prefix"]
-        logging.debug("Used previously generated MAC address prefix for this "
-                      "host: %s", prefix)
     else:
         r = random.SystemRandom()
         prefix = "9a:%02x:%02x:%02x:" % (r.randint(0x00, 0xff),
                                          r.randint(0x00, 0xff),
                                          r.randint(0x00, 0xff))
         mac_pool["prefix"] = prefix
-        logging.debug("Generated MAC address prefix for this host: %s", prefix)
     return prefix
 
 
@@ -335,7 +358,6 @@ def generate_mac_address(vm_instance, nic_index):
             if mac in mac_pool.values():
                 continue
             mac_pool[key] = mac
-            logging.debug("Generated MAC address for NIC %s: %s", key, mac)
     _close_mac_pool(mac_pool, lock_file)
     return mac
 
@@ -350,7 +372,6 @@ def free_mac_address(vm_instance, nic_index):
     mac_pool, lock_file = _open_mac_pool(fcntl.LOCK_EX)
     key = "%s:%s" % (vm_instance, nic_index)
     if key in mac_pool:
-        logging.debug("Freeing MAC address for NIC %s: %s", key, mac_pool[key])
         del mac_pool[key]
     _close_mac_pool(mac_pool, lock_file)
 
@@ -565,7 +586,7 @@ class SCPTransferFailedError(SCPError):
                 (self.status, self.output))
 
 
-def _remote_login(session, username, password, prompt, timeout=10):
+def _remote_login(session, username, password, prompt, timeout=10, debug=False):
     """
     Log into a remote host (guest) using SSH or Telnet.  Wait for questions
     and provide answers.  If timeout expires while waiting for output from the
@@ -596,12 +617,14 @@ def _remote_login(session, username, password, prompt, timeout=10):
                  r"[Pp]lease wait", r"[Ww]arning", prompt],
                 timeout=timeout, internal_timeout=0.5)
             if match == 0:  # "Are you sure you want to continue connecting"
-                logging.debug("Got 'Are you sure...'; sending 'yes'")
+                if debug:
+                    logging.debug("Got 'Are you sure...', sending 'yes'")
                 session.sendline("yes")
                 continue
             elif match == 1:  # "password:"
                 if password_prompt_count == 0:
-                    logging.debug("Got password prompt; sending '%s'", password)
+                    if debug:
+                        logging.debug("Got password prompt, sending '%s'", password)
                     session.sendline(password)
                     password_prompt_count += 1
                     continue
@@ -610,7 +633,8 @@ def _remote_login(session, username, password, prompt, timeout=10):
                                                    text)
             elif match == 2:  # "login:"
                 if login_prompt_count == 0 and password_prompt_count == 0:
-                    logging.debug("Got username prompt; sending '%s'", username)
+                    if debug:
+                        logging.debug("Got username prompt; sending '%s'", username)
                     session.sendline(username)
                     login_prompt_count += 1
                     continue
@@ -625,14 +649,17 @@ def _remote_login(session, username, password, prompt, timeout=10):
             elif match == 4:  # "Connection refused"
                 raise LoginError("Client said 'connection refused'", text)
             elif match == 5:  # "Please wait"
-                logging.debug("Got 'Please wait'")
+                if debug:
+                    logging.debug("Got 'Please wait'")
                 timeout = 30
                 continue
             elif match == 6:  # "Warning added RSA"
-                logging.debug("Got 'Warning added RSA to known host list")
+                if debug:
+                    logging.debug("Got 'Warning added RSA to known host list")
                 continue
             elif match == 7:  # prompt
-                logging.debug("Got shell prompt -- logged in")
+                if debug:
+                    logging.debug("Got shell prompt -- logged in")
                 break
         except aexpect.ExpectTimeoutError, e:
             raise LoginTimeoutError(e.output)
@@ -672,7 +699,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     else:
         raise LoginBadClientError(client)
 
-    logging.debug("Trying to login with command '%s'", cmd)
+    logging.debug("Login command: '%s'", cmd)
     session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
     try:
         _remote_login(session, username, password, prompt, timeout)
@@ -714,7 +741,7 @@ def wait_for_login(client, host, port, username, password, prompt, linesep="\n",
                         linesep, log_filename, internal_timeout)
 
 
-def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=10):
+def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
     """
     Transfer file(s) to a remote host (guest) using SCP.  Wait for questions
     and provide answers.  If login_timeout expires while waiting for output
@@ -748,12 +775,12 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=10):
                 [r"[Aa]re you sure", r"[Pp]assword:\s*$", r"lost connection"],
                 timeout=timeout, internal_timeout=0.5)
             if match == 0:  # "Are you sure you want to continue connecting"
-                logging.debug("Got 'Are you sure...'; sending 'yes'")
+                logging.debug("Got 'Are you sure...', sending 'yes'")
                 session.sendline("yes")
                 continue
             elif match == 1:  # "password:"
                 if password_prompt_count == 0:
-                    logging.debug("Got password prompt; sending '%s'" %
+                    logging.debug("Got password prompt, sending '%s'" %
                                    password_list[password_prompt_count])
                     session.sendline(password_list[password_prompt_count])
                     password_prompt_count += 1
@@ -762,7 +789,7 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=10):
                         authentication_done = True
                     continue
                 elif password_prompt_count == 1 and scp_type == 2:
-                    logging.debug("Got password prompt; sending '%s'" %
+                    logging.debug("Got password prompt, sending '%s'" %
                                    password_list[password_prompt_count])
                     session.sendline(password_list[password_prompt_count])
                     password_prompt_count += 1
@@ -788,7 +815,7 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=10):
 
 
 def remote_scp(command, password_list, log_filename=None, transfer_timeout=600,
-               login_timeout=10):
+               login_timeout=20):
     """
     Transfer file(s) to a remote host (guest) using SCP.
 
@@ -1157,7 +1184,6 @@ def wait_for(func, timeout, first=0.0, step=1.0, text=None):
 
         time.sleep(step)
 
-    logging.debug("Timeout elapsed")
     return None
 
 
@@ -1311,6 +1337,67 @@ def get_vendor_from_pci_id(pci_id):
     """
     cmd = "lspci -n | awk '/%s/ {print $3}'" % pci_id
     return re.sub(":", " ", commands.getoutput(cmd))
+
+
+class Flag(str):
+    """
+    Class for easy merge cpuflags.
+    """
+    aliases = {}
+
+    def __new__(cls, flag):
+        if flag in Flag.aliases:
+            flag = Flag.aliases[flag]
+        return str.__new__(cls, flag)
+
+    def __eq__(self, other):
+        s = set(self.split("|"))
+        o = set(other.split("|"))
+        if s & o:
+            return True
+        else:
+            return False
+
+    def __hash__(self, *args, **kwargs):
+        return 0
+
+
+kvm_map_flags_to_test = {
+            Flag('avx')                        :set(['avx']),
+            Flag('sse3')                       :set(['sse3']),
+            Flag('ssse3')                      :set(['ssse3']),
+            Flag('sse4.1|sse4_1|sse4.2|sse4_2'):set(['sse4']),
+            Flag('aes')                        :set(['aes','pclmul']),
+            Flag('pclmuldq')                   :set(['pclmul']),
+            Flag('pclmulqdq')                  :set(['pclmul']),
+            Flag('rdrand')                     :set(['rdrand']),
+            Flag('sse4a')                      :set(['sse4a']),
+            Flag('fma4')                       :set(['fma4']),
+            Flag('xop')                        :set(['xop']),
+            }
+
+
+kvm_map_flags_aliases = {
+            'sse4.1'              :'sse4_1',
+            'sse4.2'              :'sse4_2',
+            'pclmulqdq'           :'pclmuldq',
+            }
+
+
+def kvm_flags_to_stresstests(flags):
+    """
+    Covert [cpu flags] to [tests]
+
+    @param cpuflags: list of cpuflags
+    @return: Return tests like string.
+    """
+    tests = set([])
+    for f in flags:
+        tests |= kvm_map_flags_to_test[f]
+    param = ""
+    for f in tests:
+        param += ","+f
+    return param
 
 
 def get_cpu_flags():
@@ -2079,9 +2166,13 @@ class KojiClient(object):
         @returns: True or False
         '''
         valid = True
-        if not self.is_pkg_spec_build_valid(pkg):
-            valid = False
-        if not self.is_pkg_spec_tag_valid(pkg):
+        if pkg.build:
+            if not self.is_pkg_spec_build_valid(pkg):
+                valid = False
+        elif pkg.tag:
+            if not self.is_pkg_spec_tag_valid(pkg):
+                valid = False
+        else:
             valid = False
         return valid
 
@@ -2632,6 +2723,8 @@ class GitRepoParamHelper(git.GitRepoHelper):
         else:
             logging.debug('Git repo %s commit: %s' % (self.name, self.commit))
 
+        self.cmd = os_dep.command('git')
+
 
 class LocalSourceDirHelper(object):
     '''
@@ -2959,20 +3052,20 @@ class GnuSourceBuildInvalidSource(Exception):
     pass
 
 
-class GnuSourceBuildFailed(Exception):
+class SourceBuildFailed(Exception):
     '''
     Exception raised when building with parallel jobs fails
 
-    This servers as feedback for code using GnuSourceBuildHelper
+    This serves as feedback for code using *BuildHelper
     '''
     pass
 
 
-class GnuSourceBuildParallelFailed(Exception):
+class SourceBuildParallelFailed(Exception):
     '''
     Exception raised when building with parallel jobs fails
 
-    This servers as feedback for code using GnuSourceBuildHelper
+    This serves as feedback for code using *BuildHelper
     '''
     pass
 
@@ -3141,8 +3234,8 @@ class GnuSourceBuildHelper(object):
 
         @param failure_feedback: return information on build failure by raising
                                  the appropriate exceptions
-        @raise: GnuSourceBuildParallelFailed if parallel build fails, or
-                GnuSourceBuildFailed if single job build fails
+        @raise: SourceBuildParallelFailed if parallel build fails, or
+                SourceBuildFailed if single job build fails
         '''
         try:
             self.make_parallel()
@@ -3152,9 +3245,9 @@ class GnuSourceBuildHelper(object):
                 self.make_non_parallel()
             except error.CmdError:
                 if failure_feedback:
-                    raise GnuSourceBuildFailed
+                    raise SourceBuildFailed
             if failure_feedback:
-                raise GnuSourceBuildParallelFailed
+                raise SourceBuildParallelFailed
 
 
     def make_install(self):
@@ -3175,6 +3268,109 @@ class GnuSourceBuildHelper(object):
         if self.install_debug_info:
             self.enable_debug_symbols()
         self.configure()
+        self.make()
+
+
+class LinuxKernelBuildHelper(object):
+    '''
+    Handles Building Linux Kernel.
+    '''
+    def __init__(self, params, prefix, source):
+        '''
+        @type params: dict
+        @param params: dictionary containing the test parameters
+        @type source: string
+        @param source: source directory or tarball
+        @type prefix: string
+        @param prefix: installation prefix
+        '''
+        self.params = params
+        self.prefix = prefix
+        self.source = source
+        self._parse_params()
+
+
+    def _parse_params(self):
+        '''
+        Parses the params items for entries related to guest kernel
+        '''
+        configure_opt_key = '%s_config' % self.prefix
+        self.config = self.params.get(configure_opt_key, '')
+
+        build_image_key = '%s_build_image' % self.prefix
+        self.build_image = self.params.get(build_image_key,
+                                           'arch/x86/boot/bzImage')
+
+        build_target_key = '%s_build_target' % self.prefix
+        self.build_target = self.params.get(build_target_key, 'bzImage')
+
+        kernel_path_key = '%s_kernel_path' % self.prefix
+        default_kernel_path = os.path.join('/tmp/kvm_autotest_root/images',
+                                           self.build_target)
+        self.kernel_path = self.params.get(kernel_path_key,
+                                           default_kernel_path)
+
+        logging.info('Parsing Linux kernel build parameters for %s',
+                     self.prefix)
+
+
+    def make_guest_kernel(self):
+        '''
+        Runs "make", using a single job
+        '''
+        os.chdir(self.source)
+        logging.info("Building guest kernel")
+        logging.debug("Kernel config is %s" % self.config)
+        utils.get_file(self.config, '.config')
+
+        # FIXME currently no support for builddir
+        # run old config
+        utils.system('yes "" | make oldconfig > /dev/null')
+        parallel_make_jobs = utils.count_cpus()
+        make_command = "make -j %s %s" % (parallel_make_jobs, self.build_target)
+        logging.info("Running parallel make on src dir")
+        utils.system(make_command)
+
+
+    def make_clean(self):
+        '''
+        Runs "make clean"
+        '''
+        os.chdir(self.source)
+        utils.system("make clean")
+
+
+    def make(self, failure_feedback=True):
+        '''
+        Runs a parallel make
+
+        @param failure_feedback: return information on build failure by raising
+                                 the appropriate exceptions
+        @raise: SourceBuildParallelFailed if parallel build fails, or
+        '''
+        try:
+            self.make_clean()
+            self.make_guest_kernel()
+        except error.CmdError:
+            if failure_feedback:
+                raise SourceBuildParallelFailed
+
+
+    def cp_linux_kernel(self):
+        '''
+        Copying Linux kernel to target path
+        '''
+        os.chdir(self.source)
+        utils.force_copy(self.build_image, self.kernel_path)
+
+
+    install = cp_linux_kernel
+
+
+    def execute(self):
+        '''
+        Runs appropriate steps for *building* this source code tree
+        '''
         self.make()
 
 
@@ -3499,3 +3695,249 @@ def get_module_params(sys_path, module_name):
     else:
         return None
     return module_params
+
+
+def check_iso(url, destination, iso_sha1):
+    """
+    Verifies if ISO that can be find on url is on destination with right hash.
+
+    This function will verify the SHA1 hash of the ISO image. If the file
+    turns out to be missing or corrupted, let the user know we can download it.
+
+    @param url: URL where the ISO file can be found.
+    @param destination: Directory in local disk where we'd like the iso to be.
+    @param iso_sha1: SHA1 hash for the ISO image.
+    """
+    file_ok = False
+    if not os.path.isdir(destination):
+        os.makedirs(destination)
+    iso_path = os.path.join(destination, os.path.basename(url))
+    if not os.path.isfile(iso_path):
+        logging.warning("File %s not found", iso_path)
+        logging.warning("Expected SHA1 sum: %s", iso_sha1)
+        answer = utils.ask("Would you like to download it from %s?" % url)
+        if answer == 'y':
+            utils.interactive_download(url, iso_path, 'ISO Download')
+        else:
+            logging.warning("Missing file %s", iso_path)
+            logging.warning("Please download it or put an existing copy on the "
+                            "appropriate location")
+            return
+    else:
+        logging.info("Found %s", iso_path)
+        logging.info("Expected SHA1 sum: %s", iso_sha1)
+        answer = utils.ask("Would you like to check %s? It might take a while" %
+                           iso_path)
+        if answer == 'y':
+            actual_iso_sha1 = utils.hash_file(iso_path, method='sha1')
+            if actual_iso_sha1 != iso_sha1:
+                logging.error("Actual SHA1 sum: %s", actual_iso_sha1)
+            else:
+                logging.info("SHA1 sum check OK")
+        else:
+            logging.info("File %s present, but chose to not verify it",
+                         iso_path)
+            return
+
+    if file_ok:
+        logging.info("%s present, with proper checksum", iso_path)
+
+
+def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
+                        check_modules, online_docs_url):
+    """
+    Common virt test assistant module.
+
+    @param test_name: Test name, such as "kvm".
+    @param test_dir: Path with the test directory.
+    @param base_dir: Base directory used to hold images and isos.
+    @param default_userspace_paths: Important programs for a successful test
+            execution.
+    @param check_modules: Whether we want to verify if a given list of modules
+            is loaded in the system.
+    @param online_docs_url: URL to an online documentation system, such as an
+            wiki page.
+    """
+    logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
+    logging.info("%s test config helper", test_name)
+    step = 0
+    common_dir = os.path.dirname(sys.modules[__name__].__file__)
+    logging.info("")
+    step += 1
+    logging.info("%d - Verifying directories (check if the directory structure "
+                 "expected by the default test config is there)", step)
+    sub_dir_list = ["images", "isos", "steps_data"]
+    for sub_dir in sub_dir_list:
+        sub_dir_path = os.path.join(base_dir, sub_dir)
+        if not os.path.isdir(sub_dir_path):
+            logging.debug("Creating %s", sub_dir_path)
+            os.makedirs(sub_dir_path)
+        else:
+            logging.debug("Dir %s exists, not creating" %
+                          sub_dir_path)
+    logging.info("")
+    step += 1
+    logging.info("%d - Creating config files from samples (copy the default "
+                 "config samples to actual config files)", step)
+    config_file_list = glob.glob(os.path.join(test_dir, "*.cfg.sample"))
+    config_file_list += glob.glob(os.path.join(common_dir, "*.cfg.sample"))
+    for config_file in config_file_list:
+        src_file = config_file
+        dst_file = os.path.join(test_dir, os.path.basename(config_file))
+        dst_file = dst_file.rstrip(".sample")
+        if not os.path.isfile(dst_file):
+            logging.debug("Creating config file %s from sample", dst_file)
+            shutil.copyfile(src_file, dst_file)
+        else:
+            logging.debug("Config file %s exists, not touching" % dst_file)
+
+    logging.info("")
+    step += 1
+    logging.info("%s - Verifying iso (make sure we have the OS ISO needed for "
+                 "the default test set)", step)
+
+    iso_name = "Fedora-16-x86_64-DVD.iso"
+    fedora_dir = "pub/fedora/linux/releases/16/Fedora/x86_64/iso"
+    url = os.path.join("http://download.fedoraproject.org/", fedora_dir,
+                       iso_name)
+    iso_sha1 = "76dd59c37e9a0ec2af56263fa892ff571c92c89a"
+    destination = os.path.join(base_dir, 'isos', 'linux')
+    check_iso(url, destination, iso_sha1)
+
+    logging.info("")
+    step += 1
+    logging.info("%d - Verifying winutils.iso (make sure we have the utility "
+                 "ISO needed for Windows testing)", step)
+
+    logging.info("In order to run the KVM autotests in Windows guests, we "
+                 "provide you an ISO that this script can download")
+
+    url = "http://people.redhat.com/mrodrigu/kvm/winutils.iso"
+    iso_sha1 = "02930224756510e383c44c49bffb760e35d6f892"
+    destination = os.path.join(base_dir, 'isos', 'windows')
+    path = os.path.join(destination, iso_name)
+    check_iso(url, destination, iso_sha1)
+
+    logging.info("")
+    step += 1
+    logging.info("%d - Checking if the appropriate userspace programs are "
+                 "installed", step)
+    for path in default_userspace_paths:
+        if not os.path.isfile(path):
+            logging.warning("No %s found. You might need to install %s.",
+                            path, os.path.basename(path))
+        else:
+            logging.debug("%s present", path)
+    logging.info("If you wish to change any userspace program path, "
+                 "you will have to modify tests.cfg")
+
+    if check_modules:
+        logging.info("")
+        step += 1
+        logging.info("%d - Checking for modules %s", step,
+                     ",".join(check_modules))
+        for module in check_modules:
+            if not utils.module_is_loaded(module):
+                logging.warning("Module %s is not loaded. You might want to "
+                                "load it", module)
+            else:
+                logging.debug("Module %s loaded", module)
+
+    if online_docs_url:
+        logging.info("")
+        step += 1
+        logging.info("%d - Verify needed packages to get started", step)
+        logging.info("Please take a look at the online documentation: %s",
+                     online_docs_url)
+
+    client_dir = os.path.abspath(os.path.join(test_dir, "..", ".."))
+    autotest_bin = os.path.join(client_dir, 'bin', 'autotest')
+    control_file = os.path.join(test_dir, 'control')
+
+    logging.info("")
+    logging.info("When you are done fixing eventual warnings found, "
+                 "you can run the test using this command line AS ROOT:")
+    logging.info("%s %s", autotest_bin, control_file)
+    logging.info("Autotest prints the results dir, so you can look at DEBUG "
+                 "logs if something went wrong")
+    logging.info("You can also edit the test config files")
+
+
+class NumaNode(object):
+    """
+    Numa node to control processes and shared memory.
+    """
+    def __init__(self, i=-1):
+        self.num = self.get_node_num()
+        if i < 0:
+            self.cpus = self.get_node_cpus(int(self.num) + i).split()
+        else:
+            self.cpus = self.get_node_cpus(i - 1).split()
+        self.dict = {}
+        for i in self.cpus:
+            self.dict[i] = "free"
+
+
+    def get_node_num(self):
+        """
+        Get the number of nodes of current host.
+        """
+        cmd = utils.run("numactl --hardware")
+        return re.findall("available: (\d+) nodes", cmd.stdout)[0]
+
+
+    def get_node_cpus(self, i):
+        """
+        Get cpus of a specific node
+
+        @param i: Index of the CPU inside the node.
+        """
+        cmd = utils.run("numactl --hardware")
+        return re.findall("node %s cpus: (.*)" % i, cmd.stdout)[0]
+
+
+    def free_cpu(self, i):
+        """
+        Release pin of one node.
+
+        @param i: Index of the node.
+        """
+        self.dict[i] = "free"
+
+
+    def _flush_pin(self):
+        """
+        Flush pin dict, remove the record of exited process.
+        """
+        cmd = utils.run("ps -eLf | awk '{print $4}'")
+        all_pids = cmd.stdout
+        for i in self.cpus:
+            if self.dict[i] != "free" and self.dict[i] not in all_pids:
+                self.free_cpu(i)
+
+
+    @error.context_aware
+    def pin_cpu(self, process):
+        """
+        Pin one process to a single cpu.
+
+        @param process: Process ID.
+        """
+        self._flush_pin()
+        error.context("Pinning process %s to the CPU" % process)
+        for i in self.cpus:
+            if self.dict[i] == "free":
+                self.dict[i] = str(process)
+                cmd = "taskset -p %s %s" % (hex(2 ** int(i)), process)
+                logging.debug("NumaNode (%s): " % i + cmd)
+                utils.run(cmd)
+                return i
+
+
+    def show(self):
+        """
+        Display the record dict in a convenient way.
+        """
+        logging.info("Numa Node record dict:")
+        for i in self.cpus:
+            logging.info("    %s: %s" % (i, self.dict[i]))

@@ -21,7 +21,7 @@ def run_autotest(test, params, env, machine=None, kvm_test=False):
     timeout = int(params.get("test_timeout", 300))
     control_path = None
     if not kvm_test:
-        control_path = os.path.join(test.bindir, "autotest_control",
+        control_path = os.path.join(test.virtdir, "autotest_control",
                                     params.get("test_control_file"))
     outputdir = test.outputdir
     virt_test_utils.run_autotest(machine, session, control_path, timeout,

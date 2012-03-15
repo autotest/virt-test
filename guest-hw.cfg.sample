@@ -1,0 +1,188 @@
+# Copy this file to guest-hw.cfg and edit it.
+#
+# NICs
+variants:
+    - @rtl8139:
+        nic_model = rtl8139
+        no ethtool
+        jumbo:
+            mtu = 1500
+    - e1000:
+        nic_model = e1000
+        jumbo:
+            mtu = 16110
+        ethtool:
+            # gso gro lro is only supported by latest kernel
+            supported_features = "tx rx sg tso gso gro lro"
+    - virtio_nic:
+        nic_model = virtio
+        # You can add advanced attributes through netdev_extra_params
+        # such as sndbuf.
+        # you can comment out the following lines to disable the vhost
+        # support. (only available for tap.)
+        vhost = ""
+        netdev_extra_params = ""
+        jumbo:
+            mtu = 65520
+        ethtool:
+            supported_features = "tx sg tso gso"
+        whql.submission.device.net:
+            test_device = VirtIO Ethernet Adapter$
+            # Device selection for the NDISTest client machine
+            dp_regex_testdev = VirtIO Ethernet Adapter$
+            dp_regex_clientmsgdev = VirtIO Ethernet Adapter #2$
+            dp_regex_clientsupportdev = VirtIO Ethernet Adapter #3$
+            # Device selection for the NDISTest server machine
+            dp_regex_servermsgdev = VirtIO Ethernet Adapter$
+            dp_regex_serversupportdev = VirtIO Ethernet Adapter #2$
+    -xennet:
+        # placeholder
+
+# We don't support xennet in kvm tests
+no xennet
+
+# VCPUS
+# We don't config thie variants in internal tree
+#variants:
+#    - @up:
+#        no autotest.npb autotest.tsc
+#       cgroup..cpu_cfs_util:
+#            smp = 1
+#        cgroup..cpu_share:
+#            smp = 0
+#        cgroup..cpuset_cpus:
+#            #smp = 4
+#    - smp2:
+#        smp = 2
+#        used_cpus = 2
+#        stress_boot: used_cpus = 10
+#        timedrift.with_load: used_cpus = 100
+#        cgroup..cpu_cfs_util:
+#            smp = 1
+#        cgroup..cpu_share:
+#            smp = 0
+#        cgroup..cpuset_cpus:
+#            #smp = 4
+
+# Blocks
+variants:
+    - ide:
+        drive_format=ide
+    - scsi:
+        drive_format=scsi
+    - virtio_blk:
+        drive_format=virtio
+        # Some older qemu might need image_boot=yes for virtio images to work.
+        # Please uncomment the below if that is the case.
+        #image_boot=yes
+    - virtio_scsi:
+        # supported formats are: scsi-hd, scsi-cd, scsi-disk, scsi-block,
+        # scsi-generic
+        # Use drive_format_$DISKNAME = "scsi-generic" to force disk driver
+        # for single disk.
+        # NOTE:  scsi-block and scsi-generic are pass-through physical dev only
+        drive_format=scsi-hd
+        cd_format=scsi-cd
+    - ahci:
+        drive_format=ahci
+        cd_format=ahci
+    - usb.stick:
+        drive_format=usb2
+    - usb.cdrom:
+        cd_format=usb2
+    - xenblk:
+        # placeholder
+
+# Add virtio keyword in image_name parameter for virtio devices
+virtio_nic, virtio_blk:
+    image_name += -virtio
+
+# We don't support SCSI/ahci/usb.stick/usb.cdrom/xenblk drive_format now
+no scsi
+no ahci
+no usb.stick
+no usb.cdrom
+no xenblk
+
+# Image formats
+variants:
+    - qcow2:
+        image_format = qcow2
+        remove_image = no
+        check_image = yes
+        post_command_timeout = 600
+        drive_cache = none
+    - raw:
+        no ioquit
+        image_format = raw
+        drive_cache = none
+    - raw_dd:
+        no ioquit
+        image_format = raw
+        create_with_dd = yes
+        dd_create_cmd = "dd if=/dev/zero of=%s bs=1M count=%s"
+    - vmdk:
+        no ioquit
+        image_format = vmdk
+    - qed:
+        no ioquit
+        image_format = qed
+
+
+# Platform
+32:
+    platform = 32
+64:
+    platform = 64
+PAE:
+    platform = PAE
+
+# Devices
+variants:
+    - @virtual_device:
+        mac_changeable = "no"
+        pci_assignable = "no"
+    - assign_device:
+        pci_assignable = vf
+        # Driver (kernel module) that supports SR-IOV hardware.
+        # As of today (30-11-2009), we have 2 drivers for this type of hardware:
+        # Intel® 82576 Gigabit Ethernet Controller - igb
+        # Neterion® X3100™ - vxge
+        driver = igb
+        # Driver option to specify the maximum number of virtual functions
+        # (on vxge the option is , for example, is max_config_dev)
+        # the default below is for the igb driver
+        driver_option = "max_vfs=7"
+        # Number of devices that are going to be requested.
+        devices_requested = 7
+        mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
+        mac_changeable = "yes"
+
+# Storage location
+variants:
+    - @local_stg:
+        use_storage = local
+
+# Pages
+variants:
+    - @smallpages:
+    - hugepages:
+        setup_hugepages=yes
+        pre_command += "mkdir -p /space; mount -t tmpfs -o size=4G tmpfs /space; dd if=/dev/zero of=/space/mem bs=10M count=400; umount /space"
+        extra_params += " -mem-path /mnt/kvm_hugepage"
+        domain_xml_snippet = "<memoryBacking><hugepages/></memoryBacking>"
+
+# We don't support this currently
+#variants:
+#    - @no_9p_export:
+#    - 9p_export:
+#         # 9p_fs_driver support include local, handle, proxy
+#        9p_fs_driver = local
+#         9p_export_dir = /mnt/
+#         # 9p_security_model support include passthrough, mapped, none
+#         9p_security_model = passthrough
+#         9p_immediate_writeout = no
+#         9p_readonly = no
+#         # Only used in case of proxy fs driver
+#         #9p_socket_name = /tmp/virtfs-9p-socket
+#         #9p_proxy_binary = virtfs-proxy-helper

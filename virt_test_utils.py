@@ -21,14 +21,15 @@ More specifically:
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, re, signal, threading, shelve, commands, string, imp
+import time, os, logging, re, signal, imp, tempfile
+import threading, shelve, commands
 from Queue import Queue
-from distutils import version
-from autotest_lib.client.common_lib import error
+from autotest_lib.client.common_lib import error, global_config
 from autotest_lib.client.bin import utils
 from autotest_lib.client.tools import scan_results
 import aexpect, virt_utils, virt_vm
 
+GLOBAL_CONFIG = global_config.global_config
 
 def get_living_vm(env, vm_name):
     """
@@ -124,7 +125,7 @@ def reboot(vm, session, method="shell", sleep_before_reset=10, nic_index=0,
     if method == "shell":
         # Send a reboot command to the guest's shell
         session.sendline(vm.get_params().get("reboot_command"))
-        logging.info("Reboot command sent. Waiting for guest to go down...")
+        logging.info("Reboot command sent. Waiting for guest to go down")
     elif method == "system_reset":
         # Sleep for a while before sending the command
         time.sleep(sleep_before_reset)
@@ -135,7 +136,7 @@ def reboot(vm, session, method="shell", sleep_before_reset=10, nic_index=0,
         # Send a system_reset monitor command
         vm.monitor.cmd("system_reset")
         logging.info("Monitor command system_reset sent. Waiting for guest to "
-                     "go down...")
+                     "go down")
         # Look for RESET QMP events
         time.sleep(1)
         for m in monitors:
@@ -244,7 +245,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
 
     def wait_for_migration():
         if not virt_utils.wait_for(mig_finished, mig_timeout, 2, 2,
-                                  "Waiting for migration to finish..."):
+                                  "Waiting for migration to finish"):
             raise error.TestFail("Timeout expired while waiting for migration "
                                  "to finish")
 
@@ -579,7 +580,10 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         @param vm: VM object.
         @param local_path: Local path.
         @param remote_path: Remote path.
+
+        @return: Whether the hash differs (True) or not (False).
         """
+        hash_differs = False
         local_hash = utils.hash_file(local_path)
         basename = os.path.basename(local_path)
         output = session.cmd_output("md5sum %s" % remote_path)
@@ -594,22 +598,39 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
             # temporary problem
             remote_hash = "0"
         if remote_hash != local_hash:
-            logging.debug("Copying %s to guest", basename)
+            hash_differs = True
+            logging.debug("Copying %s to guest "
+                          "(remote hash: %s, local hash:%s)",
+                          basename, remote_hash, local_hash)
             vm.copy_files_to(local_path, remote_path)
+        return hash_differs
 
 
-    def extract(vm, remote_path, dest_dir="."):
+    def extract(vm, remote_path, dest_dir):
         """
-        Extract a .tar.bz2 file on the guest.
+        Extract the autotest .tar.bz2 file on the guest, ensuring the final
+        destination path will be dest_dir.
 
         @param vm: VM object
         @param remote_path: Remote file path
         @param dest_dir: Destination dir for the contents
         """
         basename = os.path.basename(remote_path)
-        logging.info("Extracting %s...", basename)
-        e_cmd = "tar xjvf %s -C %s" % (remote_path, dest_dir)
-        session.cmd(e_cmd, timeout=120)
+        logging.debug("Extracting %s on VM %s", basename, vm.name)
+        session.cmd("rm -rf %s" % dest_dir)
+        dirname = os.path.dirname(remote_path)
+        session.cmd("cd %s" % dirname)
+        session.cmd("mkdir -p %s" % os.path.dirname(dest_dir))
+        e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
+        output = session.cmd(e_cmd, timeout=120)
+        autotest_dirname = ""
+        for line in output.splitlines():
+            autotest_dirname = line.split("/")[0]
+            break
+        if autotest_dirname != os.path.basename(dest_dir):
+            session.cmd("cd %s" % os.path.dirname(dest_dir))
+            session.cmd("mv %s %s" %
+                        (autotest_dirname, os.path.basename(dest_dir)))
 
 
     def generate_test_cfg(params):
@@ -698,26 +719,27 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         file.close()
 
 
-    def get_results():
+    def get_results(guest_results_path):
         """
         Copy autotest results present on the guest back to the host.
         """
-        logging.info("Trying to copy autotest results from guest")
+        logging.debug("Trying to copy autotest results from guest")
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
         if not os.path.exists(guest_results_dir):
             try:
                 os.mkdir(guest_results_dir)
             except OSError:
                 logging.warn("Directory %s existed already!", guest_results_dir)
-        vm.copy_files_from("%s/results/default/*" % autotest_path,
+        vm.copy_files_from("%s/results/default/*" % guest_results_path,
                            guest_results_dir)
 
 
-    def get_results_summary():
+    def get_results_summary(guest_autotest_path):
         """
         Get the status of the tests that were executed on the host and close
         the session where autotest was being executed.
         """
+        session.cmd("cd %s" % guest_autotest_path)
         output = session.cmd_output("cat results/*/status")
         try:
             results = scan_results.parse_results(output)
@@ -741,6 +763,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         mig_protocol = params.get("migration_protocol", "tcp")
 
     compressed_autotest_path = "/tmp/autotest.tar.bz2"
+    destination_autotest_path = GLOBAL_CONFIG.get_config_value('COMMON',
+                                                            'autotest_top_path')
 
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
@@ -752,18 +776,17 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         logging.info("Running kvm autotest on remote machine, timeout %ss",
                     timeout)
 
+    autotest_basename = os.path.basename(autotest_path)
+    autotest_parentdir = os.path.dirname(autotest_path)
+
     # tar the contents of bindir/autotest
-    cmd = "tar cvjf %s %s/*" % (compressed_autotest_path, autotest_path)
-    # yes, we need kvm test in host's autotest.
-    if not kvm_test:
-        cmd += " --exclude=%s/tests/kvm" % autotest_path
-    else:
-        cmd += " --exclude=%s/tests/kvm/env" % autotest_path
-        cmd += " --exclude=%s/tests/kvm/isos" % autotest_path
-        cmd += " --exclude=%s/tests/kvm/images" % autotest_path
-    cmd += " --exclude=%s/results" % autotest_path
-    cmd += " --exclude=%s/tmp" % autotest_path
-    cmd += " --exclude=%s/control*" % autotest_path
+    cmd = ("cd %s; tar cvjf %s %s/*" %
+           (autotest_parentdir, compressed_autotest_path, autotest_basename))
+    # Until we have nested virtualization, we don't need the kvm test :)
+    cmd += " --exclude=%s/tests/kvm" % autotest_basename
+    cmd += " --exclude=%s/results" % autotest_basename
+    cmd += " --exclude=%s/tmp" % autotest_basename
+    cmd += " --exclude=%s/control*" % autotest_basename
     cmd += " --exclude=*.pyc"
     cmd += " --exclude=*.svn"
     cmd += " --exclude=*.git"
@@ -771,20 +794,31 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
     utils.run(cmd)
 
     # Copy autotest.tar.bz2
-    copy_if_hash_differs(vm, compressed_autotest_path,
-                        compressed_autotest_path)
+    update = copy_if_hash_differs(vm, compressed_autotest_path,
+                                  compressed_autotest_path)
 
     # Extract autotest.tar.bz2
-    extract(vm, compressed_autotest_path, "/")
+    if update:
+        extract(vm, compressed_autotest_path, destination_autotest_path)
 
+    g_fd, g_path = tempfile.mkstemp(dir='/tmp/')
+    aux_file = os.fdopen(g_fd, 'w')
+    config = GLOBAL_CONFIG.get_section_values(('CLIENT', 'COMMON'))
+    config.write(aux_file)
+    aux_file.close()
+    global_config_guest = os.path.join(destination_autotest_path,
+                                       'global_config.ini')
+    vm.copy_files_to(g_path, global_config_guest)
+    os.unlink(g_path)
 
     if not kvm_test:
         vm.copy_files_to(control_path,
-                                os.path.join(autotest_path, 'control'))
-        # Run the test
-        logging.info("Running autotest control file %s on guest, timeout %ss",
-                     os.path.basename(control_path), timeout)
-    session.cmd("cd %s" % autotest_path)
+                         os.path.join(destination_autotest_path, 'control'))
+
+    # Run the test
+    logging.info("Running autotest control file %s on guest, timeout %ss",
+                 os.path.basename(control_path), timeout)
+    session.cmd("cd %s" % destination_autotest_path)
     try:
         session.cmd("rm -f control.state")
         session.cmd("rm -rf results/*")
@@ -813,9 +847,9 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
 
                 bg.start()
 
-                while bg.is_alive():
-                    logging.info("Tests is not ended, start a round of"
-                                 "migration ...")
+                while bg.isAlive():
+                    logging.info("Autotest job did not end, start a round of "
+                                 "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
                 if kvm_test:
@@ -830,20 +864,20 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                 bg.join()
     except aexpect.ShellTimeoutError:
         if vm.is_alive():
-            get_results()
-            get_results_summary()
+            get_results(destination_autotest_path)
+            get_results_summary(destination_autotest_path)
             raise error.TestError("Timeout elapsed while waiting for job to "
                                   "complete")
         else:
             raise error.TestError("Autotest job on guest failed "
                                   "(VM terminated during job)")
     except aexpect.ShellProcessTerminatedError:
-        get_results()
+        get_results(destination_autotest_path)
         raise error.TestError("Autotest job on guest failed "
                               "(Remote session terminated during job)")
 
-    results = get_results_summary()
-    get_results()
+    results = get_results_summary(destination_autotest_path)
+    get_results(destination_autotest_path)
 
     # Make a list of FAIL/ERROR/ABORT results (make sure FAIL results appear
     # before ERROR results, and ERROR results appear before ABORT results)
@@ -1312,7 +1346,7 @@ def commit_image(cmd, snapshot_img, snapshot_fmt):
     return snapshot_img
 
 
-def run_sub_test(test, params, env, sub_type=None, tag=None):
+def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     Call another test script in one test script.
     @param test:   KVM test object.
@@ -1397,3 +1431,14 @@ def update_mac_ip_address(vm, params):
         vlan = macs_ips.index((mac, ip))
         vm.address_cache[mac.lower()] = ip
         virt_utils.set_mac_address(vm.instance, vlan, mac)
+
+def pin_vm_threads(vm, node):
+    """
+    Pin VM threads to single cpu of a numa node
+    @param vm: VM object
+    @param node: NumaNode object
+    """
+    for i in vm.vhost_threads:
+        logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
+    for i in vm.vcpu_threads:
+        logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))

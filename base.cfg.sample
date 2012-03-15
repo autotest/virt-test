@@ -1,0 +1,301 @@
+# Copy this file to base.cfg and edit it.
+
+# Absolute paths and/or names of binaries (default path is /usr/bin)
+qemu_binary = qemu
+qemu_img_binary = qemu-img
+qemu_io_binary = qemu-io
+
+# List of virtual machine object names (whitespace seperated)
+vms = vm1
+# Default virtual machine to use, when not specified by test.
+main_vm = vm1
+
+# List of network device object names (whitespace seperated)
+nics = nic1
+# List of end-point bridges to connect NIC devices to on host
+bridge = switch
+# For libvirt, use following as argument to --network
+virsh_network = network=default
+
+# List of block device object names (whitespace seperated)
+images = image1
+# List of optical device object names
+cdroms = cd1
+
+# USB controller object names (whitespace seperated)
+usbs = usb1
+# USB controller type, run following command to see supported controller.
+# `qemu-kvm -device \? 2>&1 | grep "usb.*bus PCI"`
+usb_type = ich9-usb-uhci1
+# Max ports on a controller.
+usb_max_port = 2
+## These configure is used for multifunction support.
+# usbs = usb1 usb2
+## UHCI's multifunction configure.
+# usb_type_usb1 = ich9-usb-uhci1
+# multifunction_usb1 = on
+# masterbus_usb1 = usb1
+# firstport_usb1 = 0
+## EHCI's multifunction configure.
+# usb_type_usb2 = usb-ehci
+# multifunction_usb2 = on
+
+# USB device object names (whitespace seperated)
+usb_devices = tablet1
+# USB device type, run following command to see device list on your host.
+# `qemu-kvm -device \? 2>&1 | grep "bus USB"`
+usb_type_tablet1 = usb-tablet
+# USB Controller type which device uses.
+usb_controller_tablet1 = uhci
+
+
+##### Low-level parameters for platform, networking, block, and usb devices.
+
+# Default number of processors for each VM
+smp = 1
+# Memory for each VM
+mem = 1024
+
+# Networking type (nic, user, tap, socket, vde, dump, none)
+nic_mode = tap
+
+# Size of file-based qcow2 image, if image_raw-device not used.
+image_size = 10G
+
+# Use raw block device node or file-based qcow2 format
+image_raw_device = no
+# Name of image, or path to device node if using image_raw_device
+image_name = image
+
+
+# Host-side caching to use (none, writeback, writethrough)
+#    writeback - use host cache, report complete after storage write
+#    writethrough - use host cache, report complete before storage write
+drive_cache = none
+
+# List of hypervisor-monitor object names (one per guest),
+#    used to communicate with hypervisor to control guests.
+#    Order cooresponds to 'vms' list above.
+monitors = qmpmonitor1
+# Default monitor type (protocol), if multiple types to be used
+monitor_type = qmp
+
+# Pattern to get vcpu threads from monitor.
+#    human monitor: thread_id=(\d+)
+#    qmp monitor: u'thread_id':\s+(\d+)
+vcpu_thread_pattern = u'thread_id':\s+(\d+)
+
+# Guest Display type (vnc, sdl, spice, or nographic)
+display = vnc
+# If using a spice display, specific spice options
+qxl = on
+qxl_dev_nr = 1
+spice = disable-ticketing
+# Capture contents of display during each test
+take_regular_screendumps = yes
+keep_screendumps_on_error = yes
+screendump_delay = 5
+# Encode video from vm screenshots
+encode_video_files = yes
+
+
+##### Less-common and default parameters expected by some tests,
+##### do not modify unless you know what you're doing.
+
+# Whether to run the qemu binary with malloc perturb set.
+#    Off by default, set to 'yes' to enable
+malloc_perturb = no
+
+# Monitor network traffic during testing
+run_tcpdump = yes
+
+# Block devices
+drive_index_image1 = 0
+drive_index_cd1 = 1
+# You can specify a blkdebug file here, relative to kvm/blkdebug dir
+#    we have a premade default.conf in there. Important to note that you
+#    can set this for any image defined in the config at a given time
+#    drive_blkdebug_image1 = blkdebug/default.conf
+#    drive_blkdebug_image1 =
+# What to do whether a read error is detected, such as 'stop'
+drive_rerror_image1 =
+# What to do whether a write error is detected, such as 'stop'
+drive_werror_image1 =
+# KVM qcow2 image verification and backup settings
+# Enable backup_image = yes only in some specific tests, such as
+#    unattended_install. In all other tests, it should be no, so keep the global
+#    as is.
+backup_image = no
+# Enable backup_image_on_check_error = yes globally to allow isolate bad images
+#    for investigation purposes
+backup_image_on_check_error = no
+# Enable restore_image_on_check_error = yes globally to allow restore a image
+#    that had a check image with a pristine image. Works only if
+#    backup_image_on_check_error = yes, of course. For tests such as
+#    unattended_install, you'll have to set it to no, since if it fails, we won't
+#    have an image at all, so you save time.
+restore_image_on_check_error = no
+
+## UHCI's multifunction configure.
+# usb_type_usb1 = ich9-usb-uhci1
+# multifunction_usb1 = on
+# masterbus_usb1 = usb1
+# firstport_usb1 = 0
+## EHCI's multifunction configure.
+# usb_type_usb2 = usb-ehci
+# multifunction_usb2 = on
+
+# Some preprocessor/postprocessor params
+start_vm = yes
+kill_vm = no
+kill_vm_gracefully = yes
+kill_unresponsive_vms = yes
+
+# Screendump thread params
+convert_ppm_files_to_png_on_error = yes
+keep_ppm_files = no
+keep_ppm_files_on_error = no
+screendump_quality = 30
+screendump_temp_dir = /dev/shm
+screendump_verbose = no
+keep_video_files = yes
+keep_video_files_on_error = yes
+
+# Default remote shell port (SSH under linux)
+shell_port = 22
+# If you need more ports to be available for comm between host and guest,
+# please add them here
+#priv_bridge_ports = 53 67
+
+# Default scheduler params
+# used_cpus = 1
+# used_mem = 512
+
+# Port redirections
+#redirs = remote_shell
+guest_port_remote_shell = 22
+
+# Profilers
+profilers = kvm_stat
+
+# Timeouts
+login_timeout = 360
+
+# NFS directory of guest images
+# images_good = fileserver.foo.com:/autotest/images_good
+
+# Above lines are reserved for upstream.
+# Please Don't add any config before shutdown.
+# Below config are only existed in internal tree.
+#
+
+# Define the objects we'll be using
+vm_type = kvm
+
+main_monitor = qmpmonitor1
+monitor_type_qmpmonitor1 = qmp
+
+# Display
+display = vnc
+
+# If display = spice, you can set specific spice stuff here
+qxl = on
+qxl_dev_nr = 1
+spice = disable-ticketing
+
+# virtlab tests configuartion file
+profilers = "kvm_stat "
+try_serial_login = 'yes'
+dd_timeout = 900
+
+check_img = no
+
+nic_pci_addr_nic1 = 3
+image_aio = native
+init_pci_addr = 4
+
+# ksm is disabled
+ksm = 0
+
+index_enable = yes
+#you can specify the drive_index by
+#drive_index_$image/stage/cd = $number
+#drive_pci_addr_image1 = 4
+
+# key need to report to virtlab UI
+important_key = guest_name,platform,smp,mem,drive_format,nic_model,type,ksm,image_format,kvm_version,kvm_userspace_version,tag,medium,installation
+
+kill_vm_on_error = yes
+
+convert_ppm_files_to_png = yes
+keep_screendumps = yes
+
+kvm_ver_cmd = "grep -q el5 /proc/version && cat /sys/module/kvm/version || uname -r"
+kvm_userspace_ver_cmd = "grep -q el5 /proc/version && rpm -qa | grep ^kvm-83-.* || rpm -qa | grep qemu-kvm-[0-9].*-.* | head -n 1"
+
+vcpu_cores = ''
+vcpu_threads = 1
+vcpu_sockets = 2
+
+boot_order = cdn
+boot_once = c
+boot_menu = off
+
+
+# Specify multiple sound cards seperated by comma,like 'sb16,adlib'
+# or 'all'. By default, it's 'ac97' which is only supported internally
+soundcards = ac97
+
+#nic_script = scripts/qemu-ifup
+#nic_script = scripts/qemu-ifup-ipv6
+#mac_prefix = 00:11:22:33:
+
+always_use_tcpdump = yes
+address_ranges = r1
+address_range_base_mac_r1 = 00:11:22:33:AB:08
+#address_range_base_ip_r1 = 10.66.0.0
+#address_range_size_r1 = 16
+snapshot_name = vm
+
+image_snapshot = no
+image_boot = no
+
+# parallel capability
+# single run test would fix this parameter
+#parallel = yes
+
+rtc_drift = "slew"
+cpu_model = qemu64
+extra_flags = +sse2
+enable_x2apic = yes
+# Network method
+network = bridge
+use_nic_scritps = no
+
+nic_model = e1000
+
+images_good = 10.66.90.128:/vol/S2/kvmauto/linux_img
+nfs_iso = 10.66.90.128:/vol/S2/kvmauto/iso
+
+post_command_noncritical = yes
+mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
+
+#If we need to setup host env
+#for host_setup_flag:
+#    0(00): do nothing
+#    1(01): setup env
+#    2(10): cleanup env
+#    3(11): setup and cleanup env
+
+host_setup_flag = 0
+sysfs_dir = "/sys"
+
+# Prepend images directory to each images.
+image_name(_.*)? ?<= images/
+# Prepend steps directory to every step files.
+steps ?<= steps/
+
+# Internal case configuration end. Don't add any line below this line.
+# (THIS LINE IS RESERVED FOR MERGE)
+# (THIS LINE IS RESERVED FOR MERGE)
+# (THIS LINE IS RESERVED FOR MERGE)

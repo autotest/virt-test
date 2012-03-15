@@ -1,4 +1,4 @@
-import os, logging, time, glob, re
+import os, logging, time, glob, re, shutil
 from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
 import virt_utils, virt_test_utils
@@ -17,6 +17,19 @@ class VMCreateError(VMError):
     def __str__(self):
         return ("VM creation command failed:    %r    (status: %s,    "
                 "output: %r)" % (self.cmd, self.status, self.output))
+
+
+class VMStartError(VMError):
+    def __init__(self, name, reason=None):
+        VMError.__init__(self, name, reason)
+        self.name = name
+        self.reason = reason
+
+    def __str__(self):
+        msg = "VM '%s' failed to start" % self.name
+        if self.reason is not None:
+            msg += ": %s" % self.reason
+        return msg
 
 
 class VMConfigMissingError(VMError):
@@ -120,6 +133,18 @@ class VMDeadKernelCrashError(VMError):
         return ("VM is dead due to a kernel crash:\n%s" % self.kernel_crash)
 
 
+class VMInvalidInstructionCode(VMError):
+    def __init__(self, invalid_code):
+        VMError.__init__(self, invalid_code)
+        self.invalid_code = invalid_code
+
+    def __str__(self):
+        error = ""
+        for invalid_code in self.invalid_code:
+            error += "%s" % (invalid_code)
+        return ("Invalid instruction was executed on VM:\n%s" % error)
+
+
 class VMAddressError(VMError):
     pass
 
@@ -140,8 +165,8 @@ class VMAddressVerificationError(VMAddressError):
         self.ip = ip
 
     def __str__(self):
-        return ("Cannot verify MAC-IP address mapping using arping: "
-                "%s ---> %s" % (self.mac, self.ip))
+        return ("Could not verify DHCP lease: "
+                "%s --> %s" % (self.mac, self.ip))
 
 
 class VMMACAddressMissingError(VMAddressError):
@@ -150,7 +175,7 @@ class VMMACAddressMissingError(VMAddressError):
         self.nic_index = nic_index
 
     def __str__(self):
-        return "No MAC address defined for NIC #%s" % self.nic_index
+        return "No MAC defined for NIC #%s" % self.nic_index
 
 
 class VMIPAddressMissingError(VMAddressError):
@@ -159,7 +184,23 @@ class VMIPAddressMissingError(VMAddressError):
         self.mac = mac
 
     def __str__(self):
-        return "Cannot find IP address for MAC address %s" % self.mac
+        return "No DHCP lease for MAC %s" % self.mac
+
+
+class VMAddNetDevError(VMError):
+    pass
+
+
+class VMDelNetDevError(VMError):
+    pass
+
+
+class VMAddNicError(VMError):
+    pass
+
+
+class VMDelNicError(VMError):
+    pass
 
 
 class VMMigrateError(VMError):
@@ -196,6 +237,9 @@ class VMRebootError(VMError):
     pass
 
 class VMStatusError(VMError):
+    pass
+
+class VMRemoveError(VMError):
     pass
 
 class VMDeviceError(VMError):
@@ -274,7 +318,10 @@ def get_image_filename(params, root_dir):
         return image_name
     if params.get("image_raw_device") == "yes":
         return image_name
-    image_filename = "%s.%s" % (image_name, image_format)
+    if image_format:
+        image_filename = "%s.%s" % (image_name, image_format)
+    else:
+        image_filename = image_name
     image_filename = virt_utils.get_path(root_dir, image_filename)
     return image_filename
 
@@ -290,8 +337,10 @@ def create_image(params, root_dir, check_output=False):
     @note: params should contain:
            image_name -- the name of the image file, without extension
            image_format -- the format of the image (qcow2, raw etc)
+           image_cluster_size (optional) -- the cluster size for the image
            image_size -- the requested size of the image (a string
            qemu-img can understand, such as '10G')
+           create_with_dd -- use dd to create the image (raw format only)
     """
     format = params.get("image_format", "qcow2")
     image_filename = get_image_filename(params, root_dir)
@@ -299,11 +348,18 @@ def create_image(params, root_dir, check_output=False):
     size = params.get("image_size", "10G")
 
     if params.get("create_with_dd") == "yes" and format == "raw":
-        size_num = re.findall("\d+", size)[0]
-        size_num = int(size_num)
-        if "G" in size:
-            size_num *= 1024
-        qemu_img_cmd = params.get("dd_create_cmd") % (image_filename, size_num)
+        # maps K,M,G,T => (count, bs)
+        human = {'K': (1, 1),
+                 'M': (1, 1024),
+                 'G': (1024, 1024),
+                 'T': (1024, 1048576),
+                }
+        if human.has_key(size[-1]):
+            block_size = human[size[-1]][1]
+            size = int(size[:-1]) * human[size[-1]][0]
+
+        qemu_img_cmd = (params.get("dd_create_cmd")
+                                  % (image_filename, size, block_size))
 
     else:
         qemu_img_cmd = virt_utils.get_path(root_dir,
@@ -351,11 +407,11 @@ def remove_image(params, root_dir):
            image_format -- the format of the image (qcow2, raw etc)
     """
     image_filename = get_image_filename(params, root_dir)
-    logging.debug("Removing image file %s...", image_filename)
+    logging.debug("Removing image file %s", image_filename)
     if os.path.exists(image_filename):
         os.unlink(image_filename)
     else:
-        logging.debug("Image file %s not found")
+        logging.debug("Image file %s not found", image_filename)
 
 
 def check_image(params, root_dir):
@@ -374,7 +430,7 @@ def check_image(params, root_dir):
     vm_type = params.get("vm_type")
     if vm_type == 'kvm':
         image_filename = get_image_filename(params, root_dir)
-        logging.debug("Checking image file %s...", image_filename)
+        logging.debug("Checking image file %s", image_filename)
         qemu_img_cmd = virt_utils.get_path(root_dir,
                                       params.get("qemu_img_binary", "qemu-img"))
         image_is_qcow2 = params.get("image_format") == 'qcow2'
@@ -385,11 +441,11 @@ def check_image(params, root_dir):
             check_img = True
             if not "check" in q_output:
                 logging.error("qemu-img does not support 'check', "
-                              "skipping check...")
+                              "skipping check")
                 check_img = False
             if not "info" in q_output:
                 logging.error("qemu-img does not support 'info', "
-                              "skipping check...")
+                              "skipping check")
                 check_img = False
             if check_img:
                 try:
@@ -408,6 +464,8 @@ def check_image(params, root_dir):
                         logging.error("[stdout] %s", e_line)
                     for e_line in cmd_result.stderr.splitlines():
                         logging.error("[stderr] %s", e_line)
+                    if params.get("backup_image_on_check_error", "no") == "yes":
+                        backup_image(params, root_dir, 'backup', False)
                     raise error.TestWarn("qemu-img check error. Some bad data "
                                          "in the image may have gone unnoticed")
                 # Exit status 2 is data corruption for sure, so fail the test
@@ -416,6 +474,8 @@ def check_image(params, root_dir):
                         logging.error("[stdout] %s", e_line)
                     for e_line in cmd_result.stderr.splitlines():
                         logging.error("[stderr] %s", e_line)
+                    if params.get("backup_image_on_check_error", "no") == "yes":
+                        backup_image(params, root_dir, 'backup', False)
                     raise VMImageCheckError(image_filename)
                 # Leaked clusters, they are known to be harmless to data
                 # integrity
@@ -424,13 +484,103 @@ def check_image(params, root_dir):
                                          "image check. No data integrity "
                                          "problem was found though.")
 
+                # Just handle normal operation
+                if params.get("backup_image", "no") == "yes":
+                    backup_image(params, root_dir, 'backup', True)
+
         else:
             if not os.path.exists(image_filename):
-                logging.debug("Image file %s not found, skipping check...",
+                logging.debug("Image file %s not found, skipping check",
                               image_filename)
             elif not image_is_qcow2:
-                logging.debug("Image file %s not qcow2, skipping check...",
+                logging.debug("Image file %s not qcow2, skipping check",
                               image_filename)
+
+
+def backup_image(params, root_dir, action, good=True):
+    """
+    Backup or restore a disk image, depending on the action chosen.
+
+    @param params: Dictionary containing the test parameters.
+    @param root_dir: Base directory for relative filenames.
+    @param action: Whether we want to backup or restore the image.
+    @param good: If we are backing up a good image(we want to restore it) or
+            a bad image (we are saving a bad image for posterior analysis).
+
+    @note: params should contain:
+           image_name -- the name of the image file, without extension
+           image_format -- the format of the image (qcow2, raw etc)
+    """
+    def backup_raw_device(src, dst):
+        utils.system("dd if=%s of=%s bs=4k conv=sync" % (src, dst))
+
+    def backup_image_file(src, dst):
+        logging.debug("Copying %s -> %s", src, dst)
+        shutil.copy(src, dst)
+
+    def get_backup_name(filename, backup_dir, good):
+        if not os.path.isdir(backup_dir):
+            os.makedirs(backup_dir)
+        basename = os.path.basename(filename)
+        if good:
+            backup_filename = "%s.backup" % basename
+        else:
+            backup_filename = ("%s.bad.%s" %
+                               (basename, virt_utils.generate_random_string(4)))
+        return os.path.join(backup_dir, backup_filename)
+
+
+    image_filename = get_image_filename(params, root_dir)
+    backup_dir = params.get("backup_dir")
+    if params.get('image_raw_device') == 'yes':
+        iname = "raw_device"
+        iformat = params.get("image_format", "qcow2")
+        ifilename = "%s.%s" % (iname, iformat)
+        ifilename = virt_utils.get_path(root_dir, ifilename)
+        image_filename_backup = get_backup_name(ifilename, backup_dir, good)
+        backup_func = backup_raw_device
+    else:
+        image_filename_backup = get_backup_name(image_filename, backup_dir,
+                                                good)
+        backup_func = backup_image_file
+
+    if action == 'backup':
+        image_dir = os.path.dirname(image_filename)
+        image_dir_disk_free = utils.freespace(image_dir)
+        image_filename_size = os.path.getsize(image_filename)
+        image_filename_backup_size = 0
+        if os.path.isfile(image_filename_backup):
+            image_filename_backup_size = os.path.getsize(image_filename_backup)
+        disk_free = image_dir_disk_free + image_filename_backup_size
+        minimum_disk_free = 1.2 * image_filename_size
+        if disk_free < minimum_disk_free:
+            image_dir_disk_free_gb = float(image_dir_disk_free) / 10**9
+            minimum_disk_free_gb = float(minimum_disk_free) / 10**9
+            logging.error("Dir %s has %.1f GB free, less than the minimum "
+                          "required to store a backup, defined to be 120%% "
+                          "of the backup size, %.1f GB. Skipping backup...",
+                          image_dir, image_dir_disk_free_gb,
+                          minimum_disk_free_gb)
+            return
+        if good:
+            # In case of qemu-img check return 1, we will make 2 backups, one
+            # for investigation and other, to use as a 'pristine' image for
+            # further tests
+            state = 'good'
+        else:
+            state = 'bad'
+        logging.info("Backing up %s image file %s", state, image_filename)
+        src, dst = image_filename, image_filename_backup
+    elif action == 'restore':
+        if not os.path.isfile(image_filename_backup):
+            logging.error('Image backup %s not found, skipping restore...',
+                          image_filename_backup)
+            return
+        logging.info("Restoring image file %s from backup",
+                     image_filename)
+        src, dst = image_filename_backup, image_filename
+
+    backup_func(src, dst)
 
 
 class BaseVM(object):
@@ -471,6 +621,17 @@ class BaseVM(object):
     # (true for xen & kvm). Also true for libvirt (using xen and kvm drivers)
     #
     MIGRATION_PROTOS = ['tcp', ]
+
+    #
+    # Timeout definition. This is being kept inside the base class so that
+    # sub classes can change the default just for themselves
+    #
+    LOGIN_TIMEOUT = 10
+    LOGIN_WAIT_TIMEOUT = 240
+    COPY_FILES_TIMEOUT = 600
+    MIGRATE_TIMEOUT = 3600
+    REBOOT_TIMEOUT = 240
+    CREATE_TIMEOUT = 5
 
     def __init__(self, name, params):
         self.name = name
@@ -547,6 +708,21 @@ class BaseVM(object):
                 raise VMDeadKernelCrashError(match.group(0))
 
 
+    def verify_illegal_instructonn(self):
+        """
+        Find illegal instruction code on VM serial console output.
+
+        @raise: VMInvalidInstructionCode, in case a wrong instruction code.
+        """
+        if self.serial_console is not None:
+            data = self.serial_console.get_output()
+            match = re.findall(r".*trap invalid opcode.*\n", data,
+                               re.MULTILINE)
+
+            if match:
+                raise VMInvalidInstructionCode(match)
+
+
     def get_params(self):
         """
         Return the VM's params dict. Most modified params take effect only
@@ -569,7 +745,7 @@ class BaseVM(object):
         return "/tmp/testlog-%s" % self.instance
 
     @error.context_aware
-    def login(self, nic_index=0, timeout=10):
+    def login(self, nic_index=0, timeout=LOGIN_TIMEOUT):
         """
         Log into the guest via SSH/Telnet/Netcat.
         If timeout expires while waiting for output from the guest (e.g. a
@@ -598,14 +774,15 @@ class BaseVM(object):
         return session
 
 
-    def remote_login(self, nic_index=0, timeout=10):
+    def remote_login(self, nic_index=0, timeout=LOGIN_TIMEOUT):
         """
         Alias for login() for backward compatibility.
         """
         return self.login(nic_index, timeout)
 
 
-    def wait_for_login(self, nic_index=0, timeout=240, internal_timeout=10,
+    def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
+                       internal_timeout=LOGIN_TIMEOUT,
                        serial=False, restart_network=False):
         """
         Make multiple attempts to log into the guest via SSH/Telnet/Netcat.
@@ -618,6 +795,7 @@ class BaseVM(object):
         @param restart_network: Whether to try to restart guest's network.
         @return: A ShellSession object.
         """
+        error_messages = []
         logging.debug("Attempting to log into '%s' (timeout %ds)", self.name,
                       timeout)
         end_time = time.time() + timeout
@@ -625,7 +803,10 @@ class BaseVM(object):
             try:
                 return self.login(nic_index, internal_timeout)
             except (virt_utils.LoginError, VMError), e:
-                logging.debug(e)
+                e = str(e)
+                if e not in error_messages:
+                    logging.debug(e)
+                    error_messages.append(e)
             time.sleep(2)
 
         # Timeout expired
@@ -640,7 +821,7 @@ class BaseVM(object):
 
     @error.context_aware
     def copy_files_to(self, host_path, guest_path, nic_index=0, verbose=False,
-                      timeout=600):
+                      timeout=COPY_FILES_TIMEOUT):
         """
         Transfer files to the remote host(guest).
 
@@ -667,7 +848,7 @@ class BaseVM(object):
 
     @error.context_aware
     def copy_files_from(self, guest_path, host_path, nic_index=0,
-                        verbose=False, timeout=600):
+                        verbose=False, timeout=COPY_FILES_TIMEOUT):
         """
         Transfer files from the guest.
 
@@ -693,7 +874,7 @@ class BaseVM(object):
 
 
     @error.context_aware
-    def serial_login(self, timeout=10):
+    def serial_login(self, timeout=LOGIN_TIMEOUT):
         """
         Log into the guest via the serial console.
         If timeout expires while waiting for output from the guest (e.g. a
@@ -720,7 +901,8 @@ class BaseVM(object):
         return self.serial_console
 
 
-    def wait_for_serial_login(self, timeout=240, internal_timeout=10,
+    def wait_for_serial_login(self, timeout=LOGIN_WAIT_TIMEOUT,
+                              internal_timeout=LOGIN_TIMEOUT,
                               restart_network=False):
         """
         Make multiple attempts to log into the guest via serial console.
@@ -730,6 +912,7 @@ class BaseVM(object):
         @param restart_network: Whether try to restart guest's network.
         @return: A ShellSession object.
         """
+        error_messages = []
         logging.debug("Attempting to log into '%s' via serial console "
                       "(timeout %ds)", self.name, timeout)
         end_time = time.time() + timeout
@@ -743,7 +926,10 @@ class BaseVM(object):
                         pass
                 return session
             except virt_utils.LoginError, e:
-                logging.debug(e)
+                e = str(e)
+                if e not in error_messages:
+                    logging.debug(e)
+                    error_messages.append(e)
             time.sleep(2)
         # Timeout expired; try one more time but don't catch exceptions
         return self.serial_login(internal_timeout)
@@ -887,9 +1073,10 @@ class BaseVM(object):
         raise NotImplementedError
 
 
-    def migrate(self, timeout=3600, protocol="tcp", cancel_delay=None,
-                offline=False, stable_check=False, clean=True,
-                save_path="/tmp", dest_host="localhost", remote_port=None):
+    def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
+                cancel_delay=None, offline=False, stable_check=False,
+                clean=True, save_path="/tmp", dest_host="localhost",
+                remote_port=None):
         """
         Migrate the VM.
 
@@ -914,7 +1101,8 @@ class BaseVM(object):
         raise NotImplementedError
 
 
-    def reboot(self, session=None, method="shell", nic_index=0, timeout=240):
+    def reboot(self, session=None, method="shell", nic_index=0,
+               timeout=REBOOT_TIMEOUT):
         """
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
@@ -939,18 +1127,44 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def save_to_file(self, path):
         """
-        Save the state of virtual machine to a file through migrate to
-        exec
+        State of paused VM recorded to path and VM shutdown on success
+
+        Throws a VMStatusError if before/after state is incorrect.
+
+        @param: path: file where VM state recorded
+
         """
         raise NotImplementedError
 
+    def restore_from_file(self, path):
+        """
+        A shutdown or paused VM is resumed from path, & possibly set running
+
+        Throws a VMStatusError if before/after restore state is incorrect
+
+        @param: path: path to file vm state was saved to
+        """
+        raise NotImplementedError
 
     def needs_restart(self, name, params, basedir):
         """
         Based on virt preprocessing information, decide whether the VM needs
         a restart.
+        """
+        raise NotImplementedError
+
+
+    def pause(self):
+        """
+        Stop the VM operation.
+        """
+        raise NotImplementedError
+
+
+    def resume(self):
+        """
+        Resume the VM operation in case it's stopped.
         """
         raise NotImplementedError

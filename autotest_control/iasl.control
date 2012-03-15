@@ -1,0 +1,10 @@
+NAME = "iasl"
+AUTHOR = "Feng Yang <fyang@redhat.com>"
+TIME = "MEDIUM"
+TEST_TYPE = "CLIENT"
+DOC = """
+Run iasl command with all options. Base on iasl test script which is
+maintained by  Neil Zhang <nzhang@redhat.com>
+"""
+
+job.run_test("iasl", cmd="./iasl-test.sh")
