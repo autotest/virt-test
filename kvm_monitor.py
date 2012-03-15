@@ -317,19 +317,6 @@ class HumanMonitor(Monitor):
         """
         return (status in self.get_status())
 
-    def get_status(self):
-        return self.cmd("info status", debug=False)
-
-
-    def verify_status(self, status):
-        """
-        Verify VM status
-
-        @param status: Optional VM status, 'running' or 'paused'
-        @return: return True if VM status is same as we expected
-        """
-        return (status in self.get_status())
-
 
     # Command wrappers
     # Notes:
@@ -371,11 +358,11 @@ class HumanMonitor(Monitor):
                     command += " " + arg.split("=")[-1]
             else:
                 command = cmdline
-            cmd_output.append(self.cmd(command, timeout))
+            cmd_output += self.cmd(command, timeout)
+
         if len(cmdlines.split(";")) == 1:
             return cmd_output[0]
         return cmd_output
-
 
 
     def quit(self):
