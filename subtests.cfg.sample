@@ -789,6 +789,13 @@ variants:
                 used_cpus = 100
                 test_duration = 600
                 interval_gettime = 120
+                variants:
+                    - @default:
+                    - full_load:
+                        test_duration = 28800
+                        interval_gettime = 1800
+                        pre_command = touch /tmp/host_load_timedrift; for (( I=0; I<`grep -c 'processor' /proc/cpuinfo`; I++ )); do echo $I;taskset -c $I /bin/bash -c 'while [ -e /tmp/host_load_timedrift ]; do :; done&'; done
+                        post_command = rm -f /tmp/host_load_timedrift
             - with_migration:
                 type = timedrift_with_migration
                 migration_iterations = 3
