@@ -15,8 +15,9 @@ def run_fillup_disk(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=timeout)
+    login_timeout = int(params.get("login_timeout", 360))
+    session = vm.wait_for_login(timeout=login_timeout)
+    session2 = vm.wait_for_serial_login(timeout=login_timeout)
 
     fillup_timeout = int(params.get("fillup_timeout"))
     fillup_size = int(params.get("fillup_size"))
@@ -43,7 +44,7 @@ def run_fillup_disk(test, params, env):
         while number >= 0:
             cmd = "rm -f /%s/fillup.%d" % (fill_dir, number)
             logging.debug(cmd)
-            s, o = session.cmd_status_output(cmd)
+            s, o = session2.cmd_status_output(cmd)
             if s != 0:
                 logging.error(o)
                 raise error.TestFail("Failed to remove file %s: %s;"
@@ -51,3 +52,4 @@ def run_fillup_disk(test, params, env):
                                      "command timeout" % (number, o))
             number -= 1
         session.close()
+        session2.close()
