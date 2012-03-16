@@ -150,10 +150,12 @@ variants:
                 password = redhat
                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                     boot_path = images/pxeboot
+                    kill_vm_gracefully = no
                     # You have to use ks=floppy if you want to use floppies to
                     # hold your kickstart file
                     #extra_params += " --append 'ks=floppy nicdelay=60 console=ttyS0,115200 console=tty0'"
-                    extra_params += " --append 'ks=cdrom nicdelay=60 console=ttyS0,115200 console=tty0'"
+                    extra_params += " -no-shutdown"
+                    kernel_params = "ks=cdrom nicdelay=60 console=ttyS0,115200 console=tty0"
                     boot_once = d
                 variants:
                     - 3.9:

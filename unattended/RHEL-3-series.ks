@@ -1,7 +1,7 @@
 install
 KVM_TEST_MEDIUM
 text
-reboot
+poweroff
 lang en_US.UTF-8
 langsupport --default=en_US.UTF-8 en_US.UTF-9
 keyboard us
@@ -13,7 +13,6 @@ firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 clearpart --all --initlabel
 autopart
-reboot
 mouse generic3ps/2
 skipx
 

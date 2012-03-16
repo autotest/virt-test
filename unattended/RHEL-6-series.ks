@@ -1,7 +1,7 @@
 install
 KVM_TEST_MEDIUM
 text
-reboot
+poweroff
 lang en_US.UTF-8
 keyboard us
 key --skip
