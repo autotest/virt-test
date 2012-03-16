@@ -54,6 +54,11 @@ variants:
             guest_load_stop_command = "killall -9 dd"
             host_load_command = "bzip2 -c --best /dev/urandom > /dev/null"
             host_load_instances = 8
+            with_load.full_load:
+                guest_load_instances = 1
+                guest_load_command = touch /tmp/guest_load_timedrift; for (( I=0; I<`grep -c 'processor' /proc/cpuinfo`; I++ )); do echo $I;taskset -c $I /bin/bash -c 'while [ -e /tmp/guest_load_timedrift ]; do :; done&'; done
+                host_load_instances = 0
+                guest_load_stop_command = rm -f /tmp/guest_load_timedrift
         guest_s3, balloon_check.enable.balloon-guest_s3, acpi_after_hotplug.acpi_guest_s3:
             no virtio_blk
             no virtio_nic
