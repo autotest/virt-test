@@ -40,7 +40,10 @@ def run_trans_hugepage(test, params, env):
     if not os.path.ismount(debugfs_path):
         if not os.path.isdir(debugfs_path):
             os.makedirs(debugfs_path)
-        utils.run("mount -t debugfs none %s" % debugfs_path)
+        try:
+            utils.run("mount -t debugfs none %s" % debugfs_path)
+        except Exception:
+            debugfs_flag = 0
 
     test_config = virt_test_setup.TransparentHugePageConfig(test, params)
     vm = virt_test_utils.get_living_vm(env, params.get("main_vm"))
@@ -69,7 +72,7 @@ def run_trans_hugepage(test, params, env):
 
         count = mem / 4
         session.cmd("dd if=/dev/zero of=%s/1 bs=4000000 count=%s" %
-                    (mem_path, count), timeout=dd_timeout)
+                    (h, count), timeout=dd_timeout)
 
         nr_ah_after = int(get_mem_status('AnonHugePages', 'host'))
 
@@ -92,7 +95,14 @@ def run_trans_hugepage(test, params, env):
         error.context("stress test")
         cmd = "rm -rf %s/*; for i in `seq %s`; do dd " % (mem_path, count)
         cmd += "if=/dev/zero of=%s/$i bs=4000000 count=1& done;wait" % mem_path
-        output = session.cmd_output(cmd, timeout=dd_timeout)
+        try:
+            output = session.cmd_output(cmd, timeout=dd_timeout)
+        except kvm_subprocess.ShellStatusError, e:
+            logging.debug(e)
+            raise error.TestFail("Could not get exit status of command %s" % cmd)
+        except Exception, e:
+            logging.debug(e)
+            raise error.TestFail("Fail command: %s. Please check debug log!" % cmd)
 
         if len(re.findall("No space", output)) > count * 0.05:
             e_msg = "stress: Too many dd instances failed in guest"
