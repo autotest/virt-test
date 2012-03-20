@@ -1640,10 +1640,45 @@ def run_tests(parser, job):
 
     @return: True, if all tests ran passed, False if any of them failed.
     """
-    last_index = 0
-    for i, d in enumerate(parser.get_dicts()):
-        logging.info("Test %4d:  %s" % (i + 1, d["shortname"]))
-        last_index += 1
+    test_dicts = list(parser.get_dicts())
+    if len(test_dicts) > 0 and "prepare_case" in test_dicts[0].keys():
+        prepare_case = test_dicts[0]["prepare_case"]
+    else:
+        prepare_case = ['unattended_install', 'rh_kernel_update',
+                                           'disable_win_update']
+    for case in prepare_case:
+        del_list = {}
+        for d in test_dicts:
+            if case in d["name"]:
+                if "case_type" in d.keys() and d["case_type"] == "prepare":
+                    img_name = virt_vm.get_image_filename(d, ".")
+                    if img_name not in del_list.keys():
+                        del_list[img_name] = [d]
+                    else:
+                        del_list[img_name].append(d)
+        for img_l in del_list.keys():
+            if len(del_list[img_l]) > 1:
+                for d in del_list[img_l][:-1]:
+                    test_dicts.remove(d)
+
+    # Add the parameter decide if setup host env in the test case
+    # For some sepical test we only setup host in the first and last case
+    if test_dicts:
+        if test_dicts[0].get("host_setup_flag"):
+            flag = int(test_dicts[0]["host_setup_flag"])
+            test_dicts[0]["host_setup_flag"] =  1 | flag
+        else:
+            test_dicts[0]["host_setup_flag"] = 1
+
+        if test_dicts[-1].get("host_setup_flag"):
+            flag = int(test_dicts[-1].get("host_setup_flag"))
+            test_dicts[-1]["host_setup_flag"] = 2 | flag
+        else:
+            test_dicts[-1]["host_setup_flag"] = 2
+
+
+    for i in range(len(test_dicts)):
+        logging.info("Test %4d:  %s", i + 1, test_dicts[i].get("shortname"))
 
     status_dict = {}
     failed = False
@@ -1672,13 +1707,15 @@ def run_tests(parser, job):
                 dict["host_setup_flag"] = cleanup_flag
         index += 1
 
+    for di in test_dicts:
         # Add kvm module status
-        dict["kvm_default"] = get_module_params(dict.get("sysfs_dir", "sys"), "kvm")
+        if di.get("sysfs_dir"):
+            di["kvm_default"] = get_module_params(di.get("sysfs_dir"), "kvm")
 
-        if dict.get("skip") == "yes":
+        if di.get("skip") == "yes":
             continue
         dependencies_satisfied = True
-        for dep in dict.get("dep"):
+        for dep in di.get("dep"):
             for test_name in status_dict.keys():
                 if not dep in test_name:
                     continue
@@ -1688,19 +1725,19 @@ def run_tests(parser, job):
                 if status_dict[test_name] not in ['GOOD', 'WARN']:
                     dependencies_satisfied = False
                     break
-        test_iterations = int(dict.get("iterations", 1))
-        test_tag = dict.get("shortname")
+        test_iterations = int(di.get("iterations", 1))
+        test_tag = di.get("shortname")
 
         if dependencies_satisfied:
             # Setting up profilers during test execution.
-            profilers = dict.get("profilers", "").split()
+            profilers = di.get("profilers", "").split()
             for profiler in profilers:
                 job.profilers.add(profiler)
             # We need only one execution, profiled, hence we're passing
             # the profile_only parameter to job.run_test().
             profile_only = bool(profilers) or None
-            current_status = job.run_test_detail(dict.get("vm_type"),
-                                                 params=dict,
+            current_status = job.run_test_detail(di.get("vm_type"),
+                                                 params=di,
                                                  tag=test_tag,
                                                  iterations=test_iterations,
                                                  profile_only=profile_only)
@@ -1709,14 +1746,14 @@ def run_tests(parser, job):
         else:
             # We will force the test to fail as TestNA during preprocessing
             dict['dependency_failed'] = 'yes'
-            current_status = job.run_test_detail(dict.get("vm_type"),
-                                                 params=dict,
+            current_status = job.run_test_detail(di.get("vm_type"),
+                                                 params=di,
                                                  tag=test_tag,
                                                  iterations=test_iterations)
 
         if not current_status:
             failed = True
-        status_dict[dict.get("name")] = current_status
+        status_dict[di.get("name")] = current_status
 
     return not failed
 
