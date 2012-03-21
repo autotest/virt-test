@@ -725,35 +725,39 @@ variants:
                 # can use this cmd to load host in timedrift testing
                 # pre_command = for(( I=0; I<`cat /proc/cpuinfo | grep processor | wc -l`;I++)) ;do echo $I; taskset -c $I /bin/bash -c 'for ((;;)); do X=1;done &'; done
                 variants:
-                    - with_load:
-                        type = timedrift
-                        # Pin the VM and host load to CPU #0
-                        cpu_mask = 0x1
-                        # Set the load and rest durations
-                        load_duration = 20
-                        rest_duration = 20
-                        # Fail if the drift after load is higher than 50%
-                        drift_threshold = 50
-                        # Fail if the drift after the rest period is higher than 10%
-                        drift_threshold_after_rest = 10
-                        # For now, make sure this test is executed alone
-                        used_cpus = 100
-                    - with_migration:
-                        type = timedrift_with_migration
-                        migration_iterations = 3
-                        drift_threshold = 10
-                        drift_threshold_single = 3
-                    - with_reboot:
-                        type = timedrift_with_reboot
-                        reboot_iterations = 1
-                        drift_threshold = 10
-                        drift_threshold_single = 3
-                    - with_stop:
-                        type = timedrift_with_stop
-                        stop_interations = 1
-                        drift_threshold = 10
-                        drift_threshold_single = 3
-            - date:
+                    - @default:
+                    - long:
+                        time_linger = 1800
+            - with_savevm:
+                no raw
+                no raw_dd
+                type = timedrift_with_savevm
+                #keep this value is empty as use max_drift_threshold to judgement drift now
+                drift_threshold =
+                max_drift_threshold = 10
+                sleep_time = 300
+                times_gettime = 3
+                interval_gettime = 600
+        variants:
+            - @default:
+                no RHEL.5
+            - with_pvclock:
+                boot_option_added = "divider=10"
+                only RHEL.5
+            - without_pvclock:
+                extra_flags += ",-kvmclock"
+                only RHEL.5
+
+    - balloon_check:
+        no Host_RHEL.5
+        only Linux
+        no RHEL.3.9
+        no RHEL.4.9
+        kill_vm_on_error = yes
+        variants:
+            - @enable:
+                type = balloon_check
+                extra_params += " -balloon virtio"
                 variants:
                     - with_load:
                         type = timedrift
