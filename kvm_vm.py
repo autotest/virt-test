@@ -672,7 +672,7 @@ class VM(virt_vm.BaseVM):
         def add_cpu_flags(help, cpu_model, flags=None, vendor_id=None,
                           family=None):
             if has_option(help, 'cpu'):
-                cmd = " -cpu %s" % cpu_model
+                cmd = " -cpu '%s'" % cpu_model
 
                 if vendor_id:
                     cmd += ",vendor=\"%s\"" % vendor_id
@@ -778,6 +778,7 @@ class VM(virt_vm.BaseVM):
         qemu_binary = virt_utils.get_path(root_dir, params.get("qemu_binary",
                                                               "qemu"))
         help = commands.getoutput("%s -help" % qemu_binary)
+        support_cpu_model = commands.getoutput("%s -cpu ?list" % qemu_binary)
 
         index_global = 0
         # init the dict index_in_use
@@ -993,14 +994,19 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_smp(help, smp,
                                 vcpu_cores, vcpu_threads, vcpu_sockets)
 
-        cpu_model = params.get("cpu_model", "qemu64")
-        if "2.6.32" in commands.getoutput("uname -r"):
-            cpu_model = "cpu64-rhel6"
+        cpu_model = params.get("cpu_model")
         flags = params.get("cpu_model_flags", "")
-        x2apic = params.get("enable_x2apic")
 
-        if "el6" in commands.getoutput("uname -r") and x2apic=="yes":
-            flags += ",+x2apic"
+        use_default_cpu_model = True
+        if cpu_model:
+            for model in re.split(",", cpu_model):
+                if model in support_cpu_model:
+                    use_default_cpu_model = False
+                    cpu_model = model
+                    break
+
+        if use_default_cpu_model:
+            cpu_model = params.get("default_cpu_model")
 
         if cpu_model:
             vendor = params.get("cpu_model_vendor")

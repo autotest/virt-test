@@ -266,8 +266,8 @@ image_boot = no
 
 rtc_drift = "slew"
 cpu_model = qemu64
-extra_flags = +sse2
-enable_x2apic = yes
+auto_cpu_model = "yes"
+cpu_model_flags = ""
 # Network method
 network = bridge
 use_nic_scritps = no
