@@ -231,13 +231,56 @@ url_auto_ip = 192.168.122.1
 use_virt_install_wait = no
 virt_install_wait_time = 300
 
-# NFS directory of guest images
-images_good = fileserver.foo.com:/autotest/images_good
+#nic_script = scripts/qemu-ifup
+#nic_script = scripts/qemu-ifup-ipv6
+#mac_prefix = 00:11:22:33:
 
-# Regex for get peer device for a net device.
-# This regex is for Fedora host (with qemu-kvm 0.15.*),
-netdev_peer_re = "\s{2,}(.*?): .*?\\\s(.*?):"
-# for RHEL5 host, the regex should be:
-# netdev_peer_re = "\s{2,}(.*?): .*?\s{2,}(.*?):"
-# for RHEL6 host, the regex should be:
-# netdev_peer_re = "\s{2,}(.*?):.*?peer=(.*?)\n"
+always_use_tcpdump = yes
+address_ranges = r1
+address_range_base_mac_r1 = 00:11:22:33:AB:08
+#address_range_base_ip_r1 = 10.66.0.0
+#address_range_size_r1 = 16
+snapshot_name = vm
+
+image_snapshot = no
+image_boot = no
+
+# parallel capability
+# single run test would fix this parameter
+#parallel = yes
+
+rtc_drift = "slew"
+cpu_model = qemu64
+auto_cpu_model = "yes"
+cpu_model_flags = ""
+# Network method
+network = bridge
+use_nic_scritps = no
+
+nic_model = e1000
+
+images_good = 10.66.90.128:/vol/S2/kvmauto/linux_img
+nfs_iso = 10.66.90.128:/vol/S2/kvmauto/iso
+
+post_command_noncritical = yes
+mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
+
+#If we need to setup host env
+#for host_setup_flag:
+#    0(00): do nothing
+#    1(01): setup env
+#    2(10): cleanup env
+#    3(11): setup and cleanup env
+
+host_setup_flag = 0
+sysfs_dir = "/sys"
+
+# Prepend images directory to each images.
+image_name(_.*)? ?<= images/
+# Prepend steps directory to every step files.
+steps ?<= steps/
+
+# Internal case configuration end. Don't add any line below this line.
+# (THIS LINE IS RESERVED FOR MERGE)
+# (THIS LINE IS RESERVED FOR MERGE)
+# (THIS LINE IS RESERVED FOR MERGE)
