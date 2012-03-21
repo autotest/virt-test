@@ -825,6 +825,8 @@ variants:
                     - long:
                         time_linger = 1800
             - with_savevm:
+                no raw
+                no raw_dd
                 type = timedrift_with_savevm
                 #keep this value is empty as use max_drift_threshold to judgement drift now
                 drift_threshold =
