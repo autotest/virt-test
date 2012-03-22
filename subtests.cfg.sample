@@ -808,6 +808,8 @@ variants:
                 type = timedrift_with_stop
                 stop_interations = 1
             - with_signal_stop:
+                no RHEL.3.9
+                no RHEL.4
                 type = timedrift_with_stop
                 stop_interations = 1
                 stop_with_signal = yes
