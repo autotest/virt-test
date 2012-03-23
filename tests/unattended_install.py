@@ -1,10 +1,10 @@
-import logging, time, socket, re, os, shutil, tempfile, glob, ConfigParser
+import logging, time, re, os, shutil, tempfile, glob, ConfigParser
 import threading
 import xml.dom.minidom
-from autotest.client.shared import error, iso9660
-from autotest.client import utils
-from autotest.client.virt import virt_vm, virt_utils, virt_http_server
-from autotest.client.virt import libvirt_vm, kvm_monitor
+from autotest_lib.client.common_lib import error, iso9660
+from autotest_lib.client.bin import utils
+from autotest_lib.client.virt import virt_vm, virt_utils, virt_http_server
+from autotest_lib.client.virt import kvm_monitor
 
 
 # Whether to print all shell commands called
@@ -927,6 +927,19 @@ def run_unattended_install(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    def copy_images():
+        image_copy = params.get("image_copy_on_error", "yes")
+        if "yes" in image_copy:
+            try:
+                vm.monitor.quit()
+            except Exception, e:
+                logging.warn(e)
+            from autotest_lib.client.virt.tests import image_copy
+            try:
+                image_copy.run_image_copy(test, params, env)
+            except Exception, e:
+                raise error.TestError(e)
+
     vm = env.get_vm(params["main_vm"])
     unattended_install_config = UnattendedInstallConfig(test, params, vm)
     unattended_install_config.setup()
@@ -938,7 +951,6 @@ def run_unattended_install(test, params, env):
     post_finish_str = params.get("post_finish_str",
                                  "Post set up finished")
     install_timeout = int(params.get("timeout", 3000))
-    port = vm.get_port(int(params.get("guest_port_unattended_install")))
 
     migrate_background = params.get("migrate_background") == "yes"
     if migrate_background:
