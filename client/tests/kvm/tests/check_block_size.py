@@ -1,6 +1,6 @@
 import logging, re
 from autotest_lib.client.common_lib import error
-from autotest_lib.client.tests.kvm.tests import unattended_install
+from autotest_lib.client.virt.tests import unattended_install
 from autotest_lib.client.virt import virt_vm
 
 
