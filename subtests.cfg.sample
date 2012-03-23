@@ -3031,6 +3031,7 @@ variants:
                         name_snapshot3 = sn3
 
     - live_snapshot:
+        no Host_RHEL.5
         type = live_snapshot
         kill_vm = yes
         create_sn_cmd = snapshot_blkdev
