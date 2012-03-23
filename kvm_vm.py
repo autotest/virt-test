@@ -383,7 +383,7 @@ class VM(virt_vm.BaseVM):
                       pci_addr=None,floppy_unit=None, readonly=False,
                       physical_block_size=None, logical_block_size=None,
                       bus=None, port=None, bootindex=None, removable=None,
-                      min_io_size=None, opt_io_size=None):
+                      min_io_size=None, opt_io_size=None, scsi=None):
 
             dev_format = {"virtio" : "virtio-blk-pci",
                           "ide" : "ide-drive",
@@ -452,21 +452,19 @@ class VM(virt_vm.BaseVM):
             elif has_option(help, "device") and media != "floppy":
                 dev += " -device %s" % dev_format[format]
                 if format == "ide":
-                    dev += ",bus=%s" % ide_bus
-                    dev += ",unit=%s" % ide_unit
+                    dev += _add_option("bus", str(ide_bus))
+                    dev += _add_option("unit", str(ide_unit))
                 elif format == "virtio":
-                    scsi = params.get("virtio-blk-pci_scsi")
-                    if scsi:
-                        cmd += ",scsi=%s" % scsi
-                    # This only affect on RHEL6.later host. Bug 756677
-                    free_pci_addr = get_free_pci_addr(pci_addr)
-                    dev += ",bus=pci.0,addr=%s" % free_pci_addr
-                    if physical_block_size:
-                        dev += ",physical_block_size=%s" % physical_block_size
-                    if logical_block_size:
-                        dev += ",logical_block_size=%s" % logical_block_size
-                dev += ",drive=%s" % blkdev_id
-                dev += ",id=%s" % id
+                    dev += _add_option("bus", "pci.0")
+                    dev += _add_option("addr", get_free_pci_addr(pci_addr))
+                    dev += _add_option("physical_block_size",
+                                       physical_block_size)
+                    dev += _add_option("logical_block_size", logical_block_size)
+                    # This 'scsi' option only affect on RHEL6.later host.
+                    # RHBZ 756677.
+                    dev += _add_option("scsi", scsi, bool)
+                dev += _add_option("drive", blkdev_id)
+                dev += _add_option("id", id)
                 format = "none"
 
 
@@ -892,6 +890,7 @@ class VM(virt_vm.BaseVM):
                   removable=image_params.get("removable"),
                   min_io_size=image_params.get("min_io_size"),
                   opt_io_size=image_params.get("opt_io_size"),
+                  scsi=image_params.get("virtio-blk-pci_scsi")
                   )
 
             # increase the bus and unit no for ide device
