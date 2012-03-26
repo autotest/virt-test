@@ -72,7 +72,7 @@ def run_trans_hugepage(test, params, env):
 
         count = mem / 4
         session.cmd("dd if=/dev/zero of=%s/1 bs=4000000 count=%s" %
-                    (h, count), timeout=dd_timeout)
+                    (mem_path, count), timeout=dd_timeout)
 
         nr_ah_after = int(get_mem_status('AnonHugePages', 'host'))
 
