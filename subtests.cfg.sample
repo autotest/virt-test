@@ -2048,6 +2048,7 @@ variants:
     - cpuflags:
         only Linux
         type = cpuflags
+        auto_cpu_model = "no"
         extra_params += " -snapshot"
         #Disable all unnecessary vms.
         vms = ""
