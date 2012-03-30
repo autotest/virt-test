@@ -1575,6 +1575,8 @@ class VM(virt_vm.BaseVM):
 
             logging.debug("Destroying VM with PID %s", self.get_pid())
 
+            kill_timeout = int(self.params.get("kill_timeout", "60"))
+
             if gracefully and self.params.get("shutdown_command"):
                 # Try to destroy with shell command
                 logging.debug("Trying to shutdown VM with shell command")
@@ -1588,7 +1590,8 @@ class VM(virt_vm.BaseVM):
                         session.sendline(self.params.get("shutdown_command"))
                         logging.debug("Shutdown command sent; waiting for VM "
                                       "to go down")
-                        if virt_utils.wait_for(self.is_dead, 60, 1, 1):
+                        if virt_utils.wait_for(self.is_dead, kill_timeout,
+                                               1, 1):
                             logging.debug("VM is down")
                             return
                     finally:
@@ -1597,6 +1600,14 @@ class VM(virt_vm.BaseVM):
             if self.monitor:
                 # Try to destroy with a monitor command
                 logging.debug("Trying to kill VM with monitor command")
+                if self.params.get("kill_vm_in_paused") == "yes":
+                    try:
+                        if virt_utils.wait_for(
+                                 lambda: self.monitor.verify_status("paused"),
+                                               kill_timeout, 1, 1):
+                            logging.debug("VM already paused")
+                    except:
+                        logging.info("Kill VM when the status is running")
                 try:
                     self.monitor.quit()
                 except kvm_monitor.MonitorError, e:

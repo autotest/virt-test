@@ -226,6 +226,7 @@ index_enable = yes
 important_key = guest_name,platform,smp,mem,drive_format,nic_model,type,ksm,image_format,kvm_version,kvm_userspace_version,tag,medium,installation
 
 kill_vm_on_error = yes
+kill_vm_in_paused = yes
 
 convert_ppm_files_to_png = yes
 keep_screendumps = yes
