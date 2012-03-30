@@ -219,20 +219,62 @@ profilers = kvm_stat
 # Timeouts
 login_timeout = 360
 
-# libvirt (virt-install optional arguments)
-# TODO: Rename these with 'libvirt_' prefix
-use_autostart = no
-use_check_cpu = yes
-use_debug = yes
-use_no_reboot = no
-use_os_variant = no
-use_os_type = yes
-# if using 'url = auto' to install, url_auto_ip must match IP on
-# selected virsh network or bridge
-url_auto_ip = 192.168.122.1
-# wait in minutes for virt-install to finish (bz still open)
-use_virt_install_wait = no
-virt_install_wait_time = 300
+# NFS directory of guest images
+# images_good = fileserver.foo.com:/autotest/images_good
+
+# Above lines are reserved for upstream.
+# Please Don't add any config before shutdown.
+# Below config are only existed in internal tree.
+#
+
+# Define the objects we'll be using
+vm_type = kvm
+
+main_monitor = qmpmonitor1
+monitor_type_qmpmonitor1 = qmp
+
+# Display
+display = vnc
+
+# If display = spice, you can set specific spice stuff here
+qxl = on
+qxl_dev_nr = 1
+spice = disable-ticketing
+
+# virtlab tests configuartion file
+profilers = "kvm_stat "
+try_serial_login = 'yes'
+dd_timeout = 900
+
+check_img = no
+
+nic_pci_addr_nic1 = 3
+image_aio = native
+init_pci_addr = 4
+
+# ksm is disabled
+ksm = 0
+
+index_enable = yes
+#you can specify the drive_index by
+#drive_index_$image/stage/cd = $number
+#drive_pci_addr_image1 = 4
+
+# key need to report to virtlab UI
+important_key = guest_name,platform,smp,mem,drive_format,nic_model,type,ksm,image_format,kvm_version,kvm_userspace_version,tag,medium,installation
+
+kill_vm_on_error = yes
+kill_vm_in_paused = yes
+
+convert_ppm_files_to_png = yes
+keep_screendumps = yes
+
+kvm_ver_cmd = "grep -q el5 /proc/version && cat /sys/module/kvm/version || uname -r"
+kvm_userspace_ver_cmd = "grep -q el5 /proc/version && rpm -qa | grep ^kvm-83-.* || rpm -qa | grep qemu-kvm-[0-9].*-.* | head -n 1"
+
+vcpu_cores = ''
+vcpu_threads = 1
+vcpu_sockets = 2
 
 # NFS directory of guest images
 images_good = fileserver.foo.com:/autotest/images_good
