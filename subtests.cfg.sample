@@ -841,7 +841,7 @@ variants:
                 boot_option_added = "divider=10"
                 only RHEL.5
             - without_pvclock:
-                extra_flags += ",-kvmclock"
+                cpu_model_flags += ",-kvmclock"
                 only RHEL.5
 
     - balloon_check:
@@ -2536,7 +2536,7 @@ variants:
                 nx_on = yes
             - noexec_off:
                 cpu_model = qemu64
-                extra_flags = -nx
+                cpu_model_flags = -nx
                 nx_on = no
 
     - yonit_bitmap_benchmark:
@@ -2982,9 +2982,9 @@ variants:
         cmd_timeout = 1200
         variants:
             - msi_on:
-                extra_flags = "+sse2,family=0xf"
+                family = "0xf"
             - msi_off:
-                extra_flags = "+sse2,family=0xe"
+                family = "0xe"
 
     - qemu_disk_img:
         type = qemu_disk_img
