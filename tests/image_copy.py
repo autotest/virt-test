@@ -4,6 +4,7 @@ from autotest_lib.client.bin import utils
 from autotest_lib.client.virt import virt_utils
 
 
+@error.context_aware
 def run_image_copy(test, params, env):
     """
     Copy guest images from nfs server.
@@ -27,19 +28,23 @@ def run_image_copy(test, params, env):
                               mount_dest_dir)
 
     src = params.get('images_good')
-    image = '%s.%s' % (os.path.split(params['image_name'])[1],
-                       params['image_format'])
+    image_name = params.get('image_name')
+    image_format = params.get('image_format')
+
+    image = '%s.%s' % (os.path.basename(image_name), image_format)
     src_path = os.path.join(mount_dest_dir, image)
-    dst_path = '%s.%s' % (params['image_name'], params['image_format'])
+    dst_path = '.'.join([image_name, image_format])
+    dst_path = os.path.join(test.bindir, dst_path)
     cmd = 'cp %s %s' % (src_path, dst_path)
 
+    error.context("Mount the NFS share directory")
     if not virt_utils.mount(src, mount_dest_dir, 'nfs', 'ro'):
         raise error.TestError('Could not mount NFS share %s to %s' %
                               (src, mount_dest_dir))
 
-    # Check the existence of source image
+    error.context("Check the existence of source image")
     if not os.path.exists(src_path):
         raise error.TestError('Could not find %s in NFS share' % src_path)
 
-    logging.debug('Copying image %s...', image)
+    error.context("Copy image '%s' from NFS" % image, logging.debug)
     utils.system(cmd)
