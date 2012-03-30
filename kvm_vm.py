@@ -1764,14 +1764,15 @@ class VM(virt_vm.BaseVM):
             if self.monitor:
                 # Try to destroy with a monitor command
                 logging.debug("Trying to kill VM with monitor command")
-                if self.params.get("kill_vm_in_paused") == "yes":
+                if self.params.get("kill_vm_only_when_paused") == "yes":
                     try:
                         if virt_utils.wait_for(
                                  lambda: self.monitor.verify_status("paused"),
                                                kill_timeout, 1, 1):
-                            logging.debug("VM already paused")
+                            logging.debug("Killing already paused VM '%s'",
+                                          self.name)
                     except:
-                        logging.info("Kill VM when the status is running")
+                        logging.info("Killing running VM '%s'", self.name)
                 try:
                     self.monitor.quit()
                 except kvm_monitor.MonitorError, e:
