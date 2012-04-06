@@ -376,40 +376,11 @@ class VM(virt_vm.BaseVM):
 
         def add_drive(help, filename, index=None, format=None, cache=None,
                       werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=False, blkdebug=None,imgfmt="raw", aio=None,
-                      media="disk", ide_bus=None, ide_unit=None, vdisk=None,
-                      pci_addr=None,floppy_unit=None, readonly=False,
-                      physical_block_size=None, logical_block_size=None,
-                      bus=None, port=None, bootindex=None, removable=None,
-                      min_io_size=None, opt_io_size=None):
-
-            dev = {"virtio" : "virtio-blk-pci",
-                   "ide" : "ide-drive",
-                   "usb2": "usb-storage"}
-
-            if format == "ide":
-                id ="ide0-%s-%s" % (ide_bus, ide_unit)
-                ide_bus = "ide." + str(ide_bus)
-            elif format == "virtio":
-                if media == "disk":
-                    vdisk += 1
-                blkdev_id ="virtio-disk%s" % vdisk
-                id = "virtio-disk%s" % vdisk
-            elif format == "usb2":
-                id = "usb2.%s" % index
-            if media == "floppy":
-                id ="fdc0-0-%s" % floppy_unit
-            elif media == "cdrom":
-                readonly = True
-            if not has_option(help, "device"):
-                id = None
-            if id:
-                blkdev_id = "drive-%s" % id
-            else:
-                blkdev_id = None
-            if ",aio=" not in help:
-                aio = None
-
+                      boot=False, blkdebug=None, bus=None, port=None,
+                      bootindex=None, removable=None, min_io_size=None,
+                      opt_io_size=None, physical_block_size=None,
+                      logical_block_size=None, readonly=False):
+            name = None
             dev = ""
             if format == "ahci":
                 blkdev_id = "ahci%s" % index
@@ -497,6 +468,7 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("snapshot", snapshot, bool)
             cmd += _add_option("boot", boot, bool)
             cmd += _add_option("id", name)
+            cmd += _add_option("readonly", readonly, bool)
             return cmd + dev
 
         def add_nic(help, vlan, model=None, mac=None, device_id=None, netdev_id=None,
@@ -960,7 +932,8 @@ class VM(virt_vm.BaseVM):
                     image_params.get("min_io_size"),
                     image_params.get("opt_io_size"),
                     image_params.get("physical_block_size"),
-                    image_params.get("logical_block_size"))
+                    image_params.get("logical_block_size"),
+                    image_params.get("image_readonly"))
 
         redirs = []
         for redir_name in params.objects("redirs"):
