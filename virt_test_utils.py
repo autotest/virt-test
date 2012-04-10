@@ -21,10 +21,12 @@ More specifically:
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, re, signal, imp, tempfile, commands
-from autotest.client.shared import error, global_config
-from autotest.client import utils
-from autotest.client.tools import scan_results
+import time, os, logging, re, signal, imp, tempfile
+import threading, shelve, commands, string
+from Queue import Queue
+from autotest_lib.client.common_lib import error, global_config
+from autotest_lib.client.bin import utils
+from autotest_lib.client.tools import scan_results
 import aexpect, virt_utils, virt_vm
 
 GLOBAL_CONFIG = global_config.global_config
