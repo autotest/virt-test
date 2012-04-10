@@ -22,7 +22,7 @@ More specifically:
 """
 
 import time, os, logging, re, signal, imp, tempfile
-import threading, shelve, commands
+import threading, shelve, commands, string
 from Queue import Queue
 from autotest_lib.client.common_lib import error, global_config
 from autotest_lib.client.bin import utils
