@@ -438,7 +438,7 @@ class VM(virt_vm.BaseVM):
                 # handles scsi-{hd, cd, disk, block, generic} targets
                 blkdev_id = "virtio-scsi%s" % index
                 dev += " -device %s,bus=virtio_scsi_pci.0" % format
-                dev += _add_option("drive", name)
+                dev += _add_option("drive", blkdev_id)
                 dev += _add_option("logical_block_size", logical_block_size)
                 dev += _add_option("physical_block_size", physical_block_size)
                 dev += _add_option("min_io_size", min_io_size)
@@ -862,6 +862,7 @@ class VM(virt_vm.BaseVM):
             if (image_params.get("drive_format").startswith("scsi-")
                         and not have_virtio_scsi):
                 qemu_cmd += " -device virtio-scsi,id=virtio_scsi_pci"
+                qemu_cmd += ",addr=%s" % get_free_pci_addr(None)
                 have_virtio_scsi = True
 
             bus = None
@@ -1024,6 +1025,7 @@ class VM(virt_vm.BaseVM):
                 have_ahci = True
             if cd_format.startswith("scsi-") and not have_virtio_scsi:
                 qemu_cmd += " -device virtio-scsi,id=virtio_scsi_pci"
+                qemu_cmd += ",addr=%s" % get_free_pci_addr(None)
                 have_virtio_scsi = True
             if iso:
                 iso = virt_utils.get_path(root_dir, iso)
@@ -1038,7 +1040,9 @@ class VM(virt_vm.BaseVM):
                 else:
                     index = None
                 if has_option(help, "device"):
-                    qemu_cmd += add_drive(help, iso, index, "ide", media="cdrom",
+                     if not cd_format.startswith("scsi-"):
+                         cd_format="ide"
+                     qemu_cmd += add_drive(help, iso, index,cd_format, media="cdrom",
                                           ide_bus=ide_bus, ide_unit=ide_unit)
                 else:
                     qemu_cmd += add_cdrom(help, iso, index)
