@@ -1,6 +1,5 @@
-import os, logging, sys
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_utils
+import os, logging
+from autotest.client.virt import virt_utils
 
 
 def run_guest_test(test, params, env):
