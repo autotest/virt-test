@@ -23,7 +23,7 @@ More specifically:
 
 import time, os, logging, re, signal, imp, tempfile
 from autotest_lib.client.common_lib import error, global_config
-from autotest_lib.client.bin import utils
+from autotest_lib.client import utils
 from autotest_lib.client.tools import scan_results
 import aexpect, virt_utils, virt_vm
 
@@ -737,7 +737,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                 mig_protocol = params.get("migration_protocol", "tcp")
 
                 bg = utils.InterruptedThread(session.cmd_output,
-                                      kwargs={'cmd': "bin/autotest control",
+                                      kwargs={'cmd': "autotest control",
                                               'timeout': timeout,
                                               'print_func': logging.info})
 
@@ -748,12 +748,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                if kvm_test:
-                    session.cmd_output("bin/autotest tests/kvm/control",
-                                       timeout=timeout, print_func=logging.info)
-                else:
-                    session.cmd_output("bin/autotest control", timeout=timeout,
-                                       print_func=logging.info)
+                session.cmd_output("autotest control", timeout=timeout,
+                                   print_func=logging.info)
         finally:
             logging.info("------------- End of test output ------------")
             if migrate_background and bg:
