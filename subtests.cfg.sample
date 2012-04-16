@@ -3403,6 +3403,18 @@ variants:
                 err_event = "refblock_alloc"
                 err_command = "write -b 0 1G"
 
+    - nfs_perf:
+        only virtio_nic
+        only Linux
+        type = nfs_perf
+        nfs_server = 192.168.0.113
+        nfs_path = "/vol/s2wquan116171nfs"
+        mnt_option = "rw,bg,hard,nointr,rsize=65536,wsize=65536,tcp,noac,vers=3,timeo=600"
+        blk_size_list = "4k 8k 16k"
+
+ # Internal case configuration end. Don't add any case below this line.
+ # (THIS LINE IS RESERVED FOR MERGE)
+ # (THIS LINE IS RESERVED FOR MERGE)
 # Internal case configuration end. Don't add any case below this line.
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
