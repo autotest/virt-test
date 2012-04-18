@@ -277,6 +277,13 @@ variants:
                             catch_serial_cmd =
                         netstress_kill_guest:
                             nic_module_cmd = "ls -l --color=never /sys/class/net/*/driver"
+                        rh_kernel_update, kexec:
+                            64:
+                                kernel_re = .*kernel-smp-%s.el.*.x86_64.*
+                            PAE:
+                                kernel_re = .*kernel-hugemem-%s.el.*.i686.*
+                            32:
+                                kernel_re = .*kernel-smp-%s.el.*.i686.*
 
                         variants:
                             - 32:
