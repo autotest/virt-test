@@ -15,7 +15,7 @@ class VM(virt_vm.BaseVM):
     This class handles all basic VM operations.
     """
 
-    MIGRATION_PROTOS = ['tcp', 'unix', 'exec']
+    MIGRATION_PROTOS = ['tcp', 'unix', 'exec', 'fd']
 
     #
     # By default we inherit all timeouts from the base VM class
@@ -1205,7 +1205,8 @@ class VM(virt_vm.BaseVM):
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
                timeout=CREATE_TIMEOUT, migration_mode=None,
-               migration_exec_cmd=None, mac_source=None):
+               migration_exec_cmd=None, migration_fd=None,
+               mac_source=None):
         """
         Start the VM by running a qemu command.
         All parameters are optional. If name, params or root_dir are not
@@ -1219,6 +1220,7 @@ class VM(virt_vm.BaseVM):
         @param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
                 (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
                 default to listening on a random TCP port
+        @param migration_fd: Open descriptor from machine should migrate.
         @param mac_source: A VM object from which to copy MAC addresses. If not
                 specified, new addresses will be generated.
 
@@ -1433,6 +1435,8 @@ class VM(virt_vm.BaseVM):
                 else:
                     qemu_command += (' -incoming "exec:%s"' %
                                      migration_exec_cmd)
+            elif migration_mode == "fd":
+                qemu_command += ' -incoming "fd:%d"' % (migration_fd)
 
             p9_fs_driver = params.get("9p_fs_driver")
             if p9_fs_driver == "proxy":
@@ -2006,10 +2010,25 @@ class VM(virt_vm.BaseVM):
 
 
     @error.context_aware
+    def send_fd(self, fd, fd_name="migfd"):
+        """
+        Send file descriptor over unix socket to VM.
+
+        @param fd: File descriptor.
+        @param fd_name: File descriptor identificator in VM.
+        """
+        error.context("Send fd %d like %s to VM %s" % (fd, fd_name, self.name))
+
+        logging.debug("Send file descriptor %s to source VM." % fd_name)
+        self.monitor.cmd("getfd %s" % (fd_name), fd=fd)
+        error.context()
+
+
+    @error.context_aware
     def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
                 cancel_delay=None, offline=False, stable_check=False,
                 clean=True, save_path="/tmp", dest_host="localhost",
-                remote_port=None):
+                remote_port=None, fd_src=None, fd_dst=None):
         """
         Migrate the VM.
 
@@ -2030,6 +2049,10 @@ class VM(virt_vm.BaseVM):
         @save_path: The path for state files.
         @param dest_host: Destination host (defaults to 'localhost').
         @param remote_port: Port to use for remote migration.
+        @param fd_s: File descriptor for migration to which source
+                     VM write data. Descriptor is closed during the migration.
+        @param fd_d: File descriptor for migration from which destination
+                     VM read data.
         """
         if protocol not in self.MIGRATION_PROTOS:
             raise virt_vm.VMMigrateProtoUnsupportedError
@@ -2073,6 +2096,16 @@ class VM(virt_vm.BaseVM):
                                             "for migration to finish")
 
         local = dest_host == "localhost"
+        mig_fd_name = None
+
+        if protocol == "fd":
+            #Check if descriptors aren't None for local migration.
+            if local and (fd_dst is None or fd_src is None):
+                (fd_dst, fd_src) = os.pipe()
+
+            mig_fd_name = "migfd_%d_%d" % (fd_src, time.time())
+            self.send_fd(fd_src, mig_fd_name)
+            os.close(fd_src)
 
         clone = self.clone()
 
@@ -2085,7 +2118,10 @@ class VM(virt_vm.BaseVM):
                 # Pause the dest vm after creation
                 extra_params = clone.params.get("extra_params", "") + " -S"
                 clone.params["extra_params"] = extra_params
-            clone.create(migration_mode=protocol, mac_source=self)
+            clone.create(migration_mode=protocol, mac_source=self,
+                         migration_fd=fd_dst)
+            if fd_dst:
+                os.close(fd_dst)
             error.context()
 
         try:
@@ -2097,19 +2133,9 @@ class VM(virt_vm.BaseVM):
             elif protocol == "unix":
                 uri = "unix:%s" % clone.migration_file
             elif protocol == "exec":
-                if migration_exec_cmd != "gzip":
-                    uri = 'exec:nc localhost %s' % clone.migration_port
-                else:
-                    # Exec with gzip is a little different from other migrate
-                    # methods - first we ask the monitor the migration, then
-                    # the vm state is dumped to a compressed file, then we
-                    # start the dest vm with -incoming pointing to it.
-                    clone.exec_file = "/tmp/exec-%s.gz" % \
-                                virt_utils.generate_random_string(8)
-                    exec_cmd = "gzip -c -d %s" % clone.exec_file
-                    exec_uri = "exec:gzip -c > %s" % clone.exec_file
-
-                    self.monitor.migrate(exec_uri)
+                uri = '"exec:nc localhost %s"' % clone.migration_port
+            elif protocol == "fd":
+                uri = "fd:%s" % mig_fd_name
 
             if offline:
                 self.monitor.cmd("stop")
@@ -2127,12 +2153,6 @@ class VM(virt_vm.BaseVM):
                 return
 
             wait_for_migration()
-
-            if protocol == "exec" and migration_exec_cmd == "gzip":
-                error.context("creating destination VM")
-                clone.create(migration_mode=protocol,
-                             migration_exec_cmd=exec_cmd, mac_source=self)
-                error.context()
 
             self.verify_kernel_crash()
             self.verify_alive()
