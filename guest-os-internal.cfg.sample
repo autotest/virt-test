@@ -807,7 +807,7 @@ variants:
                             # paths are properly set in your virtio driver iso.
                             virtio_oemsetup_id = WXP32
                             virtio_network_path = 'F:\NetKVM\xp\x86'
-                            #virtio_network_installer_path = 'F:\RHEV-Network32.msi'
+                            virtio_network_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_x86\devcon.exe ' install F:\\NetKVM\\xp\\x86\\netkvm.inf hwidcmd '
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows XP
                             desc_path_desc2 = $\WDK\Logo Type\Systems Logo\Windows XP
