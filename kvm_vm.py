@@ -4,7 +4,7 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, fcntl, re, commands, shelve, glob
+import time, os, logging, fcntl, re, commands, shelve
 import virt_test_utils
 from autotest_lib.client.common_lib import error, cartesian_config
 from autotest_lib.client.bin import utils
@@ -1387,7 +1387,7 @@ class VM(virt_vm.BaseVM):
 
                 # Virtual Functions (VF) assignable devices
                 if pa_type == "vf":
-                    self.pci_assignable = virt_utils.PciAssignable(
+                    self.pci_assignable = virt_test_setup.PciAssignable(
                         type=pa_type,
                         driver=params.get("driver"),
                         driver_option=params.get("driver_option"),
@@ -1396,7 +1396,7 @@ class VM(virt_vm.BaseVM):
                         kvm_params = params.get("kvm_default"))
                 # Physical NIC (PF) assignable devices
                 elif pa_type == "pf":
-                    self.pci_assignable = virt_utils.PciAssignable(
+                    self.pci_assignable = virt_test_setup.PciAssignable(
                         type=pa_type,
                         names=params.get("device_names"),
                         devices_requested=pa_devices_requested,
@@ -1404,7 +1404,7 @@ class VM(virt_vm.BaseVM):
                         kvm_params = params.get("kvm_default"))
                 # Working with both VF and PF
                 elif pa_type == "mixed":
-                    self.pci_assignable = virt_utils.PciAssignable(
+                    self.pci_assignable = virt_test_setup.PciAssignable(
                         type=pa_type,
                         driver=params.get("driver"),
                         driver_option=params.get("driver_option"),
