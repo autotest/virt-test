@@ -2129,9 +2129,7 @@ class VM(virt_vm.BaseVM):
                     clone.exec_file = "/tmp/exec-%s.gz" % \
                                 virt_utils.generate_random_string(8)
                     exec_cmd = "gzip -c -d %s" % clone.exec_file
-                    exec_uri = "exec:gzip -c > %s" % clone.exec_file
-
-                    self.monitor.migrate(exec_uri)
+                    uri = "exec:gzip -c > %s" % clone.exec_file
 
             if offline:
                 self.monitor.cmd("stop")
