@@ -190,7 +190,7 @@
 					<Order>14</Order>
 				</SynchronousCommand>
 				<SynchronousCommand wcm:action="add">
-					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat</CommandLine>
+					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat pnputil</CommandLine>
 					<Order>15</Order>
 				</SynchronousCommand>
 			</FirstLogonCommands>

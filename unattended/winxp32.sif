@@ -83,4 +83,4 @@ Command11="cmd /c md C:\sysprep & expand D:\SUPPORT\TOOLS\DEPLOY.CAB -F:* C:\sys
 Command12="cmd /c E:\setupsp.bat"
 Command13="cmd /c sc config tlntsvr start= auto"
 Command14="cmd /c net start telnet"
-Command15="cmd /c A:\finish.bat"
+Command15="cmd /c A:\finish.bat devcon"
