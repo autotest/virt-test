@@ -601,7 +601,7 @@ def run_cgroup(test, params, env):
         timeout = 1.5 * int(params.get("login_timeout", 360))
         # First one
         vms.append(env.get_all_vms()[0])
-        cpu_pids = vms[0].get_vcpu_pids()
+        cpu_pids = vms[0].get_vcpu_pids(params)
         smp = len(cpu_pids)
         cgroup.mk_cgroup()
         cgroup.set_property("cpu.cfs_period_us", 100000, 0)
@@ -632,7 +632,7 @@ def run_cgroup(test, params, env):
             # Total quota is for ALL vCPUs
             cgroup.set_property("cpu.cfs_quota_us", 50000 * smp, -1)
             assign_vm_into_cgroup(vms[-1], cgroup, -1)
-            cpu_pids = vms[-1].get_vcpu_pids()
+            cpu_pids = vms[-1].get_vcpu_pids(params)
             for j in range(smp):
                 cgroup.mk_cgroup(pwd)
                 cgroup.set_property("cpu.cfs_period_us", 100000, -1)
@@ -1076,7 +1076,7 @@ def run_cgroup(test, params, env):
             params['smp'] = vm_cpus
             vm.create(params=params)
         # Verify vcpus matches prescription
-        vcpus = vm.get_vcpu_pids()
+        vcpus = vm.get_vcpu_pids(params)
         if len(vcpus) != vm_cpus:
             raise error.TestFail("Incorrect number of vcpu PIDs; smp=%s vcpus="
                                  "%s" % (vm_cpus, vcpus))
