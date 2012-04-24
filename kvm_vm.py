@@ -1873,14 +1873,16 @@ class VM(virt_vm.BaseVM):
         return self.vnc_port
 
 
-    def get_vcpu_pids(self):
+    def get_vcpu_pids(self,params):
         """
         Return the list of vcpu PIDs
 
         @return: the list of vcpu PIDs
         """
-        return [int(_) for _ in re.findall(r'thread_id=(\d+)',
-                                           self.monitor.info("cpus"))]
+        vcpu_thread_pattern = params.get("vcpu_thread_pattern",
+                                                        "thread_id=(\d+)")
+        return [int(_) for _ in re.findall(vcpu_thread_pattern,
+                                           str(self.monitor.info("cpus")))]
 
 
     def get_shared_meminfo(self):
