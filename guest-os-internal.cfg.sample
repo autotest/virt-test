@@ -820,6 +820,11 @@ variants:
                                 image_name_supportvm = winXP-32-supportvm
                         multi_disk, usb_multi_disk:
                             list_volume_command = fsutil fsinfo drives
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c I:\\AutoIt3_x64.exe I:\\virtio_driver_install.au3 pnputil "-i -a K:\\Balloon\\2k8\\amd64\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c I:\\AutoIt3_x64.exe I:\\virtio_driver_install.au3 I:\devcon\wlh_x86\devcon.exe ' install K:\\viostor\\xp\\x86\\viostor.inf hwidcmd '
+                            driver_install_cmd_nic = cmd /c I:\\AutoIt3.exe I:\\virtio_driver_install.au3 I:\devcon\wlh_x86\devcon.exe ' install K:\\NetKVM\\xp\\x86\\netkvm.inf hwidcmd '
+
 
             - Win2003:
                 guest_name = Win2003
@@ -883,6 +888,10 @@ variants:
                             update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win2k3_32"
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c E:\\whql\virtio_driver_install_whql.exe F:\\Balloon\\2k3\\x86 balloon
+                            driver_install_cmd_block = cmd /c  E:\\whql\virtio_driver_install_whql.exe F:\\viostor\\2k3\\x86 block
+                            driver_install_cmd_nic = cmd /c E:\\whql\virtio_driver_install_whql.exe F:\\\NetKVM\\2k3\\x86 nic
 
                     - 64:
                         guest_name += -64
@@ -926,7 +935,10 @@ variants:
                             update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win2k3_64"
-
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c E:\\whql\virtio_driver_install_whql.exe F:\\Balloon\\2k3\\amd64 balloon
+                            driver_install_cmd_block = cmd /c  E:\\whql\virtio_driver_install_whql.exe F:\\viostor\\2k3\\amd64 block
+                            driver_install_cmd_nic = cmd /c E:\\whql\virtio_driver_install_whql.exe F:\\\NetKVM\\2k3\\amd64 nic
 
             - Win2008:
                 image_name = win2008
@@ -979,6 +991,10 @@ variants:
                             disk_driver_install = ""
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\Balloon\\2k8\\x86\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\viostor\\2k8\\x86\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\NetKVM\\2k8\\x86\\netkvm.inf"
 
                     - 64:
                         image_name += -64
@@ -1022,7 +1038,10 @@ variants:
                             disk_driver_install =  ""
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
-
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\Balloon\\2k8\\amd64\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\viostor\\2k8\\amd64\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\NetKVM\\2k8\\amd64\\netkvm.inf"
 
             - Win2008r2:
                 image_name = win2008r2
@@ -1081,6 +1100,11 @@ variants:
                             disk_driver_install = ""
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\Balloon\\2k8\\amd64\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\viostor\\2k8\\amd64\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\NetKVM\\2k8\\amd64\\netkvm.inf"
+
 
             - Win7:
                 guest_name = Win7
@@ -1137,6 +1161,10 @@ variants:
                             disk_driver_install = "" 
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\Balloon\\w7\\x86\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\viostor\\w7\\x86\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\NetKVM\\w7\\x86\\netkvm.inf"
 
                     - 64:
                         guest_name += -64
@@ -1185,6 +1213,11 @@ variants:
                             disk_driver_install = ""
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
+                        win_virtio_update:
+                            driver_install_cmd_balloon = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\Balloon\\w7\\amd64\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\viostor\\w7\\amd64\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c E:\\AutoIt3_64.exe E:\\virtio_driver_install.au3 pnputil "-i -a F:\\NetKVM\\w7\\amd64\\netkvm.inf"
+
 
 
 
