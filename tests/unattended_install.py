@@ -774,6 +774,8 @@ class UnattendedInstallConfig(object):
         i.copy(os.path.join(self.boot_path, os.path.basename(self.initrd)),
                self.initrd)
         assert(os.path.getsize(self.initrd) > 0)
+        if self.vm.driver_type != 'xen':
+            i.close()
 
         if self.unattended_file.endswith('.preseed'):
             self.preseed_initrd()
