@@ -880,7 +880,7 @@ variants:
                         whql_env_setup:
                             cdrom_whql = images/win2k3-32/whql.iso
                             mem = 2048
-                            qxl_install = "cmd /c D:\devcon\wlh_x86\devcon.exe install E:\qxl.inf PCI\VEN_1B36^&DEV_0100^&SUBSYS_11001AF4^&REV_01^3^&13C0B0C5^&0^&18"
+                            update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win2k3_32"
 
@@ -923,8 +923,8 @@ variants:
                         whql_env_setup:
                             cdrom_whql = images/win2k3-64/whql.iso
                             mem = 2048
-                            qxl_install = "cmd /c D:\devcon\wlh_amd64\devcon.exe install E:\qxl.inf PCI\VEN_1B36^&DEV_0100^&SUBSYS_11001AF4^&REV_01^3^&13C0B0C5^&0^&18"
-                       whql_env_setup.block_device:
+                            update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
+                        whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win2k3_64"
 
 
@@ -973,9 +973,13 @@ variants:
                             timezone_cmd = "tzchange /C "China Standard Time""
                             cdrom_whql = images/win2k8-32/whql.iso
                             mem = 6144
-                            qxl_install = "cmd /c D:\devcon\wnet_x86\devcon.exe install E:\qxl.inf PCI\VEN_1B36^&DEV_0100^&SUBSYS_11001AF4^&REV_01^3^&13C0B0C5^&0^&18"
+                            update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win2k8_32"
+                            disk_driver_install = ""
+                        whql_env_setup.nic_device:
+                            nic_model_nic1 = e1000
+
                     - 64:
                         image_name += -64
                         guest_name += -64
@@ -1012,9 +1016,12 @@ variants:
                             timezone_cmd = "tzchange /C "China Standard Time""
                             cdrom_whql = images/win2k8-64/whql.iso
                             mem = 6144
-                            qxl_install = "cmd /c D:\devcon\wnet_amd64\devcon.exe install E:\qxl.inf PCI\VEN_1B36^&DEV_0100^&SUBSYS_11001AF4^&REV_01^3^&13C0B0C5^&0^&18"
+                            update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win2k8_64"
+                            disk_driver_install =  ""
+                        whql_env_setup.nic_device:
+                            nic_model_nic1 = e1000
 
 
             - Win2008r2:
@@ -1068,9 +1075,12 @@ variants:
                             timezone_cmd = "tzchange /C "China Standard Time""
                             cdrom_whql = images/win2k8r2-64/whql.iso
                             mem = 6144
-                            qxl_install = "cmd /c D:\devcon\wnet_amd64\devcon.exe install E:\qxl.inf PCI\VEN_1B36^&DEV_0100^&SUBSYS_11001AF4^&REV_01^3^&13C0B0C5^&0^&18"
+                            update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win2k8r2_64"
+                            disk_driver_install = ""
+                        whql_env_setup.nic_device:
+                            nic_model_nic1 = e1000
 
             - Win7:
                 guest_name = Win7
@@ -1121,9 +1131,12 @@ variants:
                             timezone_cmd = "tzchange /C "China Standard Time""
                             cdrom_whql = images/win7-32/whql.iso
                             mem = 2048
-                            qxl_install = "cmd /c pnputil /i /a E:\qxl.inf"
+                            update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win7_32"
+                            disk_driver_install = "" 
+                        whql_env_setup.nic_device:
+                            nic_model_nic1 = e1000
 
                     - 64:
                         guest_name += -64
@@ -1166,9 +1179,13 @@ variants:
                             timezone_cmd = "tzchange /C "China Standard Time""
                             cdrom_whql = images/win7-64/whql.iso
                             mem = 2048
-                            qxl_install = "cmd /c pnputil /i /a E:\qxl.inf"
+                            update_cmd = cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1"
                         whql_env_setup.block_device:
                             symbol_files = "git://qe-git.englab.nay.redhat.com/whql/win7_64"
+                            disk_driver_install = ""
+                        whql_env_setup.nic_device:
+                            nic_model_nic1 = e1000
+
 
 
     # Live CD section

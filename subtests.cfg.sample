@@ -1156,6 +1156,7 @@ variants:
                                 job_filter = syscache test
                                 test_timeout = 7200
             - whql_env_setup:
+                vms = ""
                 type = whql_env_setup
                 smp = 4
                 rtc_drift = "slew"
@@ -1171,11 +1172,21 @@ variants:
                 disable_uas =  "cmd /c regedit /s D:\whql\UAC_disable.reg"
                 dbgview_cmd = "cmd /c E:\dbgview_install.exe"
                 setup_timeout = 9000
-                qxl_install = "cmd /c D:\devcon\wxp_x86\devcon.exe install E:\QXL-Driver\WinXp32\qxl.inf PCI\VEN_1B36^&DEV_0100^&SUBSYS_11001AF4^&REV_01^3^&13C0B0C5^&0^&18"
                 disable_firewall = "netsh firewall set opmode mode=disable"
                 disable_update = "net stop wuauserv"
                 timezone_cmd = "tzutil /s "China Standard Time""
-                src_list = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/dbg_tools/dbg_x86_6.11.1.404.msi,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/qxl_rhel5/xp/x86/qxl.inf,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/qxl_rhel5/xp/x86/qxl.sys,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/qxl_rhel5/xp/x86/qxldd.dll,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/qxl_rhel5/xp/x86/qxl.cat,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/DebugView/Dbgview.exe,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/UAC_disable.reg,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/WUInstall.exe,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/auto_restart_disable.reg,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/dbgview_install.exe,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/whql_nic_set.exe,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/WindowsUpdateAgent30-x86.exe,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/wua_update.exe,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/dbg_tools/dbg_install.bat,http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/dbg_tools/dbg_x86_6.11.1.404.msi"
+                src_list = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/dbg_tools/dbg_x86_6.11.1.404.msi"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/DebugView/Dbgview.exe"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/UAC_disable.reg"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/WUInstall.exe"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/auto_restart_disable.reg"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/dbgview_install.exe"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/whql_nic_set.exe"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/WindowsUpdateAgent30-x86.exe"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/wua_update.exe"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/dbg_tools/dbg_install.bat"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/dbg_tools/dbg_x86_6.11.1.404.msi"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/disk_driver_check.exe"
                 variants:
                     - nic_device:
                         nics += ' nic2 nic3'
@@ -1184,6 +1195,7 @@ variants:
                         nic_config_cmd = "cmd /c D:\whql\whql_nic_set.exe"
 
                     - block_device:
+                        image_snapshot = yes
                         images += " stg stg2 stg3 stg4"
                         image_format_stg = raw
                         image_name_stg = storage
@@ -1197,14 +1209,23 @@ variants:
                         image_format_stg4 = raw
                         image_name_stg4 = storage4
                         image_size_stg4 = 2G
-
+                        win_format_stg = NTFS
+                        win_format_stg2 = NTFS
+                        win_format_stg3 = FAT
+                        win_format_stg4 = FAT32
+                        win_extra_stg = "/c"
                         #symbol_files git repo not set up yet will update this inside
                         #different guest config later
                         symbol_files = "git://qe-git.englab.nay.redhat.com/whql/winxp"
                         debuggers_install = "cmd  /c E:\dbg_install.bat"
-                        symbol_file_download = "cmd /c C:\debuggers\symchk /r C:\windows\system32 /s SRV*C:\symbols\*http://msdl.microsoft.com/download/symbols"
+                        symbol_file_download = "cmd /c C:\debuggers\symchk /r C:\windows\system32 /s SRV*C:\symbols\*http://msdl.microsoft.com/download/symbols & dir"
                         symbol_file_check = "cmd /c C:\debuggers\symchk C:\windows\system32\ntoskrnl.exe /s C:\symbols\"
                         symbol_check_pattern = "SYMCHK: FAILED files = 0"
+                        symbol_pid_pattern = "symchk.*?PID:\s+(\d+)"
+
+                        disk_driver_install = "cmd /c E:\disk_driver_check.exe "
+                        format_cmd = "format %s: /FS:%s /V:local /y"
+                        disk_init_cmd = "echo select disk %s > cmd && echo create partition primary  >> cmd && echo select partition 1 >> cmd && echo assign letter=%s >> cmd && echo exit >> cmd && diskpart /s cmd"
 
     - guest_s4:
         no RHEL.3
