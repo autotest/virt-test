@@ -1072,36 +1072,15 @@ class QMPMonitor(Monitor):
         """
         return self.send_args_cmd("set_link name=%s,up=%s" % (name, str(up)))
 
+
     def migrate_set_downtime(self, value):
         """
         Set maximum tolerated downtime (in seconds) for migration.
 
         @param: value: maximum downtime (in seconds)
+
         @return: The command's output
         """
-        val = value * 1000000000
+        val = value * 10**9
         args = {"value": val}
         return self.cmd("migrate_set_downtime", args)
-
-    def live_snapshot(self, device, snapshot_file, snapshot_format="qcow2"):
-        """
-        Do live snapshot.
-        @param device: device id of base image
-        @param snapshot_file: image file name of snapshot
-        @param snapshot_format: image format of snapshot
-        """
-        args = {"device": device,
-                "snapshot-file": snapshot_file,
-                "format": snapshot_format}
-        return self.cmd("blockdev-snapshot-sync", args)
-
-    def getfd(self, fd, name):
-        """
-        Receives a file descriptor
-
-        @param fd: File descriptor to pass to QEMU
-        @param name: File descriptor name (internal to QEMU)
-        @return: The command's output
-        """
-        args = {"fdname": name}
-        return self.cmd("getfd", args, fd=fd)
