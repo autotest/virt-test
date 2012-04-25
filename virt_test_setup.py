@@ -536,10 +536,10 @@ class PrivateBridgeConfig(object):
         index = 0
         for port in port_list:
             index += 1
-            rules.append("INPUT %s -i %s -p tcp -m tcp --dport %s -j ACCEPT" %
+            rules.append("INPUT %s -i %s -p tcp --dport %s -j ACCEPT" %
                          (index, self.brname, port))
             index += 1
-            rules.append("INPUT %s -i %s -p udp -m udp --dport %s -j ACCEPT" %
+            rules.append("INPUT %s -i %s -p udp --dport %s -j ACCEPT" %
                          (index, self.brname, port))
         rules.append("FORWARD 1 -m physdev --physdev-is-bridged -j ACCEPT")
         rules.append("FORWARD 2 -d %s.0/24 -o %s -m state "
