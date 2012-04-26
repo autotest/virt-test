@@ -72,6 +72,7 @@ def run_netperf(test, params, env):
     env_setup(server_ctl)
     env_setup(client)
     env_setup(host)
+
     logging.info("Start netperf testing ...")
     start_test(server, server_ctl, host, client, test.resultsdir,
                l=int(params.get('l')),
