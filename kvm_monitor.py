@@ -348,7 +348,6 @@ class HumanMonitor(Monitor):
         """
         cmd_output = []
         for cmdline in cmdlines.split(";"):
-            logging.info(cmdline)
             if not convert:
                 return self.cmd(cmdline, timeout)
             if "=" in cmdline:
@@ -358,9 +357,8 @@ class HumanMonitor(Monitor):
                     command += " " + arg.split("=")[-1]
             else:
                 command = cmdline
-            cmd_output += self.cmd(command, timeout)
-
-        if len(cmdlines.split(";")) == 1:
+            cmd_output.append(self.cmd(command, timeout))
+        if len(cmd_output) == 1:
             return cmd_output[0]
         return cmd_output
 
@@ -940,7 +938,7 @@ class QMPMonitor(Monitor):
                     except Exception:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))
-        if len(cmdlines.split(";")) == 1:
+        if len(cmd_output) == 1:
             return cmd_output[0]
         return cmd_output
 
