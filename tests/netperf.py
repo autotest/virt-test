@@ -72,8 +72,6 @@ def run_netperf(test, params, env):
     env_setup(server_ctl)
     env_setup(client)
     env_setup(host)
-    # initiate all interfaces on guest.
-    virt_test_utils.restart_guest_network(session_serial)
 
     logging.info("Start netperf testing ...")
     start_test(server, server_ctl, host, client, test.resultsdir,
