@@ -242,10 +242,6 @@ variants:
         type = boot
         kill_vm_on_error = yes
         login_timeout = 240
-        # those two scripts are used to setup test env for guest/host
-        # before performance testing
-        # stop_services_script = scripts/rh_stop_services.sh
-        # off_services_script = scripts/rh_off_services.sh
 
     - boot_with_usb:
         no Host_RHEL.5
@@ -325,6 +321,10 @@ variants:
         kill_vm_on_error = yes
         reboot = yes
         reboot_count = 25
+        login_timeout = 240
+        # this script is used to setup test env for (linux)guest/host
+        # before performance testing
+        # rh_perf_envsetup_script = scripts/rh_perf_envsetup.sh
 
     - reboot_with_usb:
         no Host_RHEL.5
@@ -1545,6 +1545,9 @@ variants:
         # sizes = "64 256 512 1024"
         # sizes_rr = "64 256 512 1024"
         numa_node = -1
+        # this script is used to setup test env for (linux)guest/host
+        # before performance testing
+        # rh_perf_envsetup_script = scripts/rh_perf_envsetup.sh
         variants:
             - guest_guest:
                 vms += " vm2"
