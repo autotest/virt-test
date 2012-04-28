@@ -367,7 +367,7 @@ variants:
                         guest_name = RHEL-Server-5.8
                         image_name = RHEL-Server-5.8
                         image_size = 20G
-                        brew_tag = dist-5E-U8
+                        brew_tag = RHEL-5.8-Z
                         timedrift.without_pvclock:
                              boot_option_added = "divider=10 clocksource=acpi_pm"
                         physical_resources_check:
@@ -397,6 +397,46 @@ variants:
                                     cdrom_unattended = images/rhel58-64/ks.iso
                                     kernel = images/rhel58-64/vmlinuz
                                     initrd = images/rhel58-64/initrd.img
+                                timedrift.without_pvclock:
+                                    boot_option_added = "divider=10 notsc"
+                            - PAE:
+                                guest_name += -PAE
+                                image_name += -PAE
+
+                    - 5.9:
+                        guest_name = RHEL-Server-5.9
+                        image_name = RHEL-Server-5.9
+                        image_size = 20G
+                        brew_tag = dist-5E-U9
+                        timedrift.without_pvclock:
+                             boot_option_added = "divider=10 clocksource=acpi_pm"
+                        physical_resources_check:
+                            vms= "vm1"
+                            catch_serial_cmd =
+
+                        variants:
+                            - 32:
+                                guest_name += -32
+                                image_name += -32
+                                unattended_install, check_block_size.4096_512, check_block_size.512_512:
+                                    unattended_file = unattended/RHEL-5-series.ks
+                                    #floppy = images/rhel59-32/ks.vfd
+                                    cdrom_unattended = images/rhel59-32/ks.iso
+                                    kernel = images/rhel59-32/vmlinuz
+                                    initrd = images/rhel59-32/initrd.img
+                                unattended_install.cdrom, check_block_size.4096_512, check_block_size.512_512:
+                                    cdrom_cd1 = isos/linux/RHEL-Server-5.9-i386-DVD.iso
+                            - 64:
+                                guest_name += -64
+                                image_name += -64
+                                unattended_install.cdrom, check_block_size.4096_512, check_block_size.512_512:
+                                    cdrom_cd1 = isos/linux/RHEL-Server-5.9-x86_64-DVD.iso
+                                unattended_install, check_block_size.4096_512, check_block_size.512_512:
+                                    unattended_file = unattended/RHEL-5-series.ks
+                                    #floppy = images/rhel59-64/ks.vfd
+                                    cdrom_unattended = images/rhel59-64/ks.iso
+                                    kernel = images/rhel59-64/vmlinuz
+                                    initrd = images/rhel59-64/initrd.img
                                 timedrift.without_pvclock:
                                     boot_option_added = "divider=10 notsc"
                             - PAE:
