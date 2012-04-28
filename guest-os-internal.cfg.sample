@@ -808,6 +808,8 @@ variants:
                             virtio_oemsetup_id = WXP32
                             virtio_network_path = 'F:\NetKVM\xp\x86'
                             virtio_network_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_x86\devcon.exe ' install F:\\NetKVM\\xp\\x86\\netkvm.inf hwidcmd '
+                            virtio_qxl_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_x86\devcon.exe ' install A:\\i386\\WinXP\\qxl.inf hwidcmd '
+                            virtio_balloon_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_x86\devcon.exe ' install F:\\Balloon\\2k3\\x86\\balloon.inf hwidcmd '
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows XP
                             desc_path_desc2 = $\WDK\Logo Type\Systems Logo\Windows XP
@@ -868,8 +870,8 @@ variants:
                             virtio_network_path = 'F:\NetKVM\2k3\x86'
                             #virtio_network_installer_path = 'F:\RHEV-Network.msi'
                             virtio_network_installer_path = E:\devcon\wlh_x86\devcon.exe install F:\\NetKVM\\2k3\\x86\\netkvm.inf hwidcmd
-                            virtio_qxl_installer_path = E:\devcon\wlh_x86\devcon.exe install A:\\i386\\WinXP\\qxl.inf hwidcmd
-                            virtio_balloon_installer_path = E:\devcon\wlh_x86\devcon.exe install F:\\Balloon\\2k3\\x86\\balloon.inf hwidcmd
+                            virtio_qxl_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_x86\devcon.exe ' install A:\\i386\\WinXP\\qxl.inf hwidcmd '
+                            virtio_balloon_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_x86\devcon.exe ' install F:\\Balloon\\2k3\\x86\\balloon.inf hwidcmd '
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows Server 2003
                             dd_data_logoarch = X86
@@ -915,8 +917,8 @@ variants:
                             virtio_network_path = 'F:\NetKVM\2k3\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
                             virtio_network_installer_path = 'E:\devcon\wlh_amd64\devcon.exe install F:\\NetKVM\\2k3\\amd64\\netkvm.inf hwidcmd'
-                            virtio_qxl_installer_path = 'E:\devcon\wlh_amd64\devcon.exe install A:\\amd64\\Win7\\qxl.inf hwidcmd'
-                            virtio_balloon_installer_path = E:\devcon\wlh_amd64\devcon.exe install F:\\Balloon\\2k3\\amd64\\balloon.inf hwidcmd
+                            virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_amd64\devcon.exe ' install A:\\amd64\\Win7\\qxl.inf hwidcmd '
+                            virtio_balloon_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 E:\devcon\wlh_amd64\devcon.exe ' install F:\\Balloon\\2k3\\amd64\\balloon.inf hwidcmd '
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows Server 2003
                             dd_data_logoarch = AMD64
@@ -975,8 +977,8 @@ variants:
                             #virtio_network_installer_path = 'F:\RHEV-Network.msi'
                             #virtio_qxl_installer_path = E:\\autoit3.exe E:\\qxl_install.au3 pnptuil " -i -a A:\\amd64\\Win7\\qxl.inf"
                             #virtio_balloon_installer_path = pnputil -i -a F:\\Balloon\\2k8\\x86\\balloon.inf
-                            virtio_qxl_installer_path = E:\\autoit3.exe E:\\qxl_install.au3 E:\devcon\wnet_x86\devcon.exe "install A:\\i386\\Win7\\qxl.inf hwid"
-                            virtio_balloon_installer_path = E:\devcon\wnet_x86\devcon.exe install F:\\Balloon\\2k8\\x86\\balloon.inf hwidcmd
+                            virtio_qxl_installer_path = E:\\autoit3.exe E:\\virtio_driver_install.au3 E:\devcon\wnet_x86\devcon.exe " install A:\\i386\\Win7\\qxl.inf hwid"
+                            virtio_balloon_installer_path = E:\\autoit3.exe E:\\virtio_driver_install.au3 E:\devcon\wnet_x86\devcon.exe " install F:\\Balloon\\2k8\\x86\\balloon.inf hwidcmd"
                             virtio_blk,virtio_nic:
                                 unattended_file = unattended/win2008-32-virtio-autounattend.xml
                         sysprep:
@@ -1020,9 +1022,9 @@ variants:
                             virtio_storage_path = 'F:\viostor\2k8\amd64'
                             virtio_network_path = 'F:\NetKVM\2k8\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
-                            virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\qxl_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
                             # virtio_qxl_installer_path = E:\\autoit3.exe E:\\qxl_install.au3 E:\devcon\wnet_amd64\devcon.exe "install A:\\amd64\\Win7\\qxl.inf hwid"
-                            virtio_balloon_installer_path = pnputil -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf
+                            virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
+                            virtio_balloon_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
                             # virtio_balloon_installer_path = E:\devcon\wnet_amd64\devcon.exe install F:\\Balloon\\2k8\\amd64\\balloon.inf hwidcmd
                             virtio_blk, virtio_nic:
                                 unattended_file = unattended/win2008-64-virtio-autounattend.xml
@@ -1082,8 +1084,8 @@ variants:
                             virtio_storage_path = 'F:\viostor\2k8\amd64'
                             virtio_network_path = 'F:\NetKVM\2k8\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
-                            virtio_qxl_installer_path = pnputil -i -a A:\\amd64\\Win7\\qxl.inf
-                            virtio_balloon_installer_path = pnputil -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf
+                            virtio_qxl_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil"  -i -a A:\\amd64\\Win7\\qxl.inf"
+                            virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
                             unattended_file = unattended/win2008-r2-autounattend.xml
                             virtio_blk, virtio_nic:
                                 unattended_file = unattended/win2008-r2-virtio-autounattend.xml
@@ -1137,8 +1139,8 @@ variants:
                             virtio_storage_path = 'F:\viostor\w7\x86'
                             virtio_network_path = 'F:\NetKVM\w7\x86'
                             #virtio_network_installer_path = 'F:\RHEV-Network32.msi'
-                            virtio_qxl_installer_path = pnputil -i -a A:\\i386\\Win7\\qxl.inf
-                            virtio_balloon_installer_path = pnputil -i -a F:\\Balloon\\w7\\x86\\balloon.inf
+                            virtio_qxl_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\i386\\Win7\\qxl.inf"
+                            virtio_balloon_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\w7\\x86\\balloon.inf"
                         whql.submission:
                             dd_data_logoarch = X86
                             dd_data_logoos = Windows 7
@@ -1189,8 +1191,8 @@ variants:
                             virtio_storage_path = 'F:\viostor\w7\amd64'
                             virtio_network_path = 'F:\NetKVM\w7\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
-                            virtio_qxl_installer_path = pnputil -i -a A:\\amd64\\Win7\\qxl.inf
-                            virtio_balloon_installer_path = pnputil -i -a F:\\Balloon\\w7\\amd64\\balloon.inf
+                            virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
+                            virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\w7\\amd64\\balloon.inf"
                         whql.submission:
                             dd_data_logoarch = AMD64
                             dd_data_logoos = Windows 7
