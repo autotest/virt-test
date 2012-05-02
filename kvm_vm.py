@@ -434,7 +434,7 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("drive", name)
                 format = "none"
                 index = None
-            elif format.startswith("scsi-"):
+            elif format and format.startswith("scsi-"):
                 # handles scsi-{hd, cd, disk, block, generic} targets
                 blkdev_id = "virtio-scsi%s" % index
                 dev += " -device %s,bus=virtio_scsi_pci.0" % format
