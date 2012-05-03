@@ -609,7 +609,11 @@ variants:
         cdrom_get_cdrom_cmd = "echo list volume > check_cdrom && echo exit >> check_cdrom && diskpart /s check_cdrom"
         cdrom_check_cdrom_pattern = "\d\s+(\w).*CD-ROM"
         cdrom_test_cmd = "dir %s:\"
-
+        unattended_install:
+            dump_path = C:\Windows\Memory.dmp
+            analyze_cmd = E:\autoit3.exe E:\dump_control.au3
+            sub_type = nmi_bsod_catch
+            rename_error_image = yes
         unattended_install.cdrom, whql.support_vm_install:
             timeout = 7200
             boot_once = d
