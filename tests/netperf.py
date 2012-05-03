@@ -1,9 +1,22 @@
 import logging, os, commands, sys, threading, re, glob
-from autotest.client.shared import error
-from autotest.client import utils
-from autotest.client.virt import aexpect, virt_utils
-from autotest.client.virt import virt_test_utils
-from autotest.server.hosts.ssh_host import SSHHost
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.bin import utils
+from autotest_lib.client.virt import aexpect, virt_utils
+from autotest_lib.client.virt import virt_test_utils
+try:
+    from autotest_lib.server.hosts.ssh_host import SSHHost
+except ImportError:
+    pubkey = "%s/.ssh/id_dsa.pub" % os.environ['HOME']
+    if not os.path.exists(os.path.expandvars(pubkey)):
+        commands.getoutput('yes ""|ssh-keygen -t dsa -q -N ""')
+    def SSHHost(ip, user, port, password):
+        session = virt_utils.wait_for_login("ssh", ip, port, user, password,
+                                            "^\[.*\][\#\$]\s*$")
+        k = open(pubkey, "r")
+        session.cmd('echo "%s" >> ~/.ssh/authorized_keys' % k.read())
+        k.close()
+        session.close()
+
 
 def run_netperf(test, params, env):
     """
