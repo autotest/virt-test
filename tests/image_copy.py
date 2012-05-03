@@ -1,7 +1,11 @@
 import os, logging
 from autotest.client.shared import error
 from autotest.client import utils
+<<<<<<< HEAD
 from virttest import utils_misc, utils_test, data_dir
+=======
+from virttest import utils_misc, data_dir, utils_test
+>>>>>>> virt test: Check windows bsod dump when unattended_install fail.
 
 
 @error.context_aware
@@ -16,11 +20,10 @@ def run_image_copy(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-
-
     vm = env.get_vm(params["main_vm"])
     if vm is not None:
         vm.destroy()
+
     mount_dest_dir = params.get('dst_dir', '/mnt/images')
     if not os.path.exists(mount_dest_dir):
         try:
@@ -73,10 +76,10 @@ def run_image_copy(test, params, env):
         error.context("Copy image '%s' from NFS" % image, logging.info)
         utils.system(cmd)
     finally:
-        sub_type = params.get("sub_type")
-        if sub_type:
+        if params.get("sub_type"):
             error.context("Run sub test '%s'" % sub_type, logging.info)
             params['image_name'] += "-error"
             params['boot_once'] = "c"
             vm.create(params=params)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
+            utils_test.run_virt_sub_test(test, params, env,
+                                         params.get("sub_type"))
