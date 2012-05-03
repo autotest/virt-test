@@ -3,7 +3,7 @@ import sys
 import re
 
 from autotest_lib.client.common_lib import error
-from autotest.client.virt import virt_test_utils
+from autotest_lib.client.virt import virt_test_utils
 
 
 def _get_function(func_name):
