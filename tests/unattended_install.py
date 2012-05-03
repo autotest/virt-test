@@ -623,8 +623,12 @@ class UnattendedInstallConfig(object):
         if self.cdkey:
             # First, replacing the CDKEY
             product_key = doc.getElementsByTagName('ProductKey')[0]
-            key = product_key.getElementsByTagName('Key')[0]
-            key_text = key.childNodes[0]
+            if product_key.getElementsByTagName('Key'):
+                key = product_key.getElementsByTagName('Key')[0]
+                key_text = key.childNodes[0]
+            else:
+                key_text = product_key.childNodes[0]
+
             assert key_text.nodeType == doc.TEXT_NODE
             key_text.data = self.cdkey
         else:
