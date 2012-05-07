@@ -2678,6 +2678,7 @@ whql.support_vm_install, whql.client_install.support_vm:
         orig_img_name = /tmp/orig.iso
         new_img_name = /tmp/new.iso
         cd_mount_cmd = mount %s /mnt
+        cd_umount_cmd = umount /mnt
         cdrom_cd1 = /tmp/orig.iso
 
     - eject_media:
