@@ -431,7 +431,7 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("opt_io_size", opt_io_size)
                 dev += _add_option("physical_block_size", physical_block_size)
                 dev += _add_option("logical_block_size", logical_block_size)
-                dev += _add_option("drive", name)
+                dev += _add_option("drive", blkdev_id)
                 format = "none"
                 index = None
             elif format and format.startswith("scsi-"):
