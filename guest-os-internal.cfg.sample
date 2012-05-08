@@ -585,7 +585,7 @@ variants:
             virtio_network_installer_path = 'help'
             cdrom_mount_point = /tmp/mount/
             floppy_mount_point = /tmp/virtio_win/
-            re_hardware_id = "(PCI.{14,50})\r\n"
+            re_hardware_id = "(PCI.{14,50})\r{0,}\n"
             # specify which driver is in floppy, this parameter is for windows only
             driver_in_floppy = qxl.inf
             # Used to split dirver link from virtio installer path.  Windows guest only
