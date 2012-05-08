@@ -1978,6 +1978,7 @@ class VM(virt_vm.BaseVM):
         Returns string value of spice variable of choice or None
         @param spice_var - spice related variable 'spice_port', ...
         """
+
         return self.spice_options.get(spice_var, None)
 
     @error.context_aware
