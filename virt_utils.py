@@ -4342,246 +4342,53 @@ class MultihostMigration(object):
         new_params["vms"] = " ".join(mig_data.vms_name)
         return new_params
 
+    return cpu_model
 
-    def _check_vms(self, mig_data):
-        """
-        Check if vms are started correctly.
-
-        @param vms: list of vms.
-        @param source: Must be True if is source machine.
-        """
-        logging.info("Try check vms %s" % (mig_data.vms_name))
-        for vm in mig_data.vms_name:
-            if not self.env.get_vm(vm) in mig_data.vms:
-                mig_data.vms.append(self.env.get_vm(vm))
-        for vm in mig_data.vms:
-            logging.info("Check vm %s on host %s" % (vm.name, self.hostid))
-            vm.verify_alive()
-
-        if mig_data.is_src():
-            self._check_vms_source(mig_data)
-        else:
-            self._check_vms_dest(mig_data)
-
-
-    def prepare_for_migration(self, mig_data, migration_mode):
-        """
-        Prepare destination of migration for migration.
-
-        @param mig_data: Class with data necessary for migration.
-        @param migration_mode: Migration mode for prepare machine.
-        """
-        new_params = self._prepare_params(mig_data)
-
-        new_params['migration_mode'] = migration_mode
-        new_params['start_vm'] = 'yes'
-        self.vm_lock.acquire()
-        virt_env_process.process(self.test, new_params, self.env,
-                                 virt_env_process.preprocess_image,
-                                 virt_env_process.preprocess_vm)
-        self.vm_lock.release()
-
-        self._check_vms(mig_data)
-
-
-    def migrate_vms(self, mig_data):
-        """
-        Migrate vms.
-        """
-        if mig_data.is_src():
-            self.migrate_vms_src(mig_data)
-        else:
-            self.migrate_vms_dest(mig_data)
-
-
-    def check_vms(self, mig_data):
-        """
-        Check vms after migrate.
-
-        @param mig_data: object with migration data.
-        """
-        for vm in mig_data.vms:
-            if not guest_active(vm):
-                raise error.TestFail("Guest not active after migration")
-
-        logging.info("Migrated guest appears to be running")
-
-        logging.info("Logging into migrated guest after migration...")
-        for vm in mig_data.vms:
-            session_serial = vm.wait_for_serial_login(timeout=
-                                                      self.login_timeout)
-            #There is sometime happen that system sends some message on
-            #serial console and IP renew command block test. Because
-            #there must be added "sleep" in IP renew command.
-            session_serial.cmd(self.regain_ip_cmd)
-            vm.wait_for_login(timeout=self.login_timeout)
-
-
-    def postprocess_env(self):
-        """
-        Kill vms and delete cloned images.
-        """
-        postprocess_images(self.test.bindir, self.params)
-
-
-    def migrate(self, vms_name, srchost, dsthost, start_work=None,
-                check_work=None, mig_mode="tcp", params_append=None):
-        """
-        Migrate machine from srchost to dsthost. It executes start_work on
-        source machine before migration and executes check_work on dsthost
-        after migration.
-
-        Migration execution progress:
-
-        source host                   |   dest host
-        --------------------------------------------------------
-           prepare guest on both sides of migration
-            - start machine and check if machine works
-            - synchronize transfer data needed for migration
-        --------------------------------------------------------
-        start work on source guests   |   wait for migration
-        --------------------------------------------------------
-                     migrate guest to dest host.
-              wait on finish migration synchronization
-        --------------------------------------------------------
-                                      |   check work on vms
-        --------------------------------------------------------
-                    wait for sync on finish migration
-
-        @param vms_name: List of vms.
-        @param srchost: src host id.
-        @param dsthost: dst host id.
-        @param start_work: Function started before migration.
-        @param check_work: Function started after migration.
-        @param mig_mode: Migration mode.
-        @param params_append: Append params to self.params only for migration.
-        """
-        def migrate_wrap(vms_name, srchost, dsthost, start_work=None,
-                check_work=None, params_append=None):
-            logging.info("Starting migrate vms %s from host %s to %s" %
-                         (vms_name, srchost, dsthost))
-            error = None
-            mig_data = MigrationData(self.params, srchost, dsthost,
-                                     vms_name, params_append)
-            try:
-                try:
-                    if mig_data.is_src():
-                        self.prepare_for_migration(mig_data, None)
-                    elif self.hostid == dsthost:
-                        self.prepare_for_migration(mig_data, mig_mode)
-                    else:
-                        return
-
-                    if mig_data.is_src():
-                        if start_work:
-                            start_work(mig_data)
-
-                    self.migrate_vms(mig_data)
-
-                    timeout = 30
-                    if not mig_data.is_src():
-                        timeout = self.mig_timeout
-                    self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
-                                        'mig_finished', timeout)
-
-                    if mig_data.is_dst():
-                        self.check_vms(mig_data)
-                        if check_work:
-                            check_work(mig_data)
-
-                except:
-                    error = True
-                    raise
-            finally:
-                if not error:
-                    self._hosts_barrier(self.hosts,
-                                        mig_data.mig_id,
-                                        'test_finihed',
-                                        self.finish_timeout)
-
-        def wait_wrap(vms_name, srchost, dsthost):
-            mig_data = MigrationData(self.params, srchost, dsthost, vms_name,
-                                     None)
-            timeout = (self.login_timeout + self.mig_timeout +
-                       self.finish_timeout)
-
-            self._hosts_barrier(self.hosts, mig_data.mig_id,
-                                'test_finihed', timeout)
-
-        if (self.hostid in [srchost, dsthost]):
-            mig_thread = utils.InterruptedThread(migrate_wrap, (vms_name,
-                                                                srchost,
-                                                                dsthost,
-                                                                start_work,
-                                                                check_work,
-                                                                params_append))
-        else:
-            mig_thread = utils.InterruptedThread(wait_wrap, (vms_name,
-                                                             srchost,
-                                                             dsthost))
-        mig_thread.start()
-        return mig_thread
-
-
-    def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
-                      check_work=None, mig_mode="tcp", params_append=None):
-        """
-        Migrate machine from srchost to dsthost and wait for finish.
-        It executes start_work on source machine before migration and executes
-        check_work on dsthost after migration.
-
-        @param vms_name: List of vms.
-        @param srchost: src host id.
-        @param dsthost: dst host id.
-        @param start_work: Function which is started before migration.
-        @param check_work: Function which is started after
-                           done of migration.
-        """
-        self.migrate(vms_name, srchost, dsthost, start_work, check_work,
-                     mig_mode, params_append).join()
-
-
-    def cleanup(self):
-        """
-        Cleanup env after test.
-        """
-        if self.clone_master:
-            self.sync_server.close()
-            self.postprocess_env()
-
-
-    def run(self):
-        """
-        Start multihost migration scenario.
-        After scenario is finished or if scenario crashed it calls postprocess
-        machines and cleanup env.
-        """
-        try:
-            self.migration_scenario()
-
-            self._hosts_barrier(self.hosts, self.hosts, 'all_test_finihed',
-                                self.finish_timeout)
-        finally:
-            self.cleanup()
-
-def get_ip_address_by_interface(ifname):
+def create_x509_dir(path, cacert_subj, server_subj, passphrase, \
+                    secure=False, bits=1024, days=1095):
     """
-    returns ip address by interface
-    @param ifname - interface name
-    @raise NetError - When failed to fetch IP address (ioctl raised IOError.).
+    Creates directory with freshly generated:
+    ca-cart.pem, ca-key.pem, server-cert.pem, server-key.pem,
 
-    Retrieves interface address from socket fd trough ioctl call
-    and transforms it into string from 32-bit packed binary
-    by using socket.inet_ntoa().
+    @param path: defines path to directory which will be created
+    @param cacert_subj: ca-cert.pem subject
+    @param server_key.csr subject
+    @param passphrase - passphrase to ca-key.pem
+    @param secure = False - defines if the server-key.pem will use a passphrase
+    @param bits = 1024: bit length of keys
+    @param days = 1095: cert expiration
 
+    @raise ValueError: openssl not found or rc != 0
+    @raise OSError: if os.makedirs() failes
     """
-    SIOCGIFADDR = 0x8915 # Get interface address <bits/ioctls.h>
-    mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        return socket.inet_ntoa(fcntl.ioctl(
-                    mysocket.fileno(),
-                    SIOCGIFADDR,
-                    struct.pack('256s', ifname[:15]) # ifname to binary IFNAMSIZ == 16
-                )[20:24])
-    except IOError:
-        raise NetError("Error while retrieving IP address from interface %s." % ifname)
+
+    ssl_cmd = os_dep.command("openssl")
+    path = path + os.path.sep # Add separator to the path
+    shutil.rmtree(path, ignore_errors = True)
+    os.makedirs(path)
+
+    server_key = "server-key.pem.secure"
+    if secure:
+        server_key = "server-key.pem"
+
+    cmd_set = [
+    '%s genrsa -des3 -passout pass:%s -out %sca-key.pem %d' % (ssl_cmd,\
+    passphrase, path, bits),
+    '%s req -new -x509 -days %d -key %sca-key.pem -passin pass:%s -out '\
+    '%sca-cert.pem -subj "%s"' \
+    % (ssl_cmd, days, path, passphrase, path, cacert_subj),
+    '%s genrsa -out %s %d' % (ssl_cmd, path + server_key, bits),
+    '%s req -new -key %s -out %s/server-key.csr '\
+    '-subj "%s"' % (ssl_cmd, path + server_key, path, server_subj),
+    '%s x509 -req -passin pass:%s -days %d -in %sserver-key.csr -CA '\
+    '%sca-cert.pem -CAkey %sca-key.pem -set_serial 01 -out %sserver-cert.pem' \
+     % (ssl_cmd, passphrase, days, path, path, path, path),
+    ]
+
+    if not secure:
+        cmd_set.append('%s rsa -in %s -out %sserver-key.pem' \
+        % (ssl_cmd, path + server_key, path))
+
+    for cmd in cmd_set:
+        utils.run(cmd)
+        logging.info(cmd)
