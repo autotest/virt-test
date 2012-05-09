@@ -5,15 +5,17 @@ Requires: binaries remote-viewer, Xorg, netstat
           Use example kickstart RHEL-6-spice.ks
 
 """
-import logging, os
-from virttest.aexpect import ShellStatusError
-from virttest.aexpect import ShellProcessTerminatedError
-from virttest import utils_net, utils_spice, remote
-from autotest.client.shared import error
+import logging, os, time
+from autotest.client.virt.aexpect import ShellCmdError
+from autotest.client.virt import virt_utils
+
+class RVConnectError(Exception):
+    """Exception raised in case that remote-viewer fails to connect"""
+    pass
 
 def send_ticket(client_vm, ticket):
     """
-    sends spice_password trough vm.send_key()
+    sends spice_password trough vm.sendkey()
     @param client_session - vm() object
     @param ticket - use params.get("spice_password")
     """
@@ -21,8 +23,40 @@ def send_ticket(client_vm, ticket):
     for character in ticket:
         client_vm.send_key(character)
 
-    client_vm.send_key("kp_enter")  # send enter
+    client_vm.send_key("kp_enter") # send enter
 
+def wait_timeout(timeout=10):
+    """
+    time.sleep(timeout) + logging.debug(timeout)
+    @param timeout=30
+    """
+    logging.debug("Waiting (timeout=%ss)", timeout)
+    time.sleep(timeout)
+
+def verify_established(client_session, host, port, rv_binary):
+    """
+    Parses netstat output for established connection on host:port
+    @param client_session - vm.wait_for_login()
+    @param host - host ip addr
+    @param port - port for client to connect
+    @param rv_binary - remote-viewer binary
+    """
+    rv_binary = rv_binary.split(os.path.sep)[-1]
+
+    # !!! -n means do not resolve port names
+    cmd = '(netstat -pn 2>&1| grep "^tcp.*:.*%s:%s.*ESTABLISHED.*%s.*")' % \
+        (host, str(port), rv_binary)
+    try:
+        netstat_out = client_session.cmd(cmd)
+        logging.info("netstat output: %s", netstat_out)
+
+    except ShellCmdError:
+        logging.error("Failed to get established connection from netstat")
+        raise RVConnectError()
+
+    else:
+        logging.info("%s connection to %s:%s successful.",
+               rv_binary, host, port)
 
 def print_rv_version(client_session, rv_binary):
     """
@@ -35,6 +69,29 @@ def print_rv_version(client_session, rv_binary):
     logging.info("spice-gtk version: %s",
             client_session.cmd(rv_binary + " --spice-gtk-version"))
 
+def launch_gnome_session(client_session):
+    """
+    Launches gnome session inside client_session
+    @param client_session - vm.wait_fo_login()
+
+    metacity ensures that newly raised window will be active
+    (remote-viewer auth dialog)
+    which is not done by default in pure Xorg
+    """
+    cmd = "nohup gnome-session --display=:0.0 &> /dev/null &"
+    return client_session.cmd(cmd)
+
+def launch_xorg(client_session):
+    """
+    Launches Xorg inside client_session on background
+    @param client_session - vm.wait_for_login()
+    @param kill - killall Xorg before launch
+    """
+    cmd = "Xorg"
+    killall(client_session, cmd)
+    wait_timeout() # Wait for Xorg to exit
+    cmd = "nohup " + cmd + " &> /dev/null &"
+    return client_session.cmd(cmd)
 
 def killall(client_session, pth):
     """
@@ -44,7 +101,6 @@ def killall(client_session, pth):
     """
     execname = pth.split(os.path.sep)[-1]
     client_session.cmd("killall %s &> /dev/null" % execname, ok_status=[0, 1])
-
 
 def launch_rv(client_vm, guest_vm, params):
     """
@@ -57,21 +113,11 @@ def launch_rv(client_vm, guest_vm, params):
     @param params
     """
     rv_binary = params.get("rv_binary", "remote-viewer")
-    host_ip = utils_net.get_host_ip_address(params)
-    test_type = params.get("test_type")
+    host_ip = virt_utils.get_ip_address_by_interface(params.get("bridge"))
     host_port = None
-    full_screen = params.get("full_screen")
     display = params.get("display")
     cmd = rv_binary + " --display=:0.0"
     ticket = None
-    ticket_send = params.get("spice_password_send")
-    qemu_ticket = params.get("qemu_password")
-
-    #If qemu_ticket is set, set the password of the VM using the qemu-monitor
-    if qemu_ticket:
-        guest_vm.monitor.cmd("set_password spice %s" % qemu_ticket)
-        logging.info("Sending to qemu monitor: set_password spice %s"
-                     % qemu_ticket)
 
     client_session = client_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
@@ -80,32 +126,7 @@ def launch_rv(client_vm, guest_vm, params):
         ticket = guest_vm.get_spice_var("spice_password")
 
         if guest_vm.get_spice_var("spice_ssl") == "yes":
-            host_tls_port = guest_vm.get_spice_var("spice_tls_port")
-            host_port = guest_vm.get_spice_var("spice_port")
-            cacert = "%s/%s" % (guest_vm.get_spice_var("spice_x509_prefix"),
-                               guest_vm.get_spice_var("spice_x509_cacert_file"))
-            #cacert subj is in format for create certificate(with '/' delimiter)
-            #remote-viewer needs ',' delimiter. And also is needed to remove
-            #first character (it's '/')
-            host_subj = guest_vm.get_spice_var("spice_x509_server_subj")
-            host_subj = host_subj.replace('/', ',')[1:]
-
-            cmd += " spice://%s?tls-port=%s\&port=%s" % (host_ip, host_tls_port,
-                                                         host_port)
-            cmd += " --spice-ca-file=%s" % cacert
-
-            if params.get("spice_client_host_subject") == "yes":
-                cmd += " --spice-host-subject=\"%s\"" % host_subj
-
-            #client needs cacert file
-            client_session.cmd("rm -rf %s && mkdir -p %s" % (
-                               guest_vm.get_spice_var("spice_x509_prefix"),
-                               guest_vm.get_spice_var("spice_x509_prefix")))
-            remote.copy_files_to(client_vm.get_address(), 'scp',
-                                      params.get("username"),
-                                      params.get("password"),
-                                      params.get("shell_port"),
-                                      cacert, cacert)
+            raise NotImplementedError("spice-ssl")
         else:
             host_port = guest_vm.get_spice_var("spice_port")
             cmd += " spice://%s?port=%s" % (host_ip, host_port)
@@ -115,55 +136,27 @@ def launch_rv(client_vm, guest_vm, params):
 
     else:
         raise Exception("Unsupported display value")
-
-    # Check to see if the test is using the full screen option.
-    if full_screen == "yes":
-        logging.info("Remote Viewer Set to use Full Screen")
-        cmd += " --full-screen"
-
-
     cmd = "nohup " + cmd + " &> /dev/null &" # Launch it on background
 
     # Launching the actual set of commands
-    try:
-        print_rv_version(client_session, rv_binary)
-    except ShellStatusError, ShellProcessTerminatedError:
-        # Sometimes It fails with Status error, ingore it and continue.
-        # It's not that important to have printed versions in the log.
-        logging.debug("Ignoring a Status Exception that occurs from calling "
-                      "print versions of remote-viewer or spice-gtk")
+    launch_xorg(client_session)
+    wait_timeout() # Wait for Xorg to start up
+    launch_gnome_session(client_session)
+    wait_timeout() # Wait till gnome-session starts up
+
+    print_rv_version(client_session, rv_binary)
 
     logging.info("Launching %s on the client (virtual)", cmd)
-    try:
-        client_session.cmd(cmd)
-    except ShellStatusError:
-        logging.debug("Ignoring a status exception, will check connection of"
-                      "remote-viewer later")
+    client_session.cmd(cmd)
 
     # client waits for user entry (authentication) if spice_password is set
-    # use qemu monitor password if set, else check if the normal password is set
-    if qemu_ticket:
-        # Wait for remote-viewer to launch
-        utils_spice.wait_timeout(5)
-        send_ticket(client_vm, qemu_ticket)
-    elif ticket:
-        if ticket_send:
-            ticket = ticket_send
-
-        utils_spice.wait_timeout(5)  # Wait for remote-viewer to launch
+    if ticket:
+        wait_timeout() # Wait for remote-viewer to launch
         send_ticket(client_vm, ticket)
-    utils_spice.wait_timeout(5)  # Wait for conncetion to establish
-    try:
-        utils_spice.verify_established(client_vm, host_ip, host_port, rv_binary)
-    except utils_spice.RVConnectError:
-        if test_type == "negative":
-            logging.info("remote-viewer connection failed as expected")
-        else:
-            raise error.TestFail("remote-viewer connection failed")
 
-    #prevent from kill remote-viewer after test finish
-    cmd = "disown -ar"
-    client_session.cmd(cmd)
+    wait_timeout() # Wait for conncetion to establish
+    verify_established(client_session, host_ip, host_port, rv_binary)
+
 
 
 def run_rv_connect(test, params, env):
@@ -174,7 +167,7 @@ def run_rv_connect(test, params, env):
 
     The plan is to support remote-viewer at first place
 
-    @param test: QEMU test object.  @param params: Dictionary with the test parameters.
+    @param test: KVM test object.  @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
 
@@ -187,8 +180,6 @@ def run_rv_connect(test, params, env):
     client_vm.verify_alive()
     client_session = client_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
-
-    utils_spice.wait_timeout(15)
 
     launch_rv(client_vm, guest_vm, params)
 
