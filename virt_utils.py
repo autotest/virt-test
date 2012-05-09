@@ -6,11 +6,13 @@ KVM test utility functions.
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
 import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect, tarfile
-import struct, shutil, glob
-from autotest_lib.client.bin import utils, os_dep
-from autotest_lib.client.common_lib import error, logging_config
-from autotest_lib.client.common_lib import git
-import rss_client, aexpect, virt_vm
+import struct, shutil, glob, HTMLParser, urllib
+from autotest.client import utils, os_dep
+from autotest.client.shared import error, logging_config
+from autotest.client.shared import logging_manager, git
+from autotest.client.virt import virt_env_process, virt_vm
+from autotest.client.shared.syncdata import SyncData, SyncListenServer
+import rss_client, aexpect
 import platform
 
 try:
@@ -585,16 +587,18 @@ def get_image_filename(params, root_dir):
         try:
             image_name = matching_images[indirect_image_select]
         except IndexError:
-            raise VMDeviceError("No matching disk found for name = '%s', "
-                                "matching = '%s' and selector = '%s'" %
-                                (re_name, matching_images,
-                                 indirect_image_select))
+            raise virt_vm.VMDeviceError("No matching disk found for "
+                                        "name = '%s', matching = '%s' and "
+                                        "selector = '%s'" %
+                                        (re_name, matching_images,
+                                         indirect_image_select))
         for protected in params.get('indirect_image_blacklist', '').split(' '):
             if re.match(protected, image_name):
-                raise VMDeviceError("Matching disk is in blacklist. name = '%s"
-                                    "', matching = '%s' and selector = '%s'" %
-                                    (re_name, matching_images,
-                                     indirect_image_select))
+                raise virt_vm.VMDeviceError("Matching disk is in blacklist. "
+                                            "name = '%s', matching = '%s' and "
+                                            "selector = '%s'" %
+                                            (re_name, matching_images,
+                                             indirect_image_select))
     image_format = params.get("image_format", "qcow2")
     if params.get("image_raw_device") == "yes":
         return image_name
@@ -787,7 +791,7 @@ def check_image(params, root_dir):
                         logging.error("[stderr] %s", e_line)
                     if params.get("backup_image_on_check_error", "no") == "yes":
                         backup_image(params, root_dir, 'backup', False)
-                    raise VMImageCheckError(image_filename)
+                    raise virt_vm.VMImageCheckError(image_filename)
                 # Leaked clusters, they are known to be harmless to data
                 # integrity
                 elif cmd_result.exit_status == 3:
