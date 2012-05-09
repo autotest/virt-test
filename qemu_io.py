@@ -1,8 +1,8 @@
 import re, logging
-from autotest.client.shared import error
-from autotest.client import utils
-import virt_utils, aexpect
-
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.bin import utils
+import aexpect
+import virt_utils
 
 class QemuIOParamError(Exception):
     """
@@ -74,7 +74,6 @@ class QemuIO(object):
             qemu_io_cmd += self.image_name
 
         return qemu_io_cmd
-
 
     def cmd_output(self, command):
         """
@@ -169,7 +168,6 @@ class QemuIOSystem(QemuIO):
         @param timeout: timeout for execute the command
         """
         qemu_io_cmd = self.qemu_io_cmd
-        print qemu_io_cmd
         if command:
             qemu_io_cmd += " -c '%s'" % command
 
