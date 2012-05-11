@@ -5,7 +5,7 @@ import os, logging, time, re, random, commands
 from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
 from autotest_lib.client.bin import kvm_control
-from autotest_lib.client.virt import virt_utils
+import virt_utils
 
 
 class THPError(Exception):
