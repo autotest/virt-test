@@ -57,7 +57,6 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
     @param timeout: Time to wait before giving up.
     @param serial: Whether to use a serial connection instead of a remote
             (ssh, rss) one.
-
     @return: A shell session object.
     """
     login_type = 'remote'
@@ -270,7 +269,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             elif mig_protocol == "unix":
                 uri = "unix:%s" % dest_vm.migration_file
             elif mig_protocol == "exec":
-                uri = 'exec:nc localhost %s' % dest_vm.migration_port
+                uri = '"exec:nc localhost %s"' % dest_vm.migration_port
 
             if offline:
                 vm.monitor.cmd("stop")
@@ -392,6 +391,7 @@ def start_windows_service(session, service, timeout=120):
         time.sleep(1)
     else:
         raise error.TestError("Could not start service '%s'" % service)
+
 
 def get_time(session, time_command, time_filter_re, time_format):
     """
@@ -842,12 +842,12 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                 mig_timeout = float(params.get("mig_timeout", "3600"))
                 mig_protocol = params.get("migration_protocol", "tcp")
                 if kvm_test:
-                    bg = virt_utils.Thread(session.cmd_output,
+                    bg = utils.InterruptedThread(session.cmd_output,
                               kwargs={'cmd': "bin/autotest tests/kvm/control",
                                      'timeout': timeout,
                                      'print_func': logging.info})
                 else:
-                    bg = virt_utils.Thread(session.cmd_output,
+                    bg = utils.InterruptedThread(session.cmd_output,
                                       kwargs={'cmd': "bin/autotest control",
                                               'timeout': timeout,
                                               'print_func': logging.info})
