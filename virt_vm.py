@@ -759,7 +759,7 @@ class BaseVM(object):
                 raise VMDeadKernelCrashError(match.group(0))
 
 
-    def verify_illegal_instructonn(self):
+    def verify_illegal_instruction(self):
         """
         Find illegal instruction code on VM serial console output.
 
@@ -871,14 +871,15 @@ class BaseVM(object):
 
 
     @error.context_aware
-    def copy_files_to(self, host_path, guest_path, nic_index=0, verbose=False,
-                      timeout=COPY_FILES_TIMEOUT):
+    def copy_files_to(self, host_path, guest_path, nic_index=0, limit="",
+                      verbose=False, timeout=COPY_FILES_TIMEOUT):
         """
         Transfer files to the remote host(guest).
 
         @param host_path: Host path
         @param guest_path: Guest path
         @param nic_index: The index of the NIC to connect to.
+        @param limit: Speed limit of file transfer.
         @param verbose: If True, log some stats using logging.debug (RSS only)
         @param timeout: Time (seconds) before giving up on doing the remote
                 copy.
@@ -893,12 +894,12 @@ class BaseVM(object):
                         (self.name, address,
                         virt_utils.generate_random_string(4)))
         virt_utils.copy_files_to(address, client, username, password, port,
-                                host_path, guest_path, log_filename, verbose,
-                                timeout)
+                                 host_path, guest_path, limit, log_filename,
+                                 verbose, timeout)
 
 
     @error.context_aware
-    def copy_files_from(self, guest_path, host_path, nic_index=0,
+    def copy_files_from(self, guest_path, host_path, nic_index=0, limit="",
                         verbose=False, timeout=COPY_FILES_TIMEOUT):
         """
         Transfer files from the guest.
@@ -906,6 +907,7 @@ class BaseVM(object):
         @param host_path: Guest path
         @param guest_path: Host path
         @param nic_index: The index of the NIC to connect to.
+        @param limit: Speed limit of file transfer.
         @param verbose: If True, log some stats using logging.debug (RSS only)
         @param timeout: Time (seconds) before giving up on doing the remote
                 copy.
@@ -920,8 +922,8 @@ class BaseVM(object):
                         (self.name, address,
                         virt_utils.generate_random_string(4)))
         virt_utils.copy_files_from(address, client, username, password, port,
-                                  guest_path, host_path, log_filename,
-                                  verbose, timeout)
+                                   guest_path, host_path, limit, log_filename,
+                                   verbose, timeout)
 
 
     @error.context_aware
