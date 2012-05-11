@@ -1106,7 +1106,7 @@ class VM(virt_vm.BaseVM):
             vendor = params.get("cpu_model_vendor")
             family = params.get("family")
             qemu_cmd += add_cpu_flags(help, cpu_model, flags,
-                                      vendor,family)
+                                      vendor, family)
 
 
         for cdrom in params.objects("cdroms"):
@@ -1133,10 +1133,11 @@ class VM(virt_vm.BaseVM):
                 else:
                     index = None
                 if has_option(help, "device"):
-                     if not cd_format.startswith("scsi-"):
-                         cd_format="ide"
-                     qemu_cmd += add_drive(help, iso, index,cd_format, media="cdrom",
-                                          ide_bus=ide_bus, ide_unit=ide_unit)
+                    if not cd_format.startswith("scsi-"):
+                        cd_format = "ide"
+                    qemu_cmd += add_drive(help, iso, index, cd_format,
+                                          media="cdrom", ide_bus=ide_bus,
+                                          ide_unit=ide_unit)
                 else:
                     qemu_cmd += add_cdrom(help, iso, index)
                 if ide_unit == 1:
@@ -1596,6 +1597,7 @@ class VM(virt_vm.BaseVM):
             self.monitors = []
             for monitor_name in params.objects("monitors"):
                 monitor_params = params.object_params(monitor_name)
+
                 # Wait for monitor connection to succeed
                 end_time = time.time() + timeout
                 while time.time() < end_time:
