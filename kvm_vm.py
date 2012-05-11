@@ -1108,14 +1108,9 @@ class VM(virt_vm.BaseVM):
 
         if cpu_model:
             vendor = params.get("cpu_model_vendor")
-            flags = params.get("cpu_model_flags")
-            qemu_cmd += add_cpu_flags(help, cpu_model, vendor, flags)
-
-        cpu_model = params.get("cpu_model")
-        if cpu_model:
-            vendor = params.get("cpu_model_vendor")
-            flags = params.get("cpu_model_flags")
-            qemu_cmd += add_cpu_flags(help, cpu_model, vendor, flags)
+            family = params.get("family")
+            qemu_cmd += add_cpu_flags(help, cpu_model, flags,
+                                      vendor, family)
 
         machine_type = params.get("machine_type")
         if machine_type:
@@ -1142,9 +1137,28 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += " -device virtio-scsi,id=virtio_scsi_pci%d" % i
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
-                qemu_cmd += add_cdrom(help, virt_utils.get_path(root_dir, iso),
-                                      cdrom_params.get("drive_index"),
-                                      cd_format, bus)
+                iso = virt_utils.get_path(root_dir, iso)
+                if params.get("index_enable") == "yes":
+                    drive_index = cdrom_params.get("drive_index")
+                    if drive_index:
+                        index = drive_index
+                    else:
+                        index_global = get_index(index_global)
+                        index = str(index_global)
+                        index_global += 1
+                else:
+                    index = None
+                if has_option(help, "device"):
+                    if not cd_format.startswith("scsi-"):
+                        cd_format = "ide"
+                    qemu_cmd += add_drive(help, iso, index, cd_format,
+                                          media="cdrom", ide_bus=ide_bus,
+                                          ide_unit=ide_unit)
+                else:
+                    qemu_cmd += add_cdrom(help, iso, index)
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
 
         # We may want to add {floppy_otps} parameter for -fda
         # {fat:floppy:}/path/. However vvfat is not usually recommended.
@@ -1557,6 +1571,7 @@ class VM(virt_vm.BaseVM):
             self.monitors = []
             for monitor_name in params.objects("monitors"):
                 monitor_params = params.object_params(monitor_name)
+
                 # Wait for monitor connection to succeed
                 end_time = time.time() + timeout
                 while time.time() < end_time:
