@@ -1212,7 +1212,7 @@ variants:
                 pci_model = rtl8139
                 match_string = "8139"
             - nic_virtio:
-                #TODO: Confirm this works with libvirt
+                only virtio_nic virtio_blk
                 pci_model = virtio-net-pci
                 match_string = "Virtio network device"
             - nic_e1000:
