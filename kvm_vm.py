@@ -2031,11 +2031,11 @@ class VM(virt_vm.BaseVM):
         self.tapfds.append(tapfd)
         tapfd_id = virt_utils.generate_random_id()
         self.monitor.getfd(tapfd, tapfd_id)
-        attach_cmd = "netdev_add tap,id=%s,fd=%s" % (netdev_id, tapfd_id)
+        attach_cmd = "netdev_add type=tap,id=%s,fd=%s" % (netdev_id, tapfd_id)
         if extra_params is not None:
             attach_cmd += ",%s" % extra_params
         error.context("adding netdev id %s to vm %s" % (netdev_id, self.name))
-        self.monitor.cmd(attach_cmd)
+        self.monitor.send_args_cmd(attach_cmd, convert=False)
 
         network_info = self.monitor.info("network")
         if netdev_id not in network_info:
@@ -2052,7 +2052,7 @@ class VM(virt_vm.BaseVM):
         """
         error.context("removing netdev id %s from vm %s" %
                       (netdev_id, self.name))
-        self.monitor.cmd("netdev_del %s" % netdev_id)
+        self.monitor.send_args_cmd("netdev_del id=%s" % netdev_id)
 
         network_info = self.monitor.info("network")
         if netdev_id in network_info:
@@ -2102,7 +2102,7 @@ class VM(virt_vm.BaseVM):
         nic_info['romfile'] = romfile
 
         error.context("adding nic %s to vm %s" % (nic_info, self.name))
-        self.monitor.cmd(device_add_cmd)
+        self.monitor.send_args_cmd(device_add_cmd, convert=False)
 
         qtree = self.monitor.info("qtree")
         if not nic_id in qtree:
@@ -2123,8 +2123,8 @@ class VM(virt_vm.BaseVM):
         @wait: Time test will wait for the guest to unplug the device
         """
         error.context("")
-        nic_del_cmd = "device_del %s" % nic_info['nic_id']
-        self.monitor.cmd(nic_del_cmd)
+        nic_del_cmd = "device_del id=%s" % nic_info['nic_id']
+        self.monitor.send_args_cmd(nic_del_cmd)
         if wait:
             logging.info("waiting for the guest to finish the unplug")
             if not virt_utils.wait_for(lambda: nic_info['nic_id'] not in
