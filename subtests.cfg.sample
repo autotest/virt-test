@@ -1282,7 +1282,7 @@ variants:
                 match_string = "8139"
             - nic_virtio:
                 only virtio_nic virtio_blk
-                pci_model = virtio
+                pci_model = virtio-net-pci
                 match_string = "Virtio network device"
             - nic_e1000:
                 no Windows
