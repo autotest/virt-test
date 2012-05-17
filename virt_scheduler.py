@@ -75,7 +75,7 @@ class scheduler:
                 env_filename = os.path.join(self.bindir, self_dict["env"])
                 env = virt_utils.Env(env_filename)
                 for obj in env.values():
-                    if isinstance(obj, virt_vm.VM):
+                    if isinstance(obj, virt_vm.BaseVM):
                         obj.destroy()
                     elif isinstance(obj, aexpect.Spawn):
                         obj.close()
@@ -104,9 +104,11 @@ class scheduler:
 
         while True:
             # Wait for a message from a worker
-            r, w, x = select.select(self.w2s_r, [], [])
+            r, w, x = select.select(self.w2s_r, [], [], float(2))
 
             someone_is_ready = False
+            if idle_workers:
+                someone_is_ready = True
 
             for pipe in r:
                 worker_index = self.w2s_r.index(pipe)
@@ -125,6 +127,7 @@ class scheduler:
                     test = self.tests[test_index]
                     status = int(eval(msg[2]))
                     test_status[test_index] = ("fail", "pass")[status]
+
                     # If the test failed, mark all dependent tests as "failed" too
                     if not status:
                         for i, other_test in enumerate(self.tests):
@@ -141,7 +144,7 @@ class scheduler:
             if not someone_is_ready:
                 continue
 
-            for worker in idle_workers[:]:
+            for worker in idle_workers:
                 # Find a test for this worker
                 test_found = False
                 for i, test in enumerate(self.tests):
