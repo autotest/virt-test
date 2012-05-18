@@ -423,6 +423,19 @@ class HumanMonitor(Monitor):
         return self.cmd("%s %s %s" % (set_link_cmd, name, status))
 
 
+    def live_snapshot(self, device, snapshot_file, snapshot_format="qcow2"):
+        """
+        Do live snapshot.
+        @param device: device id of base image
+        @param snapshot_file: image file name of snapshot
+        @param snapshot_format: image format of snapshot
+        """
+        cmd = "snapshot_blkdev %s %s %s" %\
+              (device, snapshot_file, snapshot_format)
+        return self.cmd(cmd)
+
+
+
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
         """
         Migrate.
@@ -1038,3 +1051,15 @@ class QMPMonitor(Monitor):
         val = value * 1000000000
         args = {"value": val}
         return self.cmd("migrate_set_downtime", args)
+
+    def live_snapshot(self, device, snapshot_file, snapshot_format="qcow2"):
+        """
+        Do live snapshot.
+        @param device: device id of base image
+        @param snapshot_file: image file name of snapshot
+        @param snapshot_format: image format of snapshot
+        """
+        args = {"device": device,
+                "snapshot-file": snapshot_file,
+                "format": snapshot_format}
+        return self.cmd("blockdev-snapshot-sync", args)
