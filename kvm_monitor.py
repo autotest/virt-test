@@ -670,7 +670,7 @@ class QMPMonitor(Monitor):
 
     # Public methods
 
-    def cmd(self, cmd, args=None, timeout=CMD_TIMEOUT, debug=True):
+    def cmd(self, cmd, args=None, timeout=CMD_TIMEOUT, debug=True, fd=None):
         """
         Send a QMP monitor command and return the response.
 
@@ -680,6 +680,8 @@ class QMPMonitor(Monitor):
         @param cmd: Command to send
         @param args: A dict containing command arguments, or None
         @param timeout: Time duration to wait for response
+        @param debug: Whether to print the commands being sent and responses
+        @param fd: file object or file descriptor to pass
         @return: The response received
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
@@ -702,7 +704,13 @@ class QMPMonitor(Monitor):
             id = virt_utils.generate_random_string(8)
             cmdobj = self._build_cmd(cmd, args, id)
             logging.debug("Send command: %s" % cmdobj)
-            self._send(json.dumps(cmdobj) + "\n")
+            if fd is not None:
+                if self._passfd is None:
+                    self._passfd = virt_passfd_setup.import_passfd()
+                # If command includes a file descriptor, use passfd module
+                self._passfd.sendfd(self._socket, fd, json.dumps(cmdobj) + "\n")
+            else:
+                self._send(json.dumps(cmdobj) + "\n")
             # Read response
             r = self._get_response(id, timeout)
             if r is None:
@@ -1063,3 +1071,14 @@ class QMPMonitor(Monitor):
                 "snapshot-file": snapshot_file,
                 "format": snapshot_format}
         return self.cmd("blockdev-snapshot-sync", args)
+
+    def getfd(self, fd, name):
+        """
+        Receives a file descriptor
+
+        @param fd: File descriptor to pass to QEMU
+        @param name: File descriptor name (internal to QEMU)
+        @return: The command's output
+        """
+        args = {"fdname": name}
+        return self.cmd("getfd", args, fd=fd)
