@@ -774,6 +774,17 @@ variants:
             guest_test.autoit.sandra.run:
                 dst_rsc_path = "C:\sandra\run_sandra_64.au3"
 
+        live_snapshot_chain:
+            md5_cmd = "cd C:\test && D:\coreutils\md5sum.exe %s"
+            file_create_cmd = "D:\coreutils\DummyCMD.exe C:\test\%s 1048576 1" 
+            file_dir = "C:\test"
+            dir_create_cmd = "mkdir %s; dir"
+            file_check_cmd = "dir %s"
+            check_alive_cmd = "dir"
+        live_snapshot_chain.update:
+            post_snapshot_cmd = {shell:D:\whql\WUInstall.exe /install}
+        live_snapshot_chain.oops:
+            post_snapshot_cmd = {monitor:nmi 0}
 
         variants:
             - WinXP:
@@ -826,6 +837,8 @@ variants:
                             driver_install_cmd_balloon = cmd /c I:\\AutoIt3_x64.exe I:\\virtio_driver_install.au3 pnputil "-i -a K:\\Balloon\\2k8\\amd64\\Balloon.inf"
                             driver_install_cmd_block = cmd /c I:\\AutoIt3_x64.exe I:\\virtio_driver_install.au3 I:\devcon\wlh_x86\devcon.exe ' install K:\\viostor\\xp\\x86\\viostor.inf hwidcmd '
                             driver_install_cmd_nic = cmd /c I:\\AutoIt3.exe I:\\virtio_driver_install.au3 I:\devcon\wlh_x86\devcon.exe ' install K:\\NetKVM\\xp\\x86\\netkvm.inf hwidcmd '
+                        live_snapshot_chain.update:
+                            post_snapshot_cmd = {shell:cmd /c D:\wua_update.exe && cmd /c net stop wuauserv && cmd /c net start wuauserv && D:\whql\WUInstall.exe /install}
 
 
             - Win2003:

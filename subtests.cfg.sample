@@ -3111,6 +3111,66 @@ variants:
                 transfer_type = remote
                 tmp_dir = /tmp/
 
+    - live_snapshot_chain:
+        only qcow2
+        type = live_snapshot_chain
+        snapshot_chain = "image1 sn1"
+        file_create_cmd = "dd if=/dev/urandom of=/home/test/%s count=1024 bs=4k conv=fsync"
+        md5_cmd = md5sum /home/test/%s
+        file_create =
+        check_base_image =
+        image_name_sn1 = "sn1"
+        file_check_cmd = "ls %s"
+        file_dir = "/home/test"
+        dir_create_cmd = "mkdir %s; ls ."
+        check_alive_cmd = "ls"
+        kill_vm = yes
+        remove_snapshot_images = yes
+        variants:
+            - pause:
+                file_create = 
+                pre_snapshot_cmd = {monitor:stop}
+                post_snapshot_cmd = {monitor:cont}
+            - update:
+                post_snapshot_cmd = {shell:yum update -y}
+                check_base_image_image1 = yes
+            - long_chain:
+                snapshot_chain = "image1 sn1 sn2 sn3 sn4 sn5 sn6 sn7 sn8 sn9 sn10 sn11 sn12 sn13 sn14 sn15 sn16 sn17 sn18 sn19 sn20"
+                image_name_sn1 = "sn1"
+                image_name_sn2 = "sn2"
+                image_name_sn3 = "sn3"
+                image_name_sn4 = "sn4"
+                image_name_sn5 = "sn5"
+                image_name_sn6 = "sn6"
+                image_name_sn7 = "sn7"
+                image_name_sn8 = "sn8"
+                image_name_sn9 = "sn9"
+                image_name_sn10 = "sn10"
+                image_name_sn11 = "sn11"
+                image_name_sn12 = "sn12"
+                image_name_sn13 = "sn13"
+                image_name_sn14 = "sn14"
+                image_name_sn15 = "sn15"
+                image_name_sn16 = "sn16"
+                image_name_sn17 = "sn17"
+                image_name_sn18 = "sn18"
+                image_name_sn19 = "sn19"
+                image_name_sn20 = "sn20"
+                file_create = yes
+                check_base_image_image1 = yes
+            - check:
+                snapshot_chain = "image1 sn1 sn2"
+                image_name_sn1 = "sn1"
+                image_name_sn2 = "sn2"
+                file_create = yes
+                check_base_image = yes
+            - oops:
+                post_snapshot_cmd = {shell_no_reply:echo c > /proc/sysrq-trigger}
+                check_base_image = yes
+                operate_timeout = 10
+                check_alive_cmd = ""
+
+
     - performance:
         type = performance
         kill_vm = yes
