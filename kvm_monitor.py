@@ -694,13 +694,15 @@ class QMPMonitor(Monitor):
         @param timeout: Time duration to wait for response
         @param debug: Whether to print the commands being sent and responses
         @param fd: file object or file descriptor to pass
+
         @return: The response received
+
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if no response is received
         @raise QMPCmdError: Raised if the response is an error message
-                (the exception's args are (cmd, args, data) where data is the
-                error data)
+                            (the exception's args are (cmd, args, data)
+                             where data is the error data)
         """
         if debug:
             logging.debug("(monitor %s) Sending command '%s'",
@@ -715,7 +717,6 @@ class QMPMonitor(Monitor):
             # Send command
             id = virt_utils.generate_random_string(8)
             cmdobj = self._build_cmd(cmd, args, id)
-            logging.debug("Send command: %s" % cmdobj)
             if fd is not None:
                 if self._passfd is None:
                     self._passfd = virt_passfd_setup.import_passfd()
@@ -1102,3 +1103,16 @@ class QMPMonitor(Monitor):
                 "snapshot-file": snapshot_file,
                 "format": snapshot_format}
         return self.cmd("blockdev-snapshot-sync", args)
+
+
+    def getfd(self, fd, name):
+        """
+        Receives a file descriptor
+
+        @param fd: File descriptor to pass to QEMU
+        @param name: File descriptor name (internal to QEMU)
+
+        @return: The response to the command
+        """
+        args = {"fdname": name}
+        return self.cmd("getfd", args, fd=fd)
