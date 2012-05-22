@@ -3519,7 +3519,7 @@ def install_host_kernel(job, params):
         patch_list = params.get('host_kernel_patch_list')
         if patch_list:
             patch_list = patch_list.split()
-        kernel_config = params.get('host_kernel_config')
+        kernel_config = params.get('host_kernel_config', None)
 
         repodir = os.path.join("/tmp", 'kernel_src')
         r = git.get_repo(uri=repo, branch=branch, destination_dir=repodir,
@@ -3527,7 +3527,8 @@ def install_host_kernel(job, params):
         host_kernel = job.kernel(r)
         if patch_list:
             host_kernel.patch(patch_list)
-        host_kernel.config(kernel_config)
+        if kernel_config:
+            host_kernel.config(kernel_config)
         host_kernel.build()
         host_kernel.install()
         host_kernel.boot()
