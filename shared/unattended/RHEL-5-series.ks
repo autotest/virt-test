@@ -22,15 +22,27 @@ KVM_TEST_LOGGING
 @base
 @development-libs
 @development-tools
+@gnome-desktop
+@base-x
+@core
+xorg-x11-utils
+xorg-x11-server-Xnest
 kexec-tools
 watchdog
+gcc
+patch
+make
+nc
 ntp
+redhat-lsb
 
-%post --interpreter /usr/bin/python
-import os
-os.system('dhclient')
-os.system('chkconfig sshd on')
-os.system('iptables -F')
-os.system('echo 0 > /selinux/enforce')
-os.system('echo Post set up finished > /dev/ttyS0')
-os.system('echo Post set up finished > /dev/hvc0')
+%post
+echo "OS install is completed" > /dev/ttyS0
+dhclient
+chkconfig sshd on
+iptables -F
+echo 0 > /selinux/enforce
+sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0
+%end
