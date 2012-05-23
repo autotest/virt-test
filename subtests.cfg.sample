@@ -3542,9 +3542,9 @@ variants:
 # URLs/Remote links for RHEL installation and update, put them together.
 unattended_install.url:
     RHEL.6.3.64:
-        url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-6/6/Server/x86_64/os
+        url = http://tree.englab.nay.redhat.com/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/x86_64/os/ 
     RHEL.6.3.32:
-        url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-6/6/Server/i386/os
+        url = http://tree.englab.nay.redhat.com/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/i386/os/ 
     RHEL.6.2.64:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.2/Server/x86_64/os/
     RHEL.6.2.32:
@@ -3578,9 +3578,11 @@ unattended_install.nfs:
     nfs_server = nfs.englab.nay.redhat.com
     nfs_dir = /pub/rhel/released/
     RHEL.6.3.64:
-        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6/Server/x86_64/os
+        nfs_server = tree.englab.nay.redhat.com
+        nfs_dir = /tree/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/x86_64/os
     RHEL.6.3.32:
-        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6/Server/i386/os
+        nfs_server = tree.englab.nay.redhat.com
+        nfs_dir = /tree/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/i386/os
     RHEL.6.2.64:
         nfs_dir += RHEL-6/6.2/Server/x86_64/os
     RHEL.6.2.32:
@@ -3606,9 +3608,11 @@ unattended_install.nfs:
     RHEL.4.9.32:
         nfs_dir += RHEL-4/U9/AS/i386/tree
     RHEL.3.9.64:
-        nfs_dir += RHEL-3/U9/AS/x86_64/tree
+        nfs_server = tree.englab.nay.redhat.com
+        nfs_dir = /tree/pub/rhel/released/RHEL-3/U9/x86_64/os/
     RHEL.3.9.32:
-        nfs_dir += RHEL-3/U9/AS/i386/tree
+        nfs_server = tree.englab.nay.redhat.com
+        nfs_dir = /tree/pub/rhel/released/RHEL-3/U9/i386/os/
 
 rh_kernel_update, kexec:
     RHEL.6.3.64:
