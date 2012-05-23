@@ -1310,6 +1310,10 @@ class VM(virt_vm.BaseVM):
         if extra_params:
             qemu_cmd += " %s" % extra_params
 
+        bios_path = params.get("bios_path")
+        if bios_path:
+            qemu_cmd += " -bios %s" % bios_path
+
         if has_option(help, "enable-kvm") and params.get("enable-kvm",
                                                          "yes") == "yes":
             qemu_cmd += " -enable-kvm "
@@ -1480,7 +1484,7 @@ class VM(virt_vm.BaseVM):
                         virt_utils.set_mac_address(self.instance, vlan, mac)
                     else:
                         mac = virt_utils.generate_mac_address(self.instance, vlan)
- 
+
                     if nic_params.get("ip"):
                         self.address_cache[mac] = nic_params.get("ip")
                         logging.debug("(address cache) Adding static cache entry: "
