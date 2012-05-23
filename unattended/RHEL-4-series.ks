@@ -46,10 +46,6 @@ make
 make install
 ln -sf /usr/local/bin/python /usr/bin/python
 sleep 10
-cat > post_script.py <<ABC
-import os
-os.system("echo 'Post set up finished' > /dev/ttyS0")
-os.system('echo Post set up finished > /dev/hvc0')
-ABC
-python post_script.py
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0
 %end
