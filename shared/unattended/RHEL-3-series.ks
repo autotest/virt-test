@@ -21,12 +21,21 @@ skipx
 @ base
 @ development-libs
 @ development-tools
+gcc
+patch
+make
+nc
 ntp
+redhat-lsb
 
-%post --interpreter /usr/bin/python
-import os
-os.system('/sbin/ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up')
-os.system('/sbin/route add default gw 10.0.2.2')
-os.system('chkconfig sshd on')
-os.system('echo Post set up finished > /dev/ttyS0')
-os.system('echo Post set up finished > /dev/hvc0')
+%post
+echo "OS install is completed" > /dev/ttyS0
+cd home
+echo "s0:2345:respawn:/sbin/agetty -L -f /etc/issue 115200 ttyS0 vt100" >> /etc/inittab
+echo "ttyS0" >> /etc/securetty
+dhclient
+chkconfig sshd on
+sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0
+%end
