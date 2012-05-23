@@ -662,7 +662,11 @@ class VM(virt_vm.BaseVM):
                           "tls-port=%s" % t_port)
 
                 prefix = optget("spice_x509_prefix")
-                if optget("spice_gen_x509") == "yes":
+                if (os.path.exists(prefix) is False
+                    and optget("spice_gen_x509") == "yes"):
+                    # Generate spice_x509_* is not always necessary,
+                    # Regenerate them will make your existing VM
+                    # not longer accessiable via encrypted spice.
                     c_subj = optget("spice_x509_cacert_subj")
                     s_subj = optget("spice_x509_server_subj")
                     passwd = optget("spice_x509_key_password")
