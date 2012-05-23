@@ -1353,9 +1353,13 @@ class VM(virt_vm.BaseVM):
         if extra_params:
             qemu_cmd += " %s" % extra_params
 
-        if (has_option(help, "enable-kvm")
-            and params.get("enable-kvm", "yes") == "yes"):
-            qemu_cmd += " -enable-kvm"
+        bios_path = params.get("bios_path")
+        if bios_path:
+            qemu_cmd += " -bios %s" % bios_path
+
+        if has_option(help, "enable-kvm") and params.get("enable-kvm",
+                                                         "yes") == "yes":
+            qemu_cmd += " -enable-kvm "
 
         return qemu_cmd
 
@@ -1513,21 +1517,23 @@ class VM(virt_vm.BaseVM):
                 f.close()
 
             # Generate or copy MAC addresses for all NICs
-            num_nics = len(params.objects("nics"))
-            for vlan in range(num_nics):
-                nic_name = params.objects("nics")[vlan]
-                nic_params = params.object_params(nic_name)
-                mac = (nic_params.get("nic_mac") or
-                       mac_source and mac_source.get_mac_address(vlan))
-                if mac:
-                    virt_utils.set_mac_address(self.instance, vlan, mac)
-                else:
-                    mac = virt_utils.generate_mac_address(self.instance, vlan)
+            pa_type = params.get("pci_assignable")
+            if pa_type == "no":
+                num_nics = len(params.objects("nics"))
+                for vlan in range(num_nics):
+                    nic_name = params.objects("nics")[vlan]
+                    nic_params = params.object_params(nic_name)
+                    mac = (nic_params.get("nic_mac") or
+                           mac_source and mac_source.get_mac_address(vlan))
+                    if mac:
+                        virt_utils.set_mac_address(self.instance, vlan, mac)
+                    else:
+                        mac = virt_utils.generate_mac_address(self.instance, vlan)
 
-                if nic_params.get("ip"):
-                    self.address_cache[mac] = nic_params.get("ip")
-                    logging.debug("(address cache) Adding static cache entry: "
-                                  "%s ---> %s" % (mac, nic_params.get("ip")))
+                    if nic_params.get("ip"):
+                        self.address_cache[mac] = nic_params.get("ip")
+                        logging.debug("(address cache) Adding static cache entry: "
+                                      "%s ---> %s" % (mac, nic_params.get("ip")))
 
             # Assign a PCI assignable device
             self.pci_assignable = None
