@@ -19,6 +19,7 @@ variants:
         password = 123456
         shell_client = ssh
         shell_port = 22
+        dst_dir = /mnt/linux/
         shell_prompt = "\[root@.{0,50}][\#\$] "
         migration_test_command = uname -r
         file_transfer_client = scp
