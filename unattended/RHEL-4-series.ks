@@ -23,11 +23,24 @@ poweroff
 @ development-tools
 ntp
 
-%post --interpreter /usr/bin/python
-import os
-os.system('dhclient')
-os.system('chkconfig sshd on')
-os.system('iptables -F')
-os.system('echo 0 > /selinux/enforce')
-os.system('echo Post set up finished > /dev/ttyS0')
-os.system('echo Post set up finished > /dev/hvc0')
+%post
+echo "OS install is completed" > /dev/ttyS0
+cd home
+dhclient
+chkconfig sshd on
+iptables -F
+echo 0 > selinux/enforce
+sed -i '/^HWADDR/d' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "s0:2345:respawn:/sbin/agetty -L -f /etc/issue 115200 ttyS0 vt100" >> /etc/inittab
+echo "ttyS0" >> /etc/securetty
+wget http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/download/Python-2.6.6.tar.bz2
+tar xjf Python-2.6.6.tar.bz2
+cd Python-2.6.6
+./configure --prefix=/usr/local --exec-prefix=/usr/local
+make
+make install
+ln -sf /usr/local/bin/python /usr/bin/python
+sleep 10
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0
+%end
