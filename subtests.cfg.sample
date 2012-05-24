@@ -2054,6 +2054,7 @@ whql.support_vm_install, whql.client_install.support_vm:
     image_name += -supportvm
 
     - ntttcp:
+        only Windows
         type = ntttcp
         image_snapshot = yes
         check_ntttcp_cmd = "cmd /c dir C:\NTttcp"
