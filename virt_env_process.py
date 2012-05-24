@@ -330,7 +330,6 @@ def preprocess(test, params, env):
     test.write_test_keyval({"kvm_version": kvm_version})
 
     # Get the KVM userspace version and write it as a keyval
-    logging.debug("Fetching KVM userspace version...")
     kvm_userspace_ver_cmd = params.get("kvm_userspace_ver_cmd")
     if kvm_userspace_ver_cmd is not None:
         kvm_userspace_version = commands.getoutput(kvm_userspace_ver_cmd)
