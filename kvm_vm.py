@@ -378,9 +378,9 @@ class VM(virt_vm.BaseVM):
 
         def add_drive(help, filename, index=None, format=None, cache=None,
                       werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=False, blkdebug=None,imgfmt="raw", aio=None,
+                      boot=None, blkdebug=None,imgfmt="raw", aio=None,
                       media="disk", ide_bus=None, ide_unit=None, vdisk=None,
-                      pci_addr=None,floppy_unit=None, readonly=False,
+                      pci_addr=None,floppy_unit=None, readonly=None,
                       physical_block_size=None, logical_block_size=None,
                       bus=None, port=None, bootindex=None, removable=None,
                       min_io_size=None, opt_io_size=None, scsi=None):
@@ -984,8 +984,8 @@ class VM(virt_vm.BaseVM):
                   removable=image_params.get("removable"),
                   min_io_size=image_params.get("min_io_size"),
                   opt_io_size=image_params.get("opt_io_size"),
-                  scsi=image_params.get("virtio-blk-pci_scsi")
-                  )
+                  scsi=image_params.get("virtio-blk-pci_scsi"),
+                  readonly=image_params.get("image_readonly"))
 
             # increase the bus and unit no for ide device
             if params.get("drive_format") == "ide":
