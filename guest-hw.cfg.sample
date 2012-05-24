@@ -80,7 +80,7 @@ variants:
         drive_format=usb2
         usbs += " default-ehci"
         usb_type_default-ehci = usb-ehci
-    - usb_cdrom:
+    - usb.cdrom:
         cd_format=usb2
         usbs += " default-ehci-cd"
         usb_type_default-ehci-cd = usb-ehci
