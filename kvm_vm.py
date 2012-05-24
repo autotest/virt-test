@@ -381,12 +381,41 @@ class VM(virt_vm.BaseVM):
 
         def add_drive(help, filename, index=None, format=None, cache=None,
                       werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=False, blkdebug=None, bus=None, port=None,
-                      bootindex=None, removable=None, min_io_size=None,
-                      opt_io_size=None, physical_block_size=None,
-                      logical_block_size=None, readonly=False, scsiid=None,
-                      lun=None):
-            name = None
+                      boot=None, blkdebug=None,imgfmt="raw", aio=None,
+                      media="disk", ide_bus=None, ide_unit=None, vdisk=None,
+                      pci_addr=None,floppy_unit=None, readonly=None,
+                      physical_block_size=None, logical_block_size=None,
+                      bus=None, port=None, bootindex=None, removable=None,
+                      min_io_size=None, opt_io_size=None, scsi=None):
+
+            dev_format = {"virtio" : "virtio-blk-pci",
+                          "ide" : "ide-drive",
+                          "usb2": "usb-storage"}
+
+            id = ""
+            if format == "ide":
+                id ="ide0-%s-%s" % (ide_bus, ide_unit)
+                ide_bus = "ide." + str(ide_bus)
+            elif format == "virtio":
+                if media == "disk":
+                    vdisk += 1
+                blkdev_id ="virtio-disk%s" % vdisk
+                id = "virtio-disk%s" % vdisk
+            elif format == "usb2":
+                id = "usb2.%s" % index
+            if media == "floppy":
+                id ="fdc0-0-%s" % floppy_unit
+            elif media == "cdrom":
+                readonly = True
+            if not has_option(help, "device"):
+                id = None
+            if id:
+                blkdev_id = "drive-%s" % id
+            else:
+                blkdev_id = None
+            if ",aio=" not in help:
+                aio = None
+
             dev = ""
             if format == "ahci":
                 blkdev_id = "ahci%s" % index
@@ -938,28 +967,37 @@ class VM(virt_vm.BaseVM):
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
             qemu_cmd += add_drive(help,
-                    virt_utils.get_image_filename(image_params, root_dir),
-                    image_params.get("drive_index"),
-                    image_params.get("drive_format"),
-                    image_params.get("drive_cache"),
-                    image_params.get("drive_werror"),
-                    image_params.get("drive_rerror"),
-                    image_params.get("drive_serial"),
-                    image_params.get("image_snapshot"),
-                    image_params.get("image_boot"),
-                    virt_utils.get_image_blkdebug_filename(image_params,
-                                                           self.virt_dir),
-                    bus,
-                    port,
-                    image_params.get("bootindex"),
-                    image_params.get("removable"),
-                    image_params.get("min_io_size"),
-                    image_params.get("opt_io_size"),
-                    image_params.get("physical_block_size"),
-                    image_params.get("logical_block_size"),
-                    image_params.get("image_readonly"),
-                    image_params.get("drive_scsiid"),
-                    image_params.get("drive_lun"))
+                  virt_vm.get_image_filename(image_params, root_dir),
+                  index,
+                  image_params.get("drive_format"),
+                  image_params.get("drive_cache"),
+                  image_params.get("drive_werror"),
+                  image_params.get("drive_rerror"),
+                  image_params.get("drive_serial"),
+                  image_params.get("image_snapshot") == "yes",
+                  image_params.get("image_boot") == "yes",
+                  virt_vm.get_image_blkdebug_filename(image_params, root_dir),
+                  image_params.get("image_format"),
+                  image_params.get("image_aio", "native"),
+                  "disk", ide_bus, ide_unit, vdisk,
+                  image_params.get("drive_pci_addr"),
+                  physical_block_size=image_params.get("physical_block_size"),
+                  logical_block_size=image_params.get("logical_block_size"),
+                  bus=bus, port=port,
+                  bootindex=image_params.get("bootindex"),
+                  removable=image_params.get("removable"),
+                  min_io_size=image_params.get("min_io_size"),
+                  opt_io_size=image_params.get("opt_io_size"),
+                  scsi=image_params.get("virtio-blk-pci_scsi"),
+                  readonly=image_params.get("image_readonly"))
+
+            # increase the bus and unit no for ide device
+            if params.get("drive_format") == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            else:
+                vdisk += 1
 
         redirs = []
         for redir_name in params.objects("redirs"):
