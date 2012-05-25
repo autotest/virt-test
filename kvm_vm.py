@@ -342,7 +342,7 @@ class VM(virt_vm.BaseVM):
         def add_smp(help, smp):
             return " -smp %s" % smp
 
-        def add_cdrom(help, filename, index=None, format=None):
+        def add_cdrom(help, filename, index=None, format=None, bus=None):
             if has_option(help, "drive"):
                 name = None;
                 dev = "";
@@ -360,8 +360,9 @@ class VM(virt_vm.BaseVM):
                 if format is not None and format.startswith("scsi-"):
                     # handles scsi-{hd, cd, disk, block, generic} targets
                     name = "virtio-scsi-cd%s" % index
-                    dev += (" -device %s,drive=%s,bus=virtio_scsi_pci.0" %
+                    dev += (" -device %s,drive=%s" %
                             (format, name))
+                    dev += _add_option("bus", "virtio_scsi_pci%d.0" % bus)
                     format = "none"
                     index = None
                 cmd = " -drive file='%s',media=cdrom" % filename
@@ -1083,18 +1084,11 @@ class VM(virt_vm.BaseVM):
             cd_format = params.get("cd_format", "")
             cdrom_params = params.object_params(cdrom)
             iso = cdrom_params.get("cdrom")
+            bus = None
             if cd_format == "ahci" and not have_ahci:
                 qemu_cmd += " -device ahci,id=ahci"
                 have_ahci = True
-            if cd_format.startswith("scsi-"):
-                bus = cdrom_params.get("drive_bus")
-                if bus and bus not in virtio_scsi_pcis:
-                    qemu_cmd += " -device virtio-scsi,id=%s" % bus
-                    virtio_scsi_pcis.append(bus)
-                elif not virtio_scsi_pcis:
-                    qemu_cmd += " -device virtio-scsi,id=virtio_scsi_pci0"
-                    virtio_scsi_pcis.append("virtio_scsi_pci0")
-            if cd_format.startswith("scsi-"):
+            if cd_format and cd_format.startswith("scsi-"):
                 try:
                     bus = int(cdrom_params.get("drive_bus", 0))
                 except ValueError:
@@ -1104,59 +1098,16 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += " -device virtio-scsi,id=virtio_scsi_pci%d" % i
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
-                iso = virt_utils.get_path(root_dir, iso)
-                if params.get("index_enable") == "yes":
-                    drive_index = cdrom_params.get("drive_index")
-                    if drive_index:
-                        index = drive_index
-                    else:
-                        index_global = get_index(index_global)
-                        index = str(index_global)
-                        index_global += 1
-                else:
-                    index = None
-                if has_option(help, "device"):
-                     if not cd_format.startswith("scsi-"):
-                         cd_format="ide"
-                     qemu_cmd += add_drive(help, iso, index,cd_format, media="cdrom",
-                                          ide_bus=ide_bus, ide_unit=ide_unit)
-                else:
-                    qemu_cmd += add_cdrom(help, iso, index)
-                if ide_unit == 1:
-                    ide_bus += 1
-                ide_unit ^= 1
+                qemu_cmd += add_cdrom(help, virt_utils.get_path(root_dir, iso),
+                                      cdrom_params.get("drive_index"),
+                                      cd_format, bus)
 
-
-        soundhw = params.get("soundcards")
-        if soundhw:
-            if "2.6.32" not in commands.getoutput("uname -r"):
-                qemu_cmd += " -soundhw %s" % soundhw
-
-        # We may want to add the floppy using the "-drive -global " format
-        # and the current script allow the nums of the floppies to be 2
-        # Readonly floppy is supported by adding the parameter of floppy_readonly
-        floppies = params.get("floppy")
-        floppies_readonly = params.get("floppy_readonly")
-        if floppies:
-            for floppy in floppies.split():
-                floppy = virt_utils.get_path(root_dir, floppy)
-                qemu_cmd += add_floppy(help, floppy)
-        if floppies and floppies_readonly:
-            floppy_list = floppies.split()
-            fl_readonly_list = floppies_readonly.split()
-            for index in range(len(fl_readonly_list)):
-                fl_readonly_list[index] = eval(fl_readonly_list[index])
-            if len(floppy_list) > 2 :
-                raise error.TestError("Only the maximum of 2 floppies"
-                                      " can be supported here")
-            for (floppy,fl_readonly) in zip(floppy_list,fl_readonly_list):
-                floppy = virt_utils.get_path(root_dir, floppy)
-                if has_option(help,"global"):
-                    qemu_cmd += add_drive(help,floppy,media="floppy",
-                        floppy_unit=floppy_unit,readonly=fl_readonly)
-                else:
-                    qemu_cmd += add_floppy(help, floppy)
-                floppy_unit ^= 1
+        # We may want to add {floppy_otps} parameter for -fda
+        # {fat:floppy:}/path/. However vvfat is not usually recommended.
+        floppy = params.get("floppy")
+        if floppy:
+            floppy = virt_utils.get_path(root_dir, floppy)
+            qemu_cmd += add_floppy(help, floppy)
 
         # Add usb devices
         for usb_dev in params.objects("usb_devices"):
