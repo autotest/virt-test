@@ -14,7 +14,7 @@ variants:
         ethtool:
             # gso gro lro is only supported by latest kernel
             supported_features = "tx rx sg tso gso gro lro"
-    - virtio_nic:
+    - virtio_net:
         nic_model = virtio
         # You can add advanced attributes through netdev_extra_params
         # such as sndbuf.
@@ -102,7 +102,7 @@ variants:
         # placeholder
 
 # Add virtio keyword in image_name parameter for virtio devices
-virtio_nic, virtio_blk:
+virtio_net, virtio_blk:
     image_name += -virtio
 
 # We don't support SCSI/ahci/usb.stick/usb.cdrom/xenblk drive_format now

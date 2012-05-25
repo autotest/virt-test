@@ -5,7 +5,7 @@ variants:
     - install:
         no RHEL
         no e1000
-        no virtio_nic
+        no virtio_net
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -18,7 +18,7 @@ variants:
     - setup: install
         no Linux
         no e1000
-        no virtio_nic
+        no virtio_net
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -1333,7 +1333,7 @@ variants:
     - guest_s4:
         no RHEL.3
         no virtio_blk
-        no virtio_nic
+        no virtio_net
         #kill_vm = yes
         type = guest_s4
         kill_vm_on_error = yes
@@ -1352,7 +1352,7 @@ variants:
                 pci_model = rtl8139
                 match_string = "8139"
             - nic_virtio:
-                only virtio_nic virtio_blk
+                only virtio_net virtio_blk
                 pci_model = virtio-net-pci
                 match_string = "Virtio network device"
             - nic_e1000:
@@ -1402,7 +1402,7 @@ variants:
         kill_vm_on_error = yes
         variants:
             - block_virtio:
-                only virtio_nic virtio_blk
+                only virtio_net virtio_blk
                 pci_model = virtio
                 match_string = "Virtio block device"
             - block_scsi:
@@ -1554,7 +1554,7 @@ variants:
             mtu = 1500
         e1000:
             mtu = 16110
-        virtio_nic:
+        virtio_net:
             mtu = 65520
 
     - file_transfer:
@@ -1641,18 +1641,18 @@ variants:
         RHEL.4:
             e1000:
                 supported_features = "tx rx sg tso"
-            virtio_nic:
+            virtio_net:
                 supported_features = "tx sg tso"
         RHEL.5:
             e1000:
                 supported_features = "tx rx sg tso gso"
-            virtio_nic:
+            virtio_net:
                 supported_features = "tx sg tso gso"
         RHEL.6:
             # gso gro lro is only supported by latest kernel
             e1000:
                 supported_features = "tx rx sg tso gso gro"
-            virtio_nic:
+            virtio_net:
                 supported_features = "tx sg tso gso"
 
     - nic_bonding:
@@ -2385,7 +2385,7 @@ variants:
         method = brew
         install_virtio = no
         verify_virtio = no
-        virtio_nic, virtio_blk:
+        virtio_net, virtio_blk:
             install_virtio = yes
             verify_virtio = yes
 
@@ -3600,7 +3600,7 @@ variants:
                 err_command = "write -b 0 1G"
 
     - nfs_perf:
-        only virtio_nic
+        only virtio_net
         only Linux
         type = nfs_perf
         nfs_server = 192.168.0.113

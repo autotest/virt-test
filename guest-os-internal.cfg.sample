@@ -61,7 +61,7 @@ variants:
                 guest_load_stop_command = rm -f /tmp/guest_load_timedrift
         guest_s3, balloon_check.enable.balloon-guest_s3, acpi_after_hotplug.acpi_guest_s3:
             no virtio_blk
-            no virtio_nic
+            no virtio_net
             check_s3_support_cmd = dmesg -c  && grep -q mem /sys/power/state
             bg_cmd = "cd /tmp/; nohup ping localhost"
             check_bg_cmd = pgrep ping
@@ -70,7 +70,7 @@ variants:
             kill_bg_cmd = pkill ping
         guest_s4, acpi_after_hotplug.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
             no virtio_blk
-            no virtio_nic
+            no virtio_net
             check_s4_support_cmd = "dmesg -c  && grep -q disk /sys/power/state"
             bg_cmd = "cd /tmp/; nohup ping localhost"
             check_bg_cmd = pgrep ping
@@ -1032,7 +1032,7 @@ variants:
                             #virtio_balloon_installer_path = pnputil -i -a F:\\Balloon\\2k8\\x86\\balloon.inf
                             virtio_qxl_installer_path = E:\\autoit3.exe E:\\virtio_driver_install.au3 E:\devcon\wnet_x86\devcon.exe " install A:\\i386\\Win7\\qxl.inf hwid"
                             virtio_balloon_installer_path = E:\\autoit3.exe E:\\virtio_driver_install.au3 E:\devcon\wnet_x86\devcon.exe " install F:\\Balloon\\2k8\\x86\\balloon.inf hwidcmd"
-                            virtio_blk,virtio_nic:
+                            virtio_blk,virtio_net:
                                 unattended_file = unattended/win2008-32-virtio-autounattend.xml
                         sysprep:
                             unattended_file = win2008-32-autounattend.xml
@@ -1079,7 +1079,7 @@ variants:
                             virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
                             virtio_balloon_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
                             # virtio_balloon_installer_path = E:\devcon\wnet_amd64\devcon.exe install F:\\Balloon\\2k8\\amd64\\balloon.inf hwidcmd
-                            virtio_blk, virtio_nic:
+                            virtio_blk, virtio_net:
                                 unattended_file = unattended/win2008-64-virtio-autounattend.xml
                         sysprep:
                             unattended_file = win2008-64-autounattend.xml
@@ -1140,7 +1140,7 @@ variants:
                             virtio_qxl_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil"  -i -a A:\\amd64\\Win7\\qxl.inf"
                             virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
                             unattended_file = unattended/win2008-r2-autounattend.xml
-                            virtio_blk, virtio_nic:
+                            virtio_blk, virtio_net:
                                 unattended_file = unattended/win2008-r2-virtio-autounattend.xml
                         sysprep:
                             unattended_file = win2008-r2-autounattend.xml
