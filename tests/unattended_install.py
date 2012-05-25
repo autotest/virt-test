@@ -1,4 +1,4 @@
-import logging, time, re, os, shutil, tempfile, glob, ConfigParser
+import logging,  re, os, shutil, tempfile, glob, ConfigParser
 import threading
 import xml.dom.minidom
 from autotest_lib.client.common_lib import error, iso9660
@@ -1096,7 +1096,7 @@ def run_unattended_install(test, params, env):
 
     post_finish_str = params.get("post_finish_str",
                                  "Post set up finished")
-    install_timeout = int(params.get("timeout", 3000))
+    install_timeout = int(params.get("install_timeout", 3000))
 
     migrate_background = params.get("migrate_background") == "yes"
     if migrate_background:
@@ -1108,6 +1108,12 @@ def run_unattended_install(test, params, env):
     error.context("waiting for installation to finish")
 
     start_time = time.time()
+
+    log_file = virt_utils.get_path(test.outputdir,
+                                   "debug/serial-%s.log" % vm.name)
+    finish_signal = ""
+    fd = None
+
     while (time.time() - start_time) < install_timeout:
         try:
             vm.verify_alive()
@@ -1120,7 +1126,18 @@ def run_unattended_install(test, params, env):
                 copy_images()
                 raise e
         vm.verify_kernel_crash()
-        finish_signal = vm.serial_console.get_output()
+
+        # To ignore the try:except:finally problem in old version of python
+        try:
+            try:
+                fd = open(log_file, 'r')
+                finish_signal = fd.read()
+            except Exception, e:
+                logging.warn("Can not read from serail log file: %s" % e)
+        finally:
+            if fd and not fd.closed:
+                fd.close()
+
         if params.get("wait_no_ack", "no") == "no" and\
             post_finish_str in finish_signal:
             break
