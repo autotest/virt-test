@@ -2239,6 +2239,8 @@ class VM(virt_vm.BaseVM):
                     exec_cmd = "gzip -c -d %s" % clone.exec_file
                     uri = "exec:gzip -c > %s" % clone.exec_file
 
+            elif protocol == "fd":
+                uri = "fd:%s" % mig_fd_name
             if offline:
                 self.monitor.cmd("stop")
 
