@@ -87,6 +87,18 @@ variants:
     - xenblk:
         # placeholder
 
+# Add virtio keyword in image_name parameter for virtio devices
+virtio_net, virtio_blk:
+    image_name += -virtio
+
+# We don't support SCSI/ahci/usb.stick/usb.cdrom/xenblk drive_format now
+no scsi
+no ahci
+no usb.stick
+no usb.cdrom
+no xenblk
+
+# Image formats
 variants:
     - @qcow2:
         image_format = qcow2

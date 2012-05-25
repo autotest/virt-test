@@ -4,6 +4,9 @@
 
 variants:
     - install:
+        no RHEL
+        no e1000
+        no virtio_net
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -14,6 +17,9 @@ variants:
         kill_vm_timeout_on_error = 0
 
     - setup: install
+        no Linux
+        no e1000
+        no virtio_net
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -1154,7 +1160,7 @@ variants:
     - guest_s4:
         no RHEL.3
         no virtio_blk
-        no virtio_nic
+        no virtio_net
         #kill_vm = yes
         type = guest_s4
         check_s4_support_cmd = grep -q disk /sys/power/state
@@ -1177,7 +1183,7 @@ variants:
                 pci_model = rtl8139
                 match_string = "8139"
             - nic_virtio:
-                only virtio_nic virtio_blk
+                only virtio_net virtio_blk
                 pci_model = virtio-net-pci
                 match_string = "Virtio network device"
             - nic_e1000:
@@ -1206,6 +1212,7 @@ variants:
         kill_vm_on_error = yes
         variants:
             - block_virtio:
+                only virtio_net virtio_blk
                 pci_model = virtio
                 match_string = "Virtio block device"
             - block_scsi:
@@ -1264,8 +1271,14 @@ variants:
     - jumbo: install setup image_copy unattended_install.cdrom
         only Linux
         type = jumbo
+        rtl8139:
+            mtu = 1500
+        e1000:
+            mtu = 16110
+        virtio_net:
+            mtu = 65520
 
-    - file_transfer: install setup image_copy unattended_install.cdrom
+    - file_transfer:
         type = file_transfer
         filesize = 4000
         transfer_timeout = 1000
@@ -1486,8 +1499,25 @@ variants:
         type = ethtool
         filesize = 512
         nic_mode = tap
+        supported_features = "tx rx sg tso"
+        RHEL.4:
+            e1000:
+                supported_features = "tx rx sg tso"
+            virtio_net:
+                supported_features = "tx sg tso"
+        RHEL.5:
+            e1000:
+                supported_features = "tx rx sg tso gso"
+            virtio_net:
+                supported_features = "tx sg tso gso"
+        RHEL.6:
+            # gso gro lro is only supported by latest kernel
+            e1000:
+                supported_features = "tx rx sg tso gso gro"
+            virtio_net:
+                supported_features = "tx sg tso gso"
 
-    - nic_bonding: install setup image_copy unattended_install.cdrom
+    - nic_bonding:
         only Linux
         type = nic_bonding
         nics += ' nic2 nic3 nic4'
@@ -2198,14 +2228,81 @@ variants:
 
     # Do not define test variants below shutdown
 
-    - remove_guest: install setup image_copy unattended_install.cdrom
-        type = remove_guest
-        shutdown_method = shell
-        kill_vm = yes
-        kill_vm_gracefully = no
-        force_remove_vm = yes
-        start_vm = no
-        restart_vm = no
+    - rh_kernel_update:
+        only Linux
+        no RHEL.3.9
+        type = rh_kernel_update
+        rpm_timeout = 1200
+        kernel_version = 2.6.18-164.8.1.el5
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/164.8.1.el5/x86_64/kernel-2.6.18-164.8.1.el5.x86_64.rpm
+        args_removed = "rhgb quiet"
+        args_added = "console=ttyS0,115200 console=tty0"
+        method = brew
+        install_virtio = no
+        verify_virtio = no
+        virtio_net, virtio_blk:
+            install_virtio = yes
+            verify_virtio = yes
+
+    - kernel_install:
+        type = kernel_install
+        variants:
+            - brew:
+                install_type = brew
+                kernel_dep_pkgs = "kernel-firmware"
+            ## Example for other installation methods
+            #- rpm:
+            #    install_type = rpm
+            ## These 2 parameter can be a url.
+            #    kernel_rpm_path = "kernel-2.6.32-220.el6.i686.rpm"
+            #    kernel_deps_rpms = "kernel-firmware-2.6.32-220.el6.noarch.rpm"
+            #- git:
+            #    install_type = git
+            #    kernel_git_repo = ""
+            #    kernel_git_repo_base = ""
+            #    kernel_git_branch = ""
+            #    kernel_git_commit = ""
+            #    kernel_patch_list = ""
+            #    kernel_config = ""
+            #    kerne_config_list = ""
+            #- tar:
+            #    install_type = tar
+            #    kerne_src_pkg = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/test_src/linux-2.6.34.tar.bz2"
+            #    kernel_config = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/test_src/config-64"
+            #    kernel_patch_list = ""
+            #    kernel_tag = "2.6.34"
+
+    - vnc_test:
+        no RHEL_Server_5.7_host
+        no RHEL_Server_5.8_host
+        type = vnc
+        vnc_password = 'yes'
+        rfb_version = 3.3 3.7 3.8
+        change_passwd_cmd = "set_password protocol=vnc,password=%s;expire_password protocol=vnc,time=+%s"
+
+    - cross_host_migrate:
+        type = cross_host_migration
+        migration_test_command = help
+        migration_bg_command = "cd /tmp; nohup ping localhost"
+        migration_bg_check_command = pgrep ping
+        migration_bg_kill_command = pkill ping
+        kill_vm_on_error = yes
+        iterations = 2
+        max_vms = 2
+        used_mem = 1024
+        mig_timeout = 3600
+        guest_stress_test = stress
+        monitor_type = human
+        monitors = humanmonitor1
+        main_monitor = humanmonitor1
+        # you can uncomment the following line to enable the state
+        # check
+        # vmstate_check = yes
+        variants:
+            - tcp:
+                migration_protocol = "tcp"
+            - exec:
+                migration_protocol = "exec"
         variants:
             - without_disk:
                 remove_image = no
@@ -3295,7 +3392,7 @@ whql.support_vm_install, whql.client_install.support_vm:
                 err_command = "write -b 0 1G"
 
     - nfs_perf:
-        only virtio_nic
+        only virtio_net
         only Linux
         type = nfs_perf
         nfs_server = 192.168.0.113
