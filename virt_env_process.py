@@ -289,10 +289,9 @@ def preprocess(test, params, env):
 
     # Get Host cpu type
     if params.get("auto_cpu_model") == "yes":
-       if not env.get("cpu_model"):
-           env["cpu_model"] = virt_utils.get_cpu_model()
-       params["cpu_model"] = env.get("cpu_model")
-
+        if not env.get("cpu_model"):
+            env["cpu_model"] = virt_utils.get_cpu_model()
+        params["cpu_model"] = env.get("cpu_model")
     # Get the KVM kernel module version and write it as a keyval
     if os.path.exists("/dev/kvm"):
         try:
@@ -301,7 +300,8 @@ def preprocess(test, params, env):
             kvm_version = os.uname()[2]
     else:
         kvm_version = "Unknown"
-
+        logging.debug("KVM module not loaded")
+    logging.debug("KVM version: %s" % kvm_version)
     test.write_test_keyval({"kvm_version": kvm_version})
 
     # Get the KVM userspace version and write it as a keyval
@@ -332,15 +332,6 @@ def preprocess(test, params, env):
                         int(params.get("pre_command_timeout", "600")),
                         params.get("pre_command_noncritical") == "yes")
 
-    # Start the screendump thread
-    if params.get("take_regular_screendumps") == "yes":
-        logging.debug("Starting screendump thread")
-        global _screendump_thread, _screendump_thread_termination_event
-        _screendump_thread_termination_event = threading.Event()
-        _screendump_thread = threading.Thread(target=_take_screendumps,
-                                              args=(test, params, env))
-        _screendump_thread.start()
-
     # Generate iscsi related paramters
     use_storage = params.get("use_storage")
     if (use_storage == "iscsi" or use_storage == "emulational_iscsi"):
@@ -351,17 +342,38 @@ def preprocess(test, params, env):
         if use_storage == "iscsi":
             count = 1
             for i in images:
-               params["image_name_%s" % i] = "%s%s" % (device, count)
-               params["image_format_%s" % i] = "qcow2"
-               count += 1
+                params["image_name_%s" % i] = "%s%s" % (device, count)
+                params["image_format_%s" % i] = "qcow2"
+                count += 1
         else:
             # Emulational_iscsi uses the whole disk as image,
             # no need to get the count like Real_iscsi.
             params["image_name"] = device
 
-   # Preprocess all VMs and images
-    process(test, params, env, preprocess_image, preprocess_vm)
+    #Clone master image from vms.
+    if params.get("master_images_clone"):
+        for vm_name in params.get("vms").split():
+            vm = env.get_vm(vm_name)
+            if vm:
+                vm.destroy(free_mac_addresses=False)
+                env.unregister_vm(vm_name)
 
+            vm_params = params.object_params(vm_name)
+            for image in vm_params.get("master_images_clone").split():
+                virt_vm.clone_image(params, vm_name, image, test.bindir)
+
+    # Preprocess all VMs and images
+    if params.get("not_preprocess","no") == "no":
+        process(test, params, env, preprocess_image, preprocess_vm)
+
+    # Start the screendump thread
+    if params.get("take_regular_screendumps") == "yes":
+        logging.debug("Starting screendump thread")
+        global _screendump_thread, _screendump_thread_termination_event
+        _screendump_thread_termination_event = threading.Event()
+        _screendump_thread = threading.Thread(target=_take_screendumps,
+                                              args=(test, params, env))
+        _screendump_thread.start()
 
 @error.context_aware
 def postprocess(test, params, env):

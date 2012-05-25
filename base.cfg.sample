@@ -343,3 +343,6 @@ steps ?<= steps/
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
+
+image_clone_commnad = 'cp --reflink=auto %s %s'
+image_remove_commnad = 'rm -rf %s'
