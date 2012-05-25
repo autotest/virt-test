@@ -859,7 +859,7 @@ def run_unattended_install(test, params, env):
 
     post_finish_str = params.get("post_finish_str",
                                  "Post set up finished")
-    install_timeout = int(params.get("timeout", 3000))
+    install_timeout = int(params.get("install_timeout", 3000))
 
     migrate_background = params.get("migrate_background") == "yes"
     if migrate_background:
@@ -871,6 +871,13 @@ def run_unattended_install(test, params, env):
     error.context("waiting for installation to finish")
 
     start_time = time.time()
+
+    log_file = utils_misc.get_path(test.outputdir,
+                                   "debug/serial-%s.log" % vm.name))
+    serial_log_msg = ""
+    serial_log_file = None
+
+
     while (time.time() - start_time) < install_timeout:
         try:
             vm.verify_alive()
@@ -886,9 +893,20 @@ def run_unattended_install(test, params, env):
                 raise e
 
         test.verify_background_errors()
-        finish_signal = vm.serial_console.get_output()
+
+        # To ignore the try:except:finally problem in old version of python
+        try:
+            try:
+                serial_log_file = open(log_file, 'r')
+                serial_log_msg = serial_log_file.read()
+            except Exception, e:
+                logging.warn("Can not read from serail log file: %s", e)
+        finally:
+            if serial_log_file and not serial_log_file.closed:
+                serial_log_file.close()
+
         if (params.get("wait_no_ack", "no") == "no" and
-            (post_finish_str in finish_signal)):
+            (post_finish_str in serial_log_msg)):
             break
 
         # Due to libvirt automatically start guest after import
