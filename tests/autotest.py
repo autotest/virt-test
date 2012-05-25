@@ -3,7 +3,7 @@ from autotest_lib.client.common_lib import error
 from autotest_lib.client.virt import virt_test_utils
 
 
-def run_autotest(test, params, env, machine=None, kvm_test=False):
+def run_autotest(test, params, env):
     """
     Run an autotest test inside a guest.
 
@@ -11,25 +11,22 @@ def run_autotest(test, params, env, machine=None, kvm_test=False):
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
-    if machine is None:
-        machine = env.get_vm(params["main_vm"])
-    machine.verify_alive()
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
-    session = machine.wait_for_login(timeout=timeout)
+    session = vm.wait_for_login(timeout=timeout)
 
     # Collect test parameters
     timeout = int(params.get("test_timeout", 300))
     control_path = None
-    if not kvm_test:
-        control_path = os.path.join(test.virtdir, "autotest_control",
-                                    params.get("test_control_file"))
+    control_path = os.path.join(test.virtdir, "autotest_control",
+                                params.get("test_control_file"))
     outputdir = test.outputdir
-    virt_test_utils.run_autotest(machine, session, control_path, timeout,
-                            outputdir, params, kvm_test)
+    virt_test_utils.run_autotest(vm, session, control_path, timeout,
+                            outputdir, params)
 
-def run_autotest_background(test, params, env, test_name = "dbench",
-                            test_control_file="control", machine=None,
-                            kvm_test=False):
+def run_autotest_background(test, params, env, test_name="dbench",
+                            test_control_file="control"):
     """
     Wrapper of run_autotest() and make it run in the background through fork()
     and let it run in the child process.
@@ -64,7 +61,7 @@ def run_autotest_background(test, params, env, test_name = "dbench",
         params['test_name'] = test_name
         params['test_control_file'] = test_control_file
         # Launch autotest
-        run_autotest(test, params, env, machine, kvm_test)
+        run_autotest(test, params, env)
         os.remove(flag_fname)
     except error.TestFail, message_fail:
         logging.info("[Autotest Background FAIL] %s" % message_fail)
