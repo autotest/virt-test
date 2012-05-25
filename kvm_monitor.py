@@ -6,6 +6,7 @@ Interfaces to the QEMU monitor.
 
 import socket, time, threading, logging, select, re
 import virt_utils, virt_passfd_setup
+from autotest.client.shared import utils
 try:
     import json
 except ImportError:
@@ -1042,24 +1043,8 @@ class QMPMonitor(Monitor):
 
         @return: The response to the command
         """
-
-        # In qmp interface, we have to set speed in bytes/sec.
-        if isinstance(value, str):
-            if value.isdigit():
-                val = long(value) << 20
-            elif value.endswith(("g", "G")):
-                val = long(value.strip("gG")) << 30
-            elif value.endswith(("m", "M")):
-                val = long(value.strip("mM")) << 20
-            elif value.endswith(("k", "K")):
-                val = long(value.strip("kK")) << 10
-            elif value.endswith(("b", "B")):
-                val = long(value.srtip("bB"))
-            else:
-                logging.info("Not support value")
-        else:
-            val = value * (1 << 20)
-        args = {"value": val}
+        value = utils.convert_data_size(value, "M")
+        args = {"value": value}
         return self.cmd("migrate_set_speed", args)
 
 
