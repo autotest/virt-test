@@ -1118,14 +1118,16 @@ class QMPMonitor(Monitor):
         Request a screendump.
 
         @param filename: Location for the screendump
+        @param debug: Whether to print the commands being sent and responses
+
         @return: The response to the command
         """
-        cmdline = "screendump %s" % filename
-        return self.human_monitor_cmd(cmdline)
-
-    def sendkey(self, keystr, hold_time=1):
-        """
-        Send key combination to VM.
+        if self._has_command("screendump"):
+            args = {"filename": filename}
+            return self.cmd(cmd="screendump", args=args, debug=debug)
+        else:
+            cmdline = "screendump %s" % filename
+            return self.human_monitor_cmd(cmdline, debug=debug)
 
         @param keystr: Key combination string
         @param hold_time: Hold time in ms (should normally stay 1 ms)
