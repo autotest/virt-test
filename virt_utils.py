@@ -4005,7 +4005,7 @@ class MultihostMigration(object):
             session_serial.cmd(self.regain_ip_cmd)
             vm.wait_for_login(timeout=self.login_timeout)
 
-   def postprocess_env(self):
+    def postprocess_env(self):
         """
         Kill vms and delete cloned images.
         """
