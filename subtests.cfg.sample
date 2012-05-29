@@ -530,7 +530,12 @@ variants:
         disk_prepare_timeout = 360
         comm_port = 13234
         regain_ip_cmd = killall dhclient; sleep 10; dhclient;
-
+        variants:
+            #Migration protocol.
+            -tcp:
+                type = migration_multi_host
+            -fd:
+                type = migration_multi_host_fd
     - boot_savevm:
         no raw
         no raw_dd
