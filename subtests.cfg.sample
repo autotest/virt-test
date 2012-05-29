@@ -905,6 +905,13 @@ variants:
                 sleep_time = 300
                 times_gettime = 3
                 interval_gettime = 600
+            - with_cpu_offline:
+                no Windows
+                type = timedrift_with_cpu_offline
+                offline_cpu_cmd = echo 0 > /sys/devices/system/cpu/cpu1/online
+                online_cpu_cmd = echo 1 > /sys/devices/system/cpu/cpu1/online
+                interval_gettime = 120
+                test_duration = 600
         variants:
             - @default:
                 no RHEL.5
