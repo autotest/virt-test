@@ -2170,7 +2170,8 @@ class VM(virt_vm.BaseVM):
     def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
                 cancel_delay=None, offline=False, stable_check=False,
                 clean=True, save_path="/tmp", dest_host="localhost",
-                remote_port=None, fd_src=None, fd_dst=None):
+                remote_port=None, not_wait_for_migration=False,
+                fd_src=None, fd_dst=None,):
         """
         Migrate the VM.
 
@@ -2191,6 +2192,8 @@ class VM(virt_vm.BaseVM):
         @save_path: The path for state files.
         @param dest_host: Destination host (defaults to 'localhost').
         @param remote_port: Port to use for remote migration.
+        @param not_wait_for_migration: If True migration start but not wait till
+                the end of migration.
         @param fd_s: File descriptor for migration to which source
                      VM write data. Descriptor is closed during the migration.
         @param fd_d: File descriptor for migration from which destination
@@ -2204,7 +2207,7 @@ class VM(virt_vm.BaseVM):
         def mig_finished():
             o = self.monitor.info("migrate")
             if isinstance(o, str):
-                return "status: active" not in o
+                return not "status: active" in o
             else:
                 return o.get("status") != "active"
 
@@ -2294,6 +2297,8 @@ class VM(virt_vm.BaseVM):
 
             logging.info("Migrating to %s", uri)
             self.monitor.migrate(uri)
+            if not_wait_for_migration:
+                return clone
 
             if cancel_delay:
                 time.sleep(cancel_delay)
@@ -2361,15 +2366,16 @@ class VM(virt_vm.BaseVM):
         finally:
             # If we're doing remote migration and it's completed successfully,
             # self points to a dead VM object
-            if self.is_alive():
-                self.monitor.cmd("cont")
-            clone.destroy(gracefully=False)
-            if protocol == "exec" and migration_exec_cmd == "gzip":
-                try:
-                    logging.info("Removing migration file %s", clone.exec_file)
-                    os.remove(self.exec_file)
-                except Exception:
-                    pass
+            if not not_wait_for_migration:
+                if self.is_alive():
+                    self.monitor.cmd("cont")
+                clone.destroy(gracefully=False)
+                if protocol == "exec" and migration_exec_cmd == "gzip":
+                    try:
+                        logging.info("Removing migration file %s", clone.exec_file)
+                        os.remove(self.exec_file)
+                    except Exception:
+                        pass
 
 
     @error.context_aware
