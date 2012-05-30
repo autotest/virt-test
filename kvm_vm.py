@@ -2414,6 +2414,12 @@ class VM(virt_vm.BaseVM):
                 if self.is_alive():
                     self.monitor.cmd("cont")
                 clone.destroy(gracefully=False)
+                if protocol == "exec" and migration_exec_cmd == "gzip":
+                    try:
+                        logging.info("Removing migration file %s", clone.exec_file)
+                        os.remove(self.exec_file)
+                    except Exception:
+                        pass
 
 
     @error.context_aware
