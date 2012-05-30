@@ -6,7 +6,7 @@ Interfaces to the QEMU monitor.
 
 import socket, time, threading, logging, select, re
 import virt_utils, virt_passfd_setup
-from autotest.client.shared import utils
+from autotest_lib.client.common_lib import utils
 try:
     import json
 except ImportError:
@@ -508,12 +508,9 @@ class HumanMonitor(Monitor):
 
     def migrate_set_speed(self, value):
         """
-        Set maximum speed for migrations.
+        Set maximum speed (in bytes/sec) for migrations.
 
-        @param value: Set speed in Gb, Mb, Kb, bytes/sec. By default, set
-        speed in Mb/sec. It also support numeber, which means set speed in
-        Mb/sec.
-
+        @param value: Speed in bytes/sec
         @return: The command's output
         """
         return self.cmd("migrate_set_speed %s" % value)
@@ -1174,11 +1171,9 @@ class QMPMonitor(Monitor):
 
     def migrate_set_speed(self, value):
         """
-        Set maximum speed for migrations.
+        Set maximum speed (in bytes/sec) for migrations.
 
-        @param value: Set speed in Gb, Mb, Kb, bytes/sec. By default, set speed
-         in Mb/sec. It also support numeber, which means set speed in Mb/sec.
-
+        @param value: Speed in bytes/sec
         @return: The response to the command
         """
         value = utils.convert_data_size(value, "M")
