@@ -3726,7 +3726,10 @@ def guest_active(vm):
     if isinstance(o, str):
         return "status: running" in o
     else:
-        return o.get("status") == "running"
+        if "status" in o:
+            return o.get("status") == "running"
+        else:
+            return o.get("running")
 
 def preprocess_images(bindir, params, env):
     # Clone master image form vms.
