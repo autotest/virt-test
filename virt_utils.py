@@ -10,9 +10,8 @@ import struct, shutil, glob
 from autotest_lib.client.bin import utils, os_dep
 from autotest_lib.client.common_lib import logging_config, logging_manager
 from autotest_lib.client.common_lib import error, git
-from autotest_lib.client.virt import virt_env_process
 from autotest_lib.client.common_lib.syncdata import SyncData, SyncListenServer
-import rss_client, aexpect, virt_vm
+import rss_client, aexpect, virt_vm, virt_env_process
 import platform
 
 try:
