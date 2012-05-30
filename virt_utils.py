@@ -4316,7 +4316,70 @@ def generate_mac_address_simple():
     return mac
 
 
-def get_ip_address_by_interface(ifname):
+def guest_active(vm):
+    o = vm.monitor.info("status")
+    if isinstance(o, str):
+        return "status: running" in o
+    else:
+        if "status" in o:
+            return o.get("status") == "running"
+        else:
+            return o.get("running")
+
+def preprocess_images(bindir, params, env):
+    # Clone master image form vms.
+    for vm_name in params.get("vms").split():
+        vm = env.get_vm(vm_name)
+        if vm:
+            vm.destroy(free_mac_addresses=False)
+        vm_params = params.object_params(vm_name)
+        for image in vm_params.get("master_images_clone").split():
+            virt_vm.clone_image(params, vm_name, image, bindir)
+
+def postprocess_images(bindir, params):
+    for vm in params.get("vms").split():
+        vm_params = params.object_params(vm)
+        for image in vm_params.get("master_images_clone").split():
+            virt_vm.rm_image(params, vm, image, bindir)
+
+
+class MigrationData(object):
+    def __init__(self, params, srchost, dsthost, vms_name, params_append):
+        """
+        Class that contains data needed for one migration.
+        """
+        self.params = params.copy()
+        self.params.update(params_append)
+        self.source = False
+        if params.get("hostid") == srchost:
+            self.source = True
+
+        self.destination = False
+        if params.get("hostid") == dsthost:
+            self.destination = True
+
+        self.src = srchost
+        self.dst = dsthost
+        self.hosts = [srchost, dsthost]
+        self.mig_id = {'src': srchost, 'dst': dsthost, "vms": vms_name}
+        self.vms_name = vms_name
+        self.vms = []
+        self.vm_ports = None
+
+    def is_src(self):
+        """
+        @return: True if host is source.
+        """
+        return self.source
+
+    def is_dst(self):
+        """
+        @return: True if host is destination.
+        """
+        return self.destination
+
+
+class MultihostMigration(object):
     """
     returns ip address by interface
     @param ifname - interface name
