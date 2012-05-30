@@ -882,12 +882,6 @@ class VM(virt_vm.BaseVM):
         help = commands.getoutput("%s -help" % qemu_binary)
         support_cpu_model = commands.getoutput("%s -cpu ?list" % qemu_binary)
 
-        index_global = 0
-        # init the dict index_in_use
-        for key in params.keys():
-            if 'drive_index' in key:
-                self.index_in_use[params.get(key)] = True
-
         # Start constructing the qemu command
         qemu_cmd = ""
 
@@ -1093,8 +1087,6 @@ class VM(virt_vm.BaseVM):
                                 vcpu_cores, vcpu_threads, vcpu_sockets)
 
         cpu_model = params.get("cpu_model")
-        flags = params.get("cpu_model_flags", "")
-
         use_default_cpu_model = True
         if cpu_model:
             for model in re.split(",", cpu_model):
