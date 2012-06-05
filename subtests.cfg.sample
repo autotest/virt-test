@@ -971,7 +971,6 @@ variants:
 
     - whql: install setup image_copy unattended_install.cdrom
         only Windows
-        nic_mode = tap
         # Replace this with the address of an installed DTM server
         server_address = 10.20.30.40
         # The server should run rss.exe like a regular Windows VM, preferably
@@ -992,7 +991,6 @@ variants:
                 boot_once = d
                 force_create_image = yes
                 kill_vm = yes
-                nic_mode = user
                 redirs += " unattended_install"
                 guest_port_unattended_install = 12323
                 medium = cdrom
@@ -1256,7 +1254,6 @@ variants:
         maximal = 4094
         listen_cmd = "nc -l %s > %s"
         send_cmd = "nc %s %s < %s"
-        nic_mode = tap
         vms += " vm2"
         image_snapshot = yes
         kill_vm_vm2 = yes
@@ -1289,7 +1286,6 @@ variants:
     - nicdriver_unload: install setup image_copy unattended_install.cdrom
         only Linux
         type = nicdriver_unload
-        nic_mode = tap
         filesize = 100
         transfer_timeout = 100
         transfer_type = remote
@@ -1305,7 +1301,6 @@ variants:
     - multicast: install setup image_copy unattended_install.cdrom
         only Linux
         type = multicast
-        nic_mode = tap
         mcast = 225.0.0.1
         mgroup_count = 20
         flood_minutes = 1
@@ -1446,7 +1441,6 @@ variants:
         pci_model_nic1 = virtio_net
         # bridge_nic2 = switch
         pci_model_nic2 = e1000
-        nic_mode = tap
         netperf_files = netperf-2.4.5.tar.bz2 wait_before_data.patch
         setup_cmd = "cd /tmp && rm -rf netperf-2.4.5 && tar xvfj netperf-2.4.5.tar.bz2 && cd netperf-2.4.5 && patch -p0 < ../wait_before_data.patch && ./configure --enable-burst && make"
         # configure netperf test parameters
@@ -1498,26 +1492,8 @@ variants:
         only Linux
         type = ethtool
         filesize = 512
-        nic_mode = tap
-        supported_features = "tx rx sg tso"
-        RHEL.4:
-            e1000:
-                supported_features = "tx rx sg tso"
-            virtio_net:
-                supported_features = "tx sg tso"
-        RHEL.5:
-            e1000:
-                supported_features = "tx rx sg tso gso"
-            virtio_net:
-                supported_features = "tx sg tso gso"
-        RHEL.6:
-            # gso gro lro is only supported by latest kernel
-            e1000:
-                supported_features = "tx rx sg tso gso gro lro"
-            virtio_net:
-                supported_features = "tx sg tso gso"
 
-    - nic_bonding:
+    - nic_bonding: install setup image_copy unattended_install.cdrom
         only Linux
         type = nic_bonding
         nics += ' nic2 nic3 nic4'
@@ -1543,7 +1519,6 @@ variants:
         only Linux
         type = netstress_kill_guest
         image_snapshot = yes
-        nic_mode = tap
         # There should be enough vms for build topology.
         variants:
             -driver:
