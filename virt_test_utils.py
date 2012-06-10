@@ -556,19 +556,16 @@ def get_memory_info(lvms):
     return meminfo
 
 
-def run_autotest(vm, session, control_path, timeout, outputdir, params,
-                 kvm_test=False):
+def run_autotest(vm, session, control_path, timeout, outputdir, params):
     """
     Run an autotest control file inside a guest (linux only utility).
-    This function can start autotest on host or guest.
 
-    @param vm: machine object, can be VM, RemoteVM, RemoteHost.
+    @param vm: VM object. 
     @param session: A shell session on the VM provided.
     @param control_path: A path to an autotest control file.
     @param timeout: Timeout under which the autotest control file must complete.
     @param outputdir: Path on host where we should copy the guest autotest
             results to.
-    @param kvm_test: whether include kvm test files in autotest package.
 
     The following params is used by the migration
     @param params: Test params used in the migration test
@@ -633,92 +630,6 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                         (autotest_dirname, os.path.basename(dest_dir)))
 
 
-    def generate_test_cfg(params):
-        guest_name = params.get("guest_name")
-        guest_name = '-'.join(guest_name.split('-')[0:-1])
-        if guest_name == '':
-            guest_name = params.get("guest_name")
-
-        drive_format = params.get("drive_format")
-        if drive_format == "virtio":
-            drive_format = "virtio_blk"
-
-        nic_model = params.get("nic_model")
-        if nic_model == "virtio":
-            nic_model = "virtio_nic"
-
-        fullname = params.get("name")
-        pages = "smallpages"
-        name = params.get("test_name")
-        if fullname:
-            p = re.compile(".*full\.(\w+)\..*%s\.(.+)\.%s"
-                            % (drive_format, params.get("image_format")))
-            m = p.match(fullname)
-            if m:
-                pages = m.group(1)
-                name = m.group(2)
-        test_cfg  = "include virtlab_tests.cfg\n"
-        test_cfg += "include cdkeys.cfg\n"
-        test_cfg += "nic_script = %s\n" % params.get("nic_script")
-        test_cfg += "pci_assignable = %s\n" % params.get("pci_assignable")
-        test_cfg += "display = %s\n" % params.get("display")
-        test_cfg += "hosttype = %s\n" % params.get("hosttype")
-        test_cfg += "image_name = %s\n" % params.get("image_name")
-        test_cfg += "image_boot = %s\n" % params.get("image_boot")
-        test_cfg += "dsthost = %s\n" % params.get("srchost")
-        test_cfg += "bridge = %s\n" % params.get("bridge")
-        test_cfg += "use_storage = %s\n" % params.get("use_storage")
-        test_cfg += "mig_timeout = %s\n" % params.get("mig_timeout")
-        test_cfg += "login_timeout = %s\n" % params.get("login_timeout")
-        test_cfg += "wait_augment_ratio = %s\n" % params.get("wait_augment_ratio")
-        test_cfg += "install_timeout = %s\n" % params.get("install_timeout")
-        test_cfg += "smp = %s\n" % params.get("smp")
-        test_cfg += "vcpu_cores = %s\n" % params.get("vcpu_cores")
-        test_cfg += "vcpu_threads = %s\n" % params.get("vcpu_threads")
-        test_cfg += "mem = %s\n" % params.get("mem")
-        test_cfg += "iterations = %s\n" % params.get("iterations")
-        test_cfg += "iscsi_dev = %s\n" % params.get("iscsi_dev")
-        test_cfg += "iscsi_number = %s\n" % params.get("iscsi_number")
-        # These params needs by cross_host test.
-        ## disable remote test.
-        test_cfg += "slaver_peer = yes\n"
-        ## don't start vms before images are ready.
-        test_cfg += "start_vm = no\n"
-        ## port for XMLRPC server.
-        if params.get("listen_port"):
-            test_cfg += "listen_port = %s\n" % params.get("listen_port")
-        test_cfg += "only %s\n" % pages
-        test_cfg += "only %s\n" % guest_name
-        test_cfg += "only %s\n" % params.get("platform")
-        test_cfg += "only %s\n" % drive_format
-        test_cfg += "only %s\n" % nic_model
-        test_cfg += "only %s\n" % params.get("image_format")
-        test_cfg += "only full\n"
-        if params.get("test_name"):
-            test_cfg += "only %s\n" % params.get("test_name")
-        else:
-            test_cfg += "only %s\n" % name
-        test_cfg += "variants:\n"
-        test_cfg += "    - repeat1:\n"
-        test_cfg += "pre_test:\n"
-        test_cfg += "    only repeat1\n"
-        test_cfg += "    iterations = 1\n"
-
-        return test_cfg
-
-
-    def build_config_file(autotest_path, config_string,
-                        config_filename= "tests.cfg"):
-        kvm_dir = os.path.join(autotest_path, 'tests/kvm')
-        kvm_tests = os.path.join(kvm_dir, config_filename)
-        try:
-            file = open(kvm_tests, 'w')
-        except IOError:
-            raise error.TestError("Failed to create config file kvm_tests.cfg")
-        file.write(config_string)
-        file.close()
-
-
     def get_results(guest_results_path):
         """
         Copy autotest results present on the guest back to the host.
@@ -760,7 +671,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
             logging.error("Error processing guest autotest results: %s", e)
             return None
 
-    if (not kvm_test) and (not os.path.isfile(control_path)):
+    if not os.path.isfile(control_path):
         raise error.TestError("Invalid path to autotest control file: %s" %
                               control_path)
 
@@ -776,14 +687,6 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
     autotest_path = os.environ['AUTODIR']
-    if kvm_test:
-        test_cfg = generate_test_cfg(vm.params)
-        build_config_file(autotest_path, test_cfg,
-                        config_filename="tests.cfg.remote")
-        logging.info("Running kvm autotest on remote machine, timeout %ss",
-                    timeout)
-
-    autotest_basename = os.path.basename(autotest_path)
     autotest_parentdir = os.path.dirname(autotest_path)
 
     # tar the contents of bindir/autotest
@@ -818,9 +721,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
     vm.copy_files_to(g_path, global_config_guest)
     os.unlink(g_path)
 
-    if not kvm_test:
-        vm.copy_files_to(control_path,
-                         os.path.join(destination_autotest_path, 'control'))
+    vm.copy_files_to(control_path,
+                     os.path.join(destination_autotest_path, 'control'))
 
     # Run the test
     logging.info("Running autotest control file %s on guest, timeout %ss",
@@ -830,8 +732,6 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
         session.cmd("rm -f control.state")
         session.cmd("rm -rf results/*")
         session.cmd("rm -rf tmp/*")
-        if kvm_test:
-            session.cmd("mv -f tests/kvm/tests.cfg.remote tests/kvm/tests.cfg")
     except aexpect.ShellError:
         pass
     try:
@@ -841,16 +741,10 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
             if migrate_background:
                 mig_timeout = float(params.get("mig_timeout", "3600"))
                 mig_protocol = params.get("migration_protocol", "tcp")
-                if kvm_test:
-                    bg = utils.InterruptedThread(session.cmd_output,
-                              kwargs={'cmd': "bin/autotest tests/kvm/control",
-                                     'timeout': timeout,
-                                     'print_func': logging.info})
-                else:
-                    bg = utils.InterruptedThread(session.cmd_output,
-                                      kwargs={'cmd': "bin/autotest control",
-                                              'timeout': timeout,
-                                              'print_func': logging.info})
+                bg = utils.InterruptedThread(session.cmd_output,
+                                  kwargs={'cmd': "bin/autotest control",
+                                          'timeout': timeout,
+                                          'print_func': logging.info})
 
                 bg.start()
 
@@ -859,12 +753,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params,
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                if kvm_test:
-                    session.cmd_output("bin/autotest tests/kvm/control",
-                                       timeout=timeout, print_func=logging.info)
-                else:
-                    session.cmd_output("bin/autotest control", timeout=timeout,
-                                       print_func=logging.info)
+                session.cmd_output("bin/autotest control", timeout=timeout,
+                                   print_func=logging.info)
         finally:
             logging.info("------------- End of test output ------------")
             if migrate_background and bg:
