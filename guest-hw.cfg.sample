@@ -4,29 +4,18 @@
 variants:
     - @rtl8139:
         nic_model = rtl8139
-        no ethtool
-        jumbo:
-            mtu = 1500
     - e1000:
         nic_model = e1000
-        jumbo:
-            mtu = 16110
-        ethtool:
-            # gso gro lro is only supported by latest kernel
-            supported_features = "tx rx sg tso gso gro lro"
     - virtio_net:
         nic_model = virtio
         # You can add advanced attributes on nic_extra_params such as mrg_rxbuf
         #nic_extra_params =
         # You can add advanced attributes through netdev_extra_params
-        # such as sndbuf, as an example, you can uncomment the
-        # following lines to enable the vhost support ( only available
-        # for tap )
-        #netdev_extra_params = "vhost=on"
-        jumbo:
-            mtu = 65520
-        ethtool:
-            supported_features = "tx sg tso gso"
+        # such as sndbuf.
+        # you can comment out the following lines to disable the vhost
+        # support. (only available for tap.)
+        vhost = ""
+        netdev_extra_params = ""
         whql.submission.device.net:
             test_device = VirtIO Ethernet Adapter$
             # Device selection for the NDISTest client machine
