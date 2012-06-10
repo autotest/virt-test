@@ -1299,6 +1299,19 @@ def run_tests(parser, job):
     failed = False
 
     for di in test_dicts:
+        for key in di:
+            if key.endswith("_equal"):
+                tmp_key = key.split("_equal")[0]
+                di[tmp_key] = di[key]
+            elif key.endswith("_min"):
+                tmp_key = key.split("_min")[0]
+                if di[tmp_key] < di[key]:
+                   di[tmp_key] = di[key]
+            elif key.endswith("_max"):
+                tmp_key = key.split("_max")[0]
+                if di[tmp_key] > di[key]:
+                   di[tmp_key] = di[key]
+
         # Add kvm module status
         if di.get("sysfs_dir"):
             di["kvm_default"] = get_module_params(di.get("sysfs_dir"), "kvm")
