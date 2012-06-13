@@ -284,7 +284,8 @@ class VM(virt_vm.BaseVM):
             elif bus is None:
                 raise virt_vm.VMUSBControllerPortFullError(self.name)
 
-            return (bus, port)
+            return (bus, str(port))
+
 
         def add_name(help, name):
             return " -name '%s'" % name
