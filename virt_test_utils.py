@@ -687,6 +687,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
     autotest_path = os.environ['AUTODIR']
+    autotest_basename = os.path.basename(autotest_path)
     autotest_parentdir = os.path.dirname(autotest_path)
 
     # tar the contents of bindir/autotest
