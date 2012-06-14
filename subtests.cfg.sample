@@ -1456,7 +1456,7 @@ variants:
                 image_format_stg24= qcow2
                 image_format_stg25= qcow2
                 image_format_stg26= qcow2
-                image_format_stg27= qcow2
+                #image_format_stg27= qcow2
             - fmt_raw:
                 image_format_stg = raw
                 image_format_stg0 = raw
@@ -1476,8 +1476,8 @@ variants:
                 confirm_cmd = "dd if=/dev/%s bs=%s count=1 skip=1"
                 offset = 64k
                 repeat_times = 256000
-                pci_num = 27
-                images += " stg1 stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24 stg25 stg26"
+                pci_num = 26
+                images += " stg1 stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24 stg25"
                 boot_drive = no
                 boot_drive_image1 = yes
                 image_name_stg0 = storage0
@@ -1507,7 +1507,7 @@ variants:
                 image_name_stg24 = storage24
                 image_name_stg25 = storage25
                 image_name_stg26 = storage26
-                image_name_stg27 = storage27
+                #image_name_stg27 = storage27
                 image_size = 128k
                 remove_image = yes
                 remove_image_image1 = no
