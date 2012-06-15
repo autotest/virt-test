@@ -338,6 +338,8 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                         variants:
                             - 32:
@@ -378,6 +380,8 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                         variants:
                             - 32:
@@ -418,6 +422,8 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                         variants:
                             - 32:
