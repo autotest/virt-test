@@ -1960,14 +1960,11 @@ variants:
         kill_vm_on_error = yes
         max_times = 20
         # test whether cdrom is unlocked <300s after boot
-        cdrom_test_autounlock = no
-        # test the tray status
-        cdrom_test_tray_status = yes
+        cdrom_test_autounlock = yes
         # wait before eject $cdrom (let OS initialize cdrom ...)
         workaround_eject_time = 0
 
-    - floppy_test: install setup image_copy unattended_install.cdrom
-        only Linux
+    - floppy_test:
         type = floppy
         start_vm = no
         floppies = "fl"
