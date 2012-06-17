@@ -1976,16 +1976,18 @@ variants:
         post_command_noncritical = no
 
     - multi_disk:
-        no ide
         type = multi_disk
-        usbs = ""
-        usb_devices = ""
+        # disk verificator needs humanmonitor
+        monitors = "humanmonitor1"
+        main_monitor = humanmonitor1
+        monitor_type_humanmonitor1 = human
         force_create_image = yes
         force_create_image_image1 = no
         remove_image = yes
         remove_image_image1 = no
         cmd_timeout = 1000
         block_list = C: D: vda vda1 vda2 hda hda1 hda2
+        start_vm = no
         variants:
             - default:
                 no virtio_blk
@@ -2000,6 +2002,8 @@ variants:
                 image_name_stg3 = storage3
                 image_size_stg3 = 5G
             - max_disk:
+                usbs = ""
+                usb_devices = ""
                 drive_pci_addr_image1 = 4
                 drive_format = virtio
                 stg_image_num = 24
