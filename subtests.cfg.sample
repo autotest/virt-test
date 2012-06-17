@@ -2062,13 +2062,14 @@ variants:
         only Linux
         no RHEL.3.9
         type = cdrom
-        pre_command = "dd if=/dev/urandom of=orig bs=10M count=1 && dd if=/dev/urandom of=new bs=10M count=1 && mkisofs -o /tmp/orig.iso orig && mkisofs -o /tmp/new.iso new"
-        new_iso = /tmp/new.iso
+        cdrom_cd1 = orig.iso
+        start_vm = no
+        kill_vm_on_error = yes
         max_times = 20
-        filename = new
-        kill_vm = yes
-        post_command = rm -rf /tmp/orig.iso /tmp/new.iso orig new
-        cdrom_cd1 = /tmp/orig.iso
+        # test whether cdrom is unlocked <300s after boot
+        cdrom_test_autounlock = yes
+        # wait before eject $cdrom (let OS initialize cdrom ...)
+        workaround_eject_time = 0
 
     - floppy_test:
         type = floppy
