@@ -2426,6 +2426,7 @@ variants:
         change_passwd_cmd = "set_password protocol=vnc,password=%s;expire_password protocol=vnc,time=+%s"
 
     - readonly_floppy:
+        no Host_RHEL.5
         type = readonly_floppy
         floppy = "images/fd1.img images/fd2.img"
         pre_command = "dd if=/dev/urandom of=images/fd1.img bs=512 count=2880&&  dd if=/dev/urandom of=images/fd2.img bs=512 count=2880"
