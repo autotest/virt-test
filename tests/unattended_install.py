@@ -1,4 +1,4 @@
-import logging,  re, os, shutil, tempfile, glob, ConfigParser
+import logging, time, re, os, shutil, tempfile, glob, ConfigParser
 import threading
 import xml.dom.minidom
 from autotest.client.shared import error, iso9660
