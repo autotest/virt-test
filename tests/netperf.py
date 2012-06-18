@@ -88,7 +88,16 @@ def run_netperf(test, params, env):
             virt_test_utils.service_setup(vm2, session2, test.virtdir)
         client = vm2.get_address()
         session2.close()
-        _pin_vm_threads(vm2, numa_node)
+        if params.get('numa_node'):
+            virt_test_utils.pin_vm_threads(vm2, node)
+
+    if params.get("client"):
+        client = params["client"]
+    if params.get("host"):
+        host = params["host"]
+    else:
+        cmd = "ifconfig %s|awk 'NR==2 {print $2}'|awk -F: '{print $2}'"
+        host = commands.getoutput(cmd % params["netdst"])
 
     shell_port = int(params["shell_port"])
     password = params["password"]
