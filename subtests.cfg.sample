@@ -3531,6 +3531,12 @@ variants:
                 image_size_blk = 20G
                 err_event = "refblock_alloc"
                 err_command = "write -b 0 1G"
+            - l2_load:
+                image_size_blk = 20G
+                err_event = "l2_load"
+                pre_err_commands = "write 0 1G"
+                err_command = "write 0 1G"
+                session_reload = 'yes'
 
     - nfs_perf:
         only virtio_net
