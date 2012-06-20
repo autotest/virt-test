@@ -54,28 +54,32 @@ class virt_test(test.test):
         try:
             try:
                 try:
-                    # Get the test routine corresponding to the specified
-                    # test type
-                    t_type = params.get("type")
                     # Verify if we have the correspondent source file for it
                     virt_dir = os.path.dirname(virt_utils.__file__)
                     subtest_dir_common = os.path.join(virt_dir, "tests")
                     subtest_dir_test = os.path.join(self.bindir, "tests")
                     subtest_dir = None
-                    for d in [subtest_dir_test, subtest_dir_common]:
-                        module_path = os.path.join(d, "%s.py" % t_type)
-                        if os.path.isfile(module_path):
-                            subtest_dir = d
-                            break
-                    if subtest_dir is None:
-                        raise error.TestError("Could not find test file %s.py "
-                                              "on either %s or %s directory" %
-                                              (t_type, subtest_dir_test,
-                                              subtest_dir_common))
-                    # Load the test module
-                    f, p, d = imp.find_module(t_type, [subtest_dir])
-                    test_module = imp.load_module(t_type, f, p, d)
-                    f.close()
+
+                    # Get the test routine corresponding to the specified
+                    # test type
+                    t_types = params.get("type").split()
+                    test_modules = {}
+                    for t_type in t_types:
+                        for d in [subtest_dir_test, subtest_dir_common]:
+                            module_path = os.path.join(d, "%s.py" % t_type)
+                            if os.path.isfile(module_path):
+                                subtest_dir = d
+                                break
+                        if subtest_dir is None:
+                            msg = "Could not find test file %s.py "\
+                                  "on either %s or %s directory" % \
+                                  (t_type, subtest_dir_test,
+                                   subtest_dir_common)
+                            raise error.TestError(msg)
+                        # Load the test module
+                        f, p, d = imp.find_module(t_type, [subtest_dir])
+                        test_modules[t_type] = imp.load_module(t_type, f, p, d)
+                        f.close()
 
                     # Preprocess
                     try:
@@ -83,11 +87,14 @@ class virt_test(test.test):
                     finally:
                         env.save()
                     # Run the test function
-                    run_func = getattr(test_module, "run_%s" % t_type)
-                    try:
-                        run_func(self, params, env)
-                    finally:
-                        env.save()
+                    for t_type, test_module in test_modules.items():
+                        logging.info("Running function: %s.run_%s" % (t_type,
+                                                                      t_type))
+                        run_func = getattr(test_module, "run_%s" % t_type)
+                        try:
+                            run_func(self, params, env)
+                        finally:
+                            env.save()
                     test_passed = True
 
                 except Exception, e:
