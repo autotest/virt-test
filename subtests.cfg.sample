@@ -3452,6 +3452,7 @@ variants:
         re_std_msg = "error\s+code\s+\d+:\s+([a-zA-Z\/\-\s]+)$"
         test_timeout = 720
         blkdebug_default = blkdebug/qemu_io_default.conf
+        check_image = no
         variants:
             - refblock_update_part:
                 image_size_blk = 1G
