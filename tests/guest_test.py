@@ -72,8 +72,7 @@ def run_guest_test(test, params, env):
                 # copy the dir to guest.
                 logging.debug("the resource is a dir.")
 
-                if not vm.copy_files_to(rsc_path, dst_rsc_dir):
-                    raise error.TestError("Cannot copy %s to guest" % rsc_path)
+                vm.copy_files_to(rsc_path, dst_rsc_dir)
                 logging.debug("The resource files are transferred.")
 
                 rsc_entry = params.get("rsc_entry")
@@ -85,8 +84,7 @@ def run_guest_test(test, params, env):
                 # copy the single file to guest.
                 logging.debug("The resource is a file.")
 
-                if not vm.copy_files_to(rsc_path, dst_rsc_dir):
-                    raise error.TestError("Cannot copy %s to guest" % rsc_path)
+                vm.copy_files_to(rsc_path, dst_rsc_dir)
                 logging.debug("The resource file is transferred.")
 
                 dst_rsc_path = os.path.join(dst_rsc_dir,
