@@ -53,21 +53,32 @@ class virt_test(test.test):
         try:
             try:
                 try:
-                    subtest_dirs = []
-                    tests_dir = self.job.testdir
-
-                    other_subtests_dirs = params.get("other_tests_dirs", "")
-                    for d in other_subtests_dirs.split():
-                        subtestdir = os.path.join(tests_dir, d, "tests")
-                        if not os.path.isdir(subtestdir):
-                            raise error.TestError("Directory %s not"
-                                                  " exist." % (subtestdir))
-                        subtest_dirs.append(subtestdir)
                     # Verify if we have the correspondent source file for it
                     virt_dir = os.path.dirname(virt_utils.__file__)
                     subtest_dirs.append(os.path.join(virt_dir, "tests"))
                     subtest_dirs.append(os.path.join(self.bindir, "tests"))
                     subtest_dir = None
+
+                    # Get the test routine corresponding to the specified
+                    # test type
+                    t_types = params.get("type").split()
+                    test_modules = {}
+                    for t_type in t_types:
+                        for d in [subtest_dir_test, subtest_dir_common]:
+                            module_path = os.path.join(d, "%s.py" % t_type)
+                            if os.path.isfile(module_path):
+                                subtest_dir = d
+                                break
+                        if subtest_dir is None:
+                            msg = "Could not find test file %s.py "\
+                                  "on either %s or %s directory" % \
+                                  (t_type, subtest_dir_test,
+                                   subtest_dir_common)
+                            raise error.TestError(msg)
+                        # Load the test module
+                        f, p, d = imp.find_module(t_type, [subtest_dir])
+                        test_modules[t_type] = imp.load_module(t_type, f, p, d)
+                        f.close()
 
                     # Get the test routine corresponding to the specified
                     # test type
@@ -94,8 +105,8 @@ class virt_test(test.test):
                         env.save()
                     # Run the test function
                     for t_type, test_module in test_modules.items():
-                        msg = "Running function: %s.run_%s()" % (t_type, t_type)
-                        logging.info(msg)
+                        logging.info("Running function: %s.run_%s" % (t_type,
+                                                                      t_type))
                         run_func = getattr(test_module, "run_%s" % t_type)
                         try:
                             run_func(self, params, env)
