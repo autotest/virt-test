@@ -3537,6 +3537,14 @@ variants:
                 pre_err_commands = "write 0 1G"
                 err_command = "write 0 1G"
                 session_reload = 'yes'
+            - l2_alloc_cow_read:
+                image_size_blk = 20G
+                err_event = "l2_alloc.cow_read"
+                pre_snapshot = "yes"
+                image_chain = "blk sn1"
+                image_name_sn1 = "sn1"
+                pre_err_commands = "write 0 1G"
+                err_command = "write 0 1G"
 
     - nfs_perf:
         only virtio_net
