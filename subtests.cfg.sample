@@ -1368,6 +1368,23 @@ variants:
         script_params =
         reboot = yes
         variants:
+            - stub:
+                no Windows
+                test_name = "stub"
+                interpreter = "python"
+                rsc_path = "tests_rsc/stub.py"
+            - stub_d:
+                no Windows
+                test_name = "stub_d"
+                interpreter = "python"
+                rsc_path = "tests_rsc/stub"
+                rsc_entry = "index.py"
+            - arp_set:
+                no Windows
+                no RHEL.3.9
+                test_name = "arp_set"
+                interpreter = "python"
+                rsc_path = "tests_rsc/arp_set.py"
             - autoit:
                 interpreter = "cmd /c D:\AutoIt3.exe"
                 variants:
@@ -1381,6 +1398,7 @@ variants:
                         dst_rsc_dir = "C:\"
                         dst_rsc_path = "C:\autoit\stub\stub.au3"
             - powershell:
+                only Windows
                 interpreter = "cmd /c powershell.exe -File"
                 variants:
                     - stub:
