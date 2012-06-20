@@ -1085,15 +1085,18 @@ variants:
         script_params =
         variants:
             - stub:
+                no Windows
                 test_name = "stub"
                 interpreter = "python"
                 rsc_path = "tests_rsc/stub.py"
             - stub_d:
+                no Windows
                 test_name = "stub_d"
                 interpreter = "python"
                 rsc_path = "tests_rsc/stub"
                 rsc_entry = "index.py"
             - arp_set:
+                no Windows
                 no RHEL.3.9
                 test_name = "arp_set"
                 interpreter = "python"
@@ -1157,6 +1160,7 @@ variants:
                                 test_name += "run"
                                 dst_rsc_path = "C:\autoit\sandra\run_sandra.au3"
             - powershell:
+                only Windows
                 interpreter = "cmd /c powershell.exe -File"
                 variants:
                     - stub:
