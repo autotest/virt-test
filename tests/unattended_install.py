@@ -355,10 +355,10 @@ class UnattendedInstallConfig(object):
 
         attributes = ['kernel_args', 'finish_program', 'cdrom_cd1',
                       'unattended_file', 'medium', 'url', 'kernel', 'initrd',
-                      'nfs_server', 'nfs_dir', 'install_virtio', 'floppy',
-                      'cdrom_unattended', 'boot_path', 'kernel_params',
-                      'extra_params', 'qemu_img_binary', 'cdkey',
-                      'finish_program', 'vm_type', 'process_check',
+                      'nfs_server', 'nfs_dir', 'install_virtio',
+                      'floppy_name', 'cdrom_unattended', 'boot_path',
+                      'kernel_params', 'extra_params', 'qemu_img_binary',
+                      'cdkey', 'finish_program', 'vm_type', 'process_check'
                       'cdrom_mount_point', 'floppy_mount_point',
                       'cdrom_virtio', 'virtio_floppy', 're_driver_match',
                       're_hardware_id', 'driver_in_floppy']
@@ -416,8 +416,8 @@ class UnattendedInstallConfig(object):
             self.nfs_mount = tempfile.mkdtemp(prefix='nfs_',
                                               dir=self.tmpdir)
 
-        if getattr(self, 'floppy'):
-            self.floppy = os.path.join(root_dir, self.floppy)
+        if getattr(self, 'floppy_name'):
+            self.floppy = os.path.join(root_dir, self.floppy_name)
             if not os.path.isdir(os.path.dirname(self.floppy)):
                 os.makedirs(os.path.dirname(self.floppy))
 

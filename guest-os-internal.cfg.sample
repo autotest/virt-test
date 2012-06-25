@@ -208,7 +208,8 @@ variants:
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     kernel_params = "ks=floppy nicdelay=60 console=ttyS0,115200 console=tty0"
                                     unattended_file = unattended/RHEL-3-series.ks
-                                    floppy = images/rhel39-32/ks.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/rhel39-32/ks.vfd
                                     #cdrom_unattended = images/rhel39-32/ks.iso
                                     kernel = images/rhel39-32/vmlinuz
                                     initrd = images/rhel39-32/initrd.img
@@ -230,7 +231,8 @@ variants:
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     kernel_params = "ks=floppy nicdelay=60 console=ttyS0,115200 console=tty0"
                                     unattended_file = unattended/RHEL-3-series.ks
-                                    floppy = images/rhel39-64/ks.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/rhel39-64/ks.vfd
                                     #cdrom_unattended = images/rhel39-64/ks.iso
                                     kernel = images/rhel39-64/vmlinuz
                                     initrd = images/rhel39-64/initrd.img
@@ -300,7 +302,8 @@ variants:
                                     cdrom_cd1 = isos/linux/RHEL4.9-i386-AS-DVD.iso
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-4-series.ks
-                                    #floppy = images/rhel48-32/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel48-32/ks.vfd
                                     cdrom_unattended = images/rhel48-32/ks.iso
                                     kernel = images/rhel48-32/vmlinuz
                                     initrd = images/rhel48-32/initrd.img
@@ -315,7 +318,8 @@ variants:
                                     cdrom_cd1 = isos/linux/RHEL4.9-x86_64-AS-DVD.iso
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-4-series.ks
-                                    #floppy = images/rhel48-64/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel48-64/ks.vfd
                                     cdrom_unattended = images/rhel48-64/ks.iso
                                     kernel = images/rhel48-64/vmlinuz
                                     initrd = images/rhel48-64/initrd.img
@@ -348,7 +352,8 @@ variants:
                                 image_name += -32
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-5-series.ks
-                                    #floppy = images/rhel57-32/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel57-32/ks.vfd
                                     cdrom_unattended = images/rhel57-32/ks.iso
                                     kernel = images/rhel57-32/vmlinuz
                                     initrd = images/rhel57-32/initrd.img
@@ -359,7 +364,8 @@ variants:
                                 image_name += -64
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-5-series.ks
-                                    #floppy = images/rhel57-64/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel57-64/ks.vfd
                                     cdrom_unattended = images/rhel57-64/ks.iso
                                     kernel = images/rhel57-64/vmlinuz
                                     initrd = images/rhel57-64/initrd.img
@@ -390,7 +396,8 @@ variants:
                                 image_name += -32
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-5-series.ks
-                                    #floppy = images/rhel57-32/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel57-32/ks.vfd
                                     cdrom_unattended = images/rhel58-32/ks.iso
                                     kernel = images/rhel58-32/vmlinuz
                                     initrd = images/rhel58-32/initrd.img
@@ -403,7 +410,8 @@ variants:
                                     cdrom_cd1 = isos/linux/RHEL-Server-5.8-x86_64-DVD.iso
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-5-series.ks
-                                    #floppy = images/rhel57-64/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel57-64/ks.vfd
                                     cdrom_unattended = images/rhel58-64/ks.iso
                                     kernel = images/rhel58-64/vmlinuz
                                     initrd = images/rhel58-64/initrd.img
@@ -432,7 +440,8 @@ variants:
                                 image_name += -32
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-5-series.ks
-                                    #floppy = images/rhel59-32/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel59-32/ks.vfd
                                     cdrom_unattended = images/rhel59-32/ks.iso
                                     kernel = images/rhel59-32/vmlinuz
                                     initrd = images/rhel59-32/initrd.img
@@ -445,7 +454,8 @@ variants:
                                     cdrom_cd1 = isos/linux/RHEL-Server-5.9-x86_64-DVD.iso
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-5-series.ks
-                                    #floppy = images/rhel59-64/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel59-64/ks.vfd
                                     cdrom_unattended = images/rhel59-64/ks.iso
                                     kernel = images/rhel59-64/vmlinuz
                                     initrd = images/rhel59-64/initrd.img
@@ -474,7 +484,8 @@ variants:
                                 image_name += -32
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-6-series.ks
-                                    #floppy = images/rhel61-32/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel61-32/ks.vfd
                                     cdrom_unattended = images/rhel61-32/ks.iso
                                     kernel = images/rhel61-32/vmlinuz
                                     initrd = images/rhel61-32/initrd.img
@@ -489,7 +500,8 @@ variants:
                                 image_name += -64
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-6-series.ks
-                                    #floppy = images/rhel61-64/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel61-64/ks.vfd
                                     cdrom_unattended = images/rhel61-64/ks.iso
                                     kernel = images/rhel61-64/vmlinuz
                                     initrd = images/rhel61-64/initrd.img
@@ -516,7 +528,8 @@ variants:
                                 image_name += -32
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-6-series.ks
-                                    #floppy = images/rhel62-32/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel62-32/ks.vfd
                                     cdrom_unattended = images/rhel62-32/ks.iso
                                     kernel = images/rhel62-32/vmlinuz
                                     initrd = images/rhel62-32/initrd.img
@@ -531,7 +544,8 @@ variants:
                                 image_name += -64
                                 unattended_install, check_block_size.4096_512, check_block_size.512_512:
                                     unattended_file = unattended/RHEL-6-series.ks
-                                    #floppy = images/rhel62-64/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel62-64/ks.vfd
                                     cdrom_unattended = images/rhel62-64/ks.iso
                                     kernel = images/rhel62-64/vmlinuz
                                     initrd = images/rhel62-64/initrd.img
@@ -557,7 +571,8 @@ variants:
                                 image_name += -32
                                 unattended_install:
                                     unattended_file = unattended/RHEL-6-series.ks
-                                    #floppy = images/rhel63-32/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel63-32/ks.vfd
                                     cdrom_unattended = images/rhel63-32/ks.iso
                                     kernel = images/rhel63-32/vmlinuz
                                     initrd = images/rhel63-32/initrd.img
@@ -568,7 +583,8 @@ variants:
                                 image_name += -64
                                 unattended_install:
                                     unattended_file = unattended/RHEL-6-series.ks
-                                    #floppy = images/rhel63-64/ks.vfd
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel63-64/ks.vfd
                                     cdrom_unattended = images/rhel63-64/ks.iso
                                     kernel = images/rhel63-64/vmlinuz
                                     initrd = images/rhel63-64/initrd.img
@@ -638,7 +654,8 @@ variants:
             #virtio_floppy = /usr/share/virtio-win/virtio-drivers.vfd
             virtio_floppy = isos/windows/virtio-win.vfd
             #pre_command += "scripts/private_br.sh notftp;"
-            floppy = "images/floppy.img"
+            floppies = "fl"
+            floppy_name = "images/floppy.img"
             virtio_network_installer_path = 'help'
             cdrom_mount_point = /tmp/mount/
             floppy_mount_point = /tmp/virtio_win/
@@ -869,7 +886,8 @@ variants:
                         unattended_install.cdrom, whql.support_vm_install:
                             cdrom_cd1 = isos/ISO/WinXP/32/en_windows_xp_professional_with_service_pack_3_x86_cd_x14-80428.iso
                             unattended_file = unattended/winxp32.sif
-                            floppy = images/winXP-32/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/winXP-32/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
@@ -932,7 +950,8 @@ variants:
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/ISO/Win2003/32/en_win_srv_2003_r2_enterprise_with_sp2_X13.iso
                             unattended_file = unattended/win2003-32.sif
-                            floppy = images/win2003-32/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win2003-32/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
@@ -979,7 +998,8 @@ variants:
                         unattended_install.cdrom, whql.support_vm_install:
                             cdrom_cd1 = isos/ISO/Win2003/64/en_win_srv_2003_r2_enterprise_x64_with_sp2_X13.iso
                             unattended_file = unattended/win2003-64.sif
-                            floppy = images/win2003-64/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win2003-64/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
@@ -1038,7 +1058,8 @@ variants:
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/ISO/Win2008/32/en_windows_server_2008_datacenter_enterprise_standard_sp2_x86_dvd_342333.iso
                             unattended_file = unattended/win2008-32-autounattend.xml
-                            floppy = images/win2008-sp2-32/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win2008-sp2-32/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
@@ -1085,7 +1106,8 @@ variants:
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/ISO/Win2008/64/en_windows_server_2008_datacenter_enterprise_standard_sp2_x64_dvd_342336.iso
                             unattended_file = unattended/win2008-64-autounattend.xml
-                            floppy = images/win2008-sp2-64/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win2008-sp2-64/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
@@ -1147,7 +1169,8 @@ variants:
                             sha1sum_cd1 = d3fd7bf85ee1d5bdd72de5b2c69a7b470733cd0a
                             sha1sum_1m_cd1 = 9194a3aabae25b36e5f73cad001314b2c8d07d14
                             unattended_file = unattended/win2008-r2-autounattend.xml
-                            floppy = images/win2008-r2-64/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win2008-r2-64/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
@@ -1202,7 +1225,8 @@ variants:
                             md5sum_cd1 = 24f3a45d43d7c532aa3126cc094c61bd
                             md5sum_1m_cd1 = 01728cbbc6c4d8f25a82c1028093dc5f
                             unattended_file = unattended/win7-32-autounattend.xml
-                            floppy = images/win7-32/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win7-32/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
@@ -1254,7 +1278,8 @@ variants:
                             md5sum_cd1 = 56a26636ec667799f5a7f42f142c772d
                             md5sum_1m_cd1 = a0fa6e40d54fe88d30c43bea3e4d9a0b
                             unattended_file = unattended/win7-64-autounattend.xml
-                            floppy = images/win7-64/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win7-64/answer.vfd
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.

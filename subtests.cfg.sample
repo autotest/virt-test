@@ -2079,7 +2079,8 @@ variants:
 
     - floppy_test:
         type = floppy
-        floppy = "images/test_floppy.img"
+        floppies = "fl"
+        floppy_name = "images/test_floppy.img"
         pre_command = "dd if=/dev/zero of=images/test_floppy.img bs=512 count=2880"
 
     - usb_storage:
@@ -2451,7 +2452,9 @@ variants:
     - readonly_floppy:
         no Host_RHEL.5
         type = readonly_floppy
-        floppy = "images/fd1.img images/fd2.img"
+        floppies = "fl1 fl2"
+        floppy_name_fl1 = "images/fd1.img"
+        floppy_name_fl2 = "images/fd2.img"
         pre_command = "dd if=/dev/urandom of=images/fd1.img bs=512 count=2880&&  dd if=/dev/urandom of=images/fd2.img bs=512 count=2880"
         format_floppy_timeout = 60
         floppy_readonly = "True True"
@@ -3422,7 +3425,8 @@ variants:
         cdroms += " sdk virtio"
         cdrom_virtio = /usr/share/virtio-win/virtio-win.iso
         cdrom_sdk = isos/windows/GRMSDKX_EN_DVD.iso
-        floppy = "/usr/share/virtio-win/virtio-win.vfd"
+        floppies = "fl"
+        floppy_name = "/usr/share/virtio-win/virtio-win.vfd"
         list_files_cmd = dir /s /b %s | find "%s"
         winsdk_au3 = autoit/winsdk.au3
         signtool_install = "D:\autoit3.exe c:\winsdk.au3"
