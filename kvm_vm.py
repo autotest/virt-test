@@ -1070,12 +1070,11 @@ class VM(virt_vm.BaseVM):
         vcpu_threads = params.get("vcpu_threads", "1")
         vcpu_cores = params.get("vcpu_cores", smp)
         vcpu_sockets = params.get("vcpu_sockets", "1")
-        guest_name = params.get("guest_name")
 
         if int(smp) > 8 and vcpu_threads == "1":
             vcpu_threads = "2"
-        if (vcpu_sockets and int(vcpu_sockets) > 2  and "Win" in
-                               re.findall("win", guest_name, re.I)):
+        if (vcpu_sockets and int(vcpu_sockets) > 2
+            and params.get("os_type") == 'windows'):
             vcpu_sockets = "2"
 
         if not vcpu_cores:

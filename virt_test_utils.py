@@ -165,7 +165,7 @@ def update_boot_option(vm, args_removed=None, args_added=None,
     """
     Update guest default kernel option.
     """
-    if re.findall("win", vm.params.get("guest_name"), re.I):
+    if vm.params.get("os_type") == 'windows':
         # this function is only for linux, if we need to change
         # windows guest's boot option, we can use a function like:
         # update_win_bootloader(args_removed, args_added, reboot)
