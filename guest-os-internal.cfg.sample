@@ -4,6 +4,7 @@
 variants:
     # Linux section
     - @Linux:
+        os_type = linux
         network_query = ifconfig
         shutdown_command = shutdown -h now
         reboot_command = shutdown -r now
@@ -576,6 +577,7 @@ variants:
 
     # Windows section
     - @Windows:
+        os_type = windows
         network_query = ipconfig
         shutdown_command = shutdown /s /t 0
         reboot_command = shutdown /r /t 0
