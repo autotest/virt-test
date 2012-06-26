@@ -1115,7 +1115,29 @@ class VM(virt_vm.BaseVM):
         if mem:
             qemu_cmd += add_mem(help, mem)
 
-        smp = int(params.get("smp", 1))
+        smp = params.get("smp", 1)
+
+        vcpu_threads = params.get("vcpu_threads", "1")
+        vcpu_cores = params.get("vcpu_cores", smp)
+        vcpu_sockets = params.get("vcpu_sockets", "1")
+
+        if int(smp) > 8 and vcpu_threads == "1":
+            vcpu_threads = "2"
+        if (vcpu_sockets and int(vcpu_sockets) > 2
+            and params.get("os_type") == 'windows'):
+            vcpu_sockets = "2"
+
+        if not vcpu_cores:
+            vcpu_cores = str(int(smp)/int(vcpu_threads)/int(vcpu_sockets))
+        if not vcpu_threads:
+            vcpu_threads = str(int(smp)/int(vcpu_cores)/int(vcpu_sockets))
+        if not vcpu_sockets:
+            vcpu_sockets = str(int(smp)/int(vcpu_cores)/int(vcpu_threads))
+        if smp == "1":
+            vcpu_threads = "1"
+            vcpu_cores = "1"
+            vcpu_sockets = "1"
+
         if smp:
             vcpu_threads = int(params.get("vcpu_threads", 1))
             vcpu_cores = int(params.get("vcpu_cores", smp))
