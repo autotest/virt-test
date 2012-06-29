@@ -6,7 +6,7 @@ This exports:
   - class for image operates and basic parameters
 """
 import logging, os, shutil, re
-from autotest.client import utils
+from autotest_lib.client.bin import utils
 import virt_utils, virt_vm
 
 
@@ -134,18 +134,18 @@ class QemuImg(object):
             image_chain = re.split("\s+", image_chain)
             if tag in image_chain:
                 index = image_chain.index(tag)
-                if index < len(image_chain) - 1:
+                if index < len(image_chain):
                     self.snapshot_tag = image_chain[index + 1]
                 if index > 0:
                     self.base_tag = image_chain[index - 1]
         if self.base_tag:
             base_params = params.object_params(self.base_tag)
-            self.base_image_filename = get_image_filename(base_params,
+            self.base_image_filename = virt_utils.get_path(base_params,
                                                            root_dir)
             self.base_format = base_params.get("image_format")
         if self.snapshot_tag:
             ss_params = params.object_params(self.snapshot_tag)
-            self.snapshot_image_filename = get_image_filename(ss_params,
+            self.snapshot_image_filename = virt_utils.get_path(ss_params,
                                                                root_dir)
             self.snapshot_format = ss_params.get("image_format")
 
