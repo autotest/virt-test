@@ -968,7 +968,7 @@ class VM(virt_vm.BaseVM):
                 bus, port = get_free_usb_port(image_name, "ehci")
 
             qemu_cmd += add_drive(help,
-                  virt_vm.get_image_filename(image_params, root_dir),
+                  virt_utils.get_image_filename(image_params, root_dir),
                   index,
                   image_params.get("drive_format"),
                   image_params.get("drive_cache"),
@@ -977,7 +977,7 @@ class VM(virt_vm.BaseVM):
                   image_params.get("drive_serial"),
                   image_params.get("image_snapshot"),
                   image_params.get("image_boot"),
-                  virt_vm.get_image_blkdebug_filename(image_params, root_dir),
+                  virt_utils.get_image_blkdebug_filename(image_params, root_dir),
                   image_params.get("image_format"),
                   image_params.get("image_aio", "native"),
                   "disk", ide_bus, ide_unit, vdisk,
