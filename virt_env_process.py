@@ -25,7 +25,7 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
-    image_filename = virt_storage.get_image_filename(params, test.bindir)
+    image_filename = virt_utils.get_image_filename(params, test.bindir)
 
     create_image = False
 
@@ -36,10 +36,8 @@ def preprocess_image(test, params, image_name):
           os.path.exists(image_filename)):
         create_image = True
 
-    if create_image:
-        image = kvm_storage.QemuImg(params, test.bindir, image_name)
-        if not image.create(params):
-            raise error.TestError("Could not create image")
+    if create_image and not virt_utils.create_image(params, test.bindir):
+        raise error.TestError("Could not create image")
 
 
 def preprocess_vm(test, params, env, name):
@@ -122,13 +120,13 @@ def postprocess_image(test, params, image_name):
     image = kvm_storage.QemuImg(params, test.bindir, image_name)
     if params.get("check_image") == "yes":
         try:
-            image.check_image(params, test.bindir)
+            virt_utils.check_image(params, test.bindir)
         except Exception, e:
             if params.get("restore_image_on_check_error", "no") == "yes":
-                image.backup_image(params, test.bindir, "restore", True)
+                virt_utils.backup_image(params, test.bindir, 'restore', True)
             raise e
     if params.get("remove_image") == "yes":
-        image.remove()
+        virt_utils.remove_image(params, test.bindir)
 
 
 def postprocess_vm(test, params, env, name):

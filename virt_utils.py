@@ -5,11 +5,14 @@ Virtualization test utility functions.
 """
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
-import fcntl, shelve, ConfigParser, sys, UserDict, inspect, tarfile
-import struct, shutil, glob, HTMLParser, urllib, traceback, platform
-from autotest.client import utils, os_dep
-from autotest.client.shared import error, logging_config
-from autotest.client.shared import logging_manager, git
+import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect, tarfile
+import struct, shutil, glob
+from autotest_lib.client.bin import utils, os_dep
+from autotest_lib.client.common_lib import logging_config, logging_manager
+from autotest_lib.client.common_lib import error, git
+from autotest_lib.client.common_lib.syncdata import SyncData, SyncListenServer
+import rss_client, aexpect, virt_env_process
+import platform
 
 try:
     import koji
@@ -1316,6 +1319,826 @@ def check_kvm_source_dir(source_dir):
         return 2
     else:
         raise error.TestError("Unknown source dir layout, cannot proceed.")
+
+
+# Functions for handling virtual machine image files
+
+def get_image_blkdebug_filename(params, root_dir):
+    """
+    Generate an blkdebug file path from params and root_dir.
+
+    blkdebug files allow error injection in the block subsystem.
+
+    @param params: Dictionary containing the test parameters.
+    @param root_dir: Base directory for relative filenames.
+
+    @note: params should contain:
+           blkdebug -- the name of the debug file.
+    """
+    blkdebug_name = params.get("drive_blkdebug", None)
+    if blkdebug_name is not None:
+        blkdebug_filename = get_path(root_dir, blkdebug_name)
+    else:
+        blkdebug_filename = None
+    return blkdebug_filename
+
+
+def get_image_filename(params, root_dir):
+    """
+    Generate an image path from params and root_dir.
+
+    @param params: Dictionary containing the test parameters.
+    @param root_dir: Base directory for relative filenames.
+
+    @note: params should contain:
+           image_name -- the name of the image file, without extension
+           image_format -- the format of the image (qcow2, raw etc)
+    """
+    image_name = params.get("image_name", "image")
+    image_format = params.get("image_format", "qcow2")
+    if params.get("image_raw_device") == "yes":
+        return image_name
+    if image_format:
+        image_filename = "%s.%s" % (image_name, image_format)
+    else:
+        image_filename = image_name
+    image_filename = get_path(root_dir, image_filename)
+    return image_filename
+
+
+def clone_image(params, vm_name, image_name, root_dir):
+    """
+    Clone master image to vm specific file.
+
+    @param params: Dictionary containing the test parameters.
+    @param vm_name: Vm name.
+    @param image_name: Master image name.
+    @param root_dir: Base directory for relative filenames.
+    """
+    if not params.get("image_name_%s_%s" % (image_name, vm_name)):
+        m_image_name = params.get("image_name", "image")
+        vm_image_name = "%s_%s" % (m_image_name, vm_name)
+        if params.get("clone_master", "yes") == "yes":
+            image_params = params.object_params(image_name)
+            image_params["image_name"] = vm_image_name
+
+            m_image_fn = get_image_filename(params, root_dir)
+            image_fn = get_image_filename(image_params, root_dir)
+
+            logging.info("Clone master image for vms.")
+            utils.run(params.get("image_clone_commnad") % (m_image_fn,
+                                                           image_fn))
+
+        params["image_name_%s_%s" % (image_name, vm_name)] = vm_image_name
+
+
+def rm_image(params, vm_name, image_name, root_dir):
+    """
+    Remove vm specific file.
+
+    @param params: Dictionary containing the test parameters.
+    @param vm_name: Vm name.
+    @param image_name: Master image name.
+    @param root_dir: Base directory for relative filenames.
+    """
+    if params.get("image_name_%s_%s" % (image_name, vm_name)):
+        m_image_name = params.get("image_name", "image")
+        vm_image_name = "%s_%s" % (m_image_name, vm_name)
+        if params.get("clone_master", "yes") == "yes":
+            image_params = params.object_params(image_name)
+            image_params["image_name"] = vm_image_name
+
+            image_fn = get_image_filename(image_params, root_dir)
+
+            logging.debug("Removing vm specific image file %s", image_fn)
+            if os.path.exists(image_fn):
+                utils.run(params.get("image_remove_commnad") % (image_fn))
+            else:
+                logging.debug("Image file %s not found", image_fn)
+
+
+def create_image(params, root_dir):
+    """
+    Create an image using qemu_image.
+
+    @param params: Dictionary containing the test parameters.
+    @param root_dir: Base directory for relative filenames.
+
+    @note: params should contain:
+           image_name -- the name of the image file, without extension
+           image_format -- the format of the image (qcow2, raw etc)
+           image_cluster_size (optional) -- the cluster size for the image
+           image_size -- the requested size of the image (a string
+           qemu-img can understand, such as '10G')
+           create_with_dd -- use dd to create the image (raw format only)
+    """
+    format = params.get("image_format", "qcow2")
+    image_filename = get_image_filename(params, root_dir)
+    size = params.get("image_size", "10G")
+    if params.get("create_with_dd") == "yes" and format == "raw":
+        # maps K,M,G,T => (count, bs)
+        human = {'K': (1, 1),
+                 'M': (1, 1024),
+                 'G': (1024, 1024),
+                 'T': (1024, 1048576),
+                }
+        if human.has_key(size[-1]):
+            block_size = human[size[-1]][1]
+            size = int(size[:-1]) * human[size[-1]][0]
+        qemu_img_cmd = ("dd if=/dev/zero of=%s count=%s bs=%sK"
+                        % (image_filename, size, block_size))
+    else:
+        qemu_img_cmd = get_path(root_dir,
+                                params.get("qemu_img_binary", "qemu-img"))
+        qemu_img_cmd += " create"
+
+        qemu_img_cmd += " -f %s" % format
+
+        image_cluster_size = params.get("image_cluster_size", None)
+        if image_cluster_size is not None:
+            qemu_img_cmd += " -o cluster_size=%s" % image_cluster_size
+
+        qemu_img_cmd += " %s" % image_filename
+
+        qemu_img_cmd += " %s" % size
+
+    utils.system(qemu_img_cmd)
+    return image_filename
+
+
+def remove_image(params, root_dir):
+    """
+    Remove an image file.
+
+    @param params: A dict
+    @param root_dir: Base directory for relative filenames.
+
+    @note: params should contain:
+           image_name -- the name of the image file, without extension
+           image_format -- the format of the image (qcow2, raw etc)
+    """
+    image_filename = get_image_filename(params, root_dir)
+    logging.debug("Removing image file %s", image_filename)
+    if os.path.exists(image_filename):
+        os.unlink(image_filename)
+    else:
+        logging.debug("Image file %s not found", image_filename)
+
+
+def check_image(params, root_dir):
+    """
+    Check an image using the appropriate tools for each virt backend.
+
+    @param params: Dictionary containing the test parameters.
+    @param root_dir: Base directory for relative filenames.
+
+    @note: params should contain:
+           image_name -- the name of the image file, without extension
+           image_format -- the format of the image (qcow2, raw etc)
+
+    @raise VMImageCheckError: In case qemu-img check fails on the image.
+    """
+    vm_type = params.get("vm_type")
+    if vm_type == 'kvm':
+        image_filename = get_image_filename(params, root_dir)
+        logging.debug("Checking image file %s", image_filename)
+        qemu_img_cmd = get_path(root_dir,
+                                params.get("qemu_img_binary", "qemu-img"))
+        image_is_qcow2 = params.get("image_format") == 'qcow2'
+        if os.path.exists(image_filename) and image_is_qcow2:
+            # Verifying if qemu-img supports 'check'
+            q_result = utils.run(qemu_img_cmd, ignore_status=True)
+            q_output = q_result.stdout
+            check_img = True
+            if not "check" in q_output:
+                logging.error("qemu-img does not support 'check', "
+                              "skipping check")
+                check_img = False
+            if not "info" in q_output:
+                logging.error("qemu-img does not support 'info', "
+                              "skipping check")
+                check_img = False
+            if check_img:
+                try:
+                    utils.system("%s info %s" % (qemu_img_cmd, image_filename))
+                except error.CmdError:
+                    logging.error("Error getting info from image %s",
+                                  image_filename)
+
+                cmd_result = utils.run("%s check %s" %
+                                       (qemu_img_cmd, image_filename),
+                                       ignore_status=True)
+                # Error check, large chances of a non-fatal problem.
+                # There are chances that bad data was skipped though
+                if cmd_result.exit_status == 1:
+                    for e_line in cmd_result.stdout.splitlines():
+                        logging.error("[stdout] %s", e_line)
+                    for e_line in cmd_result.stderr.splitlines():
+                        logging.error("[stderr] %s", e_line)
+                    if params.get("backup_image_on_check_error", "no") == "yes":
+                        backup_image(params, root_dir, 'backup', False)
+                    raise error.TestWarn("qemu-img check error. Some bad data "
+                                         "in the image may have gone unnoticed")
+                # Exit status 2 is data corruption for sure, so fail the test
+                elif cmd_result.exit_status == 2:
+                    for e_line in cmd_result.stdout.splitlines():
+                        logging.error("[stdout] %s", e_line)
+                    for e_line in cmd_result.stderr.splitlines():
+                        logging.error("[stderr] %s", e_line)
+                    if params.get("backup_image_on_check_error", "no") == "yes":
+                        backup_image(params, root_dir, 'backup', False)
+                    raise VMImageCheckError(image_filename)
+                # Leaked clusters, they are known to be harmless to data
+                # integrity
+                elif cmd_result.exit_status == 3:
+                    raise error.TestWarn("Leaked clusters were noticed during "
+                                         "image check. No data integrity "
+                                         "problem was found though.")
+
+                # Just handle normal operation
+                if params.get("backup_image", "no") == "yes":
+                    backup_image(params, root_dir, 'backup', True)
+
+        else:
+            if not os.path.exists(image_filename):
+                logging.debug("Image file %s not found, skipping check",
+                              image_filename)
+            elif not image_is_qcow2:
+                logging.debug("Image file %s not qcow2, skipping check",
+                              image_filename)
+
+
+def backup_image(params, root_dir, action, good=True):
+    """
+    Backup or restore a disk image, depending on the action chosen.
+
+    @param params: Dictionary containing the test parameters.
+    @param root_dir: Base directory for relative filenames.
+    @param action: Whether we want to backup or restore the image.
+    @param good: If we are backing up a good image(we want to restore it) or
+            a bad image (we are saving a bad image for posterior analysis).
+
+    @note: params should contain:
+           image_name -- the name of the image file, without extension
+           image_format -- the format of the image (qcow2, raw etc)
+    """
+    def backup_raw_device(src, dst):
+        utils.system("dd if=%s of=%s bs=4k conv=sync" % (src, dst))
+
+    def backup_image_file(src, dst):
+        logging.debug("Copying %s -> %s", src, dst)
+        shutil.copy(src, dst)
+
+    def get_backup_name(filename, backup_dir, good):
+        if not os.path.isdir(backup_dir):
+            os.makedirs(backup_dir)
+        basename = os.path.basename(filename)
+        if good:
+            backup_filename = "%s.backup" % basename
+        else:
+            backup_filename = ("%s.bad.%s" %
+                               (basename, generate_random_string(4)))
+        return os.path.join(backup_dir, backup_filename)
+
+
+    image_filename = get_image_filename(params, root_dir)
+    backup_dir = params.get("backup_dir")
+    if params.get('image_raw_device') == 'yes':
+        iname = "raw_device"
+        iformat = params.get("image_format", "qcow2")
+        ifilename = "%s.%s" % (iname, iformat)
+        ifilename = get_path(root_dir, ifilename)
+        image_filename_backup = get_backup_name(ifilename, backup_dir, good)
+        backup_func = backup_raw_device
+    else:
+        image_filename_backup = get_backup_name(image_filename, backup_dir,
+                                                good)
+        backup_func = backup_image_file
+
+    if action == 'backup':
+        image_dir = os.path.dirname(image_filename)
+        image_dir_disk_free = utils.freespace(image_dir)
+        image_filename_size = os.path.getsize(image_filename)
+        image_filename_backup_size = 0
+        if os.path.isfile(image_filename_backup):
+            image_filename_backup_size = os.path.getsize(image_filename_backup)
+        disk_free = image_dir_disk_free + image_filename_backup_size
+        minimum_disk_free = 1.2 * image_filename_size
+        if disk_free < minimum_disk_free:
+            image_dir_disk_free_gb = float(image_dir_disk_free) / 10**9
+            minimum_disk_free_gb = float(minimum_disk_free) / 10**9
+            logging.error("Dir %s has %.1f GB free, less than the minimum "
+                          "required to store a backup, defined to be 120%% "
+                          "of the backup size, %.1f GB. Skipping backup...",
+                          image_dir, image_dir_disk_free_gb,
+                          minimum_disk_free_gb)
+            return
+        if good:
+            # In case of qemu-img check return 1, we will make 2 backups, one
+            # for investigation and other, to use as a 'pristine' image for
+            # further tests
+            state = 'good'
+        else:
+            state = 'bad'
+        logging.info("Backing up %s image file %s", state, image_filename)
+        src, dst = image_filename, image_filename_backup
+    elif action == 'restore':
+        if not os.path.isfile(image_filename_backup):
+            logging.error('Image backup %s not found, skipping restore...',
+                          image_filename_backup)
+            return
+        logging.info("Restoring image file %s from backup",
+                     image_filename)
+        src, dst = image_filename_backup, image_filename
+
+    backup_func(src, dst)
+
+
+# Functions and classes used for logging into guests and transferring files
+
+class LoginError(Exception):
+    def __init__(self, msg, output):
+        Exception.__init__(self, msg, output)
+        self.msg = msg
+        self.output = output
+
+    def __str__(self):
+        return "%s    (output: %r)" % (self.msg, self.output)
+
+
+class LoginAuthenticationError(LoginError):
+    pass
+
+
+class LoginTimeoutError(LoginError):
+    def __init__(self, output):
+        LoginError.__init__(self, "Login timeout expired", output)
+
+
+class LoginProcessTerminatedError(LoginError):
+    def __init__(self, status, output):
+        LoginError.__init__(self, None, output)
+        self.status = status
+
+    def __str__(self):
+        return ("Client process terminated    (status: %s,    output: %r)" %
+                (self.status, self.output))
+
+
+class LoginBadClientError(LoginError):
+    def __init__(self, client):
+        LoginError.__init__(self, None, None)
+        self.client = client
+
+    def __str__(self):
+        return "Unknown remote shell client: %r" % self.client
+
+
+class SCPError(Exception):
+    def __init__(self, msg, output):
+        Exception.__init__(self, msg, output)
+        self.msg = msg
+        self.output = output
+
+    def __str__(self):
+        return "%s    (output: %r)" % (self.msg, self.output)
+
+
+class SCPAuthenticationError(SCPError):
+    pass
+
+
+class SCPAuthenticationTimeoutError(SCPAuthenticationError):
+    def __init__(self, output):
+        SCPAuthenticationError.__init__(self, "Authentication timeout expired",
+                                        output)
+
+
+class SCPTransferTimeoutError(SCPError):
+    def __init__(self, output):
+        SCPError.__init__(self, "Transfer timeout expired", output)
+
+
+class SCPTransferFailedError(SCPError):
+    def __init__(self, status, output):
+        SCPError.__init__(self, None, output)
+        self.status = status
+
+    def __str__(self):
+        return ("SCP transfer failed    (status: %s,    output: %r)" %
+                (self.status, self.output))
+
+
+def _remote_login(session, username, password, prompt, timeout=10, debug=False):
+    """
+    Log into a remote host (guest) using SSH or Telnet.  Wait for questions
+    and provide answers.  If timeout expires while waiting for output from the
+    child (e.g. a password prompt or a shell prompt) -- fail.
+
+    @brief: Log into a remote host (guest) using SSH or Telnet.
+
+    @param session: An Expect or ShellSession instance to operate on
+    @param username: The username to send in reply to a login prompt
+    @param password: The password to send in reply to a password prompt
+    @param prompt: The shell prompt that indicates a successful login
+    @param timeout: The maximal time duration (in seconds) to wait for each
+            step of the login procedure (i.e. the "Are you sure" prompt, the
+            password prompt, the shell prompt, etc)
+    @raise LoginTimeoutError: If timeout expires
+    @raise LoginAuthenticationError: If authentication fails
+    @raise LoginProcessTerminatedError: If the client terminates during login
+    @raise LoginError: If some other error occurs
+    """
+    password_prompt_count = 0
+    login_prompt_count = 0
+
+    while True:
+        try:
+            match, text = session.read_until_last_line_matches(
+                [r"[Aa]re you sure", r"[Pp]assword:\s*$", r"[Ll]ogin:\s*$",
+                 r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
+                 r"[Pp]lease wait", r"[Ww]arning", prompt],
+                timeout=timeout, internal_timeout=0.5)
+            if match == 0:  # "Are you sure you want to continue connecting"
+                if debug:
+                    logging.debug("Got 'Are you sure...', sending 'yes'")
+                session.sendline("yes")
+                continue
+            elif match == 1:  # "password:"
+                if password_prompt_count == 0:
+                    if debug:
+                        logging.debug("Got password prompt, sending '%s'", password)
+                    session.sendline(password)
+                    password_prompt_count += 1
+                    continue
+                else:
+                    raise LoginAuthenticationError("Got password prompt twice",
+                                                   text)
+            elif match == 2:  # "login:"
+                if login_prompt_count == 0 and password_prompt_count == 0:
+                    if debug:
+                        logging.debug("Got username prompt; sending '%s'", username)
+                    session.sendline(username)
+                    login_prompt_count += 1
+                    continue
+                else:
+                    if login_prompt_count > 0:
+                        msg = "Got username prompt twice"
+                    else:
+                        msg = "Got username prompt after password prompt"
+                    raise LoginAuthenticationError(msg, text)
+            elif match == 3:  # "Connection closed"
+                raise LoginError("Client said 'connection closed'", text)
+            elif match == 4:  # "Connection refused"
+                raise LoginError("Client said 'connection refused'", text)
+            elif match == 5:  # "Please wait"
+                if debug:
+                    logging.debug("Got 'Please wait'")
+                timeout = 30
+                continue
+            elif match == 6:  # "Warning added RSA"
+                if debug:
+                    logging.debug("Got 'Warning added RSA to known host list")
+                continue
+            elif match == 7:  # prompt
+                if debug:
+                    logging.debug("Got shell prompt -- logged in")
+                break
+        except aexpect.ExpectTimeoutError, e:
+            raise LoginTimeoutError(e.output)
+        except aexpect.ExpectProcessTerminatedError, e:
+            raise LoginProcessTerminatedError(e.status, e.output)
+
+
+def remote_login(client, host, port, username, password, prompt, linesep="\n",
+                 log_filename=None, timeout=10):
+    """
+    Log into a remote host (guest) using SSH/Telnet/Netcat.
+
+    @param client: The client to use ('ssh', 'telnet' or 'nc')
+    @param host: Hostname or IP address
+    @param port: Port to connect to
+    @param username: Username (if required)
+    @param password: Password (if required)
+    @param prompt: Shell prompt (regular expression)
+    @param linesep: The line separator to use when sending lines
+            (e.g. '\\n' or '\\r\\n')
+    @param log_filename: If specified, log all output to this file
+    @param timeout: The maximal time duration (in seconds) to wait for
+            each step of the login procedure (i.e. the "Are you sure" prompt
+            or the password prompt)
+    @raise LoginBadClientError: If an unknown client is requested
+    @raise: Whatever _remote_login() raises
+    @return: A ShellSession object.
+    """
+    if client == "ssh":
+        cmd = ("ssh -o UserKnownHostsFile=/dev/null "
+               "-o PreferredAuthentications=password -p %s %s@%s" %
+               (port, username, host))
+    elif client == "telnet":
+        cmd = "telnet -l %s %s %s" % (username, host, port)
+    elif client == "nc":
+        cmd = "nc %s %s" % (host, port)
+    else:
+        raise LoginBadClientError(client)
+
+    logging.debug("Login command: '%s'", cmd)
+    session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
+    try:
+        _remote_login(session, username, password, prompt, timeout)
+    except Exception:
+        session.close()
+        raise
+    if log_filename:
+        session.set_output_func(log_line)
+        session.set_output_params((log_filename,))
+    return session
+
+
+def wait_for_login(client, host, port, username, password, prompt, linesep="\n",
+                   log_filename=None, timeout=240, internal_timeout=10):
+    """
+    Make multiple attempts to log into a remote host (guest) until one succeeds
+    or timeout expires.
+
+    @param timeout: Total time duration to wait for a successful login
+    @param internal_timeout: The maximal time duration (in seconds) to wait for
+            each step of the login procedure (e.g. the "Are you sure" prompt
+            or the password prompt)
+    @see: remote_login()
+    @raise: Whatever remote_login() raises
+    @return: A ShellSession object.
+    """
+    logging.debug("Attempting to log into %s:%s using %s (timeout %ds)",
+                  host, port, client, timeout)
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        try:
+            return remote_login(client, host, port, username, password, prompt,
+                                linesep, log_filename, internal_timeout)
+        except LoginError, e:
+            logging.debug(e)
+        time.sleep(2)
+    # Timeout expired; try one more time but don't catch exceptions
+    return remote_login(client, host, port, username, password, prompt,
+                        linesep, log_filename, internal_timeout)
+
+
+def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
+    """
+    Transfer file(s) to a remote host (guest) using SCP.  Wait for questions
+    and provide answers.  If login_timeout expires while waiting for output
+    from the child (e.g. a password prompt), fail.  If transfer_timeout expires
+    while waiting for the transfer to complete, fail.
+
+    @brief: Transfer files using SCP, given a command line.
+
+    @param session: An Expect or ShellSession instance to operate on
+    @param password_list: Password list to send in reply to the password prompt
+    @param transfer_timeout: The time duration (in seconds) to wait for the
+            transfer to complete.
+    @param login_timeout: The maximal time duration (in seconds) to wait for
+            each step of the login procedure (i.e. the "Are you sure" prompt or
+            the password prompt)
+    @raise SCPAuthenticationError: If authentication fails
+    @raise SCPTransferTimeoutError: If the transfer fails to complete in time
+    @raise SCPTransferFailedError: If the process terminates with a nonzero
+            exit code
+    @raise SCPError: If some other error occurs
+    """
+    password_prompt_count = 0
+    timeout = login_timeout
+    authentication_done = False
+
+    scp_type = len(password_list)
+
+    while True:
+        try:
+            match, text = session.read_until_last_line_matches(
+                [r"[Aa]re you sure", r"[Pp]assword:\s*$", r"lost connection"],
+                timeout=timeout, internal_timeout=0.5)
+            if match == 0:  # "Are you sure you want to continue connecting"
+                logging.debug("Got 'Are you sure...', sending 'yes'")
+                session.sendline("yes")
+                continue
+            elif match == 1:  # "password:"
+                if password_prompt_count == 0:
+                    logging.debug("Got password prompt, sending '%s'" %
+                                   password_list[password_prompt_count])
+                    session.sendline(password_list[password_prompt_count])
+                    password_prompt_count += 1
+                    timeout = transfer_timeout
+                    if scp_type == 1:
+                        authentication_done = True
+                    continue
+                elif password_prompt_count == 1 and scp_type == 2:
+                    logging.debug("Got password prompt, sending '%s'" %
+                                   password_list[password_prompt_count])
+                    session.sendline(password_list[password_prompt_count])
+                    password_prompt_count += 1
+                    timeout = transfer_timeout
+                    authentication_done = True
+                    continue
+                else:
+                    raise SCPAuthenticationError("Got password prompt twice",
+                                                 text)
+            elif match == 2:  # "lost connection"
+                raise SCPError("SCP client said 'lost connection'", text)
+        except aexpect.ExpectTimeoutError, e:
+            if authentication_done:
+                raise SCPTransferTimeoutError(e.output)
+            else:
+                raise SCPAuthenticationTimeoutError(e.output)
+        except aexpect.ExpectProcessTerminatedError, e:
+            if e.status == 0:
+                logging.debug("SCP process terminated with status 0")
+                break
+            else:
+                raise SCPTransferFailedError(e.status, e.output)
+
+
+def remote_scp(command, password_list, log_filename=None, transfer_timeout=600,
+               login_timeout=20):
+    """
+    Transfer file(s) to a remote host (guest) using SCP.
+
+    @brief: Transfer files using SCP, given a command line.
+
+    @param command: The command to execute
+        (e.g. "scp -r foobar root@localhost:/tmp/").
+    @param password_list: Password list to send in reply to a password prompt.
+    @param log_filename: If specified, log all output to this file
+    @param transfer_timeout: The time duration (in seconds) to wait for the
+            transfer to complete.
+    @param login_timeout: The maximal time duration (in seconds) to wait for
+            each step of the login procedure (i.e. the "Are you sure" prompt
+            or the password prompt)
+    @raise: Whatever _remote_scp() raises
+    """
+    logging.debug("Trying to SCP with command '%s', timeout %ss",
+                  command, transfer_timeout)
+    if log_filename:
+        output_func = log_line
+        output_params = (log_filename,)
+    else:
+        output_func = None
+        output_params = ()
+    session = aexpect.Expect(command,
+                                    output_func=output_func,
+                                    output_params=output_params)
+    try:
+        _remote_scp(session, password_list, transfer_timeout, login_timeout)
+    finally:
+        session.close()
+
+
+def scp_to_remote(host, port, username, password, local_path, remote_path,
+                  limit="", log_filename=None, timeout=600):
+    """
+    Copy files to a remote host (guest) through scp.
+
+    @param host: Hostname or IP address
+    @param username: Username (if required)
+    @param password: Password (if required)
+    @param local_path: Path on the local machine where we are copying from
+    @param remote_path: Path on the remote machine where we are copying to
+    @param limit: Speed limit of file transfer.
+    @param log_filename: If specified, log all output to this file
+    @param timeout: The time duration (in seconds) to wait for the transfer
+            to complete.
+    @raise: Whatever remote_scp() raises
+    """
+    if (limit):
+        limit = "-l %s" % (limit)
+
+    command = ("scp -v -o UserKnownHostsFile=/dev/null "
+               "-o PreferredAuthentications=password -r %s "
+               "-P %s %s %s@%s:%s" %
+               (limit, port, local_path, username, host, remote_path))
+    password_list = []
+    password_list.append(password)
+    return remote_scp(command, password_list, log_filename, timeout)
+
+
+def scp_from_remote(host, port, username, password, remote_path, local_path,
+                    limit="", log_filename=None, timeout=600, ):
+    """
+    Copy files from a remote host (guest).
+
+    @param host: Hostname or IP address
+    @param username: Username (if required)
+    @param password: Password (if required)
+    @param local_path: Path on the local machine where we are copying from
+    @param remote_path: Path on the remote machine where we are copying to
+    @param limit: Speed limit of file transfer.
+    @param log_filename: If specified, log all output to this file
+    @param timeout: The time duration (in seconds) to wait for the transfer
+            to complete.
+    @raise: Whatever remote_scp() raises
+    """
+    if (limit):
+        limit = "-l %s" % (limit)
+
+    command = ("scp -v -o UserKnownHostsFile=/dev/null "
+               "-o PreferredAuthentications=password -r %s "
+               "-P %s %s@%s:%s %s" %
+               (limit, port, username, host, remote_path, local_path))
+    password_list = []
+    password_list.append(password)
+    remote_scp(command, password_list, log_filename, timeout)
+
+
+def scp_between_remotes(src, dst, port, s_passwd, d_passwd, s_name, d_name,
+                        s_path, d_path, limit="", log_filename=None,
+                        timeout=600):
+    """
+    Copy files from a remote host (guest) to another remote host (guest).
+
+    @param src/dst: Hostname or IP address of src and dst
+    @param s_name/d_name: Username (if required)
+    @param s_passwd/d_passwd: Password (if required)
+    @param s_path/d_path: Path on the remote machine where we are copying
+                         from/to
+    @param limit: Speed limit of file transfer.
+    @param log_filename: If specified, log all output to this file
+    @param timeout: The time duration (in seconds) to wait for the transfer
+            to complete.
+
+    @return: True on success and False on failure.
+    """
+    if (limit):
+        limit = "-l %s" % (limit)
+
+    command = ("scp -v -o UserKnownHostsFile=/dev/null -o "
+               "PreferredAuthentications=password -r %s -P %s"
+               " %s@%s:%s %s@%s:%s" %
+               (limit, port, s_name, src, s_path, d_name, dst, d_path))
+    password_list = []
+    password_list.append(s_passwd)
+    password_list.append(d_passwd)
+    return remote_scp(command, password_list, log_filename, timeout)
+
+
+def copy_files_to(address, client, username, password, port, local_path,
+                  remote_path, limit="", log_filename=None,
+                  verbose=False, timeout=600):
+    """
+    Copy files to a remote host (guest) using the selected client.
+
+    @param client: Type of transfer client
+    @param username: Username (if required)
+    @param password: Password (if requried)
+    @param local_path: Path on the local machine where we are copying from
+    @param remote_path: Path on the remote machine where we are copying to
+    @param address: Address of remote host(guest)
+    @param limit: Speed limit of file transfer.
+    @param log_filename: If specified, log all output to this file (SCP only)
+    @param verbose: If True, log some stats using logging.debug (RSS only)
+    @param timeout: The time duration (in seconds) to wait for the transfer to
+            complete.
+    @raise: Whatever remote_scp() raises
+    """
+    if client == "scp":
+        scp_to_remote(address, port, username, password, local_path,
+                      remote_path, limit, log_filename, timeout)
+    elif client == "rss":
+        log_func = None
+        if verbose:
+            log_func = logging.debug
+        c = rss_client.FileUploadClient(address, port, log_func)
+        c.upload(local_path, remote_path, timeout)
+        c.close()
+
+
+def copy_files_from(address, client, username, password, port, remote_path,
+                    local_path, limit="", log_filename=None,
+                    verbose=False, timeout=600):
+    """
+    Copy files from a remote host (guest) using the selected client.
+
+    @param client: Type of transfer client
+    @param username: Username (if required)
+    @param password: Password (if requried)
+    @param remote_path: Path on the remote machine where we are copying from
+    @param local_path: Path on the local machine where we are copying to
+    @param address: Address of remote host(guest)
+    @param limit: Speed limit of file transfer.
+    @param log_filename: If specified, log all output to this file (SCP only)
+    @param verbose: If True, log some stats using logging.debug (RSS only)
+    @param timeout: The time duration (in seconds) to wait for the transfer to
+    complete.
+    @raise: Whatever remote_scp() raises
+    """
+    if client == "scp":
+        scp_from_remote(address, port, username, password, remote_path,
+                        local_path, limit, log_filename, timeout)
+    elif client == "rss":
+        log_func = None
+        if verbose:
+            log_func = logging.debug
+        c = rss_client.FileDownloadClient(address, port, log_func)
+        c.download(remote_path, local_path, timeout)
+        c.close()
 
 
 # The following are utility functions related to ports.
