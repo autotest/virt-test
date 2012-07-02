@@ -8,7 +8,7 @@ import time, os, logging, fcntl, re, commands, shutil, urlparse
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from xml.dom import minidom
-import virt_utils, virt_vm, virt_storage, aexpect, virt_remote
+import virt_utils, virt_vm, aexpect, virt_storage
 
 DEBUG = False
 try:
@@ -998,7 +998,7 @@ class VM(virt_vm.BaseVM):
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
-            filename = virt_vm.get_image_filename(image_params, root_dir)
+            filename = virt_storage.get_image_filename(image_params, root_dir)
             if image_params.get("use_storage_pool") == "yes":
                 filename = None
                 virt_install_cmd += add_drive(help,

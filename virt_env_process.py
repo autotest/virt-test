@@ -1,9 +1,9 @@
 import os, time, commands, re, logging, glob, threading, shutil
-from autotest.client import utils
-from autotest.client.shared import error
-import aexpect, kvm_monitor, ppm_utils, virt_test_setup, virt_vm, kvm_vm
-import libvirt_vm, virt_video_maker, virt_utils, virt_storage, kvm_storage
-import virt_remote
+from autotest_lib.client.bin import utils
+from autotest_lib.client.common_lib import error
+import aexpect, virt_utils, kvm_monitor, ppm_utils, virt_test_setup
+import virt_vm, kvm_vm, virt_test_utils, libvirt_vm, virt_video_maker
+import virt_utils, virt_storage, kvm_storage
 
 try:
     import PIL.Image
@@ -25,7 +25,7 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
-    image_filename = virt_vm.get_image_filename(params, test.bindir)
+    image_filename = virt_storage.get_image_filename(params, test.bindir)
 
     create_image = False
 
@@ -36,8 +36,10 @@ def preprocess_image(test, params, image_name):
           os.path.exists(image_filename)):
         create_image = True
 
-    if create_image and not virt_vm.create_image(params, test.bindir):
-        raise error.TestError("Could not create image")
+    if create_image:
+        image = kvm_storage.QemuImg(params, test.bindir, image_name)
+        if not image.create(params):
+            raise error.TestError("Could not create image")
 
 
 def preprocess_vm(test, params, env, name):
@@ -120,13 +122,13 @@ def postprocess_image(test, params, image_name):
     image = kvm_storage.QemuImg(params, test.bindir, image_name)
     if params.get("check_image") == "yes":
         try:
-            virt_vm.check_image(params, test.bindir)
+            image.check_image(params, test.bindir)
         except Exception, e:
             if params.get("restore_image_on_check_error", "no") == "yes":
-                virt_vm.backup_image(params, test.bindir, 'restore', True)
+                image.backup_image(params, test.bindir, "restore", True)
             raise e
     if params.get("remove_image") == "yes":
-        virt_vm.remove_image(params, test.bindir)
+        image.remove()
 
 
 def postprocess_vm(test, params, env, name):
