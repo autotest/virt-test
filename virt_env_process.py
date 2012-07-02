@@ -3,6 +3,8 @@ from autotest_lib.client.bin import utils
 from autotest_lib.client.common_lib import error
 import aexpect, virt_utils, kvm_monitor, ppm_utils, virt_test_setup
 import virt_vm, kvm_vm, virt_test_utils, libvirt_vm, virt_video_maker
+import virt_utils, virt_storage, kvm_storage
+
 try:
     import PIL.Image
 except ImportError:
@@ -16,7 +18,7 @@ _screendump_thread = None
 _screendump_thread_termination_event = None
 
 
-def preprocess_image(test, params):
+def preprocess_image(test, params, image_name):
     """
     Preprocess a single QEMU image according to the instructions in params.
 
@@ -24,7 +26,7 @@ def preprocess_image(test, params):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
-    image_filename = virt_vm.get_image_filename(params, test.bindir)
+    image_filename = virt_storage.get_image_filename(params, test.bindir)
 
     create_image = False
 
@@ -35,8 +37,10 @@ def preprocess_image(test, params):
           os.path.exists(image_filename)):
         create_image = True
 
-    if create_image and not virt_vm.create_image(params, test.bindir):
-        raise error.TestError("Could not create image")
+    if create_image:
+        image = kvm_storage.QemuImg(params, test.bindir, image_name)
+        if not image.create(params):
+            raise error.TestError("Could not create image")
 
 
 def preprocess_vm(test, params, env, name):
@@ -109,22 +113,23 @@ def preprocess_vm(test, params, env, name):
         vm.params = params
 
 
-def postprocess_image(test, params):
+def postprocess_image(test, params, image_name):
     """
     Postprocess a single QEMU image according to the instructions in params.
 
     @param test: An Autotest test object.
     @param params: A dict containing image postprocessing parameters.
     """
+    image = kvm_storage.QemuImg(params, test.bindir, image_name)
     if params.get("check_image") == "yes":
         try:
-            virt_vm.check_image(params, test.bindir)
+            image.check_image(params, test.bindir)
         except Exception, e:
             if params.get("restore_image_on_check_error", "no") == "yes":
-                virt_vm.backup_image(params, test.bindir, 'restore', True)
+                image.backup_image(params, test.bindir, "restore", True)
             raise e
     if params.get("remove_image") == "yes":
-        virt_vm.remove_image(params, test.bindir)
+        image.remove()
 
 
 def postprocess_vm(test, params, env, name):
@@ -227,13 +232,13 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                     # Call image_func for each image
                     if vm is not None and vm.is_alive():
                         vm.pause()
-                    image_func(test, image_params)
+                    image_func(test, image_params, image_name)
                     if vm is not None and vm.is_alive():
                         vm.resume()
         else:
             for image_name in params.objects("images"):
                 image_params = params.object_params(image_name)
-                image_func(test, image_params)
+                image_func(test, image_params, image_name)
 
     if not vm_first:
         _call_image_func()
@@ -363,7 +368,8 @@ def preprocess(test, params, env):
 
             vm_params = params.object_params(vm_name)
             for image in vm_params.get("master_images_clone").split():
-                virt_vm.clone_image(params, vm_name, image, test.bindir)
+                image_obj = kvm_storage.QemuImg(params, test.bindir, image)
+                image_obj.clone_image(params, vm_name, image, test.bindir)
 
     # Preprocess all VMs and images
     if params.get("not_preprocess","no") == "no":

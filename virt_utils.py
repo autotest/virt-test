@@ -3739,13 +3739,15 @@ def preprocess_images(bindir, params, env):
             vm.destroy(free_mac_addresses=False)
         vm_params = params.object_params(vm_name)
         for image in vm_params.get("master_images_clone").split():
-            virt_vm.clone_image(params, vm_name, image, bindir)
+            image_obj = virt_image.QemuImg(params, bindir, image)
+            image_obj.clone_image(params, vm_name, image, bindir)
 
 def postprocess_images(bindir, params):
     for vm in params.get("vms").split():
         vm_params = params.object_params(vm)
         for image in vm_params.get("master_images_clone").split():
-            virt_vm.rm_image(params, vm, image, bindir)
+            image_obj = virt_image.QemuImg(params, bindir, image)
+            image_obj.rm_clone_image(params, vm, image, bindir)
 
 
 class MigrationData(object):
