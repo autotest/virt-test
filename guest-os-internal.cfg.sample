@@ -920,6 +920,11 @@ variants:
             storage:
                 vendor = "QEMU"
                 product = "QEMU_HARDDISK"
+        eject_media:
+            cdroms += " cd2"
+            cdrom_cd1 = /tmp/orig.iso
+            cdrom_cd2 = isos/windows/winutils.iso 
+
         variants:
             - WinXP:
                 guest_name = WinXP
