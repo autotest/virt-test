@@ -2473,7 +2473,7 @@ class VM(virt_vm.BaseVM):
         """
         self.verify_status('paused') # Throws exception if not
         # Set high speed 1TB/S
-        self.monitor.migrate_set_speed(2<<39)
+        self.monitor.migrate_set_speed(str(2<<39))
         self.monitor.migrate_set_downtime(self.MIGRATE_TIMEOUT)
         logging.debug("Saving VM %s to %s" % (self.name, path))
         # Can only check status if background migration
@@ -2484,7 +2484,7 @@ class VM(virt_vm.BaseVM):
             self.MIGRATE_TIMEOUT, 2, 2,
             "Waiting for save to %s to complete" % path)
         # Restore the speed and downtime to default values
-        self.monitor.migrate_set_speed(32<<20)
+        self.monitor.migrate_set_speed(str(32<<20))
         self.monitor.migrate_set_downtime(0.03)
         # Base class defines VM must be off after a save
         self.monitor.cmd("system_reset")
