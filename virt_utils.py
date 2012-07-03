@@ -1349,7 +1349,7 @@ def run_tests(parser, job):
                 job.profilers.delete(profiler)
         else:
             # We will force the test to fail as TestNA during preprocessing
-            dict['dependency_failed'] = 'yes'
+            di['dependency_failed'] = 'yes'
             current_status = job.run_test_detail(di.get("vm_type"),
                                                  params=di,
                                                  tag=test_tag,
