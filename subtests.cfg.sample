@@ -854,7 +854,7 @@ variants:
     - boot_savevm:
         no raw
         no raw_dd
-        type = boot_savevm
+        type = boot_savevm_kvm
         savevm_delay = 0.3
         savevm_login_delay = 5
         savevm_timeout = 2000
