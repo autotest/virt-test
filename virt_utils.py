@@ -11,7 +11,7 @@ from autotest_lib.client.bin import utils, os_dep
 from autotest_lib.client.common_lib import logging_config, logging_manager
 from autotest_lib.client.common_lib import error, git
 from autotest_lib.client.common_lib.syncdata import SyncData, SyncListenServer
-import rss_client, aexpect, virt_vm, virt_env_process
+import rss_client, aexpect, virt_storage, virt_env_process
 import platform
 
 try:
@@ -1266,7 +1266,7 @@ def run_tests(parser, job):
         for d in test_dicts:
             if case in d["name"]:
                 if "case_type" in d.keys() and d["case_type"] == "prepare":
-                    img_name = virt_vm.get_image_filename(d, ".")
+                    img_name = virt_storage.get_image_filename(d, ".")
                     if img_name not in del_list.keys():
                         del_list[img_name] = [d]
                     else:
