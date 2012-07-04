@@ -2471,17 +2471,23 @@ variants:
             verify_virtio = yes
 
     - kernel_install:
+        only Linux
         type = kernel_install
         variants:
             - brew:
                 install_type = brew
                 kernel_dep_pkgs = "kernel-firmware"
             ## Example for other installation methods
+            #- koji:
+            #    install_type = koji
+            #    kernel_dep_pkgs = "linux-firmware module-init-tools"
+            #    kernel_koji_tag = f16-updates
             #- rpm:
             #    install_type = rpm
-            ## These 2 parameter can be a url.
-            #    kernel_rpm_path = "kernel-2.6.32-220.el6.i686.rpm"
-            #    kernel_deps_rpms = "kernel-firmware-2.6.32-220.el6.noarch.rpm"
+            #    # These 2 parameters can be url.
+            #    kernel_rpm_path = "kernel-3.1.7-1.fc16.x86_64"
+            #    kernel_deps_rpms = "linux-firmware-20110731-2.fc16.noarch"
+            #    file_checklist = kernel_rpm_path kernel_deps_rpms
             #- git:
             #    install_type = git
             #    kernel_git_repo = ""
@@ -2491,12 +2497,16 @@ variants:
             #    kernel_patch_list = ""
             #    kernel_config = ""
             #    kerne_config_list = ""
-            #- tar:
+            #- @tar:
             #    install_type = tar
-            #    kerne_src_pkg = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/test_src/linux-2.6.34.tar.bz2"
-            #    kernel_config = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/test_src/config-64"
-            #    kernel_patch_list = ""
-            #    kernel_tag = "2.6.34"
+            #    kernel_src_pkg = "http://www.kernel.org/pub/linux/kernel/v3.0/linux-3.3.tar.bz2"
+            #    # Remember to update this config file to your own.
+            #    kernel_config = "/boot/config-3.3.4-5.fc17.x86_64"
+            #    kernel_patch_list = "http://www.kernel.org/pub/linux/kernel/v3.0/patch-3.3.4.bz2"
+            #    file_checklist = kerne_src_pkg kernel_config kernel_patch_list
+            #    kernel_tag = "3.3.4"
+            #    # The fedora default kernel config would take very long time to compile.
+            #    test_timeout_install = 3600
 
     - vnc_test:
         no RHEL_Server_5.7_host
