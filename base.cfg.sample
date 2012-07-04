@@ -94,6 +94,9 @@ display = vnc
 # Guest VGA type (cirrus,  std, vmware, qxl, xenfb, none)
 vga = std
 
+# Add a sga device to guest.
+#enable_sga = yes
+
 ###
 # Capture contents of display during each test
 take_regular_screendumps = yes
