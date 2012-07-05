@@ -57,7 +57,7 @@ variants:
             max_disk:
                  stg_image_num = 27
                  list_volume_command = cd /dev && \ls vd*
-                 re_str = "[vhs]d[a-z]*[^0-9]"
+                 re_str = "[vhs]d[a-z]"
         usb_multi_disk:
             show_mount_cmd = mount|gawk '/mnt/{print $1}'
             clean_cmd = "\rm -rf /mnt/*"
