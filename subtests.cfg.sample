@@ -1986,7 +1986,7 @@ variants:
         remove_image = yes
         remove_image_image1 = no
         cmd_timeout = 1000
-        block_list = C: D: vda vda1 vda2 hda hda1 hda2
+        black_list = C: D:
         start_vm = no
         variants:
             - default:
@@ -2002,6 +2002,7 @@ variants:
                 image_name_stg3 = storage3
                 image_size_stg3 = 5G
             - max_disk:
+                no ide
                 usbs = ""
                 usb_devices = ""
                 drive_pci_addr_image1 = 4
@@ -2117,7 +2118,7 @@ variants:
         no Host_RHEL.6.1
         type = multi_disk
         cmd_timeout = 1000
-        block_list = C: D: vda vda1 vda2 hda hda1 hda2 sda sda1 sda2
+        block_list = C: D:
         kill_vm = yes
         create_image = yes
         image_boot_image1 = yes

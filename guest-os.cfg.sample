@@ -63,7 +63,7 @@ variants:
             max_disk:
                  stg_image_num = 27
                  list_volume_command = cd /dev && \ls vd*
-                 re_str = "[vhs]d[a-z][^0-9]"
+                 re_str = "[vhs]d[a-z]"
         usb_multi_disk:
             show_mount_cmd = mount|gawk '/mnt/{print $1}'
             clean_cmd = "\rm -rf /mnt/*"
@@ -1239,7 +1239,7 @@ variants:
         vmstop:
             guest_path = C:\
         multi_disk:
-            block_list += " E:"
+            black_list += " E:"
             shell_port = 23
             shell_client = telnet
             post_cmd = del c:\cmd.exe
@@ -1257,7 +1257,7 @@ variants:
             max_disk:
                 pre_cmd = del diskpart.script && (for /L %i in (1 1 23) do echo select disk %i >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
         usb_multi_disk:
-            block_list += " E:"
+            black_list += " E:"
             shell_port = 23
             shell_client = telnet
             post_cmd = del c:\cmd.exe
