@@ -2731,6 +2731,9 @@ variants:
         format_floppy_timeout = 60
         floppy_readonly = yes
 
+    - fail-test:
+        type = fail
+
 whql.support_vm_install, whql.client_install.support_vm:
     image_name += -supportvm
 
