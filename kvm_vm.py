@@ -1016,6 +1016,7 @@ class VM(virt_vm.BaseVM):
                 qemu_cmd += "numactl -m %s " % n
         # Add the qemu binary
         qemu_cmd += qemu_binary
+        qemu_cmd += " -S"
         # Add the VM's name
         qemu_cmd += add_name(help, name)
         # no automagic devices please
@@ -1781,6 +1782,9 @@ class VM(virt_vm.BaseVM):
                     auto_close=False,
                     output_func=virt_utils.log_line,
                     output_params=(outfile,))
+
+            # start guest
+            self.monitor.cmd("cont")
 
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
