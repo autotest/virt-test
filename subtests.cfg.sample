@@ -2079,6 +2079,7 @@ variants:
 
     - floppy_test:
         type = floppy
+        start_vm = no
         floppies = "fl"
         floppy_name = "images/test_floppy.img"
         pre_command = "dd if=/dev/zero of=images/test_floppy.img bs=512 count=2880"
