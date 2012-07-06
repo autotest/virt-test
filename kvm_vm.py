@@ -591,7 +591,8 @@ class VM(virt_vm.BaseVM):
             if werror: cmd += ",werror=%s" % werror
             cmd += _add_option("serial", serial)
             cmd += _add_option("snapshot", snapshot, bool)
-            cmd += _add_option("boot", boot, bool)
+            if has_option(help, "boot=on\|off"):
+                cmd += _add_option("boot", boot, bool)
             cmd += _add_option("id", name)
             cmd += _add_option("readonly", readonly, bool)
             return cmd + dev
