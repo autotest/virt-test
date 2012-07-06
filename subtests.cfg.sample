@@ -2457,7 +2457,7 @@ variants:
         floppy_name_fl2 = "images/fd2.img"
         pre_command = "dd if=/dev/urandom of=images/fd1.img bs=512 count=2880&&  dd if=/dev/urandom of=images/fd2.img bs=512 count=2880"
         format_floppy_timeout = 60
-        floppy_readonly = "True True"
+        floppy_readonly = yes
 
     - netperf2:    install setup
         only Linux
