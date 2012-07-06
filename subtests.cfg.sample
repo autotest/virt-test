@@ -2200,6 +2200,7 @@ variants:
                 hugetlbfs_path = "/proc/sys/vm/nr_hugepages"
 
     - cpuflags:
+        no Host_RHEL.5
         only Linux
         type = cpuflags
         auto_cpu_model = "no"
