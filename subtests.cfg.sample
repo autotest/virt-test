@@ -97,7 +97,6 @@ variants:
                 only qcow2
                 image_size_image1 = 2300G
                 image_size = 2300G
-                cluster_size = 512
             with_migration:
                 migrate_background = yes
         variants:
