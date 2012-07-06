@@ -2320,7 +2320,7 @@ variants:
                 test_control_file = 9p-ci.control
                 test_timeout = 1800
 
-     - seabios: install setup image_copy unattended_install.cdrom
+    - seabios: install setup image_copy unattended_install.cdrom
          type = seabios
          start_vm = no
          restart_vm = no
