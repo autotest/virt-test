@@ -230,9 +230,11 @@ def process(test, params, env, image_func, vm_func, pre_flag=True):
                     # Call image_func for each image
                     if vm is not None and vm.is_alive():
                         vm.pause()
-                    image_func(test, image_params, image_name)
-                    if vm is not None and vm.is_alive():
-                        vm.resume()
+                    try:
+                        image_func(test, image_params, image_name)
+                    finally:
+                        if vm is not None and vm.is_alive():
+                            vm.resume()
         else:
             for image_name in params.objects("images"):
                 image_params = params.object_params(image_name)
