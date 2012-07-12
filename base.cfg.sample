@@ -267,7 +267,7 @@ init_pci_addr = 4
 # ksm is disabled
 ksm = 0
 
-index_enable = yes
+index_enable = no
 #you can specify the drive_index by
 #drive_index_$image/stage/cd = $number
 #drive_pci_addr_image1 = 4
