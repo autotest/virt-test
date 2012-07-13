@@ -358,7 +358,7 @@ class UnattendedInstallConfig(object):
                       'nfs_server', 'nfs_dir', 'install_virtio',
                       'floppy_name', 'cdrom_unattended', 'boot_path',
                       'kernel_params', 'extra_params', 'qemu_img_binary',
-                      'cdkey', 'finish_program', 'vm_type', 'process_check'
+                      'cdkey', 'finish_program', 'vm_type', 'process_check',
                       'cdrom_mount_point', 'floppy_mount_point',
                       'cdrom_virtio', 'virtio_floppy', 're_driver_match',
                       're_hardware_id', 'driver_in_floppy']
@@ -690,7 +690,7 @@ class UnattendedInstallConfig(object):
             if re.findall(dummy_re, command_line_text.data):
                 dummy = re.findall(dummy_re, command_line_text.data)[0]
                 driver = getattr(self, dummy_re_dirver[dummy])
-                
+
                 if driver.endswith("msi"):
                     driver = 'msiexec /passive /package ' + driver
                 elif 'INSTALLER' in dummy:
