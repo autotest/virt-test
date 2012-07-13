@@ -1609,45 +1609,10 @@ def run_tests(parser, job):
 
     @return: True, if all tests ran passed, False if any of them failed.
     """
-    test_dicts = list(parser.get_dicts())
-    if len(test_dicts) > 0 and "prepare_case" in test_dicts[0].keys():
-        prepare_case = test_dicts[0]["prepare_case"]
-    else:
-        prepare_case = ['unattended_install', 'rh_kernel_update',
-                                           'disable_win_update']
-    for case in prepare_case:
-        del_list = {}
-        for d in test_dicts:
-            if case in d["name"]:
-                if "case_type" in d.keys() and d["case_type"] == "prepare":
-                    img_name = virt_storage.get_image_filename(d, ".")
-                    if img_name not in del_list.keys():
-                        del_list[img_name] = [d]
-                    else:
-                        del_list[img_name].append(d)
-        for img_l in del_list.keys():
-            if len(del_list[img_l]) > 1:
-                for d in del_list[img_l][:-1]:
-                    test_dicts.remove(d)
-
-    # Add the parameter decide if setup host env in the test case
-    # For some sepical test we only setup host in the first and last case
-    if test_dicts:
-        if test_dicts[0].get("host_setup_flag"):
-            flag = int(test_dicts[0]["host_setup_flag"])
-            test_dicts[0]["host_setup_flag"] =  1 | flag
-        else:
-            test_dicts[0]["host_setup_flag"] = 1
-
-        if test_dicts[-1].get("host_setup_flag"):
-            flag = int(test_dicts[-1].get("host_setup_flag"))
-            test_dicts[-1]["host_setup_flag"] = 2 | flag
-        else:
-            test_dicts[-1]["host_setup_flag"] = 2
-
-
-    for i in range(len(test_dicts)):
-        logging.info("Test %4d:  %s", i + 1, test_dicts[i].get("shortname"))
+    last_index = -1
+    for i, d in enumerate(parser.get_dicts()):
+        logging.info("Test %4d:  %s" % (i + 1, d["shortname"]))
+        last_index += 1
 
     status_dict = {}
     failed = False
@@ -1668,7 +1633,7 @@ def run_tests(parser, job):
                 dict["host_setup_flag"] = flag | setup_flag
             else:
                 dict["host_setup_flag"] = setup_flag
-        elif index == last_index:
+        if index == last_index:
             if dict.get("host_setup_flag", None) is not None:
                 flag = int(dict["host_setup_flag"])
                 dict["host_setup_flag"] = flag | cleanup_flag
