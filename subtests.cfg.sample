@@ -1406,6 +1406,12 @@ variants:
                 only virtio_net virtio_blk
                 pci_model = virtio-net-pci
                 match_string = "Virtio network device"
+                variants:
+                    @default:
+                        no Host_RHEL.5
+                    @Host_RHEL.5:
+                        pci_model = virtio
+                        no Host_RHEL.6
             - nic_e1000:
                 no Windows
                 pci_model = e1000
