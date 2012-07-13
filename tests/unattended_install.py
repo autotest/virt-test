@@ -358,7 +358,7 @@ class UnattendedInstallConfig(object):
                       'nfs_server', 'nfs_dir', 'install_virtio',
                       'floppy_name', 'cdrom_unattended', 'boot_path',
                       'kernel_params', 'extra_params', 'qemu_img_binary',
-                      'cdkey', 'finish_program', 'vm_type', 'process_check'
+                      'cdkey', 'finish_program', 'vm_type', 'process_check',
                       'cdrom_mount_point', 'floppy_mount_point',
                       'cdrom_virtio', 'virtio_floppy', 're_driver_match',
                       're_hardware_id', 'driver_in_floppy']
@@ -547,14 +547,26 @@ class UnattendedInstallConfig(object):
             assert command_line_text.nodeType == doc.TEXT_NODE
             dummy_re = 'KVM_TEST_VIRTIO_NETWORK_INSTALLER'
             process_check_re = 'PROCESS_CHECK'
-            if (self.install_virtio == 'yes' and
-                hasattr(self, 'virtio_network_installer_path')):
-                driver = self.virtio_network_installer_path
-            else:
-                driver = 'dir'
-            if driver.endswith("msi"):
-                driver = 'msiexec /passive /package ' + driver
-            if dummy_re in command_line_text.data:
+            #if (self.install_virtio == 'yes' and
+            #    hasattr(self, 'virtio_network_installer_path')):
+            #    driver = self.virtio_network_installer_path
+            #else:
+            #    driver = 'dir'
+            #if driver.endswith("msi"):
+            #    driver = 'msiexec /passive /package ' + driver
+            #elif 'INSTALLER' in dummy:
+            #    driver = self.update_driver_hardware_id(driver)
+            #if dummy_re in command_line_text.data:
+            #    t = command_line_text.data
+            #    t = re.sub(dummy_re, driver, t)
+            if re.findall(dummy_re, command_line_text.data):
+                dummy = re.findall(dummy_re, command_line_text.data)[0]
+                driver = getattr(self, dummy_re_dirver[dummy])
+
+                if driver.endswith("msi"):
+                    driver = 'msiexec /passive /package ' + driver
+                elif 'INSTALLER' in dummy:
+                    driver = self.update_driver_hardware_id(driver)
                 t = command_line_text.data
                 t = re.sub(dummy_re, driver, t)
                 command_line_text.data = t
