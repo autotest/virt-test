@@ -2390,7 +2390,7 @@ variants:
     - usb_multi_disk: install setup image_copy unattended_install.cdrom
         type = multi_disk
         cmd_timeout = 1000
-        block_list = C: D:
+        black_list = C: D:
         kill_vm = yes
         create_image = yes
         image_boot_image1 = yes
