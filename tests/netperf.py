@@ -1,9 +1,10 @@
 import logging, os, commands, threading, re, glob, time
 from autotest.client import utils
-from autotest.client.shared import ssh_key
+from autotest.client.shared import ssh_key, error
 from virttest import utils_test, utils_misc, remote
 
 
+@error.context_aware
 def run_netperf(test, params, env):
     """
     Network stress test with netperf.
@@ -17,66 +18,75 @@ def run_netperf(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
-    login_timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=login_timeout)
-    if params.get("rh_perf_envsetup_script"):
-        utils_test.service_setup(vm, session, test.virtdir)
-    server = vm.get_address()
-    server_ctl = vm.get_address(1)
-    session.close()
-
-    logging.debug(commands.getoutput("numactl --hardware"))
-    logging.debug(commands.getoutput("numactl --show"))
-    # pin guest vcpus/memory/vhost threads to last numa node of host by default
-    if params.get('numa_node'):
-        numa_node = int(params.get('numa_node'))
-        node = utils_misc.NumaNode(numa_node)
-        utils_test.pin_vm_threads(vm, node)
-
-    if "vm2" in params["vms"]:
-        vm2 = env.get_vm("vm2")
-        vm2.verify_alive()
-        session2 = vm2.wait_for_login(timeout=login_timeout)
-        if params.get("rh_perf_envsetup_script"):
-            utils_test.service_setup(vm2, session2, test.virtdir)
-        client = vm2.get_address()
-        session2.close()
-        if params.get('numa_node'):
-            utils_test.pin_vm_threads(vm2, node)
-
-    if params.get("client"):
-        client = params["client"]
-    if params.get("host"):
-        host = params["host"]
-    else:
-        cmd = "ifconfig %s|awk 'NR==2 {print $2}'|awk -F: '{print $2}'"
-        host = commands.getoutput(cmd % params["netdst"])
-
-    shell_port = int(params["shell_port"])
-    password = params["password"]
-    username = params["username"]
-
-    def env_setup(ip):
-        logging.debug("Setup env for %s" % ip)
-        ssh_key.setup_ssh_key(hostname=ip, user=username, port=shell_port,
-                              password=password)
+    def env_setup(ip, user, port, password):
+        error.context("Setup env for %s" % ip)
+        SSHHost(ip, user=user, port=port, password=password)
         ssh_cmd(ip, "service iptables stop")
         ssh_cmd(ip, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
         netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
         for i in params.get("netperf_files").split():
             remote.scp_to_remote(ip, shell_port, username, password,
-                                      "%s/%s" % (netperf_dir, i), "/tmp/")
+                                     "%s/%s" % (netperf_dir, i), "/tmp/")
         ssh_cmd(ip, params.get("setup_cmd"))
 
-    logging.info("Prepare env of server/client/host")
 
-    env_setup(server_ctl)
-    env_setup(client)
-    env_setup(host)
-    logging.info("Start netperf testing ...")
+    def _pin_vm_threads(vm, node):
+        if node:
+            if not isinstance(node, utils_misc.NumaNode):
+                node = utils_misc.NumaNode(int(node))
+            utils_test.pin_vm_threads(vm, node)
+
+        return node
+
+
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
+    login_timeout = int(params.get("login_timeout", 360))
+
+    session = vm.wait_for_login(timeout=login_timeout)
+    if params.get("rh_perf_envsetup_script"):
+        utils_test.service_setup(vm, session, test.virtdir)
+    session.close()
+
+    server = vm.get_address()
+    server_ctl = server
+    if len(params.get("nics", "").split()) > 1:
+        server_ctl = vm.get_address(1)
+
+    logging.debug(commands.getoutput("numactl --hardware"))
+    logging.debug(commands.getoutput("numactl --show"))
+    # pin guest vcpus/memory/vhost threads to last numa node of host by default
+    numa_node = _pin_vm_threads(vm, params.get("numa_node"))
+
+    if params.get("host"):
+        host = params["host"]
+    else:
+        cmd = "ifconfig %s|awk 'NR==2 {print $2}'|awk -F: '{print $2}'"
+        host = commands.getoutput(cmd % params["bridge"])
+
+    client = params.get("client", "localhost")
+    vms_list = params["vms"].split()
+    if len(vms_list) > 1:
+        vm2 = env.get_vm(vms_list[-1])
+        vm2.verify_alive()
+        session2 = vm2.wait_for_login(timeout=login_timeout)
+        if params.get("rh_perf_envsetup_script"):
+            utils_test.service_setup(vm2, session2, test.virtdir)
+        client = vm2.get_address()
+        session2.close()
+        _pin_vm_threads(vm2, numa_node)
+
+    shell_port = int(params["shell_port"])
+    password = params["password"]
+    username = params["username"]
+
+    error.context("Prepare env of server/client/host", logging.info)
+    env_setup(server_ctl, username, shell_port, password)
+    env_setup(client, username, shell_port, password)
+    env_setup(host, username, shell_port, password)
+
+    error.context("Start netperf testing", logging.info)
     start_test(server, server_ctl, host, client, test.resultsdir,
                l=int(params.get('l')),
                sessions_rr=params.get('sessions_rr'),
@@ -119,7 +129,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
             o = commands.getoutput("cat %s |tail -n 1" % filename)
             try:
                 thu += float(o.split()[raw])
-            except:
+            except Exception:
                 logging.debug(commands.getoutput("cat %s.*" % file_prefix))
                 return -1
         return thu
@@ -139,7 +149,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     fd.write('### session-length : %s\n' % l )
 
     for protocol in protocols.split():
-        logging.info(protocol)
+        error.context("Testing %s protocol" % protocol, logging.info)
         fd.write("Category:" + protocol+ "\n")
         row = "%5s|%8s|%10s|%6s|%9s|%10s|%10s|%12s|%12s|%9s|%8s|%8s|%10s|%10s" \
               "|%11s|%10s" % ("size", "sessions", "throughput", "%CPU",
