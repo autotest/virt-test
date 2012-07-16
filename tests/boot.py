@@ -26,10 +26,12 @@ def _get_function(func_name):
     return None
 
 
-def check_usb_device(test, params, env):
+@error.context_aware
+def check_usb_device_monitor(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
+    error.context("Verify USB device in monitor.")
     o = vm.monitor.info("usb")
     if isinstance(o, dict):
         o = o.get("return")
@@ -38,20 +40,34 @@ def check_usb_device(test, params, env):
         raise error.TestFail("Could not find '%s' device, monitor "
                              "returns: \n%s" % (params.get("product"), o))
 
+@error.context_aware
+def check_usb_device(test, params, env):
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
+
+    check_usb_device_monitor(test, params, env)
+
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
-    chk_list = ["%s:%s" % (params.get("vendor_id"), params.get("product_id"))]
-    if params.get("vendor"):
-        chk_list.append(params.get("vendor"))
-    if params.get("product"):
-        chk_list.append(params.get("product"))
+    deviceid_str = params.get("deviceid_str")
+    vendor_id = params.get("vendor_id")
+    product_id = params.get("product_id")
+    vendor = params.get("vendor")
+    product = params.get("product")
 
-    o = session.cmd("lsusb -v")
+    chk_list = [deviceid_str % (vendor_id, product_id)]
+    if vendor:
+        chk_list.append(vendor)
+    if product:
+        chk_list.append(product)
+
+    error.context("Verify USB device in guest.")
+    o = session.cmd_output(params.get("chk_usb_info_cmd"))
     for item in chk_list:
         if not re.findall(item, o):
             raise error.TestFail("Could not find item '%s' in guest, "
-                                 "'lsusb -v' output:\n %s" % (item, o))
+                                 "Output:\n %s" % (item, o))
 
 
 @error.context_aware

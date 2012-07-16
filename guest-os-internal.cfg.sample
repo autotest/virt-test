@@ -859,7 +859,19 @@ variants:
             post_snapshot_cmd = {shell:D:\whql\WUInstall.exe /install}
         live_snapshot_chain.oops:
             post_snapshot_cmd = {monitor:nmi 0}
-
+        boot_with_usb, reboot_with_usb:
+            deviceid_str = "VID_%s&PID_%s"
+            chk_usb_info_cmd = 'wmic path Win32_USBControllerDevice get Dependent | find "USB"'
+            vendor = ""
+            product = ""
+            ehci:
+                deviceid_str = "VEN_%s&DEV_%s"
+                chk_usb_info_cmd = "wmic path Win32_USBController get PNPDeviceID"
+                vendor_id = 8086
+                product_id = 24CD
+            storage:
+                vendor = "QEMU"
+                product = "QEMU_HARDDISK"
         variants:
             - WinXP:
                 guest_name = WinXP
