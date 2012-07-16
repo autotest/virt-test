@@ -1,9 +1,23 @@
 import logging, os, commands, threading, re, glob
-from autotest.server.hosts.ssh_host import SSHHost
-from autotest.client import utils
-from autotest.client.virt import virt_test_utils, virt_utils, virt_remote
+from autotest_lib.client.common_lib import error
+from autotest_lib.client.bin import utils
+from autotest_lib.client.virt import virt_utils
+from autotest_lib.client.virt import virt_test_utils
+try:
+    from autotest_lib.server.hosts.ssh_host import SSHHost
+except ImportError:
+    pubkey = "%s/.ssh/id_dsa.pub" % os.environ['HOME']
+    if not os.path.exists(os.path.expandvars(pubkey)):
+        commands.getoutput('yes ""|ssh-keygen -t dsa -q -N ""')
+    def SSHHost(ip, user, port, password):
+        session = virt_utils.wait_for_login("ssh", ip, port, user, password,
+                                            "^\[.*\][\#\$]\s*$")
+        k = open(pubkey, "r")
+        session.cmd('echo "%s" >> ~/.ssh/authorized_keys' % k.read())
+        k.close()
+        session.close()
 
-
+error.context_aware
 def run_netperf(test, params, env):
     """
     Network stress test with netperf.
@@ -17,66 +31,75 @@ def run_netperf(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    def env_setup(ip, user, port, password):
+        error.context("Setup env for %s" % ip)
+        SSHHost(ip, user=user, port=port, password=password)
+        ssh_cmd(ip, "service iptables stop")
+        ssh_cmd(ip, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
+
+        netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
+        for i in params.get("netperf_files").split():
+            virt_utils.scp_to_remote(ip, shell_port, username, password,
+                                     "%s/%s" % (netperf_dir, i), "/tmp/")
+        ssh_cmd(ip, params.get("setup_cmd"))
+
+
+    def _pin_vm_threads(vm, node):
+        if node:
+            if not isinstance(node, virt_utils.NumaNode):
+                node = virt_utils.NumaNode(int(node))
+            virt_test_utils.pin_vm_threads(vm, node)
+
+        return node
+
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
+
     session = vm.wait_for_login(timeout=login_timeout)
     if params.get("rh_perf_envsetup_script"):
         virt_test_utils.service_setup(vm, session, test.virtdir)
-    server = vm.get_address()
-    server_ctl = vm.get_address(1)
     session.close()
+
+    server = vm.get_address()
+    server_ctl = server
+    if len(params.get("nics", "").split()) > 1:
+        server_ctl = vm.get_address(1)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
-    if params.get('numa_node'):
-        numa_node = int(params.get('numa_node'))
-        node = virt_utils.NumaNode(numa_node)
-        virt_test_utils.pin_vm_threads(vm, node)
+    numa_node = _pin_vm_threads(vm, params.get("numa_node"))
 
-    if "vm2" in params["vms"]:
-        vm2 = env.get_vm("vm2")
-        vm2.verify_alive()
-        session2 = vm2.wait_for_login(timeout=login_timeout)
-        if params.get("rh_perf_envsetup_script"):
-            virt_test_utils.service_setup(vm2, session2, test.virtdir)
-        client = vm2.get_address()
-        session2.close()
-        if params.get('numa_node'):
-            virt_test_utils.pin_vm_threads(vm2, node)
-
-    if params.get("client"):
-        client = params["client"]
     if params.get("host"):
         host = params["host"]
     else:
         cmd = "ifconfig %s|awk 'NR==2 {print $2}'|awk -F: '{print $2}'"
         host = commands.getoutput(cmd % params["bridge"])
 
+    client = params.get("client", "localhost")
+    vms_list = params["vms"].split()
+    if len(vms_list) > 1:
+        vm2 = env.get_vm(vms_list[-1])
+        vm2.verify_alive()
+        session2 = vm2.wait_for_login(timeout=login_timeout)
+        if params.get("rh_perf_envsetup_script"):
+            virt_test_utils.service_setup(vm2, session2, test.virtdir)
+        client = vm2.get_address()
+        session2.close()
+        _pin_vm_threads(vm2, numa_node)
+
     shell_port = int(params["shell_port"])
     password = params["password"]
     username = params["username"]
 
-    def env_setup(ip):
-        logging.debug("Setup env for %s" % ip)
-        SSHHost(ip, user=username, port=shell_port, password=password)
-        ssh_cmd(ip, "service iptables stop")
-        ssh_cmd(ip, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
+    error.context("Prepare env of server/client/host", logging.info)
+    env_setup(server_ctl, username, shell_port, password)
+    env_setup(client, username, shell_port, password)
+    env_setup(host, username, shell_port, password)
 
-        netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
-        for i in params.get("netperf_files").split():
-            virt_remote.scp_to_remote(ip, shell_port, username, password,
-                                      "%s/%s" % (netperf_dir, i), "/tmp/")
-        ssh_cmd(ip, params.get("setup_cmd"))
-
-    logging.info("Prepare env of server/client/host")
-
-    env_setup(server_ctl)
-    env_setup(client)
-    env_setup(host)
-
-    logging.info("Start netperf testing ...")
+    error.context("Start netperf testing", logging.info)
     start_test(server, server_ctl, host, client, test.resultsdir,
                l=int(params.get('l')),
                sessions_rr=params.get('sessions_rr'),
@@ -87,7 +110,7 @@ def run_netperf(test, params, env):
                ver_cmd=params.get('ver_cmd', "rpm -q qemu-kvm"),
                netserver_port=params.get('netserver_port', "12865"))
 
-
+@error.context_aware
 def start_test(server, server_ctl, host, client, resultsdir, l=60,
                sessions_rr="50 100 250 500", sessions="1 2 4",
                sizes_rr="64 256 512 1024 2048",
@@ -139,7 +162,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     fd.write(desc)
 
     for protocol in protocols.split():
-        logging.info(protocol)
+        error.context("Testing %s protocol" % protocol, logging.info)
         fd.write("Category:" + protocol+ "\n")
         row = "%5s|%8s|%10s|%6s|%9s|%10s|%10s|%12s|%12s|%9s|%8s|%8s|%10s|%10s" \
               "|%11s|%10s" % ("size", "sessions", "throughput", "%CPU",
@@ -179,7 +202,6 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                 logging.info(row)
                 fd.write(row + "\n")
                 fd.flush()
-                logging.debug("Remove temporary files")
                 commands.getoutput("rm -f /tmp/netperf.%s.*.nf" % ret['pid'])
     fd.close()
 
