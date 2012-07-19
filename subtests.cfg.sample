@@ -935,9 +935,6 @@ variants:
             - with_pvclock:
                 boot_option_added = "divider=10"
                 only RHEL.5
-            - without_pvclock:
-                cpu_model_flags += ",-kvmclock"
-                only RHEL.5
 
     - balloon_check:
         no Host_RHEL.5
