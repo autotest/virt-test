@@ -438,6 +438,8 @@ variants:
                                     cdrom_unattended = images/rhel59-32/ks.iso
                                     kernel = images/rhel59-32/vmlinuz
                                     initrd = images/rhel59-32/initrd.img
+                                    perf:
+                                        unattended_file = unattended/RHEL-5-perf-series.ks
                                 unattended_install.cdrom, check_block_size.4096_512, check_block_size.512_512:
                                     cdrom_cd1 = isos/linux/RHEL-Server-5.9-i386-DVD.iso
                             - 64:
@@ -452,6 +454,8 @@ variants:
                                     cdrom_unattended = images/rhel59-64/ks.iso
                                     kernel = images/rhel59-64/vmlinuz
                                     initrd = images/rhel59-64/initrd.img
+                                    perf:
+                                        unattended_file = unattended/RHEL-5-perf-series.ks
                             - PAE:
                                 guest_name += -PAE
                                 image_name += -PAE
@@ -567,6 +571,8 @@ variants:
                                     cdrom_unattended = images/rhel63-32/ks.iso
                                     kernel = images/rhel63-32/vmlinuz
                                     initrd = images/rhel63-32/initrd.img
+                                    perf:
+                                        unattended_file = unattended/RHEL-6-perf-series.ks
                                 unattended_install.cdrom:
                                     cdrom_cd1 = isos/linux/RHEL6.3-Server-i386.iso
                             - 64:
@@ -579,6 +585,8 @@ variants:
                                     cdrom_unattended = images/rhel63-64/ks.iso
                                     kernel = images/rhel63-64/vmlinuz
                                     initrd = images/rhel63-64/initrd.img
+                                    perf:
+                                        unattended_file = unattended/RHEL-6-perf-series.ks
                                 unattended_install.cdrom:
                                     cdrom_cd1 = isos/linux/RHEL6.3-Server-x86_64.iso
 

@@ -62,6 +62,7 @@ variants:
             aio_threads:
                 image_aio = threads
         variants:
+            perf:
             @default_install:
             multi_disk_install:
                 no ide
