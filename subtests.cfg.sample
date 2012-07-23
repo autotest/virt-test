@@ -1754,6 +1754,9 @@ variants:
         mtype_pattern = '\d.\d.\d'
         catch_uuid_cmd = dmidecode | awk -F: '/UUID/ {print $2}'
         cpu_vendor_id_chk_cmd = "cat /proc/cpuinfo | grep 'vendor_id'"
+        cpu_cores_chk_cmd = "lscpu | grep '^Core'"
+        cpu_sockets_chk_cmd = "lscpu | grep 'socket(s)'"
+        cpu_threads_chk_cmd = "lscpu | grep '^Thread'"
         check_machine_type_cmd = dmidecode | awk -F: '/Version: RHEL/'
         virtio_blk:
             vms = ""

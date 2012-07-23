@@ -10,9 +10,6 @@ variants:
         reboot_command = shutdown -r now
         status_test_command = echo $?
         cpu_chk_cmd = grep processor /proc/cpuinfo | wc -l
-        cores_chk_cmd = grep 'cpu cores' /proc/cpuinfo | uniq
-        sockets_chk_cmd = grep 'physical id' /proc/cpuinfo |sort |uniq |wc -l
-        get_siblings_num = grep siblings /proc/cpuinfo| uniq
         mem_chk_cmd = dmidecode -t 17 |awk -F: '/Size/ {print $2}'
         mem_chk_cur_cmd = grep MemTotal /proc/meminfo
         get_time_cmd = date +'TIME: %a %m/%d/%Y %H:%M:%S.%N'
@@ -283,6 +280,13 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
                         netstress_kill_guest:
                             nic_module_cmd = "ls -l --color=never /sys/class/net/*/driver"
                         rh_kernel_update, kexec:
@@ -341,6 +345,13 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
                         usb_storage.check_options:
                             check_io_size_option = no
 
@@ -381,6 +392,13 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
                         usb_storage.check_options:
                             check_io_size_option = no
 
@@ -421,6 +439,13 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
                         usb_storage.check_options:
                             check_io_size_option = no
 
@@ -616,9 +641,6 @@ variants:
         mem_chk_cmd = wmic memphysical
         mem_chk_cur_cmd = wmic memphysical
 
-        sockets_chk_cmd = cmd /c D:\coreutils\cpuz.exe --txt=cpuinfo && type cpuinfo.txt|find "Number of processors"
-        cores_chk_cmd = cmd /c D:\coreutils\cpuz.exe --txt=cpuinfo && type cpuinfo.txt|find "Number of cores"
-        threads_chk_cmd = cmd /c D:\coreutils\cpuz.exe --txt=cpuinfo && type cpuinfo.txt|find "Number of threads"
         get_time_cmd = "cmd /c echo TIME: %date% %time%"
         migration_test_command = dir
         get_nmi_cmd = ::no_cmd
@@ -734,6 +756,11 @@ variants:
             vms= "vm1"
             catch_serial_cmd =
             cpu_vendor_id_chk_cmd = "wmic cpu get Manufacturer | more +1"
+            #XXX: Since I don't find a reliable way to check the cpu socket
+            # numbers for windows, disable this kind of checking temporarily.
+            cpu_sockets_chk_cmd = ""
+            cpu_cores_chk_cmd = "wmic cpu get NumberOfCores | more +1"
+            cpu_threads_chk_cmd = "wmic cpu get NumberOfLogicalProcessors | more +1"
             check_machine_type_cmd = "wmic csproduct get Version"
             virtio_blk, virtio_net:
                 vio_driver_chk_cmd = 'driverquery /si | find "Red Hat"'
