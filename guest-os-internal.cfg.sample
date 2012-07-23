@@ -104,9 +104,6 @@ variants:
         file_transfer:
             tmp_dir = /tmp/
             clean_cmd = rm -f
-        physical_resources_check:
-            cpu_vendor_id = "AuthenticAMD"
-            cpu_vendor_id_chk_cmd = grep vendor_id /proc/cpuinfo
         nicdriver_unload:
             readlink_command = readlink -e
             sys_path = "/sys/class/net/%s/device/driver"
@@ -736,6 +733,7 @@ variants:
         physical_resources_check:
             vms= "vm1"
             catch_serial_cmd =
+            cpu_vendor_id_chk_cmd = "wmic cpu get Manufacturer | more +1"
             check_machine_type_cmd = "wmic csproduct get Version"
         file_transfer:
             tmp_dir = C:\
