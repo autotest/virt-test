@@ -735,6 +735,9 @@ variants:
             catch_serial_cmd =
             cpu_vendor_id_chk_cmd = "wmic cpu get Manufacturer | more +1"
             check_machine_type_cmd = "wmic csproduct get Version"
+            virtio_blk, virtio_net:
+                vio_driver_chk_cmd = 'driverquery /si | find "Red Hat"'
+
         file_transfer:
             tmp_dir = C:\
             clean_cmd = del

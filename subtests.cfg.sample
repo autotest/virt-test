@@ -1758,6 +1758,9 @@ variants:
         virtio_blk:
             vms = ""
             catch_serial_cmd = cat /sys/block/vda/serial; echo
+        # Parameter for checking virtio driver's signature in windows guest,
+        # useless for linux guest.
+        vio_driver_chk_cmd = ""
 
     - ksm_overcommit:
         no Windows
