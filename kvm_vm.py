@@ -438,16 +438,13 @@ class VM(virt_vm.BaseVM):
 
         def add_smp(help):
             smp_str = " -smp %d" % self.cpuinfo.smp
-            if has_option(help, "maxcpus=cpus"):
-                smp_str += ",maxcpus=%d" % self.cpuinfo.maxcpus
             smp_str += ",cores=%d" % self.cpuinfo.cores
             smp_str += ",threads=%d" % self.cpuinfo.threads
             smp_str += ",sockets=%d" % self.cpuinfo.sockets
             return smp_str
 
 
-        def add_cdrom(help, filename, index=None, format=None, bus=None,
-                      port=None):
+        def add_cdrom(help, filename, index=None, format=None):
             if has_option(help, "drive"):
                 name = None;
                 dev = "";
@@ -1222,38 +1219,32 @@ class VM(virt_vm.BaseVM):
         if mem:
             qemu_cmd += add_mem(help, mem)
 
-        smp = int(params.get("smp", 0))
-        vcpu_maxcpus = int(params.get("vcpu_maxcpus", 0))
-        vcpu_sockets = int(params.get("vcpu_sockets", 0))
-        vcpu_cores = int(params.get("vcpu_cores", 0))
-        vcpu_threads = int(params.get("vcpu_threads", 0))
-
-        # Force CPU threads to 2 when smp > 8.
-        if smp > 8 and vcpu_threads <= 1:
-            vcpu_threads = 2
-
-        if smp == 0 or vcpu_sockets == 0:
-            vcpu_cores = vcpu_cores or 1
-            vcpu_threads = vcpu_threads or 1
-            if smp and vcpu_sockets == 0:
-                vcpu_sockets = smp / (vcpu_cores * vcpu_threads)
-            else:
-                vcpu_sockets = vcpu_sockets or 1
-            if smp == 0:
-                smp = vcpu_cores * vcpu_threads * vcpu_sockets
-        else:
-            if vcpu_cores == 0:
-                vcpu_threads = vcpu_threads or 1
-                vcpu_cores = smp / (vcpu_sockets * vcpu_threads)
-            else:
-                vcpu_threads = smp / (vcpu_cores * vcpu_sockets)
-
+        smp = int(params.get("smp", 1))
         self.cpuinfo.smp = smp
-        self.cpuinfo.maxcpus = vcpu_maxcpus or smp
-        self.cpuinfo.cores = vcpu_cores
-        self.cpuinfo.threads = vcpu_threads
-        self.cpuinfo.sockets = vcpu_sockets
-        qemu_cmd += add_smp(help)
+        if smp:
+            vcpu_threads = int(params.get("vcpu_threads", 1))
+            vcpu_cores = int(params.get("vcpu_cores", smp))
+            vcpu_sockets = int(params.get("vcpu_sockets", 1))
+
+            if smp > 8 and vcpu_threads == 1:
+                vcpu_threads = 2
+
+            # Some versions of windows don't support more than 2 sockets of cpu,
+            # here is a workaround to make all windows use only 2 sockets.
+            if (vcpu_sockets and vcpu_sockets > 2
+                and params.get("os_type") == 'windows'):
+                vcpu_sockets = 2
+
+            if not vcpu_cores:
+                vcpu_cores = smp / vcpu_threads / vcpu_sockets
+            if not vcpu_threads:
+                vcpu_threads = smp / vcpu_cores / vcpu_sockets
+            if not vcpu_sockets:
+                vcpu_sockets = smp / vcpu_cores / vcpu_threads
+            self.cpuinfo.cores = vcpu_cores
+            self.cpuinfo.thread = vcpu_threads
+            self.cpuinfo.socket = vcpu_sockets
+            qemu_cmd += add_smp(help)
 
         cpu_model = params.get("cpu_model")
         use_default_cpu_model = True
@@ -1275,6 +1266,7 @@ class VM(virt_vm.BaseVM):
             self.cpuinfo.vendor = vendor
             self.cpuinfo.flags = flags
             self.cpuinfo.family = family
+
             qemu_cmd += add_cpu_flags(help, cpu_model, flags,
                                       vendor, family)
 

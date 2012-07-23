@@ -417,6 +417,9 @@ class BaseVM(object):
         if not hasattr(self, 'cpuinfo'):
             self.cpuinfo = CpuInfo()
 
+        if not hasattr(self, 'cpuinfo'):
+            self.cpuinfo = CpuInfo()
+
 
     def _generate_unique_id(self):
         """
