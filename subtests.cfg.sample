@@ -1969,20 +1969,21 @@ variants:
 
     - physical_resources_check: install setup image_copy unattended_install.cdrom
         type = physical_resources_check
-        default_cpu_model = "qemu64"
         cpu_model_vendor = "AuthenticAMD"
+        monitor_type = human
+        monitors = humanmonitor1
+        main_monitor = humanmonitor1
+        chk_timeout = 240
         # The following config parameters are only for Linux guest, thay might
         # be changed in guest-os.cfg file for different guest os type.
+        mem_chk_re_str = ([0-9]+)
+        mtype_pattern = '\d.\d.\d'
         catch_uuid_cmd = dmidecode | awk -F: '/UUID/ {print $2}'
         cpu_vendor_id_chk_cmd = "cat /proc/cpuinfo | grep 'vendor_id'"
-        # Parameter for checking virtio driver's signature in windows guest,
-        # useless for linux guest.
-        vio_driver_chk_cmd = ""
-        mem_chk_re_str = ([0-9]+)
-        cpu_cores_chk_cmd = "lscpu | grep '^Core'"
-        cpu_sockets_chk_cmd = "lscpu | grep '^Socket'"
-        cpu_threads_chk_cmd = "lscpu | grep '^Thread'"
-        chk_timeout = 240
+        check_machine_type_cmd = dmidecode | awk -F: '/Version: RHEL/'
+        virtio_blk:
+            vms = ""
+            catch_serial_cmd = cat /sys/block/vda/serial; echo
 
     - ksm_overcommit: install setup image_copy unattended_install.cdrom
         only Linux

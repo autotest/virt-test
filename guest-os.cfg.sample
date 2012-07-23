@@ -1480,12 +1480,6 @@ variants:
         physical_resources_check:
             catch_uuid_cmd =
             cpu_vendor_id_chk_cmd = "wmic cpu get Manufacturer | more +1"
-            vio_driver_chk_cmd = 'driverquery /si | find "Red Hat"'
-            #XXX: Since I don't find a reliable way to check the cpu socket
-            # numbers for windows, disable this kind of checking temporarily.
-            cpu_sockets_chk_cmd = ""
-            cpu_cores_chk_cmd = "wmic cpu get NumberOfCores | more +1"
-            cpu_threads_chk_cmd = "wmic cpu get NumberOfLogicalProcessors | more +1"
         file_transfer:
             tmp_dir = C:\
             clean_cmd = del
