@@ -1323,7 +1323,9 @@ class VM(virt_vm.BaseVM):
         if has_option(help, "enable-kvm") and params.get("enable-kvm",
                                                          "yes") == "yes":
             qemu_cmd += " -enable-kvm "
-
+        if has_option(help, "no-shutdown") and params.get("enable_no_shutdown",
+                                                          "no") == "yes":
+            qemu_cmd += " -no-shutdown "
         if params.get("enable_sga") == "yes":
             qemu_cmd += add_sga(help)
 
