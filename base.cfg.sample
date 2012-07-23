@@ -284,7 +284,7 @@ keep_screendumps = yes
 kvm_ver_cmd = "grep -q el5 /proc/version && cat /sys/module/kvm/version || uname -r"
 kvm_userspace_ver_cmd = "grep -q el5 /proc/version && rpm -qa | grep ^kvm-83-.* || rpm -qa | grep qemu-kvm-[0-9].*-.* | head -n 1"
 
-vcpu_cores = ''
+vcpu_cores = 0
 vcpu_threads = 1
 vcpu_sockets = 2
 
@@ -346,10 +346,10 @@ image_name(_.*)? ?<= images/
 # Prepend steps directory to every step files.
 steps ?<= steps/
 
+image_clone_commnad = 'cp --reflink=auto %s %s'
+image_remove_commnad = 'rm -rf %s'
+
 # Internal case configuration end. Don't add any line below this line.
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
-
-image_clone_commnad = 'cp --reflink=auto %s %s'
-image_remove_commnad = 'rm -rf %s'
