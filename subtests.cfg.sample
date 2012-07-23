@@ -1285,7 +1285,7 @@ variants:
                 rtc_drift = "slew"
                 drive_werror = stop
                 drive_rerror = stop
-                family = "0xf"
+                cpu_family = "0xf"
                 uuid = random
                 cdrom_whql = images/winXP/whql.iso
                 force_create_image = yes
@@ -3088,9 +3088,9 @@ variants:
         cmd_timeout = 1200
         variants:
             - msi_on:
-                family = "0xf"
+                cpu_family = "0xf"
             - msi_off:
-                family = "0xe"
+                cpu_family = "0xe"
 
     - qemu_disk_img:
         type = qemu_disk_img
