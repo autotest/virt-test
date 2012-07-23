@@ -49,6 +49,7 @@ variants:
 
         # Way of delivering ks file into the guest
         variants:
+            perf:
             @default_install:
             multi_disk_install:
                 no ide
