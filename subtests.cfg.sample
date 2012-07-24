@@ -854,10 +854,6 @@ variants:
             - cpuflags-stress:
                 test_control_file = cpuflags.control
 
-    - qemu_img_commit:  install setup image_copy unattended_install.cdrom
-        type = qemu_img
-        subcommand = commit
-
     - stop_continue:
         type = stop_continue
         kill_vm_on_error = yes
