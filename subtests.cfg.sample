@@ -1039,15 +1039,7 @@ variants:
                     - scsi-disk:
                         drive_format_asd = scsi-disk
 
-    - qemu_img_commit:  install setup image_copy unattended_install.cdrom
-        type = qemu_img
-        subcommand = commit
-
-    - block_stream:
-        type = block_stream
-        alive_test_cmd = uname -a
-
-    - stop_continue: install setup image_copy unattended_install.cdrom
+    - stop_continue:
         type = stop_continue
         kill_vm_on_error = yes
 
