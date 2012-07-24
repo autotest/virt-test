@@ -1216,7 +1216,7 @@ variants:
                             virtio_storage_path = 'F:\viostor\2k8\amd64'
                             virtio_network_path = 'F:\NetKVM\2k8\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
-                            virtio_qxl_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil"  -i -a A:\\amd64\\Win7\\qxl.inf"
+                            virtio_qxl_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
                             virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
                             unattended_file = unattended/win2008-r2-autounattend.xml
                             virtio_blk, virtio_net:
