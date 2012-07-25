@@ -2258,6 +2258,8 @@ def mount(src, mount_point, type, perm="rw"):
     @type: file system type
     @perm: mount premission
     """
+    if mount_point.endswith("/"):
+        mount_point = os.path.dirname(mount_point)
     umount(src, mount_point, type)
     mount_string = "%s %s %s %s" % (src, mount_point, type, perm)
 
