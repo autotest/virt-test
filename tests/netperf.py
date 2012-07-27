@@ -214,6 +214,14 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     base = params.get("format_base", "12")
     fbase = params.get("format_fbase", "2")
 
+    output = ssh_cmd(host, "mpstat 1 1 |grep CPU")
+    mpstat_head = re.findall("CPU.*", output)[0].split()
+    mpstat_key = params.get("mpstat_key", "%idle")
+    if mpstat_key in mpstat_head:
+        mpstat_index = mpstat_head.index(mpstat_key) + 1
+    else:
+        mpstat_index = 0
+
     for protocol in protocols.split():
         error.context("Testing %s protocol" % protocol, logging.info)
         fd.write("Category:" + protocol+ "\n\n")
@@ -236,7 +244,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                                      "-C -c -t %s -- -m %s" % (protocol, i),
                                      netserver_port)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
-                cpu = 100 - float(ret['mpstat'].split()[10])
+                cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
 
                 if ret.get('rx_pkts') and ret.get('irq_inj'):
