@@ -61,7 +61,7 @@ def netperf_record(results, filter_list, headon=False, base="12", fbase="2"):
     return record
 
 
-error.context_aware
+@error.context_aware
 def run_netperf(test, params, env):
     """
     Network stress test with netperf.
