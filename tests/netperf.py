@@ -4,6 +4,51 @@ from autotest.client.shared import ssh_key, error
 from virttest import utils_test, utils_misc, remote
 
 
+def format_result(result, base="12", fbase="2"):
+    """
+    Format the result to a fixed length string.
+
+    @param result: result need to convert
+    @param base: the length of converted string
+    @param fbase: the decimal digit for float
+    """
+    if isinstance(result, str):
+        value = "%" + base + "s"
+    elif isinstance(result, int):
+        value = "%" + base + "d"
+    elif isinstance(result, float):
+        value = "%" + base + "." + fbase + "f"
+    return value % result
+
+
+def netperf_record(results, filter_list, header=False, base="12", fbase="2"):
+    """
+    Record the results in a certain format.
+
+    @param results: a dict include the results for the variables
+    @param filter_list: variable list which is wanted to be shown in the
+                        record file, also fix the order of variables
+    @param header: if record the variables as a column name before the results
+    @param base: the length of a variable
+    @param fbase: the decimal digit for float
+    """
+    key_list = []
+    for key in filter_list:
+        if results.has_key(key):
+            key_list.append(key)
+
+    record = ""
+    if header:
+        for key in key_list:
+            record += "%s|" % format_result(key, base=base, fbase=fbase)
+        record = record.rstrip("|")
+        record += "\n"
+    for key in key_list:
+        record += "%s|" % format_result(results[key], base=base, fbase=fbase)
+    record = record.rstrip("|")
+    return record, key_list
+
+
 @error.context_aware
 def run_netperf(test, params, env):
     """
@@ -95,7 +140,8 @@ def run_netperf(test, params, env):
                sizes=params.get('sizes'),
                protocols=params.get('protocols'),
                ver_cmd=params.get('ver_cmd', "rpm -q qemu-kvm"),
-               netserver_port=params.get('netserver_port', "12865"), test=test)
+               netserver_port=params.get('netserver_port', "12865"),
+               params=params, test=test)
 
 
 def start_test(server, server_ctl, host, client, resultsdir, l=60,
@@ -103,7 +149,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
                protocols="TCP_STREAM TCP_MAERTS TCP_RR", ver_cmd=None,
-               netserver_port=None, test=None):
+               netserver_port=None, pramas={}, test=None):
     """
     Start to test with different kind of configurations
 
@@ -120,6 +166,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     @param protocols: test type
     @param ver_cmd: command to check kvm version
     @param netserver_port: netserver listen port
+    @param params: Dictionary with the test parameters.
     """
 
     def parse_file(file_prefix, raw=""):
@@ -133,12 +180,8 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                 logging.debug(commands.getoutput("cat %s.*" % file_prefix))
                 return -1
         return thu
-
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
-    category = 'size|sessions|throughput|%CPU|thr/%CPU|@tx-pkts|@rx-pkts|@tx-byts|@rx-byts|@re-trans|@tx-intr|@rx-intr|@io_exit|@irq_inj|@tpkt/@exit|@rpkt/@irq'
-
-    test.write_test_keyval({ 'category': category })
     test.write_test_keyval({ 'kvm-userspace-ver': commands.getoutput(ver_cmd) })
     test.write_test_keyval({ 'guest-kernel-ver': ssh_cmd(server_ctl, "uname -r") })
     test.write_test_keyval({ 'session-length': l })
@@ -148,22 +191,24 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     fd.write('### kvm_version : %s\n' % os.uname()[2] )
     fd.write('### session-length : %s\n' % l )
 
+
+    record_list = ['size', 'sessions', 'throughput', 'trans.rate', 'CPU',
+                   'thr_per_CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
+                   'rx_intr', 'tx_intr', 'io_exit', 'irq_inj', 'tpkt/exit',
+                   'tpkt_per_exit', 'rpkt_per_irq']
+    base = params.get("format_base", "12")
+    fbase = params.get("format_fbase", "2")
+
     for protocol in protocols.split():
         error.context("Testing %s protocol" % protocol, logging.info)
         fd.write("Category:" + protocol+ "\n")
-        row = "%5s|%8s|%10s|%6s|%9s|%10s|%10s|%12s|%12s|%9s|%8s|%8s|%10s|%10s" \
-              "|%11s|%10s" % ("size", "sessions", "throughput", "%CPU",
-              "thr/%CPU", "#tx-pkts", "#rx-pkts", "#tx-byts", "#rx-byts",
-              "#re-trans", "#tx-intr", "#rx-intr", "#io_exit", "#irq_inj",
-              "#tpkt/#exit", "#rpkt/#irq")
-        logging.info(row)
-        fd.write(row + "\n")
         if (protocol == "TCP_RR"):
             sessions_test = sessions_rr.split()
             sizes_test = sizes_rr.split()
         else:
             sessions_test = sessions.split()
             sizes_test = sizes.split()
+        record_header = True
         for i in sizes_test:
             for j in sessions_test:
                 if (protocol == "TCP_RR"):
@@ -178,32 +223,31 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
                 cpu = 100 - float(ret['mpstat'].split()[10])
                 normal = thu / cpu
-                pkt_rx_irq = float(ret['rx_pkts']) / float(ret['irq_inj'])
-                pkt_tx_exit = float(ret['tx_pkts']) / float(ret['io_exit'])
-                row = "%5d|%8d|%10.2f|%6.2f|%9.2f|%10d|%10d|%12d|%12d|%9d" \
-                      "|%8d|%8d|%10d|%10d|%11.2f|%10.2f" % (int(i), int(j),
-                      thu, cpu, normal, ret['tx_pkts'], ret['rx_pkts'],
-                      ret['tx_byts'], ret['rx_byts'], ret['re_pkts'],
-                      ret['tx_intr'], ret['rx_intr'], ret['io_exit'],
-                      ret['irq_inj'], pkt_tx_exit, pkt_rx_irq)
+                if ret.get('rx_pkts') and ret.get('irq_inj'):
+                    ret['tpkt_per_exit'] = float(ret['rx_pkts']) / float(ret['irq_inj'])
+                if ret.get('tx_pkts') and ret.get('io_exit'):
+                    ret['rpkt_per_irq'] = float(ret['tx_pkts']) / float(ret['io_exit'])
+                ret['size'] = int(i)
+                ret['sessions'] = int(j)
+                ret['throughput'] = thu
+                ret['CPU'] = cpu
+                ret['thr_per_CPU'] = normal
+                row, key_list =  netperf_record(ret, record_list,
+                                                header=record_header,
+                                                base=base,
+                                                fbase=fbase)
+                if record_header:
+                    record_header = False
+                    category = row.split('\n')[0]
+
+                test.write_test_keyval({ 'category': category })
+                prefix = '%s--%s--%s' % (protocol, i, j)
+                for key in key_list:
+                    test.write_perf_keyval({'%s--%s' % (prefix, key)
+                                            : ret[key]})
+
                 logging.info(row)
                 fd.write(row + "\n")
-
-                prefix = '%s--%s--%s' % (protocol, i, j)
-                test.write_perf_keyval({ '%s--throughput' % prefix :thu })
-                test.write_perf_keyval({ '%s--CPU' % prefix :cpu })
-                test.write_perf_keyval({ '%s--normal' % prefix :normal })
-                test.write_perf_keyval({ '%s--tx_pkts' % prefix :ret['tx_pkts'] })
-                test.write_perf_keyval({ '%s--rx_pkts' % prefix :ret['rx_pkts'] })
-                test.write_perf_keyval({ '%s--tx_byts' % prefix :ret['tx_byts'] })
-                test.write_perf_keyval({ '%s--rx_byts' % prefix :ret['rx_byts'] })
-                test.write_perf_keyval({ '%s--re_trans' % prefix :ret['re_pkts'] })
-                test.write_perf_keyval({ '%s--tx_intr' % prefix :ret['tx_intr'] })
-                test.write_perf_keyval({ '%s--rx_intr' % prefix :ret['rx_intr'] })
-                test.write_perf_keyval({ '%s--io_exit' % prefix :ret['io_exit'] })
-                test.write_perf_keyval({ '%s--irq_inj' % prefix :ret['irq_inj'] })
-                test.write_perf_keyval({ '%s--tpkt_exit' % prefix :pkt_tx_exit })
-                test.write_perf_keyval({ '%s--rpkt_irq' % prefix :pkt_rx_irq })
 
                 fd.flush()
                 logging.debug("Remove temporary files")
@@ -259,11 +303,28 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
 
         nre = int(ssh_cmd(server_ctl, "grep Tcp /proc/net/snmp|tail -1"
                  ).split()[12])
-        nrx_intr = count_interrupt("virtio.-input")
-        ntx_intr = count_interrupt("virtio.-output")
+        state_list = ['rx_pkts', nrx, 'tx_pkts', ntx, 'rx_byts', nrxb,
+                      'tx_byts', ntxb, 're_pkts', nre]
+        try:
+            nrx_intr = count_interrupt("virtio.-input")
+            ntx_intr = count_interrupt("virtio.-output")
+            state_list.append('rx_intr')
+            state_list.append(nrx_intr)
+            state_list.append('tx_intr')
+            state_list.append(ntx_intr)
+        except IndexError:
+            ninit = count_interrupt("virtio.")
+            state_list.append('intr')
+            state_list.append(ninit)
+
         io_exit = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/io_exits"))
         irq_inj = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
-        return [nrx, ntx, nrxb, ntxb, nre, nrx_intr, ntx_intr, io_exit, irq_inj]
+        state_list.append('io_exit')
+        state_list.append(io_exit)
+        state_list.append('irq_inj')
+        state_list.append(irq_inj)
+        return state_list
+
 
     def netperf_thread(i):
         output = ssh_cmd(client, "numactl --hardware")
@@ -291,6 +352,13 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
     end_state = get_state()
     items = ['rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts', 're_pkts',
              'rx_intr', 'tx_intr', 'io_exit', 'irq_inj']
-    for i in range(len(items)):
-        ret[items[i]] = end_state[i] - start_state[i]
+        if len(start_state) != len(end_state):
+            msg = "Initial state not match end state:\n"
+            msg += "  start state: %s\n" % start_state
+            msg += "  end state: %s\n" % end_state
+            logging.warn(msg)
+        else:
+            for i in range(len(end_state) / 2):
+                ret[end_state[i * 2]] = (end_state[i * 2 + 1]
+                                         - start_state[i * 2 + 1])
     return ret
