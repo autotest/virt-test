@@ -17,6 +17,50 @@ except ImportError:
         k.close()
         session.close()
 
+
+def format_result(result, base="12", fbase="2"):
+    """
+    Format the result to a fixed length string.
+
+    @param result: result need to convert
+    @param base: the length of converted string
+    @param fbase: the decimal digit for float
+    """
+    if isinstance(result, str):
+        value = "%" + base + "s"
+    elif isinstance(result, int):
+        value = "%" + base + "d"
+    elif isinstance(result, float):
+        value = "%" + base + "." + fbase + "f"
+    return value % result
+
+
+def netperf_record(results, filter_list, headon=False, base="12", fbase="2"):
+    """
+    Record the results in a certain format.
+
+    @param results: a dict include the results for the variables
+    @param filter_list: variable list which is wanted to be shown in the
+                        record file, also fix the order of variables
+    @param headon: if record the variables as a column name before the results
+    @param base: the length of a variable
+    @param fbase: the decimal digit for float
+    """
+    key_list = []
+    for key in filter_list:
+        if results.has_key(key):
+            key_list.append(key)
+
+    record = ""
+    if headon:
+        for key in key_list:
+            record += "%s|" % format_result(key, base=base, fbase=fbase)
+        record += "\n"
+    for key in key_list:
+        record += "%s|" % format_result(results[key], base=base, fbase=fbase)
+    return record
+
+
 error.context_aware
 def run_netperf(test, params, env):
     """
@@ -108,7 +152,8 @@ def run_netperf(test, params, env):
                sizes=params.get('sizes'),
                protocols=params.get('protocols'),
                ver_cmd=params.get('ver_cmd', "rpm -q qemu-kvm"),
-               netserver_port=params.get('netserver_port', "12865"))
+               netserver_port=params.get('netserver_port', "12865"),
+               params=params)
 
 @error.context_aware
 def start_test(server, server_ctl, host, client, resultsdir, l=60,
@@ -116,7 +161,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
                protocols="TCP_STREAM TCP_MAERTS TCP_RR", ver_cmd=None,
-               netserver_port=None):
+               netserver_port=None, params={}):
     """
     Start to test with different kind of configurations
 
@@ -133,6 +178,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     @param protocols: test type
     @param ver_cmd: command to check kvm version
     @param netserver_port: netserver listen port
+    @param params: Dictionary with the test parameters.
     """
 
     def parse_file(file_prefix, raw=""):
@@ -161,22 +207,23 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
 """ % (l)
     fd.write(desc)
 
+    record_list = ['size', 'sessions', 'throughput', '%CPU', 'thr/%CPU',
+                   'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts', 're_pkts',
+                   'rx_intr', 'tx_intr', 'io_exit', 'irq_inj', 'tpkt/exit',
+                   'rpkt/irq']
+    base = params.get("format_base", "12")
+    fbase = params.get("format_fbase", "2")
+
     for protocol in protocols.split():
         error.context("Testing %s protocol" % protocol, logging.info)
-        fd.write("Category:" + protocol+ "\n")
-        row = "%5s|%8s|%10s|%6s|%9s|%10s|%10s|%12s|%12s|%9s|%8s|%8s|%10s|%10s" \
-              "|%11s|%10s" % ("size", "sessions", "throughput", "%CPU",
-              "thr/%CPU", "#tx-pkts", "#rx-pkts", "#tx-byts", "#rx-byts",
-              "#re-trans", "#tx-intr", "#rx-intr", "#io_exit", "#irq_inj",
-              "#tpkt/#exit", "#rpkt/#irq")
-        logging.info(row)
-        fd.write(row + "\n")
+        fd.write("Category:" + protocol+ "\n\n")
         if (protocol == "TCP_RR"):
             sessions_test = sessions_rr.split()
             sizes_test = sizes_rr.split()
         else:
             sessions_test = sessions.split()
             sizes_test = sizes.split()
+        record_headon = True
         for i in sizes_test:
             for j in sessions_test:
                 if (protocol == "TCP_RR"):
@@ -191,14 +238,21 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
                 cpu = 100 - float(ret['mpstat'].split()[10])
                 normal = thu / cpu
-                pkt_rx_irq = float(ret['rx_pkts']) / float(ret['irq_inj'])
-                pkt_tx_exit = float(ret['tx_pkts']) / float(ret['io_exit'])
-                row = "%5d|%8d|%10.2f|%6.2f|%9.2f|%10d|%10d|%12d|%12d|%9d" \
-                      "|%8d|%8d|%10d|%10d|%11.2f|%10.2f" % (int(i), int(j),
-                      thu, cpu, normal, ret['tx_pkts'], ret['rx_pkts'],
-                      ret['tx_byts'], ret['rx_byts'], ret['re_pkts'],
-                      ret['tx_intr'], ret['rx_intr'], ret['io_exit'],
-                      ret['irq_inj'], pkt_tx_exit, pkt_rx_irq)
+
+                if ret.get('rx_pkts') and ret.get('irq_inj'):
+                    ret['tpkt/exit'] = float(ret['rx_pkts']) / float(ret['irq_inj'])
+                if ret.get('tx_pkts') and ret.get('io_exit'):
+                    ret['rpkt/irq'] = float(ret['tx_pkts']) / float(ret['io_exit'])
+                ret['size'] = int(i)
+                ret['sessions'] = int(j)
+                ret['throughput'] = thu
+                ret['%CPU'] = cpu
+                ret['thr/%CPU'] = normal
+                row =  netperf_record(ret, record_list, headon=record_headon,
+                                      base=base, fbase=fbase)
+                if record_headon:
+                    record_headon = False
+
                 logging.info(row)
                 fd.write(row + "\n")
                 fd.flush()
