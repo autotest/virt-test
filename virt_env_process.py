@@ -104,9 +104,9 @@ def preprocess_vm(test, params, env, name):
             vm.create(name, params, test.bindir,
                       migration_mode=params.get("migration_mode"),
                       migration_fd=params.get("migration_fd"))
-            # Update mac and IP info for assigned device
-            if params.get("pci_assignable") != "no":
-                virt_test_utils.update_mac_ip_address(vm, params)
+            if params.get("paused_after_start_vm") == "yes":
+                if vm.state() != "paused":
+                    vm.pause()
     else:
         # Don't start the VM, just update its params
         vm.params = params
