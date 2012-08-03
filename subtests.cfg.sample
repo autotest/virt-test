@@ -3625,6 +3625,14 @@ variants:
         mnt_option = "rw,bg,hard,nointr,rsize=65536,wsize=65536,tcp,noac,vers=3,timeo=600"
         blk_size_list = "4k 8k 16k"
 
+    - cyg_install:
+        only Windows
+        type = cyginstall
+        cdrom_check = wmic cdrom get id,Medialoaded
+        cdrom_filter = "(\w+):\s+TRUE"
+        cygwin_install_cmd = cmd /c WINUTILS:\netperf\cygwin.exe
+        cygwin_start = C:\rhcygwin\Cygwin.bat -i /Cygwin-Terminal.ico -
+
     - qemu_no_shutdown:
         type = qemu_no_shutdown
         enable_no_shutdown = yes
