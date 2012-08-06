@@ -13,6 +13,12 @@ main_vm = vm1
 # List of network device object names (whitespace seperated)
 nics = nic1
 # List of end-point bridges to connect NIC devices to on host
+# For private bridge created by framework please set the following
+# parameters:
+# bridge = private
+# physical_nic(optinal): physical nic for bridge
+# bridge_force_create(optinal): force to setup bridge or not, default
+#                                value is no.
 bridge = switch
 # For libvirt, use following as argument to --network
 virsh_network = network=default

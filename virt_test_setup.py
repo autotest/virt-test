@@ -529,6 +529,10 @@ class PrivateBridgeConfig(object):
             if u_port not in ports:
                 ports.append(u_port)
             self.iptables_rules = self._assemble_iptables_rules(ports)
+            self.physical_nic = params.get("physical_nic")
+            self.force_create = False
+            if params.get("bridge_force_create", "no") == "yes":
+                self.force_create = True
 
 
     def _assemble_iptables_rules(self, port_list):
@@ -559,6 +563,9 @@ class PrivateBridgeConfig(object):
         ip_fwd.write("1\n")
         utils.system("brctl stp %s on" % self.brname)
         utils.system("brctl setfd %s 0" % self.brname)
+        if self.physical_nic:
+            utils.system("brctl addif %s %s" % (self.brname,
+                                                self.physical_nic))
 
 
     def _bring_bridge_up(self):
@@ -604,6 +611,10 @@ class PrivateBridgeConfig(object):
 
     def setup(self):
         brctl_output = utils.system_output("brctl show")
+        if self.brname in brctl_output and self.force_create:
+            self._bring_bridge_down()
+            self._remove_bridge()
+            brctl_output = utils.system_output("brctl show")
         if self.brname not in brctl_output:
             logging.info("Configuring KVM test private bridge %s", self.brname)
             try:
