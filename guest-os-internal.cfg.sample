@@ -903,6 +903,7 @@ variants:
             - WinXP:
                 guest_name = WinXP
                 image_name = winXP
+                image_size = 30G
                 guest_s3:
                     check_s3_cmd = echo "since WinXP / Win2003 doesn't record ACPI event,so there's nothing to do"
                     check_s3_support_cmd = powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"
