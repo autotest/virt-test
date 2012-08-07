@@ -1303,25 +1303,40 @@ def get_readable_cdroms(params, session):
         return readable_cdroms
 
     raise error.TestFail("Could not find a cdrom device contain media.")
-def update_mac_ip_address(vm, params):
+
+
+def update_mac_ip_address(vm, params, timeout=None):
     """
-    Get mac and ip address from guest and update the mac pool and 
+    Get mac and ip address from guest then update the mac pool and
     address cache
+
     @param vm: VM object
     @param params: Dictionary with the test parameters.
     """
     network_query = params.get("network_query", "ifconfig")
+    restart_network = params.get("restart_network", "service network restart")
     mac_ip_filter = params.get("mac_ip_filter")
+    if timeout is None:
+        timeout = int(params.get("login_timeout"))
     session = vm.wait_for_serial_login(timeout=360)
-    s, o = session.cmd_status_output(network_query)
-    macs_ips = re.findall(mac_ip_filter, o)
-    # Get nics number
-    if params.get("devices_requested") is not None:
-        nic_minimum = int(params.get("devices_requested"))
-    else:
+    end_time = time.time() + timeout
+    macs_ips = []
+    i = 0
+    while time.time() < end_time:
+        try:
+            if i % 3 == 0:
+                session.cmd(restart_network)
+            s, o = session.cmd_status_output(network_query)
+            macs_ips = re.findall(mac_ip_filter, o)
+            # Get nics number
+        except Exception, e:
+            logging.warn(e)
         nics =  params.get("nics")
         nic_minimum = len(re.split("\s+", nics.strip()))
-
+        if len(macs_ips) == nic_minimum:
+            break
+        i += 1
+        time.sleep(5)
     if len(macs_ips) < nic_minimum:
         logging.warn("Not all nics get ip address")
 
@@ -1329,6 +1344,7 @@ def update_mac_ip_address(vm, params):
         vlan = macs_ips.index((mac, ip))
         vm.address_cache[mac.lower()] = ip
         virt_utils.set_mac_address(vm.instance, vlan, mac)
+
 
 def pin_vm_threads(vm, node):
     """
