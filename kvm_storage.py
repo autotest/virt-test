@@ -27,7 +27,7 @@ class QemuImg(virt_storage.QemuImg):
         self.image_cmd = virt_utils.get_path(root_dir,
                                  params.get("qemu_img_binary","qemu-img"))
 
-
+    @error.context_aware
     def create(self, params):
         """
         Create an image using qemu_img or dd.
@@ -91,7 +91,9 @@ class QemuImg(virt_storage.QemuImg):
 
         check_output = params.get("check_output") == "yes"
         try:
-            result = utils.system(qemu_img_cmd)
+            msg = "Create image by command: %s" % qemu_img_cmd
+            error.context(msg, logging.info)
+            result = utils.system_output(qemu_img_cmd, verbose=False)
         except error.CmdError, e:
             logging.error("Could not create image, failed with error message:"
                             "%s", str(e))
