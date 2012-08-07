@@ -31,6 +31,8 @@ class QemuImg(storage.QemuImg):
                                  params.get("qemu_img_binary","qemu-img"))
 
 
+
+    @error.context_aware
     def create(self, params, ignore_errors=False):
         """
         Create an image using qemu_img or dd.
@@ -122,6 +124,8 @@ class QemuImg(storage.QemuImg):
                             "Other errors may ensue")
             os.makedirs(image_dirname)
 
+        msg = "Create image by command: %s" % qemu_img_cmd
+        error.context(msg, logging.info)
         cmd_result = utils.run(qemu_img_cmd, verbose=False, ignore_status=True)
         if cmd_result.exit_status != 0 and not ignore_errors:
             raise error.TestError("Failed to create image %s" %
