@@ -1366,6 +1366,9 @@ class VM(virt_vm.BaseVM):
         if params.get("enable_sga") == "yes":
             qemu_cmd += add_sga(help)
 
+        user_runas = params.get("user_runas")
+        if has_option(help, "runas") and user_runas:
+            qemu_cmd += " -runas %s " % user_runas
         return qemu_cmd
 
 
