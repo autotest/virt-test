@@ -1791,6 +1791,10 @@ class VM(virt_vm.BaseVM):
         if self.no_shutdown:
             qemu_cmd += " -no-shutdown "
 
+        user_runas = params.get("user_runas")
+        if has_option(help_text, "runas") and user_runas:
+            qemu_cmd += " -runas %s " % user_runas
+
         if params.get("enable_sga") == "yes":
             qemu_cmd += add_sga(help_text)
 
