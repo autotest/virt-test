@@ -3,7 +3,7 @@ import re
 import logging
 
 from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_vm
+from autotest_lib.client.virt import kvm_storage
 
 @error.context_aware
 def run_cluster_size_check(test, params, env):
@@ -35,16 +35,17 @@ def run_cluster_size_check(test, params, env):
                 pass
             else:
                 value = -1
- 
+
         return value
 
-    def check_cluster_size(parttern, expect):
+    def check_cluster_size(parttern, expect, csize_set):
         cfail = 0
-        image = params.get("images")
-        error.context("Create image", logging.info)
-        output = virt_vm.create_image(params.object_params(image),
-                                      test.bindir,
-                                      check_output=True)
+        fail_log = ""
+        image_name = params.get("images")
+        image_params = params.object_params(image_name)
+        image = kvm_storage.QemuImg(image_params, test.bindir, image_name)
+        
+        output = image.create(image_params)
         error.context("Check the cluster size from output", logging.info)
         cluster_size = re.findall(parttern, output)
         if cluster_size:
@@ -55,14 +56,14 @@ def run_cluster_size_check(test, params, env):
                 logging.error("Cluster size expect: %s" % expect)
                 cfail += 1
                 fail_log += "Cluster size mismatch when set it to "
-                fail_log += "%s.\n" % params["cluster_size"]
+                fail_log += "%s.\n" % csize_set
         else:
             logging.error("Can not get the cluster size from command: %s"
                            % output)
             cfail += 1
             fail_log += "Can not get the cluster size from command:"
             fail_log += " %s\n" % output
-        return cfail
+        return cfail, fail_log
 
     fail = 0
     fail_log = ""
@@ -71,16 +72,20 @@ def run_cluster_size_check(test, params, env):
 
     for cluster_size in re.split("\s+", cluster_size_set.strip()):
         if cluster_size == "default":
-            params["cluster_size"] = ""
+            params["image_cluster_size"] = None
             csize_expect = params.get("cluster_size_default", "65536")
+            csize_set = "default"
         else:
-            params["cluster_size"] = cluster_size
+            params["image_cluster_size"] = cluster_size
             csize_expect = str(memory_size(cluster_size))
-
+            csize_set = cluster_size
         error.context("Check cluster size as cluster size set to %s"
                       % cluster_size)
 
-        fail += check_cluster_size(csize_parttern, csize_expect)
+        c_fail, log = check_cluster_size(csize_parttern, csize_expect,
+                                         csize_set)
+        fail += c_fail
+        fail_log += log
 
     error.context("Finall result check")
     if fail > 0:
