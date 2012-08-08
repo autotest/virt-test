@@ -178,7 +178,7 @@ variants:
                                 cluster_size = 2M
                     - preallocated:
                         no raw
-                        preallocated = yes
+                        preallocated = metadata
                         variants:
                             - file:
                             - over_lvm:
