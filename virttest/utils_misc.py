@@ -616,6 +616,16 @@ def get_cpu_vendor(cpu_flags=[], verbose=True):
     return vendor
 
 
+def get_support_machine_type(qemu_binary="/usr/libexec/qemu-kvm"):
+    """
+    Get the machine type the host support,return a list of machine type
+    """
+    o = utils.system_output("%s -M ?" % qemu_binary)
+    s = re.findall("(\S*)\s*RHEL\s", o)
+    c = re.findall("(RHEL.*PC)", o)
+    return (s, c)
+
+
 def get_archive_tarball_name(source_dir, tarball_name, compression):
     '''
     Get the name for a tarball file, based on source, name and compression
