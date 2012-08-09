@@ -1826,6 +1826,16 @@ def get_cpu_vendor(cpu_flags=[], verbose=True):
     return vendor
 
 
+def get_support_machine_type(qemu_binary="/usr/libexec/qemu-kvm"):
+    """
+    Get the machine type the host support,return a list of machine type
+    """
+    o = utils.system_output("%s -M ?" % qemu_binary)
+    s = re.findall("(\S*)\s*RHEL\s", o)
+    c = re.findall("(RHEL.*PC)", o)
+    return (s, c)
+
+
 def get_archive_tarball_name(source_dir, tarball_name, compression):
     '''
     Get the name for a tarball file, based on source, name and compression
@@ -4437,9 +4447,279 @@ class MultihostMigration(object):
     @param ifname - interface name
     @raise NetError - When failed to fetch IP address (ioctl raised IOError.).
 
-    Retrieves interface address from socket fd trough ioctl call
-    and transforms it into string from 32-bit packed binary
-    by using socket.inet_ntoa().
+    def __del__(self):
+        if self.sync_server:
+            self.sync_server.close()
+
+
+    def master_id(self):
+        return self.hosts[0]
+
+
+    def _hosts_barrier(self, hosts, session_id, tag, timeout):
+        logging.debug("Barrier timeout: %d tags: %s" % (timeout, tag))
+        tags = SyncData(self.master_id(), self.hostid, hosts,
+                        "%s,%s,barrier" % (str(session_id), tag),
+                        self.sync_server).sync(tag, timeout)
+        logging.debug("Barrier tag %s" % (tags))
+
+    def preprocess_env(self):
+        """
+        Prepare env to start vms.
+        """
+        preprocess_images(self.test.bindir, self.params, self.env)
+
+
+    def _check_vms_source(self, mig_data):
+        for vm in mig_data.vms:
+            vm.wait_for_login(timeout=self.login_timeout)
+
+        sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
+                        mig_data.mig_id, self.sync_server)
+        mig_data.vm_ports = sync.sync(timeout=120)[mig_data.dst]
+        logging.info("Received from destination the migration port %s",
+                     str(mig_data.vm_ports))
+
+    def _check_vms_dest(self, mig_data):
+        mig_data.vm_ports = {}
+        for vm in mig_data.vms:
+            logging.info("Communicating to source migration port %s",
+                         vm.migration_port)
+            mig_data.vm_ports[vm.name] = vm.migration_port
+
+        SyncData(self.master_id(), self.hostid,
+                 mig_data.hosts, mig_data.mig_id,
+                 self.sync_server).sync(mig_data.vm_ports, timeout=120)
+
+
+    def _prepare_params(self, mig_data):
+        """
+        Prepare separate params for vm migration.
+
+        @param vms_name: List of vms.
+        """
+        new_params = mig_data.params.copy()
+        new_params["vms"] = " ".join(mig_data.vms_name)
+        return new_params
+
+    def _check_vms(self, mig_data):
+        """
+        Check if vms are started correctly.
+
+        @param vms: list of vms.
+        @param source: Must be True if is source machine.
+        """
+        logging.info("Try check vms %s" % (mig_data.vms_name))
+        for vm in mig_data.vms_name:
+            if not self.env.get_vm(vm) in mig_data.vms:
+                mig_data.vms.append(self.env.get_vm(vm))
+        for vm in mig_data.vms:
+            logging.info("Check vm %s on host %s" % (vm.name, self.hostid))
+            vm.verify_alive()
+
+        if mig_data.is_src():
+            self._check_vms_source(mig_data)
+        else:
+            self._check_vms_dest(mig_data)
+
+
+    def prepare_for_migration(self, mig_data, migration_mode):
+        """
+        Prepare destination of migration for migration.
+
+        @param mig_data: Class with data necessary for migration.
+        @param migration_mode: Migration mode for prepare machine.
+        """
+        new_params = self._prepare_params(mig_data)
+
+        new_params['migration_mode'] = migration_mode
+        new_params['start_vm'] = 'yes'
+        self.vm_lock.acquire()
+        virt_env_process.process(self.test, new_params, self.env,
+                                 virt_env_process.preprocess_image,
+                                 virt_env_process.preprocess_vm)
+        self.vm_lock.release()
+
+        self._check_vms(mig_data)
+
+
+    def migrate_vms(self, mig_data):
+        """
+        Migrate vms.
+        """
+        if mig_data.is_src():
+            self.migrate_vms_src(mig_data)
+        else:
+            self.migrate_vms_dest(mig_data)
+
+    def check_vms(self, mig_data):
+        """
+        Check vms after migrate.
+
+        @param mig_data: object with migration data.
+        """
+        for vm in mig_data.vms:
+            if not guest_active(vm):
+                raise error.TestFail("Guest not active after migration")
+
+        logging.info("Migrated guest appears to be running")
+
+        logging.info("Logging into migrated guest after migration...")
+        for vm in mig_data.vms:
+            session_serial = vm.wait_for_serial_login(timeout=
+                                                      self.login_timeout)
+            #There is sometime happen that system sends some message on
+            #serial console and IP renew command block test. Because
+            #there must be added "sleep" in IP renew command.
+            session_serial.cmd(self.regain_ip_cmd)
+            vm.wait_for_login(timeout=self.login_timeout)
+
+    def postprocess_env(self):
+        """
+        Kill vms and delete cloned images.
+        """
+        postprocess_images(self.test.bindir, self.params)
+
+    def migrate(self, vms_name, srchost, dsthost, start_work=None,
+                check_work=None, mig_mode="tcp", params_append=None):
+        """
+        Migrate machine from srchost to dsthost. It executes start_work on
+        source machine before migration and executes check_work on dsthost
+        after migration.
+
+        Migration execution progress:
+
+        source host                   |   dest host
+        --------------------------------------------------------
+           prepare guest on both sides of migration
+            - start machine and check if machine works
+            - synchronize transfer data needed for migration
+        --------------------------------------------------------
+        start work on source guests   |   wait for migration
+        --------------------------------------------------------
+                     migrate guest to dest host.
+              wait on finish migration synchronization
+        --------------------------------------------------------
+                                      |   check work on vms
+        --------------------------------------------------------
+                    wait for sync on finish migration
+
+        @param vms_name: List of vms.
+        @param srchost: src host id.
+        @param dsthost: dst host id.
+        @param start_work: Function started before migration.
+        @param check_work: Function started after migration.
+        @param mig_mode: Migration mode.
+        @param params_append: Append params to self.params only for migration.
+        """
+        def migrate_wrap(vms_name, srchost, dsthost, start_work=None,
+                check_work=None, params_append=None):
+            logging.info("Starting migrate vms %s from host %s to %s" %
+                         (vms_name, srchost, dsthost))
+            error = None
+            mig_data = MigrationData(self.params, srchost, dsthost,
+                                    vms_name, params_append)
+            try:
+                try:
+                    if mig_data.is_src():
+                        self.prepare_for_migration(mig_data, None)
+                    elif self.hostid == dsthost:
+                        self.prepare_for_migration(mig_data, mig_mode)
+                    else:
+                        return
+
+                    if mig_data.is_src():
+                        if start_work:
+                            start_work(mig_data)
+
+                    self.migrate_vms(mig_data)
+
+
+                    timeout = 30
+                    if not mig_data.is_src():
+                        timeout = self.mig_timeout
+                    self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
+                                        'mig_finished', timeout)
+
+                    if mig_data.is_dst():
+                        self.check_vms(mig_data)
+                        if check_work:
+                            check_work(mig_data)
+
+                except:
+                    error = True
+                    raise
+            finally:
+                if not error:
+                    self._hosts_barrier(self.hosts,
+                                        mig_data.mig_id,
+                                        'test_finihed',
+                                        self.finish_timeout)
+
+        def wait_wrap(vms_name, srchost, dsthost):
+            mig_data = MigrationData(self.params, srchost, dsthost, vms_name,
+                                     None)
+            timeout = (self.login_timeout + self.mig_timeout +
+                       self.finish_timeout)
+
+            self._hosts_barrier(self.hosts, mig_data.mig_id,
+                                'test_finihed', timeout)
+
+        if (self.hostid in [srchost, dsthost]):
+            mig_thread = utils.InterruptedThread(migrate_wrap, (vms_name,
+                                                                srchost,
+                                                                dsthost,
+                                                                start_work,
+                                                                check_work,
+                                                                params_append))
+        else:
+            mig_thread = utils.InterruptedThread(wait_wrap, (vms_name,
+                                                             srchost,
+                                                             dsthost))
+        mig_thread.start()
+        return mig_thread
+
+
+    def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
+                     check_work=None, mig_mode="tcp", params_append=None):
+        """
+        Migrate machine from srchost to dsthost and wait for finish.
+        It executes start_work on source machine before migration and executes
+        check_work on dsthost after migration.
+
+        @param vms_name: List of vms.
+        @param srchost: src host id.
+        @param dsthost: dst host id.
+        @param start_work: Function which is started before migration.
+        @param check_work: Function which is started after
+                           done of migration.
+        """
+        self.migrate(vms_name, srchost, dsthost, start_work, check_work,
+                     mig_mode, params_append).join()
+
+
+    def cleanup(self):
+        """
+        Cleanup env after test.
+        """
+        if self.clone_master:
+            self.sync_server.close()
+            self.postprocess_env()
+
+
+    def run(self):
+        """
+        Start multihost migration scenario.
+        After scenario is finished or if scenario crashed it calls postprocess
+        machines and cleanup env.
+        """
+        try:
+            self.migration_scenario()
+
+            self._hosts_barrier(self.hosts, self.hosts, 'all_test_finihed',
+                                self.finish_timeout)
+        finally:
+            self.cleanup()
 
     """
     SIOCGIFADDR = 0x8915 # Get interface address <bits/ioctls.h>
