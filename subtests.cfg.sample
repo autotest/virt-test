@@ -1045,6 +1045,33 @@ variants:
     - smbios_table: install setup image_copy unattended_install.cdrom
         only Linux
         type = smbios_table
+        start_vm = no
+        #Vendor_Bios = "Redhat"
+        #Version_Bios = "A10"
+        #Date_Bios = "11/24/2011"
+        #Manufacturer_System = "DELL Inc"
+        #Product_System = "Optiples 790"
+        #UUID_System = "4C4C4544-004A-5A10-8043-B1C04F393358"
+        #Serial_System = "1JZC93X"
+        #Version_System = "01"
+        SKU_System = "KVM"
+        Family_System = "VIRT"
+        dmikeyword_Bios =  Vendor Version Date
+        dmikeyword_System = Manufacturer Product UUID Serial Version Family SKU
+        dmidecode_exp = dmidecode -t %s | grep %s | sed 's/^.*://g'
+        dmidecode_system_version = dmidecode  -s  system-version
+        variants:
+            - type0:
+                smbios_type = Bios
+            - type1:
+                smbios_type = System
+            - type0and1:
+                smbios_type = Bios System
+            - machine_type:
+                traversal_machine_emulated = yes
+                smbios_type_disable = yes
+                dmikeyword_System = Version
+                smbios_type = System
 
     - softlockup: install setup unattended_install.cdrom
         only Linux
