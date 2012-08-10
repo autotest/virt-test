@@ -1161,12 +1161,12 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         NOTE: This function depends on the results copied to host by
               get_results() function, so call get_results() first.
         """
-        status_path = os.path.join(outputdir, "guest_autotest_results",
-                                   "*/status")
+        status_path = os.path.join(outputdir,
+                                   "guest_autotest_results/*/status")
 
         try:
             output = utils.system_output("cat %s" % status_path)
-        except IOError, e:
+        except error.CmdError, e:
             logging.error("Error getting guest autotest status file: %s", e)
             return None
 
