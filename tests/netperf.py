@@ -364,11 +364,14 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
         return state_list
 
 
-    def netperf_thread(i, client_s):
-        output = ssh_cmd(client_s, "numactl --hardware")
-        n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
-        cmd = "numactl --cpunodebind=%s --membind=%s %s -H %s -l %s %s" % \
-                                    (n, n, client_path, server, l, nf_args)
+    def netperf_thread(i, numa_enable, client_s):
+        cmd = ""
+        if numa_enable:
+            output = ssh_cmd(client_s, "numactl --hardware")
+            n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
+            cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
+        cmd += "%s -H %s -l %s %s" % (client_path, server, l, nf_args)
+
         output = ssh_cmd(client_s, cmd)
         f = file("/tmp/netperf.%s.%s.nf" % (pid, i), "w")
         f.write(output)
@@ -377,9 +380,11 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
     start_state = get_state()
     pid = str(os.getpid())
     threads = []
+    numa_enable = params.get("netperf_with_numa", "yes") == "yes"
     for i in range(int(sessions)):
         t = threading.Thread(target=netperf_thread,
-                             kwargs={"i": i, "client_s":client[i]})
+                             kwargs={"i": i, "numa_enable": numa_enable,
+                                     "client_s":client[i]})
         threads.append(t)
         t.start()
     ret = {}
