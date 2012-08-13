@@ -3,19 +3,6 @@ from autotest_lib.client.common_lib import error
 from autotest_lib.client.bin import utils
 from autotest_lib.client.virt import virt_utils
 from autotest_lib.client.virt import virt_test_utils
-try:
-    from autotest_lib.server.hosts.ssh_host import SSHHost
-except ImportError:
-    pubkey = "%s/.ssh/id_dsa.pub" % os.environ['HOME']
-    if not os.path.exists(os.path.expandvars(pubkey)):
-        commands.getoutput('yes ""|ssh-keygen -t dsa -q -N ""')
-    def SSHHost(ip, user, port, password):
-        session = virt_utils.wait_for_login("ssh", ip, port, user, password,
-                                            "^\[.*\][\#\$]\s*$")
-        k = open(pubkey, "r")
-        session.cmd('echo "%s" >> ~/.ssh/authorized_keys' % k.read())
-        k.close()
-        session.close()
 
 
 def format_result(result, base="12", fbase="2"):
@@ -75,17 +62,16 @@ def run_netperf(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    def env_setup(ip, user, port, password):
+    def env_setup(session, ip, user, port, password):
         error.context("Setup env for %s" % ip)
-        SSHHost(ip, user=user, port=port, password=password)
-        ssh_cmd(ip, "service iptables stop")
-        ssh_cmd(ip, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
+        ssh_cmd(session, "service iptables stop")
+        ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
         netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
         for i in params.get("netperf_files").split():
             virt_utils.scp_to_remote(ip, shell_port, username, password,
                                      "%s/%s" % (netperf_dir, i), "/tmp/")
-        ssh_cmd(ip, params.get("setup_cmd"))
+        ssh_cmd(session, ip, params.get("setup_cmd"))
 
 
     def _pin_vm_threads(vm, node):
@@ -106,23 +92,49 @@ def run_netperf(test, params, env):
         virt_test_utils.service_setup(vm, session, test.virtdir)
     session.close()
 
-    server = vm.get_address()
-    server_ctl = server
+    server_ip = vm.get_address()
+    server_ctl = vm.wait_for_login(timeout=login_timeout)
+    server_ctl_ip = server_ip
     if len(params.get("nics", "").split()) > 1:
-        server_ctl = vm.get_address(1)
+        server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
+        server_ctl_ip = vm.get_address(1)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     numa_node = _pin_vm_threads(vm, params.get("numa_node"))
 
-    if params.get("host"):
-        host = params["host"]
-    else:
-        cmd = "ifconfig %s|awk 'NR==2 {print $2}'|awk -F: '{print $2}'"
-        host = commands.getoutput(cmd % params["bridge"])
+    host = params.get("host", "localhost")
+    host_ip = host
+    if host != "localhost":
+        parmas_host = params.object_params("host")
+        host = virt_utils.wait_for_login(params_host.get("shell_client"),
+                                         host_ip,
+                                         params_host.get("shell_port"),
+                                         params_host.get("username"),
+                                         params_host.get("password"),
+                                         params_host.get("shell_prompt"))
 
     client = params.get("client", "localhost")
+    clinet_ip = client
+    clients = []
+    if client != "localhost":
+        clients_n = 1
+        # Get the sessions that needed when run netperf parallel
+        # The default client connect is the first one.
+        if params.get("sessions"):
+            for i in re.split("\s+", params.get('sessions')):
+                clients_n = max(clients_n, int(i.strip()))
+        for i in range(clients_n):
+            tmp = virt_utils.wait_for_login(params.get("shell_client_client"),
+                                            client_ip,
+                                            params.get("shell_port_client"),
+                                            params.get("username_client"),
+                                            params.get("password_client"),
+                                            params.get("shell_prompt_client"))
+            clients.append(tmp)
+        client = clients[0]
+
     vms_list = params["vms"].split()
     if len(vms_list) > 1:
         vm2 = env.get_vm(vms_list[-1])
@@ -130,7 +142,8 @@ def run_netperf(test, params, env):
         session2 = vm2.wait_for_login(timeout=login_timeout)
         if params.get("rh_perf_envsetup_script"):
             virt_test_utils.service_setup(vm2, session2, test.virtdir)
-        client = vm2.get_address()
+        client = vm2.wait_for_login(timeout=login_timeout)
+        client_ip = vm2.get_address()
         session2.close()
         _pin_vm_threads(vm2, numa_node)
 
@@ -139,12 +152,12 @@ def run_netperf(test, params, env):
     username = params["username"]
 
     error.context("Prepare env of server/client/host", logging.info)
-    env_setup(server_ctl, username, shell_port, password)
-    env_setup(client, username, shell_port, password)
-    env_setup(host, username, shell_port, password)
+    env_setup(server_ctl, server_ctl_ip, username, shell_port, password)
+    env_setup(client, client_ip, username, shell_port, password)
+    env_setup(host, host_ip, username, shell_port, password)
 
     error.context("Start netperf testing", logging.info)
-    start_test(server, server_ctl, host, client, test.resultsdir,
+    start_test(server_ip, server_ctl, host, clients, test.resultsdir,
                l=int(params.get('l')),
                sessions_rr=params.get('sessions_rr'),
                sessions=params.get('sessions'),
@@ -268,16 +281,18 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     fd.close()
 
 
-def ssh_cmd(ip, cmd, user="root"):
+def ssh_cmd(session, cmd, timeout=120):
     """
     Execute remote command and return the output
 
-    @param ip: remote machine IP
+    @param session: a remote shell session or tag for localhost
     @param cmd: executed command
-    @param user: username
+    @param timeout: timeout for the command
     """
-    return utils.system_output('ssh -o StrictHostKeyChecking=no -o '
-    'UserKnownHostsFile=/dev/null %s@%s "%s"' % (user, ip, cmd))
+    if session == "localhost":
+        return utils.system_output(cmd, timeout=timeout)
+    else:
+        return session.cmd_output(cmd, timeout=timeout)
 
 
 def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
@@ -313,12 +328,12 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
         irq_inj = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
         return [nrx, ntx, nrxb, ntxb, nre, nrx_intr, ntx_intr, io_exit, irq_inj]
 
-    def netperf_thread(i):
-        output = ssh_cmd(client, "numactl --hardware")
+    def netperf_thread(i, client_s):
+        output = ssh_cmd(client_s, "numactl --hardware")
         n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
         cmd = "numactl --cpunodebind=%s --membind=%s %s -H %s -l %s %s" % \
                                     (n, n, client_path, server, l, nf_args)
-        output = ssh_cmd(client, cmd)
+        output = ssh_cmd(client_s, cmd)
         f = file("/tmp/netperf.%s.%s.nf" % (pid, i), "w")
         f.write(output)
         f.close()
@@ -327,7 +342,8 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
     pid = str(os.getpid())
     threads = []
     for i in range(int(sessions)):
-        t = threading.Thread(target=netperf_thread, kwargs={"i": i})
+        t = threading.Thread(target=netperf_thread,
+                             kwargs={"i": i, "client_s":client[i]})
         threads.append(t)
         t.start()
     ret = {}
