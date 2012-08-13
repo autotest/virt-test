@@ -328,11 +328,14 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
         irq_inj = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
         return [nrx, ntx, nrxb, ntxb, nre, nrx_intr, ntx_intr, io_exit, irq_inj]
 
-    def netperf_thread(i, client_s):
-        output = ssh_cmd(client_s, "numactl --hardware")
-        n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
-        cmd = "numactl --cpunodebind=%s --membind=%s %s -H %s -l %s %s" % \
-                                    (n, n, client_path, server, l, nf_args)
+    def netperf_thread(i, numa_enable, client_s):
+        cmd = ""
+        if numa_enable:
+            output = ssh_cmd(client_s, "numactl --hardware")
+            n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
+            cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
+        cmd += "%s -H %s -l %s %s" % (client_path, server, l, nf_args)
+
         output = ssh_cmd(client_s, cmd)
         f = file("/tmp/netperf.%s.%s.nf" % (pid, i), "w")
         f.write(output)
