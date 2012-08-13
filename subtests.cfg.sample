@@ -1678,6 +1678,53 @@ variants:
                 # external host ip address
                 # client =
 
+    - netperf_win:
+        only Windows
+        # only support guest run netserver and host run netperf now.
+        host = localhost
+        # this is a default value in test env
+        # please change this to your client machine ip
+        client = 192.168.100.16
+        type = netperf
+        kill_vm = yes
+        image_snapshot = yes
+        pci_model_nic1 = virtio_net
+        bridge_nic2 = switch
+        # please fix the mac for nic2 if you needed with this, this can be empty
+        nic_mac_nic2 = 9a:37:37:37:37:6e
+        bridge_nic1 = private
+        # please add the physical nic you want to add to your private bridge
+        # this can be empty
+        physical_nic = eth3
+        bridge_force_create=yes
+        pci_model_nic2 = e1000
+        nics += ' nic2'
+        nic_mode = tap
+        netperf_files = netperf-2.4.5.tar.bz2 wait_before_data.patch
+        setup_cmd = "cd /tmp && rm -rf netperf-2.4.5 && tar xvfj netperf-2.4.5.tar.bz2 && cd netperf-2.4.5 && patch -p0 < ../wait_before_data.patch && ./configure --enable-burst && make"
+        netperf_src = D:\netperf\netperf-2.4.5
+        cygwin_root = C:\rhcygwin\home\Administrator
+        cygwin_start = C:\rhcygwin\Cygwin.bat -i /Cygwin-Terminal.ico -
+        netserv_pattern = "hostname\s+[\d+\.]+\s+port\s+\d+"
+        netserv_start_cmd = netserver
+        netperf_install_cmd = cd netperf-2.4.5; ./configure --enable-burst; make; make install
+        guest_ver_cmd = "ver"
+        netperf_with_numa = yes
+        # configure netperf test parameters
+        l = 30
+        protocols = "TCP_STREAM TCP_MAERTS TCP_RR"
+        sessions_rr="1 25 50 100"
+        sessions="1 2 4"
+        sizes_rr="256"
+        sizes="256 1024 4096 16384 65535"
+        numa_node = -1
+        username_client = root
+        password_client = redhat
+        shell_client_client = ssh
+        shell_port_client = 22
+        shell_prompt_client =  \[root@.{0,50}][\#\$]
+        ver_cmd = rpm -qa |grep kvm
+
     - ethtool:
         only Linux
         no rtl8139

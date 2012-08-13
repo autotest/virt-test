@@ -47,6 +47,21 @@ def netperf_record(results, filter_list, headon=False, base="12", fbase="2"):
         record += "%s|" % format_result(results[key], base=base, fbase=fbase)
     return record
 
+def start_netserver_win(session, start_cmd, pattern):
+    """
+    Start netserver in Windows guest through a cygwin session.
+
+    @param session: remote session for cygwin
+    @param start_cmd: command to start netserver
+    @param pattern: pattern to judge the status of netserver
+    """
+    output = session.cmd_output(start_cmd)
+    try:
+        re.findall(pattern, output)[0]
+    except IndexError:
+        logging.debug("Can not start netserver: %s" % output)
+    return bool(re.findall(pattern, output))
+
 
 @error.context_aware
 def run_netperf(test, params, env):
@@ -95,9 +110,16 @@ def run_netperf(test, params, env):
     server_ip = vm.get_address()
     server_ctl = vm.wait_for_login(timeout=login_timeout)
     server_ctl_ip = server_ip
+    if params.get("os_type") == "windows":
+        server_cyg = vm.wait_for_login(timeout=login_timeout)
     if len(params.get("nics", "").split()) > 1:
         server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
         server_ctl_ip = vm.get_address(1)
+
+    cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")
+    cygwin_start = params.get("cygwin_start")
+    server_cyg.set_prompt(cygwin_prompt)
+    server_cyg.cmd_output(cygwin_start)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
@@ -152,9 +174,13 @@ def run_netperf(test, params, env):
     username = params["username"]
 
     error.context("Prepare env of server/client/host", logging.info)
-    env_setup(server_ctl, server_ctl_ip, username, shell_port, password)
-    env_setup(client, client_ip, username, shell_port, password)
-    env_setup(host, host_ip, username, shell_port, password)
+    prepare_list = set([server_ctl, client, host])
+    tag_dict = {server_ctl: "server", client: "client", host: "host"}
+    ip_dit = {server_ctl: server_ctl_ip, client: client_ip, host: host_ip}
+    for i in prepare_list:
+        params_tmp = params.object_params(tag_dict[i])
+        if params_tmp.get("os_type") == "linux":
+            env_setup(i, ip_dict[i], username, shell_port, password)
 
     error.context("Start netperf testing", logging.info)
     start_test(server_ip, server_ctl, host, clients, test.resultsdir,
@@ -166,7 +192,7 @@ def run_netperf(test, params, env):
                protocols=params.get('protocols'),
                ver_cmd=params.get('ver_cmd', "rpm -q qemu-kvm"),
                netserver_port=params.get('netserver_port', "12865"),
-               params=params)
+               params=params, server_cyg=server_cyg)
 
 @error.context_aware
 def start_test(server, server_ctl, host, client, resultsdir, l=60,
@@ -174,7 +200,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
                protocols="TCP_STREAM TCP_MAERTS TCP_RR", ver_cmd=None,
-               netserver_port=None, params={}):
+               netserver_port=None, params={}, server_cyg=None):
     """
     Start to test with different kind of configurations
 
@@ -192,6 +218,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     @param ver_cmd: command to check kvm version
     @param netserver_port: netserver listen port
     @param params: Dictionary with the test parameters.
+    @param server_cyg: shell session for cygwin in windows guest
     """
 
     def parse_file(file_prefix, raw=""):
@@ -206,10 +233,11 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                 return -1
         return thu
 
+    guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.RHS" % resultsdir, "w")
     fd.write("#ver# %s\n#ver# host kernel: %s\n#ver# guest kernel:%s\n" % (
              commands.getoutput(ver_cmd),
-             os.uname()[2], ssh_cmd(server_ctl, "uname -r")))
+             os.uname()[2], ssh_cmd(server_ctl, guest_ver_cmd)))
     desc = """#desc# The tests are %s seconds sessions of "Netperf". 'throughput' was taken from netperf's report.
 #desc# other measurements were taken on the host.
 #desc# How to read the results:
@@ -220,10 +248,10 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
 """ % (l)
     fd.write(desc)
 
-    record_list = ['size', 'sessions', 'throughput', '%CPU', 'thr/%CPU',
-                   'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts', 're_pkts',
-                   'rx_intr', 'tx_intr', 'io_exit', 'irq_inj', 'tpkt/exit',
-                   'rpkt/irq']
+    record_list = ['size', 'sessions', 'throughput', 'trans.rate', '%CPU',
+                   'thr/%CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
+                   're_pkts', 'rx_intr', 'tx_intr', 'io_exit', 'irq_inj',
+                   'tpkt/exit', 'rpkt/irq']
     base = params.get("format_base", "12")
     fbase = params.get("format_fbase", "2")
 
@@ -237,25 +265,30 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
 
     for protocol in protocols.split():
         error.context("Testing %s protocol" % protocol, logging.info)
-        fd.write("Category:" + protocol+ "\n\n")
         if (protocol == "TCP_RR"):
             sessions_test = sessions_rr.split()
             sizes_test = sizes_rr.split()
+            protocol_log = protocol
         else:
             sessions_test = sessions.split()
             sizes_test = sizes.split()
+            if protocol == "TCP_STREAM":
+                protocol_log = protocol + " (RX)"
+            elif protocol == "TCP_MAERTS":
+                protocol_log = protocol + " (TX)"
+        fd.write("Category:" + protocol_log+ "\n\n")
         record_headon = True
         for i in sizes_test:
             for j in sessions_test:
                 if (protocol == "TCP_RR"):
                     ret = launch_client(1, server, server_ctl, host, client, l,
                     "-t %s -v 0 -P -0 -- -r %s,%s -b %s" % (protocol, i, i, j),
-                    netserver_port)
+                    netserver_port, params, server_cyg)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 0)
                 else:
                     ret = launch_client(j, server, server_ctl, host, client, l,
                                      "-C -c -t %s -- -m %s" % (protocol, i),
-                                     netserver_port)
+                                     netserver_port, params, server_cyg)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
@@ -266,7 +299,10 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                     ret['rpkt/irq'] = float(ret['tx_pkts']) / float(ret['io_exit'])
                 ret['size'] = int(i)
                 ret['sessions'] = int(j)
-                ret['throughput'] = thu
+                if protocol == "TCP_RR":
+                    ret['trans.rate'] = thu
+                else:
+                    ret['throughput'] = thu
                 ret['%CPU'] = cpu
                 ret['thr/%CPU'] = normal
                 row =  netperf_record(ret, record_list, headon=record_headon,
@@ -295,13 +331,39 @@ def ssh_cmd(session, cmd, timeout=120):
         return session.cmd_output(cmd, timeout=timeout)
 
 
-def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
+def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
+                  port, params, server_cyg):
     """ Launch netperf clients """
 
     client_path="/tmp/netperf-2.4.5/src/netperf"
     server_path="/tmp/netperf-2.4.5/src/netserver"
-    ssh_cmd(server_ctl, "pidof netserver || %s -p %s" % (server_path, port))
-    ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
+    # Start netserver
+    if params.get("os_type") == "windows":
+        server_path = "netserver.exe"
+        timeout=float(params.get("timeout", "240"))
+        netperf_src = params.get("netperf_src")
+        cygwin_root = params.get("cygwin_root")
+        netserv_pattern = params.get("netserv_pattern")
+        netserv_start_cmd = params.get("netserv_start_cmd")
+        netperf_install_cmd = params.get("netperf_install_cmd")
+        if "netserver" not in server_ctl.cmd_output("tasklist"):
+            if not start_netserver_win(server_cyg, netserv_start_cmd,
+                                   netserv_pattern):
+                logging.info("Install netserver in Windows guest")
+                output = server_ctl.cmd("dir %s" % cygwin_root)
+                if "netperf" not in output:
+                    cmd = "xcopy %s %s /S /I" % (netperf_src, cygwin_root)
+                    server_ctl.cmd(cmd)
+                server_cyg.cmd_output(netperf_install_cmd, timeout=timeout)
+                if not start_netserver_win(server_cyg, netserv_start_cmd,
+                                           netserv_pattern):
+                    raise error.TestError("Can not start netserver in"
+                                          " Windows guest")
+        get_status_flag = False
+    else:
+        ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
+        get_status_flag = True
+        ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
 
     def count_interrupt(name):
         """
@@ -341,12 +403,15 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
         f.write(output)
         f.close()
 
-    start_state = get_state()
+    if get_status_flag:
+        start_state = get_state()
     pid = str(os.getpid())
     threads = []
+    numa_enable = params.get("netperf_with_numa", "yes") == "yes"
     for i in range(int(sessions)):
         t = threading.Thread(target=netperf_thread,
-                             kwargs={"i": i, "client_s":client[i]})
+                             kwargs={"i": i, "numa_enable": numa_enable,
+                                     "client_s": client[i]})
         threads.append(t)
         t.start()
     ret = {}
@@ -354,10 +419,10 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
     ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
     for t in threads:
         t.join()
-
-    end_state = get_state()
-    items = ['rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts', 're_pkts',
-             'rx_intr', 'tx_intr', 'io_exit', 'irq_inj']
-    for i in range(len(items)):
-        ret[items[i]] = end_state[i] - start_state[i]
+    if get_status_flag:
+        end_state = get_state()
+        items = ['rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts', 're_pkts',
+                 'rx_intr', 'tx_intr', 'io_exit', 'irq_inj']
+        for i in range(len(items)):
+            ret[items[i]] = end_state[i] - start_state[i]
     return ret
