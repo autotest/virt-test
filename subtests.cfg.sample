@@ -3644,6 +3644,11 @@ variants:
         #smbios_sku=
         #smbios_family=
 
+    - hello_world:
+        only Linux
+        sleep_time = 20
+        type=hello_world
+
  # Internal case configuration end. Don't add any case below this line.
  # (THIS LINE IS RESERVED FOR MERGE)
  # (THIS LINE IS RESERVED FOR MERGE)
