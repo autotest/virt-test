@@ -7,7 +7,7 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 import time, os, logging, fcntl, re, commands
 from autotest.client.shared import error
 from autotest.client import utils
-import virt_utils, virt_vm, virt_test_setup, virt_storage, kvm_monitor, aexpect
+import virt_utils, virt_vm, virt_test_setup, storage, kvm_monitor, aexpect
 import kvm_virtio_port
 import remote
 
@@ -1159,38 +1159,30 @@ class VM(virt_vm.BaseVM):
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
             qemu_cmd += add_drive(help,
-                  virt_storage.get_image_filename(image_params, root_dir),
-                  index,
-                  image_params.get("drive_format"),
-                  image_params.get("drive_cache"),
-                  image_params.get("drive_werror"),
-                  image_params.get("drive_rerror"),
-                  image_params.get("drive_serial"),
-                  image_params.get("image_snapshot"),
-                  image_params.get("image_boot"),
-                  virt_storage.get_image_blkdebug_filename(image_params, root_dir),
-                  image_params.get("image_format"),
-                  image_params.get("image_aio", "native"),
-                  "disk", ide_bus, ide_unit, vdisk,
-                  image_params.get("drive_pci_addr"),
-                  physical_block_size=image_params.get("physical_block_size"),
-                  logical_block_size=image_params.get("logical_block_size"),
-                  bus=bus, port=port,
-                  bootindex=image_params.get("bootindex"),
-                  removable=image_params.get("removable"),
-                  min_io_size=image_params.get("min_io_size"),
-                  opt_io_size=image_params.get("opt_io_size"),
-                  scsi=image_params.get("virtio-blk-pci_scsi"),
-                  readonly=image_params.get("image_readonly"))
+                    storage.get_image_filename(image_params, root_dir),
+                    image_params.get("drive_index"),
+                    image_params.get("drive_format"),
+                    image_params.get("drive_cache"),
+                    image_params.get("drive_werror"),
+                    image_params.get("drive_rerror"),
+                    image_params.get("drive_serial"),
+                    image_params.get("image_snapshot"),
+                    image_params.get("image_boot"),
+                    storage.get_image_blkdebug_filename(image_params,
+                                                           self.virt_dir),
+                    bus,
+                    port,
+                    image_params.get("bootindex"),
+                    image_params.get("removable"),
+                    image_params.get("min_io_size"),
+                    image_params.get("opt_io_size"),
+                    image_params.get("physical_block_size"),
+                    image_params.get("logical_block_size"),
+                    image_params.get("image_readonly"),
+                    image_params.get("drive_scsiid"),
+                    image_params.get("drive_lun"))
 
-            # increase the bus and unit no for ide device
-            if params.get("drive_format") == "ide":
-                if ide_unit == 1:
-                    ide_bus += 1
-                ide_unit ^= 1
-            else:
-                vdisk += 1
-
+        # Networking
         redirs = []
         for redir_name in params.objects("redirs"):
             redir_params = params.object_params(redir_name)
