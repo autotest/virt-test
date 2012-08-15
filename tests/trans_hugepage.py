@@ -1,7 +1,7 @@
 import logging, os, re
 from autotest.client.shared import error
 from autotest.client.shared import utils
-from autotest.client.virt import virt_test_utils
+from autotest.client.virt import utils_test
 
 
 @error.context_aware
@@ -45,8 +45,8 @@ def run_trans_hugepage(test, params, env):
         except Exception:
             debugfs_flag = 0
 
-    vm = virt_test_utils.get_living_vm(env, params.get("main_vm"))
-    session = virt_test_utils.wait_for_login(vm, timeout=login_timeout)
+    vm = utils_test.get_living_vm(env, params.get("main_vm"))
+    session = utils_test.wait_for_login(vm, timeout=login_timeout)
 
     try:
         logging.info("Smoke test start")

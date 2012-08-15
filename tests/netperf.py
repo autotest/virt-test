@@ -1,7 +1,7 @@
 import logging, os, commands, threading, re, glob
 from autotest.server.hosts.ssh_host import SSHHost
 from autotest.client import utils
-from autotest.client.virt import virt_test_utils, virt_utils, remote
+from autotest.client.virt import utils_test, virt_utils, remote
 
 
 def run_netperf(test, params, env):
@@ -45,7 +45,9 @@ def run_netperf(test, params, env):
 
     session = vm.wait_for_login(timeout=login_timeout)
     if params.get("rh_perf_envsetup_script"):
-        virt_test_utils.service_setup(vm, session, test.virtdir)
+        utils_test.service_setup(vm, session, test.virtdir)
+    server = vm.get_address()
+    server_ctl = vm.get_address(1)
     session.close()
 
     server = vm.get_address()
@@ -56,7 +58,10 @@ def run_netperf(test, params, env):
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
-    numa_node = _pin_vm_threads(vm, params.get("numa_node"))
+    if params.get('numa_node'):
+        numa_node = int(params.get('numa_node'))
+        node = virt_utils.NumaNode(numa_node)
+        utils_test.pin_vm_threads(vm, node)
 
     if params.get("host"):
         host = params["host"]
@@ -71,11 +76,11 @@ def run_netperf(test, params, env):
         vm2.verify_alive()
         session2 = vm2.wait_for_login(timeout=login_timeout)
         if params.get("rh_perf_envsetup_script"):
-            virt_test_utils.service_setup(vm2, session2, test.virtdir)
+            utils_test.service_setup(vm2, session2, test.virtdir)
         client = vm2.get_address()
         session2.close()
         if params.get('numa_node'):
-            virt_test_utils.pin_vm_threads(vm2, node)
+            utils_test.pin_vm_threads(vm2, node)
 
     if params.get("client"):
         client = params["client"]
