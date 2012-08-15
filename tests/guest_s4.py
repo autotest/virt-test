@@ -1,6 +1,6 @@
 import logging, time
 from autotest.client.shared import error
-from autotest.client.virt import virt_utils
+from autotest.client.virt import utils_misc
 
 @error.context_aware
 def run_guest_s4(test, params, env):
@@ -103,9 +103,43 @@ def run_guest_s4(test, params, env):
         else:
             logging.info("The system has resumed")
 
-        logging.info("remove flag from guest")
-        session3.cmd_output(params.get("kill_bg_cmd"))
-        session3.close()
-    finally:
-        session2.close()
-        session.close()
+    # Make sure the background program is running as expected
+    error.context("making sure background program is running")
+    check_s4_cmd = params.get("check_s4_cmd")
+    session2.cmd(check_s4_cmd)
+    logging.info("Launched background command in guest: %s", test_s4_cmd)
+    error.context()
+    error.base_context()
+
+    # Suspend to disk
+    logging.info("Starting suspend to disk now...")
+    session2.sendline(params.get("set_s4_cmd"))
+
+    # Make sure the VM goes down
+    error.base_context("after S4")
+    suspend_timeout = 240 + int(params.get("smp")) * 60
+    if not utils_misc.wait_for(vm.is_dead, suspend_timeout, 2, 2):
+        raise error.TestFail("VM refuses to go down. Suspend failed.")
+    logging.info("VM suspended successfully. Sleeping for a while before "
+                 "resuming it.")
+    time.sleep(10)
+
+    # Start vm, and check whether the program is still running
+    logging.info("Resuming suspended VM...")
+    vm.create()
+
+    # Log into the resumed VM
+    relogin_timeout = int(params.get("relogin_timeout", 240))
+    logging.info("Logging into resumed VM, timeout %s", relogin_timeout)
+    session2 = vm.wait_for_login(timeout=relogin_timeout)
+
+    # Check whether the test command is still alive
+    error.context("making sure background program is still running",
+                  logging.info)
+    session2.cmd(check_s4_cmd)
+    error.context()
+
+    logging.info("VM resumed successfuly after suspend to disk")
+    session2.cmd_output(params.get("kill_test_s4_cmd"))
+    session.close()
+    session2.close()

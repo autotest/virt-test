@@ -1,8 +1,7 @@
 import os, logging
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-from autotest_lib.client.virt import virt_utils
-from autotest_lib.client.virt import virt_test_utils
+from autotest.client.shared import error
+from autotest.client import utils
+from autotest.client.virt import utils_misc
 
 
 @error.context_aware
@@ -50,15 +49,9 @@ def run_image_copy(test, params, env):
         utils.system(mv_cmd, timeout=360, ignore_status=True)
     cmd = 'cp %s %s' % (src_path, dst_path)
 
-    try:
-        error.context("Mount the NFS share directory")
-        if not virt_utils.mount(src, mount_dest_dir, 'nfs', 'ro'):
-            raise error.TestError('Could not mount NFS share %s to %s' %
-                                  (src, mount_dest_dir))
-
-        error.context("Check the existence of source image")
-        if not os.path.exists(src_path):
-            raise error.TestError('Could not find %s in NFS share' % src_path)
+    if not utils_misc.mount(src, mount_dest_dir, 'nfs', 'ro'):
+        raise error.TestError('Could not mount NFS share %s to %s' %
+                              (src, mount_dest_dir))
 
         error.context("Copy image '%s' from NFS" % image, logging.debug)
         utils.system(cmd)

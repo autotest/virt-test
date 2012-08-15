@@ -28,7 +28,7 @@ from autotest.client.shared import error, global_config
 from autotest.client import utils
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
-import aexpect, virt_utils, virt_vm, remote, storage, env_process
+import aexpect, utils_misc, virt_vm, remote, storage, env_process
 
 GLOBAL_CONFIG = global_config.global_config
 
@@ -149,8 +149,8 @@ def reboot(vm, session, method="shell", sleep_before_reset=10, nic_index=0,
         logging.error("Unknown reboot method: %s", method)
 
     # Wait for the session to become unresponsive and close it
-    if not virt_utils.wait_for(lambda: not session.is_responsive(),
-                              timeout, 0, 1):
+    if not utils_misc.wait_for(lambda: not session.is_responsive(timeout=30),
+                              120, 0, 1):
         raise error.TestFail("Guest refuses to go down")
     session.close()
 
@@ -287,7 +287,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
                     o.get("status") == "canceled")
 
     def wait_for_migration():
-        if not virt_utils.wait_for(mig_finished, mig_timeout, 2, 2,
+        if not utils_misc.wait_for(mig_finished, mig_timeout, 2, 2,
                                   "Waiting for migration to finish"):
             raise error.TestFail("Timeout expired while waiting for migration "
                                  "to finish")
@@ -322,7 +322,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             if mig_cancel:
                 time.sleep(2)
                 vm.monitor.cmd("migrate_cancel")
-                if not virt_utils.wait_for(mig_cancelled, 60, 2, 2,
+                if not utils_misc.wait_for(mig_cancelled, 60, 2, 2,
                                           "Waiting for migration "
                                           "cancellation"):
                     raise error.TestFail("Failed to cancel migration")
@@ -468,7 +468,7 @@ class MultihostMigration(object):
     case is when the guest images are on an NFS server.
 
     Example:
-        class TestMultihostMigration(virt_utils.MultihostMigration):
+        class TestMultihostMigration(utils_misc.MultihostMigration):
             def __init__(self, test, params, env):
                 super(testMultihostMigration, self).__init__(test, params, env)
 
@@ -567,7 +567,7 @@ class MultihostMigration(object):
         for vm in mig_data.vms:
             multi_mig.append((mig_wrapper, (vm, mig_data.dst,
                                             mig_data.vm_ports)))
-        virt_utils.parallel(multi_mig)
+        utils_misc.parallel(multi_mig)
 
 
     def migrate_vms_dest(self, mig_data):
@@ -1069,6 +1069,86 @@ def get_memory_info(lvms):
     return meminfo
 
 
+def run_file_transfer(test, params, env):
+    """
+    Transfer a file back and forth between host and guest.
+
+    1) Boot up a VM.
+    2) Create a large file by dd on host.
+    3) Copy this file from host to guest.
+    4) Copy this file from guest to host.
+    5) Check if file transfers ended good.
+
+    @param test: KVM test object.
+    @param params: Dictionary with the test parameters.
+    @param env: Dictionary with test environment.
+    """
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
+    login_timeout = int(params.get("login_timeout", 360))
+
+    session = vm.wait_for_login(timeout=login_timeout)
+
+    dir_name = test.tmpdir
+    transfer_timeout = int(params.get("transfer_timeout"))
+    transfer_type = params.get("transfer_type")
+    tmp_dir = params.get("tmp_dir", "/tmp/")
+    clean_cmd = params.get("clean_cmd", "rm -f")
+    filesize = int(params.get("filesize", 4000))
+    count = int(filesize / 10)
+    if count == 0:
+        count = 1
+
+    host_path = os.path.join(dir_name, "tmp-%s" %
+                             utils_misc.generate_random_string(8))
+    host_path2 = host_path + ".2"
+    cmd = "dd if=/dev/zero of=%s bs=10M count=%d" % (host_path, count)
+    guest_path = (tmp_dir + "file_transfer-%s" %
+                  utils_misc.generate_random_string(8))
+
+    try:
+        logging.info("Creating %dMB file on host", filesize)
+        utils.run(cmd)
+
+        if transfer_type == "remote":
+            logging.info("Transfering file host -> guest, timeout: %ss",
+                         transfer_timeout)
+            t_begin = time.time()
+            vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
+            t_end = time.time()
+            throughput = filesize / (t_end - t_begin)
+            logging.info("File transfer host -> guest succeed, "
+                         "estimated throughput: %.2fMB/s", throughput)
+
+            logging.info("Transfering file guest -> host, timeout: %ss",
+                         transfer_timeout)
+            t_begin = time.time()
+            vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
+            t_end = time.time()
+            throughput = filesize / (t_end - t_begin)
+            logging.info("File transfer guest -> host succeed, "
+                         "estimated throughput: %.2fMB/s", throughput)
+        else:
+            raise error.TestError("Unknown test file transfer mode %s" %
+                                  transfer_type)
+
+        if (utils.hash_file(host_path, method="md5") !=
+            utils.hash_file(host_path2, method="md5")):
+            raise error.TestFail("File changed after transfer host -> guest "
+                                 "and guest -> host")
+
+    finally:
+        logging.info('Cleaning temp file on guest')
+        session.cmd("%s %s" % (clean_cmd, guest_path))
+        logging.info('Cleaning temp files on host')
+        try:
+            os.remove(host_path)
+            os.remove(host_path2)
+        except OSError:
+            pass
+        session.close()
+
+
 def run_autotest(vm, session, control_path, timeout, outputdir, params):
     """
     Run an autotest control file inside a guest (linux only utility).
@@ -1383,7 +1463,7 @@ def raw_ping(command, timeout, session, output_func):
         # Because ping have the ability to catch the SIGINT signal so we can
         # always get the packet loss ratio even if timeout.
         if process.is_alive():
-            virt_utils.kill_process_tree(process.get_pid(), signal.SIGINT)
+            utils_misc.kill_process_tree(process.get_pid(), signal.SIGINT)
 
         status = process.get_status()
         output = process.get_output()
@@ -1519,7 +1599,7 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     if sub_type is None:
         raise error.TestError("No sub test is found")
-    virt_dir = os.path.dirname(virt_utils.__file__)
+    virt_dir = os.path.dirname(utils_misc.__file__)
     subtest_dir_virt = os.path.join(virt_dir, "tests")
     subtest_dir_kvm = os.path.join(test.bindir, "tests")
     subtest_dir = None
