@@ -5,8 +5,8 @@ Interfaces to the QEMU monitor.
 """
 
 import socket, time, threading, logging, select, re, os
-import virt_utils, virt_passfd_setup
-from autotest_lib.client.common_lib import utils
+import virt_utils, passfd_setup
+from autotest.client.shared import utils
 try:
     import json
 except ImportError:
@@ -342,7 +342,7 @@ class HumanMonitor(Monitor):
             self._recvall()
             if fd is not None:
                 if self._passfd is None:
-                    self._passfd = virt_passfd_setup.import_passfd()
+                    self._passfd = passfd_setup.import_passfd()
                 # If command includes a file descriptor, use passfd module
                 self._passfd.sendfd(self._socket, fd, "%s\n" % cmd)
             else:
@@ -843,7 +843,7 @@ class QMPMonitor(Monitor):
             cmdobj = self._build_cmd(cmd, args, id)
             if fd is not None:
                 if self._passfd is None:
-                    self._passfd = virt_passfd_setup.import_passfd()
+                    self._passfd = passfd_setup.import_passfd()
                 # If command includes a file descriptor, use passfd module
                 self._passfd.sendfd(self._socket, fd, json.dumps(cmdobj) + "\n")
             else:
