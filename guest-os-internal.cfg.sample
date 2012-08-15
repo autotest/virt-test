@@ -28,9 +28,9 @@ variants:
         cdrom_check_cdrom_pattern = "/dev/cdrom-\w+|/dev/cdrom\d*"
         cdrom_test_cmd = "dd if=%s of=/dev/null bs=1 count=1"
 
-        boot.multi_disks:
+        multi_disks_boot:
             images += " stg25"
-            image_name_stg25 = images/storage25
+            image_name_stg25 = storage25
         stress_boot:
             alive_test_cmd = ps aux
         format_disk:
