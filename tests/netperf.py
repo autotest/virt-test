@@ -1,23 +1,9 @@
 import logging, os, commands, threading, re, glob
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-from autotest_lib.client.virt import virt_utils
-from autotest_lib.client.virt import virt_test_utils
-try:
-    from autotest_lib.server.hosts.ssh_host import SSHHost
-except ImportError:
-    pubkey = "%s/.ssh/id_dsa.pub" % os.environ['HOME']
-    if not os.path.exists(os.path.expandvars(pubkey)):
-        commands.getoutput('yes ""|ssh-keygen -t dsa -q -N ""')
-    def SSHHost(ip, user, port, password):
-        session = virt_utils.wait_for_login("ssh", ip, port, user, password,
-                                            "^\[.*\][\#\$]\s*$")
-        k = open(pubkey, "r")
-        session.cmd('echo "%s" >> ~/.ssh/authorized_keys' % k.read())
-        k.close()
-        session.close()
+from autotest.server.hosts.ssh_host import SSHHost
+from autotest.client import utils
+from autotest.client.virt import virt_test_utils, virt_utils, remote
 
-error.context_aware
+
 def run_netperf(test, params, env):
     """
     Network stress test with netperf.
@@ -108,7 +94,18 @@ def run_netperf(test, params, env):
     env_setup(client, username, shell_port, password)
     env_setup(host, username, shell_port, password)
 
-    error.context("Start netperf testing", logging.info)
+        netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
+        for i in params.get("netperf_files").split():
+            remote.scp_to_remote(ip, shell_port, username, password,
+                                      "%s/%s" % (netperf_dir, i), "/tmp/")
+        ssh_cmd(ip, params.get("setup_cmd"))
+
+    logging.info("Prepare env of server/client/host")
+
+    env_setup(server_ctl)
+    env_setup(client)
+    env_setup(host)
+    logging.info("Start netperf testing ...")
     start_test(server, server_ctl, host, client, test.resultsdir,
                l=int(params.get('l')),
                sessions_rr=params.get('sessions_rr'),
