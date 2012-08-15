@@ -526,7 +526,7 @@ class VM(virt_vm.BaseVM):
             dev = ""
             if self.params.get("use_bootindex") in ['yes', 'on', True]:
                 if boot in ['yes', 'on', True]:
-                    bootindex = 1
+                    bootindex = "1"
                 boot = "unused"
             if format == "ahci":
                 blkdev_id = "ahci%s" % index
