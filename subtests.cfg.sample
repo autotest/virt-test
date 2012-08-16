@@ -367,6 +367,8 @@ variants:
         reboot_method = shell
         kill_vm_on_error = yes
         login_timeout = 240
+        deviceid_str = "%s:%s"
+        chk_usb_info_cmd = "lsusb -v"
         variants:
             - ehci:
                 check_func = "check_usb_device"
