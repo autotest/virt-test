@@ -1601,7 +1601,7 @@ variants:
 
     - qmp_basic:
         no Host_RHEL.5
-        type = qmp_basic
+        type = qmp_basic_rhel6
         pre_command += "/usr/libexec/qemu-kvm --help|grep '\-qmp' || echo 'Qemu-kvm does not support qmp!';"
         monitors += ' qmp'
         monitor_type_qmp = qmp
