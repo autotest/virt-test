@@ -615,8 +615,32 @@ class VM(virt_vm.BaseVM):
         def add_uuid(help, uuid):
             return " -uuid '%s'" % uuid
 
-        def add_pcidevice(help, host):
-            return " -pcidevice host=%s" % host
+        def add_pcidevice(help, host, params=None):
+            assign_param = []
+            device_help = utils.system_output("%s -device \\?" % qemu_binary)
+            cmd = "  -pcidevice "
+            if bool(re.search("pci-assign", device_help, re.M)):
+                cmd = " -device pci-assign,"
+            help_cmd = "%s -device pci-assign,\\?" % qemu_binary
+            pcidevice_help = utils.system_output(help_cmd)
+            cmd += "host=%s" % host
+            cmd += ",id=id_%s" % host
+            if params is not None and params.get("pci-assign_params"):
+                assign_param = params.get("pci-assign_params").split()
+            fail_param = []
+            for param in assign_param:
+                value = params.get(param)
+                if value:
+                    if bool(re.search(param, pcidevice_help, re.M)):
+                        cmd += ",%s=%s" % (param, value)
+                    else:
+                        fail_param.append(param)
+            if fail_param:
+                msg = "parameter %s is not support in device pci-assign."\
+                      " It only support following paramter:\n %s" \
+                      % (param, pcidevice_help)
+                logging.warn(msg)
+            return cmd
 
         def add_spice(spice_options, port_range=(3000, 3199),
              tls_port_range=(3200, 3399)):
@@ -1015,10 +1039,11 @@ class VM(virt_vm.BaseVM):
             host_port = vm.redirs.get(guest_port)
             redirs += [(host_port, guest_port)]
 
-        if params.get('pci_assignable') == "no":
-            vlan = 0
-            for nic_name in params.objects("nics"):
-                nic_params = params.object_params(nic_name)
+        vlan = 0
+        iov = 0
+        for nic_name in params.objects("nics"):
+            nic_params = params.object_params(nic_name)
+            if nic_params.get('pci_assignable') == "no":
                 try:
                     netdev_id = vm.netdev_id[vlan]
                     device_id = vm.device_id[vlan]
@@ -1063,11 +1088,12 @@ class VM(virt_vm.BaseVM):
                                     nic_params.get("bootp"), redirs, netdev_id,
                                     nic_params.get("netdev_extra_params"),
                                     vhost, tapfd)
-
-                # Proceed to next NIC
-                vlan += 1
-        else:
-            qemu_cmd += " -net none"
+            else:
+                pci_id = vm.pa_pci_ids[iov]
+                qemu_cmd += add_pcidevice(help, pci_id, params=nic_params)
+                iov += 1
+            # Proceed to next NIC
+            vlan += 1
 
         mem = params.get("mem")
         if mem:
@@ -1277,12 +1303,6 @@ class VM(virt_vm.BaseVM):
         if params.get("disable_hpet") == "yes":
             qemu_cmd += add_no_hpet(help)
 
-        # If the PCI assignment step went OK, add each one of the PCI assigned
-        # devices to the qemu command line.
-        if vm.pci_assignable:
-            for pci_id in vm.pa_pci_ids:
-                qemu_cmd += add_pcidevice(help, pci_id)
-
         qemu_cmd += add_rtc(help)
 
         machine_type = params.get("machine_type")
@@ -1453,19 +1473,48 @@ class VM(virt_vm.BaseVM):
             self.tapfds = []
             vlan = 0
             for nic in params.objects("nics"):
-                self.netdev_id.append(virt_utils.generate_random_id())
-                self.device_id.append(virt_utils.generate_random_id())
                 nic_params = params.object_params(nic)
-                if nic_params.get("nic_mode") == "tap" and\
-                   nic_params.get("use_nic_scritps") == "no":
-                    ifname = self.get_ifname(vlan)
-                    brname = nic_params.get("bridge")
-                    if brname == "private":
-                        brname = virt_test_setup.PrivateBridgeConfig().brname
-                    tapfd = virt_utils.open_tap("/dev/net/tun", ifname)
-                    virt_utils.add_to_bridge(ifname, brname)
-                    virt_utils.bring_up_ifname(ifname)
-                    self.tapfds.append(tapfd)
+                pa_type = nic_params.get("pci_assignable")
+                if pa_type and pa_type != "no":
+                    if self.pci_assignable is None:
+                       self.pci_assignable = virt_test_setup.PciAssignable(
+                           driver=params.get("driver"),
+                           driver_option=params.get("driver_option"),
+                           host_set_flag = params.get("host_setup_flag"),
+                            kvm_params = params.get("kvm_default"))
+                    # Virtual Functions (VF) assignable devices
+                    if pa_type == "vf":
+                        self.pci_assignable.add_device(device_type=pa_type)
+                    # Physical NIC (PF) assignable devices
+                    elif pa_type == "pf":
+                        self.pci_assignable.add_device(device_type=pa_type,
+                                            name=nic_params.get("device_name"))
+                    else:
+                        raise virt_vm.VMBadPATypeError(pa_type)
+                else:
+                    self.netdev_id.append(virt_utils.generate_random_id())
+                    self.device_id.append(virt_utils.generate_random_id())
+                    if nic_params.get("nic_mode") == "tap" and\
+                       nic_params.get("use_nic_scritps") == "no":
+                        ifname = self.get_ifname(vlan)
+                        brname = nic_params.get("bridge")
+                        if brname == "private":
+                            brname = virt_test_setup.PrivateBridgeConfig().brname
+                        tapfd = virt_utils.open_tap("/dev/net/tun", ifname)
+                        virt_utils.add_to_bridge(ifname, brname)
+                        virt_utils.bring_up_ifname(ifname)
+                        self.tapfds.append(tapfd)
+                    mac = (nic_params.get("nic_mac") or
+                           mac_source and mac_source.get_mac_address(vlan))
+                    if mac:
+                        virt_utils.set_mac_address(self.instance, vlan, mac)
+                    else:
+                        mac = virt_utils.generate_mac_address(self.instance, vlan)
+
+                    if nic_params.get("ip"):
+                        self.address_cache[mac] = nic_params.get("ip")
+                        logging.debug("(address cache) Adding static cache entry: "
+                                      "%s ---> %s" % (mac, nic_params.get("ip")))
                 vlan += 1
 
             # Find available VNC port, if needed
@@ -1499,61 +1548,7 @@ class VM(virt_vm.BaseVM):
                 self.uuid = f.read().strip()
                 f.close()
 
-            # Generate or copy MAC addresses for all NICs
-            pa_type = params.get("pci_assignable")
-            if pa_type == "no":
-                num_nics = len(params.objects("nics"))
-                for vlan in range(num_nics):
-                    nic_name = params.objects("nics")[vlan]
-                    nic_params = params.object_params(nic_name)
-                    mac = (nic_params.get("nic_mac") or
-                           mac_source and mac_source.get_mac_address(vlan))
-                    if mac:
-                        virt_utils.set_mac_address(self.instance, vlan, mac)
-                    else:
-                        mac = virt_utils.generate_mac_address(self.instance, vlan)
-
-                    if nic_params.get("ip"):
-                        self.address_cache[mac] = nic_params.get("ip")
-                        logging.debug("(address cache) Adding static cache entry: "
-                                      "%s ---> %s" % (mac, nic_params.get("ip")))
-
-            # Assign a PCI assignable device
-            self.pci_assignable = None
-            pa_type = params.get("pci_assignable")
-            if pa_type and pa_type != "no":
-                pa_devices_requested = params.get("devices_requested")
-
-                # Virtual Functions (VF) assignable devices
-                if pa_type == "vf":
-                    self.pci_assignable = virt_test_setup.PciAssignable(
-                        type=pa_type,
-                        driver=params.get("driver"),
-                        driver_option=params.get("driver_option"),
-                        devices_requested=pa_devices_requested,
-                        host_set_flag = params.get("host_setup_flag"),
-                        kvm_params = params.get("kvm_default"))
-                # Physical NIC (PF) assignable devices
-                elif pa_type == "pf":
-                    self.pci_assignable = virt_test_setup.PciAssignable(
-                        type=pa_type,
-                        names=params.get("device_names"),
-                        devices_requested=pa_devices_requested,
-                        host_set_flag = params.get("host_setup_flag"),
-                        kvm_params = params.get("kvm_default"))
-                # Working with both VF and PF
-                elif pa_type == "mixed":
-                    self.pci_assignable = virt_test_setup.PciAssignable(
-                        type=pa_type,
-                        driver=params.get("driver"),
-                        driver_option=params.get("driver_option"),
-                        names=params.get("device_names"),
-                        devices_requested=pa_devices_requested,
-                        host_set_flag = params.get("host_setup_flag"),
-                        kvm_params = params.get("kvm_default"))
-                else:
-                    raise virt_vm.VMBadPATypeError(pa_type)
-
+            if self.pci_assignable is not None:
                 self.pa_pci_ids = self.pci_assignable.request_devs()
 
                 if self.pa_pci_ids:
@@ -1773,8 +1768,9 @@ class VM(virt_vm.BaseVM):
 
         finally:
             self.monitors = []
-            if self.pci_assignable:
+            if self.pci_assignable is not None:
                 self.pci_assignable.release_devs()
+                self.pci_assignable = None
             if self.process:
                 self.process.close()
             if self.serial_console:
@@ -2526,9 +2522,12 @@ class VM(virt_vm.BaseVM):
         Verifies whether the current qemu commandline matches the requested
         one, based on the test parameters.
         """
-        return (self.__make_qemu_command() !=
-                self.__make_qemu_command(name, params, basedir))
-
+        try:
+            restart = (self.__make_qemu_command() !=
+                      self.__make_qemu_command(name, params, basedir))
+        except Exception:
+            restart = True
+        return restart
 
     def get_block(self, p_dict={}):
         """
