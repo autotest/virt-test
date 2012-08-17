@@ -1355,6 +1355,7 @@ variants:
 
     - win_virtio_update:
         type = win_virtio_update
+        only Windows
         vms = ""
         drivers_install = "balloon;block;nic"
         mount_point = "/tmp/mnt"
