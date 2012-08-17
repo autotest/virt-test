@@ -216,29 +216,6 @@ variants:
                                 virtio_driver_install:
                                     virtio_install_file = linux/virtio_driver-EL-3.9-32.tar.bz2
 
-                            - 64:
-                                image_name += -64
-                                guest_name += -64
-                                image_size = 20G
-                                install:
-                                    steps = RHEL-3.9-x86_64.steps
-                                    cdrom = isos/linux/RHEL3.9-x86_64-DVD.iso
-                                    md5sum_cd1 = 1260c68e8840a6dc06e0e0c578c91fc3
-                                    md5sum_1m_cd1 = bc6998f31328338d9aeeaf26cbb323ee
-                                unattended_install, check_block_size.4096_512, check_block_size.512_512:
-                                    kernel_params = "ks=floppy nicdelay=60 console=ttyS0,115200 console=tty0"
-                                    unattended_file = unattended/RHEL-3-series.ks
-                                    floppies = "fl"
-                                    floppy_name = images/rhel39-64/ks.vfd
-                                    #cdrom_unattended = images/rhel39-64/ks.iso
-                                    kernel = images/rhel39-64/vmlinuz
-                                    initrd = images/rhel39-64/initrd.img
-                                unattended_install.cdrom, check_block_size.4096_512, check_block_size.512_512:
-                                    cdrom_cd1 = isos/linux/RHEL3.9-x86_64-DVD.iso
-                                    cdroms = cd1
-                                virtio_driver_install:
-                                    virtio_install_file = linux/virtio_driver-EL-3.9-64.tar.bz2
-
                             - PAE:
                                 no install
                                 image_name += -PAE
