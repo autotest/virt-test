@@ -62,7 +62,7 @@ class virt_test(test.test):
                     # Get the test routine corresponding to the specified
                     # test type
                     t_types = params.get("type").split()
-                    test_modules = {}
+                    test_modules = []
                     for t_type in t_types:
                         for d in [subtest_dir_test, subtest_dir_common]:
                             module_path = os.path.join(d, "%s.py" % t_type)
@@ -96,7 +96,7 @@ class virt_test(test.test):
                             raise error.TestError(msg)
                         # Load the test module
                         f, p, d = imp.find_module(t_type, [subtest_dir])
-                        test_modules[t_type] = imp.load_module(t_type, f, p, d)
+                        test_modules.append((t_type, imp.load_module(t_type, f, p, d)))
                         f.close()
                     # Preprocess
                     try:
@@ -104,9 +104,9 @@ class virt_test(test.test):
                     finally:
                         env.save()
                     # Run the test function
-                    for t_type, test_module in test_modules.items():
-                        logging.info("Running function: %s.run_%s" % (t_type,
-                                                                      t_type))
+                    for t_type, test_module in test_modules:
+                        msg = "Running function: %s.run_%s()" % (t_type, t_type)
+                        logging.info(msg)
                         run_func = getattr(test_module, "run_%s" % t_type)
                         try:
                             run_func(self, params, env)
