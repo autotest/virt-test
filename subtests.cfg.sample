@@ -3710,6 +3710,55 @@ variants:
         sleep_time = 20
         type=hello_world
 
+    - sr-iov:
+        only assign_device
+        variants:
+            - vf_boot:
+                type = boot
+                pci_assignable_nic1 = vf
+            - multi_vf_boot:
+                type = boot
+                nics = "nic1 nic2 nic3"
+                pci_assignable = vf
+            - max_vf_boot:
+                type = boot
+                nics = "nic1 nic2 nic3 nic4 nic5 nic6 nic7"
+                pci_assignable = vf
+            - pf_vf_boot:
+                type = boot
+                nics = "nic1 nic2"
+                pci_assignable_nic1 = pf
+                pci_assignable_nic1 = vf
+            - vf_boot_vms:
+                type = boot
+                vms = 'vm1 vm2'
+                pci_assignable_nic1 = vf
+            - vf_hotplug:
+                type = sr_iov_hotplug
+                pci_assignable = vf
+                reference_cmd = lspci
+                find_pci_cmd = 'lspci | tail -n1'
+                pci_test_cmd = 'echo %s; nslookup www.redhat.com'
+                pci_num = 2
+                repeat_times = 2
+                wait_secs_for_hook_up = 3
+            - vf_hotplug_500:
+                type = sr_iov_hotplug
+                pci_assignable = vf
+                reference_cmd = lspci
+                find_pci_cmd = 'lspci | tail -n1'
+                pci_test_cmd = 'echo %s; nslookup www.redhat.com'
+                wait_secs_for_hook_up = 3
+                pci_num = 2
+                repeat_times = 500
+            - vf_hot_unplug:
+                type = pci_hot_unplug
+                pci_assignable = vf
+                reference_cmd = lspci
+                nics = "nic1 nic2"
+                unplug_pci_num = 2
+
+
  # Internal case configuration end. Don't add any case below this line.
  # (THIS LINE IS RESERVED FOR MERGE)
  # (THIS LINE IS RESERVED FOR MERGE)
