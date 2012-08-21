@@ -36,7 +36,7 @@
 					<InstallFrom>
 						<MetaData wcm:action="add">
 							<Key>/IMAGE/INDEX</Key>
-							<Value>1</Value>
+							<Value>3</Value>
 						</MetaData>
 					</InstallFrom>
 					<InstallTo>
