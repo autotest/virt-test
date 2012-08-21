@@ -134,7 +134,7 @@ class Disk(object):
 
 class FloppyDisk(Disk):
     """
-    Represents a 1.44 MB floppy disk. We can copy files to it, and setup it in
+    Represents a 2.88 MB floppy disk. We can copy files to it, and setup it in
     convenient ways.
     """
     @error.context_aware
@@ -149,7 +149,7 @@ class FloppyDisk(Disk):
             os.makedirs(os.path.dirname(path))
 
         try:
-            c_cmd = '%s create -f raw %s 1440k' % (qemu_img_binary, path)
+            c_cmd = '%s create -f raw %s 2880k' % (qemu_img_binary, path)
             utils.run(c_cmd, verbose=DEBUG)
             f_cmd = 'mkfs.msdos -s 1 %s' % path
             utils.run(f_cmd, verbose=DEBUG)
