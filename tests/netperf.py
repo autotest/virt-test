@@ -1,8 +1,7 @@
 import logging, os, commands, threading, re, glob
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-from autotest_lib.client.virt import virt_utils
-from autotest_lib.client.virt import virt_test_utils
+from autotest.client import utils
+from autotest.client.shared import ssh_key
+from autotest.client.virt import utils_test, utils_misc, remote
 
 
 def format_result(result, base="12", fbase="2"):
@@ -187,17 +186,26 @@ def run_netperf(test, params, env):
     password = params["password"]
     username = params["username"]
 
-    error.context("Prepare env of server/client/host", logging.info)
-    prepare_list = set([server_ctl, client, host])
-    tag_dict = {server_ctl: "server", client: "client", host: "host"}
-    ip_dit = {server_ctl: server_ctl_ip, client: client_ip, host: host_ip}
-    for i in prepare_list:
-        params_tmp = params.object_params(tag_dict[i])
-        if params_tmp.get("os_type") == "linux":
-            env_setup(i, ip_dict[i], username, shell_port, password)
+    def env_setup(ip):
+        logging.debug("Setup env for %s" % ip)
+        ssh_key.setup_ssh_key(hostname=ip, user=username, port=shell_port,
+                              password=password)
+        ssh_cmd(ip, "service iptables stop")
+        ssh_cmd(ip, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
-    error.context("Start netperf testing", logging.info)
-    start_test(server_ip, server_ctl, host, clients, test.resultsdir,
+        netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
+        for i in params.get("netperf_files").split():
+            remote.scp_to_remote(ip, shell_port, username, password,
+                                      "%s/%s" % (netperf_dir, i), "/tmp/")
+        ssh_cmd(ip, params.get("setup_cmd"))
+
+    logging.info("Prepare env of server/client/host")
+
+    env_setup(server_ctl)
+    env_setup(client)
+    env_setup(host)
+    logging.info("Start netperf testing ...")
+    start_test(server, server_ctl, host, client, test.resultsdir,
                l=int(params.get('l')),
                sessions_rr=params.get('sessions_rr'),
                sessions=params.get('sessions'),
