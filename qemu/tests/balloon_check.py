@@ -39,7 +39,17 @@ def run_balloon_check(test, params, env):
         @param new_mem: New desired memory.
         @return: Number of failures occurred during operation.
         """
-        _, fail = check_ballooned_memory()
+        if params.get("os_type") == "windows":
+           free_mem = session.cmd_output(free_mem_cmd)
+           free_mem = re.findall("\d+", free_mem)[0]
+           if params.get("monitor_type") == "qmp":
+               free_mem = int(free_mem) * 1024
+           else:
+               free_mem = int(free_mem) / 1024
+
+        fail = 0
+        old_mem, cfail = check_ballooned_memory()
+        fail += cfail
         if params.get("monitor_type") == "qmp":
             new_mem = new_mem * 1024 * 1024
         logging.info("Changing VM memory to %s", new_mem)
@@ -56,20 +66,41 @@ def run_balloon_check(test, params, env):
             fail += 1
 
         # Verify whether the guest OS reports the correct new memory
-        current_mem_guest = vm.get_current_memory_size()
-        fail += cfail
-        current_mem_guest = current_mem_guest + offset
-        if params.get("monitor_type") == "qmp":
-            current_mem_guest = current_mem_guest * 1024 * 1024
-        # Current memory figures will allways be a little smaller than new
-        # memory. If they are higher, ballooning failed on guest perspective
-        if current_mem_guest > new_mem:
-            logging.error("Guest OS reports %s of RAM, but new ballooned RAM "
-                          "is %s", current_mem_guest, new_mem)
-            fail += 1
+        ratio = float(params.get("ratio", "0.5"))
+        guest_check_fail = False
+        if params.get("os_type") == "windows":
+            cur_free_mem = session.cmd_output(free_mem_cmd)
+            cur_free_mem = re.findall("\d+", cur_free_mem)[0]
+            if params.get("monitor_type") == "qmp":
+                cur_free_mem = int(cur_free_mem) * 1024
+            else:
+                cur_free_mem = int(cur_free_mem) / 1024
+            ballooned_mem_guest = abs(free_mem - cur_free_mem)
+            ballooned_mem = abs(cur_mem - new_mem)
+            if (abs(ballooned_mem_guest - ballooned_mem) >
+                ratio * ballooned_mem):
+                fail += 1
+                guest_check_fail = True
+                error_msg = "Try to balloon %s RAM, " % ballooned_mem
+                error_msg += "but guest OS reports RAM "
+                error_msg += "changed %s" % ballooned_mem_guest
+        else:
+            current_mem_guest = vm.get_current_memory_size()
+            current_mem_guest = current_mem_guest + offset
+            if params.get("monitor_type") == "qmp":
+                current_mem_guest = current_mem_guest * 1024 * 1024
+            if current_mem_guest != new_mem:
+                error_msg = "Guest OS reports %s of RAM, " % current_mem_guest
+                error_msg += "but new ballooned RAM is %s" % new_mem
+                fail += 1
+                guest_check_fail = True
+        if guest_check_fail:
+            logging.error(error_msg)
+
         return fail
 
     fail = 0
+    free_mem_cmd = params.get("free_mem_cmd")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -99,13 +130,14 @@ def run_balloon_check(test, params, env):
 
     # Reduce memory to random size between Free memory
     # to max memory size
-    s, o = session.cmd_status_output("cat /proc/meminfo")
+    s, o = session.cmd_status_output(free_mem_cmd)
     if s != 0:
         raise error.TestError("Can not get guest memory information")
 
-    vm_mem_free = int(re.findall('MemFree:\s+(\d+).*', o)[0]) / 1024
+    vm_mem_free = int(re.findall('\d+', o)[0]) / 1024
 
-    new_mem = int(random.uniform(vm_assigned_mem - vm_mem_free, vm_assigned_mem))
+    new_mem = int(random.uniform(vm_assigned_mem - vm_mem_free,
+                                 vm_assigned_mem))
     fail += balloon_memory(new_mem, offset)
     # Run option test after evict memory
     if 'sub_balloon_test_evict' in params:
