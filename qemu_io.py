@@ -66,7 +66,7 @@ class QemuIO(object):
                         qemu_io_cmd += " -%s" % io_option
                     else:
                         qemu_io_cmd += " --%s" % io_option
-            if not essential_flag:
+            if essential_option and not essential_flag:
                 raise QemuIOParamError
 
         if self.image_name:
