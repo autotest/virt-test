@@ -550,7 +550,7 @@ variants:
                         guest_name = RHEL-Server-6.3
                         image_name = RHEL-Server-6.3
                         image_size = 20G
-                        brew_tag = RHEL-6.3-candidate
+                        brew_tag = RHEL-6.3-Z-candidate
                         nic_hotplug:
                             modprobe_module = ""
                         block_hotplug:
@@ -588,6 +588,50 @@ variants:
                                         unattended_file = unattended/RHEL-6-perf-series.ks
                                 unattended_install.cdrom:
                                     cdrom_cd1 = isos/linux/RHEL6.3-Server-x86_64.iso
+
+
+                    - 6.4:
+                        guest_name = RHEL-Server-6.4
+                        image_name = RHEL-Server-6.4
+                        image_size = 20G
+                        brew_tag = RHEL-6.4-candidate
+                        nic_hotplug:
+                            modprobe_module = ""
+                        block_hotplug:
+                            modprobe_module = ""
+                        acpi_after_hotplug:
+                            modprobe_module = ""
+                        rh_kernel_update, kexec:
+                            args_added = "console=tty0 console=ttyS0,115200"
+                        variants:
+                            - 32:
+                                guest_name += -32
+                                image_name += -32
+                                unattended_install:
+                                    unattended_file = unattended/RHEL-6-series.ks
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel64-32/ks.vfd
+                                    cdrom_unattended = images/rhel64-32/ks.iso
+                                    kernel = images/rhel64-32/vmlinuz
+                                    initrd = images/rhel64-32/initrd.img
+                                    perf:
+                                        unattended_file = unattended/RHEL-6-perf-series.ks
+                                unattended_install.cdrom:
+                                    cdrom_cd1 = isos/linux/RHEL6.4-Server-i386.iso
+                            - 64:
+                                guest_name += -64
+                                image_name += -64
+                                unattended_install:
+                                    unattended_file = unattended/RHEL-6-series.ks
+                                    #floppies = "fl"
+                                    #floppy_name = images/rhel64-64/ks.vfd
+                                    cdrom_unattended = images/rhel64-64/ks.iso
+                                    kernel = images/rhel64-64/vmlinuz
+                                    initrd = images/rhel64-64/initrd.img
+                                    perf:
+                                        unattended_file = unattended/RHEL-6-perf-series.ks
+                                unattended_install.cdrom:
+                                    cdrom_cd1 = isos/linux/RHEL6.4-Server-x86_64.iso
 
     # Windows section
     - @Windows:

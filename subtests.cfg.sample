@@ -3803,10 +3803,14 @@ variants:
 
 # URLs/Remote links for RHEL installation and update, put them together.
 unattended_install.url:
-    RHEL.6.3.64:
+    RHEL.6.4.64:
         url = http://tree.englab.nay.redhat.com/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/x86_64/os/ 
-    RHEL.6.3.32:
+    RHEL.6.4.32:
         url = http://tree.englab.nay.redhat.com/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/i386/os/ 
+    RHEL.6.3.64:
+        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.3/Server/x86_64/os/
+    RHEL.6.3.32:
+        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.3/Server/i386/os/
     RHEL.6.2.64:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.2/Server/x86_64/os/
     RHEL.6.2.32:
@@ -3837,12 +3841,16 @@ unattended_install.url:
 unattended_install.nfs:
     nfs_server = nfs.englab.nay.redhat.com
     nfs_dir = /pub/rhel/released/
-    RHEL.6.3.64:
+    RHEL.6.4.64:
         nfs_server = tree.englab.nay.redhat.com
         nfs_dir = /tree/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/x86_64/os
-    RHEL.6.3.32:
+    RHEL.6.4.32:
         nfs_server = tree.englab.nay.redhat.com
         nfs_dir = /tree/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/i386/os
+    RHEL.6.3.64:
+        nfs_dir += RHEL-6/6.3/Server/x86_64/os
+    RHEL.6.3.32:
+        nfs_dir += RHEL-6/6.3/Server/i386/os
     RHEL.6.2.64:
         nfs_dir += RHEL-6/6.2/Server/x86_64/os
     RHEL.6.2.32:
@@ -3872,13 +3880,21 @@ unattended_install.nfs:
         nfs_dir = /tree/pub/rhel/released/RHEL-3/U9/i386/os/
 
 rh_kernel_update, kexec:
+    RHEL.6.4.64:
+        kernel_version = 2.6.32-298.el6.x86_64
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/298.el6/x86_64/kernel-2.6.32-298.el6.x86_64.rpm
+        kernel_suffix = el6.x86_64
+    RHEL.6.4.32:
+        kernel_version = 2.6.32-298.el6.i686
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/298.el6/i686/kernel-2.6.32-298.el6.i686.rpm
+        kernel_suffix = el6.i686
     RHEL.6.3.64:
-        kernel_version = 2.6.32-221.el6.x86_64
-        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/221.el6/x86_64/kernel-2.6.32-221.el6.x86_64.rpm
+        kernel_version = 2.6.32-279.el6.x86_64
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/279.el6/x86_64/kernel-2.6.32-279.el6.x86_64.rpm
         kernel_suffix = el6.x86_64
     RHEL.6.3.32:
-        kernel_version = 2.6.32-221.el6.i686
-        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/221.el6/i686/kernel-2.6.32-221.el6.i686.rpm
+        kernel_version = 2.6.32-279.el6.i686
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/279.el6/i686/kernel-2.6.32-279.el6.i686.rpm
         kernel_suffix = el6.i686
     RHEL.6.2.64:
         kernel_version = 2.6.32-220.el6.x86_64
