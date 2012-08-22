@@ -923,7 +923,9 @@ variants:
         eject_media:
             cdroms += " cd2"
             cdrom_cd1 = /tmp/orig.iso
-            cdrom_cd2 = isos/windows/winutils.iso 
+            cdrom_cd2 = isos/windows/winutils.iso
+        balloon_check:
+            free_mem_cmd = wmic os get FreePhysicalMemory 
 
         variants:
             - WinXP:

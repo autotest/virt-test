@@ -970,10 +970,10 @@ variants:
 
     - balloon_check:
         no Host_RHEL.5
-        only Linux
         no RHEL.3.9
         no RHEL.4.9
         kill_vm_on_error = yes
+        free_mem_cmd = cat /proc/meminfo |grep MemFree
         variants:
             - @enable:
                 type = balloon_check
