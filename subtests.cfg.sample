@@ -3759,6 +3759,40 @@ variants:
                 unplug_pci_num = 2
 
 
+    - qcow2perf:
+        only qcow2
+        type = qcow2perf
+        image_chain = "base"
+        image_name_base = base
+        image_format_base = qcow2
+        op_type = read
+        start_vm = no
+        image_size_base = 8G
+        variants:
+            - write:
+                op_type = write
+            - read:
+                op_type = read
+            - convert:
+                op_type = convert
+                image_convert = "convert"
+                image_name_convert = "base-qcow2"
+                image_format_convert = qcow2
+            - rebase:
+                op_type = rebase
+                image_chain += " sn1 sn2 sn3"
+                test_image = 3
+                new_base = "base1"
+                image_name_sn1 = "sn1"
+                image_name_sn2 = "sn2"
+                image_name_sn3 = "sn3"
+                image_name_base1 = "base1"
+            - commit:
+                op_type = commit
+                image_chain += " sn1"
+                image_name_sn1 = "sn1"
+                test_image = 1
+
  # Internal case configuration end. Don't add any case below this line.
  # (THIS LINE IS RESERVED FOR MERGE)
  # (THIS LINE IS RESERVED FOR MERGE)
