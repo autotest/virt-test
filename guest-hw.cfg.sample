@@ -161,6 +161,28 @@ variants:
     - iscsi:
         use_storage = iscsi
 
+# Display and VGA
+variants:
+    - spice:
+        display = spice
+        vga = qxl
+    - @vnc:
+        display = vnc
+        Linux:
+            vga = cirrus
+        Windows:
+            vga = std
+            WinXP, Win2003:
+                vga = cirrus
+    - sdl:
+        display = sdl
+        vga = cirrus
+    - nographic:
+        display = nographic
+        vga =
+    # sdl here just for placeholder
+no sdl
+
 # Pages
 variants:
     - @smallpages:
