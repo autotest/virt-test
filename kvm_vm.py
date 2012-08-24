@@ -642,6 +642,40 @@ class VM(virt_vm.BaseVM):
                 logging.warn(msg)
             return cmd
 
+        def add_spice_rhel5(help, spice_params, port_range=(3100, 3199)):
+            """
+            processes spice parameters on rhel5 host.
+
+            @param spice_options - dict with spice keys/values
+            @param port_range - tuple with port range, default: (3000, 3199)
+            """
+
+            if has_option(help, "spice"):
+                cmd = " -spice"
+            else:
+                return ""
+            spice_help = ""
+            if has_option(help,"spice-help"):
+                spice_help = commands.getoutput("%s -device \\?" % qemu_binary)
+            s_port = str(virt_utils.find_free_port(*port_range))
+            cmd += " port=%s" % s_port
+            for param in spice_params.split():
+                value = params.get(param)
+                if value:
+                    if bool(re.search(param, spice_help, re.M)):
+                        cmd += ",%s=%s" % (param, value)
+                    else:
+                        msg = "parameter %s is not support in spice."\
+                              " It only support following paramter:\n %s" \
+                               % (param, spice_help)
+                        logging.warn(msg)
+                else:
+                    cmd += ",%s" % param
+            if has_option(help, "qxl"):
+                qxl_dev_nr = params.get("qxl_dev_nr", 1)
+                cmd += " -qxl %s" % qxl_dev_nr
+            return cmd
+
         def add_spice(spice_options, port_range=(3000, 3199),
              tls_port_range=(3200, 3399)):
             """
@@ -1281,7 +1315,11 @@ class VM(virt_vm.BaseVM):
         elif params.get("display") == "nographic":
             qemu_cmd += add_nographic(help)
         elif params.get("display") == "spice":
-            qemu_cmd += add_spice(vm.spice_options)
+            if params.get("rhel5_spice"):
+                spice_params = params.get("spice_params")
+                qemu_cmd += add_spice_rhel5(help, spice_params)
+            else:
+                qemu_cmd += add_spice(vm.spice_options)
 
         vga = params.get("vga", None)
         if vga:
