@@ -838,6 +838,43 @@ class VM(virt_vm.BaseVM):
                 logging.warn(msg)
             return cmd
 
+
+        def add_spice_rhel5(help, spice_params, port_range=(3100, 3199)):
+            """
+            processes spice parameters on rhel5 host.
+
+            @param spice_options - dict with spice keys/values
+            @param port_range - tuple with port range, default: (3000, 3199)
+            """
+
+            if has_option(help, "spice"):
+                cmd = " -spice"
+            else:
+                return ""
+            spice_help = ""
+            if has_option(help,"spice-help"):
+                spice_help = commands.getoutput("%s -device \\?" % qemu_binary)
+            s_port = str(utils_misc.find_free_port(*port_range))
+            self.spice_options['spice_port'] = s_port
+            cmd += " port=%s" % s_port
+            for param in spice_params.split():
+                value = params.get(param)
+                if value:
+                    if bool(re.search(param, spice_help, re.M)):
+                        cmd += ",%s=%s" % (param, value)
+                    else:
+                        msg = ("parameter %s is not supported in spice. "
+                               "It only supports the following parameters:\n %s"
+                               % (param, spice_help))
+                        logging.warn(msg)
+                else:
+                    cmd += ",%s" % param
+            if has_option(help, "qxl"):
+                qxl_dev_nr = params.get("qxl_dev_nr", 1)
+                cmd += " -qxl %s" % qxl_dev_nr
+            return cmd
+
+
         def add_spice(port_range=(3000, 3199),
              tls_port_range=(3200, 3399)):
             """
@@ -1615,26 +1652,30 @@ class VM(virt_vm.BaseVM):
         elif params.get("display") == "nographic":
             qemu_cmd += add_nographic(help_text)
         elif params.get("display") == "spice":
-            spice_keys = (
-                "spice_port", "spice_password", "spice_addr", "spice_ssl",
-                "spice_tls_port", "spice_tls_ciphers", "spice_gen_x509",
-                "spice_x509_dir", "spice_x509_prefix", "spice_x509_key_file",
-                "spice_x509_cacert_file", "spice_x509_key_password",
-                "spice_x509_secure", "spice_x509_cacert_subj",
-                "spice_x509_server_subj", "spice_secure_channels",
-                "spice_image_compression", "spice_jpeg_wan_compression",
-                "spice_zlib_glz_wan_compression", "spice_streaming_video",
-                "spice_agent_mouse", "spice_playback_compression",
-                "spice_ipv4", "spice_ipv6", "spice_x509_cert_file",
-                "disable_copy_paste", "spice_seamless_migration"
-            )
+            if params.get("rhel5_spice"):
+                spice_params = params.get("spice_params")
+                qemu_cmd += add_spice_rhel5(help_text, spice_params)
+            else:
+                spice_keys = (
+                    "spice_port", "spice_password", "spice_addr", "spice_ssl",
+                    "spice_tls_port", "spice_tls_ciphers", "spice_gen_x509",
+                    "spice_x509_dir", "spice_x509_prefix", "spice_x509_key_file",
+                    "spice_x509_cacert_file", "spice_x509_key_password",
+                    "spice_x509_secure", "spice_x509_cacert_subj",
+                    "spice_x509_server_subj", "spice_secure_channels",
+                    "spice_image_compression", "spice_jpeg_wan_compression",
+                    "spice_zlib_glz_wan_compression", "spice_streaming_video",
+                    "spice_agent_mouse", "spice_playback_compression",
+                    "spice_ipv4", "spice_ipv6", "spice_x509_cert_file",
+                    "disable_copy_paste", "spice_seamless_migration"
+                )
 
-            for skey in spice_keys:
-                value = params.get(skey, None)
-                if value:
-                    self.spice_options[skey] = value
+                for skey in spice_keys:
+                    value = params.get(skey, None)
+                    if value:
+                        self.spice_options[skey] = value
 
-            qemu_cmd += add_spice()
+                qemu_cmd += add_spice()
 
         vga = params.get("vga", None)
         if vga:
