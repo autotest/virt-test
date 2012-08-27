@@ -60,9 +60,6 @@ num_failed_cases = 5
 
 
 class Node(object):
-    __slots__ = ["name", "dep", "content", "children", "labels",
-                 "append_to_shortname", "failed_cases", "default"]
-
     def __init__(self):
         self.name = []
         self.dep = []
@@ -107,8 +104,6 @@ def _might_match_adjacent(block, ctx, ctx_set, descendant_labels):
 
 # Filter must inherit from object (otherwise type() won't work)
 class Filter(object):
-    __slots__ = ["filter"]
-
     def __init__(self, s):
         self.filter = []
         for char in s:
@@ -145,8 +140,6 @@ class Filter(object):
 
 
 class NoOnlyFilter(Filter):
-    __slots__ = ["line"]
-
     def __init__(self, line):
         Filter.__init__(self, line.split(None, 1)[1])
         self.line = line
@@ -191,8 +184,6 @@ class NoFilter(NoOnlyFilter):
 
 
 class Condition(NoFilter):
-    __slots__ = ["content"]
-
     def __init__(self, line):
         Filter.__init__(self, line.rstrip(":"))
         self.line = line
@@ -200,8 +191,6 @@ class Condition(NoFilter):
 
 
 class NegativeCondition(OnlyFilter):
-    __slots__ = ["content"]
-
     def __init__(self, line):
         Filter.__init__(self, line.lstrip("!").rstrip(":"))
         self.line = line
@@ -216,6 +205,7 @@ class Parser(object):
 
     @see: https://github.com/autotest/autotest/wiki/KVMAutotest-CartesianConfigParametersIntro
     """
+
     def __init__(self, filename=None, debug=False):
         """
         Initialize the parser and optionally parse a file.
@@ -227,10 +217,6 @@ class Parser(object):
         self.debug = debug
         if filename:
             self.parse_file(filename)
-        self.filename = filename
-        self.only_filters = []
-        self.no_filters = []
-        self.assignments = []
 
 
     def parse_file(self, filename):
@@ -240,7 +226,6 @@ class Parser(object):
         @param filename: Path of the configuration file.
         """
         self.node = self._parse(FileReader(filename), self.node)
-        self.filename = filename
 
 
     def parse_string(self, s):
@@ -250,45 +235,6 @@ class Parser(object):
         @param s: String to parse.
         """
         self.node = self._parse(StrReader(s), self.node)
-
-
-    def only_filter(self, variant):
-        """
-        Apply a only filter programatically and keep track of it.
-
-        Equivalent to parse a "only variant" line.
-
-        @param variant: String with the variant name.
-        """
-        string = "only %s" % variant
-        self.only_filters.append(string)
-        self.parse_string(string)
-
-
-    def no_filter(self, variant):
-        """
-        Apply a only filter programatically and keep track of it.
-
-        Equivalent to parse a "no variant" line.
-
-        @param variant: String with the variant name.
-        """
-        string = "no %s" % variant
-        self.only_filters.append(string)
-        self.parse_string(string)
-
-
-    def assign(self, key, value):
-        """
-        Apply a only filter programatically and keep track of it.
-
-        Equivalent to parse a "key = value" line.
-
-        @param variant: String with the variant name.
-        """
-        string = "%s = %s" % (key, value)
-        self.assignments.append(string)
-        self.parse_string(string)
 
 
     def get_dicts(self, node=None, ctx=[], content=[], shortname=[], dep=[]):
@@ -348,29 +294,19 @@ class Parser(object):
                        failed_ctx_set,
                        failed_external_filters,
                        failed_internal_filters):
-            all_content = content + node.content
-            for t in failed_external_filters + failed_internal_filters:
-                if not t in all_content:
-                    return True
             for t in failed_external_filters:
-                _, _, external_filter = t
-                if not external_filter.might_pass(failed_ctx,
-                                                  failed_ctx_set,
-                                                  ctx, ctx_set,
-                                                  labels):
-                    return False
-            for t in failed_internal_filters:
-                if not t in node.content:
+                if t not in content:
                     return True
-
+                filename, linenum, filter = t
+                if filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
+                                     labels):
+                    return True
             for t in failed_internal_filters:
-                _, _, internal_filter = t
-                if not internal_filter.might_pass(failed_ctx,
-                                                  failed_ctx_set,
-                                                  ctx, ctx_set,
-                                                  labels):
-                    return False
-            return True
+                filename, linenum, filter = t
+                if filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
+                                     labels):
+                    return True
+            return False
 
         def add_failed_case():
             node.failed_cases.appendleft((ctx, ctx_set,
@@ -419,7 +355,7 @@ class Parser(object):
         if not node.children:
             self._debug("    reached leaf, returning it")
             d = {"name": name, "dep": dep, "shortname": ".".join(shortname)}
-            for _, _, op in new_content:
+            for filename, linenum, op in new_content:
                 op.apply_to_dict(d)
             yield d
         # If this node did not produce any dicts, remember the failed filters
@@ -428,7 +364,8 @@ class Parser(object):
             new_external_filters = []
             new_internal_filters = []
             for n in node.children:
-                (_, _,
+                (failed_ctx,
+                 failed_ctx_set,
                  failed_external_filters,
                  failed_internal_filters) = n.failed_cases[0]
                 for obj in failed_internal_filters:
@@ -472,12 +409,7 @@ class Parser(object):
             if not line:
                 break
 
-            name, dep = None, None
-            try:
-                name, dep = map(str.strip, line.lstrip("- ").split(":", 1))
-            except ValueError:
-                raise ParserError("Illegal characters expected divider ':'",
-                                  line, cr.filename, linenum)
+            name, dep = map(str.strip, line.lstrip("- ").split(":", 1))
             for char in name:
                 if not (char.isalnum() or char in "@._-"):
                     raise ParserError("Illegal characters in variant name",
@@ -601,59 +533,46 @@ class Parser(object):
 _reserved_keys = set(("name", "shortname", "dep"))
 
 
-def _subtitution(value, d):
-    """
-    Only optimization string Template subtitute is quite expensive operation.
-
-    @param value: String where could be $string for subtitution.
-    @param d: Dictionary from which should be value subtituted to value.
-
-    @return: Substituted string
-    """
-    if "$" in value:
-        st = string.Template(value)
-        return st.safe_substitute(d)
-    else:
-        return value
-
-
 def _op_set(d, key, value):
     if key not in _reserved_keys:
-        d[key] = _subtitution(value, d)
+        st = string.Template(value)
+        d[key] = st.safe_substitute(d)
 
 
 def _op_append(d, key, value):
     if key not in _reserved_keys:
-        d[key] = d.get(key, "") + _subtitution(value, d)
+        st = string.Template(value)
+        d[key] = d.get(key, "") + st.safe_substitute(d)
 
 
 def _op_prepend(d, key, value):
     if key not in _reserved_keys:
-        d[key] = _subtitution(value, d) + d.get(key, "")
+        st = string.Template(value)
+        d[key] = st.safe_substitute(d) + d.get(key, "")
 
 
 def _op_regex_set(d, exp, value):
     exp = re.compile("%s$" % exp)
-    value = _subtitution(value, d)
+    st = string.Template(value)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] = value
+            d[key] = st.safe_substitute(d)
 
 
 def _op_regex_append(d, exp, value):
     exp = re.compile("%s$" % exp)
-    value = _subtitution(value, d)
+    st = string.Template(value)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] += value
+            d[key] += st.safe_substitute(d)
 
 
 def _op_regex_prepend(d, exp, value):
     exp = re.compile("%s$" % exp)
-    value = _subtitution(value, d)
+    st = string.Template(value)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] = value + d[key]
+            d[key] = st.safe_substitute(d) + d[key]
 
 
 def _op_regex_del(d, empty, exp):
@@ -675,8 +594,6 @@ _ops_exp = re.compile("|".join([op[0] for op in _ops.values()]))
 
 
 class Op(object):
-    __slots__ = ["func", "key", "value"]
-
     def __init__(self, line, m):
         self.func = _ops[m.group()][1]
         self.key = line[:m.start()].strip()
@@ -764,32 +681,6 @@ class FileReader(StrReader):
         self.filename = filename
 
 
-def print_dicts_default(options, dicts):
-    """Print dictionaries in the default mode"""
-    for i, d in enumerate(dicts):
-        if options.fullname:
-            print "dict %4d:  %s" % (i + 1, d["name"])
-        else:
-            print "dict %4d:  %s" % (i + 1, d["shortname"])
-        if options.contents:
-            keys = d.keys()
-            keys.sort()
-            for key in keys:
-                print "    %s = %s" % (key, d[key])
-
-def print_dicts_repr(options, dicts):
-    import pprint
-    print "["
-    for d in dicts:
-        print "%s," % (pprint.pformat(d))
-    print "]"
-
-def print_dicts(options, dicts):
-    if options.repr_mode:
-        print_dicts_repr(options, dicts)
-    else:
-        print_dicts_default(options, dicts)
-
 if __name__ == "__main__":
     parser = optparse.OptionParser('usage: %prog [options] filename '
                                    '[extra code] ...\n\nExample:\n\n    '
@@ -800,8 +691,6 @@ if __name__ == "__main__":
                       help="show full dict names instead of short names")
     parser.add_option("-c", "--contents", dest="contents", action="store_true",
                       help="show dict contents")
-    parser.add_option("-r", "--repr", dest="repr_mode", action="store_true",
-                      help="Output parsing results Python format")
 
     options, args = parser.parse_args()
     if not args:
@@ -811,5 +700,13 @@ if __name__ == "__main__":
     for s in args[1:]:
         c.parse_string(s)
 
-    dicts = c.get_dicts()
-    print_dicts(options, dicts)
+    for i, d in enumerate(c.get_dicts()):
+        if options.fullname:
+            print "dict %4d:  %s" % (i + 1, d["name"])
+        else:
+            print "dict %4d:  %s" % (i + 1, d["shortname"])
+        if options.contents:
+            keys = d.keys()
+            keys.sort()
+            for key in keys:
+                print "    %s = %s" % (key, d[key])
