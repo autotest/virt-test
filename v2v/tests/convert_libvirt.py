@@ -1,4 +1,4 @@
-from virttest import utils_v2v
+from autotest.client.virt import v2v
 
 def get_args_dict(params):
     args_dict = {}
@@ -24,4 +24,4 @@ def run_convert_libvirt(test, params, env):
     args_dict = get_args_dict(params)
 
     # Run test case
-    utils_v2v.v2v_cmd(args_dict)
+    v2v.v2v_cmd(args_dict)

@@ -1,6 +1,6 @@
 import os, logging
 from autotest.client.shared import error
-from virttest import virsh
+from autotest.client.virt import virsh
 
 
 def run_virsh_pool_create_as(test, params, env):

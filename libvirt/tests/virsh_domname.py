@@ -1,6 +1,6 @@
-import logging
-from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+import logging, time
+from autotest.client.shared import utils, error
+from autotest.client.virt import libvirt_vm, virsh
 
 
 def run_virsh_domname(test, params, env):
@@ -12,19 +12,24 @@ def run_virsh_domname(test, params, env):
     3) Recover libvirtd service and test environment.
     4) Check result.
     """
-    vm_name = params.get("main_vm")
+    vm_name = params.get("main_vm", "vm1")
     vm = env.get_vm(params["main_vm"])
 
-    domid = vm.get_id()
-    domuuid = vm.get_uuid()
+    domid = vm.get_id().strip()
+    domuuid = vm.get_uuid().strip()
     connect_uri = vm.connect_uri
 
+    #Prepare libvirtd status
+    libvirtd = params.get("libvirtd", "on")
+    if libvirtd == "off":
+        libvirt_vm.service_libvirtd_control("stop")
+
     #run test case
-    options_ref = params.get("domname_options_ref", "id")
+    options_ref = params.get("options_ref", "id")
     addition_status_error = params.get("addition_status_error", "no")
     status_error = params.get("status_error", "no")
-    options = params.get("domname_options", "%s")
-    options_suffix = params.get("domname_options_suffix", "")
+    options = params.get("options", "%s")
+    options_suffix = params.get("options_suffix", "")
     if options_ref == "id":
         options_ref = domid
         if options_ref == "-":
@@ -43,12 +48,6 @@ def run_virsh_domname(test, params, env):
         options = (options % options_ref)
     if options_suffix:
         options = options + " " + options_suffix
-
-    #Prepare libvirtd status
-    libvirtd = params.get("libvirtd", "on")
-    if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("stop")
-
     result = virsh.domname(options, ignore_status=True, debug=True,
                            uri=connect_uri)
 

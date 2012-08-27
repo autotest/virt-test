@@ -1,6 +1,6 @@
 import logging
-from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from autotest.client.shared import utils, error
+from autotest.client.virt import libvirt_vm, virsh
 
 def run_virsh_uri(test, params, env):
     """
@@ -15,9 +15,8 @@ def run_virsh_uri(test, params, env):
     connect_uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
                                                                "default") )
 
-    option = params.get("virsh_uri_options")
+    option = params.get("options")
     target_uri = params.get("target_uri")
-    remote_ref = params.get("uri_remote_ref", "")
     if target_uri:
         if target_uri.count('EXAMPLE.COM'):
             raise error.TestError('target_uri configuration set to sample value')
@@ -36,8 +35,6 @@ def run_virsh_uri(test, params, env):
     # Run test case
     logging.info("The command: %s", cmd)
     try:
-        if remote_ref == "remote":
-            connect_uri = target_uri
         uri_test = virsh.canonical_uri(option, uri=connect_uri,
                              ignore_status=False,
                              debug=True)
@@ -60,8 +57,7 @@ def run_virsh_uri(test, params, env):
             logging.info("command: %s is a expected error", cmd)
     elif status_error == "no":
         if cmp(target_uri, uri_test) != 0:
-            raise error.TestFail("Virsh cmd uri %s != %s." %
-                                 (uri_test, target_uri))
+            raise error.TestFail("Virsh cmd uri %s != %s." % (uri_test,target_uri))
         if status != 0:
             raise error.TestFail("Command: %s  failed "
                                  "(correct command)" % cmd)

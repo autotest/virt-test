@@ -1,6 +1,6 @@
+import logging
 from autotest.client.shared import utils, error
-from virttest import libvirt_vm, virsh
-
+from autotest.client.virt import libvirt_vm, virsh
 
 def run_virsh_hostname(test, params, env):
     """

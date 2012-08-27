@@ -1,8 +1,7 @@
-import logging, re, math
+import logging, re, os, commands, string, math
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import virsh
-
+from autotest.client.virt import virsh
 
 def run_virsh_vcpupin(test, params, env):
     """
@@ -14,6 +13,11 @@ def run_virsh_vcpupin(test, params, env):
     (4) TODO: Right now the testcase covers the pinning one cpu at a time
               this can be improved by a random number of cpus
     """
+
+    # Initialize the variables
+    expected_affinity = []
+    total_affinity = []
+    actual_affinity = []
 
     def build_actual_info(domname, vcpu):
         """
@@ -49,7 +53,7 @@ def run_virsh_vcpupin(test, params, env):
                 expected_affinity[i] = '-'
 
         expected_affinity_proc = int(math.pow(2, cpu))
-        return expected_affinity, expected_affinity_proc
+        return expected_affinity,expected_affinity_proc
 
 
     def virsh_check_vcpupin(domname, vcpu, cpu, pid):
@@ -62,12 +66,12 @@ def run_virsh_vcpupin(test, params, env):
         @param: cpu: cpu details for the affinity
         """
 
-        expected_output, expected_output_proc = build_expected_info(vcpu, cpu)
+        expected_output,expected_output_proc = build_expected_info(vcpu, cpu)
         actual_output = build_actual_info(domname, vcpu)
 
         # Get the vcpus pid
         vcpus_pid = vm.get_vcpus_pid()
-        vcpu_pid = vcpus_pid[vcpu]
+        vcpu_pid=vcpus_pid[vcpu]
 
         # Get the actual cpu affinity value in the proc entry
         output = utils.cpu_affinity_by_task(pid, vcpu_pid)

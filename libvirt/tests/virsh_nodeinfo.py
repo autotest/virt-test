@@ -1,8 +1,7 @@
 import re, logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
-
+from autotest.client.virt import libvirt_vm, virsh
 
 def run_virsh_nodeinfo(test, params, env):
     """
@@ -12,7 +11,7 @@ def run_virsh_nodeinfo(test, params, env):
     (2) Call virsh nodeinfo with an unexpected option
     (3) Call virsh nodeinfo with libvirtd service stop
     """
-    def _check_nodeinfo(nodeinfo_output, verify_str, column):
+    def _check_nodeinfo(nodeinfo_output,verify_str, column):
         cmd = "echo \"%s\" | grep \"%s\" | awk '{print $%s}'" % (nodeinfo_output, verify_str, column)
         cmd_result = utils.run(cmd, ignore_status=True)
         stdout = cmd_result.stdout.strip()
