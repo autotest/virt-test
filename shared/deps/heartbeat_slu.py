@@ -20,7 +20,7 @@ def daemonize(output_file):
     sys.stdout.flush()
     sys.stderr.flush()
 
-    if output_file:
+    if file:
         output_handle = file(output_file, 'a+', 0)
         # autoflush stdout/stderr
         sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
@@ -42,19 +42,19 @@ def recv_all(sock):
         total_data.append(data)
     return ''.join(total_data)
 
-def run_server(host, port, daemon, path, queue_size, threshold, drift):
+def run_server(host, port, daemon, file, queue_size, threshold, drift):
     if daemon:
-        daemonize(output_file=path)
+        daemonize(output_file=file)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((host, port))
     sock.listen(queue_size)
+    timeout_interval = threshold * 2
     prev_check_timestamp = float(time.time())
     while 1:
-        c_sock, _ = sock.accept()
+        c_sock, c_addr = sock.accept()
         heartbeat = recv_all(c_sock)
         local_timestamp = float(time.time())
-        drift = check_heartbeat(heartbeat, local_timestamp, threshold,
-                                check_drift)
+        drift = check_heartbeat(heartbeat, local_timestamp, threshold, check_drift)
         # NOTE: this doesn't work if the only client is the one that timed
         # out, but anything more complete would require another thread and
         # a lock for client_prev_timestamp.
@@ -67,9 +67,9 @@ def run_server(host, port, daemon, path, queue_size, threshold, drift):
             else:
                 print "%.2f: %s" % (local_timestamp, heartbeat)
 
-def run_client(host, port, daemon, path, interval):
+def run_client(host, port, daemon, file, interval):
     if daemon:
-        daemonize(output_file=path)
+        daemonize(output_file=file)
     seq = 1
     while 1:
         try:
@@ -90,13 +90,13 @@ def get_heartbeat(seq=1):
     return "%s %06d %.2f" % (hostname, seq, float(time.time()))
 
 def check_heartbeat(heartbeat, local_timestamp, threshold, check_drift):
-    hostname, _, timestamp = heartbeat.rsplit()
+    hostname, seq, timestamp = heartbeat.rsplit()
     timestamp = float(timestamp)
     if client_prev_timestamp.has_key(hostname):
         delta = local_timestamp - client_prev_timestamp[hostname]
         if delta > threshold:
-            print ("%.2f: ALERT, SLU detected on host %s, delta %ds" %
-                   (float(time.time()), hostname, delta))
+            print "%.2f: ALERT, SLU detected on host %s, delta %ds" \
+                % (float(time.time()), hostname, delta)
 
     client_prev_timestamp[hostname] = local_timestamp
 
@@ -116,8 +116,8 @@ def check_for_timeouts(threshold, check_drift):
         timestamp = client_prev_timestamp[hostname]
         delta = local_timestamp - timestamp
         if delta > threshold * 2:
-            print ("%.2f: ALERT, SLU detected on host %s, no heartbeat for %ds"
-                   % (local_timestamp, hostname, delta))
+            print "%.2f: ALERT, SLU detected on host %s, no heartbeat for %ds" \
+                % (local_timestamp, hostname, delta)
             del client_prev_timestamp[hostname]
             if check_drift:
                 del client_clock_offset[hostname]
@@ -165,7 +165,7 @@ try:
 except getopt.GetoptError, e:
     print "error: %s" % str(e)
     usage()
-    sys.exit(1)
+    exit(1)
 
 for param, value in opts:
     if param in ["-p", "--port"]:
@@ -190,17 +190,16 @@ for param, value in opts:
         verbose = True
     elif param in ["-h", "--help"]:
         usage()
-        sys.exit(0)
+        exit(0)
     else:
         print "error: unrecognized option: %s" % value
         usage()
-        sys.exit(1)
+        exit(1)
 
 # run until we're terminated
 if is_server:
     file_server = file_selected or file_server
-    run_server(host_address, host_port, is_daemon, file_server, queue_size,
-               threshold, check_drift)
+    run_server(host_address, host_port, is_daemon, file_server, queue_size, threshold, check_drift)
 else:
     file_client = file_selected or file_client
     run_client(host_address, host_port, is_daemon, file_client, interval)

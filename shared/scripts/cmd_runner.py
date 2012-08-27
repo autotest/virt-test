@@ -27,7 +27,7 @@ class Runner(object):
         Kill the process according to its parent pid and command
         """
         fd = shelve.open(p_file)
-        _, o = commands.getstatusoutput("pstree -p %s" % fd["pid"])
+        s, o = commands.getstatusoutput("pstree -p %s" % fd["pid"])
         try:
             tmp = cmd.split()[0]
             pid = re.findall("%s.(\d+)" % tmp, o)[0]
@@ -67,8 +67,8 @@ class Runner(object):
         test_runner.start()
         monitor.join(timeout)
         if self.kill_thread_flag:
-            self.thread_kill(m_cmd, pid_file)
-            self.thread_kill(t_cmd, pid_file)
+            s, o = self.thread_kill(m_cmd, pid_file)
+            s, o = self.thread_kill(t_cmd, pid_file)
             self.kill_thread_flag = False
 
 
