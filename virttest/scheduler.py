@@ -1,5 +1,5 @@
 import os, select
-import utils_env, virt_vm, aexpect
+import utils_misc, virt_vm, aexpect
 
 
 class scheduler:
@@ -73,7 +73,7 @@ class scheduler:
             # The scheduler wants this worker to free its used resources
             elif cmd[0] == "cleanup":
                 env_filename = os.path.join(self.bindir, self_dict["env"])
-                env = utils_env.Env(env_filename)
+                env = utils_misc.Env(env_filename)
                 for obj in env.values():
                     if isinstance(obj, virt_vm.BaseVM):
                         obj.destroy()
@@ -125,6 +125,7 @@ class scheduler:
                     test = self.tests[test_index]
                     status = int(eval(msg[2]))
                     test_status[test_index] = ("fail", "pass")[status]
+
                     # If the test failed, mark all dependent tests as "failed" too
                     if not status:
                         for i, other_test in enumerate(self.tests):

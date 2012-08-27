@@ -9,15 +9,7 @@ custom logic for each virtualization hypervisor/software.
 import os, logging
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import build_helper, utils_misc, utils_koji, yumrepo, arch
-
-
-class NoModuleError(Exception):
-    '''
-    Error raised when no suitable modules were found to load
-    '''
-    pass
-
+from autotest.client.virt import utils_misc
 
 class VirtInstallException(Exception):
     '''
@@ -77,7 +69,7 @@ class BaseInstaller(object):
         Test variables values are saved here again because it's not possible to
         pickle the test instance inside BaseInstaller due to limitations
         in the pickle protocol. And, in case this pickle thing needs more
-        explanation, take a loot at the Env class inside build_helper.
+        explanation, take a loot at the Env class inside utils_misc.
 
         Besides that, we also ensure that srcdir exists, by creating it if
         necessary.
@@ -94,11 +86,10 @@ class BaseInstaller(object):
         '''
         self.test_bindir = test.bindir
         self.test_srcdir = test.srcdir
-        self.test_builddir = test.builddir
         self.test_resultsdir = test.resultsdir
 
         #
-        # test_builddir is guaranteed to exist, but test_srcdir is not
+        # test_bindir is guaranteed to exist, but test_srcdir is not
         #
         if not os.path.isdir(test.srcdir):
             os.makedirs(test.srcdir)
@@ -155,24 +146,11 @@ class BaseInstaller(object):
         if install_debug_info == 'no':
             self.install_debug_info = False
 
-    def _set_param_cleanup(self):
-        '''
-        Sets whether to enable debug information on installed software
-
-        Configuration file parameter: installer_cleanup
-        Class attribute set: cleanup
-        '''
-        self.cleanup = True
-        cleanup = self.params.get('installer_cleanup', 'yes')
-        if cleanup == 'no':
-            logging.debug("Setting installer cleanup attribute to False")
-            self.cleanup = False
 
     def set_install_params(self, test=None, params=None):
         '''
         Called by test to setup parameters from the configuration file
         '''
-        logging.info("calling set install params")
         if test is not None:
             self._set_test_dirs(test)
 
@@ -182,7 +160,6 @@ class BaseInstaller(object):
             self._set_param_module_list()
             self._set_param_save_results()
             self._set_param_install_debug_info()
-            self._set_param_cleanup()
 
 
     def _install_phase_cleanup(self):
@@ -351,9 +328,6 @@ class BaseInstaller(object):
         if module_list is None:
             module_list = self.module_list
 
-        if not module_list:
-            raise NoModuleError("Module list empty")
-
         logging.info("Loading modules from default locations through "
                      "modprobe")
         for module in module_list:
@@ -369,7 +343,8 @@ class BaseInstaller(object):
         '''
         if module_list is None:
             module_list = self.module_list
-        logging.info("Unloading kernel modules: %s" % " ".join(module_list))
+        module_list = reversed(module_list)
+        logging.info("Unloading kernel modules: %s" % ",".join(module_list))
         for module in module_list:
             utils.unload_module(module)
 
@@ -396,7 +371,7 @@ class BaseInstaller(object):
         be reimplemented completely, or simply implement one or many of the
         install  phases.
         '''
-        if (cleanup and self.cleanup):
+        if cleanup:
             self._install_phase_cleanup()
             self._install_phase_cleanup_verify()
 
@@ -430,7 +405,7 @@ class BaseInstaller(object):
         '''
         Performs the uninstallations of the virtualization software
 
-        Note: This replaces old qemu_installer._clean_previous_install()
+        Note: This replaces old kvm_installer._clean_previous_install()
         '''
         raise NotImplementedError
 
@@ -439,20 +414,6 @@ class NoopInstaller(BaseInstaller):
     '''
     Dummy installer that does nothing, useful when software is pre-installed
     '''
-    def __init__(self, mode, name, test=None, params=None):
-        '''
-        If no previous install test ran, try to figure out modules to load.
-
-        @param mode (str): Install mode (yum, git, etc).
-        @param name (str): Installer name.
-        @param test: Virt test object.
-        @param params: Dict with test params.
-        '''
-        if params['vm_type'] == 'qemu':
-            params['module_list'] = arch.get_kvm_module_list()
-        super(NoopInstaller, self).__init__(mode, name, test, params)
-
-
     def install(self):
         logging.info("Assuming virtualization software to be already "
                      "installed. Doing nothing")
@@ -463,7 +424,7 @@ class YumInstaller(BaseInstaller):
     Installs virtualization software using YUM
 
     Notice: this class implements a change of behaviour if compared to
-    qemu_installer.YumInstaller.set_install_params(). There's no longer
+    kvm_installer.YumInstaller.set_install_params(). There's no longer
     a default package list, as each virtualization technology will have
     a completely different default. This should now be kept at the
     configuration file only.
@@ -519,14 +480,12 @@ class KojiInstaller(BaseInstaller):
         self.tag = params.get("%s_tag" % self.param_key_prefix, None)
         self.koji_cmd = params.get("%s_cmd" % self.param_key_prefix, None)
         if self.tag is not None:
-            utils_koji.set_default_koji_tag(self.tag)
+            utils_misc.set_default_koji_tag(self.tag)
         self.koji_pkgs = params.get("%s_pkgs" % self.param_key_prefix,
                                     "").split()
         self.koji_scratch_pkgs = params.get("%s_scratch_pkgs" %
                                             self.param_key_prefix,
                                             "").split()
-        self.koji_yumrepo_baseurl = params.get("%s_yumrepo_baseurl" %
-                                               self.param_key_prefix, None)
         if self.install_debug_info:
             self._expand_koji_pkgs_with_debuginfo()
 
@@ -545,7 +504,7 @@ class KojiInstaller(BaseInstaller):
 
         koji_pkgs_with_debug = []
         for pkg_text in self.koji_pkgs:
-            pkg = utils_koji.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             debuginfo_pkg_name = '%s-debuginfo' % pkg.package
             # if no subpackages are set, then all packages will be installed
             # so there's no need to manually include debuginfo packages
@@ -566,30 +525,30 @@ class KojiInstaller(BaseInstaller):
 
     def _get_rpm_names(self):
         all_rpm_names = []
-        koji_client = utils_koji.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = utils_koji.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             rpm_names = koji_client.get_pkg_rpm_names(pkg)
             all_rpm_names += rpm_names
         for scratch_pkg_text in self.koji_scratch_pkgs:
-            pkg = utils_koji.KojiScratchPkgSpec(scratch_pkg_text)
+            pkg = utils_misc.KojiScratchPkgSpec(scratch_pkg_text)
             rpm_urls = koji_client.get_scratch_pkg_urls(pkg)
             file_names = map(os.path.basename, rpm_urls)
             for f in file_names:
-                r = utils_koji.RPMFileNameInfo(f)
+                r = utils_misc.RPMFileNameInfo(f)
                 all_rpm_names.append(r.get_nvr_info()['name'])
         return all_rpm_names
 
 
     def _get_rpm_file_names(self):
         all_rpm_file_names = []
-        koji_client = utils_koji.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = utils_koji.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             rpm_file_names = koji_client.get_pkg_rpm_file_names(pkg)
             all_rpm_file_names += rpm_file_names
         for scratch_pkg_text in self.koji_scratch_pkgs:
-            pkg = utils_koji.KojiScratchPkgSpec(scratch_pkg_text)
+            pkg = utils_misc.KojiScratchPkgSpec(scratch_pkg_text)
             rpm_urls = koji_client.get_scratch_pkg_urls(pkg)
             file_names = map(os.path.basename, rpm_urls)
             all_rpm_file_names += file_names
@@ -602,35 +561,23 @@ class KojiInstaller(BaseInstaller):
 
 
     def _install_phase_download(self):
-        koji_client = utils_koji.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = utils_koji.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             if pkg.is_valid():
                 koji_client.get_pkgs(pkg, dst_dir=self.test_srcdir)
             else:
                 logging.error('Package specification (%s) is invalid: %s' %
                               (pkg, pkg.describe_invalid()))
         for pkg_text in self.koji_scratch_pkgs:
-            pkg = utils_koji.KojiScratchPkgSpec(pkg_text)
+            pkg = utils_misc.KojiScratchPkgSpec(pkg_text)
             koji_client.get_scratch_pkgs(pkg, dst_dir=self.test_srcdir)
 
 
     def _install_phase_install(self):
-        if self.koji_yumrepo_baseurl is not None:
-            repo = yumrepo.YumRepo(self.param_key_prefix,
-                                   self.koji_yumrepo_baseurl)
-            logging.debug('Enabling YUM Repo "%s" at "%s"',
-                          self.param_key_prefix, self.koji_yumrepo_baseurl)
-            repo.save()
-
         os.chdir(self.test_srcdir)
         rpm_file_names = " ".join(self._get_rpm_file_names())
-        utils.system("yum --nogpgcheck -y install %s" % rpm_file_names)
-
-        if self.koji_yumrepo_baseurl is not None:
-            logging.debug('Disabling YUM Repo "%s" at "%s"',
-                          self.param_key_prefix, self.koji_yumrepo_baseurl)
-            repo.remove()
+        utils.system("yum --nogpgcheck -y localinstall %s" % rpm_file_names)
 
 
 class BaseLocalSourceInstaller(BaseInstaller):
@@ -642,7 +589,7 @@ class BaseLocalSourceInstaller(BaseInstaller):
         #
         # There are really no choices for patch helpers
         #
-        self.patch_helper = build_helper.PatchParamHelper(
+        self.patch_helper = utils_misc.PatchParamHelper(
             self.params,
             self.param_key_prefix,
             self.source_destination)
@@ -662,7 +609,7 @@ class BaseLocalSourceInstaller(BaseInstaller):
         the resulting binaries will be installed. Usually this is the value
         passed to the configure script, ie: ./configure --prefix=<value>
         '''
-        prefix = os.path.join(self.test_builddir, 'install_root')
+        prefix = os.path.join(self.test_bindir, 'install_root')
         self.install_prefix = os.path.abspath(prefix)
 
 
@@ -682,11 +629,11 @@ class BaseLocalSourceInstaller(BaseInstaller):
                                             self.param_key_prefix,
                                             'gnu_autotools')
         if build_helper_name == 'gnu_autotools':
-            self.build_helper = build_helper.GnuSourceBuildParamHelper(
+            self.build_helper = utils_misc.GnuSourceBuildParamHelper(
                 self.params, self.param_key_prefix,
                 self.source_destination, self.install_prefix)
         elif build_helper_name == 'linux_kernel':
-            self.build_helper = build_helper.LinuxKernelBuildHelper(
+            self.build_helper = utils_misc.LinuxKernelBuildHelper(
                 self.params, self.param_key_prefix,
                 self.source_destination)
 
@@ -704,17 +651,17 @@ class BaseLocalSourceInstaller(BaseInstaller):
     def _install_phase_build(self):
         if self.build_helper is not None:
             if (isinstance(self.build_helper,
-                           build_helper.GnuSourceBuildHelper) or
+                           utils_misc.GnuSourceBuildHelper) or
                 isinstance(self.build_helper,
-                           build_helper.LinuxKernelBuildHelper)):
+                           utils_misc.LinuxKernelBuildHelper)):
                 try:
                     self.build_helper.execute()
-                except build_helper.SourceBuildParallelFailed:
+                except utils_misc.SourceBuildParallelFailed:
                     # Flag minor the failure
                     self.minor_failure = True
                     self.minor_failure_reason = "Failed to do parallel build"
 
-                except build_helper.SourceBuildFailed:
+                except utils_misc.SourceBuildFailed:
                     # Failed the current test
                     raise error.TestFail("Failed to build %s" % self.name)
             else:
@@ -733,7 +680,7 @@ class LocalSourceDirInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(LocalSourceDirInstaller, self).set_install_params(test, params)
 
-        self.content_helper = build_helper.LocalSourceDirParamHelper(
+        self.content_helper = utils_misc.LocalSourceDirParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -748,7 +695,7 @@ class LocalSourceTarInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(LocalSourceTarInstaller, self).set_install_params(test, params)
 
-        self.content_helper = build_helper.LocalTarParamHelper(
+        self.content_helper = utils_misc.LocalTarParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -763,7 +710,7 @@ class RemoteSourceTarInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(RemoteSourceTarInstaller, self).set_install_params(test, params)
 
-        self.content_helper = build_helper.RemoteTarParamHelper(
+        self.content_helper = utils_misc.RemoteTarParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -775,7 +722,7 @@ class GitRepoInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(GitRepoInstaller, self).set_install_params(test, params)
 
-        self.content_helper = build_helper.GitRepoParamHelper(
+        self.content_helper = utils_misc.GitRepoParamHelper(
             params,
             self.name,
             self.source_destination)

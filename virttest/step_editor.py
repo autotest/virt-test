@@ -106,7 +106,10 @@ def key_event_to_qemu_string(event):
     return sr
 
 
-class StepMakerWindow(object):
+class StepMakerWindow:
+
+    # Constructor
+
     def __init__(self):
         # Window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -411,36 +414,31 @@ class StepMakerWindow(object):
 
     def redirect_event_box_input(self, press=None, release=None, scroll=None,
                                  motion=None, expose=None):
-        if self.handler_event_box_press is not None:
-            self.event_box.disconnect(self.handler_event_box_press)
-        if self.handler_event_box_release is not None:
-            self.event_box.disconnect(self.handler_event_box_release)
-        if self.handler_event_box_scroll is not None:
-            self.event_box.disconnect(self.handler_event_box_scroll)
-        if self.handler_event_box_motion is not None:
-            self.event_box.disconnect(self.handler_event_box_motion)
-        if self.handler_event_box_expose is not None:
-            self.event_box.disconnect(self.handler_event_box_expose)
+        if self.handler_event_box_press != None: \
+        self.event_box.disconnect(self.handler_event_box_press)
+        if self.handler_event_box_release != None: \
+        self.event_box.disconnect(self.handler_event_box_release)
+        if self.handler_event_box_scroll != None: \
+        self.event_box.disconnect(self.handler_event_box_scroll)
+        if self.handler_event_box_motion != None: \
+        self.event_box.disconnect(self.handler_event_box_motion)
+        if self.handler_event_box_expose != None: \
+        self.event_box.disconnect(self.handler_event_box_expose)
         self.handler_event_box_press = None
         self.handler_event_box_release = None
         self.handler_event_box_scroll = None
         self.handler_event_box_motion = None
         self.handler_event_box_expose = None
-        if press is not None:
-            self.handler_event_box_press = (
-                        self.event_box.connect("button-press-event", press))
-        if release is not None:
-            self.handler_event_box_release = (
-                        self.event_box.connect("button-release-event", release))
-        if scroll is not None:
-            self.handler_event_box_scroll = (
-                        self.event_box.connect("scroll-event", scroll))
-        if motion is not None:
-            self.handler_event_box_motion = (
-                        self.event_box.connect("motion-notify-event", motion))
-        if expose is not None:
-            self.handler_event_box_expose = (
-                        self.event_box.connect_after("expose-event", expose))
+        if press != None: self.handler_event_box_press = \
+        self.event_box.connect("button-press-event", press)
+        if release != None: self.handler_event_box_release = \
+        self.event_box.connect("button-release-event", release)
+        if scroll != None: self.handler_event_box_scroll = \
+        self.event_box.connect("scroll-event", scroll)
+        if motion != None: self.handler_event_box_motion = \
+        self.event_box.connect("motion-notify-event", motion)
+        if expose != None: self.handler_event_box_expose = \
+        self.event_box.connect_after("expose-event", expose)
 
 
     def get_keys(self):
@@ -463,10 +461,10 @@ class StepMakerWindow(object):
 
     def update_barrier_info(self):
         if self.barrier_selected:
-            self.label_barrier_region.set_text("Selected region: Corner: " +
-                                               str(tuple(self.barrier_corner)) +
-                                               " Size: " +
-                                               str(tuple(self.barrier_size)))
+            self.label_barrier_region.set_text("Selected region: Corner: " + \
+                                            str(tuple(self.barrier_corner)) + \
+                                            " Size: " + \
+                                            str(tuple(self.barrier_size)))
         else:
             self.label_barrier_region.set_text("No region selected.")
         self.label_barrier_md5sum.set_text("MD5: " + self.barrier_md5sum)
@@ -474,7 +472,7 @@ class StepMakerWindow(object):
 
     def update_mouse_click_info(self):
         if self.mouse_click_captured:
-            self.check_mousemove.set_label("Move: " +
+            self.check_mousemove.set_label("Move: " + \
                                            str(tuple(self.mouse_click_coords)))
             self.check_mouseclick.set_label("Click: button %d" %
                                             self.mouse_click_button)
@@ -654,15 +652,10 @@ class StepMakerWindow(object):
         self.clear_state()
 
         for line in sr.splitlines():
-            words = line.split()
-            if not words:
-                continue
-
-            if (line.startswith("#") and not
-                self.entry_comment.get_text() and not
-                line.startswith("# Sending keys:") and not
-                line.startswith("# ----")):
-
+            if line.startswith("#") \
+                    and not self.entry_comment.get_text() \
+                    and not line.startswith("# Sending keys:") \
+                    and not line.startswith("# ----"):
                 self.entry_comment.set_text(line.strip("#").strip())
 
             elif words[0] == "step":
@@ -1283,7 +1276,7 @@ class StepEditor(StepMakerWindow):
         header = ""
 
         fileobj = open(filename, "r")
-        for line in fileobj.readlines():
+        for line in file.readlines():
             words = line.split()
             if not words:
                 continue

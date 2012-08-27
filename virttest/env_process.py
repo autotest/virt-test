@@ -1,10 +1,9 @@
-import os, time, commands, re, logging, glob, threading, shutil, sys
+import os, time, commands, re, logging, glob, threading, shutil
 from autotest.client import utils
 from autotest.client.shared import error
-import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
-import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
-import remote, data_dir, utils_test
-
+import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
+import libvirt_vm, video_maker, utils_misc, storage, kvm_storage
+import remote, ovirt, utils_test
 
 try:
     import PIL.Image
@@ -26,26 +25,28 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
-    base_dir = params.get("images_base_dir", data_dir.get_data_dir())
-
     if params.get("storage_type") == "iscsi":
-        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
+        iscsidev = kvm_storage.Iscsidev(params, test.bindir, image_name)
         params["image_name"] = iscsidev.setup()
     else:
-        image_filename = storage.get_image_filename(params,
-                                                    base_dir)
+        image_filename = storage.get_image_filename(params, test.bindir)
 
         create_image = False
 
         if params.get("force_create_image") == "yes":
+            logging.debug("Param 'force_create_image' specified, creating image")
             create_image = True
         elif (params.get("create_image") == "yes" and not
               os.path.exists(image_filename)):
             create_image = True
 
+        if params.get("backup_image_before_testing", "no") == "yes":
+            image = kvm_storage.QemuImg(params, test.bindir, image_name)
+            image.backup_image(params, test.bindir, "backup", True)
         if create_image:
-            image = qemu_storage.QemuImg(params, base_dir, image_name)
-            image.create(params)
+            image = kvm_storage.QemuImg(params, test.bindir, image_name)
+            if not image.create(params):
+                raise error.TestError("Could not create image")
 
 
 def preprocess_vm(test, params, env, name):
@@ -58,14 +59,26 @@ def preprocess_vm(test, params, env, name):
     @param env: The environment (a dict-like object).
     @param name: The name of the VM object.
     """
+    logging.debug("Preprocessing VM '%s'", name)
     vm = env.get_vm(name)
     vm_type = params.get('vm_type')
     target = params.get('target')
     if not vm:
-        vm = env.create_vm(vm_type, target, name, params, test.bindir)
+        logging.debug("VM object for '%s' does not exist, creating it", name)
+        if vm_type == 'kvm':
+            vm = kvm_vm.VM(name, params, test.bindir, env.get("address_cache"))
+        if vm_type == 'libvirt':
+            vm = libvirt_vm.VM(name, params, test.bindir, env.get("address_cache"))
+        if vm_type == 'virt_v2v':
+            if target == 'libvirt' or target is None:
+                vm = libvirt_vm.VM(name, params, test.bindir, env.get("address_cache"))
+            if target == 'ovirt':
+                vm = ovirt.VMManager(name, params, test.bindir, env.get("address_cache"))
+        env.register_vm(name, vm)
 
     remove_vm = False
     if params.get("force_remove_vm") == "yes":
+        logging.debug("'force_remove_vm' specified; removing VM...")
         remove_vm = True
 
     if remove_vm:
@@ -74,51 +87,49 @@ def preprocess_vm(test, params, env, name):
     start_vm = False
 
     if params.get("restart_vm") == "yes":
+        logging.debug("Param 'restart_vm' specified, (re)starting VM")
         start_vm = True
     elif params.get("migration_mode"):
+        logging.debug("Param 'migration_mode' specified, starting VM in "
+                      "incoming migration mode")
         start_vm = True
     elif params.get("start_vm") == "yes":
         # need to deal with libvirt VM differently than qemu
-        if vm_type == 'libvirt' or vm_type == 'v2v':
+        if vm_type == 'libvirt' or vm_type == 'virt_v2v':
             if not vm.is_alive():
+                logging.debug("VM is not alive; starting it...")
                 start_vm = True
         else:
             if not vm.is_alive():
+                logging.debug("VM is not alive, starting it")
                 start_vm = True
             if vm.needs_restart(name=name, params=params, basedir=test.bindir):
+                logging.debug("Current VM specs differ from requested one; "
+                              "restarting it")
                 start_vm = True
 
     if start_vm:
         if vm_type == "libvirt" and params.get("type") != "unattended_install":
             vm.params = params
             vm.start()
-        elif vm_type == "v2v":
+        elif vm_type == "virt_v2v":
             vm.params = params
             vm.start()
         else:
             # Start the VM (or restart it if it's already up)
             vm.create(name, params, test.bindir,
                       migration_mode=params.get("migration_mode"),
-                      migration_fd=params.get("migration_fd"),
-                      migration_exec_cmd=params.get("migration_exec_cmd_dst"))
+                      migration_fd=params.get("migration_fd"))
+
             # Update mac and IP info for assigned device
-            # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
                 utils_test.update_mac_ip_address(vm, params)
+            if params.get("paused_after_start_vm") == "yes":
+                if vm.state() != "paused":
+                    vm.pause()
     else:
         # Don't start the VM, just update its params
         vm.params = params
-
-    pause_vm = False
-
-    if params.get("paused_after_start_vm") == "yes":
-        pause_vm = True
-        #Check the status of vm
-        if not vm.is_alive():
-            pause_vm = False
-
-    if pause_vm:
-        vm.pause()
 
 
 def postprocess_image(test, params, image_name):
@@ -128,36 +139,22 @@ def postprocess_image(test, params, image_name):
     @param test: An Autotest test object.
     @param params: A dict containing image postprocessing parameters.
     """
-    clone_master = params.get("clone_master", None)
-    base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
-        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
+        iscsidev = kvm_storage.Iscsidev(params, test.bindir, image_name)
         iscsidev.cleanup()
     else:
-        image = qemu_storage.QemuImg(params, base_dir, image_name)
+        image = kvm_storage.QemuImg(params, test.bindir, image_name)
         if params.get("check_image") == "yes":
             try:
-                if clone_master is None:
-                    image.check_image(params, base_dir)
-                elif clone_master == "yes":
-                    if image_name in params.get("master_images_clone").split():
-                        image.check_image(params, base_dir)
-                if params.get("restore_image", "no") == "yes":
-                    image.backup_image(params, base_dir, "restore", True)
+                image.check_image(params, test.bindir)
             except Exception, e:
                 if params.get("restore_image_on_check_error", "no") == "yes":
-                    image.backup_image(params, base_dir, "restore", True)
-                if params.get("remove_image_on_check_error", "no") == "yes":
-                    cl_images = params.get("master_images_clone", "")
-                    if image_name in cl_images.split():
-                        image.remove()
+                    image.backup_image(params, test.bindir, "restore", True)
                 raise e
+        if params.get("restore_image_after_testing", "no") == "yes":
+            image.backup_image(params, test.bindir, "restore", True)
         if params.get("remove_image") == "yes":
-            if clone_master is None:
-                image.remove()
-            elif clone_master == "yes":
-                if image_name in params.get("master_images_clone").split():
-                    image.remove()
+            image.remove()
 
 
 def postprocess_vm(test, params, env, name):
@@ -170,22 +167,18 @@ def postprocess_vm(test, params, env, name):
     @param env: The environment (a dict-like object).
     @param name: The name of the VM object.
     """
+    logging.debug("Postprocessing VM '%s'" % name)
     vm = env.get_vm(name)
     if not vm:
         return
 
-    # Close all SSH sessions that might be active to this VM
-    for s in vm.remote_sessions:
-        try:
-            s.close()
-            vm.remote_sessions.remove(s)
-        except Exception:
-            pass
-
-    # Encode an HTML 5 compatible video from the screenshots produced
+    # Encode an HTML 5 compatible video from the screenshots produced?
     screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
     if (params.get("encode_video_files", "yes") == "yes" and
         glob.glob("%s/*" % screendump_dir)):
+        logging.debug("Param 'encode_video_files' specified, trying to "
+                      "encode a video from the screenshots produced by "
+                      "vm %s", vm.name)
         try:
             video = video_maker.GstPythonVideoMaker()
             if (video.has_element('vp8enc') and video.has_element('webmmux')):
@@ -194,16 +187,20 @@ def postprocess_vm(test, params, env, name):
             else:
                 video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
                                           (vm.name, test.iteration))
-            logging.debug("Encoding video file %s", video_file)
             video.start(screendump_dir, video_file)
 
         except Exception, detail:
-            logging.info("Video creation failed for vm %s: %s", vm.name, detail)
+            logging.info("Param 'encode_video_files' specified, but video "
+                         "creation failed for vm %s: %s", vm.name, detail)
 
     if params.get("kill_vm") == "yes":
         kill_vm_timeout = float(params.get("kill_vm_timeout", 0))
         if kill_vm_timeout:
+            logging.debug("Param 'kill_vm' specified, waiting for VM to shut "
+                          "down before killing it")
             utils_misc.wait_for(vm.is_dead, kill_vm_timeout, 0, 1)
+        else:
+            logging.debug("Param 'kill_vm' specified, killing VM")
         vm.destroy(gracefully = params.get("kill_vm_gracefully") == "yes")
 
 
@@ -231,8 +228,7 @@ def process_command(test, params, env, command, command_timeout,
         else:
             raise
 
-
-def process(test, params, env, image_func, vm_func, vm_first=False):
+def process(test, params, env, image_func, vm_func, pre_flag=True):
     """
     Pre- or post-process VMs and images according to the instructions in params.
     Call image_func for each image listed in params and vm_func for each VM.
@@ -250,9 +246,6 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
             vm_func(test, vm_params, env, vm_name)
 
     def _call_image_func():
-        if params.get("skip_image_processing") == "yes":
-            return
-
         if params.objects("vms"):
             for vm_name in params.objects("vms"):
                 vm_params = params.object_params(vm_name)
@@ -260,14 +253,12 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                 for image_name in vm_params.objects("images"):
                     image_params = vm_params.object_params(image_name)
                     # Call image_func for each image
-                    unpause_vm = False
-                    if vm is not None and vm.is_alive() and not vm.is_paused():
+                    if vm is not None and vm.is_alive():
                         vm.pause()
-                        unpause_vm = True
                     try:
                         image_func(test, image_params, image_name)
                     finally:
-                        if unpause_vm:
+                        if vm is not None and vm.is_alive():
                             vm.resume()
         else:
             for image_name in params.objects("images"):
@@ -282,6 +273,31 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
     if vm_first:
         _call_image_func()
 
+    if not vm_first:
+        _call_image_func()
+
+    _call_vm_func()
+
+    if vm_first:
+        _call_image_func()
+
+    def _call_image_func():
+        # Get list of images
+        for image_name in params.objects("images"):
+            image_params = params.object_params(image_name)
+            # Call image_func for each image
+            image_func(test, image_params)
+
+    if pre_flag:
+        _call_image_func()
+        pre_flag = False
+    else:
+        pre_flag = True
+
+    _call_vm_func()
+
+    if pre_flag:
+        _call_image_func()
 
 @error.context_aware
 def preprocess(test, params, env):
@@ -294,17 +310,24 @@ def preprocess(test, params, env):
     @param env: The environment (a dict-like object).
     """
     error.context("preprocessing")
-    # First, let's verify if this test does require root or not. If it
-    # does and the test suite is running as a regular user, we shall just
-    # throw a TestNAError exception, which will skip the test.
-    if params.get('requires_root', 'no') == 'yes':
-        utils_test.verify_running_as_root()
-
     port = params.get('shell_port')
     prompt = params.get('shell_prompt')
     address = params.get('ovirt_node_address')
     username = params.get('ovirt_node_user')
     password = params.get('ovirt_node_password')
+
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        nic_params = params.object_params(nic)
+        if nic_params.get('netdst') == 'private':
+            setup_pb = True
+            params_pb = nic_params
+            params['netdst_%s' % nic] = nic_params.get("priv_brname", 'atbr0')
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig(params_pb)
+        brcfg.setup()
+
 
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
@@ -313,8 +336,9 @@ def preprocess(test, params, env):
         env["tcpdump"].close()
         del env["tcpdump"]
     if "tcpdump" not in env and params.get("run_tcpdump", "yes") == "yes":
-        cmd = "%s -npvi any 'port 68'" % utils_misc.find_command("tcpdump")
+        cmd = "%s -npvi any 'dst port 68'" % utils_misc.find_command("tcpdump")
         if params.get("remote_preprocess") == "yes":
+            logging.debug("Starting tcpdump '%s' on remote host", cmd)
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o \
                          PreferredAuthentications=password -p %s %s@%s" %
                          (port, username, address))
@@ -322,9 +346,10 @@ def preprocess(test, params, env):
                 login_cmd,
                 output_func=_update_address_cache,
                 output_params=(env["address_cache"],))
-            remote.handle_prompts(env["tcpdump"], username, password, prompt)
+            remote._remote_login(env["tcpdump"], username, password, prompt)
             env["tcpdump"].sendline(cmd)
         else:
+            logging.debug("Starting tcpdump '%s' on local host", cmd)
             env["tcpdump"] = aexpect.Tail(
                 command=cmd,
                 output_func=_tcpdump_handler,
@@ -341,16 +366,18 @@ def preprocess(test, params, env):
     requested_vms = params.objects("vms")
     for key in env.keys():
         vm = env[key]
-        if not isinstance(vm, virt_vm.BaseVM):
+        if not utils_misc.is_vm(vm):
             continue
         if not vm.name in requested_vms:
+            logging.debug("VM '%s' found in environment but not required for "
+                          "test, destroying it" % vm.name)
             vm.destroy()
             del env[key]
 
-    if (params.get("auto_cpu_model") == "yes" and
-        params.get("vm_type") == "qemu"):
+    # Get Host cpu type
+    if params.get("auto_cpu_model") == "yes":
         if not env.get("cpu_model"):
-            env["cpu_model"] = utils_misc.get_qemu_best_cpu_model(params)
+            env["cpu_model"] = utils_misc.get_cpu_model()
         params["cpu_model"] = env.get("cpu_model")
 
     kvm_ver_cmd = params.get("kvm_ver_cmd", "")
@@ -413,8 +440,25 @@ def preprocess(test, params, env):
                         int(params.get("pre_command_timeout", "600")),
                         params.get("pre_command_noncritical") == "yes")
 
+    # Generate iscsi related paramters
+    use_storage = params.get("use_storage")
+    if (use_storage == "iscsi" or use_storage == "emulational_iscsi"):
+        images = re.split("/s+", params.get("images"))
+        if len(images) > params.get("iscsi_number"):
+            raise error.TestError("Don't have enough iscsi storage")
+        device = params.get("iscsi_dev")
+        if use_storage == "iscsi":
+            count = 1
+            for i in images:
+                params["image_name_%s" % i] = "%s%s" % (device, count)
+                params["image_format_%s" % i] = "qcow2"
+                count += 1
+        else:
+            # Emulational_iscsi uses the whole disk as image,
+            # no need to get the count like Real_iscsi.
+            params["image_name"] = device
+
     #Clone master image from vms.
-    base_dir = data_dir.get_data_dir()
     if params.get("master_images_clone"):
         for vm_name in params.get("vms").split():
             vm = env.get_vm(vm_name)
@@ -424,8 +468,8 @@ def preprocess(test, params, env):
 
             vm_params = params.object_params(vm_name)
             for image in vm_params.get("master_images_clone").split():
-                image_obj = qemu_storage.QemuImg(params, base_dir, image)
-                image_obj.clone_image(params, vm_name, image, base_dir)
+                image_obj = kvm_storage.QemuImg(params, test.bindir, image)
+                image_obj.clone_image(params, vm_name, image, test.bindir)
 
     # Preprocess all VMs and images
     if params.get("not_preprocess","no") == "no":
@@ -433,13 +477,12 @@ def preprocess(test, params, env):
 
     # Start the screendump thread
     if params.get("take_regular_screendumps") == "yes":
+        logging.debug("Starting screendump thread")
         global _screendump_thread, _screendump_thread_termination_event
         _screendump_thread_termination_event = threading.Event()
         _screendump_thread = threading.Thread(target=_take_screendumps,
-                                              name='ScreenDump',
                                               args=(test, params, env))
         _screendump_thread.start()
-
 
 @error.context_aware
 def postprocess(test, params, env):
@@ -453,11 +496,13 @@ def postprocess(test, params, env):
     error.context("postprocessing")
 
     # Postprocess all VMs and images
-    process(test, params, env, postprocess_image, postprocess_vm, vm_first=True)
+    process(test, params, env, postprocess_image, postprocess_vm,
+            pre_flag=False)
 
     # Terminate the screendump thread
     global _screendump_thread, _screendump_thread_termination_event
     if _screendump_thread is not None:
+        logging.debug("Terminating screendump thread")
         _screendump_thread_termination_event.set()
         _screendump_thread.join(10)
         _screendump_thread = None
@@ -469,6 +514,8 @@ def postprocess(test, params, env):
 
     # Should we convert PPM files to PNG format?
     if params.get("convert_ppm_files_to_png") == "yes":
+        logging.debug("Param 'convert_ppm_files_to_png' specified, converting "
+                      "PPM files to PNG format")
         try:
             for f in glob.glob(os.path.join(test.debugdir, "*.ppm")):
                 if ppm_utils.image_verify_ppm_file(f):
@@ -480,33 +527,39 @@ def postprocess(test, params, env):
 
     # Should we keep the PPM files?
     if params.get("keep_ppm_files", "no") != "yes":
+        logging.debug("Param 'keep_ppm_files' not specified, removing all PPM "
+                      "files from debug dir")
         for f in glob.glob(os.path.join(test.debugdir, '*.ppm')):
             os.unlink(f)
 
     # Should we keep the screendump dirs?
     if params.get("keep_screendumps", "no") != "yes":
+        logging.debug("Param 'keep_screendumps' not specified, removing "
+                      "screendump dirs")
         for d in glob.glob(os.path.join(test.debugdir, "screendumps_*")):
             if os.path.isdir(d) and not os.path.islink(d):
                 shutil.rmtree(d, ignore_errors=True)
 
     # Should we keep the video files?
     if params.get("keep_video_files", "yes") != "yes":
+        logging.debug("Param 'keep_video_files' not specified, removing all .ogg "
+                      "and .webm files from debug dir")
         for f in (glob.glob(os.path.join(test.debugdir, '*.ogg')) +
                   glob.glob(os.path.join(test.debugdir, '*.webm'))):
             os.unlink(f)
 
     # Kill all unresponsive VMs
     if params.get("kill_unresponsive_vms") == "yes":
+        logging.debug("Param 'kill_unresponsive_vms' specified, killing all "
+                      "VMs that fail to respond to a remote login request")
         for vm in env.get_all_vms():
-            if vm.is_dead() or vm.is_paused():
-                continue
-            try:
-                # Test may be fast, guest could still be booting
-                session = vm.wait_for_login(timeout=vm.LOGIN_WAIT_TIMEOUT)
-                session.close()
-            except (remote.LoginError, virt_vm.VMError), e:
-                logging.warn(e)
-                vm.destroy(gracefully=False)
+            if vm.is_alive():
+                try:
+                    session = vm.login()
+                    session.close()
+                except (remote.LoginError, virt_vm.VMError), e:
+                    logging.warn(e)
+                    vm.destroy(gracefully=False)
 
     # Kill VMs with deleted disks
     for vm in env.get_all_vms():
@@ -544,6 +597,18 @@ def postprocess(test, params, env):
                         int(params.get("post_command_timeout", "600")),
                         params.get("post_command_noncritical") == "yes")
 
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        if params.get('netdst_%s' % nic) == 'private':
+            setup_pb = True
+            break
+    else:
+        setup_pb = params.get("netdst") == 'private'
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig()
+        brcfg.cleanup()
+
 
 def postprocess_on_error(test, params, env):
     """
@@ -561,39 +626,16 @@ def _update_address_cache(address_cache, line):
         matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
         if matches:
             address_cache["last_seen"] = matches[0]
-
     if re.search("Client.Ethernet.Address", line, re.IGNORECASE):
         matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
         if matches and address_cache.get("last_seen"):
             mac_address = matches[0].lower()
-            last_time = address_cache.get("time_%s" % mac_address, 0)
-            last_ip = address_cache.get("last_seen")
-            cached_ip = address_cache.get(mac_address)
-
-            if (time.time() - last_time > 5 or cached_ip != last_ip):
+            if time.time() - address_cache.get("time_%s" % mac_address, 0) > 5:
                 logging.debug("(address cache) DHCP lease OK: %s --> %s",
                               mac_address, address_cache.get("last_seen"))
-
             address_cache[mac_address] = address_cache.get("last_seen")
             address_cache["time_%s" % mac_address] = time.time()
             del address_cache["last_seen"]
-        elif matches:
-            address_cache["last_seen_mac"] = matches[0]
-
-    if re.search("Requested.IP", line, re.IGNORECASE):
-        matches = matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
-        if matches and address_cache.get("last_seen_mac"):
-            ip_address = matches[0]
-            mac_address = address_cache.get("last_seen_mac")
-            last_time = address_cache.get("time_%s" % mac_address, 0)
-
-            if time.time() - last_time > 10:
-                logging.debug("(address cache) DHCP lease OK: %s --> %s",
-                              mac_address, ip_address)
-
-            address_cache[mac_address] = ip_address
-            address_cache["time_%s" % mac_address] = time.time()
-            del address_cache["last_seen_mac"]
 
 
 def _tcpdump_handler(address_cache, filename, line):
@@ -643,7 +685,7 @@ def _take_screendumps(test, params, env):
                 continue
             try:
                 vm.screendump(filename=temp_filename, debug=False)
-            except qemu_monitor.MonitorError, e:
+            except kvm_monitor.MonitorError, e:
                 logging.warn(e)
                 continue
             except AttributeError, e:

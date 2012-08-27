@@ -10,9 +10,9 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         """
         rg = self.parse_header_byte_range()
         if rg:
-            f = self.send_head_range(rg[0], rg[1])
+            f = self.send_head_range(range[0], range[1])
             if f:
-                self.copyfile_range(f, self.wfile, rg[0], rg[1])
+                self.copyfile_range(f, self.wfile, range[0], range[1])
                 f.close()
         else:
             f = self.send_head()
@@ -118,8 +118,6 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
 def http_server(port=8000, cwd=None, terminate_callable=None):
     http = BaseHTTPServer.HTTPServer(('', port), HTTPRequestHandler)
-    http.timeout = 1
-
     if cwd is None:
         cwd = os.getcwd()
     http.cwd = cwd
@@ -130,10 +128,8 @@ def http_server(port=8000, cwd=None, terminate_callable=None):
         else:
             terminate = False
 
-        if terminate:
-            break
-
-        http.handle_request()
+        if not terminate:
+            http.handle_request()
 
 
 if __name__ == '__main__':

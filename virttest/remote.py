@@ -78,7 +78,7 @@ class SCPTransferFailedError(SCPError):
                 (self.status, self.output))
 
 
-def handle_prompts(session, username, password, prompt, timeout=10, debug=False):
+def _remote_login(session, username, password, prompt, timeout=10, debug=False):
     """
     Log into a remote host (guest) using SSH or Telnet.  Wait for questions
     and provide answers.  If timeout expires while waiting for output from the
@@ -177,7 +177,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
             each step of the login procedure (i.e. the "Are you sure" prompt
             or the password prompt)
     @raise LoginBadClientError: If an unknown client is requested
-    @raise: Whatever handle_prompts() raises
+    @raise: Whatever _remote_login() raises
     @return: A ShellSession object.
     """
     if client == "ssh":
@@ -194,14 +194,13 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     logging.debug("Login command: '%s'", cmd)
     session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
     try:
-        handle_prompts(session, username, password, prompt, timeout)
+        _remote_login(session, username, password, prompt, timeout)
     except Exception:
         session.close()
         raise
     if log_filename:
         session.set_output_func(utils_misc.log_line)
         session.set_output_params((log_filename,))
-        session.set_log_file(log_filename)
     return session
 
 
@@ -363,7 +362,7 @@ def scp_to_remote(host, port, username, password, local_path, remote_path,
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
                "-o PreferredAuthentications=password -r %s "
-               "-P %s %s %s@%s:%s" %
+               "-P %s %s %s@\[%s\]:%s" %
                (limit, port, local_path, username, host, remote_path))
     password_list = []
     password_list.append(password)
@@ -391,7 +390,7 @@ def scp_from_remote(host, port, username, password, remote_path, local_path,
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
                "-o PreferredAuthentications=password -r %s "
-               "-P %s %s@%s:%s %s" %
+               "-P %s %s@\[%s\]:%s %s" %
                (limit, port, username, host, remote_path, local_path))
     password_list = []
     password_list.append(password)
@@ -421,7 +420,7 @@ def scp_between_remotes(src, dst, port, s_passwd, d_passwd, s_name, d_name,
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null -o "
                "PreferredAuthentications=password -r %s -P %s"
-               " %s@%s:%s %s@%s:%s" %
+               " %s@\[%s\]:%s %s@\[%s\]:%s" %
                (limit, port, s_name, src, s_path, d_name, dst, d_path))
     password_list = []
     password_list.append(s_passwd)

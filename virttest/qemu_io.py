@@ -1,4 +1,4 @@
-import re
+import re, logging
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, aexpect
@@ -65,7 +65,7 @@ class QemuIO(object):
                         qemu_io_cmd += " -%s" % io_option
                     else:
                         qemu_io_cmd += " --%s" % io_option
-            if not essential_flag:
+            if essential_option and not essential_flag:
                 raise QemuIOParamError
 
         if self.image_name:
@@ -75,7 +75,6 @@ class QemuIO(object):
             qemu_io_cmd += self.image_name
 
         return qemu_io_cmd
-
 
     def cmd_output(self, command):
         """
@@ -101,6 +100,7 @@ class QemuIOShellSession(QemuIO):
 
         self.type = "shell"
         forbid_option = ["h", "help", "V", "version", "c", "cmd"]
+        qemu_io_cmd = self.qemu_io_cmd
 
         self.qemu_io_cmd = self.get_cmd_line(forbid_option=forbid_option)
         self.create_session = True

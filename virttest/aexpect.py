@@ -7,7 +7,6 @@ A class and functions used for running and controlling child processes.
 
 import os, sys, pty, select, termios, fcntl
 
-BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
 
 # The following helper functions are shared by the server and the client.
 
@@ -44,34 +43,35 @@ def _wait(filename):
     _unlock(fd)
 
 
-def _get_filenames(base_dir, a_id):
-    return [os.path.join(base_dir, s + a_id) for s in
+def _get_filenames(base_dir, id):
+    return [os.path.join(base_dir, s + id) for s in
             "shell-pid-", "status-", "output-", "inpipe-",
             "lock-server-running-", "lock-client-starting-"]
 
 
-def _get_reader_filename(base_dir, a_id, reader):
-    return os.path.join(base_dir, "outpipe-%s-%s" % (reader, a_id))
+def _get_reader_filename(base_dir, id, reader):
+    return os.path.join(base_dir, "outpipe-%s-%s" % (reader, id))
 
 
 # The following is the server part of the module.
 
 if __name__ == "__main__":
-    a_id = sys.stdin.readline().strip()
+    id = sys.stdin.readline().strip()
     echo = sys.stdin.readline().strip() == "True"
     readers = sys.stdin.readline().strip().split(",")
-    command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % a_id
+    command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % id
 
     # Define filenames to be used for communication
+    base_dir = "/tmp/kvm_spawn"
     (shell_pid_filename,
      status_filename,
      output_filename,
      inpipe_filename,
      lock_server_running_filename,
-     lock_client_starting_filename) = _get_filenames(BASE_DIR, a_id)
+     lock_client_starting_filename) = _get_filenames(base_dir, id)
 
     # Populate the reader filenames list
-    reader_filenames = [_get_reader_filename(BASE_DIR, a_id, reader)
+    reader_filenames = [_get_reader_filename(base_dir, id, reader)
                         for reader in readers]
 
     # Set $TERM = dumb
@@ -109,12 +109,12 @@ if __name__ == "__main__":
             reader_fds.append(os.open(filename, os.O_RDWR))
 
         # Write shell PID to file
-        fileobj = open(shell_pid_filename, "w")
-        fileobj.write(str(shell_pid))
-        fileobj.close()
+        file = open(shell_pid_filename, "w")
+        file.write(str(shell_pid))
+        file.close()
 
         # Print something to stdout so the client can start working
-        print "Server %s ready" % a_id
+        print "Server %s ready" % id
         sys.stdout.flush()
 
         # Initialize buffers
@@ -159,15 +159,15 @@ if __name__ == "__main__":
                 os.write(shell_fd, data)
 
         # Write the exit status to a file
-        fileobj = open(status_filename, "w")
-        fileobj.write(str(status))
-        fileobj.close()
+        file = open(status_filename, "w")
+        file.write(str(status))
+        file.close()
 
         # Wait for the client to finish initializing
         _wait(lock_client_starting_filename)
 
         # Delete FIFOs
-        for filename in [inpipe_filename]:
+        for filename in reader_filenames + [inpipe_filename]:
             try:
                 os.unlink(filename)
             except OSError:
@@ -180,14 +180,17 @@ if __name__ == "__main__":
             os.close(fd)
 
         _unlock(lock_server_running)
-        sys.exit(0)
+        exit(0)
 
 
 # The following is the client part of the module.
 
 import subprocess, time, signal, re, threading, logging
 import utils_misc
-
+try:
+    import autotest.common as common
+except ImportError:
+    import common
 
 class ExpectError(Exception):
     def __init__(self, patterns, output):
@@ -273,7 +276,7 @@ class ShellStatusError(ShellError):
 
 
 def run_bg(command, termination_func=None, output_func=None, output_prefix="",
-           timeout=1.0, auto_close=True):
+           timeout=1.0):
     """
     Run command as a subprocess.  Call output_func with each line of output
     from the subprocess (prefixed by output_prefix).  Call termination_func
@@ -292,16 +295,13 @@ def run_bg(command, termination_func=None, output_func=None, output_prefix="",
             before passing it to stdout_func
     @param timeout: Time duration (in seconds) to wait for the subprocess to
             terminate before returning
-    @param auto_close: If True, close() the instance automatically when its
-                reference count drops to zero (default False).
 
-    @return: A Expect object.
+    @return: A Tail object.
     """
-    process = Expect(command=command,
+    process = Tail(command=command,
                    termination_func=termination_func,
                    output_func=output_func,
-                   output_prefix=output_prefix,
-                   auto_close=auto_close)
+                   output_prefix=output_prefix)
 
     end_time = time.time() + timeout
     while time.time() < end_time and process.is_alive():
@@ -371,14 +371,14 @@ class Spawn:
     resumes _tail() if needed.
     """
 
-    def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
+    def __init__(self, command=None, id=None, auto_close=False, echo=False,
                  linesep="\n"):
         """
         Initialize the class and run command as a child process.
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        @param id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
@@ -388,12 +388,12 @@ class Spawn:
         @param linesep: Line separator to be appended to strings sent to the
                 child process by sendline().
         """
-        self.a_id = a_id or utils_misc.generate_random_string(8)
-        self.log_file = None
+        self.id = id or utils_misc.generate_random_string(8)
 
         # Define filenames for communication with server
+        base_dir = "/tmp/kvm_spawn"
         try:
-            os.makedirs(BASE_DIR)
+            os.makedirs(base_dir)
         except Exception:
             pass
         (self.shell_pid_filename,
@@ -401,8 +401,8 @@ class Spawn:
          self.output_filename,
          self.inpipe_filename,
          self.lock_server_running_filename,
-         self.lock_client_starting_filename) = _get_filenames(BASE_DIR,
-                                                              self.a_id)
+         self.lock_client_starting_filename) = _get_filenames(base_dir,
+                                                              self.id)
 
         # Remember some attributes
         self.auto_close = auto_close
@@ -417,7 +417,7 @@ class Spawn:
 
         # Define the reader filenames
         self.reader_filenames = dict(
-            (reader, _get_reader_filename(BASE_DIR, self.a_id, reader))
+            (reader, _get_reader_filename(base_dir, self.id, reader))
             for reader in self.readers)
 
         # Let the server know a client intends to open some pipes;
@@ -433,12 +433,12 @@ class Spawn:
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
             # Send parameters to the server
-            sub.stdin.write("%s\n" % self.a_id)
+            sub.stdin.write("%s\n" % self.id)
             sub.stdin.write("%s\n" % echo)
             sub.stdin.write("%s\n" % ",".join(self.readers))
             sub.stdin.write("%s\n" % command)
             # Wait for the server to complete its initialization
-            while not "Server %s ready" % self.a_id in sub.stdout.readline():
+            while not "Server %s ready" % self.id in sub.stdout.readline():
                 pass
 
         # Open the reading pipes
@@ -468,11 +468,10 @@ class Spawn:
     def __getinitargs__(self):
         # Save some information when pickling -- will be passed to the
         # constructor upon unpickling
-        return (None, self.a_id, self.auto_close, self.echo, self.linesep)
+        return (None, self.id, self.auto_close, self.echo, self.linesep)
 
 
     def __del__(self):
-        self._close_reader_fds()
         if self.auto_close:
             self.close()
 
@@ -514,23 +513,12 @@ class Spawn:
         return self.reader_fds.get(reader)
 
 
-    def _close_reader_fds(self):
-        """
-        Close all reader file descriptors.
-        """
-        for fd in self.reader_fds.values():
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-
-
     def get_id(self):
         """
-        Return the instance's a_id attribute, which may be used to access the
+        Return the instance's id attribute, which may be used to access the
         process in the future.
         """
-        return self.a_id
+        return self.id
 
 
     def get_pid(self):
@@ -541,9 +529,9 @@ class Spawn:
         command.
         """
         try:
-            fileobj = open(self.shell_pid_filename, "r")
-            pid = int(fileobj.read())
-            fileobj.close()
+            file = open(self.shell_pid_filename, "r")
+            pid = int(file.read())
+            file.close()
             return pid
         except Exception:
             return None
@@ -556,9 +544,9 @@ class Spawn:
         """
         _wait(self.lock_server_running_filename)
         try:
-            fileobj = open(self.status_filename, "r")
-            status = int(fileobj.read())
-            fileobj.close()
+            file = open(self.status_filename, "r")
+            status = int(file.read())
+            file.close()
             return status
         except Exception:
             return None
@@ -569,9 +557,9 @@ class Spawn:
         Return the STDOUT and STDERR output of the process so far.
         """
         try:
-            fileobj = open(self.output_filename, "r")
-            output = fileobj.read()
-            fileobj.close()
+            file = open(self.output_filename, "r")
+            output = file.read()
+            file.close()
             return output
         except Exception:
             return ""
@@ -599,10 +587,15 @@ class Spawn:
         for hook in self.close_hooks:
             hook(self)
         # Close reader file descriptors
-        self._close_reader_fds()
+        for fd in self.reader_fds.values():
+            try:
+                os.close(fd)
+            except Exception:
+                pass
         self.reader_fds = {}
         # Remove all used files
-        for filename in (_get_filenames(BASE_DIR, self.a_id)):
+        for filename in (_get_filenames("/tmp/kvm_spawn", self.id) +
+                         self.reader_filenames.values()):
             try:
                 os.unlink(filename)
             except OSError:
@@ -618,27 +611,27 @@ class Spawn:
         self.linesep = linesep
 
 
-    def send(self, cont=""):
+    def send(self, str=""):
         """
         Send a string to the child process.
 
-        @param cont: String to send to the child process.
+        @param str: String to send to the child process.
         """
         try:
             fd = os.open(self.inpipe_filename, os.O_RDWR)
-            os.write(fd, cont)
+            os.write(fd, str)
             os.close(fd)
         except Exception:
             pass
 
 
-    def sendline(self, cont=""):
+    def sendline(self, str=""):
         """
         Send a string followed by a line separator to the child process.
 
-        @param cont: String to send to the child process.
+        @param str: String to send to the child process.
         """
-        self.send(cont + self.linesep)
+        self.send(str + self.linesep)
 
 
 _thread_kill_requested = False
@@ -672,7 +665,7 @@ class Tail(Spawn):
     When this class is unpickled, it automatically resumes reporting output.
     """
 
-    def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
+    def __init__(self, command=None, id=None, auto_close=False, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
                  output_func=None, output_params=(), output_prefix=""):
         """
@@ -680,7 +673,7 @@ class Tail(Spawn):
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        @param id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
@@ -704,10 +697,9 @@ class Tail(Spawn):
         # Add a reader and a close hook
         self._add_reader("tail")
         self._add_close_hook(Tail._join_thread)
-        self._add_close_hook(Tail._close_log_file)
 
         # Init the superclass
-        Spawn.__init__(self, command, a_id, auto_close, echo, linesep)
+        Spawn.__init__(self, command, id, auto_close, echo, linesep)
 
         # Remember some attributes
         self.termination_func = termination_func
@@ -784,20 +776,6 @@ class Tail(Spawn):
         self.output_prefix = output_prefix
 
 
-    def set_log_file(self, filename):
-        """
-        Set a log file name for this tail instance.
-
-        @param filename: Base name of the log.
-        """
-        self.log_file = filename
-
-
-    def _close_log_file(self):
-        if self.log_file is not None:
-            utils_misc.close_log_file(self.log_file)
-
-
     def _tail(self):
         def print_line(text):
             # Pre-pend prefix and remove trailing whitespace
@@ -811,10 +789,11 @@ class Tail(Spawn):
 
         try:
             fd = self._get_fd("tail")
-            bfr = ""
+            buffer = ""
             while True:
                 global _thread_kill_requested
                 if _thread_kill_requested:
+                    _thread_kill_requested = False
                     return
                 try:
                     # See if there's any data to read from the pipe
@@ -826,24 +805,24 @@ class Tail(Spawn):
                     new_data = os.read(fd, 1024)
                     if not new_data:
                         break
-                    bfr += new_data
+                    buffer += new_data
                     # Send the output to output_func line by line
                     # (except for the last line)
                     if self.output_func:
-                        lines = bfr.split("\n")
+                        lines = buffer.split("\n")
                         for line in lines[:-1]:
                             print_line(line)
                     # Leave only the last line
-                    last_newline_index = bfr.rfind("\n")
-                    bfr = bfr[last_newline_index + 1:]
+                    last_newline_index = buffer.rfind("\n")
+                    buffer = buffer[last_newline_index+1:]
                 else:
-                    # No output is available right now; flush the bfr
-                    if bfr:
-                        print_line(bfr)
-                        bfr = ""
+                    # No output is available right now; flush the buffer
+                    if buffer:
+                        print_line(buffer)
+                        buffer = ""
             # The process terminated; print any remaining output
-            if bfr:
-                print_line(bfr)
+            if buffer:
+                print_line(buffer)
             # Get the exit status, print it and send it to termination_func
             status = self.get_status()
             if status is None:
@@ -860,7 +839,7 @@ class Tail(Spawn):
 
     def _start_thread(self):
         self.tail_thread = threading.Thread(target=self._tail,
-                                            name="tail_thread_%s" % self.a_id)
+                                            name="tail_thread_%s" % self.id)
         self.tail_thread.start()
 
 
@@ -881,7 +860,7 @@ class Expect(Tail):
     It also provides all of Tail's functionality.
     """
 
-    def __init__(self, command=None, a_id=None, auto_close=True, echo=False,
+    def __init__(self, command=None, id=None, auto_close=True, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
                  output_func=None, output_params=(), output_prefix=""):
         """
@@ -889,7 +868,7 @@ class Expect(Tail):
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        @param id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
@@ -914,7 +893,7 @@ class Expect(Tail):
         self._add_reader("expect")
 
         # Init the superclass
-        Tail.__init__(self, command, a_id, auto_close, echo, linesep,
+        Tail.__init__(self, command, id, auto_close, echo, linesep,
                       termination_func, termination_params,
                       output_func, output_params, output_prefix)
 
@@ -955,56 +934,35 @@ class Expect(Tail):
                 return data
 
 
-    def match_patterns(self, cont, patterns):
+    def match_patterns(self, str, patterns):
         """
-        Match cont against a list of patterns.
+        Match str against a list of patterns.
 
-        Return the index of the first pattern that matches a substring of cont.
+        Return the index of the first pattern that matches a substring of str.
         None and empty strings in patterns are ignored.
         If no match is found, return None.
 
-        @param cont: input string
         @param patterns: List of strings (regular expression patterns).
         """
         for i in range(len(patterns)):
             if not patterns[i]:
                 continue
-            if re.search(patterns[i], cont):
+            if re.search(patterns[i], str):
                 return i
 
 
-    def match_patterns_multiline(self, cont, patterns):
-        """
-        Match list of lines against a list of patterns.
-
-        Return the index of the first pattern that matches a substring of cont.
-        None and empty strings in patterns are ignored.
-        If no match is found, return None.
-
-        @param cont: List of strings (input strings)
-        @param patterns: List of strings (regular expression patterns). The
-                         pattern priority is from the last to first.
-        """
-        for i in range(-len(patterns), 0):
-            if not patterns[i]:
-                continue
-            for line in cont:
-                if re.search(patterns[i], line):
-                    return i
-
-
-    def read_until_output_matches(self, patterns, filter_func=lambda x: x,
+    def read_until_output_matches(self, patterns, filter=lambda x: x,
                                   timeout=60, internal_timeout=None,
-                                  print_func=None, match_func=None):
+                                  print_func=None):
         """
         Read using read_nonblocking until a match is found using match_patterns,
         or until timeout expires. Before attempting to search for a match, the
-        data is filtered using the filter_func function provided.
+        data is filtered using the filter function provided.
 
         @brief: Read from child using read_nonblocking until a pattern
                 matches.
         @param patterns: List of strings (regular expression patterns)
-        @param filter_func: Function to apply to the data read from the child before
+        @param filter: Function to apply to the data read from the child before
                 attempting to match it against the patterns (should take and
                 return a string)
         @param timeout: The duration (in seconds) to wait until a match is
@@ -1012,15 +970,12 @@ class Expect(Tail):
         @param internal_timeout: The timeout to pass to read_nonblocking
         @param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @param match_func: Function to compare the output and patterns.
         @return: Tuple containing the match index and the data read so far
         @raise ExpectTimeoutError: Raised if timeout expires
         @raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
-        if not match_func:
-            match_func = self.match_patterns
         fd = self._get_fd("expect")
         o = ""
         end_time = time.time() + timeout
@@ -1043,7 +998,7 @@ class Expect(Tail):
                     print_func(line)
             # Look for patterns
             o += data
-            match = match_func(filter_func(o), patterns)
+            match = self.match_patterns(filter(o), patterns)
             if match is not None:
                 return match, o
 
@@ -1073,9 +1028,9 @@ class Expect(Tail):
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
-        def get_last_word(cont):
-            if cont:
-                return cont.split()[-1]
+        def get_last_word(str):
+            if str:
+                return str.split()[-1]
             else:
                 return ""
 
@@ -1107,8 +1062,8 @@ class Expect(Tail):
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
-        def get_last_nonempty_line(cont):
-            nonempty_lines = [l for l in cont.splitlines() if l.strip()]
+        def get_last_nonempty_line(str):
+            nonempty_lines = [l for l in str.splitlines() if l.strip()]
             if nonempty_lines:
                 return nonempty_lines[-1]
             else:
@@ -1118,34 +1073,6 @@ class Expect(Tail):
                                               timeout, internal_timeout,
                                               print_func)
 
-
-    def read_until_any_line_matches(self, patterns, timeout=60,
-                                    internal_timeout=None, print_func=None):
-        """
-        Read using read_nonblocking until any line of the output matches
-        one of the patterns (using match_patterns_multiline), or until timeout
-        expires. Return a tuple containing the match index (or None if no match
-        was found) and the data read so far.
-
-        @brief: Read using read_nonblocking until any line matches a pattern.
-
-        @param patterns: A list of strings (regular expression patterns)
-                         Consider using '^' in the beginning.
-        @param timeout: The duration (in seconds) to wait until a match is
-                found
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
-                (should take a string parameter)
-        @return: A tuple containing the match index and the data read so far
-        @raise ExpectTimeoutError: Raised if timeout expires
-        @raise ExpectProcessTerminatedError: Raised if the child process
-                terminates while waiting for output
-        @raise ExpectError: Raised if an unknown error occurs
-        """
-        return self.read_until_output_matches(patterns,
-                                        lambda x: x.splitlines(), timeout,
-                                        internal_timeout, print_func,
-                                        self.match_patterns_multiline)
 
 class ShellSession(Expect):
     """
@@ -1157,7 +1084,7 @@ class ShellSession(Expect):
     process for responsiveness.
     """
 
-    def __init__(self, command=None, a_id=None, auto_close=True, echo=False,
+    def __init__(self, command=None, id=None, auto_close=True, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
                  output_func=None, output_params=(), output_prefix="",
                  prompt=r"[\#\$]\s*$", status_test_command="echo $?"):
@@ -1166,7 +1093,7 @@ class ShellSession(Expect):
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        @param id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default True).
@@ -1192,7 +1119,7 @@ class ShellSession(Expect):
                 cmd_status_output() and friends).
         """
         # Init the superclass
-        Expect.__init__(self, command, a_id, auto_close, echo, linesep,
+        Expect.__init__(self, command, id, auto_close, echo, linesep,
                         termination_func, termination_params,
                         output_func, output_params, output_prefix)
 
@@ -1246,7 +1173,7 @@ class ShellSession(Expect):
         end_time = time.time() + timeout
         while time.time() < end_time:
             time.sleep(0.5)
-            if self.read_nonblocking(0, end_time - time.time()).strip():
+            if self.read_nonblocking(0, end_time-time.time()).strip():
                 return True
         # No output -- report unresponsive
         return False
@@ -1274,9 +1201,9 @@ class ShellSession(Expect):
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
-        return self.read_until_last_line_matches([self.prompt], timeout,
-                                                 internal_timeout,
-                                                 print_func)[1]
+        m, o = self.read_until_last_line_matches([self.prompt], timeout,
+                                                 internal_timeout, print_func)
+        return o
 
 
     def cmd_output(self, cmd, timeout=60, internal_timeout=None,
@@ -1297,13 +1224,13 @@ class ShellSession(Expect):
                 terminates while waiting for output
         @raise ShellError: Raised if an unknown error occurs
         """
-        def remove_command_echo(cont, cmd):
-            if cont and cont.splitlines()[0] == cmd:
-                cont = "".join(cont.splitlines(True)[1:])
-            return cont
+        def remove_command_echo(str, cmd):
+            if str and str.splitlines()[0] == cmd:
+                str = "".join(str.splitlines(True)[1:])
+            return str
 
-        def remove_last_nonempty_line(cont):
-            return "".join(cont.rstrip().splitlines(True)[:-1])
+        def remove_last_nonempty_line(str):
+            return "".join(str.rstrip().splitlines(True)[:-1])
 
         logging.debug("Sending command: %s" % cmd)
         self.read_nonblocking(0, timeout)
@@ -1377,8 +1304,9 @@ class ShellSession(Expect):
         @raise ShellStatusError: Raised if the exit status cannot be obtained
         @raise ShellError: Raised if an unknown error occurs
         """
-        return self.cmd_status_output(cmd, timeout, internal_timeout,
-                                      print_func)[0]
+        s, o = self.cmd_status_output(cmd, timeout, internal_timeout,
+                                      print_func)
+        return s
 
 
     def cmd(self, cmd, timeout=60, internal_timeout=None, print_func=None,

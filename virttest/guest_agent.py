@@ -6,7 +6,7 @@ Interfaces to the virt agent.
 
 import socket, time, logging, random
 from autotest.client.shared import error
-from qemu_monitor import Monitor, MonitorError
+from kvm_monitor import Monitor, MonitorError
 
 try:
     import json
@@ -16,7 +16,8 @@ except ImportError:
 
 
 class VAgentError(MonitorError):
-    pass
+    def __init__(self):
+        MonitorError.__init__(self)
 
 
 class VAgentConnectError(VAgentError):
@@ -51,7 +52,7 @@ class VAgentNotSupportedSerialError(VAgentNotSupportedError):
 
 class VAgentCmdError(VAgentError):
     def __init__(self, cmd, args, data):
-        VAgentError.__init__(self, cmd, args, data)
+        VAgentError.__init__(self)
         self.cmd = cmd
         self.args = args
         self.data = data

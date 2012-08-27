@@ -7,12 +7,8 @@ This exports:
 """
 import logging, os, shutil, re
 from autotest.client import utils
-try:
-    from autotest.client.shared import iscsi
-except ImportError:
-    from virttest import iscsi
-
-import utils_misc, virt_vm, gluster
+from autotest.client.shared import iscsi
+import utils_misc, virt_vm
 
 
 def preprocess_images(bindir, params, env):
@@ -67,35 +63,13 @@ def get_image_filename(params, root_dir):
            image_format -- the format of the image (qcow2, raw etc)
     @raise VMDeviceError: When no matching disk found (in indirect method).
     """
-    def sort_cmp(x, y):
-        """
-        This function used for sort to suit for this test, first sort by len
-        then by value.
-        """
-        has_digit_x = re.findall('[vhs]d[a-z]*[\d]+', x)
-        has_digit_y = re.findall('[vhs]d[a-z]*[\d]+', y)
-
-        if not has_digit_x and  not has_digit_y:
-            if len(x) > len(y):
-                return 1
-            elif len(x) < len(y):
-                return -1
-        if len(x) == len(y):
-            if has_digit_x and has_digit_y:
-                return cmp(x, y)
-            elif has_digit_x:
-                return -1
-            elif has_digit_y:
-                return 1
-        return cmp(x, y)
-
     image_name = params.get("image_name", "image")
     indirect_image_select = params.get("indirect_image_select")
     if indirect_image_select:
         re_name = image_name
         indirect_image_select = int(indirect_image_select)
         matching_images = utils.system_output("ls -1d %s" % re_name)
-        matching_images = sorted(matching_images.split('\n'), cmp = sort_cmp)
+        matching_images = sorted(matching_images.split('\n'))
         if matching_images[-1] == '':
             matching_images = matching_images[:-1]
         try:
@@ -107,29 +81,20 @@ def get_image_filename(params, root_dir):
                                         (re_name, matching_images,
                                          indirect_image_select))
         for protected in params.get('indirect_image_blacklist', '').split(' '):
-            match_image = re.match(protected, image_name)
-            if match_image and match_image.group(0) == image_name:
-                """
-                We just need raise an error if it is totally match, such as
-                sda sda1 and so on, but sdaa should not raise an error.
-                """
+            if re.match(protected, image_name):
                 raise virt_vm.VMDeviceError("Matching disk is in blacklist. "
                                             "name = '%s', matching = '%s' and "
                                             "selector = '%s'" %
                                             (re_name, matching_images,
                                              indirect_image_select))
     image_format = params.get("image_format", "qcow2")
-    gluster_image = params.get("gluster_brick")
     if params.get("image_raw_device") == "yes":
         return image_name
     if image_format:
         image_filename = "%s.%s" % (image_name, image_format)
     else:
         image_filename = image_name
-    if gluster_image:
-        image_filename = gluster.get_image_filename(params, image_name, image_format)
-    else:
-        image_filename = utils_misc.get_path(root_dir, image_filename)
+    image_filename = utils_misc.get_path(root_dir, image_filename)
     return image_filename
 
 
@@ -242,7 +207,7 @@ class QemuImg(object):
                 # We have to make 2 backups, one of the bad image, another one
                 # of the good image
                 src_bad = filename
-                src_good = os.path.join(backup_dir, "%s.backup" % basename)
+                src_good = filename + ".backup"
                 hsh = utils_misc.generate_random_string(4)
                 dst_bad = (os.path.join(backup_dir, "%s.bad.%s" %
                                         (basename, hsh)))
@@ -319,11 +284,9 @@ class QemuImg(object):
                 m_image_fn = get_image_filename(params, root_dir)
                 image_fn = get_image_filename(image_params, root_dir)
 
-                force_clone = params.get("force_image_clone", "no")
-                if not os.path.exists(image_fn) or force_clone == "yes":
-                    logging.info("Clone master image for vms.")
-                    utils.run(params.get("image_clone_command") % (m_image_fn,
-                                                                   image_fn))
+                logging.info("Clone master image for vms.")
+                utils.run(params.get("image_clone_commnad") % (m_image_fn,
+                                                               image_fn))
 
             params["image_name_%s_%s" % (image_name, vm_name)] = vm_image_name
 
@@ -348,7 +311,7 @@ class QemuImg(object):
 
                 logging.debug("Removing vm specific image file %s", image_fn)
                 if os.path.exists(image_fn):
-                    utils.run(params.get("image_remove_command") % (image_fn))
+                    utils.run(params.get("image_remove_commnad") % (image_fn))
                 else:
                     logging.debug("Image file %s not found", image_fn)
 

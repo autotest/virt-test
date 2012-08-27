@@ -13,7 +13,7 @@ try:
 except ImportError:
     logging.info("ovirtsdk module not present, please install it")
 
-import virt_vm
+from autotest.client.virt import virt_vm
 
 
 _api = None
@@ -102,7 +102,7 @@ class VMManager(virt_vm.BaseVM):
         self.root_dir = root_dir
         self.address_cache = address_cache
         self.vnclisten = "0.0.0.0"
-        self.driver_type = "v2v"
+        self.driver_type = "virt_v2v"
 
         super(VMManager, self).__init__(self.name, params)
         (self.api, self.version) = connect(params)
@@ -179,10 +179,6 @@ class VMManager(virt_vm.BaseVM):
         else:
             logging.debug('The %s status is <not Down>' % self.name)
             return False
-
-
-    def is_paused(self):
-        return False
 
 
     def start(self):

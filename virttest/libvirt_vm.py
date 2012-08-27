@@ -4,11 +4,11 @@ Utility classes and functions to handle Virtual Machine creation using libvirt.
 @copyright: 2011 Red Hat Inc.
 """
 
-import time, os, logging, fcntl, re, shutil, tempfile
+import time, os, logging, fcntl, re, shutil, urlparse, tempfile
 from autotest.client.shared import error
-from autotest.client import utils
-import utils_misc, virt_vm, storage, aexpect, remote, virsh, libvirt_xml
-import data_dir, xml_utils
+from autotest.client import utils, os_dep
+from xml.dom import minidom
+import utils_misc, virt_vm, storage, aexpect, remote, virsh
 
 
 def libvirtd_restart():
@@ -59,8 +59,8 @@ def service_libvirtd_control(action):
     @ param action: start|stop|status|restart|condrestart|
       reload|force-reload|try-restart
     """
-    actions = ['start', 'stop', 'restart', 'condrestart', 'reload',
-               'force-reload', 'try-restart']
+    actions = ['start','stop','restart','condrestart','reload',
+               'force-reload','try-restart']
     if action in actions:
         try:
             utils.run("service libvirtd %s" % action)
@@ -71,7 +71,7 @@ def service_libvirtd_control(action):
             return False
     elif action == "status":
         cmd_result = utils.run("service libvirtd status", ignore_status=True)
-        if re.search("running", cmd_result.stdout.strip()):
+        if re.search("pid", cmd_result.stdout.strip()):
             logging.info("Libvirtd service is running")
             return True
         else:
@@ -90,27 +90,7 @@ def normalize_connect_uri(connect_uri):
     if connect_uri == 'default':
         return None
     else: # Validate and canonicalize uri early to catch problems
-        result = virsh.canonical_uri(uri=connect_uri)
-        if not result:
-            raise ValueError("Normalizing connect_uri %s failed" % connect_uri)
-        return result
-
-
-def complete_uri(ip_address):
-    """
-    Return a complete URI with the combination of ip_address and local uri.
-    It is useful when you need to connect remote hypervisor.
-
-    @param ip_address: an ip address or a hostname
-    @return: a complete uri
-    """
-    # Allow to raise CmdError if canonical_uri is failed
-    uri = virsh.canonical_uri(ignore_status=False)
-    driver = uri.split(":")[0]
-    # The libvirtd daemon's mode(system or session on qemu)
-    daemon_mode = uri.split("/")[-1]
-    complete_uri = "%s+ssh://%s/%s" % (driver, ip_address, daemon_mode)
-    return complete_uri
+        return virsh.canonical_uri(uri=connect_uri)
 
 
 class VM(virt_vm.BaseVM):
@@ -124,7 +104,7 @@ class VM(virt_vm.BaseVM):
 
         @param name: The name of the object
         @param params: A dict containing VM params
-                (see method make_create_command for a full description)
+                (see method __make_libvirt_command for a full description)
         @param root_dir: Base directory for relative filenames
         @param address_cache: A dict that maps MAC addresses to IP addresses
         @param state: If provided, use this as self.__dict__
@@ -143,6 +123,7 @@ class VM(virt_vm.BaseVM):
             self.device_id = []
             self.pci_devices = []
             self.uuid = None
+            self.only_pty = False
 
         self.spice_port = 8000
         self.name = name
@@ -171,7 +152,8 @@ class VM(virt_vm.BaseVM):
         """
         if not self.is_alive():
             raise virt_vm.VMDeadError("Domain %s is inactive" % self.name,
-                                      self.state())
+                                      virsh.domstate(self.name,
+                                                     uri=self.connect_uri))
 
 
     def is_alive(self):
@@ -188,20 +170,13 @@ class VM(virt_vm.BaseVM):
         return virsh.is_dead(self.name, uri=self.connect_uri)
 
 
-    def is_paused(self):
-        """
-        Return True if VM is paused.
-        """
-        return (self.state() == "paused")
-
-
     def is_persistent(self):
         """
         Return True if VM is persistent.
         """
         try:
             return bool(re.search(r"^Persistent:\s+[Yy]es",
-                virsh.dominfo(self.name, uri=self.connect_uri).stdout.strip(),
+                        virsh.dominfo(self.name, uri=self.connect_uri),
                         re.MULTILINE))
         except error.CmdError:
             return False
@@ -210,13 +185,7 @@ class VM(virt_vm.BaseVM):
         """
         Undefine the VM.
         """
-        try:
-            virsh.undefine(self.name, uri=self.connect_uri,
-                           ignore_status=False)
-        except error.CmdError, detail:
-            logging.error("Undefined VM %s failed:\n%s", self.name, detail)
-            return False
-        return True
+        return virsh.undefine(self.name, uri=self.connect_uri)
 
 
     def define(self, xml_file):
@@ -226,27 +195,21 @@ class VM(virt_vm.BaseVM):
         if not os.path.exists(xml_file):
             logging.error("File %s not found." % xml_file)
             return False
-        try:
-            virsh.define(xml_file, uri=self.connect_uri,
-                         ignore_status=False)
-        except error.CmdError, detail:
-            logging.error("Defined VM from %s failed:\n%s", xml_file, detail)
-            return False
-        return True
+        return virsh.define(xml_file, uri=self.connect_uri)
 
 
     def state(self):
         """
         Return domain state.
         """
-        return virsh.domstate(self.name, uri=self.connect_uri).stdout.strip()
+        return virsh.domstate(self.name, uri=self.connect_uri)
 
 
     def get_id(self):
         """
         Return VM's ID.
         """
-        return virsh.domid(self.name, uri=self.connect_uri).stdout.strip()
+        return virsh.domid(self.name, uri=self.connect_uri)
 
 
     def get_xml(self):
@@ -287,7 +250,7 @@ class VM(virt_vm.BaseVM):
         @param root_dir: Optional new base directory for relative filenames
         @param address_cache: A dict that maps MAC addresses to IP addresses
         @param copy_state: If True, copy the original VM's state to the clone.
-                Mainly useful for make_create_command().
+                Mainly useful for __make_libvirt_command().
         """
         if name is None:
             name = self.name
@@ -304,7 +267,7 @@ class VM(virt_vm.BaseVM):
         return VM(name, params, root_dir, address_cache, state)
 
 
-    def make_create_command(self, name=None, params=None, root_dir=None):
+    def __make_libvirt_command(self, name=None, params=None, root_dir=None):
         """
         Generate a libvirt command line. All parameters are optional. If a
         parameter is not supplied, the corresponding value stored in the
@@ -341,8 +304,8 @@ class VM(virt_vm.BaseVM):
                NIC (e.g. e1000)
         """
         # helper function for command line option wrappers
-        def has_option(help_text, option):
-            return bool(re.search(r"--%s" % option, help_text, re.MULTILINE))
+        def has_option(help, option):
+            return bool(re.search(r"--%s" % option, help, re.MULTILINE))
 
         # Wrappers for all supported libvirt command line parameters.
         # This is meant to allow support for multiple libvirt versions.
@@ -350,16 +313,16 @@ class VM(virt_vm.BaseVM):
         # parameter, and should add the requested command line option
         # accordingly.
 
-        def add_name(help_text, name):
+        def add_name(help, name):
             return " --name '%s'" % name
 
-        def add_machine_type(help_text, machine_type):
-            if has_option(help_text, "machine"):
+        def add_machine_type(help, machine_type):
+            if has_option(help, "machine"):
                 return " --machine %s" % machine_type
             else:
                 return ""
 
-        def add_hvm_or_pv(help_text, hvm_or_pv):
+        def add_hvm_or_pv(help, hvm_or_pv):
             if hvm_or_pv == "hvm":
                 return " --hvm --accelerate"
             elif hvm_or_pv == "pv":
@@ -368,45 +331,45 @@ class VM(virt_vm.BaseVM):
                 logging.warning("Unknown virt type hvm_or_pv, using default.")
                 return ""
 
-        def add_mem(help_text, mem):
+        def add_mem(help, mem):
             return " --ram=%s" % mem
 
-        def add_check_cpu(help_text):
-            if has_option(help_text, "check-cpu"):
+        def add_check_cpu(help):
+            if has_option(help, "check-cpu"):
                 return " --check-cpu"
             else:
                 return ""
 
-        def add_smp(help_text, smp):
+        def add_smp(help, smp):
             return " --vcpu=%s" % smp
 
-        def add_location(help_text, location):
-            if has_option(help_text, "location"):
+        def add_location(help, location):
+            if has_option(help, "location"):
                 return " --location %s" % location
             else:
                 return ""
 
-        def add_cdrom(help_text, filename, index=None):
-            if has_option(help_text, "cdrom"):
+        def add_cdrom(help, filename, index=None):
+            if has_option(help, "cdrom"):
                 return " --cdrom %s" % filename
             else:
                 return ""
 
-        def add_pxe(help_text):
-            if has_option(help_text, "pxe"):
+        def add_pxe(help):
+            if has_option(help, "pxe"):
                 return " --pxe"
             else:
                 return ""
 
-        def add_import(help_text):
-            if has_option(help_text, "import"):
+        def add_import(help):
+            if has_option(help, "import"):
                 return " --import"
             else:
                 return ""
 
-        def add_drive(help_text, filename, pool=None, vol=None, device=None,
+        def add_drive(help, filename, pool=None, vol=None, device=None,
                       bus=None, perms=None, size=None, sparse=False,
-                      cache=None, fmt=None):
+                      cache=None, format=None):
             cmd = " --disk"
             if filename:
                 cmd += " path=%s" % filename
@@ -425,88 +388,89 @@ class VM(virt_vm.BaseVM):
                 cmd += ",size=%s" % size.rstrip("Gg")
             if sparse:
                 cmd += ",sparse=false"
-            if fmt:
-                cmd += ",format=%s" % fmt
+            if format:
+                cmd += ",format=%s" % format
             if cache:
                 cmd += ",cache=%s" % cache
             return cmd
 
-        def add_floppy(help_text, filename):
+        def add_floppy(help, filename):
             return " --disk path=%s,device=floppy,ro" % filename
 
-        def add_vnc(help_text, vnc_port=None):
+        def add_vnc(help, vnc_port=None):
             if vnc_port:
                 return " --vnc --vncport=%d" % (vnc_port)
             else:
                 return " --vnc"
 
-        def add_vnclisten(help_text, vnclisten):
-            if has_option(help_text, "vnclisten"):
+        def add_vnclisten(help, vnclisten):
+            if has_option(help, "vnclisten"):
                 return " --vnclisten=%s" % (vnclisten)
             else:
                 return ""
 
-        def add_sdl(help_text):
-            if has_option(help_text, "sdl"):
+        def add_sdl(help):
+            if has_option(help, "sdl"):
                 return " --sdl"
             else:
                 return ""
 
-        def add_nographic(help_text):
+        def add_nographic(help):
             return " --nographics"
 
-        def add_video(help_text, video_device):
-            if has_option(help_text, "video"):
+        def add_video(help, video_device):
+            if has_option(help, "video"):
                 return " --video=%s" % (video_device)
             else:
                 return ""
 
-        def add_uuid(help_text, uuid):
-            if has_option(help_text, "uuid"):
+        def add_uuid(help, uuid):
+            if has_option(help, "uuid"):
                 return " --uuid %s" % uuid
             else:
                 return ""
 
-        def add_os_type(help_text, os_type):
-            if has_option(help_text, "os-type"):
+        def add_os_type(help, os_type):
+            if has_option(help, "os-type"):
                 return " --os-type %s" % os_type
             else:
                 return ""
 
-        def add_os_variant(help_text, os_variant):
-            if has_option(help_text, "os-variant"):
+        def add_os_variant(help, os_variant):
+            if has_option(help, "os-variant"):
                 return " --os-variant %s" % os_variant
             else:
                 return ""
 
-        def add_pcidevice(help_text, pci_device):
-            if has_option(help_text, "host-device"):
+        def add_pcidevice(help, pci_device):
+            if has_option(help, "host-device"):
                 return " --host-device %s" % pci_device
             else:
                 return ""
 
-        def add_soundhw(help_text, sound_device):
-            if has_option(help_text, "soundhw"):
+        def add_soundhw(help, sound_device):
+            if has_option(help, "soundhw"):
                 return " --soundhw %s" % sound_device
             else:
                 return ""
 
-        def add_serial(help_text, filename):
-            if has_option(help_text, "serial"):
+        def add_serial(help, filename):
+            if has_option(help, "serial"):
                 return "  --serial file,path=%s --serial pty" % filename
             else:
-                return "" # FIXME: Add additional serial ports on old libvirt?
+                self.only_pty = True
+                return ""
 
-        def add_kernel_cmdline(help_text, cmdline):
+        def add_kernel_cmdline(help, cmdline):
             return " -append %s" % cmdline
 
-        def add_connect_uri(help_text, uri):
-            if uri and has_option(help_text, "connect"):
+        def add_connect_uri(help, uri):
+            if uri and has_option(help, "connect"):
                 return " --connect=%s" % uri
             else:
                 return ""
 
-        def add_nic(help_text, nic_params):
+        def add_nic(help, nic_params):
             """
             Return additional command line params based on dict-like nic_params
             """
@@ -518,7 +482,7 @@ class VM(virt_vm.BaseVM):
                 result = " --network=%s" % nettype
             else:
                 result = ""
-            if has_option(help_text, "bridge"):
+            if has_option(help, "bridge"):
                 # older libvirt (--network=NATdev --bridge=bridgename --mac=mac)
                 if nettype != 'user':
                     result += ':%s' % netdst
@@ -534,7 +498,7 @@ class VM(virt_vm.BaseVM):
                     result += ',mac=%s' % mac
                 elif mac: # possible to specify --mac w/o --network
                     result += " --mac=%s" % mac
-            logging.debug("vm.make_create_command.add_nic returning: %s"
+            logging.debug("vm.__make_libvirt_command.add_nic returning: %s"
                              % result)
             return result
 
@@ -555,17 +519,7 @@ class VM(virt_vm.BaseVM):
             params.get("virt_install_binary",
                        "virt-install"))
 
-        help_text = utils.system_output("%s --help" % virt_install_binary)
-
-        # Find all supported machine types, so we can rule out an unsupported
-        # machine type option passed in the configuration.
-        hvm_or_pv = params.get("hvm_or_pv", "hvm")
-        # default to 'uname -m' output
-        arch_name = params.get("vm_arch_name", utils.get_current_kernel_arch())
-        capabs = libvirt_xml.LibvirtXML()
-        support_machine_type = capabs.os_arch_machine_map[hvm_or_pv][arch_name]
-        logging.debug("Machine types supported for %s\%s: %s" % (hvm_or_pv,
-                                              arch_name, support_machine_type))
+        help = utils.system_output("%s --help" % virt_install_binary)
 
         # Start constructing the qemu command
         virt_install_cmd = ""
@@ -576,35 +530,32 @@ class VM(virt_vm.BaseVM):
         virt_install_cmd += virt_install_binary
 
         # set connect uri
-        virt_install_cmd += add_connect_uri(help_text, self.connect_uri)
+        virt_install_cmd += add_connect_uri(help, self.connect_uri)
 
         # hvm or pv specificed by libvirt switch (pv used  by Xen only)
+        hvm_or_pv = params.get("hvm_or_pv", "hvm")
         if hvm_or_pv:
-            virt_install_cmd += add_hvm_or_pv(help_text, hvm_or_pv)
+            virt_install_cmd += add_hvm_or_pv(help, hvm_or_pv)
 
         # Add the VM's name
-        virt_install_cmd += add_name(help_text, name)
+        virt_install_cmd += add_name(help, name)
 
         machine_type = params.get("machine_type")
         if machine_type:
-            if machine_type in support_machine_type:
-                virt_install_cmd += add_machine_type(help_text, machine_type)
-            else:
-                raise error.TestNAError("Unsupported machine type %s." %
-                                        (machine_type))
+            virt_install_cmd += add_machine_type(help, machine_type)
 
         mem = params.get("mem")
         if mem:
-            virt_install_cmd += add_mem(help_text, mem)
+            virt_install_cmd += add_mem(help, mem)
 
         # TODO: should we do the check before we call ? negative case ?
         check_cpu = params.get("use_check_cpu")
         if check_cpu:
-            virt_install_cmd += add_check_cpu(help_text)
+            virt_install_cmd += add_check_cpu(help)
 
         smp = params.get("smp")
         if smp:
-            virt_install_cmd += add_smp(help_text, smp)
+            virt_install_cmd += add_smp(help, smp)
 
         # TODO: directory location for vmlinuz/kernel for cdrom install ?
         location = None
@@ -622,15 +573,12 @@ class VM(virt_vm.BaseVM):
 
         elif params.get("medium") == 'cdrom':
             if params.get("use_libvirt_cdrom_switch") == 'yes':
-                virt_install_cmd += add_cdrom(help_text, params.get("cdrom_cd1"))
+                virt_install_cmd += add_cdrom(help, params.get("cdrom_cd1"))
             elif params.get("unattended_delivery_method") == "integrated":
-                virt_install_cmd += add_cdrom(help_text,
-                                              os.path.join(
-                                                data_dir.get_data_dir(),
-                                                params.get("cdrom_unattended")
-                                             ))
+                virt_install_cmd += add_cdrom(help,
+                                              params.get("cdrom_unattended"))
             else:
-                location = data_dir.get_data_dir()
+                location = params.get("image_dir")
                 kernel_dir = os.path.dirname(params.get("kernel"))
                 kernel_parent_dir = os.path.dirname(kernel_dir)
                 pxeboot_link = os.path.join(kernel_parent_dir, "pxeboot")
@@ -643,10 +591,10 @@ class VM(virt_vm.BaseVM):
                 os.symlink(kernel_dir, pxeboot_link)
 
         elif params.get("medium") == "import":
-            virt_install_cmd += add_import(help_text)
+            virt_install_cmd += add_import(help)
 
         if location:
-            virt_install_cmd += add_location(help_text, location)
+            virt_install_cmd += add_location(help, location)
 
         if params.get("display") == "vnc":
             if params.get("vnc_autoport") == "yes":
@@ -655,55 +603,50 @@ class VM(virt_vm.BaseVM):
                 vm.vnc_autoport = False
             if not vm.vnc_autoport and params.get("vnc_port"):
                 vm.vnc_port = int(params.get("vnc_port"))
-            virt_install_cmd += add_vnc(help_text, vm.vnc_port)
+            virt_install_cmd += add_vnc(help, vm.vnc_port)
             if params.get("vnclisten"):
                 vm.vnclisten = params.get("vnclisten")
-            virt_install_cmd += add_vnclisten(help_text, vm.vnclisten)
+            virt_install_cmd += add_vnclisten(help, vm.vnclisten)
         elif params.get("display") == "sdl":
-            virt_install_cmd += add_sdl(help_text)
+            virt_install_cmd += add_sdl(help)
         elif params.get("display") == "nographic":
-            virt_install_cmd += add_nographic(help_text)
+            virt_install_cmd += add_nographic(help)
 
         video_device = params.get("video_device")
         if video_device:
-            virt_install_cmd += add_video(help_text, video_device)
+            virt_install_cmd += add_video(help, video_device)
 
         sound_device = params.get("sound_device")
         if sound_device:
-            virt_install_cmd += add_soundhw(help_text, sound_device)
+            virt_install_cmd += add_soundhw(help, sound_device)
 
         # if none is given a random UUID will be generated by libvirt
         if params.get("uuid"):
-            virt_install_cmd += add_uuid(help_text, params.get("uuid"))
+            virt_install_cmd += add_uuid(help, params.get("uuid"))
 
         # selectable OS type
         if params.get("use_os_type") == "yes":
-            virt_install_cmd += add_os_type(help_text, params.get("os_type"))
+            virt_install_cmd += add_os_type(help, params.get("os_type"))
 
         # selectable OS variant
         if params.get("use_os_variant") == "yes":
-            virt_install_cmd += add_os_variant(help_text, params.get("os_variant"))
+            virt_install_cmd += add_os_variant(help, params.get("os_variant"))
 
         # Add serial console
-        virt_install_cmd += add_serial(help_text, self.get_serial_console_filename())
+        virt_install_cmd += add_serial(help, self.get_serial_console_filename())
 
         # If the PCI assignment step went OK, add each one of the PCI assigned
         # devices to the command line.
         if self.pci_devices:
             for pci_id in self.pci_devices:
-                virt_install_cmd += add_pcidevice(help_text, pci_id)
+                virt_install_cmd += add_pcidevice(help, pci_id)
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
-
-            base_dir = image_params.get("images_base_dir",
-                                        data_dir.get_data_dir())
-
-            filename = storage.get_image_filename(image_params,
-                                                  base_dir)
+            filename = storage.get_image_filename(image_params, root_dir)
             if image_params.get("use_storage_pool") == "yes":
                 filename = None
-                virt_install_cmd += add_drive(help_text,
+                virt_install_cmd += add_drive(help,
                                   filename,
                                   image_params.get("image_pool"),
                                   image_params.get("image_vol"),
@@ -718,7 +661,7 @@ class VM(virt_vm.BaseVM):
             if image_params.get("boot_drive") == "no":
                 continue
             if filename:
-                virt_install_cmd += add_drive(help_text,
+                virt_install_cmd += add_drive(help,
                                     filename,
                                     None,
                                     None,
@@ -748,7 +691,7 @@ class VM(virt_vm.BaseVM):
                         continue
 
                 if iso:
-                    virt_install_cmd += add_drive(help_text,
+                    virt_install_cmd += add_drive(help,
                                       utils_misc.get_path(root_dir, iso),
                                       image_params.get("iso_image_pool"),
                                       image_params.get("iso_image_vol"),
@@ -766,8 +709,8 @@ class VM(virt_vm.BaseVM):
         # one please modify this part.
         floppy = params.get("floppy_name")
         if floppy:
-            floppy = utils_misc.get_path(data_dir.get_data_dir(), floppy)
-            virt_install_cmd += add_drive(help_text, floppy,
+            floppy = utils_misc.get_path(root_dir, floppy)
+            virt_install_cmd += add_drive(help, floppy,
                               None,
                               None,
                               'floppy',
@@ -780,11 +723,11 @@ class VM(virt_vm.BaseVM):
 
         # setup networking parameters
         for nic in vm.virtnet:
-            # make_create_command can be called w/o vm.create()
+            # __make_libvirt_command can be called w/o vm.create()
             nic = vm.add_nic(**dict(nic))
-            logging.debug("make_create_command() setting up command for"
+            logging.debug("__make_libvirt_command() setting up command for"
                           " nic: %s" % str(nic))
-            virt_install_cmd += add_nic(help_text, nic)
+            virt_install_cmd += add_nic(help,nic)
 
         if params.get("use_no_reboot") == "yes":
             virt_install_cmd += " --noreboot"
@@ -807,14 +750,6 @@ class VM(virt_vm.BaseVM):
         virt_install_cmd += " --noautoconsole"
 
         return virt_install_cmd
-
-
-    def setup_serial_console(self):
-        self.serial_console = aexpect.ShellSession(
-            "virsh console %s" % self.name,
-            auto_close=False,
-            output_func=utils_misc.log_line,
-            output_params=("serial-%s.log" % self.name,))
 
 
     @error.context_aware
@@ -869,7 +804,7 @@ class VM(virt_vm.BaseVM):
                 (os.path.basename(iso) == 'ks.iso')):
                 continue
             if iso:
-                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
+                iso = utils_misc.get_path(root_dir, iso)
                 if not os.path.exists(iso):
                     raise virt_vm.VMImageMissingError(iso)
                 compare = False
@@ -946,45 +881,38 @@ class VM(virt_vm.BaseVM):
                     logging.debug("Copying mac for nic %s from VM %s"
                                     % (nic.nic_name, mac_source.nam))
                     nic_params['mac'] = mac_source.get_mac_address(nic.nic_name)
-                # make_create_command() calls vm.add_nic (i.e. on a copy)
+                # __make_libvirt_command() calls vm.add_nic (i.e. on a copy)
                 nic = self.add_nic(**nic_params)
                 logging.debug('VM.create activating nic %s' % nic)
                 self.activate_nic(nic.nic_name)
 
             # Make qemu command
-            install_command = self.make_create_command()
+            install_command = self.__make_libvirt_command()
 
             logging.info("Running libvirt command (reformatted):")
             for item in install_command.replace(" -", " \n    -").splitlines():
                 logging.info("%s", item)
-            try:
-                utils.run(install_command, verbose=False)
-            except error.CmdError, details:
-                stderr = details.result_obj.stderr.strip()
-                # This is a common newcomer mistake, be more helpful...
-                if stderr.count('IDE CDROM must use'):
-                    testname = params.get('name', "")
-                    if testname.count('unattended_install.cdrom'):
-                        if not testname.count('http_ks'):
-                            raise error.TestNAError(
-                                            "Install command failed:\n%s "
-                                            "\n\nNote: Older versions of "
-                                            "libvirt don't work properly "
-                                            "with kickstart-on-cdrom "
-                                            "install.  Try using the "
-                                            "unattended_install.cdrom.http_ks"
-                                            " instead." % details.result_obj)
-                # some other problem happend, raise normally
-                raise
+            utils.run(install_command, verbose=False)
             # Wait for the domain to be created
             utils_misc.wait_for(func=self.is_alive, timeout=60,
                                 text=("waiting for domain %s to start" %
                                       self.name))
-            self.uuid = virsh.domuuid(self.name,
-                                      uri=self.connect_uri).stdout.strip()
+            self.uuid = virsh.domuuid(self.name, uri=self.connect_uri)
 
             # Establish a session with the serial console
-            self.setup_serial_console()
+            if self.only_pty == True:
+                self.serial_console = aexpect.ShellSession(
+                    "virsh console %s" % self.name,
+                    auto_close=False,
+                    output_func=utils_misc.log_line,
+                    output_params=("serial-%s.log" % name,))
+            else:
+                self.serial_console = aexpect.ShellSession(
+                    "tail -f %s" % self.get_serial_console_filename(),
+                    auto_close=False,
+                    output_func=utils_misc.log_line,
+                    output_params=("serial-%s.log" % name,))
+
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
@@ -1125,16 +1053,11 @@ class VM(virt_vm.BaseVM):
         """
         Return VM's UUID.
         """
-        uuid = virsh.domuuid(self.name, uri=self.connect_uri).stdout.strip()
-        # only overwrite it if it's not set
-        if self.uuid is None:
-            self.uuid = uuid
-        return self.uuid
+        return virsh.domuuid(self.name, uri=self.connect_uri)
 
 
     def get_ifname(self, nic_index=0):
         raise NotImplementedError
-
 
     def get_virsh_mac_address(self, nic_index=0):
         """
@@ -1145,16 +1068,14 @@ class VM(virt_vm.BaseVM):
                 requested NIC
         """
         thexml = virsh.dumpxml(self.name, uri=self.connect_uri)
-        xtf = xml_utils.XMLTreeFile(thexml)
-        interfaces = xtf.find('devices').findall('interface')
-        # Range check
-        try:
-            mac = interfaces[nic_index].find('mac').get('address')
-            if mac is not None:
-                return mac
-        except IndexError:
-            pass # Allow other exceptions through
-        # IndexError (range check) or mac == None
+        dom = minidom.parseString(thexml)
+        count = 0
+        for node in dom.getElementsByTagName('interface'):
+            source = node.childNodes[1]
+            x = source.attributes["address"]
+            if nic_index == count:
+                return x.value
+            count += 1
         raise virt_vm.VMMACAddressMissingError(nic_index)
 
 
@@ -1187,6 +1108,8 @@ class VM(virt_vm.BaseVM):
 
         @return: list of PID of vcpus of a VM.
         """
+
+        vcpu_pids = []
         output = virsh.qemu_monitor_command(self.name, "info cpus",
                                             uri=self.connect_uri)
         vcpu_pids = re.findall(r'thread_id=(\d+)', output.stdout)
@@ -1261,6 +1184,20 @@ class VM(virt_vm.BaseVM):
         return self.wait_for_login(nic_index, timeout=timeout)
 
 
+    def needs_restart(self, name, params, basedir):
+        """
+        Verifies whether the current virt_install commandline matches the
+        requested one, based on the test parameters.
+        """
+        if (self.__make_libvirt_command() !=
+                self.__make_libvirt_command(name, params, basedir)):
+            logging.debug("VM params in env don't match requested, restarting.")
+            return True
+        else:
+            logging.debug("VM params in env do match requested, continuing.")
+            return False
+
+
     def screendump(self, filename, debug=False):
         if debug:
             logging.debug("Requesting screenshot %s" % filename)
@@ -1271,8 +1208,7 @@ class VM(virt_vm.BaseVM):
         """
         Starts this VM.
         """
-        self.uuid = virsh.domuuid(self.name,
-                                  uri=self.connect_uri).stdout.strip()
+        self.uuid = virsh.domuuid(self.name, uri=self.connect_uri)
         # Pull in mac addresses from libvirt guest definition
         for index, nic in enumerate(self.virtnet):
             try:
@@ -1281,7 +1217,7 @@ class VM(virt_vm.BaseVM):
                     logging.debug("Updating nic %d with mac %s on vm %s"
                                   % (index, mac, self.name))
                     nic.mac = mac
-                elif nic.mac != mac:
+                elif nic.mac.upper() != mac:
                     logging.warning("Requested mac %s doesn't match mac %s "
                                     "as defined for vm %s" % (nic.mac, mac,
                                     self.name))
@@ -1289,8 +1225,6 @@ class VM(virt_vm.BaseVM):
             except virt_vm.VMMACAddressMissingError:
                 logging.warning("Nic %d requested by test but not defined for"
                                 " vm %s" % (index, self.name))
-
-        logging.debug("Starting vm '%s'", self.name)
         if virsh.start(self.name, uri=self.connect_uri):
             # Wait for the domain to be created
             has_started = utils_misc.wait_for(func=self.is_alive, timeout=60,
@@ -1299,10 +1233,7 @@ class VM(virt_vm.BaseVM):
             if has_started is None:
                 raise virt_vm.VMStartError(self.name, "libvirt domain not "
                                                       "active after start")
-            self.uuid = virsh.domuuid(self.name,
-                                      uri=self.connect_uri).stdout.strip()
-            # Establish a session with the serial console
-            self.setup_serial_console()
+            self.uuid = virsh.domuuid(self.name, uri=self.connect_uri)
         else:
             raise virt_vm.VMStartError(self.name, "libvirt domain failed "
                                                   "to start")
@@ -1335,71 +1266,38 @@ class VM(virt_vm.BaseVM):
         """
         Shuts down this VM.
         """
-        try:
-            if self.state() != 'shut off':
-                virsh.shutdown(self.name, uri=self.connect_uri)
+        if virsh.shutdown(self.name, uri=self.connect_uri):
             if self.wait_for_shutdown():
                 logging.debug("VM %s shut down", self.name)
                 return True
             else:
                 logging.error("VM %s failed to shut down", self.name)
                 return False
-        except error.CmdError:
+        else:
             logging.error("VM %s failed to shut down", self.name)
             return False
 
 
     def pause(self):
-        try:
-            state = self.state()
-            if state != 'paused':
-                virsh.suspend(self.name, uri=self.connect_uri, ignore_statues=False)
-            return True
-        except:
-            logging.error("VM %s failed to suspend", self.name)
-            return False
+        return virsh.suspend(self.name, uri=self.connect_uri)
 
 
     def resume(self):
-        try:
-            virsh.resume(self.name, ignore_status=False, uri=self.connect_uri)
-            if self.is_alive():
-                logging.debug("Resumed VM %s", self.name)
-                return True
-            else:
-                return False
-        except error.CmdError, detail:
-            logging.error("Resume VM %s failed:\n%s", self.name, detail)
-            return False
+        return virsh.resume(self.name, uri=self.connect_uri)
 
 
     def save_to_file(self, path):
         """
         Override BaseVM save_to_file method
         """
-        state = self.state()
-        if state not in ('paused',):
-            raise virt_vm.VMStatusError("Cannot save a VM that is %s" % state)
-        logging.debug("Saving VM %s to %s" %(self.name, path))
         virsh.save(self.name, path, uri=self.connect_uri)
-        state = self.state()
-        if state not in ('shut off',):
-            raise virt_vm.VMStatusError("VM not shut off after save")
 
 
     def restore_from_file(self, path):
         """
         Override BaseVM restore_from_file method
         """
-        state = self.state()
-        if state not in ('shut off',):
-            raise virt_vm.VMStatusError("Can not restore VM that is %s" % state)
-        logging.debug("Restoring VM from %s" % path)
-        virsh.restore(path, uri=self.connect_uri)
-        state = self.state()
-        if state not in ('paused','running'):
-            raise virt_vm.VMStatusError("VM not paused after restore, it is %s." %
-                   state)
+        virsh.restore(self.name, path, uri=self.connect_uri)
 
 
     def vcpupin(self, vcpu, cpu):
@@ -1407,93 +1305,3 @@ class VM(virt_vm.BaseVM):
         To pin vcpu to cpu
         """
         virsh.vcpupin(self.name, vcpu, cpu, uri=self.connect_uri)
-
-
-    def dominfo(self):
-        """
-        Return a dict include vm's infomation.
-        """
-        output = virsh.dominfo(self.name, uri=self.connect_uri).stdout.strip()
-        # Key: word before ':' | value: content after ':' (stripped)
-        dominfo_dict = {}
-        for line in output.splitlines():
-            key = line.split(':')[0].strip()
-            value = line.split(':')[-1].strip()
-            dominfo_dict[key] = value
-        return dominfo_dict
-
-
-    def vcpuinfo(self):
-        """
-        Return a dict's list include vm's vcpu infomation.
-        """
-        output = virsh.vcpuinfo(self.name,
-                                uri=self.connect_uri).stdout.strip()
-        # Key: word before ':' | value: content after ':' (stripped)
-        vcpuinfo_list = []
-        vcpuinfo_dict = {}
-        for line in output.splitlines():
-            key = line.split(':')[0].strip()
-            value = line.split(':')[-1].strip()
-            vcpuinfo_dict[key] = value
-            if key == "CPU Affinity":
-                vcpuinfo_list.append(vcpuinfo_dict)
-        return vcpuinfo_list
-
-
-    def get_used_mem(self):
-        """
-        Get vm's current memory(kilobytes).
-        """
-        dominfo_dict = self.dominfo()
-        memory = dominfo_dict['Used memory'].split(' ')[0] # strip off ' kb'
-        return int(memory)
-
-
-    def get_blk_devices(self):
-        """
-        Get vm's block devices.
-
-        Return a dict include all devices detail info.
-        example:
-        {target: {'type': value, 'device': value, 'source': value}}
-        """
-        domblkdict = {}
-        options = "--details"
-        result = virsh.domblklist(self.name, options, ignore_status=True,
-                                  uri=self.connect_uri)
-        blklist = result.stdout.strip().splitlines()
-        if result.exit_status != 0:
-            logging.info("Get vm devices failed.")
-        else:
-            blklist = blklist[2:]
-            for line in blklist:
-                linesplit = line.split(None, 4)
-                target = linesplit[2]
-                blk_detail = {'type': linesplit[0],
-                              'device': linesplit[1],
-                              'source': linesplit[3]}
-                domblkdict[target] = blk_detail
-        return domblkdict
-
-
-    def get_disk_devices(self):
-        """
-        Get vm's disk type block devices.
-        """
-        blk_devices = self.get_blk_devices()
-        disk_devices = {}
-        for target in blk_devices:
-            details = blk_devices[target]
-            if details['device'] == "disk":
-                disk_devices[target] = details
-        return disk_devices
-
-
-    def get_max_mem(self):
-        """
-        Get vm's maximum memory(kilobytes).
-        """
-        dominfo_dict = self.dominfo()
-        max_mem = dominfo_dict['Max memory'].split(' ')[0] # strip off 'kb'
-        return int(max_mem)

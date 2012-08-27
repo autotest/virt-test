@@ -5,14 +5,14 @@ This module is meant to reduce code size by performing common test procedures.
 Generally, code here should look like test code.
 More specifically:
     - Functions in this module should raise exceptions if things go wrong
-      (unlike functions in kvm_utils.py and qemu_vm.py which report failure via
+      (unlike functions in kvm_utils.py and kvm_vm.py which report failure via
       their returned values).
     - Functions in this module may use logging.info(), in addition to
       logging.debug() and logging.error(), to log messages the user may be
-      interested in (unlike kvm_utils.py and qemu_vm.py which use
+      interested in (unlike kvm_utils.py and kvm_vm.py which use
       logging.debug() for anything that isn't an error).
     - Functions in this module typically use functions and classes from
-      lower-level modules (e.g. kvm_utils.py, qemu_vm.py, kvm_subprocess.py).
+      lower-level modules (e.g. kvm_utils.py, kvm_vm.py, kvm_subprocess.py).
     - Functions in this module should not be used by lower-level modules.
     - Functions in this module should be used in the right context.
       For example, a function should not be used where it may display
@@ -21,27 +21,16 @@ More specifically:
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl
-import threading, shelve, getpass, socket
+import time, os, logging, re, signal, imp, tempfile, commands
+import threading, shelve
 from Queue import Queue
-from autotest.client.shared import error
-from autotest.client import utils, os_dep
+from autotest.client.shared import error, global_config
+from autotest.client import utils
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
-import aexpect, utils_misc, virt_vm, remote, storage, env_process, utils_cgroup
-import virttest
+import aexpect, utils_misc, virt_vm, remote, storage, env_process
 
-# Handle transition from autotest global_config (0.14.x series) to
-# settings (0.15.x onwards)
-try:
-    from autotest.client.shared import global_config
-    section_values = global_config.global_config.get_section_values
-    settings_value = global_config.global_config.get_config_value
-except ImportError:
-    from autotest.client.shared.settings import settings
-    section_values = settings.get_section_values
-    settings_value = settings.get_value
-
+GLOBAL_CONFIG = global_config.global_config
 
 def get_living_vm(env, vm_name):
     """
@@ -71,6 +60,7 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
             (ssh, rss) one.
     @return: A shell session object.
     """
+    login_type = 'remote'
     end_time = time.time() + timeout
     session = None
     if serial:
@@ -97,10 +87,23 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             time.sleep(step)
+        if not session and vm.get_params().get("try_serial_login") == "yes":
+            mode = "serial"
+            logging.info("Remote login failed, trying to login '%s' with "
+                         "serial, timeout %ds", vm.name, timeout)
+            time.sleep(start)
+            while time.time() < end_time:
+                try:
+                    session = vm.serial_login()
+                    break
+                except virt_utils.LoginError, e:
+                    logging.debug(e)
+                time.sleep(step)
     if not session:
         raise error.TestFail("Could not log into guest %s using %s connection" %
-                             (vm.name, mode))
-    logging.info("Logged into guest %s using %s connection", vm.name, mode)
+                             (vm.name, login_type))
+    logging.info("Logged into guest %s using %s connection", vm.name,
+                 login_type)
     return session
 
 
@@ -158,6 +161,36 @@ def reboot(vm, session, method="shell", sleep_before_reset=10, nic_index=0,
     logging.info("Guest is up again")
     return session
 
+def update_boot_option(vm, args_removed=None, args_added=None,
+                       need_reboot=True):
+    """
+    Update guest default kernel option.
+    """
+    if vm.params.get("os_type") == 'windows':
+        # this function is only for linux, if we need to change
+        # windows guest's boot option, we can use a function like:
+        # update_win_bootloader(args_removed, args_added, reboot)
+        # (this function is not implement.)
+        # here we just:
+        return
+
+    login_timeout = int(vm.params.get("login_timeout"))
+    session = vm.wait_for_login(timeout=login_timeout)
+
+    logging.info("Update the kernel cmdline ...")
+    cmd = "grubby --update-kernel=`grubby --default-kernel` "
+    if args_removed:
+        cmd += '--remove-args="%s" ' % args_removed
+    if args_added:
+        cmd += '--args="%s"' % args_added
+    s, o = session.cmd_status_output(cmd)
+    if s != 0:
+        logging.error(o)
+        raise error.TestError("Fail to modify the kernel cmdline")
+
+    if need_reboot:
+        logging.info("Rebooting ...")
+        vm.reboot(session=session, timeout=login_timeout)
 
 @error.context_aware
 def update_boot_option(vm, args_removed=None, args_added=None,
@@ -220,11 +253,15 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             case of multi-host migration.
     """
     def mig_finished():
-        o = vm.monitor.info("migrate")
-        if isinstance(o, str):
-            return "status: active" not in o
-        else:
-            return o.get("status") != "active"
+        try:
+            o = vm.monitor.info("migrate")
+            logging.debug("%s", o)
+            if isinstance(o, str):
+                return "status: active" not in o
+            else:
+                return o.get("status") != "active"
+        except Exception:
+            pass
 
     def mig_succeeded():
         o = vm.monitor.info("migrate")
@@ -332,7 +369,8 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
     elif mig_failed():
         raise error.TestFail("Migration failed")
     else:
-        raise error.TestFail("Migration ended with unknown status")
+        status = vm.monitor.info("migrate")
+        raise error.TestFail("Migration end with stauts: %s" % status)
 
     if dest_host == 'localhost':
         if dest_vm.monitor.verify_status("paused"):
@@ -340,7 +378,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             dest_vm.resume()
 
     # Kill the source VM
-    vm.destroy(gracefully=False)
+    vm.destroy(gracefully=False, free_mac_addresses=False)
 
     # Replace the source VM with the new cloned VM
     if (dest_host == 'localhost') and (env is not None):
@@ -512,11 +550,6 @@ class MultihostMigration(object):
         raise NotImplementedError
 
 
-    def post_migration(self, vm, cancel_delay, mig_offline, dsthost, vm_ports,
-                             not_wait_for_migration, fd, mig_data):
-        pass
-
-
     def migrate_vms_src(self, mig_data):
         """
         Migrate vms source.
@@ -526,35 +559,14 @@ class MultihostMigration(object):
         For change way how machine migrates is necessary
         re implement this method.
         """
-        def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
-                        not_wait_for_migration, mig_offline, mig_data):
-            vm.migrate(cancel_delay=cancel_delay, offline=mig_offline,
-                       dest_host=dsthost, remote_port=vm_ports[vm.name],
-                       not_wait_for_migration=not_wait_for_migration)
-
-            self.post_migration(vm, cancel_delay, mig_offline, dsthost,
-                                vm_ports, not_wait_for_migration, None,
-                                mig_data)
+        def mig_wrapper(vm, dsthost, vm_ports):
+            vm.migrate(dest_host=dsthost, remote_port=vm_ports[vm.name])
 
         logging.info("Start migrating now...")
-        cancel_delay = mig_data.params.get("cancel_delay")
-        if cancel_delay is not None:
-            cancel_delay = int(cancel_delay)
-        not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
-        if not_wait_for_migration == "yes":
-            not_wait_for_migration = True
-        mig_offline = mig_data.params.get("mig_offline")
-        if mig_offline == "yes":
-            mig_offline = True
-        else:
-            mig_offline = False
-
         multi_mig = []
         for vm in mig_data.vms:
-            multi_mig.append((mig_wrapper, (vm, cancel_delay, mig_data.dst,
-                                            mig_data.vm_ports,
-                                            not_wait_for_migration,
-                                            mig_offline, mig_data)))
+            multi_mig.append((mig_wrapper, (vm, mig_data.dst,
+                                            mig_data.vm_ports)))
         utils_misc.parallel(multi_mig)
 
 
@@ -593,17 +605,14 @@ class MultihostMigration(object):
 
 
     def _check_vms_source(self, mig_data):
-        start_mig_tout = mig_data.params.get("start_migration_timeout", None)
-        if start_mig_tout is None:
-            for vm in mig_data.vms:
-                vm.wait_for_login(timeout=self.login_timeout)
+        for vm in mig_data.vms:
+            vm.wait_for_login(timeout=self.login_timeout)
 
-        if mig_data.params.get("host_mig_offline") != "yes":
-            sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
-                            mig_data.mig_id, self.sync_server)
-            mig_data.vm_ports = sync.sync(timeout=120)[mig_data.dst]
-            logging.info("Received from destination the migration port %s",
-                         str(mig_data.vm_ports))
+        sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
+                        mig_data.mig_id, self.sync_server)
+        mig_data.vm_ports = sync.sync(timeout=120)[mig_data.dst]
+        logging.info("Received from destination the migration port %s",
+                     str(mig_data.vm_ports))
 
 
     def _check_vms_dest(self, mig_data):
@@ -613,10 +622,9 @@ class MultihostMigration(object):
                          vm.migration_port)
             mig_data.vm_ports[vm.name] = vm.migration_port
 
-        if mig_data.params.get("host_mig_offline") != "yes":
-            SyncData(self.master_id(), self.hostid,
-                     mig_data.hosts, mig_data.mig_id,
-                     self.sync_server).sync(mig_data.vm_ports, timeout=120)
+        SyncData(self.master_id(), self.hostid,
+                 mig_data.hosts, mig_data.mig_id,
+                 self.sync_server).sync(mig_data.vm_ports, timeout=120)
 
 
     def _prepare_params(self, mig_data):
@@ -681,14 +689,13 @@ class MultihostMigration(object):
             self.migrate_vms_dest(mig_data)
 
 
-    def check_vms_dst(self, mig_data):
+    def check_vms(self, mig_data):
         """
         Check vms after migrate.
 
         @param mig_data: object with migration data.
         """
         for vm in mig_data.vms:
-            vm.resume()
             if not guest_active(vm):
                 raise error.TestFail("Guest not active after migration")
 
@@ -705,29 +712,11 @@ class MultihostMigration(object):
             vm.wait_for_login(timeout=self.login_timeout)
 
 
-    def check_vms_src(self, mig_data):
-        """
-        Check vms after migrate.
-
-        @param mig_data: object with migration data.
-        """
-        pass
-
-
     def postprocess_env(self):
         """
         Kill vms and delete cloned images.
         """
-        pass
-
-
-    def before_migration(self, mig_data):
-        """
-        Do something right before migration.
-
-        @param mig_data: object with migration data.
-        """
-        pass
+        storage.postprocess_images(self.test.bindir, self.params)
 
 
     def migrate(self, vms_name, srchost, dsthost, start_work=None,
@@ -766,83 +755,44 @@ class MultihostMigration(object):
                 check_work=None, params_append=None):
             logging.info("Starting migrate vms %s from host %s to %s" %
                          (vms_name, srchost, dsthost))
-            pause = self.params.get("paused_after_start_vm")
-            mig_error = None
+            error = None
             mig_data = MigrationData(self.params, srchost, dsthost,
                                      vms_name, params_append)
-            cancel_delay = self.params.get("cancel_delay", None)
-            host_offline_migration = self.params.get("host_mig_offline")
-
             try:
                 try:
                     if mig_data.is_src():
                         self.prepare_for_migration(mig_data, None)
                     elif self.hostid == dsthost:
-                        if host_offline_migration != "yes":
-                            self.prepare_for_migration(mig_data, mig_mode)
+                        self.prepare_for_migration(mig_data, mig_mode)
                     else:
                         return
 
                     if mig_data.is_src():
                         if start_work:
-                            if pause != "yes":
-                                start_work(mig_data)
-                            else:
-                                raise error.TestNAError("Can't start work if "
-                                                        "vm is paused.")
-
-                    # Starts VM and waits timeout before migration.
-                    if pause == "yes" and mig_data.is_src():
-                        for vm in mig_data.vms:
-                            vm.resume()
-                        wait = self.params.get("start_migration_timeout", 0)
-                        logging.debug("Wait for migraiton %s seconds." %
-                                      (wait))
-                        time.sleep(int(wait))
-
-                    self.before_migration(mig_data)
+                            start_work(mig_data)
 
                     self.migrate_vms(mig_data)
 
-                    timeout = 60
-                    if cancel_delay is None:
-                        if host_offline_migration == "yes":
-                            self._hosts_barrier(self.hosts,
-                                                mig_data.mig_id,
-                                                'wait_for_offline_mig',
-                                                self.finish_timeout)
-                            if mig_data.is_dst():
-                                self.prepare_for_migration(mig_data, mig_mode)
-                            self._hosts_barrier(self.hosts,
-                                                mig_data.mig_id,
-                                                'wait2_for_offline_mig',
-                                                self.finish_timeout)
+                    timeout = 30
+                    if not mig_data.is_src():
+                        timeout = self.mig_timeout
+                    self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
+                                        'mig_finished', timeout)
 
-                        if (not mig_data.is_src()):
-                            timeout = self.mig_timeout
-                        self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
-                                            'mig_finished', timeout)
+                    if mig_data.is_dst():
+                        self.check_vms(mig_data)
+                        if check_work:
+                            check_work(mig_data)
 
-                        if mig_data.is_dst():
-                            self.check_vms_dst(mig_data)
-                            if check_work:
-                                check_work(mig_data)
-                        else:
-                            self.check_vms_src(mig_data)
-                            if check_work:
-                                check_work(mig_data)
                 except:
-                    mig_error = True
+                    error = True
                     raise
             finally:
-                if not mig_error and cancel_delay is None:
+                if not error:
                     self._hosts_barrier(self.hosts,
                                         mig_data.mig_id,
                                         'test_finihed',
                                         self.finish_timeout)
-                elif mig_error:
-                    raise
-
 
         def wait_wrap(vms_name, srchost, dsthost):
             mig_data = MigrationData(self.params, srchost, dsthost, vms_name,
@@ -910,319 +860,6 @@ class MultihostMigration(object):
             self.cleanup()
 
 
-class MultihostMigrationFd(MultihostMigration):
-    def __init__(self, test, params, env, preprocess_env=True):
-        super(MultihostMigrationFd, self).__init__(test, params, env,
-                                                   preprocess_env)
-
-    def migrate_vms_src(self, mig_data):
-        """
-        Migrate vms source.
-
-        @param mig_Data: Data for migration.
-
-        For change way how machine migrates is necessary
-        re implement this method.
-        """
-        def mig_wrapper(vm, cancel_delay, mig_offline, dsthost, vm_ports,
-                        not_wait_for_migration, fd):
-            vm.migrate(cancel_delay=cancel_delay, offline=mig_offline,
-                       dest_host=dsthost,
-                       not_wait_for_migration=not_wait_for_migration,
-                       protocol="fd",
-                       fd_src=fd)
-
-            self.post_migration(vm, cancel_delay, mig_offline, dsthost,
-                                vm_ports, not_wait_for_migration, fd, mig_data)
-
-        logging.info("Start migrating now...")
-        cancel_delay = mig_data.params.get("cancel_delay")
-        if cancel_delay is not None:
-            cancel_delay = int(cancel_delay)
-        not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
-        if not_wait_for_migration == "yes":
-            not_wait_for_migration = True
-        mig_offline = mig_data.params.get("mig_offline")
-        if mig_offline == "yes":
-            mig_offline = True
-        else:
-            mig_offline = False
-
-        multi_mig = []
-        for vm in mig_data.vms:
-            fd = vm.params.get("migration_fd")
-            multi_mig.append((mig_wrapper, (vm, cancel_delay, mig_offline,
-                                            mig_data.dst, mig_data.vm_ports,
-                                            not_wait_for_migration,
-                                            fd)))
-        utils_misc.parallel(multi_mig)
-
-    def _check_vms_source(self, mig_data):
-        start_mig_tout = mig_data.params.get("start_migration_timeout", None)
-        if start_mig_tout is None:
-            for vm in mig_data.vms:
-                vm.wait_for_login(timeout=self.login_timeout)
-        self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
-                            'prepare_VMS', 60)
-
-    def _check_vms_dest(self, mig_data):
-        self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
-                             'prepare_VMS', 120)
-        for vm in mig_data.vms:
-            fd = vm.params.get("migration_fd")
-            os.close(fd)
-
-    def _connect_to_server(self, host, port, timeout=60):
-        """
-        Connect to network server.
-        """
-        endtime = time.time() + timeout
-        sock = None
-        while endtime > time.time():
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try:
-                sock.connect((host, port))
-                break
-            except socket.error, err:
-                (code, _) = err
-                if (code != errno.ECONNREFUSED):
-                    raise
-                time.sleep(1)
-
-        return sock
-
-    def _create_server(self, port, timeout=60):
-        """
-        Create network server.
-        """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.settimeout(timeout)
-        sock.bind(('', port))
-        sock.listen(1)
-        return sock
-
-    def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
-                      check_work=None, mig_mode="fd", params_append=None):
-        vms_count = len(vms_name)
-        mig_ports = []
-
-        if self.params.get("hostid") == srchost:
-            last_port = 5199
-            for _ in range(vms_count):
-                last_port = utils_misc.find_free_port(last_port+1, 6000)
-                mig_ports.append(last_port)
-
-        sync = SyncData(self.master_id(), self.hostid,
-                         self.params.get("hosts"),
-                         {'src': srchost, 'dst': dsthost,
-                          'port': "ports"}, self.sync_server)
-
-        mig_ports = sync.sync(mig_ports, timeout=120)
-        mig_ports = mig_ports[srchost]
-        logging.debug("Migration port %s" % (mig_ports))
-
-        if self.params.get("hostid") != srchost:
-            sockets = []
-            for mig_port in mig_ports:
-                sockets.append(self._connect_to_server(srchost, mig_port))
-            try:
-                fds = {}
-                for s, vm_name in zip(sockets, vms_name):
-                    fds["migration_fd_%s" % vm_name] = s.fileno()
-                logging.debug("File descrtiptors %s used for"
-                              " migration." % (fds))
-
-                super_cls = super(MultihostMigrationFd, self)
-                super_cls.migrate_wait(vms_name, srchost, dsthost,
-                                  start_work=start_work, mig_mode="fd",
-                                  params_append=fds)
-            finally:
-                for s in sockets:
-                    s.close()
-        else:
-            sockets = []
-            for mig_port in mig_ports:
-                sockets.append(self._create_server(mig_port))
-            try:
-                conns = []
-                for s in sockets:
-                    conns.append(s.accept()[0])
-                fds = {}
-                for conn, vm_name in zip(conns, vms_name):
-                    fds["migration_fd_%s" % vm_name] = conn.fileno()
-                logging.debug("File descrtiptors %s used for"
-                              " migration." % (fds))
-
-                #Prohibits descriptor inheritance.
-                for fd in fds.values():
-                    flags = fcntl.fcntl(fd, fcntl.F_GETFD)
-                    flags |= fcntl.FD_CLOEXEC
-                    fcntl.fcntl(fd, fcntl.F_SETFD, flags)
-
-                super_cls = super(MultihostMigrationFd, self)
-                super_cls.migrate_wait(vms_name, srchost, dsthost,
-                                  start_work=start_work, mig_mode="fd",
-                                  params_append=fds)
-                for conn in conns:
-                    conn.close()
-            finally:
-                for s in sockets:
-                    s.close()
-
-
-class MultihostMigrationExec(MultihostMigration):
-    def __init__(self, test, params, env, preprocess_env=True):
-        super(MultihostMigrationExec, self).__init__(test, params, env,
-                                                     preprocess_env)
-
-
-    def post_migration(self, vm, cancel_delay, mig_offline, dsthost,
-                             mig_exec_cmd, not_wait_for_migration, fd,
-                             mig_data):
-        if mig_data.params.get("host_mig_offline") == "yes":
-            src_tmp = vm.params.get("migration_sfiles_path")
-            dst_tmp = vm.params.get("migration_dfiles_path")
-            username = vm.params.get("username")
-            password = vm.params.get("password")
-            remote.scp_to_remote(dsthost, "22", username, password,
-                                 src_tmp, dst_tmp)
-
-
-    def migrate_vms_src(self, mig_data):
-        """
-        Migrate vms source.
-
-        @param mig_Data: Data for migration.
-
-        For change way how machine migrates is necessary
-        re implement this method.
-        """
-        def mig_wrapper(vm, cancel_delay, mig_offline, dsthost, mig_exec_cmd,
-                        not_wait_for_migration, mig_data):
-            vm.migrate(cancel_delay=cancel_delay,
-                       offline=mig_offline,
-                       dest_host=dsthost,
-                       not_wait_for_migration=not_wait_for_migration,
-                       protocol="exec",
-                       migration_exec_cmd_src=mig_exec_cmd)
-
-            self.post_migration(vm, cancel_delay, mig_offline,
-                                dsthost, mig_exec_cmd,
-                                not_wait_for_migration, None, mig_data)
-
-        logging.info("Start migrating now...")
-        cancel_delay = mig_data.params.get("cancel_delay")
-        if cancel_delay is not None:
-            cancel_delay = int(cancel_delay)
-        not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
-        if not_wait_for_migration == "yes":
-            not_wait_for_migration = True
-        mig_offline = mig_data.params.get("mig_offline")
-        if mig_offline == "yes":
-            mig_offline = True
-        else:
-            mig_offline = False
-
-        multi_mig = []
-        for vm in mig_data.vms:
-            mig_exec_cmd = vm.params.get("migration_exec_cmd_src")
-            multi_mig.append((mig_wrapper, (vm, cancel_delay,
-                                            mig_offline,
-                                            mig_data.dst,
-                                            mig_exec_cmd,
-                                            not_wait_for_migration,
-                                            mig_data)))
-        utils_misc.parallel(multi_mig)
-
-
-    def _check_vms_source(self, mig_data):
-        start_mig_tout = mig_data.params.get("start_migration_timeout", None)
-        if start_mig_tout is None:
-            for vm in mig_data.vms:
-                vm.wait_for_login(timeout=self.login_timeout)
-
-        if mig_data.params.get("host_mig_offline") != "yes":
-            self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
-                                'prepare_VMS', 60)
-
-
-    def _check_vms_dest(self, mig_data):
-        if mig_data.params.get("host_mig_offline") != "yes":
-            self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
-                                'prepare_VMS', 120)
-
-
-    def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
-                      check_work=None, mig_mode="exec", params_append=None):
-        vms_count = len(vms_name)
-        mig_ports = []
-
-        host_offline_migration = self.params.get("host_mig_offline")
-
-        sync = SyncData(self.master_id(), self.hostid,
-                         self.params.get("hosts"),
-                         {'src': srchost, 'dst': dsthost,
-                          'port': "ports"}, self.sync_server)
-
-        mig_params = {}
-
-        if host_offline_migration != "yes":
-            if self.params.get("hostid") == dsthost:
-                last_port = 5199
-                for _ in range(vms_count):
-                    last_port = utils_misc.find_free_port(last_port + 1, 6000)
-                    mig_ports.append(last_port)
-
-            mig_ports = sync.sync(mig_ports, timeout=120)
-            mig_ports = mig_ports[dsthost]
-            logging.debug("Migration port %s" % (mig_ports))
-            mig_cmds = {}
-            for mig_port, vm_name in zip(mig_ports, vms_name):
-                mig_dst_cmd = "nc -l %s %s" % (dsthost, mig_port)
-                mig_src_cmd = "nc %s %s" % (dsthost, mig_port)
-                mig_params["migration_exec_cmd_src_%s" % (vm_name)] = mig_src_cmd
-                mig_params["migration_exec_cmd_dst_%s" % (vm_name)] = mig_dst_cmd
-        else:
-            # Generate filenames for migration.
-            mig_fnam = {}
-            for vm_name in vms_name:
-                while True:
-                    fnam = ("mig_" + utils.generate_random_string(6) +
-                            "." + vm_name)
-                    fpath = os.path.join(self.test.tmpdir, fnam)
-                    if (not fnam in mig_fnam.values() and
-                        not os.path.exists(fnam)):
-                        mig_fnam[vm_name] = fpath
-                        break
-            mig_fs = sync.sync(mig_fnam, timeout=120)
-            mig_cmds = {}
-            # Prepare cmd and files.
-            if self.params.get("hostid") == srchost:
-                mig_src_cmd = "gzip -c > %s"
-                for vm_name in vms_name:
-                    mig_params["migration_sfiles_path_%s" % (vm_name)] = (
-                        mig_fs[srchost][vm_name])
-                    mig_params["migration_dfiles_path_%s" % (vm_name)] = (
-                        mig_fs[dsthost][vm_name])
-
-                    mig_params["migration_exec_cmd_src_%s" % (vm_name)] = (
-                        mig_src_cmd % mig_fs[srchost][vm_name])
-
-            if self.params.get("hostid") == dsthost:
-                mig_dst_cmd = "gzip -c -d %s"
-                for vm_name in vms_name:
-                    mig_params["migration_exec_cmd_dst_%s" % (vm_name)] = (
-                         mig_dst_cmd % mig_fs[dsthost][vm_name])
-
-        logging.debug("Exec commands %s", mig_cmds)
-
-        super_cls = super(MultihostMigrationExec, self)
-        super_cls.migrate_wait(vms_name, srchost, dsthost,
-                               start_work=start_work, mig_mode=mig_mode,
-                               params_append=mig_params)
-
-
 def stop_windows_service(session, service, timeout=120):
     """
     Stop a Windows service using sc.
@@ -1278,6 +915,9 @@ def get_time(session, time_command, time_filter_re, time_format):
     (i.e. should "display" a command prompt and should be done with all
     previous commands).
 
+    Add ntp service way to get the time of guest. In this method, host_time is
+    the time of ntp server.
+
     @param session: A shell session.
     @param time_command: Command to issue to get the current guest time.
     @param time_filter_re: Regex filter to apply on the output of
@@ -1324,6 +964,61 @@ def get_time(session, time_command, time_filter_re, time_format):
 
     return (host_time, guest_time)
 
+def dump_command_output(session, command, file, timeout=30.0,
+                        internal_timeout=1.0, print_func=None):
+    """
+    @param session: a saved communication between host and guest.
+    @param command: will running in guest side.
+    @param file: redirect command output to the specify file
+    @param timeout: the duration (in seconds) to wait until a match is found.
+    @param internal_timeout: the timeout to pass to read_nonblocking.
+    @param print_func: a function to be used to print the data being read.
+    @return: Command output(string).
+    """
+
+    (status, output) = session.get_command_status_output(command, timeout,
+                                                internal_timeout, print_func)
+    if status != 0:
+        raise error.TestError("Failed to run command %s in guest." % command)
+    try:
+        f = open(file, "w")
+    except IOError:
+        raise error.TestError("Failed to open file opject: %s" % file)
+    f.write(output)
+    f.close()
+
+
+def fix_atest_cmd(atest_basedir, cmd, ip):
+    """
+    fixes the command "autotest/cli/atest" for the external server tests.
+
+    e.g.
+    1. adding -w autotest server argument;
+    2. adding autotest/cli/atest prefix/basedir;
+    and etc..
+
+    @param atest_basedir: base dir of autotest/cli/atest
+    @param cmd: command to fix.
+    @param ip: ip of the autotest server to add to the command.
+    """
+    cmd = os.path.join(atest_basedir, cmd)
+    return ''.join([cmd, " -w ", ip])
+
+
+def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
+    """
+    @param ip: IP address of the server.
+    @param port: the port for remote session.
+    @param usrname: user name for remote login.
+    @param passwd: password.
+    @param prompt: shell/session prompt for the connection.
+    """
+    session = virt_utils.remote_login("ssh", ip, port, usrname, passwd, prompt)
+    if not session:
+        raise error.TestError("Failed to login to the autotest server.")
+
+    return session
+
 
 def get_memory_info(lvms):
     """
@@ -1358,27 +1053,6 @@ def get_memory_info(lvms):
     return meminfo
 
 
-def domstat_cgroup_cpuacct_percpu(domain, qemu_path="/libvirt/qemu/"):
-    """
-    Get a list of domain-specific per CPU stats from cgroup cpuacct controller.
-
-    @param domain: Domain name
-    @param qemu_path: Default: "/libvirt/qemu/".
-                      Please refer OS doc to pass the correct qemu path.
-                      $CGRP_MNTPT/cpuacct/<$qemu_path>/<domain>..
-    """
-    percpu_act_file = (utils_cgroup.get_cgroup_mountpoint("cpuacct") +
-                       qemu_path + domain + "/cpuacct.usage_percpu")
-    try:
-        f_percpu_act = open(percpu_act_file, "rU")
-        cpuacct_usage_percpu = f_percpu_act.readline().split()
-        f_percpu_act.close()
-        return cpuacct_usage_percpu
-    except IOError:
-        raise error.TestError("Failed to get per cpu stat from %s" %
-                              percpu_act_file)
-
-
 def run_file_transfer(test, params, env):
     """
     Transfer a file back and forth between host and guest.
@@ -1389,7 +1063,7 @@ def run_file_transfer(test, params, env):
     4) Copy this file from guest to host.
     5) Check if file transfers ended good.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -1463,7 +1137,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     """
     Run an autotest control file inside a guest (linux only utility).
 
-    @param vm: VM object.
+    @param vm: VM object. 
     @param session: A shell session on the VM provided.
     @param control_path: A path to an autotest control file.
     @param timeout: Timeout under which the autotest control file must complete.
@@ -1524,7 +1198,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
         output = session.cmd(e_cmd, timeout=120)
         autotest_dirname = ""
-        for line in output.splitlines()[1:]:
+        for line in output.splitlines():
             autotest_dirname = line.split("/")[0]
             break
         if autotest_dirname != os.path.basename(dest_dir):
@@ -1533,7 +1207,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                         (autotest_dirname, os.path.basename(dest_dir)))
 
 
-    def get_results(base_results_dir):
+    def get_results(guest_results_path):
         """
         Copy autotest results present on the guest back to the host.
         """
@@ -1541,7 +1215,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
         if not os.path.exists(guest_results_dir):
             os.mkdir(guest_results_dir)
-        vm.copy_files_from("%s/results/default/*" % base_results_dir,
+        vm.copy_files_from("%s/results/default/*" % guest_autotest_path,
                            guest_results_dir)
 
 
@@ -1571,45 +1245,37 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
             logging.error("Error processing guest autotest results: %s", e)
             return None
 
-
     if not os.path.isfile(control_path):
         raise error.TestError("Invalid path to autotest control file: %s" %
                               control_path)
 
-    migrate_background = params.get("migrate_background") == "yes"
+    migrate_background = (params.get("migrate_background") == "yes")
     if migrate_background:
         mig_timeout = float(params.get("mig_timeout", "3600"))
         mig_protocol = params.get("migration_protocol", "tcp")
 
     compressed_autotest_path = "/tmp/autotest.tar.bz2"
-    destination_autotest_path = "/usr/local/autotest"
+    destination_autotest_path = GLOBAL_CONFIG.get_config_value('COMMON',
+                                                            'autotest_top_path')
 
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
-    from autotest.client import common
-    autotest_path = os.path.dirname(common.__file__)
-    autotest_local_path = os.path.join(autotest_path, 'autotest-local')
-    single_dir_install = os.path.isfile(autotest_local_path)
-    if not single_dir_install:
-        autotest_local_path = os_dep.command('autotest-local')
-    kernel_install_path = os.path.join(autotest_path, 'tests',
-                                       'kernelinstall')
-    kernel_install_present = os.path.isdir(kernel_install_path)
-
+    autotest_path = os.environ['AUTODIR']
     autotest_basename = os.path.basename(autotest_path)
     autotest_parentdir = os.path.dirname(autotest_path)
 
     # tar the contents of bindir/autotest
     cmd = ("cd %s; tar cvjf %s %s/*" %
            (autotest_parentdir, compressed_autotest_path, autotest_basename))
-    # Until we have nested virtualization, we don't need the virt test :)
-    cmd += " --exclude=%s/tests/virt" % autotest_basename
+    # Until we have nested virtualization, we don't need the kvm test :)
+    cmd += " --exclude=%s/tests/kvm" % autotest_basename
     cmd += " --exclude=%s/results" % autotest_basename
     cmd += " --exclude=%s/tmp" % autotest_basename
     cmd += " --exclude=%s/control*" % autotest_basename
     cmd += " --exclude=*.pyc"
     cmd += " --exclude=*.svn"
     cmd += " --exclude=*.git"
+    logging.info("Trying to package autotest.")
     utils.run(cmd)
 
     # Copy autotest.tar.bz2
@@ -1622,14 +1288,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
 
     g_fd, g_path = tempfile.mkstemp(dir='/tmp/')
     aux_file = os.fdopen(g_fd, 'w')
-    config = section_values(('CLIENT', 'COMMON'))
-    config.set('CLIENT', 'output_dir', destination_autotest_path)
-    config.set('COMMON', 'autotest_top_path', destination_autotest_path)
-    destination_test_dir = os.path.join(destination_autotest_path, 'tests')
-    config.set('COMMON', 'test_dir', destination_test_dir)
-    destination_test_output_dir = os.path.join(destination_autotest_path,
-                                               'results')
-    config.set('COMMON', 'test_output_dir', destination_test_output_dir)
+    config = GLOBAL_CONFIG.get_section_values(('CLIENT', 'COMMON'))
     config.write(aux_file)
     aux_file.close()
     global_config_guest = os.path.join(destination_autotest_path,
@@ -1639,28 +1298,6 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
 
     vm.copy_files_to(control_path,
                      os.path.join(destination_autotest_path, 'control'))
-
-    if not single_dir_install:
-        vm.copy_files_to(autotest_local_path,
-                         os.path.join(destination_autotest_path,
-                                      'autotest-local'))
-    if not kernel_install_present:
-        kernel_install_dir = os.path.join(virttest.data_dir.get_root_dir(),
-                                          "shared", "deps",
-                                          "test_kernel_install")
-        kernel_install_dest = os.path.join(destination_autotest_path, 'tests',
-                                           'kernelinstall')
-        vm.copy_files_to(kernel_install_dir, kernel_install_dest)
-        module_dir = os.path.dirname(virttest.__file__)
-        module_dir = os.path.join(module_dir, 'utils_koji.py')
-        vm.copy_files_to(module_dir, kernel_install_dest)
-
-    # Copy a non crippled boottool and make it executable
-    boottool_path = os.path.join(virttest.data_dir.get_root_dir(),
-                                 "shared", "deps", "boottool.py")
-    boottool_dest = '/usr/local/autotest/tools/boottool.py'
-    vm.copy_files_to(boottool_path, boottool_dest)
-    session.cmd("chmod +x %s" % boottool_dest)
 
     # Run the test
     logging.info("Running autotest control file %s on guest, timeout %ss",
@@ -1679,11 +1316,10 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
             if migrate_background:
                 mig_timeout = float(params.get("mig_timeout", "3600"))
                 mig_protocol = params.get("migration_protocol", "tcp")
-
                 bg = utils.InterruptedThread(session.cmd_output,
-                                      kwargs={'cmd': "./autotest control",
-                                              'timeout': timeout,
-                                              'print_func': logging.info})
+                                  kwargs={'cmd': "bin/autotest control",
+                                          'timeout': timeout,
+                                          'print_func': logging.info})
 
                 bg.start()
 
@@ -1692,8 +1328,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                session.cmd_output("./autotest-local --verbose control",
-                                   timeout=timeout,
+                session.cmd_output("bin/autotest control", timeout=timeout,
                                    print_func=logging.info)
         finally:
             logging.info("------------- End of test output ------------")
@@ -1716,12 +1351,11 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     get_results(destination_autotest_path)
     results = get_results_summary()
 
-    if results is not None:
-        # Make a list of FAIL/ERROR/ABORT results (make sure FAIL results appear
-        # before ERROR results, and ERROR results appear before ABORT results)
-        bad_results = [r[0] for r in results if r[1] == "FAIL"]
-        bad_results += [r[0] for r in results if r[1] == "ERROR"]
-        bad_results += [r[0] for r in results if r[1] == "ABORT"]
+    # Make a list of FAIL/ERROR/ABORT results (make sure FAIL results appear
+    # before ERROR results, and ERROR results appear before ABORT results)
+    bad_results = [r[0] for r in results if r[1] == "FAIL"]
+    bad_results += [r[0] for r in results if r[1] == "ERROR"]
+    bad_results += [r[0] for r in results if r[1] == "ABORT"]
 
     # Fail the test if necessary
     if not results:
@@ -1735,6 +1369,53 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
             e_msg = ("Tests %s failed during control file execution" %
                      " ".join(bad_results))
         raise error.TestFail(e_msg)
+
+
+class BackgroundTest(object):
+    """
+    This class would run a test in background through a dedicated thread.
+    """
+
+    def __init__(self, func, params, kwargs={}):
+        """
+        Initialize the object and set a few attributes.
+        """
+        self.thread = threading.Thread(target=self.launch,
+                                       args=(func, params, kwargs))
+        self.exception = None
+
+
+    def launch(self, func, params, kwargs):
+        """
+        Catch and record the exception.
+        """
+        try:
+            func(*params, **kwargs)
+        except Exception, e:
+            self.exception = e
+
+
+    def start(self):
+        """
+        Run func(params) in a dedicated thread
+        """
+        self.thread.start()
+
+
+    def join(self):
+        """
+        Wait for the join of thread and raise its exception if any.
+        """
+        self.thread.join()
+        if self.exception:
+            raise self.exception
+
+
+    def is_alive(self):
+        """
+        Check whether the test is still alive.
+        """
+        return self.thread.isAlive()
 
 
 def get_loss_ratio(output):
@@ -1859,66 +1540,16 @@ def get_linux_ifname(session, mac_address):
 
     @param session: session to the virtual machine
     @mac_address: the macaddress of nic
-
-    @raise error.TestError in case it was not possible to determine the
-            interface name.
     """
-    def ifconfig_method():
-        try:
-            output = session.cmd("ifconfig -a")
-            return re.findall("(\w+)\s+Link.*%s" % mac_address, output,
-                              re.IGNORECASE)[0]
-        except IndexError:
-            return None
 
-    def iplink_method():
-        try:
-            output = session.cmd("ip link | grep -B1 '%s' -i" % mac_address)
-            return re.findall("\d+:\s+(\w+):\s+.*", output, re.IGNORECASE)[0]
-        except (aexpect.ShellCmdError, IndexError):
-            return None
+    output = session.cmd_output("ifconfig -a")
 
-    def sys_method():
-        try:
-            interfaces = session.cmd('ls --color=never /sys/class/net')
-        except error.CmdError, e:
-            logging.debug("Error listing /sys/class/net: %s" % e)
-            return None
-
-        interfaces = interfaces.strip()
-        for interface in interfaces.split(" "):
-            if interface:
-                try:
-                    i_cmd = "cat /sys/class/net/%s/address" % interface
-                    mac_address_interface = session.cmd(i_cmd)
-                    mac_address_interface = mac_address_interface.strip()
-                    if mac_address_interface == mac_address:
-                        return interface
-                except aexpect.ShellCmdError:
-                    pass
-
-        # If after iterating through interfaces (or no interfaces found)
-        # no interface name was found, just return None
+    try:
+        ethname = re.findall("(\w+)\s+Link.*%s" % mac_address, output,
+                             re.IGNORECASE)[0]
+        return ethname
+    except Exception:
         return None
-
-    # Try ifconfig first
-    i = ifconfig_method()
-    if i is not None:
-        return i
-
-    # No luck, try ip link
-    i = iplink_method()
-    if i is not None:
-        return i
-
-    # No luck, look on /sys
-    i = sys_method()
-    if i is not None:
-        return i
-
-    # If we came empty handed, let's raise an error
-    raise error.TestError("Failed to determine interface name with "
-                          "mac %s" % mac_address)
 
 
 def restart_guest_network(session, nic_name=None):
@@ -1944,7 +1575,7 @@ def restart_guest_network(session, nic_name=None):
 def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     Call another test script in one test script.
-    @param test:   QEMU test object.
+    @param test:   KVM test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     @param sub_type: Type of called test script.
@@ -1952,12 +1583,11 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     if sub_type is None:
         raise error.TestError("No sub test is found")
-    virt_dir = os.path.dirname(test.virtdir)
+    virt_dir = os.path.dirname(utils_misc.__file__)
     subtest_dir_virt = os.path.join(virt_dir, "tests")
-    subtest_dir_specific = os.path.join(test.bindir, params.get('vm_type'),
-                                        "tests")
+    subtest_dir_kvm = os.path.join(test.bindir, "tests")
     subtest_dir = None
-    for d in [subtest_dir_specific, subtest_dir_virt]:
+    for d in [subtest_dir_kvm, subtest_dir_virt]:
         module_path = os.path.join(d, "%s.py" % sub_type)
         if os.path.isfile(module_path):
             subtest_dir = d
@@ -1965,7 +1595,7 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     if subtest_dir is None:
         raise error.TestError("Could not find test file %s.py "
                               "on either %s or %s directory" % (sub_type,
-                              subtest_dir_specific, subtest_dir_virt))
+                              subtest_dir_kvm, subtest_dir_virt))
 
     f, p, d = imp.find_module(sub_type, [subtest_dir])
     test_module = imp.load_module(sub_type, f, p, d)
@@ -1977,7 +1607,34 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     run_func(test, params, env)
 
 
-def update_mac_ip_address(vm, params, timeout=None):
+def get_readable_cdroms(params, session):
+    """
+    Get the cdrom list which contain media in guest.
+
+    @param params: Dictionary with the test parameters.
+    @param session: A shell session on the VM provided.
+    """
+    get_cdrom_cmd = params.get("cdrom_get_cdrom_cmd")
+    check_cdrom_patttern = params.get("cdrom_check_cdrom_pattern")
+    o = session.get_command_output(get_cdrom_cmd)
+    cdrom_list = re.findall(check_cdrom_patttern, o)
+    logging.debug("Found cdroms on guest: %s" % cdrom_list)
+
+    readable_cdroms = []
+    test_cmd = params.get("cdrom_test_cmd")
+    for d in cdrom_list:
+        s, o = session.cmd_status_output(test_cmd % d)
+        if s == 0:
+            readable_cdroms.append(d)
+            break
+
+    if readable_cdroms:
+        return readable_cdroms
+
+    raise error.TestFail("Could not find a cdrom device contain media.")
+
+
+def update_mac_ip_address(vm, params, timeout=360):
     """
     Get mac and ip address from guest then update the mac pool and
     address cache
@@ -1996,14 +1653,14 @@ def update_mac_ip_address(vm, params, timeout=None):
     i = 0
     while time.time() < end_time:
         try:
-            if i % 3 == 0:
+            if i != 0 and i % 12 == 0:
                 session.cmd(restart_network)
-            o = session.cmd_status_output(network_query)[1]
+            s, o = session.cmd_status_output(network_query)
             macs_ips = re.findall(mac_ip_filter, o)
             # Get nics number
         except Exception, e:
             logging.warn(e)
-        nics =  params.get("nics")
+        nics = params.get("nics")
         nic_minimum = len(re.split("\s+", nics.strip()))
         if len(macs_ips) == nic_minimum:
             break
@@ -2207,13 +1864,263 @@ def find_substring(string, pattern1, pattern2=None):
     return ret[0]
 
 
-def verify_running_as_root():
+def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
+                           storage_path="/tmp/prewhql.iso",
+                           re_hw_id="(PCI.{14,50})\r\n", run_cmd=True):
     """
-    Verifies whether we're running under UID 0 (root).
+    Get windows driver's hardware id from inf files.
 
-    @raise: error.TestNAError
+    @param dirver: Configurable driver name.
+    @param mount_point: Mount point for the driver storage
+    @param storage_path: The path of the virtio driver storage
+    @param re_hw_id: the pattern for getting hardware id from inf files
+    @param run_cmd:  Use hardware id in windows cmd command or not
+
+    Return: Windows driver's hardware id
     """
-    if os.getuid() != 0:
-        raise error.TestNAError("This test requires root privileges "
-                                "(currently running with user %s)" %
-                                getpass.getuser())
+    if not os.path.exists(mount_point):
+        os.mkdir(_mount_point)
+
+    if not os.path.ismount(mount_point):
+        utils.system("mount %s %s -o loop" % (storage_path, mount_point),
+                     timeout=60)
+    driver_link = os.path.join(mount_point, driver_path)
+    try:
+        txt_file = open(driver_link, "r")
+        txt = txt_file.read()
+        hwid = re.findall(re_hardware_id, txt)[-1].rstrip()
+        if run_cmd:
+            hwid = '^&'.join(hwid.split('&'))
+        txt_file.close()
+        utils.system("umount %s" % mount_point)
+        return hwid
+    except Exception, e:
+        logging.error("Fail to get hardware id with exception: %s" % e)
+        utils.system("umount %s" % mount_point)
+        return ""
+
+
+class BackgroundTest(object):
+    """
+    This class would run a test in background through a dedicated thread.
+    """
+
+    def __init__(self, func, params, kwargs={}):
+        """
+        Initialize the object and set a few attributes.
+        """
+        self.thread = threading.Thread(target=self.launch,
+                                       args=(func, params, kwargs))
+        self.exception = None
+
+
+    def launch(self, func, params, kwargs):
+        """
+        Catch and record the exception.
+        """
+        try:
+            func(*params, **kwargs)
+        except Exception, e:
+            self.exception = e
+
+
+    def start(self):
+        """
+        Run func(params) in a dedicated thread
+        """
+        self.thread.start()
+
+
+    def join(self):
+        """
+        Wait for the join of thread and raise its exception if any.
+        """
+        self.thread.join()
+        if self.exception:
+            raise self.exception
+
+
+    def is_alive(self):
+        """
+        Check whether the test is still alive.
+        """
+        return self.thread.isAlive()
+
+
+class GuestSuspend(object):
+    """
+    Suspend guest, supports both Linux and Windows.
+
+    """
+    SUSPEND_TYPE_MEM = "mem"
+    SUSPEND_TYPE_DISK = "disk"
+
+
+    def __init__(self, params, vm):
+        if not params or not vm:
+            raise error.TestError("Missing 'params' or 'vm' parameters")
+
+        self._open_session_list = []
+        self.vm = vm
+        self.params = params
+        self.login_timeout = float(self.params.get("login_timeout", 360))
+        self.services_up_timeout = float(self.params.get("services_up_timeout",
+                                                         30))
+        self.os_type = self.params.get("os_type")
+
+
+    def _get_session(self):
+        self.vm.verify_alive()
+        session = self.vm.wait_for_login(timeout=self.login_timeout)
+        return session
+
+
+    def _session_cmd_close(self, session, cmd):
+        try:
+            return session.cmd_status_output(cmd)
+        finally:
+            try:
+                session.close()
+            except Exception:
+                pass
+
+
+    def _cleanup_open_session(self):
+        try:
+            for s in self._open_session_list:
+                if s:
+                    s.close()
+        except Exception:
+            pass
+
+
+    @error.context_aware
+    def setup_bg_program(self, **args):
+        """
+        Start up a program as a flag in guest.
+        """
+        suspend_bg_program_setup_cmd = args.get("suspend_bg_program_setup_cmd")
+
+        error.context("Run a background program as a flag", logging.info)
+        session = self._get_session()
+        self._open_session_list.append(session)
+
+        logging.debug("Waiting all services in guest are fully started.")
+        time.sleep(self.services_up_timeout)
+
+        session.sendline(suspend_bg_program_setup_cmd)
+
+
+    @error.context_aware
+    def check_bg_program(self, **args):
+        """
+        Make sure the background program is running as expected
+        """
+        suspend_bg_program_chk_cmd = args.get("suspend_bg_program_chk_cmd")
+
+        error.context("Verify background program is running", logging.info)
+        session = self._get_session()
+        s, _ = self._session_cmd_close(session, suspend_bg_program_chk_cmd)
+        if s:
+            raise error.TestFail("Background program is dead. Suspend failed.")
+
+
+    @error.context_aware
+    def kill_bg_program(self, **args):
+        error.context("Kill background program after resume")
+        suspend_bg_program_kill_cmd = args.get("suspend_bg_program_kill_cmd")
+
+        try:
+            session = self._get_session()
+            self._session_cmd_close(session, suspend_bg_program_kill_cmd)
+        except Exception, e:
+            logging.warn("Could not stop background program: '%s'", e)
+            pass
+
+
+    @error.context_aware
+    def _check_guest_suspend_log(self, **args):
+        error.context("Check whether guest supports suspend",
+                      logging.info)
+        suspend_support_chk_cmd = args.get("suspend_support_chk_cmd")
+
+        session = self._get_session()
+        s, o = self._session_cmd_close(session, suspend_support_chk_cmd)
+
+        return s, o
+
+
+    def verfiy_guest_support_suspend(self, **args):
+        s, _ = self._check_guest_suspend_log(**args)
+        if s:
+            raise error.TestError("Guest doesn't support suspend.")
+
+
+    @error.context_aware
+    def start_suspend(self, **args):
+        error.context("Start suspend", logging.info)
+        suspend_start_cmd = args.get("suspend_start_cmd")
+
+        session = self._get_session()
+        self._open_session_list.append(session)
+
+        # Suspend to disk
+        session.sendline(suspend_start_cmd)
+
+
+    @error.context_aware
+    def verify_guest_down(self, **args):
+        # Make sure the VM goes down
+        error.context("Wait for guest goes down after suspend")
+        suspend_timeout = 240 + int(self.params.get("smp")) * 60
+        if not utils_misc.wait_for(self.vm.is_dead, suspend_timeout, 2, 2):
+            raise error.TestFail("VM refuses to go down. Suspend failed.")
+
+
+    @error.context_aware
+    def resume_guest_mem(self, **args):
+        error.context("Resume suspended VM from memory")
+        self.vm.monitor.system_wakeup()
+
+
+    @error.context_aware
+    def resume_guest_disk(self, **args):
+        error.context("Resume suspended VM from disk")
+        # Update vm's params dict with our params member.
+        self.vm.params = self.params
+        self.vm.create()
+
+
+    @error.context_aware
+    def verify_guest_up(self, **args):
+        error.context("Verify guest system log", logging.info)
+        suspend_log_chk_cmd = args.get("suspend_log_chk_cmd")
+
+        session = self._get_session()
+        s, _ = self._session_cmd_close(session, suspend_log_chk_cmd)
+        if s:
+            raise error.TestError("Could not find suspend log.")
+
+
+    @error.context_aware
+    def action_before_suspend(self, **args):
+        error.context("Actions before suspend")
+        pass
+
+
+    @error.context_aware
+    def action_during_suspend(self, **args):
+        error.context("Sleep a while before resuming guest", logging.info)
+
+        time.sleep(10)
+        if self.os_type == "windows":
+            # Due to WinXP/2003 won't suspend immediately after issue S3 cmd,
+            # delay 10~60 secs here, maybe there's a bug in windows os.
+            logging.info("WinXP/2003 need more time to suspend, sleep 50s.")
+            time.sleep(50)
+
+
+    @error.context_aware
+    def action_after_suspend(self, **args):
+        error.context("Actions after suspend")
+        pass
