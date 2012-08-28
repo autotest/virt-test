@@ -2272,13 +2272,6 @@ class VM(virt_vm.BaseVM):
         return "/tmp/monitor-%s-%s" % (monitor_name, self.instance)
 
 
-    def get_virtio_port_filename(self, port_name):
-        """
-        Return the filename corresponding to a givven monitor name.
-        """
-        return "/tmp/virtio_port-%s-%s" % (port_name, self.instance)
-
-
     def get_monitor_filenames(self):
         """
         Return a list of all monitor filenames (as specified in the VM's
