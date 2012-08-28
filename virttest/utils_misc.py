@@ -1653,26 +1653,26 @@ def run_tests(parser, job):
     setup_flag = 1
     cleanup_flag = 2
     pass_list = []
-    for params_dict in parser.get_dicts():
+    for param_dict in parser.get_dicts():
         tmp_dict = {}
-        for key in params_dict:
+        for key in param_dict:
             if key.endswith("_equal"):
                 t_key = key.split("_equal")[0]
-                tmp_dict[t_key] = params_dict[key]
+                tmp_dict[t_key] = param_dict[key]
             elif key.endswith("_min"):
                 t_key = key.split("_min")[0]
                 if not d.has_key(t_key) or \
-                    cartesian_config.compare_string(params_dict[t_key],
-                                                    params_dict[key]) < 0:
-                    tmp_dict[t_key] = params_dict[key]
+                    cartesian_config.compare_string(param_dict[t_key],
+                                                    param_dict[key]) < 0:
+                    tmp_dict[t_key] = param_dict[key]
             elif key.endswith("_max"):
                 t_key = key.split("_max")[0]
                 if not d.has_key(t_key) or \
-                    cartesian_config.compare_string(params_dict[t_key],
-                                                    params_dict[key]) > 0:
-                    tmp_dict[t_key] = params_dict[key]
+                    cartesian_config.compare_string(param_dict[t_key],
+                                                    param_dict[key]) > 0:
+                    tmp_dict[t_key] = param_dict[key]
         for key in tmp_dict:
-            params_dict[key] = tmp_dict[key]
+            param_dict[key] = tmp_dict[key]
 
         if index == 0:
             if param_dict.get("host_setup_flag", None) is not None:
@@ -1706,19 +1706,19 @@ def run_tests(parser, job):
                 if status_dict[test_name] not in ['GOOD', 'WARN']:
                     dependencies_satisfied = False
                     break
-        test_iterations = int(params_dict.get("iterations", 1))
-        test_tag = params_dict.get("shortname")
+        test_iterations = int(param_dict.get("iterations", 1))
+        test_tag = param_dict.get("vm_type") + "." + param_dict.get("shortname")
 
         if dependencies_satisfied:
             # Setting up profilers during test execution.
-            profilers = params_dict.get("profilers", "").split()
+            profilers = param_dict.get("profilers", "").split()
             for profiler in profilers:
-                job.profilers.add(profiler, **params_dict)
+                job.profilers.add(profiler, **param_dict)
             # We need only one execution, profiled, hence we're passing
             # the profile_only parameter to job.run_test().
             profile_only = bool(profilers) or None
-            current_status = job.run_test_detail(params_dict.get("vm_type"),
-                                                 params=params_dict,
+            current_status = job.run_test_detail("virt",
+                                                 params=param_dict,
                                                  tag=test_tag,
                                                  iterations=test_iterations,
                                                  profile_only=profile_only)
@@ -1727,7 +1727,7 @@ def run_tests(parser, job):
         else:
             # We will force the test to fail as TestNA during preprocessing
             param_dict['dependency_failed'] = 'yes'
-            current_status = job.run_test_detail(param_dict.get("vm_type"),
+            current_status = job.run_test_detail("virt",
                                                  params=param_dict,
                                                  tag=test_tag,
                                                  iterations=test_iterations)
@@ -4119,7 +4119,9 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
     logging.info("%s test config helper", test_name)
     step = 0
-    common_dir = os.path.dirname(sys.modules[__name__].__file__)
+    shared_dir = os.path.abspath(os.path.join(sys.modules[__name__].__file__,
+                                              "..", ".."))
+    shared_dir = os.path.join(shared_dir, "shared", "cfg")
     logging.info("")
     step += 1
     logging.info("%d - Verifying directories (check if the directory structure "
@@ -4137,11 +4139,11 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     step += 1
     logging.info("%d - Creating config files from samples (copy the default "
                  "config samples to actual config files)", step)
-    config_file_list = glob.glob(os.path.join(test_dir, "*.cfg.sample"))
-    config_file_list += glob.glob(os.path.join(common_dir, "*.cfg.sample"))
+    config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg.sample"))
+    config_file_list += glob.glob(os.path.join(shared_dir, "*.cfg.sample"))
     for config_file in config_file_list:
         src_file = config_file
-        dst_file = os.path.join(test_dir, os.path.basename(config_file))
+        dst_file = os.path.join(test_dir, "cfg", os.path.basename(config_file))
         dst_file = dst_file.rstrip(".sample")
         if not os.path.isfile(dst_file):
             logging.debug("Creating config file %s from sample", dst_file)
