@@ -1,7 +1,7 @@
 import logging, os, commands, threading, re, glob, time
 from autotest.client import utils
 from autotest.client.shared import error
-from autotest.client.virt import utils_misc, utils_test, remote
+from virttest import utils_test, utils_misc, remote
 
 
 def format_result(result, base="12", fbase="2"):

@@ -4,9 +4,9 @@ import xml.dom.minidom
 import errno
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
-from autotest.client.virt import virt_vm, utils_misc, utils_disk
-from autotest.client.virt import kvm_monitor, syslog_server
-from autotest.client.virt import http_server
+from virttest import virt_vm, utils_misc, utils_disk
+from virttest import kvm_monitor, syslog_server
+from virttest import http_server
 
 
 # Whether to print all shell commands called

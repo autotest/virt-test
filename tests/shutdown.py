@@ -1,6 +1,6 @@
 import time, logging
 from autotest.client.shared import error
-from autotest.client.virt import utils_misc
+from virttest import utils_misc
 
 
 @error.context_aware
