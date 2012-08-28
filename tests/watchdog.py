@@ -1,6 +1,7 @@
 import logging, re, time
 from autotest.client.shared import error, utils
-from autotest.client.virt import utils_misc, env_process
+from virttest import utils_misc, env_process
+
 
 @error.context_aware
 def run_watchdog(test, params, env):
