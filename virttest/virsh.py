@@ -4,107 +4,183 @@ Utility classes and functions to handle connection to a libvirt host system
 Suggested usage: import autotest.client.virt.virsh
 
 The entire contents of callables in this module (minus the names defined in
-NOCLOSE below), will become methods of the Virsh and VirshPersistent classes.
-A Closure class is used to wrap the module functions, lambda does not
-properly store instance state in this implementation.
+_NOCLOSE below), will become methods of the Virsh and VirshPersistent classes.
+A Closure class is used to wrap the module functions, and allow for
+Virsh/VrshPersistent instance state to be passed.  This is accomplished
+by encoding state as dictionary of keyword arguments, and passing
+that to the module functions.
 
-Because none of the methods have a 'self' parameter defined, the classes
-are defined to be dict-like, and get passed in to the methods as a the
-special **dargs parameter.  All virsh module functions _MUST_ include a
-special **dargs (variable keyword arguments) to accept non-default
-keyword arguments.
-
-The standard set of keyword arguments to all functions/modules is declared
-in the VirshBase class.  Only the 'virsh_exec' key is guaranteed to always
-be present, the remainder may or may not be provided.  Therefor, virsh
-functions/methods should use the dict.get() method to retrieve with a default
-for non-existant keys.
+Therefor, all virsh module functions _MUST_ include a '**dargs' (variable
+keyword arguments placeholder).  Accessing them is safest by using the
+'dargs.get(<name>, <default>)' call.  The keywords present in **dargs
+is defined by VIRSH_PROPERTIES and possibly VIRSH_SESSION_PROPS.
 
 @copyright: 2012 Red Hat Inc.
 """
 
-import signal, logging, urlparse, re
+import logging, urlparse, re
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-from virttest import aexpect, propcan, remote
+import aexpect, virt_vm
+
+# Store runtime namespace for filtering later
+MODULE_CONTENTS = globals()
+
+# Needs to be in-scope for Virsh* class screenshot method and module function
+_SCREENSHOT_ERROR_COUNT = 0
 
 # list of symbol names NOT to wrap as Virsh class methods
 # Everything else from globals() will become a method of Virsh class
-NOCLOSE = globals().keys() + [
-    'NOCLOSE', 'SCREENSHOT_ERROR_COUNT', 'VIRSH_COMMAND_CACHE',
-    'VIRSH_EXEC', 'VirshBase', 'VirshClosure', 'VirshSession', 'Virsh',
-    'VirshPersistent',
+_NOCLOSE = MODULE_CONTENTS.keys() + [
+    '_SCREENSHOT_ERROR_COUNT', '_NOCLOSE', 'VirshBase', 'DArgMangler',
+    'VirshSession', 'Closure', 'Virsh', 'VirshPersistent', 'VIRSH_EXEC',
+    'VIRSH_COMMAND_CACHE'
 ]
 
-# Needs to be in-scope for Virsh* class screenshot method and module function
-SCREENSHOT_ERROR_COUNT = 0
+# default virsh executable
+VIRSH_EXEC = os_dep.command("virsh")
+
+# Virsh class properties and default values
+# Schema: {<name>:<default>}
+VIRSH_PROPERTIES = {
+    'uri':None,
+    'ignore_status':False,
+    'virsh_exec':VIRSH_EXEC,
+    'debug':False,
+}
+
+# Persistent session virsh class property extension to VIRSH_PROPERTIES
+VIRSH_SESSION_PROPS = {
+    'session':None,
+    'session_id':None
+}
+VIRSH_SESSION_PROPS.update(VIRSH_PROPERTIES)
 
 # Cache of virsh commands, used by has_help_command() and help_command()
 VIRSH_COMMAND_CACHE = None
 
-# This is used both inside and outside classes
-try:
-    VIRSH_EXEC = os_dep.command("virsh")
-except ValueError:
-    logging.warning("Virsh executable not set or found on path, "
-                    "virsh module will not function normally")
-    VIRSH_EXEC = '/bin/true'
-
-class VirshBase(propcan.PropCanBase):
+class VirshBase(dict):
     """
     Base Class storing libvirt Connection & state to a host
     """
 
-    __slots__ = ('uri', 'ignore_status', 'debug', 'virsh_exec')
+    # properties only work if set on a class, so hit this from __new__
+    @classmethod
+    def _generate_property(cls, property_name):
+        # Used class's getters/setters/delters if they exist
+        getter = getattr(cls, 'get_%s' % property_name,
+                         lambda self: getattr(self, '_'+property_name))
+        setter = getattr(cls, 'set_%s' % property_name,
+                         lambda self,value: setattr(self, '_'+property_name,
+                                                    value))
+        delter = getattr(cls, 'del_%s' % property_name,
+                         lambda self: delattr(self, '_'+property_name))
+        # Don't overwrite existing
+        if not hasattr(cls, property_name):
+            setattr(cls, property_name, property(getter, setter, delter))
 
 
-    def __init__(self, *args, **dargs):
+    def __new__(cls, **dargs):
         """
-        Initialize instance with virsh_exec always set to something
+        Sets up generic getters/setters/deleteters if not defined for class
         """
-        init_dict = dict(*args, **dargs)
-        init_dict['virsh_exec'] = init_dict.get('virsh_exec', VIRSH_EXEC)
-        init_dict['uri'] = init_dict.get('uri', None)
-        super(VirshBase, self).__init__(init_dict)
+        # allow dargs to extend VIRSH_PROPERTIES
+        _dargs = VIRSH_PROPERTIES.copy()
+        _dargs.update(dargs)
+        for name in _dargs.keys():
+            cls._generate_property(name)
+        # Super doesn't work for classes on python 2.4
+        return dict.__new__(cls)
+
+
+    def __init__(self, **dargs):
+        """
+        Initialize libvirt connection/state from VIRSH_PROPERTIES and/or dargs
+        """
+        # Setup defaults, (calls properties)
+        _dargs = VIRSH_PROPERTIES.copy()
+        _dargs.update(dargs)
+        for name,value in _dargs.items():
+            self[name] = value
+
+
+    def __getitem__(self, key):
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(str(key))
+
+
+    def __setitem__(self, key, value):
+        # Calls property functions if defined
+        setattr(self, key, value)
+
+
+    def __delitem__(self, key):
+        try:
+            delattr(self, key)
+        except AttributeError:
+            raise KeyError(str(key))
+
+
+    def get_ignore_status(self):
+        if self._ignore_status:
+            return True
+        else:
+            return False
 
 
     def set_ignore_status(self, ignore_status):
-        """
-        Enforce setting ignore_status as a boolean
-        """
-        if bool(ignore_status):
-            self.dict_set('ignore_status', True)
+        if ignore_status:
+            self._ignore_status = True
         else:
-            self.dict_set('ignore_status', False)
+            self._ignore_status = False
 
 
     def set_debug(self, debug):
-        """
-        Accessor method for 'debug' property that logs message on change
-        """
-        if not self.INITIALIZED:
-            self.dict_set('debug', debug)
+        if hasattr(self, '_debug') and self._debug != debug:
+            logging.debug("Virsh debugging enabled: %s" % str(debug))
         else:
-            current_setting = self.dict_get('debug')
-            desired_setting = bool(debug)
-            if not current_setting and desired_setting:
-                self.dict_set('debug', True)
-                logging.debug("Virsh debugging enabled")
-            # current and desired could both be True
-            if current_setting and not desired_setting:
-                self.dict_set('debug', False)
-                logging.debug("Virsh debugging disabled")
+            return # no change
+        if debug:
+            self._debug = True
+        else:
+            self._debug = False
 
 
-    def get_uri(self):
+# Ahhhhh, look out!  It's D Arg mangler comnta gettcha!
+class DArgMangler(dict):
+    """
+    Dict-like class that checks parent before raising KeyError
+    """
+
+    def __init__(self, parent, *args, **dargs):
         """
-        Accessor method for 'uri' property that must exist
+        Initialize DargMangler dict-like instance.
+
+        param: parent: Parent instance to pull properties from as needed
+        param: *args: passed to ancestors constructor
+        param: **dargs: passed to ancestors constructor
         """
-        # self.get() would call get_uri() recursivly
+        if not issubclass(type(parent), dict):
+            raise ValueError("%s is not a %s" % (
+                              type(parent), dict))
+        self._parent = parent
+        super(DArgMangler, self).__init__(*args, **dargs)
+
+
+    def __getitem__(self, key):
+        """
+        Look up key's value on instance, then parent instance attributes
+
+        @param: key: key to look up non-None value
+        @raises: KeyError: When value is None, undefined locally or on parent.
+        """
         try:
-            return self.dict_get('uri')
+            return super(DArgMangler, self).__getitem__(key)
         except KeyError:
-            return None
+            # Assume parent raises KeyError if value == None
+            return self._parent.__getitem__(key)
 
 
 class VirshSession(aexpect.ShellSession):
@@ -114,11 +190,10 @@ class VirshSession(aexpect.ShellSession):
 
     # No way to get virsh sub-command "exit" status
     # Check output against list of known error-status strings
-    ERROR_REGEX_LIST = ['error:\s*.+$', '.*failed.*']
+    ERROR_REGEX_LIST = ['error:\s*', 'failed']
 
-    def __init__(self, virsh_exec=None, uri=None, a_id=None,
-                 prompt=r"virsh\s*\#\s*", remote_ip=None,
-                 remote_user=None, remote_pwd=None):
+    def __init__(self, virsh_exec=None, uri=None, id=None,
+                 prompt=r"virsh\s*\#\s*"):
         """
         Initialize virsh session server, or client if id set.
 
@@ -126,49 +201,13 @@ class VirshSession(aexpect.ShellSession):
         @param: uri: uri of libvirt instance to connect to
         @param: id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param: prompt: Regular expression describing the shell's prompt line.
-        @param: remote_ip: Hostname/IP of remote system to ssh into (if any)
-        @param: remote_user: Username to ssh in as (if any)
-        @param: remote_pwd: Password to use, or None for host/pubkey
+        @param prompt: Regular expression describing the shell's prompt line.
         """
 
-        self.uri = uri
-        self.remote_ip = remote_ip
-        self.remote_user = remote_user
-        self.remote_pwd = remote_pwd
+        if uri:
+            virsh_exec += " -c '%s'" % uri
 
-        # Special handling if setting up a remote session
-        if a_id is None and remote_ip is not None and uri is not None:
-            if remote_pwd:
-                pref_auth = "-o PreferredAuthentications=password"
-            else:
-                pref_auth = "-o PreferredAuthentications=hostbased,publickey"
-            # ssh_cmd != None flags this as remote session
-            ssh_cmd = ("ssh -o UserKnownHostsFile=/dev/null %s -p %s %s@%s"
-                       % (pref_auth, 22, self.remote_user, self.remote_ip))
-            self.virsh_exec = ( "%s \"%s -c '%s'\""
-                                % (ssh_cmd, virsh_exec, self.uri) )
-        else: # setting up a local session or re-using a session
-            if self.uri:
-                self.virsh_exec += " -c '%s'" % self.uri
-            else:
-                self.virsh_exec = virsh_exec
-            ssh_cmd = None # flags not-remote session
-
-        # aexpect tries to auto close session because no clients connected yet
-        aexpect.ShellSession.__init__(self, self.virsh_exec, a_id,
-                                      prompt=prompt, auto_close=False)
-
-        if ssh_cmd is not None: # this is a remote session
-            # Handle ssh / password prompts
-            remote.handle_prompts(self, self.remote_user, self.remote_pwd,
-                                  prompt, debug=True)
-
-        # fail if libvirtd is not running
-        if self.cmd_status('list', timeout=60) != 0:
-            logging.debug("Persistent virsh session is not responding, "
-                          "libvirtd may be dead.")
-            raise aexpect.ShellStatusError(virsh_exec, 'list')
+        super(VirshSession, self).__init__(virsh_exec, id, prompt=prompt)
 
 
     def cmd_status_output(self, cmd, timeout=60, internal_timeout=None,
@@ -190,11 +229,12 @@ class VirshSession(aexpect.ShellSession):
         @raise ShellStatusError: Raised if the exit status cannot be obtained
         @raise ShellError: Raised if an unknown error occurs
         """
-        out = self.cmd_output(cmd, timeout, internal_timeout, print_func)
-        for line in out.splitlines():
-            if self.match_patterns(line, self.ERROR_REGEX_LIST) is not None:
-                return 1, out
-        return 0, out
+
+        o = self.cmd_output(cmd, timeout, internal_timeout, print_func)
+        for line in o.splitlines():
+            if self.match_patterns(line, self.ERROR_REGEX_LIST):
+                return 1, o
+        return 0, o
 
 
     def cmd_result(self, cmd, ignore_status=False):
@@ -207,35 +247,26 @@ class VirshSession(aexpect.ShellSession):
                                  "Virsh Command returned non-zero exit status")
         return result
 
-
 # Work around for inconsistent builtin closure local reference problem
 # across different versions of python
-class VirshClosure(object):
+class Closure(object):
     """
-    Callable that uses dict-like 'self' argument to augment **dargs
+    Callable instances for function with persistent internal state
     """
 
-
-    def __init__(self, reference_function, dict_like_instance):
+    def __init__(self, ref, state):
         """
-        Initialize callable for reference_function on dict_like_instance
+        Initialize state to call ref with mangled keyword args
         """
-        if not issubclass(dict_like_instance.__class__, dict):
-            raise ValueError("dict_like_instance %s must be dict or subclass"
-                             % dict_like_instance.__class__.__name__)
-        self.reference_function = reference_function
-        self.dict_like_instance = dict_like_instance
+        self._state = state
+        self._ref = ref
 
 
     def __call__(self, *args, **dargs):
         """
-        Call reference_function with dict_like_instance augmented by **dargs
-
-        @param: *args: Passthrough to reference_function
-        @param: **dargs: Updates dict_like_instance copy before call
+        Retrieve keyword args from state before calling ref function
         """
-        dargs.update(self.dict_like_instance)
-        return self.reference_function(*args, **dargs)
+        return self._ref(*args, **DArgMangler(self._state, dargs))
 
 
 class Virsh(VirshBase):
@@ -243,24 +274,18 @@ class Virsh(VirshBase):
     Execute libvirt operations, using a new virsh shell each time.
     """
 
-    __slots__ = VirshBase.__slots__
-
-
-    def __init__(self, *args, **dargs):
+    def __init__(self, **dargs):
         """
         Initialize Virsh instance with persistent options
 
-        @param: *args: Initial property keys/values
-        @param: **dargs: Initial property keys/values
+        @param: **dargs: initial values for VIRSH_PROPERTIES
         """
-        super(Virsh, self).__init__(*args, **dargs)
+        super(Virsh, self).__init__(**dargs)
         # Define the instance callables from the contents of this module
         # to avoid using class methods and hand-written aliases
         for sym, ref in globals().items():
-            if sym not in NOCLOSE and callable(ref):
-                # Adding methods, not properties, so avoid special __slots__
-                # handling.  __getattribute__ will still find these.
-                self.super_set(sym, VirshClosure(ref, self))
+            if sym not in _NOCLOSE and callable(ref):
+                self[sym] = Closure(ref, self)
 
 
 class VirshPersistent(Virsh):
@@ -268,153 +293,53 @@ class VirshPersistent(Virsh):
     Execute libvirt operations using persistent virsh session.
     """
 
-    __slots__ = Virsh.__slots__ + ('session_id', )
-
-    # Help detect leftover sessions
-    SESSION_COUNTER = 0
-
-    def __init__(self, *args, **dargs):
-        super(VirshPersistent, self).__init__(*args, **dargs)
-        if self.get('session_id') is None:
-            # set_uri does not call when INITIALIZED = False
-            # and no session_id passed to super __init__
-            self.new_session()
+    def __new__(cls, **dargs):
+        # Allow dargs to extend VIRSH_SESSION_PROPS
+        _dargs = VIRSH_SESSION_PROPS.copy()
+        _dargs.update(dargs)
+        # python 2.4 can't use super on class objects
+        return Virsh.__new__(cls, **_dargs)
 
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __init__(self, **dargs):
         """
-        Clean up any leftover sessions
+        Initialize persistent virsh session.
+
+        @param: **dargs: initial values for VIRSH_[PROPERTIES,SESSION_PROPS]
         """
-        self.close_session()
-        super(VirshPersistent, self).__exit__(exc_type, exc_value, traceback)
+
+        _dargs = VIRSH_SESSION_PROPS.copy()
+        _dargs.update(dargs)
+        # new_session() called by super via uri property (below)
+        super(VirshPersistent, self).__init__(**_dargs)
 
 
     def __del__(self):
-        """
-        Clean up any leftover sessions
-        """
-        self.__exit__(None, None, None)
-
-    def close_session(self):
-        """
-        If a persistent session exists, close it down.
-        """
-        try:
-            session_id = self.dict_get('session_id')
-            if session_id:
-                try:
-                    existing = VirshSession(a_id=session_id)
-                    # except clause exits function
-                    self.dict_del('session_id')
-                except aexpect.ShellStatusError:
-                    # session was already closed
-                    self.dict_del('session_id')
-                    return # don't check is_alive or update counter
-                if existing.is_alive():
-                    # try nicely first
-                    existing.close()
-                    if existing.is_alive():
-                        # Be mean, incase it's hung
-                        existing.close(sig=signal.SIGTERM)
-                    # Keep count:
-                    self.__class__.SESSION_COUNTER -= 1
-                    self.dict_del('session_id')
-        except KeyError:
-            # Allow other exceptions to be raised
-            pass # session was closed already
+        if self['session_id'] and self['session']:
+            self['session'].close()
 
 
     def new_session(self):
         """
-        Open new session, closing any existing
+        Close current virsh session and open new.
         """
-        # Accessors may call this method, avoid recursion
-        virsh_exec = self.dict_get('virsh_exec') # Must exist, can't be None
-        uri = self.dict_get('uri') # Must exist, can be None
-        self.close_session()
-        # Always create new session
-        new_session = VirshSession(virsh_exec, uri, a_id=None)
-        # Keep count
-        self.__class__.SESSION_COUNTER += 1
-        session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
+
+        if self.get('session_id') and self.get('session'):
+            self['session'].close()
+        self['session'] = VirshSession(self['virsh_exec'], self['uri'])
+        self['session_id'] = self['session'].get_id()
 
 
     def set_uri(self, uri):
         """
-        Accessor method for 'uri' property, create new session on change
+        Change instances uri, and re-connect virsh shell session.
+
+        Accessed via property, i.e. virsh.uri = 'qemu://foobar/system'
         """
-        if not self.INITIALIZED:
-            # Allow __init__ to call new_session
-            self.dict_set('uri', uri)
-        else:
-            # If the uri is changing
-            if self.dict_get('uri') != uri:
-                self.dict_set('uri', uri)
-                self.new_session()
-            # otherwise do nothing
-
-
-class VirshConnectBack(VirshPersistent):
-    """
-    Persistent virsh session connected back from a remote host
-    """
-
-    __slots__ = Virsh.__slots__ + ('remote_ip', 'remote_pwd', 'remote_user')
-
-    def new_session(self):
-        """
-        Open new remote session, closing any existing
-        """
-
-        # Accessors may call this method, avoid recursion
-        virsh_exec = self.dict_get('virsh_exec') # Must exist, can't be None
-        uri = self.dict_get('uri') # Must exist, can be None
-        remote_ip = self.dict_get('remote_ip')
-        try:
-            remote_user = self.dict_get('remote_user')
-        except KeyError:
-            remote_user = 'root'
-        try:
-            remote_pwd = self.dict_get('remote_pwd')
-        except KeyError:
-            remote_pwd = None
-        super(VirshConnectBack, self).close_session()
-        new_session = VirshSession(virsh_exec, uri, a_id=None,
-                                   remote_ip=remote_ip,
-                                   remote_user=remote_user,
-                                   remote_pwd=remote_pwd)
-        # Keep count
-        self.__class__.SESSION_COUNTER += 1
-        session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
-
-
-    @staticmethod
-    def kosher_args(remote_ip, uri):
-        """
-        Convenience static method to help validate argument sanity before use
-
-        @param: remote_ip: ip/hostname of remote libvirt helper-system
-        @param: uri: fully qualified libvirt uri of local system, from remote.
-        @returns: True/False if checks pass or not
-        """
-        if remote_ip is None or uri is None:
-            return False
-        all_false = [
-            # remote_ip checks
-            bool(remote_ip.count("EXAMPLE.COM")),
-            bool(remote_ip.count("localhost")),
-            bool(remote_ip.count("127.")),
-            # uri checks
-            uri is None,
-            uri is "",
-            bool(uri.count("default")),
-            bool(uri.count(':///')),
-            bool(uri.count("localhost")),
-            bool(uri.count("127."))
-        ]
-        return True not in all_false
+        # Don't assume ancestor get/set_uri() wasn't overridden
+        if self['uri'] != uri:
+            super(VirshPersistent, self).uri = uri
+            self.new_session()
 
 
 ##### virsh module functions follow (See module docstring for API) #####
@@ -430,49 +355,30 @@ def command(cmd, **dargs):
     @raises: CmdError if non-zero exit status and ignore_status=False
     """
 
-    virsh_exec = dargs.get('virsh_exec', VIRSH_EXEC)
-    uri = dargs.get('uri', None)
-    debug = dargs.get('debug', False)
-    ignore_status = dargs.get('ignore_status', True) # Caller deals with errors
+    uri = dargs.get('uri', VIRSH_PROPERTIES['uri'])
+    virsh_exec = dargs.get('virsh_exec', VIRSH_PROPERTIES['virsh_exec'])
+    debug = dargs.get('debug', VIRSH_PROPERTIES['debug'])
+    ignore_status = dargs.get('ignore_status',
+                              VIRSH_PROPERTIES['ignore_status'])
     session_id = dargs.get('session_id', None)
 
-    # Check if this is a VirshPersistent method call
     if session_id:
-        # Retrieve existing session
-        session = VirshSession(a_id=session_id)
-        logging.debug("Reusing session %s", session_id)
-    else:
-        session = None
-
-    if debug:
-        logging.debug("Running virsh command: %s", cmd)
-
-    if session:
-        # Utilize persistant virsh session
+        session = VirshSession(id=session_id)
         ret = session.cmd_result(cmd, ignore_status)
-        # Mark return value with session it came from
-        ret.from_session_id = session_id
     else:
-        # Normal call to run virsh command
+        uri_arg = " "
         if uri:
-            # uri argument IS being used
             uri_arg = " -c '%s' " % uri
-        else:
-            uri_arg = " " # No uri argument being used
 
         cmd = "%s%s%s" % (virsh_exec, uri_arg, cmd)
-        # Raise exception if ignore_status == False
+        if debug:
+            logging.debug("Running command: %s" % cmd)
         ret = utils.run(cmd, verbose=debug, ignore_status=ignore_status)
-        # Mark return as not coming from persistant virsh session
-        ret.from_session_id = None
 
-    # Always log debug info, if persistant session or not
     if debug:
-        logging.debug("status: %s", ret.exit_status)
-        logging.debug("stdout: %s", ret.stdout.strip())
-        logging.debug("stderr: %s", ret.stderr.strip())
-
-    # Return CmdResult instance when ignore_status is True
+        logging.debug("status: %s" % ret.exit_status)
+        logging.debug("stdout: %s" % ret.stdout.strip())
+        logging.debug("stderr: %s" % ret.stderr.strip())
     return ret
 
 
@@ -487,38 +393,24 @@ def domname(dom_id_or_uuid, **dargs):
     return command("domname --domain %s" % dom_id_or_uuid, **dargs)
 
 
-def qemu_monitor_command(vm_name, cmd, **dargs):
+def qemu_monitor_command(domname, command, **dargs):
     """
     This helps to execute the qemu monitor command through virsh command.
 
-    @param: vm_name: Name of monitor domain
-    @param: cmd: monitor command to execute
+    @param: domname: Name of monitor domain
+    @param: command: monitor command to execute
     @param: dargs: standardized virsh function API keywords
     """
 
-    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (vm_name, cmd)
+    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (domname, command)
     return command(cmd_qemu_monitor, **dargs)
 
 
-def setvcpus(vm_name, count, extra="", **dargs):
-    """
-    Change the number of virtual CPUs in the guest domain.
-
-    @oaram vm_name: name of vm to affect
-    @param count: value for vcpu parameter
-    @param options: any extra command options.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult object from command
-    """
-    cmd = "setvcpus %s %s %s" % (vm_name, count, extra)
-    return command(cmd, **dargs)
-
-
-def vcpupin(vm_name, vcpu, cpu, **dargs):
+def vcpupin(domname, vcpu, cpu, **dargs):
     """
     Changes the cpu affinity for respective vcpu.
 
-    @param: vm_name: name of domain
+    @param: domname: name of domain
     @param: vcpu: virtual CPU to modify
     @param: cpu: physical CPU specification (string)
     @param: dargs: standardized virsh function API keywords
@@ -526,44 +418,37 @@ def vcpupin(vm_name, vcpu, cpu, **dargs):
     """
     dargs['ignore_status'] = False
     try:
-        cmd_vcpupin = "vcpupin %s %s %s" % (vm_name, vcpu, cpu)
+        cmd_vcpupin = "vcpupin %s %s %s" % (domname, vcpu, cpu)
         command(cmd_vcpupin, **dargs)
 
     except error.CmdError, detail:
-        logging.error("Virsh vcpupin VM %s failed:\n%s", vm_name, detail)
+        logging.error("Virsh vcpupin VM %s failed:\n%s", domname, detail)
         return False
 
 
-def vcpuinfo(vm_name, **dargs):
+def vcpuinfo(domname, **dargs):
     """
-    Retrieves the vcpuinfo command result if values not "N/A"
+    Prints the vcpuinfo of a given domain.
 
-    @param: vm_name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    # Guarantee cmdresult object created
-    dargs['ignore_status'] = True
-    cmdresult = command("vcpuinfo %s" % vm_name, **dargs)
-    if cmdresult.exit_status == 0:
-        # Non-running vm makes virsh exit(0) but have "N/A" info.
-        # on newer libvirt.  Treat this as an error.
-        if re.search(r"\s*CPU:\s+N/A\s*", cmdresult.stdout.strip()):
-            cmdresult.exit_status = -1
-            cmdresult.stdout += "\n\nvirsh.vcpuinfo inject error: N/A values\n"
-    return cmdresult
-
-
-def vcpucount_live(vm_name, **dargs):
-    """
-    Prints the vcpucount of a given domain.
-
-    @param: vm_name: name of a domain
+    @param: domname: name of domain
     @param: dargs: standardized virsh function API keywords
     @return: standard output from command
     """
 
-    cmd_vcpucount = "vcpucount --live --active %s" % vm_name
+    cmd_vcpuinfo = "vcpuinfo %s" % domname
+    return command(cmd_vcpuinfo, **dargs).stdout.strip()
+
+
+def vcpucount_live(domname, **dargs):
+    """
+    Prints the vcpucount of a given domain.
+
+    @param: domname: name of a domain
+    @param: dargs: standardized virsh function API keywords
+    @return: standard output from command
+    """
+
+    cmd_vcpucount = "vcpucount --live --active %s" % domname
     return command(cmd_vcpucount, **dargs).stdout.strip()
 
 
@@ -602,7 +487,6 @@ def canonical_uri(option='', **dargs):
     """
     return command("uri %s" % option, **dargs).stdout.strip()
 
-
 def hostname(option='', **dargs):
     """
     Return the hypervisor hostname.
@@ -633,17 +517,6 @@ def dom_list(options="", **dargs):
     @return: CmdResult object
     """
     return command("list %s" % options, **dargs)
-
-
-def reboot(name, options="", **dargs):
-    """
-    Run a reboot command in the target domain.
-
-    @param: name: Name of domain.
-    @param: options: options: options to pass to reboot command
-    @return: CmdResult object
-    """
-    return command("reboot --domain %s %s" % (name, options), **dargs)
 
 
 def managedsave(name, options="", **dargs):
@@ -687,31 +560,30 @@ def domstate(name, **dargs):
 
     @param name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: standard output from command
     """
-    return command("domstate %s" % name, **dargs)
+    return command("domstate %s" % name, **dargs).stdout.strip()
 
 
-def domid(vm_name, **dargs):
+def domid(name, **dargs):
     """
     Return VM's ID.
 
-    @param vm_name: VM name or uuid
+    @param name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    @return: standard output from command
     """
-    return command("domid %s" % (vm_name), **dargs)
+    return command("domid %s" % (name), **dargs).stdout.strip()
 
 
-def dominfo(vm_name, **dargs):
+def dominfo(name, **dargs):
     """
     Return the VM information.
 
-    @param: vm_name: VM's name or id,uuid.
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    @return: standard output from command
     """
-    return command("dominfo %s" % (vm_name), **dargs)
+    return command("dominfo %s" % (name), **dargs).stdout.strip()
 
 
 def domuuid(name, **dargs):
@@ -720,9 +592,9 @@ def domuuid(name, **dargs):
 
     @param name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    @return: standard output from command
     """
-    return command("domuuid %s" % name, **dargs)
+    return command("domuuid %s" % name, **dargs).stdout.strip()
 
 
 def screenshot(name, filename, **dargs):
@@ -734,31 +606,17 @@ def screenshot(name, filename, **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: filename
     """
-    global SCREENSHOT_ERROR_COUNT
     dargs['ignore_status'] = False
     try:
         command("screenshot %s %s" % (name, filename), **dargs)
     except error.CmdError, detail:
-        if SCREENSHOT_ERROR_COUNT < 1:
+        if _SCREENSHOT_ERROR_COUNT < 1:
             logging.error("Error taking VM %s screenshot. You might have to "
                           "set take_regular_screendumps=no on your "
                           "tests.cfg config file \n%s.  This will be the "
                           "only logged error message.", name, detail)
-        SCREENSHOT_ERROR_COUNT += 1
+        _SCREENSHOT_ERROR_COUNT += 1
     return filename
-
-
-def domblkstat(name, device, option, **dargs):
-    """
-    Store state of VM into named file.
-
-    @param: name: VM's name.
-    @param: device: VM's device.
-    @param: option: command domblkstat option.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    return command("domblkstat %s %s %s" % (name, device, option), **dargs)
 
 
 def dumpxml(name, to_file="", **dargs):
@@ -770,99 +628,12 @@ def dumpxml(name, to_file="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: standard output from command
     """
-    dargs['ignore_status'] = True
     if to_file:
         cmd = "dumpxml %s > %s" % (name, to_file)
     else:
         cmd = "dumpxml %s" % name
-    result = command(cmd, **dargs)
-    if result.exit_status:
-        raise error.CmdError(cmd, result,
-                                 "Virsh dumpxml returned non-zero exit status")
-    return result.stdout.strip()
 
-
-def domifstat(name, interface, **dargs):
-    """
-    Get network interface stats for a running domain.
-
-    @param: name: Name of domain
-    @param: interface: interface device
-    @return: CmdResult object
-    """
-    return command("domifstat %s %s" % (name, interface), **dargs)
-
-
-def domjobinfo(name, **dargs):
-    """
-    Get domain job information.
-
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    return command("domjobinfo %s" % name, **dargs)
-
-
-def edit(options, **dargs):
-    """
-    Edit the XML configuration for a domain.
-
-    @param options: virsh edit options string.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    return command("edit %s" % options, **dargs)
-
-
-def domjobabort(vm_name, **dargs):
-    """
-    Aborts the currently running domain job.
-
-    @param vm_name: VM's name, id or uuid.
-    @param dargs: standardized virsh function API keywords
-    @return: result from command
-    """
-    return command("domjobabort %s" % vm_name, **dargs)
-
-
-def domxml_from_native(format, file, options=None, **dargs):
-    """
-    Convert native guest configuration format to domain XML format.
-
-    @param format:The command's options. For exmple:qemu-argv.
-    @param file:Native infomation file.
-    @param options:extra param.
-    @param dargs: standardized virsh function API keywords.
-    @return: result from command
-    """
-    cmd = "domxml-from-native %s %s %s" % (format, file, options)
-    return command(cmd, **dargs)
-
-
-def domxml_to_native(format, file, options, **dargs):
-    """
-    Convert domain XML config to a native guest configuration format.
-
-    @param format:The command's options. For exmple:qemu-argv.
-    @param file:XML config file.
-    @param options:extra param.
-    @param dargs: standardized virsh function API keywords
-    @return: result from command
-    """
-    cmd = "domxml-to-native %s %s %s" % (format, file, options)
-    return command(cmd, **dargs)
-
-
-def vncdisplay(vm_name,  **dargs):
-    """
-    Output the IP address and port number for the VNC display.
-
-    @param vm_name: VM's name or id,uuid.
-    @param dargs: standardized virsh function API keywords.
-    @return: result from command
-    """
-    return command("vncdisplay %s" % vm_name, **dargs)
+    return command(cmd, **dargs).stdout.strip()
 
 
 def is_alive(name, **dargs):
@@ -886,7 +657,7 @@ def is_dead(name, **dargs):
     """
     dargs['ignore_status'] = False
     try:
-        state = domstate(name, **dargs).stdout.strip()
+        state = domstate(name, **dargs)
     except error.CmdError:
         return True
     if state in ('running', 'idle', 'no state', 'paused'):
@@ -901,9 +672,19 @@ def suspend(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: True operation was successful
     """
-    return command("suspend %s" % (name), **dargs)
+    dargs['ignore_status'] = False
+    try:
+        command("suspend %s" % (name), **dargs)
+        if domstate(name, **dargs) == 'paused':
+            logging.debug("Suspended VM %s", name)
+            return True
+        else:
+            return False
+    except error.CmdError, detail:
+        logging.error("Suspending VM %s failed:\n%s", name, detail)
+        return False
 
 
 def resume(name, **dargs):
@@ -912,56 +693,59 @@ def resume(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: True operation was successful
     """
-    return command("resume %s" % (name), **dargs)
+    dargs['ignore_status'] = False
+    try:
+        command("resume %s" % (name), **dargs)
+        if is_alive(name, **dargs):
+            logging.debug("Resumed VM %s", name)
+            return True
+        else:
+            return False
+    except error.CmdError, detail:
+        logging.error("Resume VM %s failed:\n%s", name, detail)
+        return False
 
 
-def dommemstat(name, extra="", **dargs):
-    """
-    Store state of VM into named file.
-
-    @param: name: VM name
-    @param: extra: extra options to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    return command("dommemstat %s %s" % (name, extra), **dargs)
-
-
-def dump(name, path, option="", **dargs):
-    """
-    Dump the core of a domain to a file for analysis.
-
-    @param: name: VM name
-    @param: path: absolute path to state file
-    @param: option: command's option.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    return command("dump %s %s %s" % (name, path, option), **dargs)
-
-
-def save(option, path, **dargs):
+def save(name, path, **dargs):
     """
     Store state of VM into named file.
 
-    @param: option: save command's first option, vm'name, id or uuid.
+    @param: name: VM Name to operate on
     @param: path: absolute path to state file
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
     """
-    return command("save %s %s" % (option, path), **dargs)
+    state = domstate(name, **dargs)
+    if state not in ('paused',):
+        raise virt_vm.VMStatusError("Cannot save a VM that is %s" % state)
+    logging.debug("Saving VM %s to %s" %(name, path))
+    command("save %s %s" % (name, path), **dargs)
+    # libvirt always stops VM after saving
+    state = domstate(name, **dargs)
+    if state not in ('shut off',):
+        raise virt_vm.VMStatusError("VM not shut off after save")
 
 
-def restore(path, **dargs):
+def restore(name, path, **dargs):
     """
     Load state of VM from named file and remove file.
 
+    @param: name: VM Name to operate on
     @param: path: absolute path to state file.
     @param: dargs: standardized virsh function API keywords
     """
-    return command("restore %s" % path, **dargs)
+    # Blindly assume named VM corresponds with state in path
+    # rely on higher-layers to take exception if mismatch
+    state = domstate(name, **dargs)
+    if state not in ('shut off',):
+        raise virt_vm.VMStatusError("Can not restore VM that is %s" % state)
+    logging.debug("Restoring VM from %s" % path)
+    command("restore %s" % path, **dargs)
+    state = domstate(name, **dargs)
+    if state not in ('paused','running'):
+        raise virt_vm.VMStatusError("VM not paused after restore, it is %s." %
+                state)
 
 
 def start(name, **dargs):
@@ -989,9 +773,17 @@ def shutdown(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: True operation was successful
     """
-    return command("shutdown %s" % (name), **dargs)
+    if domstate(name, **dargs) == 'shut off':
+        return True
+    dargs['ignore_status'] = False
+    try:
+        command("shutdown %s" % (name), **dargs)
+        return True
+    except error.CmdError, detail:
+        logging.error("Shutdown VM %s failed:\n%s", name, detail)
+        return False
 
 
 def destroy(name, **dargs):
@@ -1000,9 +792,17 @@ def destroy(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: True operation was successful
     """
-    return command("destroy %s" % (name), **dargs)
+    if domstate(name, **dargs) == 'shut off':
+        return True
+    dargs['ignore_status'] = False
+    try:
+        command("destroy %s" % (name), **dargs)
+        return True
+    except error.CmdError, detail:
+        logging.error("Destroy VM %s failed:\n%s", name, detail)
+        return False
 
 
 def define(xml_path, **dargs):
@@ -1011,11 +811,15 @@ def define(xml_path, **dargs):
 
     @param: xml_path: XML file path
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: True operation was successful
     """
-    cmd = "define --file %s" % xml_path
-    logging.debug("Define VM from %s", xml_path)
-    return command(cmd, **dargs)
+    dargs['ignore_status'] = False
+    try:
+        command("define --file %s" % xml_path, **dargs)
+        return True
+    except error.CmdError:
+        logging.error("Define %s failed.", xml_path)
+        return False
 
 
 def undefine(name, **dargs):
@@ -1024,11 +828,16 @@ def undefine(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: True operation was successful
     """
-    cmd = "undefine %s" % name
-    logging.debug("Undefine VM %s", name)
-    return command(cmd, **dargs)
+    dargs['ignore_status'] = False
+    try:
+        command("undefine %s" % (name), **dargs)
+        logging.debug("undefined VM %s", name)
+        return True
+    except error.CmdError, detail:
+        logging.error("undefine VM %s failed:\n%s", name, detail)
+        return False
 
 
 def remove_domain(name, **dargs):
@@ -1042,12 +851,7 @@ def remove_domain(name, **dargs):
     if domain_exists(name, **dargs):
         if is_alive(name, **dargs):
             destroy(name, **dargs)
-        try:
-            dargs['ignore_status'] = False
-            undefine(name, **dargs)
-        except error.CmdError, detail:
-            logging.error("Undefine VM %s failed:\n%s", name, detail)
-            return False
+        undefine(name, **dargs)
     return True
 
 
@@ -1108,7 +912,7 @@ def attach_device(name, xml_file, extra="", **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError:
-        logging.error("Attaching device to VM %s failed.", name)
+        logging.error("Attaching device to VM %s failed." % name)
         return False
 
 
@@ -1128,65 +932,8 @@ def detach_device(name, xml_file, extra="", **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError:
-        logging.error("Detaching device from VM %s failed.", name)
+        logging.error("Detaching device from VM %s failed." % name)
         return False
-
-
-def update_device(domainarg=None, filearg=None,
-                  domain_opt=None, file_opt=None,
-                  flagstr="", **dargs):
-    """
-    Update device from an XML <file>.
-
-    @param: domainarg: Domain name (first pos. parameter)
-    @param: filearg: File name (second pos. parameter)
-    @param: domain_opt: Option to --domain parameter
-    @param: file_opt: Option to --file parameter
-    @param: flagstr: string of "--force, --persistent, etc."
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    cmd = "update-device"
-    if domainarg is not None: # Allow testing of ""
-        cmd += " %s" % domainarg
-    if filearg is not None: # Allow testing of 0 and ""
-        cmd += " %s" % filearg
-    if domain_opt is not None: # Allow testing of --domain ""
-        cmd += " --domain %s" % domain_opt
-    if file_opt is not None: # Allow testing of --file ""
-        cmd += " --file %s" % file_opt
-    if len(flagstr) > 0:
-        cmd += " %s" % flagstr
-    return command(cmd, **dargs)
-
-
-def attach_disk(name, source, target, extra="", **dargs):
-    """
-    Attach a disk to VM.
-
-    @param: name: name of guest
-    @param: source: source of disk device
-    @param: target: target of disk device
-    @param: extra: additional arguments to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    cmd = "attach-disk --domain %s --source %s --target %s %s"\
-           % (name, source, target, extra)
-    return command(cmd, **dargs)
-
-
-def detach_disk(name, target, extra="", **dargs):
-    """
-    Detach a disk from VM.
-
-    @param: name: name of guest
-    @param: target: target of disk device
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    cmd = "detach-disk --domain %s --target %s %s" % (name, target, extra)
-    return command(cmd, **dargs)
 
 
 def attach_interface(name, option="", **dargs):
@@ -1227,182 +974,44 @@ def detach_interface(name, option="", **dargs):
     return command(cmd, **dargs)
 
 
-def net_dumpxml(net_name, extra="", to_file="", **dargs):
-    """
-    Dump XML from network named net_name.
-
-    @param: net_name: Name of a network
-    @param: extra: Extra parameters to pass to command
-    @param: to_file: Send result to a file
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    cmd = "net-dumpxml %s %s" % (net_name, extra)
-    result = command(cmd, **dargs)
-    if to_file:
-        result_file = open(to_file, 'w')
-        result_file.write(result.stdout.strip())
-        result_file.close()
-    return result
-
-
 def net_create(xml_file, extra="", **dargs):
     """
-    Create _transient_ network from a XML file.
+    Create network from a XML file.
 
     @param: xml_file: xml defining network
     @param: extra: extra parameters to pass to command
+    @param: options: options to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("net-create %s %s" % (xml_file, extra), **dargs)
-
-
-def net_define(xml_file, extra="", **dargs):
-    """
-    Define network from a XML file, do not start
-
-    @param: xml_file: xml defining network
-    @param: extra: extra parameters to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    return command("net-define %s %s" % (xml_file, extra), **dargs)
+    cmd = "net-create --file %s %s" % (xml_file, extra)
+    return command(cmd, **dargs)
 
 
 def net_list(options, extra="", **dargs):
     """
     List networks on host.
 
+    @param: extra: extra parameters to pass to command
     @param: options: options to pass to command
-    @param: extra: extra parameters to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("net-list %s %s" % (options, extra), **dargs)
+    cmd = "net-list %s %s" % (options, extra)
+    return command(cmd, **dargs)
 
 
-def net_state_dict(only_names=False, **dargs):
+def net_destroy(name, extra="", **dargs):
     """
-    Return network name to state/autostart/persistent mapping
+    Destroy actived network on host.
 
-    @param: only_names: When true, return network names as keys and None values
-    @param: dargs: standardized virsh function API keywords
-    @return: dictionary
-    """
-    # Using multiple virsh commands in different ways
-    dargs['ignore_status'] = False # force problem detection
-    net_list_result = net_list("--all", **dargs)
-    # If command failed, exception would be raised here
-    netlist = net_list_result.stdout.strip().splitlines()
-    # First two lines contain table header
-    # TODO: Double-check first-two lines really are header
-    netlist = netlist[2:]
-    result = {}
-    for line in netlist:
-        # Split on whitespace, assume 3 columns
-        linesplit = line.split(None, 3)
-        name = linesplit[0]
-        # Several callers in libvirt_xml only requre defined names
-        if only_names:
-            result[name] = None
-            continue
-        # Keep search fast & avoid first-letter capital problems
-        active = not bool(linesplit[1].count("nactive"))
-        autostart = bool(linesplit[2].count("es"))
-        # There is no representation of persistent status in output
-        try:
-            # Rely on net_autostart will raise() if not persistent state
-            if autostart: # Enabled, try enabling again
-                # dargs['ignore_status'] already False
-                net_autostart(name, **dargs)
-            else: # Disabled, try disabling again
-                net_autostart(name, "--disable", **dargs)
-            # no exception raised, must be persistent
-            persistent = True
-        except error.CmdError, detail:
-            # Exception thrown, could be transient or real problem
-            if bool(detail.result_obj.stderr.count("ransient")):
-                persistent = False
-            else: # A unexpected problem happened, re-raise it.
-                raise
-        # Warning: These key names are used by libvirt_xml and test modules!
-        result[name] = {'active':active,
-                        'autostart':autostart,
-                        'persistent':persistent}
-    return result
-
-
-def net_start(network, extra="", **dargs):
-    """
-    Start network on host.
-
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra parameters to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    return command("net-start %s %s" % (network, extra), **dargs)
-
-
-def net_destroy(network, extra="", **dargs):
-    """
-    Destroy (stop) an activated network on host.
-
-    @param: network: name/parameter for network option/argument
+    @param: name: name of guest
     @param: extra: extra string to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("net-destroy %s %s" % (network, extra), **dargs)
-
-
-def net_undefine(network, extra="", **dargs):
-    """
-    Undefine a defined network on host.
-
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra string to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    return command("net-undefine %s %s" % (network, extra), **dargs)
-
-
-def net_name(net_uuid, extra="", **dargs):
-    """
-    Get network name on host.
-
-    @param: net_uuid: network UUID.
-    @param: extra: extra parameters to pass to command.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    return command("net-name %s %s" % (net_uuid, extra), **dargs)
-
-
-def net_uuid(network, extra="", **dargs):
-    """
-    Get network UUID on host.
-
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra parameters to pass to command.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    return command("net-uuid %s %s" % (network, extra), **dargs)
-
-
-def net_autostart(network, extra="", **dargs):
-    """
-    Set/unset a network to autostart on host boot
-
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra parameters to pass to command (e.g. --disable)
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
-    """
-    return command("net-autostart %s %s" % (network, extra), **dargs)
+    cmd = "net-destroy --network %s %s" % (name, extra)
+    return command(cmd, **dargs)
 
 
 def pool_info(name, **dargs):
@@ -1435,7 +1044,7 @@ def pool_destroy(name, **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError, detail:
-        logging.error("Failed to destroy pool: %s.", detail)
+        logging.error("Failed to destroy pool: %s." % detail)
         return False
 
 
@@ -1457,11 +1066,11 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
     types = [ 'dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical' ]
 
     if pool_type and pool_type not in types:
-        logging.error("Only support pool types: %s.", types)
+        logging.error("Only support pool types: %s." % types)
     elif not pool_type:
         pool_type = types[0]
 
-    logging.info("Create %s type pool %s", pool_type, name)
+    logging.info("Create %s type pool %s" % (pool_type, name))
     cmd = "pool-create-as --name %s --type %s --target %s %s" \
           % (name, pool_type, target, extra)
     dargs['ignore_status'] = False
@@ -1469,7 +1078,7 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError, detail:
-        logging.error("Failed to create pool: %s.", detail)
+        logging.error("Failed to create pool: %s." % detail)
         return False
 
 
@@ -1483,18 +1092,6 @@ def capabilities(option='', **dargs):
     return command('capabilities %s' % option, **dargs).stdout.strip()
 
 
-def nodecpustats(option='', **dargs):
-    """
-    Returns basic information about the node CPU statistics
-
-    @param: option: additional options (takes none)
-    @param: dargs: standardized virsh function API keywords
-    """
-
-    cmd_nodecpustat = "nodecpustats %s" % option
-    return command(cmd_nodecpustat, **dargs)
-
-
 def help_command(options='', cache=False, **dargs):
     """
     Return list of commands in help command output
@@ -1502,7 +1099,6 @@ def help_command(options='', cache=False, **dargs):
     @param: options: additional options to pass to help command
     @param: cache: Return cached result if True, or refreshed cache if False
     @param: dargs: standardized virsh function API keywords
-    @return: List of command names
     """
     # global needed to support this function's use in Virsh method closure
     global VIRSH_COMMAND_CACHE
@@ -1511,318 +1107,21 @@ def help_command(options='', cache=False, **dargs):
         cmd = 'help'
         if options:
             cmd += (' ' + options)
-        regx = re.compile(r"\s+([a-zA-Z0-9-]+)\s+")
+        r = re.compile(r"\s+([a-zA-Z0-9-]+)\s+")
         for line in command(cmd, **dargs).stdout.strip().splitlines():
-            mobj = regx.search(line)
-            if mobj:
-                VIRSH_COMMAND_CACHE.append(mobj.group(1))
+            mo = r.search(line)
+            if mo:
+                VIRSH_COMMAND_CACHE.append(mo.group(1))
     # Prevent accidental modification of cache itself
     return list(VIRSH_COMMAND_CACHE)
 
 
 def has_help_command(cmd, options='', **dargs):
     """
-    String match on cmd in help output command list
+    Regex Search for '^\s+<command>\s+' in virsh help output
 
     @param: cmd: Name of command to look for
     @param: options: Additional options to send to help command
-    @param: dargs: standardized virsh function API keywords
     @return: True/False
     """
     return bool(help_command(options, cache=True, **dargs).count(cmd))
-
-
-def has_command_help_match(cmd, regex, **dargs):
-    """
-    Regex search on subcommand help output
-
-    @param: cmd: Name of command to match help output
-    @param: regex: regular expression string to match
-    @param: dargs: standardized virsh function API keywords
-    @return: re match object
-    """
-    command_help_output = command("help %s" % cmd, **dargs).stdout.strip()
-    return re.search(regex, command_help_output)
-
-
-def schedinfo(domain, options="", **dargs):
-    """
-    Show/Set scheduler parameters.
-
-    @param domain: vm's name id or uuid.
-    @param options: additional options.
-    @param: dargs: standardized virsh function API keywords
-    """
-    cmd = "schedinfo %s %s" % (domain, options)
-    return command(cmd, **dargs)
-
-
-def setmem(domainarg=None, sizearg=None, domain=None,
-           size=None, use_kilobytes=False, flagstr="", **dargs):
-    """
-    Change the current memory allocation in the guest domain.
-
-    @param: domainarg: Domain name (first pos. parameter)
-    @param: sizearg: Memory size in KiB (second. pos. parameter)
-    @param: domain: Option to --domain parameter
-    @param: size: Option to --size or --kilobytes parameter
-    @param: use_kilobytes: True for --kilobytes, False for --size
-    @param: dargs: standardized virsh function API keywords
-    @param: flagstr: string of "--config, --live, --current, etc."
-    @returns: CmdResult instance
-    @raises: error.CmdError: if libvirtd is not running!!!!!!
-    """
-
-    cmd = "setmem"
-    if domainarg is not None: # Allow testing of ""
-        cmd += " %s" % domainarg
-    if sizearg is not None: # Allow testing of 0 and ""
-        cmd += " %s" % sizearg
-    if domain is not None: # Allow testing of --domain ""
-        cmd += " --domain %s" % domain
-    if size is not None: # Allow testing of --size "" or --size 0
-        if use_kilobytes:
-            cmd += " --kilobytes %s" % size
-        else:
-            cmd += " --size %s" % size
-    if len(flagstr) > 0:
-        cmd += " %s" % flagstr
-    return command(cmd, **dargs)
-
-
-def setmaxmem(domainarg=None, sizearg=None, domain=None,
-              size=None, use_kilobytes=False, flagstr="", **dargs):
-    """
-    Change the maximum memory allocation for the guest domain.
-
-    @param: domainarg: Domain name (first pos. parameter)
-    @param: sizearg: Memory size in KiB (second. pos. parameter)
-    @param: domain: Option to --domain parameter
-    @param: size: Option to --size or --kilobytes parameter
-    @param: use_kilobytes: True for --kilobytes, False for --size
-    @param: flagstr: string of "--config, --live, --current, etc."
-    @returns: CmdResult instance
-    @raises: error.CmdError: if libvirtd is not running.
-    """
-    cmd = "setmaxmem"
-    if domainarg is not None: # Allow testing of ""
-        cmd += " %s" % domainarg
-    if sizearg is not None: # Allow testing of 0 and ""
-        cmd += " %s" % sizearg
-    if domain is not None: # Allow testing of --domain ""
-        cmd += " --domain %s" % domain
-    if size is not None: # Allow testing of --size "" or --size 0
-        if use_kilobytes:
-            cmd += " --kilobytes %s" % size
-        else:
-            cmd += " --size %s" % size
-    if len(flagstr) > 0:
-        cmd += " %s" % flagstr
-    return command(cmd, **dargs)
-
-
-def snapshot_create(name, **dargs):
-    """
-    Create snapshot of domain.
-
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @return: name of snapshot
-    """
-    # CmdResult is handled here, force ignore_status
-    dargs['ignore_status'] = True
-    cmd = "snapshot-create %s" % name
-    sc_output = command(cmd, **dargs)
-    if sc_output.exit_status != 0:
-        raise error.CmdError(cmd, sc_output, "Failed to create snapshot")
-    snapshot_number = re.search("\d+", sc_output.stdout.strip()).group(0)
-
-    return snapshot_number
-
-
-def snapshot_current(name, **dargs):
-    """
-    Create snapshot of domain.
-
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @return: name of snapshot
-    """
-    # CmdResult is handled here, force ignore_status
-    dargs['ignore_status'] = True
-    cmd = "snapshot-current %s --name" % name
-    sc_output = command(cmd, **dargs)
-    if sc_output.exit_status != 0:
-        raise error.CmdError(cmd, sc_output, "Failed to get current snapshot")
-
-    return sc_output.stdout.strip()
-
-
-def snapshot_list(name, **dargs):
-    """
-    Get list of snapshots of domain.
-
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @return: list of snapshot names
-    """
-    # CmdResult is handled here, force ignore_status
-    dargs['ignore_status'] = True
-    ret = []
-    cmd = "snapshot-list %s" % name
-    sc_output = command(cmd, **dargs)
-    if sc_output.exit_status != 0:
-        raise error.CmdError(cmd, sc_output, "Failed to get list of snapshots")
-
-    data = re.findall("\w* *\d*-\d*-\d* \d*:\d*:\d* [+-]\d* \w*",
-                      sc_output.stdout)
-    for rec in data:
-        if not rec:
-            continue
-        ret.append(re.match("\w*", rec).group())
-
-    return ret
-
-
-def snapshot_info(name, snapshot, **dargs):
-    """
-    Check snapshot information.
-
-    @param name: name of domain
-    @param snapshot: name os snapshot to verify
-    @param: dargs: standardized virsh function API keywords
-    @return: snapshot information dictionary
-    """
-    # CmdResult is handled here, force ignore_status
-    dargs['ignore_status'] = True
-    ret = {}
-    values = ["Name", "Domain", "Current", "State", "Parent",
-              "Children","Descendants", "Metadata"]
-
-    cmd = "snapshot-info %s %s" % (name, snapshot)
-    sc_output = command(cmd, **dargs)
-    if sc_output.exit_status != 0:
-        raise error.CmdError(cmd, sc_output, "Failed to get snapshot info")
-
-    for val in values:
-        data = re.search("(?<=%s:) *\w*" % val, sc_output.stdout)
-        if data is None:
-            continue
-        ret[val] = data.group(0).strip()
-
-    if ret["Parent"] == "-":
-        ret["Parent"] = None
-
-    return ret
-
-
-def snapshot_revert(name, snapshot, **dargs):
-    """
-    Revert domain state to saved snapshot.
-
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @param snapshot: snapshot to revert to
-    @return: CmdResult instance
-    """
-    return command("snapshot-revert %s %s" % (name, snapshot), **dargs)
-
-
-def snapshot_delete(name, snapshot, **dargs):
-    """
-    Remove domain snapshot
-
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @param snapshot: snapshot to delete
-    @return: CmdResult instance
-    """
-    return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
-
-
-def domblklist(name, options=None, **dargs):
-    """
-    Get domain devices.
-
-    @param name: name of domain
-    @param options: options of domblklist.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    cmd = "domblklist %s" % name
-    if options:
-        cmd += " %s" % options
-
-    return command(cmd, **dargs)
-
-
-def cpu_stats(name, options, **dargs):
-    """
-    Display per-CPU and total statistics about domain's CPUs
-
-    @param name: name of domain
-    @param options: options of cpu_stats
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    cmd = "cpu-stats %s" % name
-    if options:
-        cmd += " %s" % options
-
-    return command(cmd, **dargs)
-
-
-def change_media(name, device, options, **dargs):
-    """
-    Change media of CD or floppy drive.
-
-    @param: name: VM's name.
-    @param: path: Fully-qualified path or target of disk device
-    @param: options: command change_media options.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    cmd = "change-media %s %s " % (name, device)
-    if options:
-        cmd += " %s " % options
-    return command(cmd, **dargs)
-
-
-def cpu_compare(xml_file, **dargs):
-    """
-    Compare host CPU with a CPU described by an XML file
-
-    @param xml_file: file containing an XML CPU description.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    return command("cpu-compare %s" % xml_file, **dargs)
-
-
-def numatune(name, mode=None, nodeset=None, options=None, **dargs):
-    """
-    Set or get a domain's numa parameters
-    @param name: name of domain
-    @param options: options may be live, config and current
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
-    """
-    cmd = "numatune %s" % name
-    if options:
-        cmd += " --%s" % options
-    if mode:
-        cmd += " --mode %s" % mode
-    if nodeset:
-        cmd += " --nodeset %s" % nodeset
-
-    return command(cmd, **dargs)
-
-
-def ttyconsole(name, **dargs):
-    """
-    Print tty console device.
-
-    @param name: name, uuid or id of domain
-    @return: CmdResult instance
-    """
-    return command("ttyconsole %s" % name, **dargs)

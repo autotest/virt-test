@@ -1,8 +1,7 @@
 import os, sys, logging, imp, Queue
 from autotest.client import test
 from autotest.client.shared import error
-from virttest import utils_misc, utils_params, utils_env, env_process
-from virttest import data_dir, bootstrap, funcatexit
+import utils_misc, env_process
 
 
 class virt(test.test):
@@ -13,7 +12,7 @@ class virt(test.test):
     file, all code that can be reused among those virt tests.
     """
     version = 1
-    env_version = utils_env.get_env_version()
+    env_version = 1
 
 
     def initialize(self, params):
@@ -21,10 +20,7 @@ class virt(test.test):
         # the value present on the configuration file (defaults to yes)
         if params.get("preserve_srcdir", "yes") == "yes":
             self.preserve_srcdir = True
-        virtdir = os.path.dirname(sys.modules[__name__].__file__)
-        self.virtdir = os.path.join(virtdir, "shared")
-        # Place where virt software will be built/linked
-        self.builddir = os.path.join(virtdir, params.get("vm_type"))
+        self.virtdir = os.path.dirname(sys.modules[__name__].__file__)
         self.background_errors = Queue.Queue()
 
 
@@ -44,7 +40,7 @@ class virt(test.test):
 
     def run_once(self, params):
         # Convert params to a Params object
-        params = utils_params.Params(params)
+        params = utils_misc.Params(params)
 
         # If a dependency test prior to this test has failed, let's fail
         # it right away as TestNA.
@@ -64,37 +60,18 @@ class virt(test.test):
         utils_misc.set_log_file_dir(self.debugdir)
 
         # Open the environment file
-        env_filename = os.path.join(self.bindir, params.get("vm_type"),
-                                    params.get("env", "env"))
-        env = utils_env.Env(env_filename, self.env_version)
+        env_filename = os.path.join(self.bindir, params.get("env", "env"))
+        env = utils_misc.Env(env_filename, self.env_version)
 
         test_passed = False
 
         try:
             try:
                 try:
-                    subtest_dirs = []
-                    tests_dir = self.job.testdir
-
-                    other_subtests_dirs = params.get("other_tests_dirs", "")
-                    for d in other_subtests_dirs.split():
-                        # Replace split char.
-                        d = os.path.join(*d.split("/"))
-                        subtestdir = os.path.join(tests_dir, d, "tests")
-                        if not os.path.isdir(subtestdir):
-                            raise error.TestError("Directory %s not"
-                                                  " exist." % (subtestdir))
-                        subtest_dirs += data_dir.SubdirList(subtestdir,
-                                                          bootstrap.test_filter)
                     # Verify if we have the correspondent source file for it
-                    shared_test_dir = os.path.dirname(self.virtdir)
-                    shared_test_dir = os.path.join(shared_test_dir, "tests")
-                    subtest_dirs += data_dir.SubdirList(shared_test_dir,
-                                                        bootstrap.test_filter)
-                    virt_test_dir = os.path.join(self.bindir,
-                                                 params.get("vm_type"), "tests")
-                    subtest_dirs += data_dir.SubdirList(virt_test_dir,
-                                                        bootstrap.test_filter)
+                    virt_dir = os.path.dirname(utils_misc.__file__)
+                    subtest_dirs.append(os.path.join(virt_dir, "tests"))
+                    subtest_dirs.append(os.path.join(self.bindir, "tests"))
                     subtest_dir = None
 
                     # Get the test routine corresponding to the specified
@@ -102,19 +79,39 @@ class virt(test.test):
                     t_types = params.get("type").split()
                     test_modules = []
                     for t_type in t_types:
+                        for d in [subtest_dir_test, subtest_dir_common]:
+                            module_path = os.path.join(d, "%s.py" % t_type)
+                            if os.path.isfile(module_path):
+                                subtest_dir = d
+                                break
+                        if subtest_dir is None:
+                            msg = "Could not find test file %s.py "\
+                                  "on either %s or %s directory" % \
+                                  (t_type, subtest_dir_test,
+                                   subtest_dir_common)
+                            raise error.TestError(msg)
+                        # Load the test module
+                        f, p, d = imp.find_module(t_type, [subtest_dir])
+                        test_modules[t_type] = imp.load_module(t_type, f, p, d)
+                        f.close()
+
+                    # Get the test routine corresponding to the specified
+                    # test type
+                    t_types = params.get("type").split()
+                    test_modules = {}
+                    for t_type in t_types:
                         for d in subtest_dirs:
                             module_path = os.path.join(d, "%s.py" % t_type)
                             if os.path.isfile(module_path):
                                 subtest_dir = d
                                 break
                         if subtest_dir is None:
-                            msg = ("Could not find test file %s.py on tests"
-                                   "dirs %s" % (t_type, subtest_dirs))
+                            msg = "Could not find test file %s.py on tests"\
+                                  "dirs %s" % (t_type, subtest_dirs)
                             raise error.TestError(msg)
                         # Load the test module
                         f, p, d = imp.find_module(t_type, [subtest_dir])
-                        test_modules.append((t_type,
-                                             imp.load_module(t_type, f, p, d)))
+                        test_modules.append((t_type, imp.load_module(t_type, f, p, d)))
                         f.close()
                     # Preprocess
                     try:
@@ -132,15 +129,8 @@ class virt(test.test):
                         finally:
                             env.save()
                     test_passed = True
-                    error_message = funcatexit.run_exitfuncs(env, t_type)
-                    if error_message:
-                        raise error.TestWarn("funcatexit failed with: %s"
-                                             % error_message)
 
                 except Exception, e:
-                    error_message = funcatexit.run_exitfuncs(env, t_type)
-                    if error_message:
-                        logging.error(error_message)
                     logging.error("Test failed: %s: %s",
                                   e.__class__.__name__, e)
                     try:
@@ -168,7 +158,7 @@ class virt(test.test):
                 raise
             # Abort on error
             logging.info("Aborting job (%s)", e)
-            if params.get("vm_type") == "qemu":
+            if params.get("vm_type") == "kvm":
                 for vm in env.get_all_vms():
                     if vm.is_dead():
                         continue
