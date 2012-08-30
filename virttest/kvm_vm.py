@@ -79,8 +79,6 @@ class VM(virt_vm.BaseVM):
         self.name = name
         self.params = params
         self.root_dir = root_dir
-        # We need this to get to the blkdebug files
-        self.virt_dir = os.path.abspath(os.path.join(root_dir, "..", "..", "virt"))
         self.address_cache = address_cache
         self.index_in_use = {}
 
@@ -1326,47 +1324,33 @@ class VM(virt_vm.BaseVM):
                         qemu_cmd += ",%s" % params.get("scsi_extra_params_hda")
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
+            shared_dir = os.path.join(self.root_dir, "shared")
             qemu_cmd += add_drive(hlp,
-                  storage.get_image_filename(image_params, root_dir),
-                  index,
-                  image_params.get("drive_format"),
-                  image_params.get("drive_cache"),
-                  image_params.get("drive_werror"),
-                  image_params.get("drive_rerror"),
-                  image_params.get("drive_serial"),
-                  image_params.get("image_snapshot"),
-                  image_params.get("image_boot"),
-                  storage.get_image_blkdebug_filename(image_params, root_dir),
-                  bus,
-                  port,
-                  image_params.get("bootindex"),
-                  image_params.get("removable"),
-                  image_params.get("min_io_size"),
-                  image_params.get("opt_io_size"),
-                  image_params.get("physical_block_size"),
-                  image_params.get("logical_block_size"),
-                  image_params.get("image_readonly"),
-                  image_params.get("drive_scsiid"),
-                  image_params.get("drive_lun"),
-                  image_params.get("image_format"),
-                  image_params.get("image_aio", "native"),
-                  "disk", ide_bus, ide_unit, vdisk, scsi_disk,
-                  image_params.get("drive_pci_addr"),
-                  scsi=image_params.get("virtio-blk-pci_scsi"),
-                  x_data_plane=image_params.get("x-data-plane"),
-                  blk_extra_params=image_params.get("blk_extra_params"))
+                    storage.get_image_filename(image_params, root_dir),
+                    image_params.get("drive_index"),
+                    image_params.get("drive_format"),
+                    image_params.get("drive_cache"),
+                    image_params.get("drive_werror"),
+                    image_params.get("drive_rerror"),
+                    image_params.get("drive_serial"),
+                    image_params.get("image_snapshot"),
+                    image_params.get("image_boot"),
+                    storage.get_image_blkdebug_filename(image_params,
+                                                        shared_dir),
+                    bus,
+                    port,
+                    image_params.get("bootindex"),
+                    image_params.get("removable"),
+                    image_params.get("min_io_size"),
+                    image_params.get("opt_io_size"),
+                    image_params.get("physical_block_size"),
+                    image_params.get("logical_block_size"),
+                    image_params.get("image_readonly"),
+                    image_params.get("drive_scsiid"),
+                    image_params.get("drive_lun"))
 
-            # increase the bus and unit no for ide device
-            fmt = image_params.get("drive_format")
-            if fmt == "ide":
-                if ide_unit == 1:
-                    ide_bus += 1
-                ide_unit ^= 1
-            elif fmt == "virtio":
-                vdisk += 1
-            elif fmt.startswith("scsi-"):
-                scsi_disk += 1
-
+        # Networking
+>>>>>>> virt.kvm_vm: Fixup relative positioning of blkdebug files
         redirs = []
         for redir_name in params.objects("redirs"):
             redir_params = params.object_params(redir_name)
