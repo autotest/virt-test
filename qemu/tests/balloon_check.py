@@ -84,7 +84,7 @@ def run_balloon_check(test, params, env):
             else:
                 cur_free_mem = int(cur_free_mem) / 1024
             ballooned_mem_guest = abs(free_mem - cur_free_mem)
-            ballooned_mem = abs(cur_mem - new_mem)
+            ballooned_mem = abs(old_mem - new_mem)
             if (abs(ballooned_mem_guest - ballooned_mem) >
                 ratio * ballooned_mem):
                 fail += 1
