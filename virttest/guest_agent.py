@@ -4,11 +4,7 @@ Interfaces to the virt agent.
 @copyright: 2008-2012 Red Hat Inc.
 """
 
-<<<<<<< HEAD
 import socket, time, logging, random
-=======
-import socket, time, logging
->>>>>>> virt.guest_agent: Add shutdown parameter to shutdown method
 from autotest.client.shared import error
 from kvm_monitor import Monitor, MonitorError
 
