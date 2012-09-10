@@ -1,7 +1,7 @@
 import logging, os, re
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.common_lib import utils
-from autotest_lib.client.virt import virt_test_utils, aexpect, virt_test_setup
+from autotest.client.shared import error
+from autotest.client.shared import utils
+from autotest.client.virt import utils_test
 
 
 @error.context_aware
@@ -45,14 +45,10 @@ def run_trans_hugepage(test, params, env):
         except Exception:
             debugfs_flag = 0
 
-    test_config = virt_test_setup.TransparentHugePageConfig(test, params)
-    vm = virt_test_utils.get_living_vm(env, params.get("main_vm"))
-    session = virt_test_utils.wait_for_login(vm, timeout=login_timeout)
+    vm = utils_test.get_living_vm(env, params.get("main_vm"))
+    session = utils_test.wait_for_login(vm, timeout=login_timeout)
 
     try:
-        # Check khugepage is used by guest
-        test_config.setup()
-
         logging.info("Smoke test start")
         error.context("smoke test")
 
@@ -95,14 +91,7 @@ def run_trans_hugepage(test, params, env):
         error.context("stress test")
         cmd = "rm -rf %s/*; for i in `seq %s`; do dd " % (mem_path, count)
         cmd += "if=/dev/zero of=%s/$i bs=4000000 count=1& done;wait" % mem_path
-        try:
-            output = session.cmd_output(cmd, timeout=dd_timeout)
-        except kvm_subprocess.ShellStatusError, e:
-            logging.debug(e)
-            raise error.TestFail("Could not get exit status of command %s" % cmd)
-        except Exception, e:
-            logging.debug(e)
-            raise error.TestFail("Fail command: %s. Please check debug log!" % cmd)
+        output = session.cmd_output(cmd, timeout=dd_timeout)
 
         if len(re.findall("No space", output)) > count * 0.05:
             e_msg = "stress: Too many dd instances failed in guest"
@@ -129,7 +118,6 @@ def run_trans_hugepage(test, params, env):
         if os.path.isdir(debugfs_path):
             os.removedirs(debugfs_path)
         session.close()
-        test_config.cleanup()
 
     error.context("")
     if failures:

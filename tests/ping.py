@@ -1,6 +1,6 @@
 import logging
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_test_utils
+from autotest.client.shared import error
+from autotest.client.virt import utils_test
 
 
 def run_ping(test, params, env):
@@ -9,7 +9,8 @@ def run_ping(test, params, env):
 
     Packet Loss Test:
     1) Ping the guest with different size/interval of packets.
-       Stress Test:
+
+    Stress Test:
     1) Flood ping the guest.
     2) Check if the network is still usable.
 
@@ -17,14 +18,13 @@ def run_ping(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
     counts = params.get("ping_counts", 100)
     flood_minutes = float(params.get("flood_minutes", 10))
-    nics = params.get("nics").split()
+    nics = vm.virtnet
     strict_check = params.get("strict_check", "no") == "yes"
 
     packet_size = [0, 1, 4, 48, 512, 1440, 1500, 1505, 4054, 4055, 4096, 4192,
@@ -40,11 +40,11 @@ def run_ping(test, params, env):
 
             for size in packet_size:
                 logging.info("Ping with packet size %s", size)
-                status, output = virt_test_utils.ping(ip, 10,
+                status, output = utils_test.ping(ip, 10,
                                                      packetsize=size,
                                                      timeout=20)
                 if strict_check:
-                    ratio = virt_test_utils.get_loss_ratio(output)
+                    ratio = utils_test.get_loss_ratio(output)
                     if ratio != 0:
                         raise error.TestFail("Loss ratio is %s for packet size"
                                              " %s" % (ratio, size))
@@ -54,14 +54,14 @@ def run_ping(test, params, env):
                                              " output: %s" % (status, output))
 
             logging.info("Flood ping test")
-            virt_test_utils.ping(ip, None, flood=True, output_func=None,
+            utils_test.ping(ip, None, flood=True, output_func=None,
                                 timeout=flood_minutes * 60)
 
             logging.info("Final ping test")
-            status, output = virt_test_utils.ping(ip, counts,
+            status, output = utils_test.ping(ip, counts,
                                                  timeout=float(counts) * 1.5)
             if strict_check:
-                ratio = virt_test_utils.get_loss_ratio(output)
+                ratio = utils_test.get_loss_ratio(output)
                 if ratio != 0:
                     raise error.TestFail("Ping failed, status: %s,"
                                          " output: %s" % (status, output))

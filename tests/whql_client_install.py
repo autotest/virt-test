@@ -1,6 +1,7 @@
 import logging, time, os
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_utils, virt_test_utils, rss_client
+from autotest.client.shared import error
+from autotest.client.virt import utils_misc, utils_test, remote
+from autotest.client.virt import rss_client
 
 
 def run_whql_client_install(test, params, env):
@@ -37,15 +38,15 @@ def run_whql_client_install(test, params, env):
     client_password = params.get("client_password")
     dsso_delete_machine_binary = params.get("dsso_delete_machine_binary",
                                             "deps/whql_delete_machine_15.exe")
-    dsso_delete_machine_binary = virt_utils.get_path(test.bindir,
+    dsso_delete_machine_binary = utils_misc.get_path(test.bindir,
                                                     dsso_delete_machine_binary)
-    install_timeout = float(params.get("whql_install_timeout", 600))
-    install_cmd = params.get("whql_install_cmd")
+    install_timeout = float(params.get("install_timeout", 600))
+    install_cmd = params.get("install_cmd")
     wtt_services = params.get("wtt_services")
 
     # Stop WTT service(s) on client
     for svc in wtt_services.split():
-        virt_test_utils.stop_windows_service(session, svc)
+        utils_test.stop_windows_service(session, svc)
 
     # Copy dsso_delete_machine_binary to server
     rss_client.upload(server_address, server_file_transfer_port,
@@ -53,9 +54,9 @@ def run_whql_client_install(test, params, env):
                              timeout=60)
 
     # Open a shell session with server
-    server_session = virt_utils.remote_login("nc", server_address,
-                                            server_shell_port, "", "",
-                                            session.prompt, session.linesep)
+    server_session = remote.remote_login("nc", server_address,
+                                              server_shell_port, "", "",
+                                              session.prompt, session.linesep)
     server_session.set_status_test_command(session.status_test_command)
 
     # Get server and client information
@@ -81,7 +82,7 @@ def run_whql_client_install(test, params, env):
     server_session.close()
 
     # Rename the client machine
-    client_name = "autotest_%s" % virt_utils.generate_random_string(4)
+    client_name = "autotest_%s" % utils_misc.generate_random_string(4)
     logging.info("Renaming client machine to '%s'", client_name)
     cmd = ('wmic computersystem where name="%%computername%%" rename name="%s"'
            % client_name)

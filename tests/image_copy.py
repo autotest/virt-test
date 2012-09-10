@@ -1,8 +1,8 @@
 import os, logging
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-from autotest_lib.client.virt import virt_utils
-from autotest_lib.client.virt import virt_test_utils
+from autotest.client.shared import error
+from autotest.client import utils
+from autotest.client.virt import utils_misc
+from autotest.client.virt import utils_test
 
 
 @error.context_aware
@@ -52,7 +52,7 @@ def run_image_copy(test, params, env):
 
     try:
         error.context("Mount the NFS share directory")
-        if not virt_utils.mount(src, mount_dest_dir, 'nfs', 'ro'):
+        if not utils_misc.mount(src, mount_dest_dir, 'nfs', 'ro'):
             raise error.TestError('Could not mount NFS share %s to %s' %
                                   (src, mount_dest_dir))
 
@@ -67,6 +67,6 @@ def run_image_copy(test, params, env):
             params['image_name'] += "-error"
             params['boot_once'] = "c"
             vm.create(params=params)
-            virt_test_utils.run_virt_sub_test(test, params, env,
+            utils_test.run_virt_sub_test(test, params, env,
                                          params.get("sub_type"))
 

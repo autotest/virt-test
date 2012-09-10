@@ -222,7 +222,7 @@ variants:
         remove_image_pxe = yes
         boot_once = n
         kill_vm_on_error = yes
-        network = bridge
+        nettype = bridge
         restart_vm = yes
         pxe_timeout = 60
         variants:
@@ -242,39 +242,38 @@ variants:
         type = boot
         kill_vm_on_error = yes
         login_timeout = 240
-
-    - multi_disks_boot:
-        no ide
-        type = boot
-        force_create_image = yes
-        force_create_image_image1 = no
-        image_boot = no
-        image_boot_image1 = yes
-        images += " stg stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24"
-        image_name_stg = storage
-        image_name_stg2 = storage2
-        image_name_stg3 = storage3
-        image_name_stg4 = storage4
-        image_name_stg5 = storage5
-        image_name_stg6 = storage6
-        image_name_stg7 = storage7
-        image_name_stg8 = storage8
-        image_name_stg9 = storage9
-        image_name_stg10 = storage10
-        image_name_stg11 = storage11
-        image_name_stg12 = storage12
-        image_name_stg13 = storage13
-        image_name_stg14 = storage14
-        image_name_stg15 = storage15
-        image_name_stg16 = storage16
-        image_name_stg17 = storage17
-        image_name_stg18 = storage18
-        image_name_stg19 = storage19
-        image_name_stg20 = storage20
-        image_name_stg21 = storage21
-        image_name_stg22 = storage22
-        image_name_stg23 = storage23
-        image_name_stg24 = storage24
+        variants:
+            - @default_boot:
+            - multi_disks:
+                no ide
+                force_create_image = no
+                image_boot = no
+                image_boot_image1 = yes
+                images += " stg stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24"
+                image_name_stg = storage
+                image_name_stg2 = storage2
+                image_name_stg3 = storage3
+                image_name_stg4 = storage4
+                image_name_stg5 = storage5
+                image_name_stg6 = storage6
+                image_name_stg7 = storage7
+                image_name_stg8 = storage8
+                image_name_stg9 = storage9
+                image_name_stg10 = storage10
+                image_name_stg11 = storage11
+                image_name_stg12 = storage12
+                image_name_stg13 = storage13
+                image_name_stg14 = storage14
+                image_name_stg15 = storage15
+                image_name_stg16 = storage16
+                image_name_stg17 = storage17
+                image_name_stg18 = storage18
+                image_name_stg19 = storage19
+                image_name_stg20 = storage20
+                image_name_stg21 = storage21
+                image_name_stg22 = storage22
+                image_name_stg23 = storage23
+                image_name_stg24 = storage24
 
     - boot_with_usb:
         no Host_RHEL.5
@@ -655,7 +654,7 @@ variants:
 
     - autotest:
         only Linux
-        type = autotest
+        type = guest_autotest
         test_timeout = 720
         test_control_file = control
         variants:
@@ -697,13 +696,13 @@ variants:
                 test_name = monotonic_time
                 test_control_file = monotonic_time.control
                 required_cpu_flags = "constant_tsc"
-                pre_command = "/usr/bin/python scripts/check_cpu_flag.py"
+                pre_command = "/usr/bin/python ../../virt/scripts/check_cpu_flag.py"
             - tsc:
                 no RHEL.3.9
                 test_name = tsc
                 test_control_file = tsc.control
                 required_cpu_flags = "constant_tsc"
-                pre_command = "/usr/bin/python scripts/check_cpu_flag.py"
+                pre_command = "/usr/bin/python ../../virt/scripts/check_cpu_flag.py"
             - cpu_hotplug:
                 no RHEL.3.9
                 no RHEL.4
@@ -1101,10 +1100,10 @@ variants:
         kill_vm_vm1 = no
         kill_vm_gracefully = no
         image_snapshot = yes
-        bridge = vbr0
+        netdst = private
         nic_script = scripts/qemu-ifup-vbr0
-        pre_command += "scripts/private_br.sh notftp;"
-        post_command = "scripts/private_br.sh;"
+        #pre_command += "scripts/private_br.sh notftp;"
+        #post_command = "scripts/private_br.sh;"
 
     - guest_test:
         type = guest_test
@@ -1726,10 +1725,10 @@ variants:
         kill_vm = yes
         image_snapshot = yes
         pci_model_nic1 = virtio_net
-        bridge_nic2 = switch
+        netdst_nic2 = switch
         # please fix the mac for nic2 if you needed with this, this can be empty
         nic_mac_nic2 = 9a:37:37:37:37:6e
-        bridge_nic1 = private
+        netdst_nic1 = private
         # please add the physical nic you want to add to your private bridge
         # this can be empty
         physical_nic = eth3
@@ -1869,7 +1868,7 @@ variants:
         # Host memory reserve
         ksm_host_reserve = 512
         ksm_guest_reserve = 1024
-        bridge = vbr0
+        netdst = private
         nic_script = scripts/qemu-ifup-vbr0
         variants:
             - ksm_serial:
@@ -2770,7 +2769,7 @@ variants:
         drift_threshold = 10
         interval = 30
         required_cpu_flags = "constant_tsc"
-        pre_command = "/usr/bin/python scripts/check_cpu_flag.py"
+        pre_command = "/usr/bin/python ../../virt/scripts/check_cpu_flag.py"
 
     - format_disk:
         type = format_disk

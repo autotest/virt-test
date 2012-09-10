@@ -1,5 +1,5 @@
 import logging, time
-from autotest_lib.client.common_lib import error
+from autotest.client.shared import error
 
 
 def run_linux_s3(test, params, env):
@@ -19,7 +19,7 @@ def run_linux_s3(test, params, env):
     session.cmd("grep -q mem /sys/power/state")
 
     logging.info("Waiting for a while for X to start")
-    time.sleep(30)
+    time.sleep(10)
 
     src_tty = session.cmd_output("fgconsole").strip()
     logging.info("Current virtual terminal is %s", src_tty)

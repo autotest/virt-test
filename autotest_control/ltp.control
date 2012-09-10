@@ -1,5 +1,5 @@
 NAME = "LTP"
-AUTHOR = "Martin Bligh <mbligh@google.com>"
+AUTHOR = "Satheesh Rajendran <sathnaga@linux.vnet.ibm.com>"
 TIME = "MEDIUM"
 TEST_CATEGORY = "FUNCTIONAL"
 TEST_CLASS = "KERNEL"
@@ -8,4 +8,4 @@ DOC = """
 Linux Test Project. See http://ltp.sourceforge.net/
 """
 
-job.run_test('ltp')
+job.run_test('ltp', args='-t 1h')

@@ -1,9 +1,8 @@
-import os, logging, sys
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_test_utils
+import os, logging
+from autotest.client.virt import utils_test
 
 
-def run_autotest(test, params, env):
+def run_guest_autotest(test, params, env):
     """
     Run an autotest test inside a guest.
 
@@ -18,14 +17,14 @@ def run_autotest(test, params, env):
 
     # Collect test parameters
     timeout = int(params.get("test_timeout", 300))
-    control_path = None
     control_path = os.path.join(test.virtdir, "autotest_control",
                                 params.get("test_control_file"))
     outputdir = test.outputdir
-    virt_test_utils.run_autotest(vm, session, control_path, timeout,
-                            outputdir, params)
 
-def run_autotest_background(test, params, env, test_name="dbench",
+    utils_test.run_autotest(vm, session, control_path, timeout, outputdir,
+                                 params)
+
+def run_guest_autotest_background(test, params, env, test_name="dbench",
                             test_control_file="control"):
     """
     Wrapper of run_autotest() and make it run in the background through fork()
@@ -71,10 +70,6 @@ def run_autotest_background(test, params, env, test_name="dbench",
         logging.info("[Autotest Background ERROR] %s" % message_error)
         os.remove(flag_fname)
         os._exit(2)
-    except Exception:
-        os.remove(flag_fname)
-        os._exit(3)
-
     logging.info("[Auototest Background GOOD]")
     os._exit(0)
 
@@ -92,3 +87,4 @@ def wait_autotest_background(pid):
     if status != 0:
         return False
     return True
+

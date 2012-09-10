@@ -17,12 +17,6 @@ variants:
         mem_chk_re_str = [^\$]([0-9]+)
         mem_chk_cur_cmd = grep MemTotal /proc/meminfo
         cpu_chk_cmd = grep -c processor /proc/cpuinfo
-        unattended_install:
-            # If you want to use floppy to hold kickstarts,
-            # comment the 3 lines below
-            cdroms += " unattended"
-            drive_index_unattended = 1
-            drive_index_cd1 = 2
         timedrift:
             extra_params += " -no-kvm-pit-reinjection"
             time_command = date +'TIME: %a %m/%d/%Y %H:%M:%S.%N'
@@ -41,6 +35,10 @@ variants:
                 time_command = date +'TIME: %a %m/%d/%Y %H:%M:%S.%N'
                 time_filter_re = "(?:TIME: \w\w\w )(.{19})(?:\.\d\d)"
                 time_format = "%m/%d/%Y %H:%M:%S"
+        time_manage:
+            time_command = date +'TIME: %a %m/%d/%Y %H:%M:%S.%N'
+            time_filter_re = "(?:TIME: \w\w\w )(.{19})(?:\.\d\d)"
+            time_format = "%m/%d/%Y %H:%M:%S"
         file_transfer:
             tmp_dir = /tmp/
             clean_cmd = rm -f
@@ -54,17 +52,17 @@ variants:
             file_system = "ext3 ext2"
             mount_command = mkdir /mnt/%s && mount /dev/%s /mnt/%s
             umount_command = umount /dev/%s && rmdir /mnt/%s
-            list_volume_command = cd /dev && \ls [vhs]d?
-            re_str = "[vhs]d[a-z]"
+            list_volume_command = cd /dev && \ls [vhs]d*
+            re_str = "[vhs]d[a-z]*"
             format_command = echo y | mkfs -t %s /dev/%s
             copy_to_command = \cp -rf /bin/ls /mnt/%s
             copy_from_command = \cp -rf /mnt/%s/ls /tmp/ls
-            compare_command = cd /bin && md5sum ls > /tmp/ls.md5 && cd /tmp && md5sum -c ls.md5
+            compare_command = md5sum /bin/ls > /tmp/ls.md5 && cd /tmp && md5sum -c ls.md5
             check_result_key_word = OK
             max_disk:
                  stg_image_num = 27
                  list_volume_command = cd /dev && \ls vd*
-                 re_str = "[vhs]d[a-z]"
+                 re_str = "[vhs]d[a-z]*[^0-9]"
         usb_multi_disk:
             show_mount_cmd = mount|gawk '/mnt/{print $1}'
             clean_cmd = "\rm -rf /mnt/*"
@@ -81,7 +79,7 @@ variants:
             check_result_key_word = OK
             max_disk:
                 list_volume_command = cd /dev && \ls [vhs]d*
-                re_str = "[vhs]d[a-z][^0-9]"
+                re_str = "[vhs]d[a-z]"
         floppy_test:
             format_floppy_cmd = mkfs -t ext3 /dev/fd0
             test_floppy_cmd = (dd if=/dev/urandom of=/mnt/test_floppy bs=1M count=1) && (rm -f /mnt/test_floppy)
@@ -92,6 +90,10 @@ variants:
             mount_dir = /mnt/
             diff_file_cmd = diff
             copy_cmd = cp
+        unattended_install:
+            # Change the config below to yes if you want to use syslog
+            # to get anaconda logs (leads to verbose install logs)
+            syslog_server_enabled = no
 
         variants:
             - CustomGuestLinux:
@@ -106,6 +108,7 @@ variants:
                 unattended_install:
                     boot_path = "images/pxeboot"
                     kernel_params = "ks=cdrom nicdelay=60 console=ttyS0,115200 console=tty0"
+                    anaconda_log = "yes"
                     # You have to use ks=floppy if you want to use floppies to
                     # hold your kickstart file
                     #kernel_params = "ks=floppy nicdelay=60 console=ttyS0,115200 console=tty0"
@@ -120,7 +123,8 @@ variants:
                             md5sum_1m_cd1 = dabae451bb69fbbad0e505b25144b1f9
                         unattended_install:
                             unattended_file = unattended/Fedora-8.ks
-                            #floppy = images/f8-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f8-32/ks.vfd
                             cdrom_unattended = images/f8-32/ks.iso
                             kernel = images/f8-32/vmlinuz
                             initrd = images/f8-32/initrd.img
@@ -139,7 +143,8 @@ variants:
                             md5sum_1m_cd1 = 145f6414e19492649a56c89f0a45e719
                         unattended_install:
                             unattended_file = unattended/Fedora-8.ks
-                            #floppy = images/f8-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f8-64/ks.vfd
                             cdrom_unattended = images/f8-64/ks.iso
                             kernel = images/f8-64/vmlinuz
                             initrd = images/f8-64/initrd.img
@@ -157,7 +162,8 @@ variants:
                             md5sum_1m_cd1 = f24fa25689e5863f1b99984c6feb787f
                         unattended_install:
                             unattended_file = unattended/Fedora-9.ks
-                            #floppy = images/f9-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f9-32/ks.vfd
                             cdrom_unattended = images/f9-32/ks.iso
                             kernel = images/f9-32/vmlinuz
                             initrd = images/f9-32/initrd.img
@@ -176,7 +182,8 @@ variants:
                             md5sum_1m_cd1 = 9822ab5097e37e8fe306ef2192727db4
                         unattended_install:
                             unattended_file = unattended/Fedora-9.ks
-                            #floppy = images/f9-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f9-64/ks.vfd
                             cdrom_unattended = images/f9-64/ks.iso
                             kernel = images/f9-64/vmlinuz
                             initrd = images/f9-64/initrd.img
@@ -190,7 +197,8 @@ variants:
                         image_name = f10-32
                         unattended_install:
                             unattended_file = unattended/Fedora-10.ks
-                            #floppy = images/f10-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f10-32/ks.vfd
                             cdrom_unattended = images/f10-32/ks.iso
                             kernel = images/f10-32/vmlinuz
                             initrd = images/f10-32/initrd.img
@@ -203,7 +211,8 @@ variants:
                         image_name = f10-64
                         unattended_install:
                             unattended_file = unattended/Fedora-10.ks
-                            #floppy = images/f10-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f10-64/ks.vfd
                             cdrom_unattended = images/f10-64/ks.iso
                             kernel = images/f10-64/vmlinuz
                             initrd = images/f10-64/initrd.img
@@ -218,7 +227,8 @@ variants:
                             steps = steps/Fedora-11-32.steps
                         unattended_install:
                             unattended_file = unattended/Fedora-11.ks
-                            #floppy = images/f11-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f11-32/ks.vfd
                             cdrom_unattended = images/f11-32/ks.iso
                             kernel = images/f11-32/vmlinuz
                             initrd = images/f11-32/initrd.img
@@ -231,7 +241,8 @@ variants:
                         image_name = f11-64
                         unattended_install:
                             unattended_file = unattended/Fedora-11.ks
-                            #floppy = images/f11-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f11-64/ks.vfd
                             cdrom_unattended = images/f11-64/ks.iso
                             kernel = images/f11-64/vmlinuz
                             initrd = images/f11-64/initrd.img
@@ -244,7 +255,8 @@ variants:
                         image_name = f12-32
                         unattended_install:
                             unattended_file = unattended/Fedora-12.ks
-                            #floppy = images/f12-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f12-32/ks.vfd
                             cdrom_unattended = images/f12-32/ks.iso
                             kernel = images/f12-32/vmlinuz
                             initrd = images/f12-32/initrd.img
@@ -257,7 +269,8 @@ variants:
                         image_name = f12-64
                         unattended_install:
                             unattended_file = unattended/Fedora-12.ks
-                            #floppy = images/f12-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f12-64/ks.vfd
                             cdrom_unattended = images/f12-64/ks.iso
                             kernel = images/f12-64/vmlinuz
                             initrd = images/f12-64/initrd.img
@@ -270,7 +283,8 @@ variants:
                         image_name = f13-32
                         unattended_install:
                             unattended_file = unattended/Fedora-13.ks
-                            #floppy = images/f13-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f13-32/ks.vfd
                             cdrom_unattended = images/f13-32/ks.iso
                             kernel = images/f13-32/vmlinuz
                             initrd = images/f13-32/initrd.img
@@ -283,7 +297,8 @@ variants:
                         image_name = f13-64
                         unattended_install:
                             unattended_file = unattended/Fedora-13.ks
-                            #floppy = images/f13-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f13-64/ks.vfd
                             cdrom_unattended = images/f13-64/ks.iso
                             kernel = images/f13-64/vmlinuz
                             initrd = images/f13-64/initrd.img
@@ -296,7 +311,8 @@ variants:
                         image_name = f14-32
                         unattended_install:
                             unattended_file = unattended/Fedora-14.ks
-                            #floppy = images/f14-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f14-32/ks.vfd
                             cdrom_unattended = images/f14-32/ks.iso
                             kernel = images/f14-32/vmlinuz
                             initrd = images/f14-32/initrd.img
@@ -313,7 +329,8 @@ variants:
                         image_name = f14-64
                         unattended_install:
                             unattended_file = unattended/Fedora-14.ks
-                            #floppy = images/f14-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f14-64/ks.vfd
                             cdrom_unattended = images/f14-64/ks.iso
                             kernel = images/f14-64/vmlinuz
                             initrd = images/f14-64/initrd.img
@@ -330,10 +347,12 @@ variants:
                         image_name = f15-32
                         unattended_install:
                             unattended_file = unattended/Fedora-15.ks
-                            #floppy = images/f15-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f15-32/ks.vfd
                             cdrom_unattended = images/f15-32/ks.iso
                             kernel = images/f15-32/vmlinuz
                             initrd = images/f15-32/initrd.img
+                            syslog_server_proto = tcp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/Fedora-15-i386-DVD.iso
                             md5sum_cd1 = 9a91492ac84dde9ceff0cb346a079487
@@ -347,10 +366,12 @@ variants:
                         image_name = f15-64
                         unattended_install:
                             unattended_file = unattended/Fedora-15.ks
-                            #floppy = images/f15-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f15-64/ks.vfd
                             cdrom_unattended = images/f15-64/ks.iso
                             kernel = images/f15-64/vmlinuz
                             initrd = images/f15-64/initrd.img
+                            syslog_server_proto = tcp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/Fedora-15-x86_64-DVD.iso
                             md5sum_cd1 = c122a2a4f478da4a3d2d12396e84244e
@@ -364,10 +385,12 @@ variants:
                         image_name = f16-32
                         unattended_install:
                             unattended_file = unattended/Fedora-16.ks
-                            #floppy = images/f16-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f16-32/ks.vfd
                             cdrom_unattended = images/f16-32/ks.iso
                             kernel = images/f16-32/vmlinuz
                             initrd = images/f16-32/initrd.img
+                            syslog_server_proto = tcp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/Fedora-16-i386-DVD.iso
                             md5sum_cd1 = 0d64ab6b1b800827a9c83d95395b3da0
@@ -381,15 +404,64 @@ variants:
                         image_name = f16-64
                         unattended_install:
                             unattended_file = unattended/Fedora-16.ks
-                            #floppy = images/f16-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/f16-64/ks.vfd
                             cdrom_unattended = images/f16-64/ks.iso
                             kernel = images/f16-64/vmlinuz
                             initrd = images/f16-64/initrd.img
+                            syslog_server_proto = tcp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/Fedora-16-x86_64-DVD.iso
                             md5sum_cd1 = bb38ea1fe4b2fc69e7a6e15cf1c69c91
                             md5sum_1m_cd1 = e25ea147176f24239d38a46f501bd25e
 
+                    - 16.ppc64:
+                        image_name = f16-ppc64
+                        machine_type = pseries
+                        unattended_install:
+                            unattended_file = unattended/Fedora-16.ks
+                            cdrom_unattended = images/f16-ppc64/ks.iso
+                            kernel = images/f16-ppc64/vmlinuz
+                            initrd = images/f16-ppc64/initrd.img
+                            syslog_server_proto = tcp
+                        unattended_install.cdrom:
+                            boot_path = ppc/ppc64
+                            cdrom_cd1 = isos/linux/Fedora-16-ppc64-DVD.iso
+                            md5sum_cd1 = ffc0674f87e4f7e5739605dc80f4ffce
+                            md5sum_1m_cd1 = 23be25f6a04a78f6dc7cb6ad9e691988
+                            kernel_params = "root=live:CDLABEL=Fedora-16-ppc64 ks=cdrom:/ks.cfg console=hvc0 serial rd_NO_PLYMOUTH"
+
+                    - 17.32:
+                        image_name = f17-32
+                        unattended_install:
+                            unattended_file = unattended/Fedora-17.ks
+                            #floppies = "fl"
+                            #floppy_name = images/f17-32/ks.vfd
+                            cdrom_unattended = images/f17-32/ks.iso
+                            kernel = images/f17-32/vmlinuz
+                            initrd = images/f17-32/initrd.img
+                            syslog_server_proto = tcp
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/Fedora-17-i386-DVD.iso
+                            md5sum_cd1 = d4717e04b596e33898cc34970e79dd3d
+                            md5sum_1m_cd1 = 2cf9ce6b24cc0e39ec04d75499f1eb2d
+                            kernel_params = "repo=cdrom:/dev/sr1 ks=cdrom:/dev/sr0 nicdelay=60 console=ttyS0,115200 console=tty0"
+
+                    - 17.64:
+                        image_name = f17-64
+                        unattended_install:
+                            unattended_file = unattended/Fedora-17.ks
+                            #floppies = "fl"
+                            #floppy_name = images/f17-64/ks.vfd
+                            cdrom_unattended = images/f17-64/ks.iso
+                            kernel = images/f17-64/vmlinuz
+                            initrd = images/f17-64/initrd.img
+                            syslog_server_proto = tcp
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/Fedora-17-x86_64-DVD.iso
+                            md5sum_cd1 = 26f3358a5f8973f0956093f28a0106e7
+                            md5sum_1m_cd1 = 51988b8593ad488fe5a790a183cf3d81
+                            kernel_params = "repo=cdrom:/dev/sr1 ks=cdrom:/dev/sr0 nicdelay=60 console=ttyS0,115200 console=tty0"
 
             - RHEL:
                 no setup
@@ -417,7 +489,8 @@ variants:
                             md5sum_1m_cd1 = 5f10c9417c7b8372b3456c1b5f3f9ed0
                         unattended_install:
                             unattended_file = unattended/RHEL-3-series.ks
-                            #floppy = images/rhel39-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel39-32/ks.vfd
                             cdrom_unattended = images/rhel39-32/ks.iso
                             kernel = images/rhel39-32/vmlinuz
                             initrd = images/rhel39-32/initrd.img
@@ -440,7 +513,8 @@ variants:
                             md5sum_1m_cd1 = 18ecd37b639109f1b2af05cfb57dfeaf
                         unattended_install:
                             unattended_file = unattended/RHEL-3-series.ks
-                            #floppy = images/rhel39-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel39-64/ks.vfd
                             cdrom_unattended = images/rhel39-64/ks.iso
                             kernel = images/rhel39-64/vmlinuz
                             initrd = images/rhel39-64/initrd.img
@@ -461,7 +535,8 @@ variants:
                             md5sum_1m_cd1 = 127081cbed825d7232331a2083975528
                         unattended_install:
                             unattended_file = unattended/RHEL-4-series.ks
-                            #floppy = images/rhel47-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel47-32/ks.vfd
                             cdrom_unattended = images/rhel47-32/ks.iso
                             kernel = images/rhel47-32/vmlinuz
                             initrd = images/rhel47-32/initrd.img
@@ -484,7 +559,8 @@ variants:
                             md5sum_1m_cd1 = 58fa63eaee68e269f4cb1d2edf479792
                         unattended_install:
                             unattended_file = unattended/RHEL-4-series.ks
-                            #floppy = images/rhel47-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel47-64/ks.vfd
                             cdrom_unattended = images/rhel47-64/ks.iso
                             kernel = images/rhel47-64/vmlinuz
                             initrd = images/rhel47-64/initrd.img
@@ -502,7 +578,8 @@ variants:
                         image_name = rhel48-32
                         unattended_install:
                             unattended_file = unattended/RHEL-4-series.ks
-                            #floppy = images/rhel48-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel48-32/ks.vfd
                             cdrom_unattended = images/rhel48-32/ks.iso
                             kernel = images/rhel48-32/vmlinuz
                             initrd = images/rhel48-32/initrd.img
@@ -523,7 +600,8 @@ variants:
                         image_name = rhel48-64
                         unattended_install:
                             unattended_file = unattended/RHEL-4-series.ks
-                            #floppy = images/rhel48-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel48-64/ks.vfd
                             cdrom_unattended = images/rhel48-64/ks.iso
                             kernel = images/rhel48-64/vmlinuz
                             initrd = images/rhel48-64/initrd.img
@@ -549,14 +627,18 @@ variants:
                             md5sum_1m_cd1 = 242318dd44152210f6ff6cdda1bfbf51
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel53-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel53-32/ks.vfd
                             cdrom_unattended = images/rhel53-32/ks.iso
                             kernel = images/rhel53-32/vmlinuz
                             initrd = images/rhel53-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.3-i386-DVD.iso
                             md5sum_cd1 = 371c62851611fd32ead440df6f24a296
                             md5sum_1m_cd1 = 242318dd44152210f6ff6cdda1bfbf51
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.3.x86_64:
                         no setup
@@ -568,126 +650,231 @@ variants:
                             md5sum_1m_cd1 = b999f437583098ea5bbd56fb1de1d011
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel53-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel53-64/ks.vfd
                             cdrom_unattended = images/rhel53-64/ks.iso
                             kernel = images/rhel53-64/vmlinuz
                             initrd = images/rhel53-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.3-x86_64-DVD.iso
                             md5sum_cd1 = c5ed6b284410f4d8212cafc78fd7a8c5
                             md5sum_1m_cd1 = b999f437583098ea5bbd56fb1de1d011
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.4.i386:
                         no setup
                         image_name = rhel54-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel54-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel54-32/ks.vfd
                             cdrom_unattended = images/rhel54-32/ks.iso
                             kernel = images/rhel54-32/vmlinuz
                             initrd = images/rhel54-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.4-i386-DVD.iso
                             md5sum_cd1 = 7a12ec6599527e4f3d1790b51eadbfed
                             md5sum_1m_cd1 = 0dbeb8f58d213752d8c029e8601abfbb
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.4.x86_64:
                         no setup
                         image_name = rhel54-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel54-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel54-64/ks.vfd
                             cdrom_unattended = images/rhel54-64/ks.iso
                             kernel = images/rhel54-64/vmlinuz
                             initrd = images/rhel54-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.4-x86_64-DVD.iso
                             md5sum_cd1 = 04fe3c10202402d7b389528d2bad0210
                             md5sum_1m_cd1 = 3e74112003e88a966754849dbb8f5c3f
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.5.i386:
                         no setup
                         image_name = rhel55-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel55-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel55-32/ks.vfd
                             cdrom_unattended = images/rhel55-32/ks.iso
                             kernel = images/rhel55-32/vmlinuz
                             initrd = images/rhel55-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.5-i386-DVD.iso
                             md5sum_cd1 = 148858b157f275d9153797efddfc83c3
                             md5sum_1m_cd1 = 2502cc7ddb9d0684fe08c4a83d247902
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.5.x86_64:
                         no setup
                         image_name = rhel55-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel55-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel55-64/ks.vfd
                             cdrom_unattended = images/rhel55-64/ks.iso
                             kernel = images/rhel55-64/vmlinuz
                             initrd = images/rhel55-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.5-x86_64-DVD.iso
                             md5sum_cd1 = f3119f883257ef9041234feda2f1cad0
                             md5sum_1m_cd1 = a744084a03f6a08627f71527fc107a1e
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.6.i386:
                         no setup
                         image_name = rhel56-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel56-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel56-32/ks.vfd
                             cdrom_unattended = images/rhel56-32/ks.iso
                             kernel = images/rhel56-32/vmlinuz
                             initrd = images/rhel56-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.6-i386-DVD.iso
                             md5sum_cd1 = c214653d91b81c9a7a7f7249753d0f5d
                             md5sum_1m_cd1 = f299a881950bfec81fd5c74484e1b1d4
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.6.x86_64:
                         no setup
                         image_name = rhel56-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel56-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel56-64/ks.vfd
                             cdrom_unattended = images/rhel56-64/ks.iso
                             kernel = images/rhel56-64/vmlinuz
                             initrd = images/rhel56-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.6-x86_64-DVD.iso
                             md5sum_cd1 = d77d3815afb381a50148ba55ad930679
                             md5sum_1m_cd1 = 9dd97de110e391fcbed88b124a60f7a9
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                     - 5.7.i386:
                         no setup
                         image_name = rhel57-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel56-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel56-64/ks.vfd
                             cdrom_unattended = images/rhel57-32/ks.iso
                             kernel = images/rhel57-32/vmlinuz
                             initrd = images/rhel57-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.7-i386-DVD.iso
                             md5sum_cd1 = d738dcaf8d65ebf03d6da32916ddde43
                             md5sum_1m_cd1 = 9d9061f652ff435cc4c57e9e9ff09076
+                        usb_storage.check_options:
+                            check_io_size_option = no
+                        physical_resources_check:
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
 
                     - 5.7.x86_64:
                         no setup
                         image_name = rhel57-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
-                            #floppy = images/rhel56-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel56-64/ks.vfd
                             cdrom_unattended = images/rhel57-64/ks.iso
                             kernel = images/rhel57-64/vmlinuz
                             initrd = images/rhel57-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-5.7-x86_64-DVD.iso
                             md5sum_cd1 = 1a3c5959e34612e91f4a1840b997b287
                             md5sum_1m_cd1 = c65d0a1b4d9a32da42aa5142c6e9a5b3
+                        usb_storage.check_options:
+                            check_io_size_option = no
+                        physical_resources_check:
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
+
+
+                    - 5.8.i386:
+                        no setup
+                        image_name = rhel58-32
+                        unattended_install:
+                            unattended_file = unattended/RHEL-5-series.ks
+                            #floppies = "fl"
+                            #floppy_name = images/rhel58-32/ks.vfd
+                            cdrom_unattended = images/rhel58-32/ks.iso
+                            kernel = images/rhel58-32/vmlinuz
+                            initrd = images/rhel58-32/initrd.img
+                            syslog_server_proto = udp
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/RHEL-5.8-i386-DVD.iso
+                            md5sum_cd1 = 514e6ac28590e521402329da23220cc4
+                            md5sum_1m_cd1 = fd680d61aaa7f257be81fa345a56216e
+                        usb_storage.check_options:
+                            check_io_size_option = no
+                        physical_resources_check:
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
+
+                    - 5.8.x86_64:
+                        no setup
+                        image_name = rhel58-64
+                        unattended_install:
+                            unattended_file = unattended/RHEL-5-series.ks
+                            #floppies = "fl"
+                            #floppy_name = images/rhel58-64/ks.vfd
+                            cdrom_unattended = images/rhel58-64/ks.iso
+                            kernel = images/rhel58-64/vmlinuz
+                            initrd = images/rhel58-64/initrd.img
+                            syslog_server_proto = udp
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/RHEL-5.8-x86_64-DVD.iso
+                            md5sum_cd1 = e55f3a142ce6d36e8061be45f72b3c17
+                            md5sum_1m_cd1 = a09aa0e6b9ab9bb1eb019e6838b19ad3
+                        usb_storage.check_options:
+                            check_io_size_option = no
+                        physical_resources_check:
+                            cpu_sockets_chk_cmd = "cat /sys/devices/system/cpu/cpu*/topology/physical_package_id | sort | uniq | wc -l"
+                            cpu_cores_chk_cmd = echo "-($(cat /sys/devices/system/cpu/cpu0/topology/core_siblings_list))+1" | bc
+                            # kernel uses a comma-separated string for the thread list,
+                            # so we only need to count the comma in the
+                            # thread_siblings_list file to get the thread count in a core.
+                            # More info, please see cpulist_scnprintf() in include/linux/cpumask.h
+                            cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
 
                     - 6.0.i386:
                         no setup
@@ -698,10 +885,12 @@ variants:
                         image_name = rhel60-32
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
-                            #floppy = images/rhel60-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel60-32/ks.vfd
                             cdrom_unattended = images/rhel60-32/ks.iso
                             kernel = images/rhel60-32/vmlinuz
                             initrd = images/rhel60-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-6.0-i386-DVD.iso
                             md5sum_cd1 = 291d234c93442405972689b4b41c14bc
@@ -716,10 +905,12 @@ variants:
                         image_name = rhel60-64
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
-                            #floppy = images/rhel60-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel60-64/ks.vfd
                             cdrom_unattended = images/rhel60-64/ks.iso
                             kernel = images/rhel60-64/vmlinuz
                             initrd = images/rhel60-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-6.0-x86_64-DVD.iso
                             md5sum_cd1 = f7141396c6a19399d63e8c195354317d
@@ -734,10 +925,12 @@ variants:
                         image_name = rhel61-32
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
-                            #floppy = images/rhel61-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel61-32/ks.vfd
                             cdrom_unattended = images/rhel61-32/ks.iso
                             kernel = images/rhel61-32/vmlinuz
                             initrd = images/rhel61-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-6.1-i386-DVD.iso
                             md5sum_cd1 = f8c8a310e34d26339c99d462e3557324
@@ -752,10 +945,12 @@ variants:
                         image_name = rhel61-64
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
-                            #floppy = images/rhel61-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel61-64/ks.vfd
                             cdrom_unattended = images/rhel61-64/ks.iso
                             kernel = images/rhel61-64/vmlinuz
                             initrd = images/rhel61-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-6.1-x86_64-DVD.iso
                             md5sum_cd1 = a051dbf28ef444a019dc6660efe3e3a4
@@ -770,13 +965,15 @@ variants:
                         image_name = rhel62-32
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
-                            #floppy = images/rhel62-32/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel62-32/ks.vfd
                             cdrom_unattended = images/rhel62-32/ks.iso
                             kernel = images/rhel62-32/vmlinuz
                             initrd = images/rhel62-32/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-6.2-i386-DVD.iso
-                            md5sum_cd1 = 31f3ef3825fbde428bf3ab49ce2b99db 
+                            md5sum_cd1 = 31f3ef3825fbde428bf3ab49ce2b99db
                             md5sum_1m_cd1 = 46ef65cdab3c0164b43011813a319755
 
                     - 6.2.x86_64:
@@ -788,14 +985,56 @@ variants:
                         image_name = rhel62-64
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
-                            #floppy = images/rhel62-64/ks.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/rhel62-64/ks.vfd
                             cdrom_unattended = images/rhel62-64/ks.iso
                             kernel = images/rhel62-64/vmlinuz
                             initrd = images/rhel62-64/initrd.img
+                            syslog_server_proto = udp
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/RHEL-6.2-x86_64-DVD.iso
-                            md5sum_cd1 = 7525d7ea1b1fd074538c7505bccd143d 
+                            md5sum_cd1 = 7525d7ea1b1fd074538c7505bccd143d
                             md5sum_1m_cd1 = 19b99519559067656193e5e2146a81a4
+
+                    - 6.3.i386:
+                        no setup
+                        nic_hotplug:
+                            modprobe_module =
+                        block_hotplug:
+                            modprobe_module =
+                        image_name = rhel63-32
+                        unattended_install:
+                            unattended_file = unattended/RHEL-6.3.ks
+                            #floppies = "fl"
+                            #floppy_name = images/rhel63-32/ks.vfd
+                            cdrom_unattended = images/rhel63-32/ks.iso
+                            kernel = images/rhel63-32/vmlinuz
+                            initrd = images/rhel63-32/initrd.img
+                            syslog_server_proto = udp
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/RHEL-6.3-i386-DVD.iso
+                            md5sum_cd1 = edd93cda6935bcf04c3381446764eb26
+                            md5sum_1m_cd1 = e97d4ff920c82bff61ada4b1b9f183eb
+
+                    - 6.3.x86_64:
+                        no setup
+                        nic_hotplug:
+                            modprobe_module =
+                        block_hotplug:
+                            modprobe_module =
+                        image_name = rhel63-64
+                        unattended_install:
+                            unattended_file = unattended/RHEL-6.3.ks
+                            #floppies = "fl"
+                            #floppy_name = images/rhel63-64/ks.vfd
+                            cdrom_unattended = images/rhel63-64/ks.iso
+                            kernel = images/rhel63-64/vmlinuz
+                            initrd = images/rhel63-64/initrd.img
+                            syslog_server_proto = udp
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/RHEL-6.3-x86_64-DVD.iso
+                            md5sum_cd1 = d717af33dd258945e6304f9955487017
+                            md5sum_1m_cd1 = 006ea6571a6431234a1313d1c3c6e70e
 
             - OpenSUSE:
                 no setup
@@ -817,7 +1056,8 @@ variants:
                             md5sum_1m_cd1 = c720b30557af758e69de450409516369
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-0-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-0-32/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-0-32/autoyast.iso
                             kernel = images/opensuse-11-0-32/linux
                             initrd = images/opensuse-11-0-32/initrd
@@ -831,7 +1071,8 @@ variants:
                         image_name = openSUSE-11.0-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-0-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-0-64/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-0-64/autoyast.iso
                             kernel = images/opensuse-11-0-64/linux
                             initrd = images/opensuse-11-0-64/initrd
@@ -850,7 +1091,8 @@ variants:
                             md5sum_1m_cd1 = b70217417468389083429f81ba7ce2bd
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-1-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-1-32/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-1-32/autoyast.iso
                             kernel = images/opensuse-11-1-32/linux
                             initrd = images/opensuse-11-1-32/initrd
@@ -869,7 +1111,8 @@ variants:
                             md5sum_1m_cd1 = 768ca32503ef92c28f2d144f2a87e4d0
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-1-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-1-64/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-1-64/autoyast.iso
                             kernel = images/opensuse-11-1-64/linux
                             initrd = images/opensuse-11-1-64/initrd
@@ -883,7 +1126,8 @@ variants:
                         image_name = openSUSE-11.2-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-2-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-2-32/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-2-32/autoyast.iso
                             kernel = images/opensuse-11-2-32/linux
                             initrd = images/opensuse-11-2-32/initrd
@@ -897,7 +1141,8 @@ variants:
                         image_name = openSUSE-11.2-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse11-2-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse11-2-64/autoyast.vfd
                             cdrom_unattended = images/opensuse11-2-64/autoyast.iso
                             kernel = images/opensuse-11-2-64/linux
                             initrd = images/opensuse-11-2-64/initrd
@@ -911,7 +1156,8 @@ variants:
                         image_name = openSUSE-11.3-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-3-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-3-32/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-3-32/autoyast.iso
                             kernel = images/opensuse-11-3-32/linux
                             initrd = images/opensuse-11-3-32/initrd
@@ -925,7 +1171,8 @@ variants:
                         image_name = openSUSE-11.3-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-3-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-3-64/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-3-64/autoyast.iso
                             kernel = images/opensuse-11-3-64/linux
                             initrd = images/opensuse-11-3-64/initrd
@@ -939,11 +1186,12 @@ variants:
                         image_name = openSUSE-11.4-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-4-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-4-32/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-4-32/autoyast.iso
                             kernel = images/opensuse-11-4-32/linux
                             initrd = images/opensuse-11-4-32/initrd
-                            boot_path = boot/x86_64/loader
+                            boot_path = boot/i386/loader
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/openSUSE-11.4-DVD-i586.iso
                             md5sum_cd1 = 5f6d6d67c3e256b2513311f4ed650515
@@ -952,7 +1200,8 @@ variants:
                         image_name = openSUSE-11.4-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
-                            #floppy = images/opensuse-11-4-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-11-4-64/autoyast.vfd
                             cdrom_unattended = images/opensuse-11-4-64/autoyast.iso
                             kernel = images/opensuse-11-4-64/linux
                             initrd = images/opensuse-11-4-64/initrd
@@ -961,6 +1210,37 @@ variants:
                             cdrom_cd1 = isos/linux/openSUSE-11.4-DVD-x86_64.iso
                             md5sum_cd1 = 082ebfac494b41cd56b38fb4218c545d
                             md5sum_1m_cd1 = 2adcc5623e6c50b5d08acb7f84aa3fb1
+
+                    - 12.1.32:
+                        image_name = openSUSE-12.1-32
+                        unattended_install:
+                            unattended_file = unattended/OpenSUSE-12.xml
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-12-1-32/autoyast.vfd
+                            cdrom_unattended = images/opensuse-12-1-32/autoyast.iso
+                            kernel = images/opensuse-12-1-32/linux
+                            initrd = images/opensuse-12-1-32/initrd
+                            boot_path = boot/i386/loader
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/openSUSE-12.1-DVD-i586.iso
+                            md5sum_cd1 = ewew22b4d6bfdb11f5bdd36a05f9968a780c
+                            md5sum_1m_cd1 = 17013a2e8dcaea45505955c157d6b5b4
+
+                    - 12.1.64:
+                        image_name = openSUSE-12.1-64
+                        unattended_install:
+                            unattended_file = unattended/OpenSUSE-12.xml
+                            #floppies = "fl"
+                            #floppy_name = images/opensuse-12-1-64/autoyast.vfd
+                            cdrom_unattended = images/opensuse-12-1-64/autoyast.iso
+                            kernel = images/opensuse-12-1-64/linux
+                            initrd = images/opensuse-12-1-64/initrd
+                            boot_path = boot/x86_64/loader
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/openSUSE-12.1-DVD-x86_64.iso
+                            md5sum_cd1 = 4cfe8229111ef723ae7aa541fd2c87b7
+                            md5sum_1m_cd1 = ec21b641c5f024b758169324d6c634ee
+
 
             - SLES:
                 shell_prompt = "^root@.*[\#\$]\s*$|#"
@@ -980,7 +1260,8 @@ variants:
                         image_name = sles10-64
                         unattended_install:
                             unattended_file = unattended/SLES-10.xml
-                            #floppy = images/sles-10-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/sles-10-64/autoyast.vfd
                             cdrom_unattended = images/sles-10-64/autoyast.iso
                             kernel = images/sles-10-64/linux
                             initrd = images/sles-10-64/initrd
@@ -994,7 +1275,8 @@ variants:
                         image_name = sles10-64
                         unattended_install:
                             unattended_file = unattended/SLES-10.xml
-                            #floppy = images/sles-10-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/sles-10-32/autoyast.vfd
                             cdrom_unattended = images/sles-10-32/autoyast.iso
                             kernel = images/sles-10-32/linux
                             initrd = images/sles-10-32/initrd
@@ -1008,7 +1290,8 @@ variants:
                         image_name = sles11-32
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
-                            #floppy = images/sles-11-0-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/sles-11-0-32/autoyast.vfd
                             cdrom_unattended = images/sles-11-0-32/autoyast.iso
                             kernel = images/sles-11-0-32/linux
                             initrd = images/sles-11-0-32/initrd
@@ -1025,7 +1308,8 @@ variants:
                         md5sum_1m_cd1 = 00000951cab7c32e332362fc424c1054
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
-                            #floppy = images/sles-11-0-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/sles-11-0-64/autoyast.vfd
                             cdrom_unattended = images/sles-11-0-64/autoyast.iso
                             kernel = images/sles-11-0-64/linux
                             initrd = images/sles-11-0-64/initrd
@@ -1039,7 +1323,8 @@ variants:
                         image_name = sles11sp1-32
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
-                            #floppy = images/sles-11-1-32/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/sles-11-1-32/autoyast.vfd
                             cdrom_unattended = images/sles-11-1-32/autoyast.iso
                             kernel = images/sles-11-1-32/linux
                             initrd = images/sles-11-1-32/initrd
@@ -1053,7 +1338,8 @@ variants:
                         image_name = sles11sp1-64
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
-                            #floppy = images/sles-11-1-64/autoyast.vfd
+                            #floppies = "fl"
+                            #floppy_name = images/sles-11-1-64/autoyast.vfd
                             cdrom_unattended = images/sles-11-1-64/autoyast.iso
                             kernel = images/sles-11-1-64/linux
                             initrd = images/sles-11-1-64/initrd
@@ -1062,6 +1348,37 @@ variants:
                             cdrom_cd1 = isos/linux/SLES-11-SP1-DVD-x86_64-GM-DVD1.iso
                             md5sum_cd1 = d2e10420f3689faa49a004b60fb396b7
                             md5sum_1m_cd1 = f7f67b5da46923a9f01da8a2b6909654
+
+                   - 11.2.32:
+                        image_name = sles11sp2-32
+                        unattended_install:
+                            unattended_file = unattended/SLES-11-SP2.xml
+                            #floppies = "fl"
+                            #floppy_name = images/sles-11-2-32/autoyast.vfd
+                            cdrom_unattended = images/sles-11-2-32/autoyast.iso
+                            kernel = images/sles-11-2-32/linux
+                            initrd = images/sles-11-2-32/initrd
+                            boot_path = boot/i386/loader
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/SLES-11-SP2-DVD-i586-GM-DVD1.iso
+                            md5sum_cd1 = a0b34f6237b2b2a6b2174c82b40ed326 
+                            md5sum_1m_cd1 = e5a629f311cdfa7477880e7349a1f00d 
+
+                   - 11.2.64:
+                        image_name = sles11sp2-64
+                        unattended_install:
+                            unattended_file = unattended/SLES-11-SP2.xml
+                            #floppies = "fl"
+                            #floppy_name = images/sles-11-2-64/autoyast.vfd
+                            cdrom_unattended = images/sles-11-2-64/autoyast.iso
+                            kernel = images/sles-11-2-64/linux
+                            initrd = images/sles-11-2-64/initrd
+                            boot_path = boot/x86_64/loader
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/SLES-11-SP2-DVD-x86_64-GM-DVD1.iso
+                            md5sum_cd1 = 461d82ae6e15062b0807c1338f040497 
+                            md5sum_1m_cd1 = 2ad34f9d84267e732929ea977c5be47e
+
 
             - Ubuntu:
                 shell_prompt = "^root@.*[\#\$]\s*$"
@@ -1125,6 +1442,18 @@ variants:
                             md5sum_cd1 = f8a0112b7cb5dcd6d564dbe59f18c35f
                             md5sum_1m_cd1 = 3f5d0a11f4d62f82db358b329819ad9c
 
+                    - 12.04-server-64:
+                        image_name += -12.04-server-64
+                        unattended_install:
+                            kernel = images/ubuntu-server-12-04-64/vmlinuz
+                            initrd = images/ubuntu-server-12-04-64/initrd.gz
+                            boot_path = install
+                        unattended_install.cdrom:
+                            unattended_file = unattended/Ubuntu-12-04.preseed
+                            cdrom_cd1 = isos/linux/ubuntu-12.04-server-amd64.iso
+                            md5sum_cd1 = f2e921788d35bbdf0336d05d228136eb
+                            md5sum_1m_cd1 = 0d41f57e853ae85616c015e7a865eb67
+
             - DSL-4.2.5:
                 no setup dbench bonnie linux_s3
                 image_name = dsl-4.2.5
@@ -1168,6 +1497,8 @@ variants:
         mem_chk_cmd = wmic memphysical
         mem_chk_cur_cmd = wmic memphysical
 
+        rtc_base = localtime
+
         unattended_install.cdrom, whql.support_vm_install:
             timeout = 7200
             finish_program = deps/finish.bat
@@ -1186,6 +1517,8 @@ variants:
         migrate.with_file_transfer:
             guest_path = C:\tmpfile
         stress_boot:
+            alive_test_cmd = systeminfo
+        block_stream:
             alive_test_cmd = systeminfo
         timedrift:
             # Timedrift compensation on Windows with hpet does not happen
@@ -1212,6 +1545,11 @@ variants:
                 time_command = "echo TIME: %date% %time%"
                 time_filter_re = "(?<=TIME: \w\w\w ).{19}(?=\.\d\d)"
                 time_format = "%m/%d/%Y %H:%M:%S"
+        time_manage:
+            alive_test_cmd = systeminfo
+            time_command = "echo TIME: %date% %time%"
+            time_filter_re = "(?<=TIME: \w\w\w ).{19}(?=\.\d\d)"
+            time_format = "%m/%d/%Y %H:%M:%S"
         guest_s4:
             check_s4_support_cmd = powercfg /hibernate on
             test_s4_cmd = start ping -t localhost
@@ -1235,13 +1573,12 @@ variants:
         physical_resources_check:
             catch_uuid_cmd =
             cpu_vendor_id_chk_cmd = "wmic cpu get Manufacturer | more +1"
+            vio_driver_chk_cmd = 'driverquery /si | find "Red Hat"'
             #XXX: Since I don't find a reliable way to check the cpu socket
             # numbers for windows, disable this kind of checking temporarily.
             cpu_sockets_chk_cmd = ""
             cpu_cores_chk_cmd = "wmic cpu get NumberOfCores | more +1"
             cpu_threads_chk_cmd = "wmic cpu get NumberOfLogicalProcessors | more +1"
-            virtio_blk, virtio_net:
-                vio_driver_chk_cmd = 'driverquery /si | find "Red Hat"'
         file_transfer:
             tmp_dir = C:\
             clean_cmd = del
@@ -1317,7 +1654,8 @@ variants:
                     md5sum_cd1 = dda6039f3a9173f0f6bfae40f5efdfea
                     md5sum_1m_cd1 = dd28fba196d366d56fe774bd93df5527
                     unattended_file = unattended/win2000-32.sif
-                    floppy = images/win2000-32/answer.vfd
+                    floppies = "fl"
+                    floppy_name = images/win2000-32/answer.vfd
 
             - WinXP:
                 image_name = winXP
@@ -1325,20 +1663,6 @@ variants:
                 variants:
                     - 32:
                         image_name += -32
-                        install:
-                            cdrom_cd1 = isos/windows/WindowsXP-sp2-vlk.iso
-                            md5sum_cd1 = 743450644b1d9fe97b3cf379e22dceb0
-                            md5sum_1m_cd1 = b473bf75af2d1269fec8958cf0202bfd
-                            user = user
-                            steps = steps/WinXP-32.steps
-                        setup:
-                            steps = steps/WinXP-32-rss.steps
-                        unattended_install.cdrom, whql.support_vm_install:
-                            cdrom_cd1 = isos/windows/WindowsXP-sp2-vlk.iso
-                            md5sum_cd1 = 743450644b1d9fe97b3cf379e22dceb0
-                            md5sum_1m_cd1 = b473bf75af2d1269fec8958cf0202bfd
-                            unattended_file = unattended/winxp32.sif
-                            floppy = images/winXP-32/answer.vfd
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows XP
                             desc_path_desc2 = $\WDK\Logo Type\Systems Logo\Windows XP
@@ -1352,6 +1676,39 @@ variants:
                         multi_disk, usb_multi_disk:
                             list_volume_command = fsutil fsinfo drives
 
+                        variants:
+                            - sp2:
+                                install:
+                                    cdrom_cd1 = isos/windows/WindowsXP-sp2-vlk.iso
+                                    md5sum_cd1 = 743450644b1d9fe97b3cf379e22dceb0
+                                    md5sum_1m_cd1 = b473bf75af2d1269fec8958cf0202bfd
+                                    user = user
+                                    steps = steps/WinXP-32.steps
+                                setup:
+                                    steps = steps/WinXP-32-rss.steps
+                                unattended_install.cdrom, whql.support_vm_install:
+                                    cdrom_cd1 = isos/windows/WindowsXP-sp2-vlk.iso
+                                    md5sum_cd1 = 743450644b1d9fe97b3cf379e22dceb0
+                                    md5sum_1m_cd1 = b473bf75af2d1269fec8958cf0202bfd
+                                    unattended_file = unattended/winxp32.sif
+                                    floppies = "fl"
+                                    floppy_name = images/winXP-32/answer.vfd
+                            - sp3:
+                                install:
+                                    cdrom_cd1 = isos/windows/en_windows_xp_professional_with_service_pack_3_x86_cd_x14-80428.iso
+                                    md5sum_cd1 = f424a52153e6e5ed4c0d44235cf545d5
+                                    md5sum_1m_cd1 = ffe6bd8747f5a90e58710d28529e2c85
+                                    user = user
+                                    steps = steps/WinXP-32.steps
+                                setup:
+                                    steps = steps/WinXP-32-rss.steps
+                                unattended_install.cdrom, whql.support_vm_install:
+                                    cdrom_cd1 = isos/windows/en_windows_xp_professional_with_service_pack_3_x86_cd_x14-80428.iso
+                                    md5sum_cd1 = f424a52153e6e5ed4c0d44235cf545d5
+                                    md5sum_1m_cd1 = ffe6bd8747f5a90e58710d28529e2c85
+                                    unattended_file = unattended/winxp32.sif
+                                    floppies = "fl"
+                                    floppy_name = images/winXP-32/answer.vfd
 
                     - 64:
                         image_name += -64
@@ -1368,7 +1725,8 @@ variants:
                             md5sum_cd1 = 8d3f007ec9c2060cec8a50ee7d7dc512
                             md5sum_1m_cd1 = e812363ff427effc512b7801ee70e513
                             unattended_file = unattended/winxp64.sif
-                            floppy = images/winXP-64/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/winXP-64/answer.vfd
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows XP
                             desc_path_desc2 = $\WDK\Logo Type\Systems Logo\Windows XP
@@ -1414,7 +1772,8 @@ variants:
                             #md5sum_cd1 = 03e921e9b4214773c21a39f5c3f42ef7
                             #md5sum_1m_cd1 = 37c2fdec15ac4ec16aa10fdfdb338aa3
                             unattended_file = unattended/win2003-32.sif
-                            floppy = images/win2003-32/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win2003-32/answer.vfd
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows Server 2003
                             dd_data_logoarch = X86
@@ -1450,7 +1809,8 @@ variants:
                             #md5sum_cd1 = 5703f87c9fd77d28c05ffadd3354dbbd
                             #md5sum_1m_cd1 = 439393c384116aa09e08a0ad047dcea8
                             unattended_file = unattended/win2003-64.sif
-                            floppy = images/win2003-64/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win2003-64/answer.vfd
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows Server 2003
                             dd_data_logoarch = AMD64
@@ -1493,7 +1853,8 @@ variants:
                                     md5sum_cd1 = 1008f323d5170c8e614e52ccb85c0491
                                     md5sum_1m_cd1 = c724e9695da483bc0fd59e426eaefc72
                                     unattended_file = unattended/winvista-32-autounattend.xml
-                                    floppy = images/winvista-sp1-32/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/winvista-sp1-32/answer.vfd
                                 whql.submission.device.net:
                                     image_name_supportvm = winvista-sp1-32-supportvm
 
@@ -1506,7 +1867,8 @@ variants:
                                     sha1sum_cd1 = 25ad9a776503e6a583bec07879dbcc5dfd20cd6e
                                     sha1sum_1m_cd1 = a2afa4cffdc1c362dbf9e62942337f4f875a22cf
                                     unattended_file = unattended/winvista-32-autounattend.xml
-                                    floppy = images/winvista-sp2-32/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/winvista-sp2-32/answer.vfd
                                 whql.submission.device.net:
                                     image_name_supportvm = winvista-sp2-32-supportvm
 
@@ -1532,7 +1894,8 @@ variants:
                                     md5sum_cd1 = 11e2010d857fffc47813295e6be6d58d
                                     md5sum_1m_cd1 = 0947bcd5390546139e25f25217d6f165
                                     unattended_file = unattended/winvista-64-autounattend.xml
-                                    floppy = images/winvista-sp1-64/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/winvista-sp1-64/answer.vfd
                                 whql.submission.device.net:
                                     image_name_supportvm = winvista-sp1-64-supportvm
 
@@ -1545,7 +1908,8 @@ variants:
                                     sha1sum_cd1 = aaee3c04533899f9f8c4ae0c4250ef5fafbe29a3
                                     sha1sum_1m_cd1 = 1fd21bd3ce2a4de8856c7b8fe6fdf80260f6d1c7
                                     unattended_file = unattended/winvista-64-autounattend.xml
-                                    floppy = images/winvista-sp2-64/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/winvista-sp2-64/answer.vfd
                                 whql.submission.device.net:
                                     image_name_supportvm = winvista-sp2-64-supportvm
 
@@ -1574,7 +1938,8 @@ variants:
                                     md5sum_cd1 = 0bfca49f0164de0a8eba236ced47007d
                                     md5sum_1m_cd1 = 07d7f5006393f74dc76e6e2e943e2440
                                     unattended_file = unattended/win2008-32-autounattend.xml
-                                    floppy = images/win2008-sp1-32/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/win2008-sp1-32/answer.vfd
 
                             - sp2:
                                 image_name += -sp2-32
@@ -1585,7 +1950,8 @@ variants:
                                     sha1sum_cd1 = 49d0d6917c1256fe81048d414fa473bbc76a8724
                                     sha1sum_1m_cd1 = 9662ff7ed715faa00407e4befc484ea52a92a9fb
                                     unattended_file = unattended/win2008-32-autounattend.xml
-                                    floppy = images/win2008-sp2-32/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/win2008-sp2-32/answer.vfd
 
                     - 64:
                         variants:
@@ -1606,7 +1972,8 @@ variants:
                                     md5sum_cd1 = 27c58cdb3d620f28c36333a5552f271c
                                     md5sum_1m_cd1 = efdcc11d485a1ef9afa739cb8e0ca766
                                     unattended_file = unattended/win2008-64-autounattend.xml
-                                    floppy = images/win2008-sp1-64/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/win2008-sp1-64/answer.vfd
 
                             - sp2:
                                 image_name += -sp2-64
@@ -1617,7 +1984,8 @@ variants:
                                     sha1sum_cd1 = 34c7d726c57b0f8b19ba3b40d1b4044c15fc2029
                                     sha1sum_1m_cd1 = 8fe08b03e3531906855a60a78020ac9577dff5ba
                                     unattended_file = unattended/win2008-64-autounattend.xml
-                                    floppy = images/win2008-sp2-64/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/win2008-sp2-64/answer.vfd
 
                             - r2:
                                 image_name += -r2-64
@@ -1628,7 +1996,8 @@ variants:
                                     sha1sum_cd1 = ad855ea913aaec3f1d0e1833c1aef7a0de326b0a
                                     sha1sum_1m_cd1 = 9194a3aabae25b36e5f73cad001314b2c8d07d14
                                     unattended_file = unattended/win2008-r2-autounattend.xml
-                                    floppy = images/win2008-r2-64/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/win2008-r2-64/answer.vfd
 
             - Win7:
                 os_variant = win7
@@ -1651,7 +2020,8 @@ variants:
                             sha1sum_cd1 = 5395dc4b38f7bdb1e005ff414deedfdb16dbf610
                             sha1sum_1m_cd1 = 9f9c3780aebeb28a9bf22188eed6bc15475dc9c5
                             unattended_file = unattended/win7-32-autounattend.xml
-                            floppy = images/win7-32/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win7-32/answer.vfd
                         whql.submission:
                             dd_data_logoarch = X86
                             dd_data_logoos = Windows 7
@@ -1670,7 +2040,8 @@ variants:
                                     md5sum_1m_cd1 = 65b2d563769a07982a4fb0c26eaed910
                                     sha1sum_cd1 = bbf301280faa00b02f5475cdaa06558f569569e8
                                     sha1sum_1m_cd1 = e0c1dc9d1cca9fd1cb601fab86fa7679a4d83275
-                                    floppy = images/win7-32-sp1/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/win7-32-sp1/answer.vfd
 
                     - 64:
                         image_name += -64
@@ -1689,7 +2060,8 @@ variants:
                             sha1sum_cd1 = 326327cc2ff9f05379f5058c41be6bc5e004baa7
                             sha1sum_1m_cd1 = 4a3903bd5157de54f0702e5263e0a683c5775515
                             unattended_file = unattended/win7-64-autounattend.xml
-                            floppy = images/win7-64/answer.vfd
+                            floppies = "fl"
+                            floppy_name = images/win7-64/answer.vfd
                         whql.submission:
                             dd_data_logoarch = AMD64
                             dd_data_logoos = Windows 7
@@ -1708,7 +2080,8 @@ variants:
                                     md5sum_1m_cd1 = 0b45ee07fc26d8cbc7d08daed9be1a22
                                     sha1sum_cd1 = 36ae90defbad9d9539e649b193ae573b77a71c83
                                     sha1sum_1m_cd1 = 3bdeb6786ac94bdd982a0bad8593de206b3d7321
-                                    floppy = images/win7-64-sp1/answer.vfd
+                                    floppies = "fl"
+                                    floppy_name = images/win7-64-sp1/answer.vfd
 
 
     # Unix/BSD section

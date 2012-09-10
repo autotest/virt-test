@@ -74,4 +74,4 @@
    Command2="cmd /c netsh interface ip set address local dhcp"
    Command3="cmd /c sc config tlntsvr start= auto"
    Command4="cmd /c net start telnet"
-   Command5="cmd /c A:\finish.bat"
+   Command5="cmd /c A:\finish.bat PROCESS_CHECK"

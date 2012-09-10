@@ -1,4 +1,4 @@
-# Copy this file to base.cfg and edit it.
+# Copy this file to base.cfg and edit it
 
 # Absolute paths and/or names of binaries (default path is /usr/bin)
 qemu_binary = qemu
@@ -10,18 +10,37 @@ vms = vm1
 # Default virtual machine to use, when not specified by test.
 main_vm = vm1
 
-# List of network device object names (whitespace seperated)
+# List of default network device object names (whitespace seperated)
+# All VMs get these by default, unless specific vm name references
+# are used, for example:
+#
+# vms = vm1 vm2 vm3 vm4
+# nics = nic1 nic2 nic3
+# nics_vm1 = nic2
+# nics_vm2 =
+# nics_vm3 = nic1 nic3
+#
+# Translates to:
+# VM 'vm1' uses only 'nic2'
+# VM 'vm2' uses no nics
+# VM 'vm3' uses 'nic1' and 'nic3'
+# VM 'vm4' uses all three nics
 nics = nic1
-# List of end-point bridges to connect NIC devices to on host
-# For private bridge created by framework please set the following
-# parameters:
-# bridge = private
-# physical_nic(optinal): physical nic for bridge
-# bridge_force_create(optinal): force to setup bridge or not, default
-#                                value is no.
-bridge = switch
-# For libvirt, use following as argument to --network
-virsh_network = network=default
+# Assign random MAC by default, or specify per-nic values
+# mac_nic1 = 01:02:03:04:05:06
+# Use builtin dhcpd by default, or assign per-nic IP addresses
+# ip_nic1 = 192.168.122.100
+# Global defauot NIC Destination type (network, bridge (tap), user)
+# Add '_<nic_name>' postfix for heterogenious mapping (nettype_nic1 = bridge)
+nettype = bridge
+# Global default destination name (eth1, virbr0, default, etc.)
+# Add '_<nic_name>' postfix for heterogenious mapping (netdst_nic1 = virbr0)
+netdst = switch
+# Heterogenious models are also possible (default in guest-hw.cfg)
+# nic_model_nic1 = e1000
+# nic_model_nic2 = virtio
+# or based on vm
+# nic_model_vm1 = virtio
 
 # List of block device object names (whitespace seperated)
 images = image1
@@ -57,16 +76,45 @@ usb_type_tablet1 = usb-tablet
 # USB Controller type which device uses.
 usb_controller_tablet1 = uhci
 
+# virtio_serialport and virtio_console ports
+# virtio_ports = "vs1 vs2 vc1"
+# Port types
+# virtio_port_type = serialport
+# virtio_port_type_vc1 = console
+# Host socket type
+# virtio_port_chardev = spicevmc
+# virtio_port_chardev_vc1 = socket
+# chardev name prefix (port index will be appended)
+# virtio_port_name_prefix = "com.redhat.spice."
+# By default the port name is used (vc1)
+# virtio_port_name_prefix_vc1 = ""
+
+# Emulated machine type, run following command to see supported machine type.
+# qemu-kvm -M ?
+# machine_type = pc
+
+
 
 ##### Low-level parameters for platform, networking, block, and usb devices.
 
 # Default number of processors for each VM
 smp = 1
+# Config for vcpu
+#vcpu_cores = 1
+#vcpu_threads = 1
+#vcpu_sockets = 1
+
 # Memory for each VM
 mem = 1024
 
 # Networking type (nic, user, tap, socket, vde, dump, none)
 nic_mode = tap
+
+# initial PCI address for guest.
+init_pci_addr = 4
+
+# Host networking restart command line for PCI assign cases
+# net_restart_cmd = /etc/init.d/network restart
 
 # Size of file-based qcow2 image, if image_raw-device not used.
 image_size = 10G
@@ -76,19 +124,48 @@ image_raw_device = no
 # Name of image, or path to device node if using image_raw_device
 image_name = image
 
-
-# Host-side caching to use (none, writeback, writethrough)
-#    writeback - use host cache, report complete after storage write
-#    writethrough - use host cache, report complete before storage write
+# Host-side caching to use. This option is passed directly to qemu(-kvm) so
+# any valid qemu cache option is valid here. A quick reference for the
+# valid cache modes on current qemu:
+#
+# none: avoids the page cache completely, attempt to do disk IO directly to the
+#       guest memory.
+#
+# writethrough: use host page cache, report data as written to guest only when
+#               it's actually written by the storage subsystem (qemu default).
+#
+# writeback: use host page cache, report data as written to guest as soon as it
+#            is written to the host page cache.
+#
+# unsafe: use page cache, but never worry about flushing that data to disk.
+#
+# directsync: avoid page cache, report data as written to guest after it's
+#             reported as written by the storage subsystem.
+#
 drive_cache = none
 
+# Iscsi support related params. Please fill them depends on your environment.
+# For both iscsi and emulated iscsi should have this option:
+# target: target name of your iscsi device
+# device_id(optinal): The number of your device if the iscsi device already formated
+# For iscsi device only:
+# portal_ip: iscsi server ip
+# initiator: initiator name
+# For emulated iscsi in localhost only:
+# emulated_image: image name in localhost
+# Other option parameters:
+# force_cleanup: if need logout and cleanup after the case. The value should
+#                be yes or no
+# emulated_file_remove(emulated iscsi only): If remove the file after logout
+#
 # List of hypervisor-monitor object names (one per guest),
 #    used to communicate with hypervisor to control guests.
 #    Order cooresponds to 'vms' list above.
 monitors = qmpmonitor1
+# hmp1 monitor type (protocol), if only hmp1 type is going to be set
+#monitor_type_hmp1 = human
 # Default monitor type (protocol), if multiple types to be used
 monitor_type = qmp
-
 # Pattern to get vcpu threads from monitor.
 #    human monitor: thread_id=(\d+)
 #    qmp monitor: u'thread_id':\s+(\d+)
@@ -97,11 +174,18 @@ vcpu_thread_pattern = u'thread_id':\s+(\d+)
 # Guest Display type (vnc, sdl, spice, or nographic)
 display = vnc
 
+# VNC autoport selection.
+vnc_autoport = yes
+
 # Guest VGA type (cirrus,  std, vmware, qxl, xenfb, none)
 vga = std
 
 # Add a sga device to guest.
 #enable_sga = yes
+
+# Specify multiple sound cards seperated by comma,like 'sb16,adlib' or 'all'.
+# By default, it's 'ac97'.
+soundcards = ac97
 
 ###
 # Capture contents of display during each test
@@ -110,6 +194,13 @@ keep_screendumps_on_error = yes
 screendump_delay = 5
 # Encode video from vm screenshots
 encode_video_files = yes
+
+# Set boot order
+boot_order = cdn
+# Use the first hard disk for boot device once
+boot_once = c
+# Enable/Disable boot menu
+boot_menu = off
 
 
 #### SPICE related options valid if display == spice,
@@ -120,6 +211,7 @@ spice_password = 123456
 spice_addr = 0
 
 spice_ssl = yes
+#spice_tls_port = 3001
 spice_tls_ciphers = DEFAULT
 spice_gen_x509 = yes
 
@@ -203,9 +295,14 @@ restore_image_on_check_error = no
 
 # Some preprocessor/postprocessor params
 start_vm = yes
+paused_after_start_vm = no
 kill_vm = no
 kill_vm_gracefully = yes
 kill_unresponsive_vms = yes
+# Don't kill vm via monitor until it becomes paused
+kill_vm_only_when_paused = yes
+# Wait time before kill vm
+kill_timeout = 60
 
 # Screendump thread params
 convert_ppm_files_to_png_on_error = yes
@@ -220,12 +317,15 @@ keep_video_files_on_error = yes
 # Default remote shell port (SSH under linux)
 shell_port = 22
 # If you need more ports to be available for comm between host and guest,
-# please add them here
-#priv_bridge_ports = 53 67
+# please see https://github.com/autotest/autotest/wiki/KVMAutotest-Networking
 
 # Default scheduler params
-# used_cpus = 1
-# used_mem = 512
+#used_cpus = 1
+#used_mem = 512
+
+# Cpu model params
+auto_cpu_model = "yes"
+cpu_model_flags = ""
 
 # Port redirections
 #redirs = remote_shell
@@ -294,15 +394,6 @@ vcpu_cores = 0
 vcpu_threads = 1
 vcpu_sockets = 2
 
-boot_order = cdn
-boot_once = c
-boot_menu = off
-
-
-# Specify multiple sound cards seperated by comma,like 'sb16,adlib'
-# or 'all'. By default, it's 'ac97' which is only supported internally
-soundcards = ac97
-
 #nic_script = scripts/qemu-ifup
 #nic_script = scripts/qemu-ifup-ipv6
 #mac_prefix = 00:11:22:33:
@@ -326,13 +417,9 @@ cpu_model = qemu64
 auto_cpu_model = "yes"
 cpu_model_flags = ""
 # Network method
-network = bridge
 use_nic_scritps = no
 
 nic_model = e1000
-
-images_good = 10.66.90.128:/vol/S2/kvmauto/linux_img
-nfs_iso = 10.66.90.128:/vol/S2/kvmauto/iso
 
 post_command_noncritical = yes
 mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
@@ -351,10 +438,42 @@ sysfs_dir = "/sys"
 image_name(_.*)? ?<= images/
 # Prepend steps directory to every step files.
 steps ?<= steps/
+# libvirt (virt-install optional arguments)
+# TODO: Rename these with 'libvirt_' prefix
+use_autostart = no
+use_check_cpu = yes
+use_debug = yes
+use_no_reboot = no
+use_os_variant = no
+use_os_type = yes
+# if using 'url = auto' to install, url_auto_ip must match IP on
+# selected virsh network or bridge
+url_auto_ip = 192.168.122.1
+# wait in minutes for virt-install to finish (bz still open)
+use_virt_install_wait = no
+virt_install_wait_time = 300
+
+# NFS directory of guest images
+images_good = 10.66.90.128:/vol/S2/kvmauto/linux_img
+nfs_iso = 10.66.90.128:/vol/S2/kvmauto/iso
+
+# Regex for get peer device for a net device.
+# This regex is for Fedora host (with qemu-kvm 0.15.*),
+netdev_peer_re = "\s{2,}(.*?): .*?\\\s(.*?):"
+# for RHEL5 host, the regex should be:
+# netdev_peer_re = "\s{2,}(.*?): .*?\s{2,}(.*?):"
+# for RHEL6 host, the regex should be:
+# netdev_peer_re = "\s{2,}(.*?):.*?peer=(.*?)\s"
+
+# You can set custom commands to verify kvm module and userspace version, here
+# is a convenient example for RHEL and Fedora.
+#kvm_ver_cmd = "modinfo kvm | grep vermagic | awk '{print $2}'"
+#kvm_userspace_ver_cmd = "grep -q el5 /proc/version && rpm -q kvm || rpm -q qemu-kvm"
 
 image_clone_commnad = 'cp --reflink=auto %s %s'
 image_remove_commnad = 'rm -rf %s'
 
+indirect_image_blacklist = "/dev/hda.* /dev/sda.* /dev/sg0 /dev/md0"
 # Internal case configuration end. Don't add any line below this line.
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)

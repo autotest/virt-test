@@ -2,194 +2,9 @@
 Library to perform pre/post test setup for KVM autotest.
 """
 import os, logging, time, re, random, commands
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-from autotest_lib.client.bin import kvm_control
-import virt_utils
-
-
-class THPError(Exception):
-    """
-    Base exception for Transparent Hugepage setup.
-    """
-    pass
-
-
-class THPNotSupportedError(THPError):
-    """
-    Thrown when host does not support tansparent hugepages.
-    """
-    pass
-
-
-class THPWriteConfigError(THPError):
-    """
-    Thrown when host does not support tansparent hugepages.
-    """
-    pass
-
-
-class THPKhugepagedError(THPError):
-    """
-    Thrown when khugepaged is not behaving as expected.
-    """
-    pass
-
-
-class TransparentHugePageConfig(object):
-    def __init__(self, test, params):
-        """
-        Find paths for transparent hugepages and kugepaged configuration. Also,
-        back up original host configuration so it can be restored during
-        cleanup.
-        """
-        self.params = params
-
-        RH_THP_PATH = "/sys/kernel/mm/redhat_transparent_hugepage"
-        UPSTREAM_THP_PATH = "/sys/kernel/mm/transparent_hugepage"
-        if os.path.isdir(RH_THP_PATH):
-            self.thp_path = RH_THP_PATH
-        elif os.path.isdir(UPSTREAM_THP_PATH):
-            self.thp_path = UPSTREAM_THP_PATH
-        else:
-            raise THPNotSupportedError("System doesn't support transparent "
-                                       "hugepages")
-
-        tmp_list = []
-        test_cfg = {}
-        test_config = self.params.get("test_config", None)
-        if test_config is not None:
-            tmp_list = re.split(';', test_config)
-        while len(tmp_list) > 0:
-            tmp_cfg = tmp_list.pop()
-            test_cfg[re.split(":", tmp_cfg)[0]] = re.split(":", tmp_cfg)[1]
-        # Save host current config, so we can restore it during cleanup
-        # We will only save the writeable part of the config files
-        original_config = {}
-        # List of files that contain string config values
-        self.file_list_str = []
-        # List of files that contain integer config values
-        self.file_list_num = []
-        for f in os.walk(self.thp_path):
-            base_dir = f[0]
-            if f[2]:
-                for name in f[2]:
-                    f_dir = os.path.join(base_dir, name)
-                    parameter = file(f_dir, 'r').read()
-                    try:
-                        # Verify if the path in question is writable
-                        f = open(f_dir, 'w')
-                        f.close()
-                        if re.findall("\[(.*)\]", parameter):
-                            original_config[f_dir] = re.findall("\[(.*)\]",
-                                                           parameter)[0]
-                            self.file_list_str.append(f_dir)
-                        else:
-                            original_config[f_dir] = int(parameter)
-                            self.file_list_num.append(f_dir)
-                    except IOError:
-                        pass
-
-        self.test_config = test_cfg
-        self.original_config = original_config
-
-
-    def set_env(self):
-        """
-        Applies test configuration on the host.
-        """
-        if self.test_config:
-            for path in self.test_config.keys():
-                file(path, 'w').write(self.test_config[path])
-
-
-    def value_listed(self, value):
-        """
-        Get a parameters list from a string
-        """
-        value_list = []
-        for i in re.split("\[|\]|\n+|\s+", value):
-            if i:
-                value_list.append(i)
-        return value_list
-
-
-    def khugepaged_test(self):
-        """
-        Start, stop and frequency change test for khugepaged.
-        """
-        def check_status_with_value(action_list, file_name):
-            """
-            Check the status of khugepaged when set value to specify file.
-            """
-            for (a, r) in action_list:
-                open(file_name, "w").write(a)
-                time.sleep(5)
-                try:
-                    utils.run('pgrep khugepaged')
-                    if r != 0:
-                        raise THPKhugepagedError("Khugepaged still alive when"
-                                                 "transparent huge page is "
-                                                 "disabled")
-                except error.CmdError:
-                    if r == 0:
-                        raise THPKhugepagedError("Khugepaged could not be set to"
-                                                 "status %s" % a)
-
-
-        for file_path in self.file_list_str:
-            action_list = []
-            if re.findall("enabled", file_path):
-                # Start and stop test for khugepaged
-                value_list = self.value_listed(open(file_path,"r").read())
-                for i in value_list:
-                    if re.match("n", i, re.I):
-                        action_stop = (i, 256)
-                for i in value_list:
-                    if re.match("[^n]", i, re.I):
-                        action = (i, 0)
-                        action_list += [action_stop, action, action_stop]
-                action_list += [action]
-
-                check_status_with_value(action_list, file_path)
-            else:
-                value_list = self.value_listed(open(file_path,"r").read())
-                for i in value_list:
-                    action = (i, 0)
-                    action_list.append(action)
-                check_status_with_value(action_list, file_path)
-
-        for file_path in self.file_list_num:
-            action_list = []
-            value = int(open(file_path, "r").read())
-            if value != 0 and value != 1:
-                new_value = random.random()
-                action_list.append((str(int(value * new_value)),0))
-                action_list.append((str(int(value * ( new_value + 1))),0))
-            else:
-                action_list.append(("0", 0))
-                action_list.append(("1", 0))
-
-            check_status_with_value(action_list, file_path)
-
-
-    def setup(self):
-        """
-        Configure host for testing. Also, check that khugepaged is working as
-        expected.
-        """
-        self.set_env()
-        self.khugepaged_test()
-
-
-    def cleanup(self):
-        """:
-        Restore the host's original configuration after test
-        """
-        for path in self.original_config:
-            p_file = open(path, 'w')
-            p_file.write(str(self.original_config[path]))
-            p_file.close()
+from autotest.client.shared import error
+from autotest.client import utils, kvm_control
+import utils_misc
 
 
 class THPError(Exception):
@@ -643,6 +458,10 @@ class PrivateBridgeConfig(object):
                 self._bring_bridge_down()
                 self._remove_bridge()
                 raise
+            # Wait the setup to inure
+            if self.physical_nic:
+                time.sleep(5)
+                utils.system("ifconfig %s up" % self.physical_nic)
             self._verify_bridge()
 
 
@@ -738,8 +557,8 @@ class PciAssignable(object):
         self.devices_requested = 0
         self.dev_unbind_drivers = {}
         if host_set_flag is not None:
-            self.setup = int(host_set_flag) & 1 == 1
-            self.cleanup = int(host_set_flag) & 2 == 2
+            self.setup = host_set_flag & 1 == 1
+            self.cleanup = host_set_flag & 2 == 2
         else:
             self.setup = False
             self.cleanup = False
@@ -749,6 +568,7 @@ class PciAssignable(object):
             for i in self.kvm_params:
                 if "allow_unsafe_assigned_interrupts" in i:
                     self.auai_path = i
+
 
     def add_device(self, device_type="vf", name=None):
         """
@@ -789,10 +609,9 @@ class PciAssignable(object):
         @param pci_id: PCI ID of a given PCI device.
         """
         base_dir = "/sys/bus/pci"
-        full_id = virt_utils.get_full_pci_id(pci_id)
-        vendor_id = virt_utils.get_vendor_from_pci_id(pci_id)
+        full_id = utils_misc.get_full_pci_id(pci_id)
+        vendor_id = utils_misc.get_vendor_from_pci_id(pci_id)
         drv_path = os.path.join(base_dir, "devices/%s/driver" % full_id)
-
         if 'pci-stub' in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
             driver = self.dev_unbind_drivers[pci_id]
@@ -833,6 +652,7 @@ class PciAssignable(object):
             return True
         else:
             return False
+
 
     def get_vf_devs(self):
         """
@@ -883,7 +703,7 @@ class PciAssignable(object):
         for vf_id in vf_ids:
             if self.get_vf_status(vf_id):
                 vf_d.append(vf_id)
- 
+
         for vf in vf_d:
             vf_ids.remove(vf)
 
@@ -1006,7 +826,6 @@ class PciAssignable(object):
                 return False
             return True
 
-    @error.context_aware
     def sr_iov_cleanup(self):
         """
         Clean up the sriov setup
@@ -1052,7 +871,7 @@ class PciAssignable(object):
         if s:
             cmd = "modprobe -r %s" % self.driver
             logging.info("Running host command: %s" % cmd)
-            os.system("modprobe -r %s" % self.driver)
+            os.system(cmd)
             re_probe = True
         else:
             return True
@@ -1068,15 +887,16 @@ class PciAssignable(object):
                 return False
             return True
 
+
     def request_devs(self, count=None):
         """
         Implement setup process: unbind the PCI device and then bind it
         to the pci-stub driver.
 
         @param count: count number of PCI devices needed for pass through
+
         @return: a list of successfully requested devices' PCI IDs.
         """
-
         if count is None:
             count = self.devices_requested
         base_dir = "/sys/bus/pci"
@@ -1089,7 +909,7 @@ class PciAssignable(object):
 
         # Setup all devices specified for assignment to guest
         for pci_id in self.pci_ids:
-            full_id = virt_utils.get_full_pci_id(pci_id)
+            full_id = utils_misc.get_full_pci_id(pci_id)
             if not full_id:
                 continue
             drv_path = os.path.join(base_dir, "devices/%s/driver" % full_id)
@@ -1100,7 +920,7 @@ class PciAssignable(object):
             # Judge whether the device driver has been binded to stub
             if not self.is_binded_to_stub(full_id):
                 error.context("Bind device %s to stub" % full_id, logging.info)
-                vendor_id = virt_utils.get_vendor_from_pci_id(pci_id)
+                vendor_id = utils_misc.get_vendor_from_pci_id(pci_id)
                 stub_new_id = os.path.join(stub_path, 'new_id')
                 unbind_dev = os.path.join(drv_path, 'unbind')
                 stub_bind = os.path.join(stub_path, 'bind')
@@ -1108,6 +928,7 @@ class PciAssignable(object):
                 info_write_to_files = [(vendor_id, stub_new_id),
                                        (full_id, unbind_dev),
                                        (full_id, stub_bind)]
+
                 for content, file in info_write_to_files:
                     try:
                         utils.open_write_close(file, content)
@@ -1124,6 +945,7 @@ class PciAssignable(object):
             requested_pci_ids.append(pci_id)
         self.pci_ids = requested_pci_ids
         return self.pci_ids
+
 
     @error.context_aware
     def release_devs(self):

@@ -7,9 +7,9 @@ custom logic for each virtualization hypervisor/software.
 '''
 
 import os, logging
-from autotest_lib.client.bin import utils, os_dep
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_utils
+from autotest.client import utils, os_dep
+from autotest.client.shared import error
+from autotest.client.virt import utils_misc
 
 class VirtInstallException(Exception):
     '''
@@ -69,7 +69,7 @@ class BaseInstaller(object):
         Test variables values are saved here again because it's not possible to
         pickle the test instance inside BaseInstaller due to limitations
         in the pickle protocol. And, in case this pickle thing needs more
-        explanation, take a loot at the Env class inside virt_utils.
+        explanation, take a loot at the Env class inside utils_misc.
 
         Besides that, we also ensure that srcdir exists, by creating it if
         necessary.
@@ -304,6 +304,16 @@ class BaseInstaller(object):
         pass
 
 
+    def write_version_keyval(self, test):
+        try:
+            version = self.get_version()
+        except AttributeError:
+            version = "Unknown"
+        sw_version = {('software_version_%s' % self.name): version}
+        logging.debug("Writing test keyval %s", sw_version)
+        test.write_test_keyval(sw_version)
+
+
     def load_modules(self, module_list=None):
         '''
         Load Linux Kernel modules the virtualization software may depend on
@@ -352,7 +362,8 @@ class BaseInstaller(object):
             self.reload_modules()
 
 
-    def install(self):
+    def install(self, cleanup=True, download=True, prepare=True,
+                build=True, install=True, init=True):
         '''
         Performs the installation of the virtualization software
 
@@ -360,27 +371,33 @@ class BaseInstaller(object):
         be reimplemented completely, or simply implement one or many of the
         install  phases.
         '''
-        self._install_phase_cleanup()
-        self._install_phase_cleanup_verify()
+        if cleanup:
+            self._install_phase_cleanup()
+            self._install_phase_cleanup_verify()
 
-        self._install_phase_download()
-        self._install_phase_download_verify()
+        if download:
+            self._install_phase_download()
+            self._install_phase_download_verify()
 
-        self._install_phase_prepare()
-        self._install_phase_prepare_verify()
+        if prepare:
+            self._install_phase_prepare()
+            self._install_phase_prepare_verify()
 
-        self._install_phase_build()
-        self._install_phase_build_verify()
+        if build:
+            self._install_phase_build()
+            self._install_phase_build_verify()
 
-        self._install_phase_install()
-        self._install_phase_install_verify()
+        if install:
+            self._install_phase_install()
+            self._install_phase_install_verify()
 
-        self._install_phase_init()
-        self._install_phase_init_verify()
+        if init:
+            self._install_phase_init()
+            self._install_phase_init_verify()
 
         self.reload_modules_if_needed()
         if self.save_results:
-            virt_utils.archive_as_tarball(self.test_srcdir,
+            utils_misc.archive_as_tarball(self.test_srcdir,
                                           self.test_resultsdir)
 
 
@@ -459,9 +476,12 @@ class KojiInstaller(BaseInstaller):
         self.tag = params.get("%s_tag" % self.param_key_prefix, None)
         self.koji_cmd = params.get("%s_cmd" % self.param_key_prefix, None)
         if self.tag is not None:
-            virt_utils.set_default_koji_tag(self.tag)
-        self.koji_pkgs = eval(params.get("%s_pkgs" % self.param_key_prefix,
-                                         "[]"))
+            utils_misc.set_default_koji_tag(self.tag)
+        self.koji_pkgs = params.get("%s_pkgs" % self.param_key_prefix,
+                                    "").split()
+        self.koji_scratch_pkgs = params.get("%s_scratch_pkgs" %
+                                            self.param_key_prefix,
+                                            "").split()
         if self.install_debug_info:
             self._expand_koji_pkgs_with_debuginfo()
 
@@ -476,7 +496,7 @@ class KojiInstaller(BaseInstaller):
 
         koji_pkgs_with_debug = []
         for pkg_text in self.koji_pkgs:
-            pkg = virt_utils.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             debuginfo_pkg_name = '%s-debuginfo' % pkg.package
             # if no subpackages are set, then all packages will be installed
             # so there's no need to manually include debuginfo packages
@@ -497,21 +517,33 @@ class KojiInstaller(BaseInstaller):
 
     def _get_rpm_names(self):
         all_rpm_names = []
-        koji_client = virt_utils.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = virt_utils.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             rpm_names = koji_client.get_pkg_rpm_names(pkg)
             all_rpm_names += rpm_names
+        for scratch_pkg_text in self.koji_scratch_pkgs:
+            pkg = utils_misc.KojiScratchPkgSpec(scratch_pkg_text)
+            rpm_urls = koji_client.get_scratch_pkg_urls(pkg)
+            file_names = map(os.path.basename, rpm_urls)
+            for f in file_names:
+                r = utils_misc.RPMFileNameInfo(f)
+                all_rpm_names.append(r.get_nvr_info()['name'])
         return all_rpm_names
 
 
     def _get_rpm_file_names(self):
         all_rpm_file_names = []
-        koji_client = virt_utils.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = virt_utils.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             rpm_file_names = koji_client.get_pkg_rpm_file_names(pkg)
             all_rpm_file_names += rpm_file_names
+        for scratch_pkg_text in self.koji_scratch_pkgs:
+            pkg = utils_misc.KojiScratchPkgSpec(scratch_pkg_text)
+            rpm_urls = koji_client.get_scratch_pkg_urls(pkg)
+            file_names = map(os.path.basename, rpm_urls)
+            all_rpm_file_names += file_names
         return all_rpm_file_names
 
 
@@ -521,14 +553,17 @@ class KojiInstaller(BaseInstaller):
 
 
     def _install_phase_download(self):
-        koji_client = virt_utils.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = virt_utils.KojiPkgSpec(pkg_text)
+            pkg = utils_misc.KojiPkgSpec(pkg_text)
             if pkg.is_valid():
                 koji_client.get_pkgs(pkg, dst_dir=self.test_srcdir)
             else:
                 logging.error('Package specification (%s) is invalid: %s' %
                               (pkg, pkg.describe_invalid()))
+        for pkg_text in self.koji_scratch_pkgs:
+            pkg = utils_misc.KojiScratchPkgSpec(pkg_text)
+            koji_client.get_scratch_pkgs(pkg, dst_dir=self.test_srcdir)
 
 
     def _install_phase_install(self):
@@ -546,7 +581,7 @@ class BaseLocalSourceInstaller(BaseInstaller):
         #
         # There are really no choices for patch helpers
         #
-        self.patch_helper = virt_utils.PatchParamHelper(
+        self.patch_helper = utils_misc.PatchParamHelper(
             self.params,
             self.param_key_prefix,
             self.source_destination)
@@ -586,11 +621,11 @@ class BaseLocalSourceInstaller(BaseInstaller):
                                             self.param_key_prefix,
                                             'gnu_autotools')
         if build_helper_name == 'gnu_autotools':
-            self.build_helper = virt_utils.GnuSourceBuildParamHelper(
+            self.build_helper = utils_misc.GnuSourceBuildParamHelper(
                 self.params, self.param_key_prefix,
                 self.source_destination, self.install_prefix)
         elif build_helper_name == 'linux_kernel':
-            self.build_helper = virt_utils.LinuxKernelBuildHelper(
+            self.build_helper = utils_misc.LinuxKernelBuildHelper(
                 self.params, self.param_key_prefix,
                 self.source_destination)
 
@@ -608,19 +643,19 @@ class BaseLocalSourceInstaller(BaseInstaller):
     def _install_phase_build(self):
         if self.build_helper is not None:
             if (isinstance(self.build_helper,
-                           virt_utils.GnuSourceBuildHelper) or
+                           utils_misc.GnuSourceBuildHelper) or
                 isinstance(self.build_helper,
-                           virt_utils.LinuxKernelBuildHelper)):
+                           utils_misc.LinuxKernelBuildHelper)):
                 try:
                     self.build_helper.execute()
-                except virt_utils.SourceBuildParallelFailed:
+                except utils_misc.SourceBuildParallelFailed:
                     # Flag minor the failure
                     self.minor_failure = True
                     self.minor_failure_reason = "Failed to do parallel build"
 
-                except virt_utils.SourceBuildFailed:
+                except utils_misc.SourceBuildFailed:
                     # Failed the current test
-                    raise error.Fail("Failed to build %s" % self.name)
+                    raise error.TestFail("Failed to build %s" % self.name)
             else:
                 self.build_helper.execute()
 
@@ -637,7 +672,7 @@ class LocalSourceDirInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(LocalSourceDirInstaller, self).set_install_params(test, params)
 
-        self.content_helper = virt_utils.LocalSourceDirParamHelper(
+        self.content_helper = utils_misc.LocalSourceDirParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -652,7 +687,7 @@ class LocalSourceTarInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(LocalSourceTarInstaller, self).set_install_params(test, params)
 
-        self.content_helper = virt_utils.LocalTarParamHelper(
+        self.content_helper = utils_misc.LocalTarParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -667,7 +702,7 @@ class RemoteSourceTarInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(RemoteSourceTarInstaller, self).set_install_params(test, params)
 
-        self.content_helper = virt_utils.RemoteTarParamHelper(
+        self.content_helper = utils_misc.RemoteTarParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -679,12 +714,19 @@ class GitRepoInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(GitRepoInstaller, self).set_install_params(test, params)
 
-        self.content_helper = virt_utils.GitRepoParamHelper(
+        self.content_helper = utils_misc.GitRepoParamHelper(
             params,
             self.name,
             self.source_destination)
 
         self._set_build_helper()
+
+
+    def get_version(self):
+        uri = self.content_helper.uri
+        branch = self.content_helper.branch
+        commit = self.content_helper.get_top_commit()
+        return "%s:%s:%s" % (uri, branch, commit)
 
 
 class FailedInstaller:

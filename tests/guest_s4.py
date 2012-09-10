@@ -1,6 +1,7 @@
 import logging, time
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_utils
+from autotest.client.shared import error
+from autotest.client.virt import utils_misc
+
 
 @error.context_aware
 def run_guest_s4(test, params, env):
@@ -28,9 +29,7 @@ def run_guest_s4(test, params, env):
     @param test: kvm test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
-
     """
-
     error.base_context("before S4")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -68,7 +67,7 @@ def run_guest_s4(test, params, env):
         # Make sure the VM goes down
         error.base_context("after S4")
         suspend_timeout = 240 + int(params.get("smp")) * 60
-        if not virt_utils.wait_for(vm.is_dead, suspend_timeout, 2, 2):
+        if not utils_misc.wait_for(vm.is_dead, suspend_timeout, 2, 2):
             raise error.TestFail("VM refuses to go down. Suspend failed.")
         logging.info("VM suspended successfully. Sleeping for a while before "
                      "resuming it.")

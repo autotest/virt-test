@@ -1,5 +1,5 @@
-import logging, os
-from autotest_lib.client.common_lib import error
+import os
+from autotest.client.shared import error
 
 
 @error.context_aware
@@ -33,8 +33,8 @@ def run_lvm(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    login_timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=login_timeout)
+    timeout = int(params.get("login_timeout", 360))
+    session = vm.wait_for_login(timeout=timeout)
 
     vg_name = "vg_kvm_test"
     lv_name = "lv_kvm_test"

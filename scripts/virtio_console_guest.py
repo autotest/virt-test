@@ -66,10 +66,12 @@ class VirtioGuest:
         if not os.path.ismount(DEBUGPATH):
             os.system('mount -t debugfs none %s' % (DEBUGPATH))
         try:
-            viop_names = os.listdir('%s/virtio-ports' % (DEBUGPATH))
-        except OSError:
+            if not os.path.isdir('%s/virtio-ports' % (DEBUGPATH)):
+                print not_present_msg
+        except Exception:
             print not_present_msg
         else:
+            viop_names = os.listdir('%s/virtio-ports' % (DEBUGPATH))
             if in_files is not None:
                 dev_names = os.listdir('/dev')
                 rep = re.compile(r"vport[0-9]p[0-9]+")
@@ -158,7 +160,6 @@ class VirtioGuest:
         for item in in_files:
             if (item[1] != self.ports[item[0]]["is_console"]):
                 print self.ports
-                print "item: %s" % item
                 print "FAIL: Host console is not like console on guest side\n"
                 return
 

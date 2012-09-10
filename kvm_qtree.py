@@ -4,10 +4,8 @@ Utility classes and functions to handle KVM Qtree parsing and verification.
 @author: Lukas Doktor <ldoktor@redhat.com>
 @copyright: 2012 Red Hat Inc.
 """
-import logging
-import os
-import re
-import virt_storage
+import logging, os, re
+import storage
 
 OFFSET_PER_LEVEL = 2
 
@@ -18,7 +16,7 @@ _RE_CLASS = re.compile(r'^class ([^,]*), addr (\d\d:\d\d.\d+), pci id '
 
 class IncompatibleTypeError(TypeError):
     def __init__(self, prop, desired_type, value):
-        super(IncompatibleTypeError, self).__init__()
+        TypeError.__init__(self)
         self.prop = prop
         self.desired = desired_type
         self.value = value
@@ -91,6 +89,10 @@ class QtreeNode(object):
         self.update_qtree_prop(prop, value)
 
     def update_qtree_prop(self, prop, value):
+        if prop.startswith("bus-prop: "):
+            prop = prop[10:]
+        if prop.startswith("dev-prop: "):
+            prop = prop[10:]
         self.qtree[prop] = value
 
     def get_qtree(self):
@@ -148,7 +150,7 @@ class QtreeDev(QtreeNode):
         super(QtreeDev, self).add_child(child)
 
     def guess_type(self):
-        if ('dev-prop: drive' in self.qtree and
+        if ('drive' in self.qtree and
                 self.qtree['type'] != 'usb-storage'):
             # ^^ HOOK when usb-storage-containter is detected as disk
             return QtreeDisk
@@ -177,6 +179,10 @@ class QtreeDisk(QtreeDev):
         self.update_block_prop(prop, value)
 
     def update_block_prop(self, prop, value):
+        if prop.startswith("bus-prop: "):
+            prop = prop[10:]
+        if prop.startswith("dev-prop: "):
+            prop = prop[10:]
         self.block[prop] = value
 
     def get_block(self):
@@ -200,7 +206,7 @@ class QtreeDisk(QtreeDev):
         self.params['drive_format'] = self.qtree.get('type')
 
     def get_qname(self):
-        return self.qtree.get('dev-prop: drive')
+        return self.qtree.get('drive')
 
 
 class QtreeContainer(object):
@@ -288,7 +294,9 @@ class QtreeContainer(object):
                         new.set_parent(current)
                     current = new
                     line = line[5:].split(',')
-                    current.set_qtree_prop('id', line[1][5:-1])
+                    id = line[1][5:-1]
+                    if len(id) > 0:
+                        current.set_qtree_prop('id', line[1][5:-1])
                     offset += OFFSET_PER_LEVEL
                     line = ['type', line[0]]
                 elif _RE_CLASS.match(line):
@@ -297,7 +305,7 @@ class QtreeContainer(object):
                     current.set_qtree_prop('class_addr', line[1])
                     current.set_qtree_prop('class_pciid', line[2])
                     current.set_qtree_prop('class_sub', line[3])
-                    line = ['class', line[0]]
+                    line = ['class_name', line[0]]
                 elif '=' in line:
                     # bus-prop: addr = 02.0
                     line = line.split('=', 1)
@@ -422,9 +430,9 @@ class QtreeDisksContainer(object):
             if (disk.get_qtree()['type'].startswith('scsi') or
                     disk.get_qtree()['type'].startswith('usb2')):
                 props = disk.get_qtree()
-                disks.add('%d-%d-%d' % (int(props.get('bus-prop: channel')),
-                                        int(props.get('bus-prop: scsi-id')),
-                                        int(props.get('bus-prop: lun'))))
+                disks.add('%d-%d-%d' % (int(props.get('channel')),
+                                        int(props.get('scsi-id')),
+                                        int(props.get('lun'))))
             else:
                 qtree_not_scsi += 1
         scsis = set()
@@ -465,7 +473,7 @@ class QtreeDisksContainer(object):
             current = None
             image_params = params.object_params(name)
             image_name = os.path.realpath(
-                        virt_storage.get_image_filename(image_params, root_dir))
+                        storage.get_image_filename(image_params, root_dir))
             for (qname, disk) in disks.iteritems():
                 if disk.get('image_name') == image_name:
                     current = disk

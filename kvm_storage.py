@@ -6,12 +6,12 @@ This exports:
   - class for image operates and basic parameters
 """
 import logging, os
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-import virt_utils, virt_vm, virt_storage
+from autotest.client.shared import error
+from autotest.client import utils
+import utils_misc, virt_vm, storage
 
 
-class QemuImg(virt_storage.QemuImg):
+class QemuImg(storage.QemuImg):
     """
     KVM class for handling operations of disk/block images.
     """
@@ -23,9 +23,10 @@ class QemuImg(virt_storage.QemuImg):
         @param root_dir: Base directory for relative filenames.
         @param tag: Image tag defined in parameter images
         """
-        virt_storage.QemuImg.__init__(self, params, root_dir, tag)
-        self.image_cmd = virt_utils.get_path(root_dir,
+        storage.QemuImg.__init__(self, params, root_dir, tag)
+        self.image_cmd = utils_misc.get_path(root_dir,
                                  params.get("qemu_img_binary","qemu-img"))
+
 
     @error.context_aware
     def create(self, params):
@@ -131,7 +132,7 @@ class QemuImg(virt_storage.QemuImg):
         params_convert = {"image_name": convert_image,
                           "image_format": convert_format}
 
-        convert_image_filename = virt_storage.get_image_filename(params_convert,
+        convert_image_filename = storage.get_image_filename(params_convert,
                                                                  root_dir)
 
         cmd = self.image_cmd
@@ -346,3 +347,43 @@ class QemuImg(virt_storage.QemuImg):
             elif not image_is_qcow2:
                 logging.debug("Image file %s not qcow2, skipping check",
                               image_filename)
+
+
+class Iscsidev(storage.Iscsidev):
+    """
+    Class for handle iscsi devices for VM
+    """
+    def __init__(self, params, root_dir, tag):
+        """
+        Init the default value for image object.
+
+        @param params: Dictionary containing the test parameters.
+        @param root_dir: Base directory for relative filenames.
+        @param tag: Image tag defined in parameter images
+        """
+        super(Iscsidev, self).__init__(self, params, root_dir, tag)
+
+
+    def setup(self):
+        """
+        Access the iscsi target. And return the local raw device name.
+        """
+        self.iscsidevice.login()
+        device_name = self.iscsidevice.get_device_name()
+        if self.device_id:
+            device_name += self.device_id
+        return device_name
+
+
+    def cleanup(self):
+        """
+        Logout the iscsi target and clean up the config and image.
+        """
+        if self.cleanup:
+            self.iscsidevice.cleanup()
+            if self.emulated_file_remove:
+                logging.debug("Removing file %s", self.emulated_image)
+                if os.path.exists(self.emulated_image):
+                    os.unlink(self.emulated_image)
+                else:
+                    logging.debug("File %s not found", self.emulated_image)

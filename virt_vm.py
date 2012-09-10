@@ -1,7 +1,7 @@
-import os, logging, time, glob, re, shutil
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-import virt_utils, virt_test_utils
+import logging, time, glob, re
+from autotest.client.shared import error
+import utils_misc, remote
+
 
 class VMError(Exception):
     pass
@@ -186,6 +186,16 @@ class VMIPAddressMissingError(VMAddressError):
     def __str__(self):
         return "No DHCP lease for MAC %s" % self.mac
 
+class VMUnknownNetTypeError(VMError):
+    def __init__(self, vmname, nicname, nettype):
+        super(VMUnknownNetTypeError, self).__init__()
+        self.vmname = vmname
+        self.nicname = nicname
+        self.nettype = nettype
+
+    def __str__(self):
+        return "Unknown nettype '%s' requested for NIC %s on VM %s" % (
+            self.nettype, self.nicname, self.vmname)
 
 class VMAddNetDevError(VMError):
     pass
@@ -254,6 +264,29 @@ class VMDeviceNotSupportedError(VMDeviceError):
     def __str__(self):
         return ("Device '%s' is not supported for vm '%s' on this Host." %
                 (self.device, self.name))
+
+class VMPCIDeviceError(VMDeviceError):
+    pass
+
+class VMPCISlotInUseError(VMPCIDeviceError):
+    def __init__(self, name, slot):
+        VMPCIDeviceError.__init__(self, name, slot)
+        self.name = name
+        self.slot = slot
+
+    def __str__(self):
+        return ("PCI slot '0x%s' is already in use on vm '%s'. Please assign"
+                " another slot in config file." % (self.slot, self.name))
+
+class VMPCIOutOfRangeError(VMPCIDeviceError):
+    def __init__(self, name, max_dev_num):
+        VMPCIDeviceError.__init__(self, name, max_dev_num)
+        self.name = name
+        self.max_dev_num = max_dev_num
+
+    def __str__(self):
+        return ("Too many PCI devices added on vm '%s', max supported '%s'" %
+                (self.name, str(self.max_dev_num)))
 
 class VMUSBError(VMError):
     pass
@@ -362,7 +395,6 @@ class BaseVM(object):
     def __init__(self, name, params):
         self.name = name
         self.params = params
-
         #
         # Assuming all low-level hypervisors will have a serial (like) console
         # connection to the guest. libvirt also supports serial (like) consoles
@@ -370,8 +402,20 @@ class BaseVM(object):
         # is or behaves like aexpect.ShellSession.
         #
         self.serial_console = None
-
-        self._generate_unique_id()
+        # Create instance if not already set
+        if not hasattr(self, 'instance'):
+            self._generate_unique_id()
+        # Don't overwrite existing state, update from params
+        if hasattr(self, 'virtnet'):
+            # Direct reference to self.virtnet makes pylint complain
+            # note: virtnet.__init__() supports being called anytime
+            getattr(self, 'virtnet').__init__(self.params,
+                                              self.name,
+                                              self.instance)
+        else: # Create new
+            self.virtnet = utils_misc.VirtNet(self.params,
+                                              self.name,
+                                              self.instance)
 
         if not hasattr(self, 'cpuinfo'):
             self.cpuinfo = CpuInfo()
@@ -383,7 +427,7 @@ class BaseVM(object):
         """
         while True:
             self.instance = (time.strftime("%Y%m%d-%H%M%S-") +
-                             virt_utils.generate_random_string(4))
+                             utils_misc.generate_random_string(8))
             if not glob.glob("/tmp/*%s" % self.instance):
                 break
 
@@ -413,13 +457,145 @@ class BaseVM(object):
         @raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
         """
-        nic_name = self.params.objects("nics")[nic_index]
-        nic_params = self.params.object_params(nic_name)
-        mac = (nic_params.get("nic_mac") or
-               virt_utils.get_mac_address(self.instance, nic_index))
-        if not mac:
+        try:
+            mac = self.virtnet[nic_index].mac
+            return mac
+        except KeyError:
             raise VMMACAddressMissingError(nic_index)
-        return mac
+
+
+    def get_address(self, index=0):
+        """
+        Return the IP address of a NIC or guest (in host space).
+
+        @param index: Name or index of the NIC whose address is requested.
+        @return: 'localhost': Port redirection is in use
+        @return: IP address of NIC if valid in arp cache.
+        @raise VMMACAddressMissingError: If no MAC address is defined for the
+                requested NIC
+        @raise VMIPAddressMissingError: If no IP address is found for the the
+                NIC's MAC address
+        @raise VMAddressVerificationError: If the MAC-IP address mapping cannot
+                be verified (using arping)
+        """
+        nic = self.virtnet[index]
+        # TODO: Determine port redirection in use w/o checking nettype
+        if nic.nettype != 'bridge':
+            return "localhost"
+        if not nic.has_key('mac'):
+            raise VMMACAddressMissingError(index)
+        else:
+            # Get the IP address from arp cache, try upper and lower case
+            arp_ip = self.address_cache.get(nic.mac.upper())
+            if not arp_ip:
+                arp_ip = self.address_cache.get(nic.mac.lower())
+            if not arp_ip:
+                raise VMIPAddressMissingError(nic.mac)
+            # Make sure the IP address is assigned to one or more macs
+            # for this guest
+            macs = self.virtnet.mac_list()
+            if not utils_misc.verify_ip_address_ownership(arp_ip, macs):
+                raise VMAddressVerificationError(nic.mac, arp_ip)
+            logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
+                            arp_ip, self.name, str(index)))
+            return arp_ip
+
+
+    def get_port(self, port, nic_index=0):
+        """
+        Return the port in host space corresponding to port in guest space.
+
+        @param port: Port number in host space.
+        @param nic_index: Index of the NIC.
+        @return: If port redirection is used, return the host port redirected
+                to guest port port. Otherwise return port.
+        @raise VMPortNotRedirectedError: If an unredirected port is requested
+                in user mode
+        """
+        if self.virtnet[nic_index].nettype == "bridge":
+            return port
+        else:
+            try:
+                return self.redirs[port]
+            except KeyError:
+                raise VMPortNotRedirectedError(port)
+
+
+    def free_mac_address(self, nic_index_or_name=0):
+        """
+        Free a NIC's MAC address.
+
+        @param nic_index: Index of the NIC
+        """
+        self.virtnet.free_mac_address(nic_index_or_name)
+
+    @error.context_aware
+    def wait_for_get_address(self, nic_index_or_name, timeout=30, internal_timeout=1):
+        """
+        Wait for a nic to acquire an IP address, then return it.
+        """
+        # Don't let VMIPAddressMissingError/VMAddressVerificationError through
+        def _get_address():
+            try:
+                return self.get_address(nic_index_or_name)
+            except (VMIPAddressMissingError, VMAddressVerificationError):
+                return False
+        if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
+            raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
+        return self.get_address(nic_index_or_name)
+
+    # Adding/setup networking devices methods split between 'add_*' for
+    # setting up virtnet, and 'activate_' for performing actions based
+    # on settings.
+    def add_nic(self, **params):
+        """
+        Add new or setup existing NIC with optional model type and mac address
+
+        @param: **params: Additional NIC parameters to set.
+        @param: nic_name: Name for device
+        @param: mac: Optional MAC address, None to randomly generate.
+        @param: ip: Optional IP address to register in address_cache
+        @return: Dict with new NIC's info.
+        """
+        if not params.has_key('nic_name'):
+            params['nic_name'] = utils_misc.generate_random_id()
+        nic_name = params['nic_name']
+        if nic_name in self.virtnet.nic_name_list():
+            self.virtnet[nic_name].update(**params)
+        else:
+            self.virtnet.append(params)
+        nic = self.virtnet[nic_name]
+        if not nic.has_key('mac'): # generate random mac
+            logging.debug("Generating random mac address for nic")
+            self.virtnet.generate_mac_address(nic_name)
+        # mac of '' or invaid format results in not setting a mac
+        if nic.has_key('ip') and nic.has_key('mac'):
+            if not self.address_cache.has_key(nic.mac):
+                logging.debug("(address cache) Adding static "
+                              "cache entry: %s ---> %s" % (nic.mac, nic.ip))
+            else:
+                logging.debug("(address cache) Updating static "
+                              "cache entry from: %s ---> %s"
+                              " to: %s ---> %s" % (nic.mac,
+                              self.address_cache[nic.mac], nic.mac, nic.ip))
+            self.address_cache[nic.mac] = nic.ip
+        return nic
+
+
+    def del_nic(self, nic_index_or_name):
+        """
+        Remove the nic specified by name, or index number
+        """
+        nic = self.virtnet[nic_index_or_name]
+        nic_mac = nic.mac.lower()
+        self.free_mac_address(nic_index_or_name)
+        try:
+            del self.virtnet[nic_index_or_name]
+            del self.address_cache[nic_mac]
+        except IndexError:
+            pass # continue to not exist
+        except KeyError:
+            pass # continue to not exist
 
 
     def verify_kernel_crash(self):
@@ -473,6 +649,7 @@ class BaseVM(object):
         """
         return "/tmp/testlog-%s" % self.instance
 
+
     @error.context_aware
     def login(self, nic_index=0, timeout=LOGIN_TIMEOUT):
         """
@@ -494,10 +671,10 @@ class BaseVM(object):
         address = self.get_address(nic_index)
         port = self.get_port(int(self.params.get("shell_port")))
         log_filename = ("session-%s-%s.log" %
-                        (self.name, virt_utils.generate_random_string(4)))
-        session = virt_utils.remote_login(client, address, port, username,
-                                         password, prompt, linesep,
-                                         log_filename, timeout)
+                        (self.name, utils_misc.generate_random_string(4)))
+        session = remote.remote_login(client, address, port, username,
+                                           password, prompt, linesep,
+                                           log_filename, timeout)
         session.set_status_test_command(self.params.get("status_test_command",
                                                         ""))
         return session
@@ -531,7 +708,7 @@ class BaseVM(object):
         while time.time() < end_time:
             try:
                 return self.login(nic_index, internal_timeout)
-            except (virt_utils.LoginError, VMError), e:
+            except (remote.LoginError, VMError), e:
                 e = str(e)
                 if e not in error_messages:
                     logging.debug(e)
@@ -570,10 +747,10 @@ class BaseVM(object):
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-to-%s-%s.log" %
                         (self.name, address,
-                        virt_utils.generate_random_string(4)))
-        virt_utils.copy_files_to(address, client, username, password, port,
-                                 host_path, guest_path, limit, log_filename,
-                                 verbose, timeout)
+                        utils_misc.generate_random_string(4)))
+        remote.copy_files_to(address, client, username, password, port,
+                                  host_path, guest_path, limit, log_filename,
+                                  verbose, timeout)
 
 
     @error.context_aware
@@ -598,10 +775,10 @@ class BaseVM(object):
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-from-%s-%s.log" %
                         (self.name, address,
-                        virt_utils.generate_random_string(4)))
-        virt_utils.copy_files_from(address, client, username, password, port,
-                                   guest_path, host_path, limit, log_filename,
-                                   verbose, timeout)
+                        utils_misc.generate_random_string(4)))
+        remote.copy_files_from(address, client, username, password, port,
+                                    guest_path, host_path, limit, log_filename,
+                                    verbose, timeout)
 
 
     @error.context_aware
@@ -627,8 +804,8 @@ class BaseVM(object):
         # Try to get a login prompt
         self.serial_console.sendline()
 
-        virt_utils._remote_login(self.serial_console, username, password,
-                                prompt, timeout)
+        remote._remote_login(self.serial_console, username, password,
+                                  prompt, timeout)
         return self.serial_console
 
 
@@ -652,11 +829,11 @@ class BaseVM(object):
                 session = self.serial_login(internal_timeout)
                 if restart_network:
                     try:
-                        virt_test_utils.restart_guest_network(session)
+                        utils_test.restart_guest_network(session)
                     except Exception:
                         pass
                 return session
-            except virt_utils.LoginError, e:
+            except remote.LoginError, e:
                 e = str(e)
                 if e not in error_messages:
                     logging.debug(e)
@@ -697,13 +874,10 @@ class BaseVM(object):
         Get the cpu count of the VM.
         """
         session = self.login()
-        if not session:
-            return None
         try:
             return int(session.cmd(self.params.get("cpu_chk_cmd")))
         finally:
-            if session:
-                session.close()
+            session.close()
 
 
     def get_memory_size(self, cmd=None, timeout=60, re_str=None):
@@ -714,15 +888,13 @@ class BaseVM(object):
                 self.params.get("mem_chk_cmd") will be used.
         """
         session = self.login()
-        if not session:
-            return None
+        if re_str is None:
+            re_str = self.params.get("mem_chk_re_str", "([0-9]+)")
         try:
             if not cmd:
                 cmd = self.params.get("mem_chk_cmd")
-            if re_str is None:
-                re_str = self.params.get("mem_chk_re_str", "([0-9]+)")
-            mem_str = session.cmd(cmd, timeout)
-            mem = re.findall(re_str, mem_str)
+            mem_str = session.cmd(cmd)
+            mem = re.findall("([0-9]+)", mem_str)
             mem_size = 0
             for m in mem:
                 mem_size += int(m)
@@ -734,8 +906,7 @@ class BaseVM(object):
                 mem_size /= 1024
             return int(mem_size)
         finally:
-            if session:
-                session.close()
+            session.close()
 
 
     def get_current_memory_size(self):
@@ -763,17 +934,20 @@ class BaseVM(object):
         raise NotImplementedError
 
 
-    def get_address(self, index=0):
+    def activate_nic(self, nic_index_or_name):
         """
-        Return the IP address of a NIC of the guest
+        Activate an inactive network device
 
-        @param index: Index of the NIC whose address is requested.
-        @raise VMMACAddressMissingError: If no MAC address is defined for the
-                requested NIC
-        @raise VMIPAddressMissingError: If no IP address is found for the the
-                NIC's MAC address
-        @raise VMAddressVerificationError: If the MAC-IP address mapping cannot
-                be verified (using arping)
+        @param: nic_index_or_name: name or index number for existing NIC
+        """
+        raise NotImplementedError
+
+
+    def deactivate_nic(self, nic_index_or_name):
+        """
+        Deactivate an active network device
+
+        @param: nic_index_or_name: name or index number for existing NIC
         """
         raise NotImplementedError
 

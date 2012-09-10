@@ -551,6 +551,7 @@ service sshd restart
   <software>
     <packages config:type="list">
       <package>dhcp-client</package>
+      <package>patch</package>
     </packages>
     <patterns config:type="list">
       <pattern>Basis-Devel</pattern>

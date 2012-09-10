@@ -1,4 +1,4 @@
-AUTHOR = "mbligh@google.com (Martin Bligh)"
+AUTHOR = "Sudhir Kumar <skumar@linux.vnet.ibm.com>"
 NAME = "Kernbench"
 TIME = "SHORT"
 TEST_CLASS = "Kernel"

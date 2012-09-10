@@ -6,8 +6,9 @@ This exports:
   - class for image operates and basic parameters
 """
 import logging, os, shutil, re
-from autotest_lib.client.bin import utils
-import virt_utils, virt_vm
+from autotest.client import utils
+from autotest.client.shared import iscsi
+import utils_misc, virt_vm
 
 
 def preprocess_images(bindir, params, env):
@@ -44,7 +45,7 @@ def get_image_blkdebug_filename(params, root_dir):
     """
     blkdebug_name = params.get("drive_blkdebug", None)
     if blkdebug_name is not None:
-        blkdebug_filename = virt_utils.get_path(root_dir, blkdebug_name)
+        blkdebug_filename = utils_misc.get_path(root_dir, blkdebug_name)
     else:
         blkdebug_filename = None
     return blkdebug_filename
@@ -93,7 +94,7 @@ def get_image_filename(params, root_dir):
         image_filename = "%s.%s" % (image_name, image_format)
     else:
         image_filename = image_name
-    image_filename = virt_utils.get_path(root_dir, image_filename)
+    image_filename = utils_misc.get_path(root_dir, image_filename)
     return image_filename
 
 
@@ -190,7 +191,7 @@ class QemuImg(object):
             else:
                 backup_filename = ("%s.bad.%s" %
                                    (basename,
-                                    virt_utils.generate_random_string(4)))
+                                    utils_misc.generate_random_string(4)))
             return os.path.join(backup_dir, backup_filename)
 
 
@@ -200,7 +201,7 @@ class QemuImg(object):
             iname = "raw_device"
             iformat = params.get("image_format", "qcow2")
             ifilename = "%s.%s" % (iname, iformat)
-            ifilename = virt_utils.get_path(root_dir, ifilename)
+            ifilename = utils_misc.get_path(root_dir, ifilename)
             image_filename_backup = get_backup_name(ifilename, backup_dir, good)
             backup_func = backup_raw_device
         else:
@@ -297,3 +298,48 @@ class QemuImg(object):
                     utils.run(params.get("image_remove_commnad") % (image_fn))
                 else:
                     logging.debug("Image file %s not found", image_fn)
+
+
+class Rawdev(object):
+    """
+    Base class for rew storage devices such as iscsi and local disks
+    """
+    def __init__(self, params, root_dir, tag):
+        """
+        Init the default value for image object.
+
+        @param params: Dictionary containing the test parameters.
+        @param root_dir: Base directory for relative filenames.
+        @param tag: Image tag defined in parameter images
+        """
+        host_set_flag = params.get("host_setup_flag")
+        if host_set_flag is not None:
+            self.cleanup = host_set_flag & 2 == 2
+        else:
+            self.cleanup = False
+        if params.get("force_cleanup") == "yes":
+            self.cleanup = True
+        self.image_name = tag
+
+
+class Iscsidev(Rawdev):
+    """
+    Class for handle iscsi devices for VM
+    """
+    def __init__(self, params, root_dir, tag):
+        """
+        Init the default value for image object.
+
+        @param params: Dictionary containing the test parameters.
+        @param root_dir: Base directory for relative filenames.
+        @param tag: Image tag defined in parameter images
+        """
+        Rawdev.__init__(self, params, root_dir, tag)
+        self.emulated_file_remove = False
+        self.emulated_image = params.get("emulated_image")
+        if self.emulated_image:
+            if params.get("emulated_file_remove", "no") == "yes":
+                self.emulated_file_remove = True
+        params["iscsi_thread_id"] = self.image_name
+        self.iscsidevice = iscsi.Iscsi(params, root_dir=root_dir)
+        self.device_id = params.get("device_id")

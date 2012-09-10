@@ -1,17 +1,16 @@
-TIME="SHORT"
-AUTHOR = "Jose Santos"
+AUTHOR = "Onkar N Mahajan <onkar.n.mahajan@linux.vnet.ibm.com>"
+NAME = "Flexible Filesystem Benchmark (FFSB)"
+TEST_CATEGORY = "Filesystem Benchmark"
+TEST_CLASS = "General"
+TEST_TYPE = "client"
+TIME = 'MEDIUM'
 DOC = """
-The Flexible Filesystem Benchmark (FFSB) is a filesystem performance
-measurement tool.  It is a multi-threaded application (using
-pthreads), written entirely in C with cross-platform portability in
-mind.  It differs from other filesystem benchmarks in that the user
-may supply a profile to create custom workloads, while most other
-filesystem benchmarks use a fixed set of workloads.
-More information on dbench can be found here:
+The Flexible Filesystem Benchmark (FFSB) is a cross-platform
+filesystem performance measurement tool. It uses customizable
+profiles to measure of different workloads, and it supports
+multiple groups of threads across multiple filesystems.
+
+For more info, see http://sourceforge.net/projects/ffsb/
 """
-NAME = 'ffsb'
-TEST_CLASS = 'file system'
-TEST_CATEGORY = 'Benchmark'
-TEST_TYPE = 'client'
 
 job.run_test('ffsb')

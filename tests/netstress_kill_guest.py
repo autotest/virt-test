@@ -1,7 +1,7 @@
 import logging, os, signal, re, time
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils
-from autotest_lib.client.virt import aexpect, virt_utils
+from autotest.client.shared import error
+from autotest.client import utils
+from autotest.client.virt import aexpect
 
 
 def run_netstress_kill_guest(test, params, env):
@@ -91,7 +91,7 @@ def run_netstress_kill_guest(test, params, env):
 
         server_netperf_cmd = params.get("netperf_cmd") % (netperf_dir, "TCP_STREAM",
                                         guest_ip, params.get("packet_size", "1500"))
-        quest_netperf_cmd = params.get("netperf_cmd") % ("/tmp", "TCP_STREAM",
+        guest_netperf_cmd = params.get("netperf_cmd") % ("/tmp", "TCP_STREAM",
                                        server_ip, params.get("packet_size", "1500"))
 
         tcpdump = env.get("tcpdump")
@@ -107,7 +107,7 @@ def run_netstress_kill_guest(test, params, env):
 
         try:
             logging.info("Start heavy network load host <=> guest.")
-            session_serial.sendline(quest_netperf_cmd)
+            session_serial.sendline(guest_netperf_cmd)
             utils.BgJob(server_netperf_cmd)
 
             #Wait for create big network usage.
@@ -122,17 +122,29 @@ def run_netstress_kill_guest(test, params, env):
                 os.kill(pid, signal.SIGCONT)
 
 
+    def send_cmd_safe(session_serial, cmd):
+        logging.debug("Sending command: %s", cmd)
+        session_serial.sendline(cmd)
+        got_prompt = False
+        while not got_prompt:
+            time.sleep(0.2)
+            session_serial.sendline()
+            try:
+                session_serial.read_up_to_prompt()
+                got_prompt = True
+            except aexpect.ExpectTimeoutError:
+                pass
+
+
     def netdriver_kill_problem(session_serial):
         modules = get_ethernet_driver(session_serial)
         logging.debug(modules)
         for _ in range(50):
             for module in modules:
-                session_serial.cmd("rmmod %s" % (module))
-                time.sleep(0.2)
+                send_cmd_safe(session_serial, "rmmod %s" % module)
             for module in modules:
-                logging.debug("Sending command: modprobe %s", module)
-                session_serial.sendline("modprobe %s\n" % (module))
-                time.sleep(0.2)
+                send_cmd_safe(session_serial, "modprobe %s" % module)
+
         kill_and_check(vm)
 
 

@@ -1,8 +1,8 @@
 import logging, os, re
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.bin import utils, os_dep
-from autotest_lib.client.virt import virt_utils
-from autotest_lib.client.virt import virt_env_process
+from autotest.client.shared import error
+from autotest.client import utils, os_dep
+from autotest.client.virt import utils_misc
+from autotest.client.virt import env_process
 
 
 class NFSCorruptConfig(object):
@@ -186,7 +186,7 @@ def run_nfs_corrupt(test, params, env):
     params["force_create_image_stg"] = "yes"
     params["create_image_stg"] = "yes"
     stg_params = params.object_params("stg")
-    virt_env_process.preprocess_image(test, stg_params, image_name)
+    env_process.preprocess_image(test, stg_params, image_name)
 
     vm = env.get_vm(params["main_vm"])
     vm.create(params=params)
@@ -224,7 +224,7 @@ def run_nfs_corrupt(test, params, env):
             utils.system(cmd)
 
             error.context("Check if VM status is 'paused'")
-            if not virt_utils.wait_for(
+            if not utils_misc.wait_for(
                                 lambda: check_vm_status(vm, "paused"),
                                 int(params.get('wait_paused_timeout', 120))):
                 raise error.TestError("Guest is not paused after stop NFS")
@@ -246,7 +246,7 @@ def run_nfs_corrupt(test, params, env):
         vm.resume()
 
         error.context("Check if VM status is 'running'")
-        if not virt_utils.wait_for(lambda: check_vm_status(vm, "running"), 20):
+        if not utils_misc.wait_for(lambda: check_vm_status(vm, "running"), 20):
             raise error.TestError("Guest does not restore to 'running' status")
 
     finally:
