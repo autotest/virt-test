@@ -80,7 +80,7 @@ class QemuImg(storage.QemuImg):
                 qemu_img_cmd += "encrypted=%s," % encrypted
 
             if image_cluster_size is not None:
-                qemu_img_cmd += "cluster_size=%s," % cluster_size
+                qemu_img_cmd += "cluster_size=%s," % image_cluster_size
             qemu_img_cmd = qemu_img_cmd.rstrip(" -o")
             qemu_img_cmd = qemu_img_cmd.rstrip(",")
 
