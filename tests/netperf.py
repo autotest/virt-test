@@ -1,7 +1,7 @@
 import logging, os, commands, threading, re, glob
+from autotest.client.shared import error
 from autotest.client import utils
-from autotest.client.shared import ssh_key
-from autotest.client.virt import utils_test, utils_misc, remote
+from autotest.client.virt import utils_misc, utils_test, remote
 
 
 def format_result(result, base="12", fbase="2"):
