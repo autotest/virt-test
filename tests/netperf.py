@@ -1,6 +1,6 @@
 import logging, os, commands, threading, re, glob
 from autotest.client.shared import error
-from autotest.client.bin import utils
+from autotest.client import utils
 from autotest.client.virt import utils_misc, utils_test, remote
 
 
