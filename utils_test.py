@@ -972,23 +972,6 @@ def fix_atest_cmd(atest_basedir, cmd, ip):
     return ''.join([cmd, " -w ", ip])
 
 
-def fix_atest_cmd(atest_basedir, cmd, ip):
-    """
-    fixes the command "autotest/cli/atest" for the external server tests.
-
-    e.g.
-    1. adding -w autotest server argument;
-    2. adding autotest/cli/atest prefix/basedir;
-    and etc..
-
-    @param atest_basedir: base dir of autotest/cli/atest
-    @param cmd: command to fix.
-    @param ip: ip of the autotest server to add to the command.
-    """
-    cmd = os.path.join(atest_basedir, cmd)
-    return ''.join([cmd, " -w ", ip])
-
-
 def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
     """
     @param ip: IP address of the server.
@@ -1775,18 +1758,3 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
                                 len(result_dict[column_list[i]][j]))
 
     return average_list
-
-
-def service_setup(vm, session, dir):
-
-    params = vm.get_params()
-    rh_perf_envsetup_script = params.get("rh_perf_envsetup_script")
-    rebooted = params.get("rebooted", "rebooted")
-
-    if rh_perf_envsetup_script:
-        src = os.path.join(dir, rh_perf_envsetup_script)
-        vm.copy_files_to(src, "/tmp/rh_perf_envsetup.sh")
-        logging.info("setup perf environment for host")
-        commands.getoutput("bash %s host %s" % (src, rebooted))
-        logging.info("setup perf environment for guest")
-        session.cmd("bash /tmp/rh_perf_envsetup.sh guest %s" % rebooted)

@@ -9,7 +9,7 @@ from autotest.client.shared import error, cartesian_config
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, kvm_monitor, aexpect
 import kvm_virtio_port
-import remote
+import remote, utils_test
 
 
 class VM(virt_vm.BaseVM):
@@ -1042,6 +1042,7 @@ class VM(virt_vm.BaseVM):
             root_dir = self.root_dir
 
         have_ahci = False
+        have_virtio_scsi = False
         virtio_scsi_pcis = []
 
         # Clone this VM using the new params
