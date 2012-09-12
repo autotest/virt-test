@@ -1,6 +1,6 @@
 import logging, time, glob, re
 from autotest.client.shared import error
-import utils_misc, remote
+import utils_misc, remote, utils_test
 
 
 class VMError(Exception):
