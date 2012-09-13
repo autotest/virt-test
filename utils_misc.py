@@ -3729,7 +3729,7 @@ def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
     session.close()
 
 
-def qemu_has_option(option, qemu_path):
+def qemu_has_option(option, qemu_path="/usr/libexec/qemu-kvm"):
     """
     Helper function for command line option wrappers
 
