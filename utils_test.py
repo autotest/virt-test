@@ -1758,3 +1758,50 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
                                 len(result_dict[column_list[i]][j]))
 
     return average_list
+
+
+class BackgroundTest(object):
+    """
+    This class would run a test in background through a dedicated thread.
+    """
+
+    def __init__(self, func, params, kwargs={}):
+        """
+        Initialize the object and set a few attributes.
+        """
+        self.thread = threading.Thread(target=self.launch,
+                                       args=(func, params, kwargs))
+        self.exception = None
+
+
+    def launch(self, func, params, kwargs):
+        """
+        Catch and record the exception.
+        """
+        try:
+            func(*params, **kwargs)
+        except Exception, e:
+            self.exception = e
+
+
+    def start(self):
+        """
+        Run func(params) in a dedicated thread
+        """
+        self.thread.start()
+
+
+    def join(self):
+        """
+        Wait for the join of thread and raise its exception if any.
+        """
+        self.thread.join()
+        if self.exception:
+            raise self.exception
+
+
+    def is_alive(self):
+        """
+        Check whether the test is still alive.
+        """
+        return self.thread.isAlive()
