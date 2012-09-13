@@ -1,4 +1,4 @@
-import os, logging
+import os, logging, sys
 from autotest.client.virt import utils_test
 
 
