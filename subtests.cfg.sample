@@ -2895,6 +2895,7 @@ variants:
         split = "yes"
         variants:
             - disable:
+                no Host_RHEL.5
                 test_type = "disable"
                 split = "no"
                 extra_params += " -redhat-disable-KSM"
