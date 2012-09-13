@@ -638,6 +638,7 @@ variants:
     # Windows section
     - @Windows:
         os_type = windows
+        vfd_size = 2880k
         network_query = ipconfig
         shutdown_command = shutdown /s /t 0
         reboot_command = shutdown /r /t 0
