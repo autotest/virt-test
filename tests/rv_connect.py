@@ -9,9 +9,11 @@ import logging, os, time
 from virttest.aexpect import ShellCmdError
 from virttest import utils_misc, remote
 
+
 class RVConnectError(Exception):
     """Exception raised in case that remote-viewer fails to connect"""
     pass
+
 
 def send_ticket(client_vm, ticket):
     """
@@ -23,15 +25,17 @@ def send_ticket(client_vm, ticket):
     for character in ticket:
         client_vm.send_key(character)
 
-    client_vm.send_key("kp_enter") # send enter
+    client_vm.send_key("kp_enter")  # send enter
 
-def wait_timeout(timeout=10):
+
+def wait_timeout(timeout=5):
     """
     time.sleep(timeout) + logging.debug(timeout)
-    @param timeout=30
+    @param timeout=5
     """
     logging.debug("Waiting (timeout=%ss)", timeout)
     time.sleep(timeout)
+
 
 def verify_established(client_session, host, port, rv_binary):
     """
@@ -58,6 +62,7 @@ def verify_established(client_session, host, port, rv_binary):
         logging.info("%s connection to %s:%s successful.",
                rv_binary, host, port)
 
+
 def print_rv_version(client_session, rv_binary):
     """
     prints remote-viewer and spice-gtk version available inside client_session
@@ -69,29 +74,6 @@ def print_rv_version(client_session, rv_binary):
     logging.info("spice-gtk version: %s",
             client_session.cmd(rv_binary + " --spice-gtk-version"))
 
-def launch_gnome_session(client_session):
-    """
-    Launches gnome session inside client_session
-    @param client_session - vm.wait_fo_login()
-
-    metacity ensures that newly raised window will be active
-    (remote-viewer auth dialog)
-    which is not done by default in pure Xorg
-    """
-    cmd = "nohup gnome-session --display=:0.0 &> /dev/null &"
-    return client_session.cmd(cmd)
-
-def launch_xorg(client_session):
-    """
-    Launches Xorg inside client_session on background
-    @param client_session - vm.wait_for_login()
-    @param kill - killall Xorg before launch
-    """
-    cmd = "Xorg"
-    killall(client_session, cmd)
-    wait_timeout() # Wait for Xorg to exit
-    cmd = "nohup " + cmd + " &> /dev/null &"
-    return client_session.cmd(cmd)
 
 def killall(client_session, pth):
     """
@@ -101,6 +83,7 @@ def killall(client_session, pth):
     """
     execname = pth.split(os.path.sep)[-1]
     client_session.cmd("killall %s &> /dev/null" % execname, ok_status=[0, 1])
+
 
 def launch_rv(client_vm, guest_vm, params):
     """
@@ -133,7 +116,7 @@ def launch_rv(client_vm, guest_vm, params):
             #remote-viewer needs ',' delimiter. And also is needed to remove
             #first character (it's '/')
             host_subj = guest_vm.get_spice_var("spice_x509_server_subj")
-            host_subj = host_subj.replace('/',',')[1:]
+            host_subj = host_subj.replace('/', ',')[1:]
 
             cmd += " spice://%s?tls-port=%s" % (host_ip, host_port)
             cmd += " --spice-ca-file=%s" % cacert
@@ -162,11 +145,12 @@ def launch_rv(client_vm, guest_vm, params):
     cmd = "nohup " + cmd + " &> /dev/null &" # Launch it on background
 
     # Launching the actual set of commands
-    launch_xorg(client_session)
-    wait_timeout() # Wait for Xorg to start up
-    launch_gnome_session(client_session)
-    wait_timeout() # Wait till gnome-session starts up
+    try:
+        client_session.cmd("startx &", timeout=15)
+    except:
+        logging.debug("Ignoring an Exception that Occurs from calling startx")
 
+    wait_timeout(15)
     print_rv_version(client_session, rv_binary)
 
     logging.info("Launching %s on the client (virtual)", cmd)
@@ -174,15 +158,16 @@ def launch_rv(client_vm, guest_vm, params):
 
     # client waits for user entry (authentication) if spice_password is set
     if ticket:
-        wait_timeout() # Wait for remote-viewer to launch
+        wait_timeout()  # Wait for remote-viewer to launch
         send_ticket(client_vm, ticket)
 
-    wait_timeout() # Wait for conncetion to establish
+    wait_timeout()  # Wait for conncetion to establish
     verify_established(client_session, host_ip, host_port, rv_binary)
 
     #prevent from kill remote-viewer after test finish
     cmd = "disown -ar"
     client_session.cmd(cmd)
+
 
 def run_rv_connect(test, params, env):
     """
