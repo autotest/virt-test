@@ -93,7 +93,6 @@ def main(argv):
     elif options.clear:
         # Get and clear the clipboard
         clipboard.set_text("")
-        clipboard.clear()
         clipboard.store()
         print 'The clipboard has been cleared.'
     elif options.setcb_file:
