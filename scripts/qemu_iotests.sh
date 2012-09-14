@@ -103,11 +103,11 @@ EOF
 
     # bug 635354 by Feng Yang
     $QEMU_IMG create -f raw $TEST_IMG 6G
-    $QEMU_IMG create -F raw -f qcow2 -b $TEST_IMG $TEST_IMG.sp
+    $QEMU_IMG create -F raw -f qcow2 -b $TEST_IMG /tmp/$(basename $TEST_IMG).snapshot
     $QEMU_IO <<EOF
 write 0 512k -P 3
 EOF
-    $QEMU_IMG commit $TEST_IMG.sp
+    $QEMU_IMG commit /tmp/$(basename $TEST_IMG).snapshot
 
     # Bug 558195
     $QEMU_IMG create -f qcow2 test.qcow2 6G

@@ -2723,11 +2723,10 @@ variants:
         variants:
             - file_based:
             - lvm_based:
-                pre_command += " qemu-img create -f raw 0.raw 10G && qemu-img create -f raw 1.raw 10G && losetup /dev/loop0 0.raw && losetup /dev/loop1 1.raw && pvcreate /dev/loop0 /dev/loop1 && vgcreate vg /dev/loop0 /dev/loop1 && lvcreate -L10G -n lv vg"
-                post_command += " lvremove -f vg ; losetup -d /dev/loop0 ; losetup -d /dev/loop1; rm -rf /dev/vg; rm -rf *.raw;"
-                pre_command_noncritical = no
-                post_command_noncritical = no
-                test_image= /dev/vg/lv
+                test_type = "lvm"
+                vgtest_name = "vg_kvm_test_qemu_io"
+                lvtest_name = "lv_kvm_test_qemu_io"
+                test_image = "/dev/vg_kvm_test_qemu_io/lv_kvm_test_qemu_io"
 
     - multi_nics: guest_test.arp_set
         only Linux
