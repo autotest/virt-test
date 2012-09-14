@@ -316,7 +316,7 @@ variants:
     - Install_Win_Guest:
         only qemu_kvm_windows_install_guest
     - Negative_QEMU_Spice_Launch_badport:
-    only spice.default_ipv.default_pc.default_sv.default_zlib_wc.default_jpeg_wc.default_ic.bad_port.no_password.dcp_off.1monitor
+        only spice.default_ipv.default_pc.default_sv.default_zlib_wc.default_jpeg_wc.default_ic.bad_port.no_password.dcp_off.1monitor
         only spice_negative_rhel63
     - Negative_QEMU_Spice_Launch_badic:
         only spice.default_ipv.default_pc.default_sv.default_zlib_wc.default_jpeg_wc.bad_ic.no_ssl.no_password.dcp_off.1monitor
@@ -379,16 +379,88 @@ variants:
         only rv_copyandpaste_dcp_rhel63
     - Copy_Client_to_Guest_largetext_POS:
         config_test = "positive_client_to_guest"
-        #Currently only testing 256KB, this is due to a bug on pygtk
-        #When the bug gets resolved the amount should be increased
+        # Currently only testing 256KB, this is due to a bug on pygtk
+        # When the bug gets resolved the amount should be increased
         text_to_test=262144
         only rv_copyandpaste_rhel63
     - Copy_Guest_to_Client_largetext_POS:
+        config_test = "positive_guest_to_client"
+        # Currently only testing 256KB, this is due to a bug on pygtk
+        # When the bug gets resolved the amount should be increased
+        text_to_test=262144
+        only rv_copyandpaste_rhel63
+    - Copy_Client_to_Guest_largetext_10MB_POS:
+        # This 10MB test will fail on RHEL63 because of a pygtk bug
         config_test = "positive_client_to_guest"
+        text_to_test=10485760
+        only rv_copyandpaste_rhel63
+    - Copy_Guest_to_Client_largetext_10MB_POS:
+        # This 10MB test will fail on RHEL63 because of a pygtk bug
+        config_test = "positive_guest_to_client"
+        text_to_test=10485760
+        only rv_copyandpaste_rhel63
+    - CopyBMPIMG_Client_to_Guest_POS:
+        image_type = bmp
+        config_test = "positive_client_to_guest_image"
+        only rv_copyandpaste_rhel63
+    - CopyBMPIMG_Guest_to_Client_POS:
+        image_type = bmp
+        config_test = "positive_guest_to_client_image"
+        only rv_copyandpaste_rhel63
+    - CopyIMG_Medium_Client_to_Guest_POS:
+        image_tocopy_name = Image.png
+        final_image = MediumPNGTest.png
+        config_test = "positive_client_to_guest_image"
+        only rv_copyandpaste_rhel63
+    - CopyIMG_Medium_Guest_to_Client_POS:
+        image_tocopy_name = Image.png
+        final_image = MediumPNGTest.png
+        config_test = "positive_guest_to_client_image"
+        only rv_copyandpaste_rhel63
+    - CopyIMG_Large_Client_to_Guest_POS:
+        image_tocopy_name = Image-large.png
+        final_image = LargePNGTest.png
+        config_test = "positive_client_to_guest_image"
+        only rv_copyandpaste_rhel63
+    - CopyIMG_Large_Guest_to_Client_POS:
+        image_tocopy_name = Image-large.png
+        final_image = LargePNGTest.png
+        config_test = "positive_guest_to_client_image"
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_Copy_Client_to_Guest_POS:
+        config_test = "positive_restart_client_to_guest"
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_Copy_Guest_to_Client_POS:
+        config_test = "positive_restart_guest_to_client"
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_CopyIMG_Client_to_Guest_POS:
+        config_test = "positive_restart_client_to_guest_image"
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_CopyIMG_Guest_to_Client_POS:
+        config_test = "positive_restart_guest_to_client_image"
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_CopyBMPIMG_Client_to_Guest_POS:
+        image_type = bmp
+        config_test = "positive_restart_client_to_guest_image"
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_CopyBMPIMG_Guest_to_Client_POS:
+        image_type = bmp
+        config_test = "positive_restart_guest_to_client_image"
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_Copy_Client_to_Guest_largetext_POS:
+        config_test = "positive_restart_client_to_guest"
         #Currently only testing 256KB, this is due to a bug on pygtk
-        #When the bug gets resolved the amount should be increased
+        #When the bug gets resolved the amount should be increased 
+        only rv_copyandpaste_rhel63
+    - Restart_Vdagent_Copy_Guest_to_Client_largetext_POS:
+        config_test = "positive_restart_guest_to_client"
+        #Currently only testing 256KB, this is due to a bug on pygtk
+        #When the bug gets resolved the amount should be increased 
         text_to_test=262144
         only rv_copyandpaste_rhel63
 
+#Spice Vdagent Tests:
+#only Copy_Client_to_Guest_largetext_POS, Copy_Guest_to_Client_largetext_POS, Copy_Client_to_Guest_POS, Copy_Guest_to_Client_POS, Copy_Guest_to_Client_NEG, Copy_Client_to_Guest_NEG, CopyIMG_Client_to_Guest_POS, CopyIMG_Client_to_Guest_NEG, CopyIMG_Guest_to_Client_POS, CopyIMG_Guest_to_Client_NEG, CopyIMG_Client_to_Guest_DCP_NEG, CopyIMG_Guest_to_Client_DCP_NEG, Copy_Guest_to_Client_DCP_NEG, Copy_Client_to_Guest_DCP_NEG, CopyBMPIMG_Client_to_Guest_POS, CopyBMPIMG_Guest_to_Client_POS, Copy_Guest_to_Client_largetext_10MB_POS, Copy_Client_to_Guest_largetext_10MB_POS, CopyIMG_Medium_Client_to_Guest_POS, CopyIMG_Medium_Guest_to_Client_POS, CopyIMG_Large_Client_to_Guest_POS, CopyIMG_Large_Guest_to_Client_POS, Restart_Vdagent_Copy_Client_to_Guest_POS, only Restart_Vdagent_Copy_Guest_to_Client_POS, Restart_Vdagent_CopyIMG_Client_to_Guest_POS, Restart_Vdagent_CopyIMG_Guest_to_Client_POS, Restart_Vdagent_CopyBMPIMG_Client_to_Guest_POS, Restart_Vdagent_CopyBMPIMG_Guest_to_Client_POS, Restart_Vdagent_Copy_Client_to_Guest_largetext_POS, Restart_Vdagent_Copy_Guest_to_Client_largetext_POS
+
 #Running all Spice Tests
-only Create_VMs, Install_Win_Guest, Negative_QEMU_Spice_Launch_badport, Negative_QEMU_Spice_Launch_badic, Negative_QEMU_Spice_Launch_badjpegwc, Negative_QEMU_Spice_Launch_badzlib, Negative_QEMU_Spice_Launch_badsv, Negative_QEMU_Spice_Launch_badpc, Remote_Viewer_Test, Remote_Viewer_SSL_Test, Remote_Viewer_WinGuest_Test, Remote_Viewer_Disconnect_Test, only Copy_Client_to_Guest_largetext_POS, Copy_Guest_to_Client_largetext_POS, Copy_Client_to_Guest_POS, Copy_Guest_to_Client_POS, Copy_Guest_to_Client_NEG, Copy_Client_to_Guest_NEG, CopyIMG_Client_to_Guest_POS, CopyIMG_Client_to_Guest_NEG, CopyIMG_Guest_to_Client_POS, CopyIMG_Guest_to_Client_NEG, CopyIMG_Client_to_Guest_DCP_NEG, CopyIMG_Guest_to_Client_DCP_NEG, Copy_Guest_to_Client_DCP_NEG, Copy_Client_to_Guest_DCP_NEG
+only Create_VMs, Install_Win_Guest, Negative_QEMU_Spice_Launch_badport, Negative_QEMU_Spice_Launch_badic, Negative_QEMU_Spice_Launch_badjpegwc, Negative_QEMU_Spice_Launch_badzlib, Negative_QEMU_Spice_Launch_badsv, Negative_QEMU_Spice_Launch_badpc, Remote_Viewer_Test, Remote_Viewer_SSL_Test, Remote_Viewer_WinGuest_Test, Remote_Viewer_Disconnect_Test, Copy_Client_to_Guest_largetext_POS, Copy_Guest_to_Client_largetext_POS, Copy_Client_to_Guest_POS, Copy_Guest_to_Client_POS, Copy_Guest_to_Client_NEG, Copy_Client_to_Guest_NEG, CopyIMG_Client_to_Guest_POS, CopyIMG_Client_to_Guest_NEG, CopyIMG_Guest_to_Client_POS, CopyIMG_Guest_to_Client_NEG, CopyIMG_Client_to_Guest_DCP_NEG, CopyIMG_Guest_to_Client_DCP_NEG, Copy_Guest_to_Client_DCP_NEG, Copy_Client_to_Guest_DCP_NEG, CopyBMPIMG_Client_to_Guest_POS, CopyBMPIMG_Guest_to_Client_POS, Copy_Guest_to_Client_largetext_10MB_POS, Copy_Client_to_Guest_largetext_10MB_POS, CopyIMG_Medium_Client_to_Guest_POS, CopyIMG_Medium_Guest_to_Client_POS, CopyIMG_Large_Client_to_Guest_POS, CopyIMG_Large_Guest_to_Client_POS, Restart_Vdagent_Copy_Client_to_Guest_POS, only Restart_Vdagent_Copy_Guest_to_Client_POS, Restart_Vdagent_CopyIMG_Client_to_Guest_POS, Restart_Vdagent_CopyIMG_Guest_to_Client_POS, Restart_Vdagent_CopyBMPIMG_Client_to_Guest_POS, Restart_Vdagent_CopyBMPIMG_Guest_to_Client_POS, Restart_Vdagent_Copy_Client_to_Guest_largetext_POS, Restart_Vdagent_Copy_Guest_to_Client_largetext_POS
