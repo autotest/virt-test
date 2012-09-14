@@ -2651,8 +2651,11 @@ variants:
         script_params_writef = -f
         script_params_createf = -n
         final_textfile = StringLengthTest.txt
-        final_image = Test.png
-        image_tocopy_name = Image.png
+        final_image = PNGTest.png
+        image_tocopy_name = Image-small.png
+        final_image_bmp = BMPTest.bmp
+        image_tocopy_name_bmp = Image2.bmp
+        image_type = png
         script_params = --set
         script_params_clear = --clear
         text_to_test = Testing_this_text_was_copied
