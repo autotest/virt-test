@@ -202,8 +202,8 @@ class GuestWorker(object):
                 base_path = os.environ['AUTODIR']
             except KeyError:
                 base_path = os.path.join(os.environ['AUTOTEST_PATH'], 'client')
-            vksmd_src = os.path.join(base_path, 'virt', 'scripts',
-                                     'virtio_console_guest.py')
+            vksmd_src = os.path.join(base_path, 'tests', 'virt',
+                                     'shared', 'scripts', 'virtio_console_guest.py')
             dst_dir = "/tmp"
 
             self.vm.copy_files_to(vksmd_src, guest_script_path)
