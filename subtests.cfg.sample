@@ -242,38 +242,39 @@ variants:
         type = boot
         kill_vm_on_error = yes
         login_timeout = 240
-        variants:
-            - @default_boot:
-            - multi_disks:
-                no ide
-                force_create_image = no
-                image_boot = no
-                image_boot_image1 = yes
-                images += " stg stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24"
-                image_name_stg = storage
-                image_name_stg2 = storage2
-                image_name_stg3 = storage3
-                image_name_stg4 = storage4
-                image_name_stg5 = storage5
-                image_name_stg6 = storage6
-                image_name_stg7 = storage7
-                image_name_stg8 = storage8
-                image_name_stg9 = storage9
-                image_name_stg10 = storage10
-                image_name_stg11 = storage11
-                image_name_stg12 = storage12
-                image_name_stg13 = storage13
-                image_name_stg14 = storage14
-                image_name_stg15 = storage15
-                image_name_stg16 = storage16
-                image_name_stg17 = storage17
-                image_name_stg18 = storage18
-                image_name_stg19 = storage19
-                image_name_stg20 = storage20
-                image_name_stg21 = storage21
-                image_name_stg22 = storage22
-                image_name_stg23 = storage23
-                image_name_stg24 = storage24
+
+    - multi_disks_boot:
+        no ide
+        type = boot
+        force_create_image = yes
+        force_create_image_image1 = no
+        image_boot = no
+        image_boot_image1 = yes
+        images += " stg stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24"
+        image_name_stg = storage
+        image_name_stg2 = storage2
+        image_name_stg3 = storage3
+        image_name_stg4 = storage4
+        image_name_stg5 = storage5
+        image_name_stg6 = storage6
+        image_name_stg7 = storage7
+        image_name_stg8 = storage8
+        image_name_stg9 = storage9
+        image_name_stg10 = storage10
+        image_name_stg11 = storage11
+        image_name_stg12 = storage12
+        image_name_stg13 = storage13
+        image_name_stg14 = storage14
+        image_name_stg15 = storage15
+        image_name_stg16 = storage16
+        image_name_stg17 = storage17
+        image_name_stg18 = storage18
+        image_name_stg19 = storage19
+        image_name_stg20 = storage20
+        image_name_stg21 = storage21
+        image_name_stg22 = storage22
+        image_name_stg23 = storage23
+        image_name_stg24 = storage24
 
     - boot_with_usb:
         no Host_RHEL.5
