@@ -1099,6 +1099,18 @@ def capabilities(option='', **dargs):
     return command('capabilities %s' % option, **dargs).stdout.strip()
 
 
+def nodecpustats(option='', **dargs):
+    """
+    Returns basic information about the node CPU statistics
+
+    @param: option: additional options (takes none)
+    @param: dargs: standardized virsh function API keywords
+    """
+
+    cmd_nodecpustat = "nodecpustats %s" % option
+    return command(cmd_nodecpustat, **dargs)
+
+
 def help_command(options='', cache=False, **dargs):
     """
     Return list of commands in help command output
