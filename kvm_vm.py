@@ -2612,7 +2612,7 @@ class VM(virt_vm.BaseVM):
                 uri = "unix:%s" % clone.migration_file
             elif protocol == "exec":
                 if migration_exec_cmd != "gzip":
-                    uri = 'exec:nc localhost %s' % clone.migration_port
+                    uri = '"exec:nc localhost %s"' % clone.migration_port
                 else:
                     # Exec with gzip is a little different from other migrate
                     # methods - first we ask the monitor the migration, then
@@ -2621,7 +2621,7 @@ class VM(virt_vm.BaseVM):
                     clone.exec_file = "/tmp/exec-%s.gz" % \
                                 utils_misc.generate_random_string(8)
                     exec_cmd = "gzip -c -d %s" % clone.exec_file
-                    uri = "exec:gzip -c > %s" % clone.exec_file
+                    uri = '"exec:gzip -c > %s"' % clone.exec_file
 
             elif protocol == "fd":
                 uri = "fd:%s" % mig_fd_name
