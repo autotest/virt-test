@@ -1134,13 +1134,6 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-    def needs_restart(self, name, params, basedir):
-        """
-        Based on virt preprocessing information, decide whether the VM needs
-        a restart.
-        """
-        raise NotImplementedError
-
 
     def pause(self):
         """
