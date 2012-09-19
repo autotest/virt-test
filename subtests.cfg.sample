@@ -495,9 +495,6 @@ variants:
         max_vms = 2
         used_mem = 1024
         mig_timeout = 3600
-        monitor_type = human
-        monitors = humanmonitor1
-        main_monitor = humanmonitor1
         # you can uncomment the following line to enable the state
         # check
         # vmstate_check = yes
