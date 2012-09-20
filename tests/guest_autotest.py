@@ -27,13 +27,13 @@ def run_guest_autotest(test, params, env):
 def run_guest_autotest_background(test, params, env, test_name="dbench",
                             test_control_file="control"):
     """
-    Wrapper of run_autotest() and make it run in the background through fork()
-    and let it run in the child process.
+    Wrapper of run_guest_autotest() and make it run in the background through
+    fork() and let it run in the child process.
     1) Flush the stdio.
     2) Build test params which is recevied from arguments and used by
-       run_autotest()
-    3) Fork the process and let the run_autotest() run in the child
-    4) Catch the exception raise by run_autotest() and exit the child with
+       run_guest_autotest()
+    3) Fork the process and let the run_guest_autotest() run in the child
+    4) Catch the exception raise by run_guest_autotest() and exit the child with
        non-zero return code.
     5) If no exception catched, reutrn 0
 
@@ -60,7 +60,7 @@ def run_guest_autotest_background(test, params, env, test_name="dbench",
         params['test_name'] = test_name
         params['test_control_file'] = test_control_file
         # Launch autotest
-        run_autotest(test, params, env)
+        run_guest_autotest(test, params, env)
         os.remove(flag_fname)
     except error.TestFail, message_fail:
         logging.info("[Autotest Background FAIL] %s" % message_fail)
