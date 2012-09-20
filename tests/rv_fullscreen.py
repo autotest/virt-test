@@ -18,7 +18,7 @@ def run_rv_fullscreen(test, params, env):
     Positive test: full_screen param = yes, verify guest res = client res
     Negative test: full_screen param= no, verify guest res != client res
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -40,8 +40,7 @@ def run_rv_fullscreen(test, params, env):
     client_session.cmd("export DISPLAY=:0.0")
 
     try:
-        client_session.cmd("xrandr | grep '*' >/tmp/res")
-        client_res_raw = client_session.cmd("cat /tmp/res|awk '{print $1}'")
+        client_res_raw = client_session.cmd("xrandr | grep '*'")
         client_res = client_res_raw.split()[0]
     except ShellCmdError:
         raise error.TestFail("Could not get guest resolution, xrandr output:" +
@@ -54,8 +53,7 @@ def run_rv_fullscreen(test, params, env):
     guest_session.cmd("export DISPLAY=:0.0")
 
     try:
-        guest_session.cmd("xrandr | grep '*' >/tmp/res")
-        guest_res_raw = guest_session.cmd("cat /tmp/res|awk '{print $1}'")
+        guest_res_raw = guest_session.cmd("xrandr | grep '*'")
         guest_res = guest_res_raw.split()[0]
     except ShellCmdError:
         raise error.TestFail("Could not get guest resolution, xrandr output:" +
@@ -73,13 +71,13 @@ def run_rv_fullscreen(test, params, env):
         if(client_res == guest_res):
             logging.info("PASS: Guest resolution is the same as the client")
         else:
-            raise error.TestFail("Guest resolution differs from the client")
+            raise error.TestFail("Guest resolution is the same as the client")
     # Negative Test, verify the resolutions are not equal
     elif full_screen == "no":
         if(client_res != guest_res):
             logging.info("PASS: Guest resolution differs from the client")
         else:
-            raise error.TestFail("Guest resolution is the same as the client")
+            raise error.TestFail("Guest resolution differs from the client")
     else:
         raise error.TestFail("The test setup is incorrect.")
 
