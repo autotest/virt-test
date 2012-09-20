@@ -1321,6 +1321,26 @@ def run_virtio_console(test, params, env):
         for port in vm.virtio_ports:
             port.close()
 
+    def test_failed_boot():
+        """
+        Start VM and check if it failed with the right error message.
+        @param cfg: virtio_console_params - Expected error message.
+        """
+        exp_error_message = params.get('virtio_console_params')
+        env_process.preprocess(test, params, env)
+        vm = env.get_vm(params["main_vm"])
+        try:
+            vm.create()
+        except Exception, details:
+            if exp_error_message in str(details):
+                logging.info("Expected qemu failure. Test PASSED.")
+                return
+            else:
+                raise error.TestFail("VM failed to start but error messages "
+                                     "don't match.\nExpected:\n%s\nActual:\n%s"
+                                     % (exp_error_message, details))
+        raise error.TestFail("VM started even though it should fail.")
+
     ######################################################################
     # Debug and dummy tests
     ######################################################################
