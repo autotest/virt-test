@@ -378,7 +378,7 @@ class VM(virt_vm.BaseVM):
 
 
         def add_virtio_port(hlp, name, bus, filename, porttype, chardev,
-                            name_prefix=None, index=None, extra_params=None):
+                            name_prefix=None, index=None, extra_params=""):
             """
             Appends virtio_serialport or virtio_console device to cmdline.
             @param help: qemu -h output
