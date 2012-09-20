@@ -5,9 +5,9 @@ Requires: binaries remote-viewer, Xorg, netstat
           Use example kickstart RHEL-6-spice.ks
 
 """
-import logging, os, time
-from virttest.aexpect import ShellCmdError
-from virttest import utils_misc, remote
+import logging, os
+from virttest.aexpect import ShellCmdError, ShellStatusError
+from virttest import utils_misc, utils_spice, remote
 
 
 class RVConnectError(Exception):
@@ -26,15 +26,6 @@ def send_ticket(client_vm, ticket):
         client_vm.send_key(character)
 
     client_vm.send_key("kp_enter")  # send enter
-
-
-def wait_timeout(timeout=5):
-    """
-    time.sleep(timeout) + logging.debug(timeout)
-    @param timeout=5
-    """
-    logging.debug("Waiting (timeout=%ss)", timeout)
-    time.sleep(timeout)
 
 
 def verify_established(client_session, host, port, rv_binary):
@@ -98,6 +89,7 @@ def launch_rv(client_vm, guest_vm, params):
     rv_binary = params.get("rv_binary", "remote-viewer")
     host_ip = utils_misc.get_host_ip_address(params)
     host_port = None
+    full_screen = params.get("full_screen")
     display = params.get("display")
     cmd = rv_binary + " --display=:0.0"
     ticket = None
@@ -142,26 +134,40 @@ def launch_rv(client_vm, guest_vm, params):
 
     else:
         raise Exception("Unsupported display value")
+
+    # Check to see if the test is using the full screen option.
+    if full_screen == "yes":
+        logging.info("Remote Viewer Set to use Full Screen")
+        cmd += " --full-screen"
+
+
     cmd = "nohup " + cmd + " &> /dev/null &" # Launch it on background
 
     # Launching the actual set of commands
     try:
         client_session.cmd("startx &", timeout=15)
-    except ShellCmdError:
+    except (ShellCmdError, ShellStatusError):
         logging.debug("Ignoring an Exception that Occurs from calling startx")
 
-    wait_timeout(15)
-    print_rv_version(client_session, rv_binary)
+    utils_spice.wait_timeout(15)
+
+    try:
+        print_rv_version(client_session, rv_binary)
+    except ShellStatusError:
+        # Sometimes It fails with Status error, ingore it and continue.
+        # It's not that important to have printed versions in the log.
+        logging.debug("Ignoring a Status Exception that occurs from calling " \
+                      + "print versions of remote-viewer or spice-gtk")
 
     logging.info("Launching %s on the client (virtual)", cmd)
     client_session.cmd(cmd)
 
     # client waits for user entry (authentication) if spice_password is set
     if ticket:
-        wait_timeout()  # Wait for remote-viewer to launch
+        utils_spice.wait_timeout(5)  # Wait for remote-viewer to launch
         send_ticket(client_vm, ticket)
 
-    wait_timeout()  # Wait for conncetion to establish
+    utils_spice.wait_timeout(5)  # Wait for conncetion to establish
     verify_established(client_session, host_ip, host_port, rv_binary)
 
     #prevent from kill remote-viewer after test finish
