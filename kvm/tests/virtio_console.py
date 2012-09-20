@@ -1334,6 +1334,8 @@ def run_virtio_console(test, params, env):
         session = vm.wait_for_login()
         out = session.cmd_output("echo on")
         if "on" in out:     # Linux
+            session.cmd_status("killall python")
+            session.cmd_status("rm -f /tmp/guest_daemon_*")
             session.cmd_status("rm -f /tmp/virtio_console_guest.py*")
         else:       # Windows
             session.cmd_status("del /F /Q C:\\virtio_console_guest.py*")
