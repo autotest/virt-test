@@ -62,7 +62,7 @@ class Bridge(object):
         """
         br_i = re.compile("^(\S+).*?(\S+)$", re.MULTILINE)
         nbr_i = re.compile("^\s+(\S+)$", re.MULTILINE)
-        out_line = utils.run("brctl show", verbose=False).stdout.splitlines()
+        out_line = (utils.run("brctl show", verbose=False).stdout.splitlines())
         result = dict()
         bridge = None
         iface = None
@@ -226,7 +226,7 @@ class BRAddIfError(NetError):
         self.details = details
 
     def __str__(self):
-        return ("Can not add if %s to bridge %s: %s" %
+        return ("Can't remove interface %s from bridge %s: %s" %
                 (self.ifname, self.brname, self.details))
 
 
@@ -249,7 +249,7 @@ class IfNotInBridgeError(NetError):
         self.details = details
 
     def __str__(self):
-        return ("If %s in any bridge: %s" %
+        return ("Interface %s is not present on any bridge: %s" %
                 (self.ifname, self.details))
 
 
@@ -260,7 +260,7 @@ class BRNotExistError(NetError):
         self.details = details
 
     def __str__(self):
-        return ("Bridge %s not exists: %s" % (self.brname, self.details))
+        return ("Bridge %s does not exist: %s" % (self.brname, self.details))
 
 
 class IfChangeBrError(NetError):
@@ -272,7 +272,7 @@ class IfChangeBrError(NetError):
         self.details = details
 
     def __str__(self):
-        return ("Can not change if %s from bridge %s to bridge %s: %s" %
+        return ("Can't move interface %s from bridge %s to bridge %s: %s" %
                 (self.ifname, self.new_brname, self.oldbrname, self.details))
 
 
@@ -284,7 +284,7 @@ class IfChangeAddrError(NetError):
         self.details = details
 
     def __str__(self):
-        return ("Can not change if %s from bridge %s to bridge %s: %s" %
+        return ("Can't change interface IP address %s from interface %s: %s" %
                 (self.ifname, self.ipaddr, self.details))
 
 
@@ -294,8 +294,9 @@ class BRIpError(NetError):
         self.brname = brname
 
     def __str__(self):
-        return ("Bridge %s doesn't have assigned any ip address. It is"
-                " impossible to start dnsmasq for this bridge." % (self.brname))
+        return ("Bridge %s doesn't have an IP address assigned. It's"
+                " impossible to start dnsmasq for this bridge." %
+                   (self.brname))
 
 
 class HwAddrSetError(NetError):
@@ -720,7 +721,8 @@ class VirtIface(PropCan):
     Networking information for single guest interface and host connection.
     """
 
-    __slots__ = ['nic_name', 'mac', 'nic_model', 'ip', 'nettype', 'netdst']
+    __slots__ = ['nic_name', 'g_nic_name', 'mac', 'nic_model', 'ip',
+                 'nettype', 'netdst']
     # Make sure first byte generated is always zero and it follows
     # the class definition.  This helps provide more predictable
     # addressing while avoiding clashes between multiple NICs.
@@ -4049,7 +4051,7 @@ def local_runner_status(cmd, timeout=None):
 def get_net_if(runner=None):
     """
     @param output: Output form ip link command.
-    @return: List of netowork interface
+    @return: List of network interfaces.
     """
     if runner is None:
         runner = local_runner
@@ -4060,8 +4062,8 @@ def get_net_if(runner=None):
 
 def get_net_if_addrs(if_name, runner=None):
     """
-    Get network device ip addresses. ioctl not used because there is
-    incompatibility with ipv6.
+    Get network device ip addresses. ioctl not used because it's not
+    compatible with ipv6 address.
 
     @param if_name: Name of interface.
     @return: List ip addresses of network interface.
@@ -4086,7 +4088,7 @@ def get_net_if_and_addrs(runner=None):
     return ret
 
 
-def set_net_if_ip(if_name, ip_addr):
+def set_net_if_ip(if_name, ip_addr, runner=None):
     """
     Get network device ip addresses. ioctl not used because there is
     incompatibility with ipv6.
@@ -4095,9 +4097,11 @@ def set_net_if_ip(if_name, ip_addr):
     @param ip_addr: Interface ip addr in format "ip_address/mask".
     @raise: IfChangeAddrError.
     """
+    if runner is None:
+        runner = local_runner
     cmd = "ip addr add %s dev %s" % (ip_addr, if_name)
     try:
-        utils.run(cmd, verbose=False)
+        runner(cmd)
     except error.CmdError, e:
         raise IfChangeAddrError(if_name, ip_addr, e)
 
@@ -4114,11 +4118,13 @@ def ipv6_from_mac_addr(mac_addr):
 def check_add_dnsmasq_to_br(br_name, tmpdir):
     """
     Add dnsmasq for bridge. dnsmasq could be added only if bridge
-    have assigned ip address.
+    has assigned ip address.
 
     @param bridge_name: Name of bridge.
     @param bridge_ip: Bridge ip.
     @param tmpdir: Tmp dir for save pid file and ip range file.
+    @return: When new dnsmasq is started name of pidfile  otherwise return
+             None because system dnsmasq is already started on bridge.
     """
     br_ips = get_net_if_addrs(br_name)["ipv4"]
     if not br_ips:
@@ -4144,7 +4150,8 @@ def check_add_dnsmasq_to_br(br_name, tmpdir):
                   " --dhcp-lease-max=127 --dhcp-no-override" %
                   (os.path.join(tmpdir, pidfile), br_ips[0], dhcp_ip_start,
                    dhcp_ip_end, (os.path.join(tmpdir, leases))))
-    return pidfile
+        return pidfile
+    return None
 
 
 @__init_openvswitch
@@ -4152,7 +4159,7 @@ def find_bridge_manager(br_name, ovs=None):
     """
     Finds bridge which contain interface iface_name.
 
-    @param iface_name: Name of interface.
+    @param br_name: Name of interface.
     @return: (br_manager) which contain bridge or None.
     """
     if ovs is None:
@@ -4169,7 +4176,7 @@ def find_bridge_manager(br_name, ovs=None):
 @__init_openvswitch
 def find_current_bridge(iface_name, ovs=None):
     """
-    Finds bridge which contain interface iface_name.
+    Finds bridge which contains interface iface_name.
 
     @param iface_name: Name of interface.
     @return: (br_manager, Bridge) which contain iface_name or None.
@@ -4192,7 +4199,7 @@ def find_current_bridge(iface_name, ovs=None):
 @__init_openvswitch
 def change_iface_bridge(ifname, new_bridge, ovs=None):
     """
-    Change bridge on which is port added.
+    Change bridge on which interface was added.
 
     @param ifname: Iface name or Iface struct.
     @param new_bridge: Name of new bridge.
