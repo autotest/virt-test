@@ -126,6 +126,71 @@ node   0
         raise ValueError("Could not locate locate '%s' on fake cmd db" % cmd)
 
 
+class test_Bridge(unittest.TestCase):
+    class FakeCmd(object):
+        iter = 0
+
+        def __init__(self, *args, **kargs):
+            self.fake_cmds = [
+"""bridge name    bridge id        STP enabled    interfaces
+virbr0        8000.52540018638c    yes        virbr0-nic
+virbr1        8000.525400c0b080    yes        em1
+                                              virbr1-nic
+""",
+"""bridge name    bridge id        STP enabled    interfaces
+virbr0        8000.52540018638c    yes
+""",
+"""bridge name    bridge id        STP enabled    interfaces
+""",
+"""bridge name    bridge id        STP enabled    interfaces
+virbr0        8000.52540018638c    yes        virbr0-nic
+                                              virbr2-nic
+                                              virbr3-nic
+virbr1        8000.525400c0b080    yes        em1
+                                              virbr1-nic
+                                              virbr4-nic
+                                              virbr5-nic
+virbr2        8000.525400c0b080    yes        em1
+                                              virbr10-nic
+                                              virbr40-nic
+                                              virbr50-nic
+"""]
+
+            self.stdout = self.get_stdout()
+            self.__class__.iter += 1
+
+        def get_stdout(self):
+            return self.fake_cmds[self.__class__.iter]
+
+    def setUp(self):
+        self.god = mock.mock_god(ut=self)
+
+        def utils_run(*args, **kargs):
+            return test_Bridge.FakeCmd(*args, **kargs)
+
+        self.god.stub_with(utils, 'run', utils_run)
+
+    def test_getstructure(self):
+
+        br = utils_misc.Bridge().get_structure()
+        self.assertEqual(br, {'virbr1': ['em1', 'virbr1-nic'],
+                              'virbr0': ['virbr0-nic']})
+
+        br = utils_misc.Bridge().get_structure()
+        self.assertEqual(br, {'virbr0': []})
+
+        br = utils_misc.Bridge().get_structure()
+        self.assertEqual(br, {})
+
+        br = utils_misc.Bridge().get_structure()
+        self.assertEqual(br, {'virbr2': ['em1', 'virbr10-nic',
+                                         'virbr40-nic', 'virbr50-nic'],
+                              'virbr1': ['em1', 'virbr1-nic', 'virbr4-nic',
+                                         'virbr5-nic'],
+                              'virbr0': ['virbr0-nic', 'virbr2-nic',
+                                         'virbr3-nic']})
+
+
 def utils_run(cmd):
     return FakeCmd(cmd)
 

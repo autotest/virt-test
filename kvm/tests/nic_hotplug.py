@@ -31,6 +31,7 @@ def run_nic_hotplug(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
     pci_model = params.get("pci_model", "rtl8139")
     run_dhclient = params.get("run_dhclient", "no")
+    netdst = params.get("netdst", "virbr0")
     guest_is_not_windows = "Win" not in params.get("guest_name", "")
 
     session = utils_test.wait_for_login(vm, timeout=login_timeout)
@@ -56,7 +57,8 @@ def run_nic_hotplug(test, params, env):
 
     # hot-add the nic
     nic_name = 'hotadded'
-    nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name)
+    nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name,
+                              netdst=netdst)
 
     # Only run dhclient if explicitly set and guest is not running Windows.
     # Most modern Linux guests run NetworkManager, and thus do not need this.
