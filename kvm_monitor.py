@@ -1068,7 +1068,7 @@ class QMPMonitor(Monitor):
         cmd_output = []
         for cmdline in cmdlines.split(";"):
             command = cmdline.split()[0]
-            if self._has_command(command):
+            if not self._has_command(command):
                 if "=" in cmdline:
                     command = cmdline.split()[0]
                     cmdargs = " ".join(cmdline.split()[1:]).split(",")
