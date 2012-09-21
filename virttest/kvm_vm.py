@@ -1203,7 +1203,7 @@ class VM(virt_vm.BaseVM):
         qemu_cmd += add_name(hlp, name)
         # no automagic devices please
         defaults = params.get("defaults", "no")
-        if has_option(hlp,"nodefaults") and defaults != "yes":
+        if has_option(hlp, "nodefaults") and defaults != "yes":
             qemu_cmd += " -nodefaults"
         # Add monitors
         for monitor_name in params.objects("monitors"):
@@ -2514,7 +2514,8 @@ class VM(virt_vm.BaseVM):
             error.context("Raising bridge for " + msg_sfx + attach_cmd,
                           logging.debug)
             # assume this will puke if netdst unset
-            utils_misc.add_to_bridge(nic.ifname, nic.netdst)
+            if not nic.netdst is None:
+                utils_misc.add_to_bridge(nic.ifname, nic.netdst)
         elif nic.nettype == 'user':
             attach_cmd += " user,name=%s" % nic.ifname
         else: # unsupported nettype
