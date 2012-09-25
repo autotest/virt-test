@@ -105,7 +105,7 @@ def run_migration_multi_host_fd(test, params, env):
                 s = self._create_server(mig_port)
                 try:
                     conn, _ = s.accept()
-                    fd = conn.fileno()
+                    fd = s.fileno()
                     logging.debug("File descrtiptor %d used for"
                                   " migration." % (fd))
 
