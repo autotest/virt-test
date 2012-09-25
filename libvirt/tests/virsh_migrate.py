@@ -188,7 +188,7 @@ def run_virsh_migrate(test, params, env):
             logging.info("Verifying <virsh domstate> DOES return an error."
                          "%s should not exist on %s." % (vm_name, src_uri))
             if virsh.domain_exists(vm_name, uri=src_uri):
-                check_src_undefine=False
+                check_src_undefine = False
 
         # Checking for --dname.
         logging.debug("Checking for --dname option.")
