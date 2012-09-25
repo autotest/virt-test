@@ -31,7 +31,7 @@ We support x86\_64 hosts with hardware virtualization support (AMD and
 Intel), and Intel 32 and 64 bit guest operating systems, and work is underway
 to support ARM hosts.
 
-[1]  <http://autotest.github.com/>`_. Autotest is a project that aims to
+[1] http://autotest.github.com/ - Autotest is a project that aims to
 provide tools and libraries to perform automated testing on the linux
 platform. Autotest is a modular framework, and this suite can be used as
 a submodule of the client module. If you do not want to use or know about
