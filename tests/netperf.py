@@ -216,8 +216,8 @@ def ssh_cmd(ip, cmd, user="root"):
 def launch_client(sessions, server, server_ctl, host, client, l, nf_args, port):
     """ Launch netperf clients """
 
-    client_path="/tmp/netperf-2.4.5/src/netperf"
-    server_path="/tmp/netperf-2.4.5/src/netserver"
+    client_path = "/tmp/netperf-2.4.5/src/netperf"
+    server_path = "/tmp/netperf-2.4.5/src/netserver"
     ssh_cmd(server_ctl, "pidof netserver || %s -p %s" % (server_path, port))
     ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
 

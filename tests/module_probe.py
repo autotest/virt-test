@@ -30,7 +30,7 @@ def run_module_probe(test, params, env):
         for _ in range(load_count):
             try:
                 installer_object.load_modules()
-            except Exception,e:
+            except Exception, e:
                 raise error.TestFail("Failed to load modules [%r]: %s" %
                                      (installer_object.module_list, e))
 
@@ -39,7 +39,7 @@ def run_module_probe(test, params, env):
             # and we want to run the loop as fast as possible.
             for mod in reversed(installer_object.module_list):
                 r = utils.system("rmmod %s" % (mod), ignore_status=True)
-                if r <> 0:
+                if r != 0:
                     raise error.TestFail("Failed to unload module %s. "
                                          "exit status: %d" % (mod, r))
     finally:
