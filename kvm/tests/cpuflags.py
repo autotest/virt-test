@@ -1,5 +1,6 @@
 import logging, re, random, os, time, pickle, sys, traceback
 from autotest.client.shared import error, utils
+from autotest.client.shared import test as test_module
 from virttest import kvm_vm
 from virttest import utils_misc, utils_test, aexpect
 
@@ -317,9 +318,9 @@ def run_cpuflags(test, params, env):
             extra_flags = set([])
         return (cpu_model, extra_flags)
 
-    class MiniSubtest(object):
+    class MiniSubtest(test_module.Subtest):
         def __new__(cls, *args, **kargs):
-            self = super(MiniSubtest, cls).__new__(cls)
+            self = test.Subtest.__new__()
             ret = None
             if args is None:
                 args = []
@@ -344,7 +345,8 @@ def run_cpuflags(test, params, env):
         def clean(self):
             logging.info("cleanup")
             if (hasattr(self, "vm")):
-                self.vm.destroy(gracefully=False)
+                vm = getattr(self, "vm")
+                vm.destroy(gracefully=False)
 
     # 1) <qemu-kvm-cmd> -cpu ?model
     class test_qemu_cpu_model(MiniSubtest):
@@ -704,9 +706,8 @@ def run_cpuflags(test, params, env):
 
             class testMultihostMigration(utils_test.MultihostMigration):
                 def __init__(self, test, params, env):
-                    super(testMultihostMigration, self).__init__(test,
-                                                                 params,
-                                                                 env)
+                    utils_test.MultihostMigration.__init__(self, test, params,
+                                                           env)
 
                 def migration_scenario(self):
                     srchost = self.params.get("hosts")[0]
