@@ -29,7 +29,7 @@ This test suite aims to have test tools for a wide range of testing scenarios:
 
 We support x86\_64 hosts with hardware virtualization support (AMD and
 Intel), and Intel 32 and 64 bit guest operating systems, and work is underway
-to support ARM hosts.
+to support PPC hosts.
 
 [1] http://autotest.github.com/ - Autotest is a project that aims to
 provide tools and libraries to perform automated testing on the linux
