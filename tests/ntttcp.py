@@ -136,7 +136,7 @@ def run_ntttcp(test, params, env):
     def parse_file(resultfile):
         """ Parse raw result files and generate files with standard format """
         fileobj = open(resultfile, "r")
-        lst= []
+        lst = []
         found = False
         for line in fileobj.readlines():
             o = re.findall("Send buffer size: (\d+)", line)

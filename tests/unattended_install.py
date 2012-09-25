@@ -322,7 +322,7 @@ class RemoteInstall(object):
         self.port = port
         self.filename = filename
 
-        start_unattended_server_thread(self.port,self.path)
+        start_unattended_server_thread(self.port, self.path)
 
 
     def get_url(self):

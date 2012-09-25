@@ -18,7 +18,7 @@ def run_save_restore(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-    def get_save_filename(path="",file_pfx=""):
+    def get_save_filename(path="", file_pfx=""):
         """
         Generate a guaranteed not to clash filename.
 
@@ -28,7 +28,7 @@ def run_save_restore(test, params, env):
         """
         if not path:
             path = tempfile.gettempdir()
-        fd,filename = tempfile.mkstemp(prefix = file_pfx, dir=path)
+        fd, filename = tempfile.mkstemp(prefix=file_pfx, dir=path)
         os.close(fd)
         return filename
 
@@ -91,7 +91,7 @@ def run_save_restore(test, params, env):
     while True:
         try:
             vm.verify_kernel_crash()
-            check_system(vm,120) # networking needs time to recover
+            check_system(vm, 120) # networking needs time to recover
             logging.info("Save/restores left: %d (or %0.4f more seconds)" %
                          (repeat, (time_to_stop - time.time())))
             if start_delay:
