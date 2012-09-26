@@ -4630,10 +4630,13 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
             execution.
     @param check_modules: Whether we want to verify if a given list of modules
             is loaded in the system.
-    @param online_docs_url: URL to an online documentation system, such as an
+    @param online_docs_url: URL to an online documentation system, such as a
             wiki page.
+    @param restore_image: Whether to restore the image from the pristine.
+    @param interactive: Whether to ask for confirmation.
     """
-    logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
+    if interactive:
+        logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
     logging.info("%s test config helper", test_name)
     step = 0
     shared_dir = os.path.abspath(os.path.join(sys.modules[__name__].__file__,
@@ -4691,7 +4694,7 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
                     answer = utils.ask("Config file  %s differs from %s."
                                        "Overwrite?" % (dst_file,src_file))
                 else:
-                    answer = "y"
+                    answer = "n"
 
                 if answer == "y":
                     logging.debug("Restoring config file %s from sample" %
@@ -4715,11 +4718,11 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     tarball_path = os.path.join(destination, guest_tarball)
     if os.path.isfile(tarball_path) and restore_image:
         os.chdir(destination)
-        utils.run("7za e %s" % tarball_path)
+        utils.run("7za -y e %s" % tarball_path)
 
-    logging.info("%d - Checking if the appropriate userspace programs are "
-                 "installed", step)
     if default_userspace_paths:
+        logging.info("%d - Checking if the appropriate userspace programs are "
+                     "installed", step)
         for path in default_userspace_paths:
             if not os.path.isfile(path):
                 logging.warning("No %s found. You might need to install %s.",
@@ -4733,7 +4736,7 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
         logging.info("")
         step += 1
         logging.info("%d - Checking for modules %s", step,
-                     ",".join(check_modules))
+                     ", ".join(check_modules))
         for module in check_modules:
             if not utils.module_is_loaded(module):
                 logging.warning("Module %s is not loaded. You might want to "
@@ -4747,18 +4750,7 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
         logging.info("%d - Verify needed packages to get started", step)
         logging.info("Please take a look at the online documentation: %s",
                      online_docs_url)
-
-    client_dir = os.path.abspath(os.path.join(test_dir, "..", "..", ".."))
-    autotest_bin = os.path.join(client_dir, 'autotest-local')
-    control_file = os.path.join(test_dir, 'control')
-
-    logging.info("")
-    logging.info("When you are done fixing eventual warnings found, "
-                 "you can run the test using this command line AS ROOT:")
-    logging.info("%s %s", autotest_bin, control_file)
-    logging.info("Autotest prints the results dir, so you can look at DEBUG "
-                 "logs if something went wrong")
-    logging.info("You can also edit the test config files")
+        logging.info("")
 
 
 def create_x509_dir(path, cacert_subj, server_subj, passphrase,
