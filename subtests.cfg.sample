@@ -3592,12 +3592,13 @@ variants:
 
     - boot_time:
         only Linux
-        vms = ""
+        start_vm = no
         type = boot_time
         shutdown_method = system_powerdown
         kill_vm = yes
         kill_vm_gracefully = no
         check_img = yes
+        image_chain = "image1 snap"
         # This value may change from host to host
         # Please confirm your host status and update it
         # expect_bootup_time = 16
