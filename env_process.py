@@ -308,8 +308,18 @@ def preprocess(test, params, env):
     username = params.get('ovirt_node_user')
     password = params.get('ovirt_node_password')
 
-    if params.get("bridge") == "private":
-        brcfg = virt_test_setup.PrivateBridgeConfig(params)
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        if params.get('netdst_%s' % nic) == 'private':
+            setup_pb = True
+            params_pb = params.object_params(params)
+            break
+    else:
+        setup_pb = params.get("netdst") == 'private'
+        params_pb = params
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig(params_pb)
         brcfg.setup()
 
 
@@ -570,8 +580,16 @@ def postprocess(test, params, env):
                         int(params.get("post_command_timeout", "600")),
                         params.get("post_command_noncritical") == "yes")
 
-    if params.get("bridge") == "private":
-        brcfg = virt_test_setup.PrivateBridgeConfig()
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        if params.get('netdst_%s' % nic) == 'private':
+            setup_pb = True
+            break
+    else:
+        setup_pb = params.get("netdst") == 'private'
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig()
         brcfg.cleanup()
 
 
