@@ -1387,9 +1387,9 @@ variants:
         vms = ""
         drivers_install = "balloon;block;nic"
         mount_point = "/tmp/mnt"
-        driver_install_cmd_balloon = cmd /c E:\\whql\virtio_driver_install_whql.exe F:\\Balloon\\xp\\x86 balloon
-        driver_install_cmd_block = cmd /c  E:\\whql\virtio_driver_install_whql.exe F:\\viostor\\xp\\x86 block
-        driver_install_cmd_nic = cmd /c E:\\whql\virtio_driver_install_whql.exe F:\\\NetKVM\\xp\\x86 nic
+        driver_install_cmd_balloon = cmd /c WIN_UILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\Balloon\\xp\\x86 balloon
+        driver_install_cmd_block = cmd /c  WIN_UILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\viostor\\xp\\x86 block
+        driver_install_cmd_nic = cmd /c WIN_UILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\\NetKVM\\xp\\x86 nic
         check_str_balloon = Virtio Balloon
         check_str_block = Virtio SCSI DISK
         check_str_nic = VirtIO Ethernet Adapter
