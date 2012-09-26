@@ -21,7 +21,7 @@ def md5eval(data):
     @param data: Optional input string that will be used to update the object.
     """
     try:
-        hsh = hashlib.new(type)
+        hsh = hashlib.new('md5')
     except NameError:
         hsh = md5.new()
     if data:
