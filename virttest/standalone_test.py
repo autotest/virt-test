@@ -294,29 +294,14 @@ def run_tests(parser, restore_image=False):
     @param restore: Whether to restore or not the pristine JeOS image
     @return: True, if all tests ran passed, False if any of them failed.
     """
-    print_header("SETUP...")
-    params = parser.get_dicts().next()
-
-    test_name = params.get("vm_type")
-    test_dir = os.path.dirname(sys.modules[__name__].__file__)
-    test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
-                                            test_name))
-    base_dir = "/tmp/%s_autotest_root" % test_name
-    default_userspace_paths = None
-    check_modules = None
-    online_docs_url = None
-    utils_misc.virt_test_assistant(test_name, test_dir, base_dir,
-                                   default_userspace_paths, check_modules,
-                                   online_docs_url, restore_image=restore_image,
-                                   interactive=False)
-
     debugdir = os.path.join(ROOT_PATH, 'logs',
                             'run-%s' % time.strftime('%Y-%m-%d-%H.%M.%S'))
     if not os.path.isdir(debugdir):
         os.makedirs(debugdir)
     debuglog = os.path.join(debugdir, "debug.log")
-    print_header("DEBUG LOG: %s" % debuglog)
     configure_file_logging(debuglog)
+
+    print_header("DEBUG LOG: %s" % debuglog)
 
     last_index = -1
     for i, d in enumerate(parser.get_dicts()):
@@ -329,8 +314,27 @@ def run_tests(parser, restore_image=False):
                      "wrong indentation)")
         sys.exit(-1)
 
-    n_tests = last_index + 1
+    n_tests = last_index + 2
     print_header("TESTS: %s" % n_tests)
+
+    print_stdout("setup:", end=False)
+    t_begin = time.time()
+    params = parser.get_dicts().next()
+    test_name = params.get("vm_type")
+    test_dir = os.path.dirname(sys.modules[__name__].__file__)
+    test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
+                                            test_name))
+    base_dir = "/tmp/%s_autotest_root" % test_name
+    default_userspace_paths = None
+    check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+    online_docs_url = "https://github.com/autotest/virt-test/wiki"
+    utils_misc.virt_test_assistant(test_name, test_dir, base_dir,
+                                   default_userspace_paths, check_modules,
+                                   online_docs_url, restore_image=restore_image,
+                                   interactive=False)
+    t_end = time.time()
+    t_elapsed = t_end - t_begin
+    print_pass(t_elapsed)
 
     status_dct = {}
     failed = False
