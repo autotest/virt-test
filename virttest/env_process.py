@@ -312,7 +312,7 @@ def preprocess(test, params, env):
     password = params.get('ovirt_node_password')
 
     setup_pb = False
-    for nic in params.get('nics').split():
+    for nic in params.get('nics', "").split():
         nic_params = params.object_params(nic)
         if nic_params.get('netdst') == 'private':
             setup_pb = True
@@ -571,7 +571,7 @@ def postprocess(test, params, env):
                         params.get("post_command_noncritical") == "yes")
 
     setup_pb = False
-    for nic in params.get('nics').split():
+    for nic in params.get('nics', "").split():
         if params.get('netdst_%s' % nic) == 'private':
             setup_pb = True
             break
