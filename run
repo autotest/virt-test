@@ -57,6 +57,9 @@ if __name__ == '__main__':
     parser.add_option("-c", "--config",
                       action="store", dest="config",
                       help="Explicitly choose a cartesian config")
+    parser.add_option("-r", "--restore-image",
+                      action="store_true", dest="restore",
+                      help="Restore image from pristine image")
     options, args = parser.parse_args()
 
     if (not options.type) and (not options.config):
@@ -111,4 +114,4 @@ if __name__ == '__main__':
         cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
     parser.parse_file(cfg)
-    standalone_test.run_tests(parser)
+    standalone_test.run_tests(parser, restore_image=options.restore)
