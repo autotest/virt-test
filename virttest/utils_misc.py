@@ -4376,54 +4376,64 @@ def get_module_params(sys_path, module_name):
     return module_params
 
 
-def check_iso(url, destination, iso_sha1):
+def download_file(url, destination, sha1, interactive=False):
     """
-    Verifies if ISO that can be find on url is on destination with right hash.
+    Verifies if file that can be find on url is on destination with right hash.
 
-    This function will verify the SHA1 hash of the ISO image. If the file
-    turns out to be missing or corrupted, let the user know we can download it.
+    This function will verify the SHA1 hash of the file. If the file
+    appears to be missing or corrupted, let the user know.
 
-    @param url: URL where the ISO file can be found.
-    @param destination: Directory in local disk where we'd like the iso to be.
-    @param iso_sha1: SHA1 hash for the ISO image.
+    @param url: URL where the file can be found.
+    @param destination: Directory in local disk where we'd like the file to be.
+    @param iso_sha1: SHA1 hash for the file.
+    @return: True, if file had to be downloaded
+             False, if file didn't have to be downloaded
     """
     file_ok = False
+    had_to_download = False
     if not os.path.isdir(destination):
         os.makedirs(destination)
-    iso_path = os.path.join(destination, os.path.basename(url))
-    if not os.path.isfile(iso_path):
-        logging.warning("File %s not found", iso_path)
-        logging.warning("Expected SHA1 sum: %s", iso_sha1)
-        answer = utils.ask("Would you like to download it from %s?" % url)
-        if answer == 'y':
-            utils.interactive_download(url, iso_path, 'ISO Download')
+    path = os.path.join(destination, os.path.basename(url))
+    if not os.path.isfile(path):
+        logging.warning("File %s not found", path)
+        logging.warning("Expected SHA1 sum: %s", sha1)
+        if interactive:
+            answer = utils.ask("Would you like to download it from %s?" % url)
         else:
-            logging.warning("Missing file %s", iso_path)
-            logging.warning("Please download it or put an existing copy on the "
-                            "appropriate location")
-            return
-    else:
-        logging.info("Found %s", iso_path)
-        logging.info("Expected SHA1 sum: %s", iso_sha1)
-        answer = utils.ask("Would you like to check %s? It might take a while" %
-                           iso_path)
+            answer = 'y'
         if answer == 'y':
-            actual_iso_sha1 = utils.hash_file(iso_path, method='sha1')
-            if actual_iso_sha1 != iso_sha1:
-                logging.error("Actual SHA1 sum: %s", actual_iso_sha1)
+            utils.interactive_download(url, path)
+            had_to_download = True
+        else:
+            logging.warning("Missing file %s", path)
+            return had_to_download
+    else:
+        logging.info("Found %s", path)
+        logging.info("Expected SHA1 sum: %s", sha1)
+        if interactive:
+            answer = utils.ask("Would you like to check %s? It might take a"
+                               "while" % path)
+        else:
+            answer = 'y'
+        if answer == 'y':
+            actual_sha1 = utils.hash_file(path, method='sha1')
+            if actual_sha1 != sha1:
+                logging.error("Actual SHA1 sum: %s", actual_sha1)
             else:
                 logging.info("SHA1 sum check OK")
         else:
             logging.info("File %s present, but chose to not verify it",
-                         iso_path)
-            return
+                         path)
+            return had_to_download
 
     if file_ok:
-        logging.info("%s present, with proper checksum", iso_path)
+        logging.info("%s present, with proper checksum", path)
+    return had_to_download
 
 
 def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
-                        check_modules, online_docs_url):
+                        check_modules, online_docs_url, restore_image=False,
+                        interactive=True):
     """
     Common virt test assistant module.
 
@@ -4491,8 +4501,12 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
             if diff_result.exit_status != 0:
                 logging.debug("%s result:\n %s" %
                               (diff_result.command, diff_result.stdout))
-                answer = utils.ask("Config file  %s differs from %s. Overwrite?"
-                                   % (dst_file,src_file))
+                if interactive:
+                    answer = utils.ask("Config file  %s differs from %s."
+                                       "Overwrite?" % (dst_file,src_file))
+                else:
+                    answer = "y"
+
                 if answer == "y":
                     logging.debug("Restoring config file %s from sample" %
                                   dst_file)
@@ -4504,43 +4518,30 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
 
     logging.info("")
     step += 1
-    logging.info("%s - Verifying iso (make sure we have the OS ISO needed for "
-                 "the default test set)", step)
+    logging.info("%s - Verifying (and possibly downloading) guest image", step)
 
-    iso_name = "Fedora-17-x86_64-DVD.iso"
-    fedora_dir = "pub/fedora/linux/releases/17/Fedora/x86_64/iso"
-    url = os.path.join("http://download.fedoraproject.org/", fedora_dir,
-                       iso_name)
-    iso_sha1 = "7a748072cc366ee3bdcd533afc70eda239c977c7"
-    destination = os.path.join(base_dir, 'isos', 'linux')
-    check_iso(url, destination, iso_sha1)
+    guest_tarball = "jeos-17-64.qcow2.7z"
+    url = os.path.join("http://lmr.fedorapeople.org/jeos/", guest_tarball)
+    tarball_sha1 = "321fc6bacb507a0d30ee6ca7c474800d533cc1a7"
+    destination = os.path.join(base_dir, 'images')
+    had_to_download = download_file(url, destination, tarball_sha1)
+    restore_image = (restore_image or had_to_download)
+    tarball_path = os.path.join(destination, guest_tarball)
+    if os.path.isfile(tarball_path) and restore_image:
+        os.chdir(destination)
+        utils.run("7z e %s" % tarball_path)
 
-    logging.info("")
-    step += 1
-    logging.info("%d - Verifying winutils.iso (make sure we have the utility "
-                 "ISO needed for Windows testing)", step)
-
-    logging.info("In order to run the KVM autotests in Windows guests, we "
-                 "provide you an ISO that this script can download")
-
-    url = "http://people.redhat.com/mrodrigu/kvm/winutils.iso"
-    iso_sha1 = "02930224756510e383c44c49bffb760e35d6f892"
-    destination = os.path.join(base_dir, 'isos', 'windows')
-    path = os.path.join(destination, iso_name)
-    check_iso(url, destination, iso_sha1)
-
-    logging.info("")
-    step += 1
     logging.info("%d - Checking if the appropriate userspace programs are "
                  "installed", step)
-    for path in default_userspace_paths:
-        if not os.path.isfile(path):
-            logging.warning("No %s found. You might need to install %s.",
-                            path, os.path.basename(path))
-        else:
-            logging.debug("%s present", path)
-    logging.info("If you wish to change any userspace program path, "
-                 "you will have to modify tests.cfg")
+    if default_userspace_paths:
+        for path in default_userspace_paths:
+            if not os.path.isfile(path):
+                logging.warning("No %s found. You might need to install %s.",
+                                path, os.path.basename(path))
+            else:
+                logging.debug("%s present", path)
+        logging.info("If you wish to change any userspace program path, "
+                     "you will have to modify tests.cfg")
 
     if check_modules:
         logging.info("")
