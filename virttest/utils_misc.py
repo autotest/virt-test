@@ -4565,7 +4565,7 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     tarball_path = os.path.join(destination, guest_tarball)
     if os.path.isfile(tarball_path) and restore_image:
         os.chdir(destination)
-        utils.run("7z e %s" % tarball_path)
+        utils.run("7za e %s" % tarball_path)
 
     logging.info("%d - Checking if the appropriate userspace programs are "
                  "installed", step)
