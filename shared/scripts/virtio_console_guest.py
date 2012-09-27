@@ -582,7 +582,7 @@ class VirtioGuest:
         Quit consoleswitch.
         """
         self.exit_threads()
-        exit()
+        sys.exit(0)
 
 
     def send_loop_init(self, port, length):
@@ -697,7 +697,7 @@ def compile():
     import py_compile
     py_compile.compile(sys.path[0] + "/virtio_console_guest.py")
     print "PASS: compile"
-    sys.exit()
+    sys.exit(0)
 
 
 def guest_exit():
