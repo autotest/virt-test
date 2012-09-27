@@ -3869,7 +3869,7 @@ class LinuxKernelBuildHelper(object):
         self.build_target = self.params.get(build_target_key, 'bzImage')
 
         kernel_path_key = '%s_kernel_path' % self.prefix
-        default_kernel_path = os.path.join('/tmp/kvm_autotest_root/images',
+        default_kernel_path = os.path.join('/var/tmp/virt_test/images',
                                            self.build_target)
         self.kernel_path = self.params.get(kernel_path_key,
                                            default_kernel_path)
