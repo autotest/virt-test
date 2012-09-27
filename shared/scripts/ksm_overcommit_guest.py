@@ -86,7 +86,7 @@ class MemFill(object):
         @return: return array of bytes size PAGE_SIZE.
         """
         a = array.array("B")
-        for i in range((PAGE_SIZE / a.itemsize)):
+        for _ in range((PAGE_SIZE / a.itemsize)):
             try:
                 a.append(value)
             except Exception:
@@ -103,7 +103,7 @@ class MemFill(object):
         """
         random.seed(seed)
         a = array.array(self.allocate_by)
-        for i in range(PAGE_SIZE / a.itemsize):
+        for _ in range(PAGE_SIZE / a.itemsize):
             a.append(random.randrange(0, sys.maxint))
         return a
 
@@ -119,7 +119,7 @@ class MemFill(object):
         if value is None:
             value = self.static_value
         page = self.value_page(value)
-        for pages in range(self.npages):
+        for _ in range(self.npages):
             page.tofile(self.f)
         print "PASS: Mem value fill"
 
@@ -139,7 +139,7 @@ class MemFill(object):
         if value is None:
             value = self.static_value
         page = self.value_page(value)
-        for pages in range(self.npages):
+        for _ in range(self.npages):
             pf = array.array("B")
             pf.fromfile(self.f, PAGE_SIZE / pf.itemsize)
             if not (page == pf):
@@ -229,8 +229,8 @@ def main():
     print "PASS: Start"
     end = False
     while not end:
-        str = raw_input()
-        exec str
+        sr = raw_input()
+        exec sr
 
 
 if __name__ == "__main__":
