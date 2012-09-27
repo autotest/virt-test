@@ -1186,8 +1186,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     # tar the contents of bindir/autotest
     cmd = ("cd %s; tar cvjf %s %s/*" %
            (autotest_parentdir, compressed_autotest_path, autotest_basename))
-    # Until we have nested virtualization, we don't need the kvm test :)
-    cmd += " --exclude=%s/tests/kvm" % autotest_basename
+    # Until we have nested virtualization, we don't need the virt test :)
+    cmd += " --exclude=%s/tests/virt" % autotest_basename
     cmd += " --exclude=%s/results" % autotest_basename
     cmd += " --exclude=%s/tmp" % autotest_basename
     cmd += " --exclude=%s/control*" % autotest_basename
