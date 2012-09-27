@@ -60,6 +60,8 @@ if __name__ == '__main__':
     parser.add_option("-r", "--restore-image",
                       action="store_true", dest="restore",
                       help="Restore image from pristine image")
+    parser.add_option("--qemu-bin", action="store", dest="qemu",
+                      help="Choose a custom qemu path to be tested")
     options, args = parser.parse_args()
 
     if (not options.type) and (not options.config):
@@ -114,4 +116,11 @@ if __name__ == '__main__':
         cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
     parser.parse_file(cfg)
+    if options.qemu:
+        d = os.path.dirname(options.qemu)
+        parser.parse_string("qemu_binary = %s" % options.qemu)
+        parser.parse_string("qemu_img_binary = %s" %
+                            os.path.join(d, 'qemu-img'))
+        parser.parse_string("qemu_io_binary = %s" % os.path.join(d, 'qemu-io'))
+
     standalone_test.run_tests(parser, restore_image=options.restore)
