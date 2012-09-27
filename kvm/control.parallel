@@ -44,7 +44,7 @@ sys.path.append(pwd)
 #
 # We create the links only if not already exist, so if one already set up the
 # links for client/local run we do not touch the links.
-rootdir='/tmp/kvm_autotest_root'
+rootdir='/var/tmp/virt_test'
 iso=os.path.join(rootdir, 'iso')
 images=os.path.join(rootdir, 'images')
 qemu=os.path.join(rootdir, 'qemu')

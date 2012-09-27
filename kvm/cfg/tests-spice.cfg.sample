@@ -142,7 +142,7 @@ variants:
         qemu_binary = /usr/libexec/qemu-kvm
         qemu_img_binary = /usr/bin/qemu-img
         qemu_io_binary = /usr/bin/qemu-io
-        image_name = /tmp/kvm_autotest_root/images/rhel63-64_client
+        image_name = /var/tmp/virt_test/images/rhel63-64_client
         only qcow2
         only rtl8139
         only ide
