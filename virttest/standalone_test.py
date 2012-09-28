@@ -1,4 +1,4 @@
-import os, logging, imp, sys, time
+import os, logging, imp, sys, time, traceback
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, env_process
@@ -378,6 +378,14 @@ def run_tests(parser):
                     t_end = time.time()
                     t_elapsed = t_end - t_begin
             except Exception, reason:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                logging.error("")
+                tb_info = traceback.format_exception(exc_type, exc_value,
+                                                     exc_traceback.tb_next)
+                tb_info = "".join(tb_info)
+                for e_line in tb_info.splitlines():
+                    logging.error(e_line)
+                logging.error("")
                 logging.error("FAIL -> %s: %s", reason.__class__.__name__,
                               reason)
                 t.stop_file_logging()
