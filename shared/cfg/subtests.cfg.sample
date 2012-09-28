@@ -68,6 +68,11 @@ variants:
                 no JeOS
                 only Linux
                 unattended_delivery_method = floppy
+            # Only perform a libvirt import. No cdroms, no floppies, no nothing
+            - import:
+                no cdrom
+                cdroms = ""
+                floppy = ""
 
         variants:
             # Install guest from cdrom
@@ -110,7 +115,7 @@ variants:
                 only Linux
                 medium = kernel_initrd
             - import:
-                no JeOS
+                no extra_cdrom_ks
                 medium = import
                 force_create_image = no
                 create_image = no
