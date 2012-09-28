@@ -7,26 +7,6 @@ include tests-shared.cfg
 
 # Here are the test sets variants
 variants:
-    # Runs all variants defined. HUGE test set.
-    - @full:
-
-
-    # Runs qemu-kvm, Windows 7 64 bit guest OS, install, boot, shutdown
-    - @qemu_kvm_windows_quick:
-        qemu_binary = /usr/bin/qemu-kvm
-        qemu_img_binary = /usr/bin/qemu-img
-        qemu_io_binary = /usr/bin/qemu-io
-        only qcow2
-        only rtl8139
-        only ide
-        only smp2
-        only no_9p_export
-        only no_pci_assignable
-        only smallpages
-        only Win7.64.sp1
-        only unattended_install.cdrom, boot, shutdown
-
-
     # Runs qemu-kvm, JeOS 64 bit OS
     - @qemu_kvm_jeos_quick:
         qemu_binary = /usr/bin/qemu-kvm
@@ -40,8 +20,6 @@ variants:
         only no_pci_assignable
         only smallpages
         only JeOS.17.64
-        only migrate
-        no migrate..with_speed_measurement, migrate..with_autotest
 
 # Choose your test list from the testsets defined
 only qemu_kvm_jeos_quick
