@@ -62,6 +62,8 @@ if __name__ == '__main__':
                       help="Restore image from pristine image")
     parser.add_option("--qemu-bin", action="store", dest="qemu",
                       help="Choose a custom qemu path to be tested")
+    parser.add_option("--tests", action="store", dest="tests",
+                      help="List of space separated tests to be executed")
     parser.add_option("--list-tests", action="store_true", dest="list",
                       help="List tests available")
     options, args = parser.parse_args()
@@ -119,6 +121,7 @@ if __name__ == '__main__':
         cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
     parser.parse_file(cfg)
+
     if options.list:
         try:
             less_cmd = utils_misc.find_command('less')
@@ -137,5 +140,12 @@ if __name__ == '__main__':
         parser.parse_string("qemu_img_binary = %s" %
                             os.path.join(d, 'qemu-img'))
         parser.parse_string("qemu_io_binary = %s" % os.path.join(d, 'qemu-io'))
+
+    if options.tests:
+        tests = options.tests.split(" ")
+        parser.parse_string("only %s" % ", ".join(tests))
+    else:
+        parser.parse_string("only migrate")
+        parser.parse_string("no migrate..with_speed_measurement, migrate..with_autotest")
 
     standalone_test.run_tests(parser, restore_image=options.restore)
