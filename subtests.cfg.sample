@@ -3980,6 +3980,15 @@ variants:
                 image_convert = "convert"
                 image_name_convert = "base-qcow2"
                 image_format_convert = qcow2
+                variants:
+                    cache_none:
+                        cache_mode = none
+                    cache_unsafe:
+                        cache_mode = unsafe
+                    cache_writeback:
+                        cache_mode = writeback
+                    cache_writethrough:
+                        cache_mode = writethrough
             - rebase:
                 op_type = rebase
                 image_chain += " sn1 sn2 sn3"
@@ -3989,11 +3998,30 @@ variants:
                 image_name_sn2 = "sn2"
                 image_name_sn3 = "sn3"
                 image_name_base1 = "base1"
+                variants:
+                    cache_none:
+                        cache_mode = none
+                    cache_unsafe:
+                        cache_mode = unsafe
+                    cache_writeback:
+                        cache_mode = writeback
+                    cache_writethrough:
+                        cache_mode = writethrough
             - commit:
                 op_type = commit
                 image_chain += " sn1"
                 image_name_sn1 = "sn1"
                 test_image = 1
+                variants:
+                    cache_none:
+                        cache_mode = none
+                    cache_unsafe:
+                        cache_mode = unsafe
+                    cache_writeback:
+                        cache_mode = writeback
+                    cache_writethrough:
+                        cache_mode = writethrough
+
 
     - qemu_nobody:
         start_vm = no
