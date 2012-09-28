@@ -144,6 +144,8 @@ if __name__ == '__main__':
     if options.tests:
         tests = options.tests.split(" ")
         parser.parse_string("only %s" % ", ".join(tests))
+    elif options.config:
+        pass
     else:
         parser.parse_string("only migrate")
         parser.parse_string("no migrate..with_speed_measurement, migrate..with_autotest")
