@@ -146,6 +146,5 @@ if __name__ == '__main__':
         parser.parse_string("only %s" % ", ".join(tests))
     else:
         parser.parse_string("only migrate")
-        parser.parse_string("no migrate..with_speed_measurement, migrate..with_autotest")
 
     standalone_test.run_tests(parser, restore_image=options.restore)

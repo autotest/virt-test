@@ -4,6 +4,7 @@
 
 variants:
     - install:
+        no JeOS
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -14,6 +15,7 @@ variants:
         kill_vm_timeout_on_error = 0
 
     - setup: install
+        no JeOS
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -21,6 +23,7 @@ variants:
         keep_screendump_history = yes
 
     - image_copy:
+        no JeOS
         type = image_copy
         vms = ''
         parallel = no
@@ -52,14 +55,17 @@ variants:
                 drive_index_cd1 = 2
             # Kickstart is packed into the installation iso
             - in_cdrom_ks:
+                no JeOS
                 only Linux, unattended_install.cdrom
                 unattended_delivery_method = integrated
             # Autotest starts simple http server providing kickstart
             - http_ks:
+                no JeOS
                 only Linux
                 unattended_delivery_method = url
             # Image with kickstart is attached into the guest as floppy drive
             - floppy_ks:
+                no JeOS
                 only Linux
                 unattended_delivery_method = floppy
 
@@ -74,17 +80,20 @@ variants:
                 redirs += " unattended_install"
             # Install guest from http/ftp url
             - url:
+                no JeOS
                 only Linux
                 medium = url
                 url = REPLACE_THIS_WITH_TREE_URL
             # Install guest from nfs nfs_server:nfs_dir
             - nfs:
+                no JeOS
                 only Linux
                 medium = nfs
                 nfs_server = REPLACE_THIS_WITH_NFS_SERVER
                 nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
             # Install guest with a remote kickstart
             - remote_ks:
+                no JeOS
                 only Linux
                 medium = url
                 # TODO: does kvm need to prefix this with '--append'?
@@ -92,13 +101,16 @@ variants:
                 url = REPLACE_THIS_WITH_TREE_URL
             # Install guest using pxe/tftp  (virt-install --pxe)
             - pxe:
+                no JeOS
                 only Linux
                 medium = pxe
             # Install guest using kernel/initrd pair from directory
             - kernel_initrd:
+                no JeOS
                 only Linux
                 medium = kernel_initrd
             - import:
+                no JeOS
                 medium = import
                 force_create_image = no
                 create_image = no
@@ -926,6 +938,7 @@ variants:
         variants:
             - @default:
             - with_speed_measurement:
+                no JeOS
                 # migration speed in bytes. Default scaler is M (350 == 350M)
                 only Linux
                 mig_speed = 125M
@@ -948,6 +961,7 @@ variants:
                 iterations = 1
                 type = migration_with_file_transfer
             - with_autotest:
+                no JeOS
                 only Linux
                 type = autotest
                 migrate_background = yes
@@ -961,6 +975,7 @@ variants:
                         test_control_file = monotonic_time.control
 
     - migrate_multi_host: install setup image_copy unattended_install.cdrom
+        no JeOS
         type = migration_multi_host
         vms = "vm1"
         start_vm = no
@@ -989,6 +1004,7 @@ variants:
                 type = migration_multi_host_fd
 
     - migration_multi_host_with_file_transfer: install setup image_copy unattended_install.cdrom
+        no JeOS
         type = migration_multi_host_with_file_transfer
         vms = "vm1"
         start_vm = no
@@ -1048,6 +1064,7 @@ variants:
                 save_restore_duration = 5400.0
 
     - autotest: install setup image_copy unattended_install.cdrom
+        no JeOS
         only Linux
         type = autotest
         test_timeout = 1800
@@ -1280,13 +1297,14 @@ variants:
         start_vm = no
 
     - perf_kvm: install setup image_copy unattended_install.cdrom
-	type = perf_kvm
-	kallsyms_cmd = "cat /proc/kallsyms > /tmp/guest_kallsyms"
-	modules_cmd = "cat /proc/modules > /tmp/geust_modules"
-	transfer_timeout = 100
-	perf_record_timeout =  100
+        type = perf_kvm
+        kallsyms_cmd = "cat /proc/kallsyms > /tmp/guest_kallsyms"
+        modules_cmd = "cat /proc/modules > /tmp/geust_modules"
+        transfer_timeout = 100
+        perf_record_timeout =  100
 
     - softlockup: install setup unattended_install.cdrom
+        no JeOS
         only Linux
         type = softlockup
         softlockup_files = stress-1.0.4.tar.gz
@@ -1793,6 +1811,7 @@ variants:
 #               test_timeout = 1200
 
     - netperf: install setup image_copy unattended_install.cdrom
+        no JeOS
         only Linux
         only virtio_net
         type = netperf
@@ -2315,6 +2334,7 @@ variants:
                 stg_params += "range_0-all_disk:range(n) "
 
     - clock_getres: install setup image_copy unattended_install.cdrom
+        no JeOS
         only Linux
         type = clock_getres
 
@@ -2467,6 +2487,7 @@ variants:
                 check_cmd_timeout = 900
 
     - cpuflags: install setup image_copy unattended_install.cdrom
+        no JeOS
         type = cpuflags
         extra_params += " -snapshot"
         auto_cpu_model = no
@@ -2516,6 +2537,7 @@ variants:
                         test_type = "test_migration_with_additional_flags"
 
     - cpuflags_multi_host:
+        no JeOS
         type = cpuflags
         test_type = test_multi_host_migration
         vms = "vm1"
@@ -2616,6 +2638,7 @@ variants:
         start_vm = no
 
     - rv_connect:
+        no JeOS
         type = rv_connect
         vms = vm1 vm2
         guest_vm = vm1
@@ -2641,6 +2664,7 @@ variants:
 
 
     - rv_copyandpaste: rv_connect
+        no JeOS
         type = rv_copyandpaste
         vms = vm1 vm2
         shell_prompt_vm2 = ^\[.*\][\#\$]\s*$
@@ -2683,6 +2707,7 @@ variants:
 
 
     - rv_connect_win:
+        no JeOS
         type = rv_connect
         vms = vm1 vm2
         guest_vm = vm1
@@ -2748,6 +2773,7 @@ variants:
                 test_timeout_install = 3600
 
     - rv_disconnect: rv_connect
+        no JeOS
         type = rv_disconnect
         vms = vm1 vm2
         guest_vm = vm1
