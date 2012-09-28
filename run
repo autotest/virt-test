@@ -17,7 +17,10 @@ class StreamProxy(object):
         Keep 2 streams to write to, and eventually switch.
         """
         self.terminal = stream
-        self.log = open(filename, "a")
+        if filename is None:
+            self.log = stream
+        else:
+            self.log = open(filename, "a")
         self.stream = self.log
 
     def write(self, message):
@@ -70,10 +73,12 @@ if __name__ == '__main__':
         finally:
             os.close(out_fd)
         sys.stderr = os.fdopen(2, 'w')
-
-    # Replace stdout by our StreamProxy object, so we can supress all output
-    # but the one we specifically want.
-    sys.stdout = StreamProxy(stream=sys.stdout)
+        # Replace stdout by our StreamProxy object, so we can supress all output
+        # but the one we specifically want.
+        sys.stdout = StreamProxy(filename="/dev/null", stream=sys.stdout)
+    else:
+        # We have full stdout output
+        sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
 
     try:
         from autotest.client import setup_modules
