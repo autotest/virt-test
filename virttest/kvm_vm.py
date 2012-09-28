@@ -197,11 +197,12 @@ class VM(virt_vm.BaseVM):
         def has_option(hlp, option):
             return bool(re.search(r"^-%s(\s|$)" % option, hlp, re.MULTILINE))
 
-        # Wrappers for all supported qemu command line parameters.
-        # This is meant to allow support for multiple qemu versions.
-        # Each of these functions receives the output of 'qemu -help' as a
-        # parameter, and should add the requested command line option
-        # accordingly.
+
+        def has_device(device_help, device):
+            """
+            Helper for checking if qemu-kvm support 'device'.
+            """
+            return bool(re.search(r'name "%s"' % device, device_help, re.M))
 
 
         def _add_option(option, value, option_type=None, first=False):
@@ -264,6 +265,12 @@ class VM(virt_vm.BaseVM):
 
             return (bus, str(port))
 
+
+        # Wrappers for all supported qemu command line parameters.
+        # This is meant to allow support for multiple qemu versions.
+        # Each of these functions receives the output of 'qemu -help'
+        # as a parameter, and should add the requested command line
+        # option accordingly.
 
         def add_name(hlp, name):
             return " -name '%s'" % name
@@ -349,9 +356,8 @@ class VM(virt_vm.BaseVM):
             return cmd
 
 
-        def add_log_seabios(hlp):
-            device_help = commands.getoutput("%s -device \\?" % qemu_binary)
-            if not bool(re.search("isa-debugcon", device_help, re.M)):
+        def add_log_seabios(device_help):
+            if not has_device(device_help, "isa-debugcon"):
                 return ""
 
             default_id = "seabioslog_id_%s" % self.instance
@@ -840,8 +846,7 @@ class VM(virt_vm.BaseVM):
                 self.usb_dev_dict["OLDVERSION_usb0"] = []
                 return " -usb"
 
-            device_help = commands.getoutput("%s -device \\?" % qemu_binary)
-            if not bool(re.search(usb_type, device_help, re.M)):
+            if not has_device(device_help, usb_type):
                 raise virt_vm.VMDeviceNotSupportedError(self.name, usb_type)
 
             cmd = " -device %s" % usb_type
@@ -911,6 +916,10 @@ class VM(virt_vm.BaseVM):
         self.qemu_binary = qemu_binary
         hlp = commands.getoutput("%s -help" % qemu_binary)
         support_cpu_model = commands.getoutput("%s -cpu ?list" % qemu_binary)
+
+        device_help = ""
+        if has_option(hlp, "device"):
+            device_help = commands.getoutput("%s -device \\?" % qemu_binary)
 
         # Start constructing the qemu command
         qemu_cmd = ""
@@ -994,7 +1003,7 @@ class VM(virt_vm.BaseVM):
             i += 1
 
         # Add logging
-        qemu_cmd += add_log_seabios(hlp)
+        qemu_cmd += add_log_seabios(device_help)
         if params.get("anaconda_log", "no") == "yes":
             qemu_cmd += add_log_anaconda(hlp)
 
