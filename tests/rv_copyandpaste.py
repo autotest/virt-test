@@ -7,7 +7,7 @@ Requires: connected binaries remote-viewer, Xorg, gnome session
 """
 import logging, os, time
 from autotest.client.shared import error
-from virttest import utils_misc, utils_spice
+from virttest import utils_misc, utils_spice, aexpect
 
 
 def wait_timeout(timeout=10):
@@ -40,7 +40,7 @@ def clear_cb(session, params):
     try:
         logging.info("Clearing the clipboard")
         session.cmd(clear_cmd)
-    except:
+    except aexpect.ShellCmdError:
         logging.debug("Clearing the clipboard, Test will continue")
 
     logging.info("Clipboard has been cleared.")
@@ -69,7 +69,7 @@ def place_img_in_clipboard(session_to_copy_from, interpreter, script_call,
             logging.info("Copying of the image was successful")
         else:
             raise error.TestFail("Copying to the clipboard failed", output)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
     logging.debug("------------ End of script output of the Copying"
@@ -99,7 +99,7 @@ def verify_img_paste(session_to_copy_from, interpreter, script_call,
             logging.info("Copying of the image was successful")
         else:
             raise error.TestFail("Copying to the clipboard failed", output)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
     logging.debug("------------ End of script output of the Copying"
@@ -110,7 +110,7 @@ def verify_img_paste(session_to_copy_from, interpreter, script_call,
         logging.debug("------------ Script output ------------")
         output = session_to_copy_from.cmd(cmd, print_func=logging.info,
                                           timeout=test_timeout)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Couldn't get the size of the file")
 
     logging.debug("------------ End of script output of the Copying"
@@ -155,7 +155,7 @@ def verify_img_paste_success(session_to_copy_from, interpreter, script_call,
         logging.debug("------------ Script output ------------")
         output = session_to_copy_from.cmd(cmd, print_func=logging.info,
                                           timeout=test_timeout)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed.")
 
     logging.info("------------ End of script output of the Pasting"
@@ -191,7 +191,7 @@ def verify_img_paste_fails(session_to_copy_from, interpreter, script_call,
         else:
             raise error.TestFail("Copying to the clipboard"
                                  "failed", output)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
     logging.debug("------------ End of script output of the Pasting"
@@ -224,7 +224,7 @@ def verify_text_copy(session_to_copy_from, interpreter, script_call,
             logging.info("Copying of the large text file was successful")
         else:
             raise error.TestFail("Copying to the clipboard failed", output)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
     logging.debug("------------ End of script output of the Copying"
@@ -235,7 +235,7 @@ def verify_text_copy(session_to_copy_from, interpreter, script_call,
         logging.debug("------------ Script output ------------")
         output = session_to_copy_from.cmd(cmd, print_func=logging.info,
                                           timeout=test_timeout)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Couldn't get the size of the file")
 
     logging.debug("------------ End of script output of the Copying"
@@ -279,7 +279,7 @@ def verify_txt_paste_success(session_to_paste_to, interpreter,
         logging.debug("------------ Script output ------------")
         output = session_to_paste_to.cmd(cmd, print_func=logging.info,
                                           timeout=test_timeout)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed.")
 
     logging.info("------------ End of script output of the Pasting"
@@ -314,7 +314,7 @@ def place_text_in_clipboard(session_to_copy_from, interpreter, script_call,
             logging.info("Copying of text was successful")
         else:
             raise error.TestFail("Copying to the clipboard failed", output)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
     logging.debug("------------ End of script output of the Copying"
@@ -331,7 +331,7 @@ def place_text_in_clipboard(session_to_copy_from, interpreter, script_call,
             logging.info("Text was successfully copied to the clipboard")
         else:
             raise error.TestFail("Copying to the clipboard Failed ", output)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
     logging.debug("------------ End of script output ------------")
@@ -362,7 +362,7 @@ def verify_paste_fails(session_to_paste_to, testing_text, interpreter,
         else:
             logging.info("PASS: Pasting from the clipboard was not"
                          " successful, as EXPECTED")
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Pasting from the clipboard failed.")
 
     logging.debug("------------ End of script output ------------")
@@ -391,7 +391,7 @@ def verify_paste_successful(session_to_paste_to, testing_text, interpreter,
         else:
             raise error.TestFail("Pasting from the clipboard failed, "
                                  "nothing copied from other session", output)
-    except:
+    except aexpect.ShellCmdError:
         raise error.TestFail("Pasting from the clipboard failed.")
 
     logging.debug("------------ End of script output ------------")
@@ -1016,7 +1016,7 @@ def run_rv_copyandpaste(test, params, env):
 
     try:
         guest_session.cmd("startx &", timeout=15)
-    except:
+    except aexpect.ShellCmdError:
         logging.debug("Ignoring an Exception that Occurs from calling startx")
     #Wait for X to start
     wait_timeout(10)
