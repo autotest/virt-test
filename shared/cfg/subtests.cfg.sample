@@ -1626,7 +1626,13 @@ variants:
         type = ping
         counts = 100
         flood_minutes = 10
-        nics += ' nic2'
+        variants:
+            - multi_nics:
+                nics += ' nic2'
+            - ext_host:
+                ping_ext_host = "yes"
+                ext_host_get_cmd = "ip route | awk '/default/ { print $3 }'"
+
 
     - jumbo: install setup image_copy unattended_install.cdrom
         only Linux
