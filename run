@@ -17,7 +17,10 @@ class StreamProxy(object):
         Keep 2 streams to write to, and eventually switch.
         """
         self.terminal = stream
-        self.log = open(filename, "a")
+        if filename is None:
+            self.log = stream
+        else:
+            self.log = open(filename, "a")
         self.stream = self.log
 
     def write(self, message):
@@ -54,6 +57,16 @@ if __name__ == '__main__':
     parser.add_option("-c", "--config",
                       action="store", dest="config",
                       help="Explicitly choose a cartesian config")
+    parser.add_option("-r", "--restore-image",
+                      action="store_true", dest="restore",
+                      help="Restore image from pristine image")
+    parser.add_option("--qemu-bin", action="store", dest="qemu",
+                      help="Choose a custom qemu path to be tested")
+    parser.add_option("--tests", action="store", dest="tests",
+                      help=("List of space separated tests to be executed"
+                            "(use quotes around them for safety)"))
+    parser.add_option("--list-tests", action="store_true", dest="list",
+                      help="List tests available")
     options, args = parser.parse_args()
 
     if (not options.type) and (not options.config):
@@ -70,10 +83,12 @@ if __name__ == '__main__':
         finally:
             os.close(out_fd)
         sys.stderr = os.fdopen(2, 'w')
-
-    # Replace stdout by our StreamProxy object, so we can supress all output
-    # but the one we specifically want.
-    sys.stdout = StreamProxy(stream=sys.stdout)
+        # Replace stdout by our StreamProxy object, so we can supress all output
+        # but the one we specifically want.
+        sys.stdout = StreamProxy(filename="/dev/null", stream=sys.stdout)
+    else:
+        # We have full stdout output
+        sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
 
     try:
         from autotest.client import setup_modules
@@ -95,15 +110,49 @@ if __name__ == '__main__':
     test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
     sys.path.append(test_dir)
 
-    from virttest import cartesian_config, standalone_test
+    from virttest import cartesian_config, standalone_test, utils_misc
 
     standalone_test.configure_logging()
     standalone_test.configure_console_logging()
+
     parser = cartesian_config.Parser()
     if options.config is not None:
         cfg = os.path.abspath(options.config)
-    else:
+    if options.config is None or options.list:
         cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
     parser.parse_file(cfg)
-    standalone_test.run_tests(parser)
+
+    if options.list:
+        try:
+            less_cmd = utils_misc.find_command('less')
+            pipe = os.popen('%s -FRSX' % less_cmd, 'w')
+        except ValueError:
+            pipe = sys.stdout
+        for index, params in enumerate(parser.get_dicts()):
+            shortname = params['shortname'].split(".")[6:]
+            shortname = ".".join(shortname)
+            pipe.write("%d %s\n" % (index+1, shortname))
+        sys.exit(0)
+
+    if options.qemu:
+        d = os.path.dirname(options.qemu)
+        parser.parse_string("qemu_binary = %s" % options.qemu)
+        parser.parse_string("qemu_img_binary = %s" %
+                            os.path.join(d, 'qemu-img'))
+        parser.parse_string("qemu_io_binary = %s" % os.path.join(d, 'qemu-io'))
+
+    if options.type and options.tests:
+        if options.config:
+            standalone_test.print_stdout("You can't use -c together "
+                                         "with -t or --tests")
+            sys.exit(0)
+        tests = options.tests.split(" ")
+        parser.parse_string("only %s" % ", ".join(tests))
+    elif options.type and not options.tests:
+        if options.type == 'kvm':
+            parser.parse_string("only migrate")
+        elif options.type == 'libvirt':
+            parser.parse_string("only virsh_domname")
+
+    standalone_test.run_tests(parser, restore_image=options.restore)

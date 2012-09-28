@@ -17,7 +17,7 @@ def return_nonrandom_str(length):
     str_len = len(input_string)
 
     for i in xrange(int(length)):
-        finalstring += input_string[i%str_len]
+        finalstring += input_string[i % str_len]
 
     return finalstring
 
@@ -93,7 +93,6 @@ def main(argv):
     elif options.clear:
         # Get and clear the clipboard
         clipboard.set_text("")
-        clipboard.clear()
         clipboard.store()
         print 'The clipboard has been cleared.'
     elif options.setcb_file:

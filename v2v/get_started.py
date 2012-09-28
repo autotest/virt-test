@@ -14,7 +14,7 @@ from virttest import utils_misc
 test_name = "v2v"
 test_dir = os.path.dirname(sys.modules[__name__].__file__)
 test_dir = os.path.abspath(test_dir)
-base_dir = "/tmp/v2v_autotest_root"
+base_dir = "/var/tmp/virt_test"
 default_userspace_paths = ["/usr/bin/virt-v2v"]
 check_modules = None
 online_docs_url = None

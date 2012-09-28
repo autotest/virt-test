@@ -24,22 +24,37 @@ def start_vdagent(guest_session, test_timeout):
     @param guest_session: ssh session of the VM
     @param test_timeout: timeout time for the cmds
     """
-    cmd = "service spice-vdagentd status"
+    cmd = "service spice-vdagentd start"
+    try:
+        guest_session.cmd(cmd, print_func=logging.info,
+                                   timeout=test_timeout)
+    except:
+        raise error.TestFail("Guest Vdagent Daemon Start failed")
+
+    logging.debug("------------ End of guest checking for Spice Vdagent"
+                  " Daemon ------------")
+    wait_timeout(3)
+
+
+def restart_vdagent(guest_session, test_timeout):
+    """
+    Sending commands to restart the spice-vdagentd service
+
+    @param guest_session: ssh session of the VM
+    @param test_timeout: timeout time for the cmds
+    """
+    cmd = "service spice-vdagentd restart"
     try:
         guest_session.cmd(cmd, print_func=logging.info,
                                    timeout=test_timeout)
     except ShellCmdError:
-        guest_session.cmd("service spice-vdagentd start",
-                                   print_func=logging.info,
-                                   timeout=test_timeout)
+        raise error.TestFail("Couldn't restart spice vdagent process")
     except:
         raise error.TestFail("Guest Vdagent Daemon Check failed")
 
-    logging.debug("------------ End of guest checking for Spice Vdagent"
-                  " Daemon ------------")
-
-    # Wait for vdagent to come up
-    wait_timeout(30)
+    logging.debug("------------ End of Spice Vdagent"
+                     " Daemon  Restart ------------")
+    wait_timeout(3)
 
 
 def stop_vdagent(guest_session, test_timeout):
@@ -60,6 +75,7 @@ def stop_vdagent(guest_session, test_timeout):
 
     logging.debug("------------ End of guest checking for Spice Vdagent"
                   " Daemon ------------")
+    wait_timeout(3)
 
 
 def verify_vdagent(guest_session, test_timeout):
@@ -76,6 +92,7 @@ def verify_vdagent(guest_session, test_timeout):
     finally:
         logging.debug("----------- End of guest check to see if vdagent package"
                      " is available ------------")
+    wait_timeout(3)
 
 
 def verify_virtio(guest_session, test_timeout):
@@ -92,3 +109,4 @@ def verify_virtio(guest_session, test_timeout):
     finally:
         logging.debug("------------ End of guest check of the Virtio-Serial"
                      " Driver------------")
+    wait_timeout(3)
