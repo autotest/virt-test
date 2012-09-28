@@ -63,7 +63,8 @@ if __name__ == '__main__':
     parser.add_option("--qemu-bin", action="store", dest="qemu",
                       help="Choose a custom qemu path to be tested")
     parser.add_option("--tests", action="store", dest="tests",
-                      help="List of space separated tests to be executed")
+                      help=("List of space separated tests to be executed"
+                            "(use quotes around them for safety)"))
     parser.add_option("--list-tests", action="store_true", dest="list",
                       help="List tests available")
     options, args = parser.parse_args()
@@ -141,13 +142,17 @@ if __name__ == '__main__':
                             os.path.join(d, 'qemu-img'))
         parser.parse_string("qemu_io_binary = %s" % os.path.join(d, 'qemu-io'))
 
-    if options.tests:
+    if options.type and options.tests:
+        if options.config:
+            standalone_test.print_stdout("You can't use -c together "
+                                         "with -t or --tests")
+            sys.exit(0)
         tests = options.tests.split(" ")
         parser.parse_string("only %s" % ", ".join(tests))
-    elif options.config:
-        pass
-    else:
-        parser.parse_string("only migrate")
-        parser.parse_string("no migrate..with_speed_measurement, migrate..with_autotest")
+    elif options.type and not options.tests:
+        if options.type == 'kvm':
+            parser.parse_string("only migrate")
+        elif options.type == 'libvirt':
+            parser.parse_string("only virsh_domname")
 
     standalone_test.run_tests(parser, restore_image=options.restore)
