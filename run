@@ -62,6 +62,8 @@ if __name__ == '__main__':
                       help="Restore image from pristine image")
     parser.add_option("--qemu-bin", action="store", dest="qemu",
                       help="Choose a custom qemu path to be tested")
+    parser.add_option("--list-tests", action="store_true", dest="list",
+                      help="List tests available")
     options, args = parser.parse_args()
 
     if (not options.type) and (not options.config):
@@ -105,17 +107,30 @@ if __name__ == '__main__':
     test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
     sys.path.append(test_dir)
 
-    from virttest import cartesian_config, standalone_test
+    from virttest import cartesian_config, standalone_test, utils_misc
 
     standalone_test.configure_logging()
     standalone_test.configure_console_logging()
+
     parser = cartesian_config.Parser()
     if options.config is not None:
         cfg = os.path.abspath(options.config)
-    else:
+    if options.config is None or options.list:
         cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
     parser.parse_file(cfg)
+    if options.list:
+        try:
+            less_cmd = utils_misc.find_command('less')
+            pipe = os.popen('%s -FRSX' % less_cmd, 'w')
+        except ValueError:
+            pipe = sys.stdout
+        for index, params in enumerate(parser.get_dicts()):
+            shortname = params['shortname'].split(".")[6:]
+            shortname = ".".join(shortname)
+            pipe.write("%d %s\n" % (index+1, shortname))
+        sys.exit(0)
+
     if options.qemu:
         d = os.path.dirname(options.qemu)
         parser.parse_string("qemu_binary = %s" % options.qemu)
