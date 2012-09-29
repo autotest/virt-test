@@ -3355,19 +3355,20 @@ variants:
         kill_vm = yes
         variants:
             - ffsb:
-                MD5 = "cabfc1021c2ec6c6b168fefc84210891"
+                only Linux
+                md5value = "cabfc1021c2ec6c6b168fefc84210891"
                 images += " stg2"
                 image_name_stg2 = storage2
                 image_size_stg2 = 110G
                 force_create_image = yes
                 force_create_image_image1 = no
                 test_timeout = 3600
-                monitor_command = "mpstat -P ALL 1"
+                monitor_cmd = "mpstat -P ALL 1"
                 #test_command = "ffsb examples/profile_everything"
-                test_src = "http://cdnetworks-kr-1.dl.sourceforge.net/project/ffsb/ffsb/ffsb-6.0-rc2/ffsb-6.0-rc2.tar.bz2"
+                test_src = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/perf/ffsb-6.0-rc2.tar.bz2"
                 compile_cmd = "./configure && make"
                 prepare_cmd = " mount /dev/[sv]db /mnt"
-                result_path = "/tmp/guest_test_result"
+                result_path = "/tmp/guest_result"
                 ignore_pattern = "Linux|^(\n)"
                 head_pattern = "\d+:\d+:\d+\s+[AP]M\s+(\w+)\s+"
                 row_pattern = "CPU"
@@ -3375,96 +3376,96 @@ variants:
                     - file_prepare:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_file_prepare.patch"
-                        test_command = "ffsb examples/file_prepare.ffsb"
+                        test_cmd = "ffsb examples/file_prepare.ffsb"
                     - sequential_reads_256k_16:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_256k_16.patch"
-                        test_command = "ffsb examples/sequential_reads_256k_16.ffsb"
+                        test_cmd = "ffsb examples/sequential_reads_256k_16.ffsb"
                     - sequential_reads_256k_8:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_256k_8.patch"
-                        test_command = "ffsb examples/sequential_reads_256k_8.ffsb"
+                        test_cmd = "ffsb examples/sequential_reads_256k_8.ffsb"
                     - sequential_reads_256k_1:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_256k_1.patch"
-                        test_command = "ffsb examples/sequential_reads_256k_1.ffsb"
+                        test_cmd = "ffsb examples/sequential_reads_256k_1.ffsb"
                     - sequential_reads_8k_16:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_8k_16.patch"
-                        test_command = "ffsb examples/sequential_reads_8k_16.ffsb"
+                        test_cmd = "ffsb examples/sequential_reads_8k_16.ffsb"
                     - sequential_reads_8k_8:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_8k_8.patch"
-                        test_command = "ffsb examples/sequential_reads_8k_8.ffsb"
+                        test_cmd = "ffsb examples/sequential_reads_8k_8.ffsb"
                     - sequential_reads_8k_1:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_8k_1.patch"
-                        test_command = "ffsb examples/sequential_reads_8k_1.ffsb"
+                        test_cmd = "ffsb examples/sequential_reads_8k_1.ffsb"
                     - random_read_8k_16:
                         force_create_image = no
                         test_patch = "ffsb_random_reads_8k_16.patch"
-                        test_command = "ffsb examples/random_reads_8k_16.ffsb"
+                        test_cmd = "ffsb examples/random_reads_8k_16.ffsb"
                     - random_read_8k_8:
                         force_create_image = no
                         test_patch = "ffsb_random_reads_8k_8.patch"
-                        test_command = "ffsb examples/random_reads_8k_8.ffsb"
+                        test_cmd = "ffsb examples/random_reads_8k_8.ffsb"
                     - random_read_8k_1:
                         force_create_image = no
                         test_patch = "ffsb_random_reads_8k_1.patch"
-                        test_command = "ffsb examples/random_reads_8k_1.ffsb"
+                        test_cmd = "ffsb examples/random_reads_8k_1.ffsb"
                     - large_file_creates_256k_16:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_256k_16.patch"
-                        test_command = "ffsb examples/large_file_creates_256k_16.ffsb"
+                        test_cmd = "ffsb examples/large_file_creates_256k_16.ffsb"
                     - large_file_creates_256k_8:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_256k_8.patch"
-                        test_command = "ffsb examples/large_file_creates_256k_8.ffsb"
+                        test_cmd = "ffsb examples/large_file_creates_256k_8.ffsb"
                     - large_file_creates_256k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_256k_1.patch"
-                        test_command = "ffsb examples/large_file_creates_256k_1.ffsb"
+                        test_cmd = "ffsb examples/large_file_creates_256k_1.ffsb"
                     - large_file_creates_8k_16:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_8k_16.patch"
-                        test_command = "ffsb examples/large_file_creates_8k_16.ffsb"
+                        test_cmd = "ffsb examples/large_file_creates_8k_16.ffsb"
                     - large_file_creates_8k_8:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_8k_8.patch"
-                        test_command = "ffsb examples/large_file_creates_8k_8.ffsb"
+                        test_cmd = "ffsb examples/large_file_creates_8k_8.ffsb"
                     - large_file_creates_8k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_8k_1.patch"
-                        test_command = "ffsb examples/large_file_creates_8k_1.ffsb"
+                        test_cmd = "ffsb examples/large_file_creates_8k_1.ffsb"
                     - mail_server_8k_16:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_mail_server_8k_16.patch"
-                        test_command = "ffsb examples/mail_server_8k_16.ffsb"
+                        test_cmd = "ffsb examples/mail_server_8k_16.ffsb"
                     - mail_server_8k_8:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_mail_server_8k_8.patch"
-                        test_command = "ffsb examples/mail_server_8k_8.ffsb"
+                        test_cmd = "ffsb examples/mail_server_8k_8.ffsb"
                     - mail_server_8k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_mail_server_8k_1.patch"
-                        test_command = "ffsb examples/mail_server_8k_1.ffsb"
+                        test_cmd = "ffsb examples/mail_server_8k_1.ffsb"
                     - random_write_8k_16:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_random_write_8k_16.patch"
-                        test_command = "ffsb examples/random_write_8k_16.ffsb"
+                        test_cmd = "ffsb examples/random_write_8k_16.ffsb"
                     - random_write_8k_8:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_random_write_8k_8.patch"
-                        test_command = "ffsb examples/random_write_8k_8.ffsb"
+                        test_cmd = "ffsb examples/random_write_8k_8.ffsb"
                     - random_write_8k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_random_write_8k_1.patch"
-                        test_command = "ffsb examples/random_write_8k_1.ffsb"
+                        test_cmd = "ffsb examples/random_write_8k_1.ffsb"
 
             - iozone:
                 test_timeout = 1200
-                monitor_command = "mpstat -P ALL 1"
-                test_command = "./run_iozone.sh"
+                monitor_cmd = "mpstat -P ALL 1"
+                test_cmd = "./run_iozone.sh"
                 test_src = "http://www.iozone.org/src/current/iozone3_373.tar"
                 compile_cmd = " chmod +x run_iozone.sh; cd src/current; make linux-AMD64"
                 prepare_cmd = "i=`/bin/ls /dev/[vs]db` && dd if=$i bs=64k >/dev/null && echo 1 && echo y | mkfs -t ext4 $i > /dev/null && echo 2 ; partprobe && echo 3 ; umount /mnt ; mount $i /mnt && echo 3 > /proc/sys/vm/drop_caches && sleep 3"
