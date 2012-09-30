@@ -36,6 +36,7 @@ spice-xpi
 virt-viewer
 spice-vdagent
 usbredir
+SDL
 
 %post --interpreter /usr/bin/python
 import os
