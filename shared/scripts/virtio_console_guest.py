@@ -169,7 +169,7 @@ class VirtioGuest:
 
     def send(self, port, length=1, mode=True, is_static=False):
         """
-        Send a data of some length
+        Send a data of arbitrary length
 
         @param port: Port to write data
         @param length: Length of data
@@ -181,7 +181,7 @@ class VirtioGuest:
 
     def recv(self, port, length=1, buffer=1024, mode=True):
         """
-        Receive a data of some length.
+        Receive a data of arbitrary length.
 
         @param port: Port to write data
         @param length: Length of data
@@ -778,7 +778,7 @@ class VirtioGuestPosix(VirtioGuest):
 
     def recv(self, port, length=1, buffer=1024, mode=True):
         """
-        Receive a data of some length.
+        Receive a data of arbitrary length.
 
         @param port: Port to write data
         @param length: Length of data
@@ -1049,7 +1049,7 @@ class VirtioGuestNt(VirtioGuest):
 
     def send(self, port, length=1, mode=True, is_static=False):
         """
-        Send a data of some length
+        Send a data of arbitrary length
 
         @param port: Port to write data
         @param length: Length of data
@@ -1097,7 +1097,7 @@ class VirtioGuestNt(VirtioGuest):
 
     def recv(self, port, length=1, buflen=1024, mode=True):
         """
-        Receive a data of some length.
+        Receive a data of arbitrary length.
 
         @param port: Port to write data
         @param length: Length of data
