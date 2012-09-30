@@ -8,8 +8,8 @@ Requires: Two VMs - client and guest and remote-viewer session
 
 import logging, os
 from autotest.client.shared import error
-from virttest.aexpect import ShellCmdError
-from virttest import utils_misc, utils_spice, aexpect
+from virttest.aexpect import ShellCmdError, ShellStatusError
+from virttest import utils_misc, utils_spice
 
 def deploy_epel_repo(guest_session, params):
     """
@@ -22,26 +22,21 @@ def deploy_epel_repo(guest_session, params):
     #Check existance of epel repository
     cmd = ("if [ ! -f /etc/yum.repos.d/epel.repo ]; then echo"
           " \"NeedsInstall\"; fi")
-    output = guest_session.cmd(cmd, timeout=10)
+    output = guest_session.cmd(cmd, print_func=logging.info, timeout=10)
     #Install epel repository If needed
     if "NeedsInstall" in output:
-        arch = guest_session.cmd("arch")
-        if "i686" in arch:
-            arch = "i386"
-        else:
-            arch = arch[:-1]
         if "release 5" in guest_session.cmd("cat /etc/redhat-release"):
-            cmd = ("yum -y localinstall http://download.fedoraproject.org/"
-                   "pub/epel/5/%s/epel-release-5-4.noarch.rpm 2>&1" % arch)
+            cmd = ("rpm -ivh http://download.fedoraproject.org/pub/epel/5/"
+                  "`arch`/epel-release-5-4.noarch.rpm 2>&1")
             logging.info("Installing epel repository to %s",
                          params.get("guest_vm"))
-            guest_session.cmd(cmd, print_func=logging.info, timeout=90)
+            guest_session.cmd(cmd, print_func=logging.info, timeout=60)
         elif "release 6" in guest_session.cmd("cat /etc/redhat-release"):
-            cmd = ("yum -y localinstall http://download.fedoraproject.org/"
-                   "pub/epel/6/%s/epel-release-6-8.noarch.rpm 2>&1" % arch)
+            cmd = ("rpm -ivh http://download.fedoraproject.org/pub/epel/6/"
+                  "`arch`/epel-release-6-7.noarch.rpm 2>&1")
             logging.info("Installing epel repository to %s",
                         params.get("guest_vm"))
-            guest_session.cmd(cmd, print_func=logging.info, timeout=90)
+            guest_session.cmd(cmd, print_func=logging.info, timeout=60)
         else:
             raise Exception("Unsupported RHEL guest")
 
@@ -58,7 +53,7 @@ def install_wxpython(guest_session, params):
     try:
         guest_session.cmd(cmd)
     except ShellCmdError:
-        cmd = "yum -y install wxPython --nogpgcheck > /dev/null"
+        cmd = "yum -y install wxPython"
         logging.info("Installing wxPython package to %s",
                     params.get("guest_vm"))
         guest_session.cmd(cmd, timeout=60)
@@ -222,7 +217,6 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     for key in test_keys:
         client_vm.send_key(key)
         utils_spice.wait_timeout(0.3)
-    utils_spice.wait_timeout(30)
 
 def analyze_results(file_path, test_type):
     """
@@ -254,9 +248,9 @@ def analyze_results(file_path, test_type):
         correct_keycodes = ['97', '312', '65', '49', '65', '49']
 
     #Read caught keycodes on guest machine
-    fileobj = open(file_path, "r")
-    keycodes = fileobj.read()
-    fileobj.close()
+    file = open(file_path, "r")
+    keycodes = file.read()
+    file.close()
 
     #Compare caught keycodes with expected keycodes
     test_keycodes = keycodes.split(",")
@@ -272,7 +266,7 @@ def run_rv_input(test, params, env):
     Test for testing keyboard inputs through spice.
     Test depends on rv_connect test.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -285,25 +279,23 @@ def run_rv_input(test, params, env):
 
     guest_session = guest_vm.wait_for_login(
               timeout=int(params.get("login_timeout", 360)))
-    guest_root_session = guest_vm.wait_for_login(
-              timeout=int(params.get("login_timeout", 360)),
-              username="root", password="123456")
-    try:
-        guest_session.cmd("! test -e /etc/redhat-release")
-    except ShellCmdError:
-        deploy_epel_repo(guest_root_session, params)
+    if guest_session.cmd("test -e /etc/redhat-release"):
+        deploy_epel_repo(guest_session, params)
 
-    #utils_spice.launch_startx(guest_vm)
-
-    # Verify that gnome is now running on the guest
     try:
-        guest_session.cmd("ps aux | grep -v grep | grep gnome-session")
-    except aexpect.ShellCmdError:
-        raise error.TestWarn("gnome-session was probably not corretly started")
+        guest_session.cmd("startx &", timeout=15)
+    except (ShellCmdError, ShellStatusError):
+        logging.debug("Ignoring an Exception that Occurs from calling startx")
+
+    #Give some time to X
+    utils_spice.wait_timeout(15)
 
     guest_session.cmd("export DISPLAY=:0.0")
+    utils_spice.wait_timeout(3)
+    # Verify that gnome is now running on the guest
+    guest_session.cmd("ps aux | grep -v grep | grep gnome-session")
 
-    install_wxpython(guest_root_session, params)
+    install_wxpython(guest_session, params)
 
     deploy_test_form(test, guest_vm, params)
 
@@ -336,3 +328,4 @@ def run_rv_input(test, params, env):
                             "  Expected keycode = %s" % result)
 
     guest_session.close()
+
