@@ -63,15 +63,6 @@ def unlock_file(f):
     f.close()
 
 
-def is_vm(obj):
-    """
-    Tests whether a given object is a VM object.
-
-    @param obj: Python object.
-    """
-    return obj.__class__.__name__ == "VM"
-
-
 class NetError(Exception):
     pass
 
@@ -177,6 +168,10 @@ class DbNoLockError(NetError):
         return "Attempt made to access database with improper locking"
 
 
+class EnvSaveError(Exception):
+    pass
+
+
 class Env(UserDict.IterableUserDict):
     """
     A dict-like object containing global objects used by tests.
@@ -194,8 +189,8 @@ class Env(UserDict.IterableUserDict):
         """
         UserDict.IterableUserDict.__init__(self)
         empty = {"version": version}
+        self._filename = filename
         if filename:
-            self._filename = filename
             try:
                 if os.path.isfile(filename):
                     f = open(filename, "r")
@@ -230,6 +225,8 @@ class Env(UserDict.IterableUserDict):
                 use the filename from which the dict was loaded.
         """
         filename = filename or self._filename
+        if filename is None:
+            raise EnvSaveError("No filename specified for this env file")
         f = open(filename, "w")
         cPickle.dump(self.data, f)
         f.close()
@@ -239,7 +236,11 @@ class Env(UserDict.IterableUserDict):
         """
         Return a list of all VM objects in this Env object.
         """
-        return [o for o in self.values() if is_vm(o)]
+        vm_list = []
+        for key in self.data.keys():
+            if key.startswith("vm__"):
+                vm_list.append(self[key])
+        return vm_list
 
 
     def get_vm(self, name):
@@ -248,7 +249,7 @@ class Env(UserDict.IterableUserDict):
 
         @param name: VM name.
         """
-        return self.get("vm__%s" % name)
+        return self.data.get("vm__%s" % name)
 
 
     def register_vm(self, name, vm):
@@ -258,7 +259,7 @@ class Env(UserDict.IterableUserDict):
         @param name: VM name.
         @param vm: VM object.
         """
-        self["vm__%s" % name] = vm
+        self.data["vm__%s" % name] = vm
 
 
     def unregister_vm(self, name):
@@ -267,7 +268,7 @@ class Env(UserDict.IterableUserDict):
 
         @param name: VM name.
         """
-        del self["vm__%s" % name]
+        del self.data["vm__%s" % name]
 
 
     def register_syncserver(self, port, server):
@@ -277,7 +278,7 @@ class Env(UserDict.IterableUserDict):
         @param port: Sync Server port.
         @param server: Sync Server object.
         """
-        self["sync__%s" % port] = server
+        self.data["sync__%s" % port] = server
 
 
     def unregister_syncserver(self, port):
@@ -286,7 +287,7 @@ class Env(UserDict.IterableUserDict):
 
         @param port: Sync Server port.
         """
-        del self["sync__%s" % port]
+        del self.data["sync__%s" % port]
 
 
     def get_syncserver(self, port):
@@ -295,7 +296,7 @@ class Env(UserDict.IterableUserDict):
 
         @param port: Sync Server port.
         """
-        return self.get("sync__%s" % port)
+        return self.data.get("sync__%s" % port)
 
 
     def register_installer(self, installer):
@@ -306,14 +307,14 @@ class Env(UserDict.IterableUserDict):
         information about the installed KVM modules and qemu-kvm can be used by
         them.
         """
-        self['last_installer'] = installer
+        self.data['last_installer'] = installer
 
 
     def previous_installer(self):
         """
         Return the last installer that was registered
         """
-        return self.get('last_installer')
+        return self.data.get('last_installer')
 
 
 class Params(UserDict.IterableUserDict):
