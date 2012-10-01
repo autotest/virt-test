@@ -813,6 +813,152 @@ class FakeVm(object):
     def is_alive(self):
         logging.info("Fake VM %s (instance %s)", self.name, self.instance)
 
+class FakeSyncListenServer(object):
+    def __init__(self, address='', port=123, tmpdir=None):
+        self.instance = ( "%s-%s" % (
+            time.strftime("%Y%m%d-%H%M%S"),
+            utils_misc.generate_random_string(16)))
+        self.port = port
+
+    def close(self):
+        logging.info("Closing sync server (instance %s)", self.instance)
+
+
+class TestEnv(unittest.TestCase):
+    def test_save(self):
+        """
+        1) Verify that calling env.save() with no filename where env doesn't
+           specify a filename will throw an EnvSaveError.
+        2) Register a VM in environment, save env to a file, recover env from
+           that file, get the vm and verify that the instance attribute of the
+           2 objects is the same.
+        3) Register a SyncListenServer and don't save env. Restore env from
+           file and try to get the syncserver, verify it doesn't work.
+        4) Now save env to a file, restore env from file and verify that
+           the syncserver can be found there, and that the sync server
+           instance attribute is equal to the initial sync server instance.
+        """
+        fname="/dev/shm/EnvUnittest"
+        env = utils_misc.Env()
+
+        self.assertRaises(utils_misc.EnvSaveError, env.save, {})
+
+        params = utils_misc.Params({"main_vm": 'rhel7-migration'})
+        vm1 = FakeVm(params['main_vm'], params)
+        vm1.is_alive()
+        env.register_vm(params['main_vm'], vm1)
+        env.save(filename=fname)
+        env2 = utils_misc.Env(filename=fname)
+        vm2 = env2.get_vm(params['main_vm'])
+        vm2.is_alive()
+        assert vm1.instance == vm2.instance
+
+        sync1 = FakeSyncListenServer(port=222)
+        env.register_syncserver(222, sync1)
+        env3 = utils_misc.Env(filename=fname)
+        syncnone = env3.get_syncserver(222)
+        assert syncnone is None
+
+        env.save(filename=fname)
+        env4 = utils_misc.Env(filename=fname)
+        sync2 = env4.get_syncserver(222)
+        assert sync2.instance == sync1.instance
+        if os.path.isfile(fname):
+            os.unlink(fname)
+
+    def test_register_vm(self):
+        """
+        1) Create an env object.
+        2) Create a VM and register it from env.
+        3) Get the vm back from the env.
+        4) Verify that the 2 objects are the same.
+        """
+        env = utils_misc.Env()
+        params = utils_misc.Params({"main_vm": 'rhel7-migration'})
+        vm1 = FakeVm(params['main_vm'], params)
+        vm1.is_alive()
+        env.register_vm(params['main_vm'], vm1)
+        vm2 = env.get_vm(params['main_vm'])
+        vm2.is_alive()
+        assert vm1 == vm2
+
+    def test_unregister_vm(self):
+        """
+        1) Create an env object.
+        2) Register 2 vms to the env.
+        3) Verify both vms are in the env.
+        4) Remove one of those vms.
+        5) Verify that the removed vm is no longer in env.
+        """
+        env = utils_misc.Env()
+        params = utils_misc.Params({"main_vm": 'rhel7-migration'})
+        vm1 = FakeVm(params['main_vm'], params)
+        vm1.is_alive()
+        vm2 = FakeVm('vm2', params)
+        vm2.is_alive()
+        env.register_vm(params['main_vm'], vm1)
+        env.register_vm('vm2', vm2)
+        assert vm1 in env.get_all_vms()
+        assert vm2 in env.get_all_vms()
+        env.unregister_vm('vm2')
+        assert vm1 in env.get_all_vms()
+        assert vm2 not in env.get_all_vms()
+
+    def test_get_all_vms(self):
+        """
+        1) Create an env object.
+        2) Create 2 vms and register them in the env.
+        3) Create a SyncListenServer and register it in the env.
+        4) Verify that the 2 vms are in the output of get_all_vms.
+        5) Verify that the sync server is not in the output of get_all_vms.
+        """
+        env = utils_misc.Env()
+        params = utils_misc.Params({"main_vm": 'rhel7-migration'})
+        vm1 = FakeVm(params['main_vm'], params)
+        vm1.is_alive()
+        vm2 = FakeVm('vm2', params)
+        vm2.is_alive()
+        env.register_vm(params['main_vm'], vm1)
+        env.register_vm('vm2', vm2)
+        sync1 = FakeSyncListenServer(port=333)
+        env.register_syncserver(333, sync1)
+        assert vm1 in env.get_all_vms()
+        assert vm2 in env.get_all_vms()
+        assert sync1 not in env.get_all_vms()
+
+    def test_register_syncserver(self):
+        """
+        1) Create an env file.
+        2) Create a SyncListenServer object and register it in the env.
+        3) Get that SyncListenServer with get_syncserver.
+        4) Verify that both objects are the same.
+        """
+        env = utils_misc.Env()
+        sync1 = FakeSyncListenServer(port=333)
+        env.register_syncserver(333, sync1)
+        sync2 = env.get_syncserver(333)
+        assert sync1 == sync2
+
+    def test_unregister_syncserver(self):
+        """
+        1) Create an env file.
+        2) Create and register 2 SyncListenServers in the env.
+        4) Get one of the SyncListenServers in the env.
+        5) Unregister one of the SyncListenServers.
+        6) Verify that the SyncListenServer unregistered can't be retrieved
+           anymore with get_syncserver().
+        """
+        env = utils_misc.Env()
+        sync1 = FakeSyncListenServer(port=333)
+        env.register_syncserver(333, sync1)
+        sync2 = FakeSyncListenServer(port=444)
+        env.register_syncserver(444, sync2)
+        sync3 = env.get_syncserver(333)
+        assert sync1 == sync3
+        env.unregister_syncserver(444)
+        sync4 = env.get_syncserver(444)
+        assert sync4 is None
+
 
 if __name__ == '__main__':
     unittest.main()
