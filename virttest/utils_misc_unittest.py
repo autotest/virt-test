@@ -1,14 +1,12 @@
 #!/usr/bin/python
 
-import unittest, time, sys, os, shelve, random
+import unittest, time, sys, os, shelve, random, logging
 import common
 from autotest.client import utils
 from autotest.client.shared.test_utils import mock
 import utils_misc, cartesian_config
 
-class utils_misc_test(unittest.TestCase):
-
-
+class TestUtilsMisc(unittest.TestCase):
     def test_cpu_vendor_intel(self):
         flags = ['fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce',
                  'cx8', 'apic', 'sep', 'mtrr', 'pge', 'mca', 'cmov',
@@ -202,13 +200,14 @@ class TestNumaNode(unittest.TestCase):
     def tearDown(self):
         self.god.unstub_all()
 
-class test_PropCan(unittest.TestCase):
+
+class TestPropCan(unittest.TestCase):
 
     def test_empty_len(self):
         pc = utils_misc.PropCan()
         self.assertEqual(len(pc), 0)
 
-class test_VirtIface(unittest.TestCase):
+class TestVirtIface(unittest.TestCase):
 
     VirtIface = utils_misc.VirtIface
 
@@ -283,21 +282,21 @@ class test_VirtIface(unittest.TestCase):
         self.assertRaises(TypeError, self.VirtIface.complete_mac_address,
                         "01:02:03::05:06")
 
-class test_KVMIface(test_VirtIface):
+class TestKvmIface(TestVirtIface):
 
     def setUp(self):
         self.VirtIface = utils_misc.KVMIface
         # These warnings are annoying during testing
         utils_misc.VMNet.DISCARD_WARNINGS -1
 
-class test_LibvirtIface(test_VirtIface):
+class TestLibvirtIface(TestVirtIface):
 
     def setUp(self):
         self.VirtIface = utils_misc.LibvirtIface
         # These warnings are annoying during testing
         utils_misc.VMNet.DISCARD_WARNINGS -1
 
-class test_VMNetStyle(unittest.TestCase):
+class TestVmNetStyle(unittest.TestCase):
 
     def get_a_map(self, vm_type, driver_type):
         return utils_misc.VMNetStyle.get_style(vm_type, driver_type)
@@ -316,7 +315,7 @@ class test_VMNetStyle(unittest.TestCase):
         self.assert_(issubclass(map['container_class'], utils_misc.VirtIface))
 
 
-class test_VMNet(unittest.TestCase):
+class TestVmNet(unittest.TestCase):
 
     def setUp(self):
         utils_misc.VirtIface.LASTBYTE = -1 # Restart count at zero
@@ -351,7 +350,7 @@ class test_VMNet(unittest.TestCase):
         self.assertEqual(True, hasattr(vmnet[2], 'mac'))
         self.assertEqual(test_data[2]['mac'], vmnet[2]['mac'])
 
-class test_VMNet_Subclasses(unittest.TestCase):
+class TestVmNetSubclasses(unittest.TestCase):
 
     nettests_cartesian = ("""
     variants:
@@ -474,24 +473,13 @@ class test_VMNet_Subclasses(unittest.TestCase):
                 if nics and len(nics.split()) > 0:
                     self.db_item_count += 1
 
-    class FakeVm(object):
-        def __init__(self, vm_name, params):
-            self.name = vm_name
-            self.params = params
-            self.get_params = lambda :self.params
-            self.vm_type = self.params.get('vm_type')
-            self.driver_type = self.params.get('driver_type')
-            self.instance = ( "%s-%s" % (
-                time.strftime("%Y%m%d-%H%M%S"),
-                utils_misc.generate_random_string(16)) )
-
     def fakevm_generator(self):
         for params in self.CartesianResult:
             for vm_name in params.get('vms').split():
                 # Return iterator covering all types of vms
                 # in exactly the same order each time. For more info, see:
                 # http://docs.python.org/reference/simple_stmts.html#yield
-                yield self.FakeVm(vm_name, params)
+                yield FakeVm(vm_name, params)
 
     def zero_counter(self, increment = 100):
         # rough total, doesn't include the number of vms
@@ -521,7 +509,7 @@ class test_VMNet_Subclasses(unittest.TestCase):
                                                  self.db_filename)
             if len(fakevm1.virtnet) < 2:
                 continue
-            fakevm2 = self.FakeVm(fakevm1.name + "_2", fvm1p)
+            fakevm2 = FakeVm(fakevm1.name + "_2", fvm1p)
             fakevm2.virtnet = utils_misc.VirtNet(fvm1p, fakevm2.name,
                                                  fakevm2.instance,
                                                  self.db_filename)
@@ -531,7 +519,7 @@ class test_VMNet_Subclasses(unittest.TestCase):
                          "nics", fvm1p.get('nics', "") ).split()
             random.shuffle(nic_list)
             fvm3p['nics'] = " ".join(nic_list)
-            fakevm3 = self.FakeVm(fakevm1.name + "_3", fvm3p)
+            fakevm3 = FakeVm(fakevm1.name + "_3", fvm3p)
             fakevm3.virtnet = utils_misc.VirtNet(fvm3p, fakevm3.name,
                                                  fakevm3.instance,
                                                  self.db_filename)
@@ -806,6 +794,24 @@ class test_VMNet_Subclasses(unittest.TestCase):
             os.unlink(self.db_filename)
         except OSError:
             pass
+
+
+class FakeVm(object):
+    def __init__(self, vm_name, params):
+        self.name = vm_name
+        self.params = params
+        self.vm_type = self.params.get('vm_type')
+        self.driver_type = self.params.get('driver_type')
+        self.instance = ( "%s-%s" % (
+            time.strftime("%Y%m%d-%H%M%S"),
+            utils_misc.generate_random_string(16)) )
+
+    def get_params(self):
+        return self.params
+
+    def is_alive(self):
+        logging.info("Fake VM %s (instance %s)", self.name, self.instance)
+
 
 if __name__ == '__main__':
     unittest.main()
