@@ -293,7 +293,7 @@ class IfChangeAddrError(NetError):
         self.details = details
 
     def __str__(self):
-        return ("Can not change if %s from bridge %s to bridge %s: %s" %
+        return ("Can not change IP %s on if %s: %s" %
                 (self.ifname, self.ipaddr, self.details))
 
 
