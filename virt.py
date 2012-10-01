@@ -72,6 +72,18 @@ class virt(test.test):
         try:
             try:
                 try:
+                    subtest_dirs = []
+                    tests_dir = self.job.testdir
+
+                    other_subtests_dirs = params.get("other_tests_dirs", "")
+                    for d in other_subtests_dirs.split():
+                        #replace split char.
+                        d = os.path.join(*d.split("/"))
+                        subtestdir = os.path.join(tests_dir, d, "tests")
+                        if not os.path.isdir(subtestdir):
+                            raise error.TestError("Directory %s not"
+                                                  " exist." % (subtestdir))
+                        subtest_dirs.append(subtestdir)
                     # Verify if we have the correspondent source file for it
                     virt_dir = os.path.dirname(self.virtdir)
                     subtest_dirs.append(os.path.join(virt_dir, "tests"))
