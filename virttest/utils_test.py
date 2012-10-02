@@ -647,6 +647,7 @@ class MultihostMigration(object):
         @param mig_data: object with migration data.
         """
         for vm in mig_data.vms:
+            vm.monitor.cmd("cont")
             if not guest_active(vm):
                 raise error.TestFail("Guest not active after migration")
 
