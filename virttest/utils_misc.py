@@ -353,84 +353,197 @@ class Params(UserDict.IterableUserDict):
         return new_dict
 
 
-# subclassed dict wouldn't honor __slots__ on python 2.4 when __slots__ gets
-# overridden by a subclass. This class also changes behavior of dict
-# WRT to None value being the same as non-existant "key".
-class PropCan(object):
+# Work around for inconsistent builtin closure local reference problem
+# across different versions of python
+class Closure(object):
     """
-    Allow container-like access to fixed set of items (__slots__)
-
-    raise: KeyError if requested container-like index isn't in set (__slots__)
+    Callable instances for function with persistent internal state
     """
 
-    __slots__ = []
-
-    def __init__(self, properties={}):
+    def __init__(self, ref, state):
         """
-        Initialize, optionally with pre-defined key values.
-
-        param: properties: Mapping of fixed (from __slots__) keys to values
+        Initialize to call ref with state
         """
-        for propertea in self.__slots__:
-            value = properties.get(propertea, None)
-            self[propertea] = value
+        self.state = state
+        self.ref = ref
 
 
-    def __getattribute__(self, propertea):
+    def __call__(self, *args, **dargs):
+        """
+        Return call to ref on state with args and dargs
+        """
+        # This could be a dict-like access closure
+        ref = getattr(self.state, self.ref)
+        return ref(*args, **dargs)
+
+
+# Can't reliably combine use of properties and __slots__ (both set descriptors)
+class PropCanBase(dict):
+    """
+    Objects with optional accessor methods and dict-like access to fixed set of keys
+    """
+
+    def __new__(cls, *args, **dargs):
+        if not hasattr(cls, '__slots__'):
+            raise NotImplementedError("Class '%s' must define __slots__ "
+                                      "property" % str(cls))
+        newone = dict.__new__(cls, *args, **dargs)
+        # Let accessor methods know initialization is running
+        newone.super_set('INITIALIZED', False)
+        return newone
+
+
+    def __init__(self, *args, **dargs):
+        """
+        Initialize contents directly or by way of accessors
+
+        @param: *args: Initial values for __slots__ keys, same as dict.
+        @param: **dargs: Initial values for __slots__ keys, same as dict.
+        """
+        # Params are initialized here, not in super
+        super(PropCanBase, self).__init__()
+        # No need to re-invent dict argument processing
+        values = dict(*args, **dargs)
+        for key in self.__slots__:
+            value = values.get(key, "@!@!@!@!@!SENTENEL!@!@!@!@!@")
+            if value is not "@!@!@!@!@!SENTENEL!@!@!@!@!@":
+                # Call accessor methods if present
+                self[key] = value
+        # Let accessor methods know initialization is complete
+        self.super_set('INITIALIZED', True)
+
+
+    def __getitem__(self, key):
         try:
-            value = super(PropCan, self).__getattribute__(propertea)
-        except:
-            raise PropCanKeyError(propertea, self.__slots__)
-        if value is not None:
-            return value
-        else:
-            raise PropCanValueError(propertea, self.__slots__)
-
-
-    def __getitem__(self, propertea):
-        try:
-            return getattr(self, propertea)
+            accessor = super(PropCanBase,
+                             self).__getattribute__('get_%s' % key)
+            return accessor()
         except AttributeError:
-            raise PropCanKeyError(propertea, self.__slots__)
+            return super(PropCanBase, self).__getitem__(key)
 
 
-    def __setitem__(self, propertea, value):
+    def __setitem__(self, key, value):
         try:
-            setattr(self, propertea, value)
+            accessor = super(PropCanBase,
+                             self).__getattribute__('set_%s' % key)
+            return accessor(value)
         except AttributeError:
-            raise PropCanKeyError(propertea, self.__slots__)
+            self.__canhaz__(key, KeyError)
+            return super(PropCanBase, self).__setitem__(key, value)
 
 
-    def __delitem__(self, propertea):
+    def __delitem__(self, key):
         try:
-            delattr(self, propertea)
+            accessor = super(PropCanBase,
+                             self).__getattribute__('del_%s' % key)
+            return accessor()
         except AttributeError:
-            raise PropCanKeyError(propertea, self.__slots__)
+            return super(PropCanBase, self).__delitem__(key)
 
+
+    def __getattr__(self, key):
+        try:
+            # Attempt to call accessor methods first whenever possible
+            self.__canhaz__(key, KeyError)
+            return self.__getitem__(key)
+        except KeyError:
+            return super(PropCanBase, self).__getattribute__(key)
+
+
+    def __setattr__(self, key, value):
+        self.__canhaz__(key)
+        try:
+            return self.__setitem__(key, value)
+        except KeyError, detail:
+            raise AttributeError(str(detail))
+
+
+    def __delattr__(self, key):
+        self.__canhaz__(key)
+        try:
+             return self.__delitem__(key)
+        except KeyError, detail:
+            raise AttributeError(str(detail))
+
+
+    def __canhaz__(self, key, excpt=AttributeError):
+        slots = tuple(super(PropCanBase, self).__getattribute__('__slots__'))
+        keys = slots + ('get_%s' % key, 'set_%s' % key, 'del_%s' % key)
+        if key not in keys:
+            raise excpt("Key '%s' not found in super class attributes or in %s"
+                        % (str(key), str(keys)))
+
+
+    def dict_get(self, key):
+        """
+        Get a key unconditionally, w/o checking for accessor method or __slots__
+        """
+        return dict.__getitem__(self, key)
+
+
+    def dict_set(self, key, value):
+        """
+        Set a key unconditionally, w/o checking for accessor method or __slots__
+        """
+        dict.__setitem__(self, key, value)
+
+
+    def dict_del(self, key):
+        """
+        Del key unconditionally, w/o checking for accessor method or __slots__
+        """
+        return dict.__delitem__(self, key)
+
+
+    def super_get(self, key):
+        """
+        Get attribute unconditionally, w/o checking accessor method or __slots__
+        """
+        return object.__getattribute__(self, key)
+
+
+    def super_set(self, key, value):
+        """
+        Set attribute unconditionally, w/o checking accessor method or __slots__
+        """
+        object.__setattr__(self, key, value)
+
+
+    def super_del(self, key):
+        """
+        Del attribute unconditionally, w/o checking accessor method or __slots__
+        """
+        object.__delattr__(self, key)
+
+
+class PropCan(PropCanBase):
+    """
+    Special value handling on retrieval of None/False values
+    """
 
     def __len__(self):
         length = 0
-        for propertea in self.__slots__:
-            if self.__contains__(propertea):
+        for key in self.__slots__:
+            # special None/False value handling
+            if self.__contains__(key):
                 length += 1
         return length
 
 
-    def __contains__(self, propertea):
+    def __contains__(self, key):
         try:
-            value = getattr(self, propertea)
-        except PropCanKeyError:
+            value = self.dict_get(key)
+        except (KeyError, AttributeError):
             return False
-        if value:
-            return True
+        # Avoid inf. recursion if value == self
+        if issubclass(type(value), type(self)) or value:
+                return True
+        return False
 
 
     def __eq__(self, other):
-        for key in self.__class__.__slots__:
-            if self.has_key(key) and other.has_key(key):
-                if self[key] != other[key]:
-                    return False
-        return True
+        # special None/False value handling
+        return dict([(key, value) for key, value in self.items()]) == other
 
 
     def __ne__(self, other):
@@ -438,94 +551,48 @@ class PropCan(object):
 
 
     def keys(self):
-        keylist = []
-        for propertea in self.__slots__:
-            if self.__contains__(propertea):
-                keylist.append(propertea)
-        return keylist
+        # special None/False value handling
+        return [key for key in self.__slots__ if self.__contains__(key)]
 
 
-    def has_key(self, propertea):
-        return self.__contains__(propertea)
+    def values(self):
+        # special None/False value handling
+        return [self[key] for key in self.keys()]
 
 
-    def set_if_none(self, propertea, value):
+    def items(self):
+        return tuple( [(key, self[key]) for key in self.keys()] )
+
+
+    has_key = __contains__
+
+
+    def set_if_none(self, key, value):
         """
-        Set the value of propertea, only if it's not set or None
+        Set the value of key, only if it's not set or None
         """
-        if propertea not in self.keys():
-            self[propertea] = value
+        if not self.has_key(key):
+            self[key] = value
 
 
-    def get(self, propertea, default=None):
+    def set_if_value_not_none(self, key, value):
         """
-        Mimics get method on python dictionaries
+        Set the value of key, only if value is not None
         """
-        if self.has_key(propertea):
-            return self[propertea]
-        else:
-            return default
-
-
-    def update(self, **otherdict):
-        for propertea in self.__slots__:
-            if otherdict.has_key(propertea):
-                self[propertea] = otherdict[propertea]
-
-
-    def __repr__(self):
-        return self.__str__()
+        if value:
+            self[key] = value
 
 
     def __str__(self):
         """
         Guarantee return of string format dictionary representation
         """
-        d = {}
-        for propertea in self.__slots__:
-            value = getattr(self, propertea, None)
-            # Avoid producing string conversions with python-specific or
-            # ambiguous meaning e.g. str(None) == 'None' and
-            # str(<type>) == '<type "foo">' are all valid
-            # but demand interpretation on the receiving-side. Easier to
-            # just hard-code a common set of types known to convert to/from
-            # database strings easily.
-            if value is not None and (
-                        isinstance(value, str) or isinstance(value, int) or
-                        isinstance(value, float) or isinstance(value, long) or
-                        isinstance(value, unicode)):
-                d[propertea] = value
-            else:
-                continue
-        return str(d)
+        acceptable_types = (str, unicode, int, float, long)
+        return str( dict([(key, value) for key, value in self.items()
+                                if issubclass(type(value), acceptable_types)]) )
 
 
-# Legacy functions related to MAC/IP addresses should make noise
-def _open_mac_pool(lock_mode):
-    raise RuntimeError("Please update your code to use the VirtNet class")
-
-
-def _close_mac_pool(pool, lock_file):
-    raise RuntimeError("Please update your code to use the VirtNet class")
-
-
-def _generate_mac_address_prefix(mac_pool):
-    raise RuntimeError("Please update your code to use the VirtNet class")
-
-
-def generate_mac_address(vm_instance, nic_index):
-    raise RuntimeError("Please update your code to use "
-                       "VirtNet.generate_mac_address()")
-
-
-def free_mac_address(vm_instance, nic_index):
-    raise RuntimeError("Please update your code to use "
-                       "VirtNet.free_mac_address()")
-
-
-def set_mac_address(vm_instance, nic_index, mac):
-    raise RuntimeError("Please update your code to use "
-                       "VirtNet.set_mac_address()")
+    __repr__ = __str__
 
 
 class VirtIface(PropCan):
@@ -558,9 +625,7 @@ class VirtIface(PropCan):
         """
         try:
             return isinstance(nic_name, str) and len(nic_name) > 1
-        except TypeError: # object does not implement len()
-            return False
-        except PropCanKeyError: #unset name
+        except (TypeError, KeyError, AttributeError):
             return False
 
 
@@ -1056,7 +1121,7 @@ class DbNet(VMNet):
             db_key = self.db_key
         try:
             db_entry = self.db[db_key]
-        except AttributeError:
+        except AttributeError: # self.db doesn't exist:
             raise DbNoLockError
         # Always wear protection
         try:
@@ -1154,7 +1219,7 @@ class VirtNet(DbNet, ParamsNet):
     # names for pickling works. The possibility also remains open
     # for extensions via style-class updates.
     def __getstate__(self):
-        self.INITIALIZED = False # prevent database updates
+        self._INITIALIZED = False # prevent database updates
         state = {'container_items':VMNet.__getstate__(self)}
         for attrname in ['params', 'vm_name', 'db_key', 'db_filename',
                          'vm_type', 'driver_type', 'db_lockfile']:
