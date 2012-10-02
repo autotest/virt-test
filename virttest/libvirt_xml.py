@@ -1,16 +1,18 @@
 """
-    Intermediate module for working with XML-related virsh functions/methods.
+Intermediate module for working with XML-related virsh functions/methods.
 
-    All classes defined here should inherrit from LibvirtXMLBase and utilize
-    the XMLTreeFile interface to recover external source XML in case internal
-    errors are detected.  Errors originating within this module should raise
-    LibvirtXMLError or subclasses of this exception.  Pleae refer to the
-    xml_utils module documentation for more information on working with
-    XMLTreeFile instances.
+All classes defined here should inherrit from LibvirtXMLBase and utilize
+the XMLTreeFile interface to recover external source XML in case internal
+errors are detected.  Errors originating within this module should raise
+LibvirtXMLError or a subclass of this exception.  Pleae refer to the
+xml_utils module documentation for more information on working with
+XMLTreeFile instances.  Please see the virsh and utils_misc modules for
+information on working with Virsh and especially PropCanBase classes.
 """
 
+import uuid
 from autotest.client.shared import xml_utils
-from virttest import virsh
+import utils_misc, virsh
 
 
 class LibvirtXMLError(Exception):
@@ -27,7 +29,7 @@ class LibvirtXMLError(Exception):
         return str(self.details)
 
 
-class LibvirtXMLBase(xml_utils.XMLTreeFile):
+class LibvirtXMLBase(utils_misc.PropCanBase):
     """
     Base class for common attributes/methods applying to all sub-classes
     """
@@ -65,6 +67,29 @@ class LibvirtXMLBase(xml_utils.XMLTreeFile):
                 del self['xml'] # clean up old temporary files
             # value could be filename or a string full of XML
             self.dict_set('xml', xml_utils.XMLTreeFile(value))
+
+
+    def get_xml(self):
+        """
+        Accessor method for 'xml' property returns xmlTreeFile backup filename
+        """
+
+        if persistent:
+            super(LibvirtXMLBase, self).__init__(
+                    virsh=virsh.VirshPersistent(**virsh_dargs))
+        else:
+            super(LibvirtXMLBase, self).__init__(
+                    virsh=virsh.Virsh(**virsh_dargs))
+        self.dict_set('xml', None)
+
+
+    def set_xml(self, value):
+        """
+        Accessor method for 'xml' property to load using xml_utils.XMLTreeFile
+        """
+        if self.dict_get('xml') is not None:
+            del self['xml'] # clean up old temporary files
+        self.dict_set('xml', xml_utils.XMLTreeFile(value))
 
 
     def get_xml(self):
@@ -141,7 +166,7 @@ class VMXMLBase(LibvirtXMLBase):
             xmltreefile.write()
 
 
-    def del_name(self):
+    def del_vm_name(self):
         """
         Raise LibVirtXMLError because name is a required element
         """
@@ -222,13 +247,19 @@ class VMXML(VMXMLBase):
         self.set_xml(self.virsh.dumpxml(vm_name))
 
 
-    def __new__(cls):
-        if cls._XML is None:
-            cls._XML = virsh.capabilities()
-        # older python super doesn't work on class objects
-        return LibvirtXMLBase.__new__(cls)
+    def define(self):
+        """Define VM with virsh from this instance"""
+        self.virsh.define(self.xml)
 
-    def __init__(self):
-        """Returns copy of libvirtd capabilities XML"""
-        # protect against accidental modification
-        super(LibvirtXML, self).__init__(self._XML)
+
+    def new_from_dumpxml(self, vm_name):
+        """
+        Load XML info from virsh dumpxml vm_name command
+        """
+        # Calls set_XML accessor method
+        self.set_xml(self.virsh.dumpxml(vm_name))
+
+
+    #TODO: Add function to create from xml_utils.TemplateXML()
+    # def new_from_template(...)
+
