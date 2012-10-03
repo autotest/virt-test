@@ -22,7 +22,7 @@ def wait_timeout(timeout=10):
 
 def clear_cb(session, params):
     """
-    
+
     Use the clipboard script to copy an image into the clipboard.
     @param session: the ssh session where the clipboard is to be cleared
     @param params: Dictionary with the test parameters.
@@ -1084,7 +1084,7 @@ def run_rv_copyandpaste(test, params, env):
             else:
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copying from Client to Guest\n")
-                    restart_cppaste(client_session, guest_session, 
+                    restart_cppaste(client_session, guest_session,
                                     guest_session, params)
                 else:
                     logging.info("Copying from the Client to Guest\n")
