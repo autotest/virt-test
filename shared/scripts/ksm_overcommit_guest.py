@@ -219,7 +219,7 @@ def die():
     """
     Quit allocator.
     """
-    exit(0)
+    sys.exit(0)
 
 
 def main():
