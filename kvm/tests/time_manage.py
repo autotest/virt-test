@@ -101,7 +101,7 @@ def run_time_manage(test, params, env):
                 for i in range(int(params.get("max_vms"))):
                     hdelta = curr_time[i][0] - prev_time[i][0]
                     gdelta = curr_time[i][1] - prev_time[i][1]
-                    drift = format( 100.0 * (hdelta - gdelta) / hdelta, ".2f" )
+                    drift = "%.2f" % (100.0 * (hdelta - gdelta) / hdelta)
                     timedrift.append(drift)
                 totaldrift.append(timedrift)
                 prev_time = curr_time
