@@ -180,7 +180,7 @@ if __name__ == "__main__":
             os.close(fd)
 
         _unlock(lock_server_running)
-        exit(0)
+        sys.exit(0)
 
 
 # The following is the client part of the module.
