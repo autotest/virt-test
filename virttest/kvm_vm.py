@@ -830,7 +830,6 @@ class VM(virt_vm.BaseVM):
                 cmd = ""
             return cmd
 
-
         def add_machine_type(hlp, machine_type):
             if has_option(hlp, "machine") or has_option(hlp, "M"):
                 return " -M %s" % machine_type
@@ -916,6 +915,7 @@ class VM(virt_vm.BaseVM):
         self.qemu_binary = qemu_binary
         hlp = commands.getoutput("%s -help" % qemu_binary)
         support_cpu_model = commands.getoutput("%s -cpu ?list" % qemu_binary)
+        support_machine_type = commands.getoutput("%s -M ?" % qemu_binary)
 
         device_help = ""
         if has_option(hlp, "device"):
@@ -1165,7 +1165,15 @@ class VM(virt_vm.BaseVM):
 
         machine_type = params.get("machine_type")
         if machine_type:
-            qemu_cmd += add_machine_type(hlp, machine_type)
+            m_types = []
+            for m in support_machine_type.splitlines()[1:]:
+                m_types.append(m.split()[0])
+
+            if machine_type in m_types:
+                qemu_cmd += add_machine_type(hlp, machine_type)
+            else:
+                raise error.TestNAError("Unsupported machine type %s." %
+                                        (machine_type))
 
         for cdrom in params.objects("cdroms"):
             cd_format = params.get("cd_format", "")
