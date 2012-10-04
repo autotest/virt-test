@@ -960,52 +960,111 @@ variants:
                     - monotonic_time:
                         test_control_file = monotonic_time.control
 
-    - migrate_multi_host: install setup image_copy unattended_install.cdrom
-        type = migration_multi_host
-        vms = "vm1"
-        start_vm = no
-        migration_test_command = help
-        migration_bg_command = "cd /tmp; nohup tcpdump -q -i any -t ip host localhost"
-        migration_bg_check_command = pgrep tcpdump
-        migration_bg_kill_command = pkill tcpdump
-        kill_vm_on_error = yes
-        iterations = 2
-        used_mem = 1024
-        mig_timeout = 4800
-        disk_prepare_timeout = 360
-        comm_port = 13234
-        regain_ip_cmd = killall dhclient; sleep 10; dhclient;
+    - @multi_host:
         variants:
-            #Migration protocol.
-            -tcp:
+            - migrate_multi_host: install setup image_copy unattended_install.cdrom
+                type = migration_multi_host
+                vms = "vm1"
+                start_vm = no
+                migration_test_command = help
+                migration_bg_command = "cd /tmp; nohup tcpdump -q -i any -t ip host localhost"
+                migration_bg_check_command = pgrep tcpdump
+                migration_bg_kill_command = pkill tcpdump
+                kill_vm_on_error = yes
+                iterations = 2
+                used_mem = 1024
+                mig_timeout = 4800
+                disk_prepare_timeout = 360
+                comm_port = 13234
+                regain_ip_cmd = killall dhclient; sleep 10; dhclient;
                 variants:
-                    - @default:
-                        type = migration_multi_host
-                    - measure_migration_speed:
-                        only Linux
-                        mig_speed = 1G
-                        type = migration_multi_host_with_speed_measurement
-            -fd:
-                type = migration_multi_host_fd
+                    #Migration protocol.
+                    -tcp:
+                        variants:
+                            - @default:
+                                type = migration_multi_host
+                            - measure_migration_speed:
+                                only Linux
+                                mig_speed = 1G
+                                type = migration_multi_host_with_speed_measurement
+                    -fd:
+                        type = migration_multi_host_fd
 
-    - migration_multi_host_with_file_transfer: install setup image_copy unattended_install.cdrom
-        type = migration_multi_host_with_file_transfer
-        vms = "vm1"
-        start_vm = no
-        kill_vm_on_error = yes
-        used_mem = 1024
-        mig_timeout = 4800
-        disk_prepare_timeout = 360
-        comm_port = 13234
-        #path where file is stored on guest.
-        guest_path = "/tmp/file"
-        #size of generated file.
-        file_size = 500
-        transfer_timeout = 240
-        #Transfer speed in Mb
-        transfer_speed = 100
-        #Count of migration during file transfer.
-        migrate_count = 3
+            - migration_multi_host_with_file_transfer: install setup image_copy unattended_install.cdrom
+                type = migration_multi_host_with_file_transfer
+                vms = "vm1"
+                start_vm = no
+                kill_vm_on_error = yes
+                used_mem = 1024
+                mig_timeout = 4800
+                disk_prepare_timeout = 360
+                comm_port = 13234
+                #path where file is stored on guest.
+                guest_path = "/tmp/file"
+                #size of generated file.
+                file_size = 500
+                transfer_timeout = 240
+                #Transfer speed in Mb
+                transfer_speed = 100
+                #Count of migration during file transfer.
+                migrate_count = 3
+
+            - cpuflags_multi_host:
+                type = cpuflags
+                test_type = test_multi_host_migration
+                vms = "vm1"
+                start_vm = no
+                #Try to start guest with all flags which are supported by host.
+                all_host_supported_flags = "no"
+                cpu_model = "core2duo:sse3"
+                guest_spec_flags = "fxsr_opt hypervisor ds pdpe1gb osxsave svm"
+                host_spec_flags = "pbe tm ds_cpl monitor acpi dtes64 ht tm2 xtpr est pdcm smx"
+                mig_timeout = 4800
+                kill_vm_on_error = yes
+                disk_prepare_timeout = 360
+                comm_port = 13234
+                regain_ip_cmd = killall dhclient; sleep 10; dhclient;
+                auto_cpu_model = no
+
+        only default_machine_types
+        # For RHEL machine type.
+        #only rhel_machine_types
+
+        variants:
+            - @default_machine_types:
+                variants:
+                    -@pc:
+                        machine_type = "pc"
+                    -pc-0.14:
+                        machine_type = "pc-0.14"
+                    -pc-0.13:
+                        machine_type = "pc-0.13"
+                    -pc-0.12:
+                        machine_type = "pc-0.12"
+                    -pc-0.11:
+                        machine_type = "pc-0.11"
+                    -pc-0.10:
+                        machine_type = "pc-0.10"
+                    -isapc:
+                        machine_type = "isapc"
+
+            - @rhel_machine_types:
+                variants:
+                    -@pc:
+                        machine_type = "pc"
+                    - rhel5.4.0:
+                        machine_type = "rhel5.4.0"
+                    - rhel5.4.4:
+                        machine_type = "rhel5.4.4"
+                    - rhel5.5.0:
+                        machine_type = "rhel5.5.0"
+                    - rhel6.0.0:
+                        machine_type = "rhel6.0.0"
+                    - rhel6.2.0:
+                        machine_type = "rhel6.2.0"
+                    - rhel6.3.0:
+                        machine_type = "rhel6.3.0"
+
 
     - boot_savevm: install setup image_copy unattended_install.cdrom
         type = boot_savevm
@@ -2514,23 +2573,6 @@ variants:
                         test_type = "test_online_offline_guest_CPUs"
                     - qemu_test_migration_with_additional_flags:
                         test_type = "test_migration_with_additional_flags"
-
-    - cpuflags_multi_host:
-        type = cpuflags
-        test_type = test_multi_host_migration
-        vms = "vm1"
-        start_vm = no
-        #Try to start guest with all flags which are supported by host.
-        all_host_supported_flags = "no"
-        cpu_model = "core2duo:sse3"
-        guest_spec_flags = "fxsr_opt hypervisor ds pdpe1gb osxsave svm"
-        host_spec_flags = "pbe tm ds_cpl monitor acpi dtes64 ht tm2 xtpr est pdcm smx"
-        mig_timeout = 4800
-        kill_vm_on_error = yes
-        disk_prepare_timeout = 360
-        comm_port = 13234
-        regain_ip_cmd = killall dhclient; sleep 10; dhclient;
-        auto_cpu_model = no
 
     - cpu_hotplug_test: install setup image_copy unattended_install.cdrom
         type = cpu_hotplug
