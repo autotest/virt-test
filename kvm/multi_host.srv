@@ -81,6 +81,13 @@ def run(machines):
         host = _hosts[machine]
         ips.append(host.host.ip)
 
+    logging.info("")
+    for i, params in enumerate(test_dicts):
+        logging.info("Test    %d:  %s" % (i, params.get("shortname")))
+    logging.info("")
+
+    test_dicts = parser.get_dicts()
+
     for params in test_dicts:
 
         params['hosts'] = ips
