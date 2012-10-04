@@ -8,7 +8,7 @@ import time, os, logging, fcntl, re, shutil, urlparse, tempfile
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from xml.dom import minidom
-import utils_misc, virt_vm, storage, aexpect, remote, virsh
+import utils_misc, virt_vm, storage, aexpect, remote, virsh, libvirt_xml
 
 
 def libvirtd_restart():
@@ -521,6 +521,11 @@ class VM(virt_vm.BaseVM):
 
         help = utils.system_output("%s --help" % virt_install_binary)
 
+        # Find all machine type. There isn't filtred any machine type even if
+        # domain doesn't support this machine type. Filtering could be added.
+        me = libvirt_xml.LibvirtXML().getroot().findall("./guest/arch/machine")
+        support_machine_type = map(lambda m: m.text, me)
+
         # Start constructing the qemu command
         virt_install_cmd = ""
         # Set the X11 display parameter if requested
@@ -542,7 +547,11 @@ class VM(virt_vm.BaseVM):
 
         machine_type = params.get("machine_type")
         if machine_type:
-            virt_install_cmd += add_machine_type(help, machine_type)
+            if machine_type in support_machine_type:
+                virt_install_cmd += add_machine_type(help, machine_type)
+            else:
+                raise error.TestNAError("Not supported machine type %s." %
+                                        (machine_type))
 
         mem = params.get("mem")
         if mem:
