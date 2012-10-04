@@ -21,7 +21,8 @@ variants:
         only no_pci_assignable
         only no_9p_export
         only smallpages
-        only Fedora.15.64
+        only pc
+        only Fedora.17.64
         only migrate_multi_host
 
     # Runs qemu, f16 64 bit guest OS, install, boot, shutdown
@@ -37,7 +38,8 @@ variants:
         only no_pci_assignable
         only no_9p_export
         only smallpages
-        only Fedora.15.64
+        only pc
+        only Fedora.17.64
         only cpuflags_multi_host
 
 only qemu_migrate_multi_host
