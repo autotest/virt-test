@@ -8,10 +8,8 @@
     xml_utils module documentation for more information on working with
     XMLTreeFile instances.
 """
-
-import logging, os.path
-from autotest.client.shared import error, xml_utils
-from virttest import libvirt_vm, virsh
+from autotest.client.shared import xml_utils
+from virttest import virsh
 
 
 class LibvirtXMLError(Exception):
