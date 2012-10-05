@@ -96,8 +96,9 @@ class Monitor:
 
         try:
             self._socket.connect(filename)
-        except socket.error:
-            raise MonitorConnectError("Could not connect to monitor socket")
+        except socket.error, details:
+            raise MonitorConnectError("Could not connect to monitor socket: %s"
+                                      % details)
 
 
     def __del__(self):
