@@ -318,17 +318,14 @@ def run_tests(parser, restore_image=False):
                      "wrong indentation)")
         sys.exit(-1)
 
-    n_tests = last_index + 2
-    print_header("TESTS: %s" % n_tests)
-
-    print_stdout("setup:", end=False)
+    print_stdout(bcolors.HEADER + "SETUP:" + bcolors.ENDC, end=False)
     t_begin = time.time()
     params = parser.get_dicts().next()
     test_name = params.get("vm_type")
     test_dir = os.path.dirname(sys.modules[__name__].__file__)
     test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
                                             test_name))
-    base_dir = "/tmp/%s_autotest_root" % test_name
+    base_dir = "/var/tmp/virt_test"
     default_userspace_paths = None
     check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
@@ -339,6 +336,9 @@ def run_tests(parser, restore_image=False):
     t_end = time.time()
     t_elapsed = t_end - t_begin
     print_pass(t_elapsed)
+
+    n_tests = last_index + 1
+    print_header("TESTS: %s" % n_tests)
 
     status_dct = {}
     failed = False
