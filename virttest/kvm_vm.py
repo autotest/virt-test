@@ -219,9 +219,9 @@ class VM(virt_vm.BaseVM):
                     return fmt % (option, "on")
                 elif value in ['no', 'off', False]:
                     return fmt % (option, "off")
-            elif value and isinstance(value, bool):
-                return fmt % (option, "on")
-            elif value and isinstance(value, str):
+                logging.warn("Got a unknown value '%s' for bool option '%s', "
+                             "ignore it.", value, option)
+            elif value is not None:
                 # "EMPTY_STRING" and "NULL_STRING" is used for testing illegal
                 # foramt of option.
                 # "EMPTY_STRING": set option as a empty string "".
@@ -479,7 +479,7 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("port", port)
                 dev += _add_option("serial", serial)
                 dev += _add_option("bootindex", bootindex)
-                dev += _add_option("removable", removable)
+                dev += _add_option("removable", removable, bool)
                 dev += _add_option("min_io_size", min_io_size)
                 dev += _add_option("opt_io_size", opt_io_size)
                 dev += _add_option("physical_block_size", physical_block_size)
@@ -497,7 +497,7 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("opt_io_size", opt_io_size)
                 dev += _add_option("bootindex", bootindex)
                 dev += _add_option("serial", serial)
-                dev += _add_option("removable", removable)
+                dev += _add_option("removable", removable, bool)
                 if bus:
                     name += "-b%s" % bus
                     dev += _add_option("bus", "virtio_scsi_pci%d.0" % bus)
