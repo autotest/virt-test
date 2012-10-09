@@ -1,4 +1,4 @@
-import logging
+import logging, time
 from autotest.client.shared import error
 from virttest import utils_test, virt_vm, aexpect
 
@@ -80,6 +80,7 @@ def run_nic_hotplug(test, params, env):
             raise error.TestFail("Could not get or verify ip address of nic")
         logging.info("Got the ip address of new nic: %s", ip)
 
+        time.sleep(3)
         logging.info("Ping test the new nic ...")
         s, o = utils_test.ping(ip, 100)
         if s != 0:
