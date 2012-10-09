@@ -1735,7 +1735,7 @@ class VM(virt_vm.BaseVM):
                     if nic.nettype == 'bridge' or nic.nettype == 'network':
                         nic.tapfd = str(utils_misc.open_tap("/dev/net/tun",
                                                             nic.ifname,
-                                                            vnet_hdr=False))
+                                                            vnet_hdr=True))
                         logging.debug("Adding VM %s NIC ifname %s"
                                       " to bridge %s" % (self.name,
                                             nic.ifname, nic.netdst))
