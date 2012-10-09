@@ -1,0 +1,80 @@
+import re
+from autotest.client.shared import  error
+from virttest import  libvirt_vm, virsh
+
+
+def run_virsh_managedsave(test, params, env):
+    """
+    Test command: virsh managedsave.
+
+    This command can save and destroy a
+    running domain, so it can be restarted
+    from the same state at a later time.
+    """
+
+    vm_name = params.get("main_vm", "vm1")
+    vm = env.get_vm(params["main_vm"])
+
+    #define function
+    def vm_recover_check(guest_name):
+        """
+        Check if the vm can be recovered correctly.
+
+        @param: guest_name : Checked vm's name.
+        """
+        ret = virsh.dom_list()
+        #This time vm should not be in the list
+        if re.search(guest_name, ret.stdout):
+            raise error.TestFail("virsh list output invalid")
+        virsh.start(guest_name)
+        if params.get("paused_after_start_vm") == "yes":
+            virsh.resume(guest_name)
+        #This time vm should be in the list
+        ret = virsh.dom_list()
+        if  not re.search(guest_name, ret.stdout):
+            raise error.TestFail("virsh list output invalid")
+
+    domid = virsh.domid(vm_name).strip()
+    domuuid = virsh.domuuid(vm_name).strip()
+
+    libvirtd = params.get("managedsave_libvirtd","on")
+
+    #run test case
+    vm_ref = params.get("managedsave_vm_ref")
+    if vm_ref == "id":
+        vm_ref = domid
+    elif vm_ref == "uuid":
+        vm_ref = domuuid
+    elif vm_ref == "hex_id":
+        vm_ref = hex(int(domid))
+    elif vm_ref == "managedsave_invalid_id" or\
+         vm_ref == "managedsave_invalid_uuid":
+        vm_ref = params.get(vm_ref)
+    elif vm_ref == "name" or vm_ref == "extra_parame":
+        vm_ref = "%s %s" % (vm_name, params.get("managedsave_extra_parame"))
+
+    #stop the libvirtd service
+    if libvirtd == "off":
+        libvirt_vm.libvirtd_stop()
+
+    #Ignore exception with "ignore_status=True"
+    ret = virsh.managedsave(vm_ref, ignore_status=True)
+    status = ret.exit_status
+
+    #recover libvirtd service start
+    if libvirtd == "off":
+        libvirt_vm.libvirtd_start()
+
+    #check status_error
+    status_error = params.get("status_error")
+    if status_error == "yes":
+        if status == 0:
+            if not virsh.has_command_help_match('managedsave', r'\s+--running\s+'):
+                # Older libvirt does not have --running parameter
+                raise error.TestNAError("Older libvirt does not handle arguments consistently")
+            else:
+                raise error.TestFail("Run successfully with wrong command!")
+    elif status_error == "no":
+        if status != 0:
+            raise error.TestFail("Run failed with right command")
+        vm_recover_check(vm_name)
