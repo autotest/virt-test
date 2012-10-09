@@ -386,6 +386,7 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
         ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
         get_status_flag = True
         ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
+        ncpu = re.findall("\d+", ncpu)[0]
 
 
     def count_interrupt(name):
