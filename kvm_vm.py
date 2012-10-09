@@ -1697,29 +1697,34 @@ class VM(virt_vm.BaseVM):
                     else:
                         raise virt_vm.VMBadPATypeError(pa_type)
                 else:
-                    self.netdev_id.append(virt_utils.generate_random_id())
-                    self.device_id.append(virt_utils.generate_random_id())
-                    if nic_params.get("nic_mode") == "tap" and\
-                       nic_params.get("use_nic_scritps") == "no":
-                        ifname = self.get_ifname(vlan)
-                        brname = nic_params.get("bridge")
-                        if brname == "private":
-                            brname = virt_test_setup.PrivateBridgeConfig().brname
-                        tapfd = virt_utils.open_tap("/dev/net/tun", ifname)
-                        virt_utils.add_to_bridge(ifname, brname)
-                        virt_utils.bring_up_ifname(ifname)
-                        self.tapfds.append(tapfd)
-                    mac = (nic_params.get("nic_mac") or
-                           mac_source and mac_source.get_mac_address(vlan))
-                    if mac:
-                        virt_utils.set_mac_address(self.instance, vlan, mac)
-                    else:
-                        mac = virt_utils.generate_mac_address(self.instance, vlan)
-
-                    if nic_params.get("ip"):
-                        self.address_cache[mac] = nic_params.get("ip")
-                        logging.debug("(address cache) Adding static cache entry: "
-                                      "%s ---> %s" % (mac, nic_params.get("ip")))
+                    # fill in key values, validate nettype
+                    # note: __make_qemu_command() calls vm.add_nic (i.e. on a copy)
+                    if nic_params.get('netdst') == 'private':
+                        nic.netdst = (test_setup.
+                                      PrivateBridgeConfig(nic_params).brname)
+                    nic = self.add_nic(**dict(nic)) # implied add_netdev
+                    if mac_source:
+                        # Will raise exception if source doesn't
+                        # have cooresponding nic
+                        logging.debug("Copying mac for nic %s from VM %s"
+                                        % (nic.nic_name, mac_source.name))
+                        nic.mac = mac_source.get_mac_address(nic.nic_name)
+                    if nic.nettype == 'bridge' or nic.nettype == 'network':
+                        nic.tapfd = str(utils_misc.open_tap("/dev/net/tun",
+                                                            nic.ifname,
+                                                            vnet_hdr=True))
+                        logging.debug("Adding VM %s NIC ifname %s"
+                                      " to bridge %s" % (self.name,
+                                            nic.ifname, nic.netdst))
+                        if nic.nettype == 'bridge':
+                            utils_misc.add_to_bridge(nic.ifname, nic.netdst)
+                        utils_misc.bring_up_ifname(nic.ifname)
+                    elif nic.nettype == 'user':
+                        logging.info("Assuming dependencies met for "
+                                     "user mode nic %s, and ready to go"
+                                     % nic.nic_name)
+                        pass # assume prep. manually performed
+                    self.virtnet.update_db()
                 vlan += 1
 
             # Find available VNC port, if needed
