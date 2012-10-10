@@ -1672,7 +1672,7 @@ def run_tests(parser, job):
             # Setting up profilers during test execution.
             profilers = dict.get("profilers", "").split()
             for profiler in profilers:
-                job.profilers.add(profiler)
+                job.profilers.add(profiler, **dict)
             # We need only one execution, profiled, hence we're passing
             # the profile_only parameter to job.run_test().
             profile_only = bool(profilers) or None
