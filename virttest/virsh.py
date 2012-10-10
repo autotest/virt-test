@@ -1144,3 +1144,14 @@ def has_help_command(cmd, options='', **dargs):
     @return: True/False
     """
     return bool(help_command(options, cache=True, **dargs).count(cmd))
+
+
+def schedinfo(domain, options="", **dargs):
+    """
+    Show/Set scheduler parameters.
+
+    @param domain: vm's name id or uuid.
+    @param options: additional options.
+    """
+    cmd = "schedinfo %s %s" % (domain, options)
+    return command(cmd, **dargs)
