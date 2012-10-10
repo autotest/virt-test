@@ -400,16 +400,16 @@ def domname(dom_id_or_uuid, **dargs):
     return command("domname --domain %s" % dom_id_or_uuid, **dargs)
 
 
-def qemu_monitor_command(domname, command, **dargs):
+def qemu_monitor_command(domname, cmd, **dargs):
     """
     This helps to execute the qemu monitor command through virsh command.
 
     @param: domname: Name of monitor domain
-    @param: command: monitor command to execute
+    @param: cmd: monitor command to execute
     @param: dargs: standardized virsh function API keywords
     """
 
-    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (domname, command)
+    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (domname, cmd)
     return command(cmd_qemu_monitor, **dargs)
 
 
