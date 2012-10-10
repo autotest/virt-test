@@ -95,12 +95,13 @@ def run_ping(test, params, env):
                 # There is no ping program for guest, so let's hardcode...
                 cmd = ['ping']
                 cmd.append(ext_host) # external host
+                # Windows doesn't support ping with packet
+                # larger than '65500'
+                pkt_sizes = [p for p in packet_sizes if p < 65500]
+
                 if params.get("os_type") == "windows":
                     cmd.append("-n 10")
                     cmd.append("-l %s")
-                    # Windows doesn't support ping with packet
-                    # larger than '65500'
-                    pkt_sizes = [p for p in packet_sizes if p < 65500]
                     # Add a packet size just equal '65500' for windows
                     pkt_sizes.append(65500)
                 else:
