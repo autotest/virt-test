@@ -23,6 +23,8 @@ variants:
         only smallpages
         only pc
         only Fedora.17.64
+        cpu_model = "core2duo"
+        cpu_model_flags = "+sse3"
         only migrate_multi_host
 
     # Runs qemu, f16 64 bit guest OS, install, boot, shutdown
