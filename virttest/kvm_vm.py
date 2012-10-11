@@ -1785,16 +1785,17 @@ class VM(virt_vm.BaseVM):
                     output_func=utils_misc.log_line,
                     output_params=(outfile,))
 
-            # start guest
-            if self.monitor.verify_status("paused"):
-                try:
-                    self.monitor.cmd("cont")
-                except kvm_monitor.QMPCmdError, e:
-                    if ((e.data['class'] == "MigrationExpected") and
-                        (migration_mode is not None)):
-                        logging.debug("Migration did not start yet...")
-                    else:
-                        raise e
+            if params.get("paused_after_start_vm") != "yes":
+                # start guest
+                if self.monitor.verify_status("paused"):
+                    try:
+                        self.monitor.cmd("cont")
+                    except kvm_monitor.QMPCmdError, e:
+                        if ((e.data['class'] == "MigrationExpected") and
+                            (migration_mode is not None)):
+                            logging.debug("Migration did not start yet...")
+                        else:
+                            raise e
 
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
