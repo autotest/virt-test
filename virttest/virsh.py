@@ -1155,3 +1155,24 @@ def schedinfo(domain, options="", **dargs):
     """
     cmd = "schedinfo %s %s" % (domain, options)
     return command(cmd, **dargs)
+
+
+def setmem(name, size, options="", **dargs):
+    """
+    Change the current memory allocation in the guest domain.
+
+    @param name: name of domain.
+    @param size: the memory size to set.
+    @param options: options of command virsh setmem, it can be
+                --config/--live/--current or mix them.
+    """
+
+    cmd = "setmem"
+    if name:
+        cmd += " --domain %s" % name
+    if size:
+        cmd += " %s" % size
+    if options:
+        cmd += " %s" % options
+    return command(cmd, **dargs)
+
