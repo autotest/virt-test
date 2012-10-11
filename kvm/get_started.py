@@ -4,7 +4,7 @@ Program to help setup kvm test environment
 
 @copyright: Red Hat 2010
 """
-import os, sys
+import os, sys, logging
 try:
     import autotest.common as common
 except ImportError:
@@ -20,6 +20,9 @@ check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
 online_docs_url = "https://github.com/autotest/autotest/wiki/KVMAutotest-GetStartedClient"
 
 if __name__ == "__main__":
-    utils_misc.virt_test_assistant(test_name, test_dir, base_dir,
-                                   default_userspace_paths, check_modules,
-                                   online_docs_url)
+    try:
+        utils_misc.virt_test_assistant(test_name, test_dir, base_dir,
+                                       default_userspace_paths, check_modules,
+                                       online_docs_url)
+    except Exception, details:
+        logging.error("Setup error: %s", details)
