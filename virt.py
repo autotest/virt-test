@@ -62,6 +62,8 @@ class virt(test.test):
 
                     other_subtests_dirs = params.get("other_tests_dirs", "")
                     for d in other_subtests_dirs.split():
+                        #replace split char.
+                        d = os.path.join(*d.split("/"))
                         subtestdir = os.path.join(tests_dir, d, "tests")
                         if not os.path.isdir(subtestdir):
                             raise error.TestError("Directory %s not"
