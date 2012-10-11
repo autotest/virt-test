@@ -1300,3 +1300,26 @@ class VM(virt_vm.BaseVM):
         To pin vcpu to cpu
         """
         virsh.vcpupin(self.name, vcpu, cpu, uri=self.connect_uri)
+
+
+    def dominfo(self):
+        """
+        Return a dict include vm's infomation.
+        """
+        output = virsh.dominfo(self.name, uri=self.connect_uri)
+        # Key: word before ':' | value: content after ':' (stripped)
+        dominfo_dict = {}
+        for line in output.splitlines():
+            key = line.split(':')[0].strip()
+            value = line.split(':')[-1].strip()
+            dominfo_dict[key] = value
+        return dominfo_dict
+
+
+    def get_used_mem(self):
+        """
+        Get vm's current memory(kilobytes).
+        """
+        dominfo_dict = self.dominfo()
+        memory = dominfo_dict['Used memory'].split(' ')[0] # strip off ' kb'
+        return int(memory)
