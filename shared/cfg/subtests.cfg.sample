@@ -455,6 +455,79 @@ variants:
                         addition_status_error = "yes"
                         libvirtd = "off"
 
+    - virsh_setmem:
+        type = virsh_setmem
+        kill_vm = yes
+        kill_vm_on_error = yes
+        setmem_options = ""
+        setmem_options_prefix = ""
+        setmem_options_suffix = ""
+        setmem_vm = "%s"
+        # The percentage allowed between
+        # inside and outside vm's memory.
+        setmem_delta_per = 15
+        variants:
+            - with_valid_vm:
+                #status_error here flags if error should be included
+                #in result when test with this option.
+                status_error = no
+                variants:
+                    - domid:
+                        #the type to help get vm
+                        setmem_vm_ref = "domid"
+                    - domname:
+                        setmem_vm_ref = "domname"
+                    - domuuid:
+                        setmem_vm_ref = "domuuid"
+            - with_invalid_vm:
+                status_error = yes
+                variants:
+                    - none:
+                        setmem_vm_ref = ""
+                    - hex_domid:
+                        setmem_vm_ref = "domid"
+                        setmem_vm = "%x"
+                    - invalid_domid:
+                        setmem_vm_ref = "9999"
+                    - invalid_domuuid:
+                        setmem_vm_ref = "99999999-9999-9999-9999-999999999999"
+        variants:
+            - with_valid_mem:
+                #whether this mem is suitable to this case
+                status_error = no
+                #the type to help get memory
+                setmem_mem_ref = "default_half"
+            - with_invalid_mem:
+                status_error = yes
+                variants:
+                    - none:
+                        setmem_mem_ref = ""
+                    - zero:
+                        setmem_mem_ref = "0"
+                    - memory1:
+                        setmem_mem_ref = "8388608"
+        variants:
+            - normal_test:
+            - with_vm_state:
+                only with_valid_mem.with_valid_vm.domname
+                variants:
+                    - paused:
+                        addition_status_error = no
+                        paused_after_start_vm = yes
+                    - shut_off:
+                        addition_status_error = yes
+                        start_vm = no
+            - with_libvirtd_stop:
+                only with_valid_mem.with_valid_vm.domname
+                #addition_status_error here flags if error should
+                #be included in result when test with this feature.
+                addition_status_error = yes
+                libvirt = "off"
+            - with_addtion_args:
+                only with_valid_mem.with_valid_vm.domname
+                addition_status_error = yes
+                setmem_options_suffix = "xyz"
+
     - module_probe:
         type = module_probe
         # You can specify your own module list, though it is not needed usually.
