@@ -1212,10 +1212,6 @@ variants:
         wait_paused_timeout = 120
         nfs_stat_chk_re = "running"
 
-    - linux_s3: install setup image_copy unattended_install.cdrom
-        only Linux
-        type = linux_s3
-
     - timedrift: install setup image_copy unattended_install.cdrom
         rtc_drift = "slew"
         variants:
