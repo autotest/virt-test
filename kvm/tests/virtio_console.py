@@ -1017,9 +1017,9 @@ def run_virtio_console(test, params, env):
                                     "name=%s"
                                     % (port_type, pci_id, port, port))
         if console == "no":
-            vm.virtio_ports.append(kvm_virtio_port.VirtioSerial(port, None))
+            vm.virtio_ports.append(kvm_virtio_port.VirtioSerial(port, port, None))
         else:
-            vm.virtio_ports.append(kvm_virtio_port.VirtioConsole(port, None))
+            vm.virtio_ports.append(kvm_virtio_port.VirtioConsole(port, port, None))
         if ret != "":
             logging.error(ret)
 
