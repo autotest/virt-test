@@ -26,7 +26,7 @@ class VAgentConnectError(VAgentError):
 
 class VAgentSocketError(VAgentError):
     def __init__(self, msg, e):
-        VAgentError.__init__(self, msg, e)
+        VAgentError.__init__(self)
         self.msg = msg
         self.e = e
 
@@ -52,7 +52,7 @@ class VAgentNotSupportedSerialError(VAgentNotSupportedError):
 
 class VAgentCmdError(VAgentError):
     def __init__(self, cmd, args, data):
-        VAgentError.__init__(self, cmd, args, data)
+        VAgentError.__init__(self)
         self.cmd = cmd
         self.args = args
         self.data = data
