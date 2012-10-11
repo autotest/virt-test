@@ -556,8 +556,10 @@ class MultihostMigration(object):
 
 
     def _check_vms_source(self, mig_data):
-        for vm in mig_data.vms:
-            vm.wait_for_login(timeout=self.login_timeout)
+        start_mig_tout = mig_data.params.get("start_migration_timeout", None)
+        if start_mig_tout is None:
+            for vm in mig_data.vms:
+                vm.wait_for_login(timeout=self.login_timeout)
 
         sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
                         mig_data.mig_id, self.sync_server)
@@ -707,7 +709,8 @@ class MultihostMigration(object):
                 check_work=None, params_append=None):
             logging.info("Starting migrate vms %s from host %s to %s" %
                          (vms_name, srchost, dsthost))
-            error = None
+            pause = self.params.get("paused_after_start_vm")
+            mig_error = None
             mig_data = MigrationData(self.params, srchost, dsthost,
                                      vms_name, params_append)
             try:
@@ -721,7 +724,18 @@ class MultihostMigration(object):
 
                     if mig_data.is_src():
                         if start_work:
-                            start_work(mig_data)
+                            if pause != "yes":
+                                start_work(mig_data)
+                            else:
+                                raise error.TestNAError("Can't start work if "
+                                                        "vm is paused.")
+
+                    # Starts VM and waits timeout before migration.
+                    if self.params.get("paused_after_start_vm") == "yes":
+                        for vm in mig_data.vms:
+                            vm.resume()
+                        wait = self.params.get("start_migration_timeout", 0)
+                        time.sleep(int(wait))
 
                     self.migrate_vms(mig_data)
 
@@ -734,13 +748,17 @@ class MultihostMigration(object):
                     if mig_data.is_dst():
                         self.check_vms(mig_data)
                         if check_work:
-                            check_work(mig_data)
-
+                            if pause != "yes":
+                                check_work(mig_data)
+                            else:
+                                raise error.TestNAError("Can't check work if "
+                                                        "vm was paused before "
+                                                        "migration.")
                 except:
-                    error = True
+                    mig_error = True
                     raise
             finally:
-                if not error:
+                if not mig_error:
                     self._hosts_barrier(self.hosts,
                                         mig_data.mig_id,
                                         'test_finihed',
