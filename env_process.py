@@ -288,7 +288,7 @@ def preprocess(test, params, env):
     for nic in params.get('nics', "").split():
         if params.get('netdst_%s' % nic) == 'private':
             setup_pb = True
-            params_pb = params.object_params(params)
+            params_pb = params.object_params(nic)
             break
     else:
         setup_pb = params.get("netdst") == 'private'
