@@ -613,6 +613,15 @@ class HumanMonitor(Monitor):
         return self.cmd("getfd %s" % name, fd=fd)
 
 
+    def system_wakeup(self):
+        """
+        Wakeup suspended guest.
+        """
+        cmd = "system_wakeup"
+        self.verify_supported_cmd(cmd)
+        return self.cmd(cmd)
+
+
 class QMPMonitor(Monitor):
     """
     Wraps QMP monitor commands.
@@ -1250,3 +1259,11 @@ class QMPMonitor(Monitor):
         """
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
+
+    def system_wakeup(self):
+        """
+        Wakeup suspended guest.
+        """
+        cmd = "system_wakeup"
+        self.verify_supported_cmd(cmd)
+        return self.cmd(cmd)
