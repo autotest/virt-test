@@ -3466,14 +3466,14 @@ variants:
                 test_timeout = 1200
                 monitor_cmd = "mpstat -P ALL 1"
                 test_cmd = "./run_iozone.sh"
-                test_src = "http://www.iozone.org/src/current/iozone3_373.tar"
+                test_src = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/perf/tools/iozone3_373.tar"
                 compile_cmd = " chmod +x run_iozone.sh; cd src/current; make linux-AMD64"
                 prepare_cmd = "i=`/bin/ls /dev/[vs]db` && dd if=$i bs=64k >/dev/null && echo 1 && echo y | mkfs -t ext4 $i > /dev/null && echo 2 ; partprobe && echo 3 ; umount /mnt ; mount $i /mnt && echo 3 > /proc/sys/vm/drop_caches && sleep 3"
-                result_path = "/tmp/guest_test_result"
+                result_path = "/tmp/guest_result"
                 ignore_pattern = "Linux|^(\n)"
                 head_pattern = "\d+:\d+:\d+\s+[AP]M\s+(\w+)\s+"
                 row_pattern = "CPU"
-                MD5 = "6ce0277d3d1769f38040b84853a3472c"
+                md5value = "6ce0277d3d1769f38040b84853a3472c"
                 images += " stg2"
                 image_name_stg2 = storage2
                 image_size_stg2 = 10G
