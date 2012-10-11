@@ -4537,12 +4537,21 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     url = os.path.join("http://lmr.fedorapeople.org/jeos/", guest_tarball)
     tarball_sha1 = "321fc6bacb507a0d30ee6ca7c474800d533cc1a7"
     destination = os.path.join(base_dir, 'images')
-    had_to_download = download_file(url, destination, tarball_sha1)
-    restore_image = (restore_image or had_to_download)
-    tarball_path = os.path.join(destination, guest_tarball)
-    if os.path.isfile(tarball_path) and restore_image:
-        os.chdir(destination)
-        utils.run("7za -y e %s" % tarball_path)
+
+    if (interactive and not
+        os.path.isfile(os.path.join(destination, guest_tarball))):
+        answer = utils.ask("Minimal basic guest image (JeOS) not present. "
+                           "Do you want to download it (~ 120MB)?")
+    else:
+        answer = "y"
+
+    if answer == "y":
+        had_to_download = download_file(url, destination, tarball_sha1)
+        restore_image = (restore_image or had_to_download)
+        tarball_path = os.path.join(destination, guest_tarball)
+        if os.path.isfile(tarball_path) and restore_image:
+            os.chdir(destination)
+            utils.run("7za -y e %s" % tarball_path)
 
     if default_userspace_paths:
         logging.info("")
