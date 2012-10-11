@@ -13,6 +13,7 @@ import select
 import socket
 import threading
 import time
+from subprocess import Popen
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import kvm_virtio_port, env_process
@@ -1306,43 +1307,97 @@ def run_virtio_console(test, params, env):
         cleanup(vm, guest_worker)
 
     @error.context_aware
-    def test_shutdown():
+    def test_stressed_restart():
         """
         Try to gently shutdown the machine while sending data through virtio
         port.
         @note: VM should shutdown safely.
         @param cfg: virtio_console_params - which type of virtio port to test
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
+        @param cfg: virtio_console_method - reboot method (shell, system_reset)
         """
         if params.get('virtio_console_params') == 'serialport':
             vm, guest_worker = get_vm_with_worker(no_serialports=1)
+            _ports, ports = get_virtio_ports(vm)
         else:
             vm, guest_worker = get_vm_with_worker(no_consoles=1)
-        ports, _ports = get_virtio_ports(vm)
+            ports, _ports = get_virtio_ports(vm)
         ports.extend(_ports)
+
+        session = vm.wait_for_login()
         for port in ports:
             port.open()
         # If more than one, send data on the other ports
+        process = []
         for port in ports[1:]:
             guest_worker.cmd("virt.close('%s')" % (port.name), 2)
             guest_worker.cmd("virt.open('%s')" % (port.name), 2)
             try:
-                os.system("dd if=/dev/random of='%s' bs=4096 &>/dev/null &"
-                          % port.path)
+                process.append(Popen("dd if=/dev/random of='%s' bs=4096 "
+                                     "&>/dev/null &" % port.path))
             except Exception:
                 pass
-        # Just start sending, it won't finish anyway...
+        # Start sending data, it won't finish anyway...
         guest_worker._cmd("virt.send('%s', 1024**3, True, is_static=True)"
                           % ports[0].name, 1)
-
         # Let the computer transfer some bytes :-)
         time.sleep(2)
 
         # Power off the computer
-        vm.destroy(gracefully=True)
-        # close the virtio ports on the host side
+        try:
+            vm.reboot(session=session,
+                      method=params.get('virtio_console_method', 'shell'),
+                      timeout=360)
+        except Exception, details:
+            for proces in process:
+                proces.terminate()
+            for port in vm.virtio_ports:
+                port.close()
+            raise error.TestFail("Fail to reboot VM:\n%s" % details)
+
+        # close the virtio ports and process
+        for proces in process:
+                proces.terminate()
         for port in vm.virtio_ports:
             port.close()
+        error.context("Executing basic loopback after reboot.", logging.info)
+        test_basic_loopback()
+
+    @error.context_aware
+    def test_unplugged_restart():
+        """
+        Try to unplug all virtio ports and gently restart machine
+        @note: VM should shutdown safely.
+        @param cfg: virtio_console_params - which type of virtio port to test
+        @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
+        @param cfg: virtio_console_method - reboot method (shell, system_reset)
+        """
+        if params.get('virtio_console_params') == 'serialport':
+            vm = get_vm_with_ports(no_serialports=1)
+        else:
+            vm = get_vm_with_ports(no_consoles=1)
+        ports, _ports = get_virtio_ports(vm)
+        ports.extend(_ports)
+
+        # Remove all ports:
+        while vm.virtio_ports:
+            port = vm.virtio_ports.pop()
+            ret = vm.monitor.cmd("device_del %s" % port.qemu_id)
+            if ret != "":
+                raise error.TestFail("Can't unplug port %s: %s" % port, ret)
+        session = vm.wait_for_login()
+
+        # Power off the computer
+        try:
+            vm.reboot(session=session,
+                      method=params.get('virtio_console_method', 'shell'),
+                      timeout=360)
+        except Exception, details:
+            raise error.TestFail("Fail to reboot VM:\n%s" % details)
+
+        # TODO: Hotplug ports and verify that they are usable
+        # VM is missing ports, which are in params.
+        vm.destroy(gracefully=True)
 
     @error.context_aware
     def test_failed_boot():
