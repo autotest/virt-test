@@ -32,11 +32,12 @@ class _VirtioPort(object):
     """
     Define structure to keep information about used port.
     """
-    def __init__(self, name, hostfile):
+    def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
         @param hostfile: Path to port on host side.
         """
+        self.qemu_id = qemu_id
         self.name = name
         self.hostfile = hostfile
         self.is_console = None  # "yes", "no"
@@ -134,23 +135,23 @@ class _VirtioPort(object):
 
 class VirtioSerial(_VirtioPort):
     """ Class for handling virtio-serialport """
-    def __init__(self, name, hostfile):
+    def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
         @param hostfile: Path to port on host side.
         """
-        super(VirtioSerial, self).__init__(name, hostfile)
+        super(VirtioSerial, self).__init__(qemu_id, name, hostfile)
         self.is_console = "no"
 
 
 class VirtioConsole(_VirtioPort):
     """ Class for handling virtio-console """
-    def __init__(self, name, hostfile):
+    def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
         @param hostfile: Path to port on host side.
         """
-        super(VirtioConsole, self).__init__(name, hostfile)
+        super(VirtioConsole, self).__init__(qemu_id, name, hostfile)
         self.is_console = "yes"
 
 
