@@ -34,8 +34,11 @@ def run_migration_multi_host_fd(test, params, env):
                        fd_src=mig_data.params['migration_fd'])
 
         def _check_vms_source(self, mig_data):
-            for vm in mig_data.vms:
-                vm.wait_for_login(timeout=self.login_timeout)
+            start_mig_tout = mig_data.params.get("start_migration_timeout",
+                                                 None)
+            if start_mig_tout is None:
+                for vm in mig_data.vms:
+                    vm.wait_for_login(timeout=self.login_timeout)
             self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
                                 'prepare_VMS', 60)
 
