@@ -4484,6 +4484,9 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
             wiki page.
     @param restore_image: Whether to restore the image from the pristine.
     @param interactive: Whether to ask for confirmation.
+
+    @raise error.CmdError: If JeOS image failed to uncompress
+    @raise ValueError: If 7za was not found
     """
     if interactive:
         logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
@@ -4559,6 +4562,13 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     step += 1
     logging.info("%s - Verifying (and possibly downloading) guest image", step)
 
+    # If this is not present, we better tell the user straight away
+    try:
+        os_dep.command("7za")
+    except ValueError:
+        raise ValueError("Command 7za not installed. Please install p7zip "
+                         "(Red Hat based) or the equivalent for your host")
+
     guest_tarball = "jeos-17-64.qcow2.7z"
     url = os.path.join("http://lmr.fedorapeople.org/jeos/", guest_tarball)
     tarball_sha1 = "321fc6bacb507a0d30ee6ca7c474800d533cc1a7"
@@ -4571,6 +4581,8 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
         utils.run("7za -y e %s" % tarball_path)
 
     if default_userspace_paths:
+        logging.info("")
+        step += 1
         logging.info("%d - Checking if the appropriate userspace programs are "
                      "installed", step)
         for path in default_userspace_paths:
