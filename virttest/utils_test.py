@@ -1643,3 +1643,268 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
                                 len(result_dict[column_list[i]][j]))
 
     return average_list
+
+
+class GuestSuspend(object):
+    """
+    Suspend guest, supports both Linux and Windows.
+
+    """
+    __open_session_list = []
+
+
+    @classmethod
+    def __get_session(cls, params, vm):
+        vm.verify_alive()
+        timeout = int(params.get("login_timeout", 360))
+        session = vm.wait_for_login(timeout=timeout)
+        return session
+
+
+    @classmethod
+    def __session_cmd_close(cls, session, cmd):
+        try:
+            return session.cmd_status_output(cmd)
+        finally:
+            try:
+                session.close()
+            except Exception:
+                pass
+
+    @classmethod
+    def __cleanup_open_session(cls):
+        try:
+            for s in cls.__open_session_list:
+                if s:
+                    s.close()
+        except Exception:
+            pass
+
+
+    @classmethod
+    @error.context_aware
+    def setup_bg_program(cls, params, vm, suspend_bg_program_setup_cmd):
+        """
+        Start up a program as a flag in guest.
+        """
+        error.context("Run a background program as a flag", logging.info)
+        session = cls.__get_session(params, vm)
+        cls.__open_session_list.append(session)
+
+        logging.debug("Waiting all services in guest are fully started.")
+        time.sleep(float(params.get("services_up_timeout", 30)))
+
+        session.sendline(suspend_bg_program_setup_cmd)
+
+
+    @classmethod
+    @error.context_aware
+    def check_bg_program(cls, params, vm, suspend_bg_program_chk_cmd):
+        """
+        Make sure the background program is running as expected
+        """
+        error.context("Verify background program is running", logging.info)
+        session = cls.__get_session(params, vm)
+        s, _ = cls.__session_cmd_close(session, suspend_bg_program_chk_cmd)
+        if s:
+            raise error.TestFail("Background program is dead. Suspend failed.")
+
+
+    @classmethod
+    @error.context_aware
+    def kill_bg_program(cls, params, vm, suspend_bg_program_kill_cmd):
+        error.context("Kill background program after resume")
+        try:
+            session = cls.__get_session(params, vm)
+            cls.__session_cmd_close(session, suspend_bg_program_kill_cmd)
+        except Exception, e:
+            logging.warn("Could not stop background program: '%s'", e)
+            pass
+
+
+    @classmethod
+    @error.context_aware
+    def verfiy_guest_support_suspend(cls, params, vm, suspend_support_chk_cmd):
+        error.context("Clear guest's log and check if guest supports suspend",
+                      logging.info)
+        session = cls.__get_session(params, vm)
+        s, _ = cls.__session_cmd_close(session, suspend_support_chk_cmd)
+        if s:
+            raise error.TestError("Guest doesn't support suspend.")
+
+
+
+    @classmethod
+    @error.context_aware
+    def start_suspend(cls, params, vm, suspend_start_cmd):
+        error.context("Start suspend", logging.info)
+        session = cls.__get_session(params, vm)
+        cls.__open_session_list.append(session)
+
+        # Suspend to disk
+        session.sendline(suspend_start_cmd)
+
+
+    @classmethod
+    @error.context_aware
+    def verify_guest_down(cls, params, vm):
+        # Make sure the VM goes down
+        error.context("Wait for guest goes down after suspend")
+        suspend_timeout = 240 + int(params.get("smp")) * 60
+        if not utils_misc.wait_for(vm.is_dead, suspend_timeout, 2, 2):
+            raise error.TestFail("VM refuses to go down. Suspend failed.")
+
+
+    @classmethod
+    @error.context_aware
+    def resume_guest_mem(cls, vm):
+        error.context("Resume suspended VM from memory")
+        vm.monitor.system_wakeup()
+
+
+    @classmethod
+    @error.context_aware
+    def resume_guest_disk(cls, vm):
+        error.context("Resume suspended VM from disk")
+        vm.create()
+
+
+    @classmethod
+    @error.context_aware
+    def verify_guest_up(cls, params, vm, suspend_log_chk_cmd):
+        error.context("Verify guest system log", logging.info)
+        session = cls.__get_session(params, vm)
+        s, _ = cls.__session_cmd_close(session, suspend_log_chk_cmd)
+        if s:
+            raise error.TestError("Could not find suspend log.")
+
+
+    @classmethod
+    @error.context_aware
+    def action_before_suspend(cls, params, vm):
+        error.context("Actions before suspend")
+        pass
+
+
+    @classmethod
+    @error.context_aware
+    def action_during_suspend(cls, params, vm):
+        error.context("Sleep a while before resuming guest", logging.info)
+        time.sleep(10)
+        if params.get("os_type") == "windows":
+            # Due to WinXP/2003 won't suspend immediately after issue S3 cmd,
+            # delay 10~60 secs here, maybe there's a bug in windows os.
+            logging.info("WinXP/2003 need more time to suspend, sleep 50s.")
+            time.sleep(50)
+
+
+    @classmethod
+    @error.context_aware
+    def action_after_suspend(cls, params, vm):
+        error.context("Actions after suspend")
+        pass
+
+
+    @classmethod
+    def guest_suspend_mem(cls, params, vm):
+        """
+        Suspend a guest os to memory. Support both Linux and Windows guest.
+
+        Test steps:
+        1) Boot a guest.
+        2) Clear guest's log and check(Linux guest) or enable(Windows guest)
+           S3 mode.
+        3) Run a background program as a flag.
+        4) Set guest into S3 state.
+        5) Sleep a while before resuming guest.
+        6) Verify background program is still running.
+        7) Verify guest system log.
+
+        NOTE:
+          Because WinXP/2003 doesn't record ACPI event into log, this test
+          always passes if the guest's driver supports S3
+
+        @param params: Dictionary with test parameters.
+        @param env: Dictionary with the test environment.
+
+        """
+        suspend_support_chk_cmd = params.get("s3_support_chk_cmd")
+        suspend_bg_program_setup_cmd = params.get("s3_bg_program_setup_cmd")
+        suspend_bg_program_chk_cmd = params.get("s3_bg_program_chk_cmd")
+        suspend_bg_program_kill_cmd = params.get("s3_bg_program_kill_cmd")
+        suspend_start_cmd = params.get("s3_start_cmd")
+        suspend_log_chk_cmd = params.get("s3_log_chk_cmd")
+
+        cls.verfiy_guest_support_suspend(params, vm, suspend_support_chk_cmd)
+        cls.setup_bg_program(params, vm, suspend_bg_program_setup_cmd)
+        cls.check_bg_program(params, vm, suspend_bg_program_chk_cmd)
+
+        # Do something before start suspend
+        cls.action_before_suspend(params, vm)
+
+        cls.start_suspend(params, vm, suspend_start_cmd)
+
+        # Do something during suspend stage
+        cls.action_during_suspend(params, vm)
+
+        cls.resume_guest_mem(vm)
+        cls.check_bg_program(params, vm, suspend_bg_program_chk_cmd)
+        cls.verify_guest_up(params, vm, suspend_log_chk_cmd)
+
+        # Do something after suspend
+        cls.action_after_suspend(params, vm)
+
+        cls.kill_bg_program(params, vm, suspend_bg_program_kill_cmd)
+
+        cls.__cleanup_open_session()
+
+
+    @classmethod
+    def guest_suspend_disk(cls, params, vm):
+        """
+        Suspend guest to disk, supports both Linux and Windows.
+
+        Test steps:
+        1) Boot a guest.
+        2) Clear guest's log and check(Linux guest) or enable(Windows guest)
+           S3 mode.
+        3) Run a background program as a flag.
+        4) Set guest into S4 state.
+        5) Sleep a while before resuming guest.
+        6) Verify background program is still running.
+        7) Verify guest system log.
+
+        @param params: Dictionary with test parameters.
+        @param env: Dictionary with the test environment.
+        """
+        suspend_support_chk_cmd = params.get("s4_support_chk_cmd")
+        suspend_bg_program_setup_cmd = params.get("s4_bg_program_setup_cmd")
+        suspend_bg_program_chk_cmd = params.get("s4_bg_program_chk_cmd")
+        suspend_bg_program_kill_cmd = params.get("s4_bg_program_kill_cmd")
+        suspend_start_cmd = params.get("s4_start_cmd")
+        suspend_log_chk_cmd = params.get("s4_log_chk_cmd")
+
+        cls.verfiy_guest_support_suspend(params, vm, suspend_support_chk_cmd)
+        cls.setup_bg_program(params, vm, suspend_bg_program_setup_cmd)
+        cls.check_bg_program(params, vm, suspend_bg_program_chk_cmd)
+
+        # Do something before start suspend
+        cls.action_before_suspend(params, vm)
+
+        cls.start_suspend(params, vm, suspend_start_cmd)
+
+        # Do something during suspend stage
+        cls.action_during_suspend(params, vm)
+
+        cls.verify_guest_down(params, vm)
+
+        cls.resume_guest_disk(vm)
+        cls.check_bg_program(params, vm, suspend_bg_program_chk_cmd)
+        cls.verify_guest_up(params, vm, suspend_log_chk_cmd)
+
+        # Do something after suspend
+        cls.action_after_suspend(params, vm)
+
+        cls.kill_bg_program(params, vm, suspend_bg_program_kill_cmd)
+
+        cls.__cleanup_open_session()
