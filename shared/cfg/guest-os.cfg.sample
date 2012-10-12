@@ -4,6 +4,8 @@ variants:
     # Linux section
     - @Linux:
         os_type = linux
+        # Name of KVM/XEN arch. to use, default to 64-bit.
+        vm_arch_name = x86_64
         shutdown_command = shutdown -h now
         reboot_command = shutdown -r now
         status_test_command = echo $?
@@ -122,6 +124,7 @@ variants:
                 variants:
                     - 8.32:
                         no setup
+                        vm_arch_name = i686
                         image_name = f8-32
                         install:
                             steps = steps/Fedora-8-i386.steps
@@ -161,6 +164,7 @@ variants:
                             md5sum_1m_cd1 = 145f6414e19492649a56c89f0a45e719
 
                     - 9.32:
+                        vm_arch_name = i686
                         image_name = f9-32
                         install:
                             steps = steps/Fedora-9-i386.steps
@@ -201,6 +205,7 @@ variants:
 
 
                     - 10.32:
+                        vm_arch_name = i686
                         image_name = f10-32
                         unattended_install:
                             unattended_file = unattended/Fedora-10.ks
@@ -229,6 +234,7 @@ variants:
                             md5sum_1m_cd1 = 732857cbf40c80c34683e874601d982c
 
                     - 11.32:
+                        vm_arch_name = i686
                         image_name = f11-32
                         install:
                             steps = steps/Fedora-11-32.steps
@@ -259,6 +265,7 @@ variants:
                             md5sum_1m_cd1 = 405ee05e2387a2e4328b008d5bcbdd1e
 
                     - 12.32:
+                        vm_arch_name = i686
                         image_name = f12-32
                         unattended_install:
                             unattended_file = unattended/Fedora-12.ks
@@ -287,6 +294,7 @@ variants:
                             md5sum_1m_cd1 = 514efbd7698b55ff6768c8605438bfc5
 
                     - 13.32:
+                        vm_arch_name = i686
                         image_name = f13-32
                         unattended_install:
                             unattended_file = unattended/Fedora-13.ks
@@ -315,6 +323,7 @@ variants:
                             md5sum_1m_cd1 = 68821b9de4d3b5975d6634334e7f47a6
 
                     - 14.32:
+                        vm_arch_name = i686
                         image_name = f14-32
                         unattended_install:
                             unattended_file = unattended/Fedora-14.ks
@@ -351,6 +360,7 @@ variants:
                             nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
 
                     - 15.32:
+                        vm_arch_name = i686
                         image_name = f15-32
                         unattended_install:
                             unattended_file = unattended/Fedora-15.ks
@@ -389,6 +399,7 @@ variants:
                             nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
 
                     - 16.32:
+                        vm_arch_name = i686
                         image_name = f16-32
                         unattended_install:
                             unattended_file = unattended/Fedora-16.ks
@@ -425,6 +436,7 @@ variants:
                     - 16.ppc64:
                         image_name = f16-ppc64
                         machine_type = pseries
+                        vm_arch_name = ppc64
                         unattended_install:
                             unattended_file = unattended/Fedora-16.ks
                             cdrom_unattended = images/f16-ppc64/ks.iso
@@ -439,6 +451,7 @@ variants:
                             kernel_params = "root=live:CDLABEL=Fedora-16-ppc64 ks=cdrom:/ks.cfg console=hvc0 serial rd_NO_PLYMOUTH"
 
                     - 17.32:
+                        vm_arch_name = i686
                         image_name = f17-32
                         unattended_install:
                             unattended_file = unattended/Fedora-17.ks
@@ -485,6 +498,7 @@ variants:
                     kernel_params = "ks=cdrom nicdelay=60 console=ttyS0,115200 console=tty0"
                 variants:
                     - 3.9.i386:
+                        vm_arch_name = i686
                         no setup autotest linux_s3 guest_s4 shutdown multi_disk
                         no usb_multi_disk
                         image_name = rhel39-32
@@ -533,6 +547,7 @@ variants:
                             md5sum_1m_cd1 = 18ecd37b639109f1b2af05cfb57dfeaf
 
                     - 4.7.i386:
+                        vm_arch_name = i686
                         no setup autotest
                         image_name = rhel47-32
                         install:
@@ -581,6 +596,7 @@ variants:
                             fillup_cmd = "dd if=/dev/zero of=/%s/fillup.%d bs=%dM count=1"
 
                     - 4.8.i386:
+                        vm_arch_name = i686
                         no setup autotest
                         image_name = rhel48-32
                         unattended_install:
@@ -625,6 +641,7 @@ variants:
                             fillup_cmd = "dd if=/dev/zero of=/%s/fillup.%d bs=%dM count=1"
 
                     - 5.3.i386:
+                        vm_arch_name = i686
                         no setup
                         image_name = rhel53-32
                         install:
@@ -671,6 +688,7 @@ variants:
                             check_io_size_option = no
 
                     - 5.4.i386:
+                        vm_arch_name = i686
                         no setup
                         image_name = rhel54-32
                         unattended_install:
@@ -707,6 +725,7 @@ variants:
                             check_io_size_option = no
 
                     - 5.5.i386:
+                        vm_arch_name = i686
                         no setup
                         image_name = rhel55-32
                         unattended_install:
@@ -743,6 +762,7 @@ variants:
                             check_io_size_option = no
 
                     - 5.6.i386:
+                        vm_arch_name = i686
                         no setup
                         image_name = rhel56-32
                         unattended_install:
@@ -779,6 +799,7 @@ variants:
                             check_io_size_option = no
 
                     - 5.7.i386:
+                        vm_arch_name = i686
                         no setup
                         image_name = rhel57-32
                         unattended_install:
@@ -832,6 +853,7 @@ variants:
 
 
                     - 5.8.i386:
+                        vm_arch_name = i686
                         no setup
                         image_name = rhel58-32
                         unattended_install:
@@ -884,6 +906,7 @@ variants:
                             cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
 
                     - 6.0.i386:
+                        vm_arch_name = i686
                         no setup
                         nic_hotplug:
                             modprobe_module =
@@ -924,6 +947,7 @@ variants:
                             md5sum_1m_cd1 = b060eeef63e2c8700db54ae02056e80c
 
                     - 6.1.i386:
+                        vm_arch_name = i686
                         no setup
                         nic_hotplug:
                             modprobe_module =
@@ -964,6 +988,7 @@ variants:
                             md5sum_1m_cd1 = cb3b9d140404a6797b0f423dfe620ab8
 
                     - 6.2.i386:
+                        vm_arch_name = i686
                         no setup
                         nic_hotplug:
                             modprobe_module =
@@ -1004,6 +1029,7 @@ variants:
                             md5sum_1m_cd1 = 19b99519559067656193e5e2146a81a4
 
                     - 6.3.i386:
+                        vm_arch_name = i686
                         no setup
                         nic_hotplug:
                             modprobe_module =
@@ -1055,6 +1081,7 @@ variants:
 
                 variants:
                     - 11.0.32:
+                        vm_arch_name = i686
                         image_name = openSUSE-11.0-32
                         install:
                             steps = steps/openSUSE-11.0-32.steps
@@ -1090,6 +1117,7 @@ variants:
                             md5sum_1m_cd1 = 661aa4cd031df2f25ea0102318a3f4d1
 
                     - 11.1.32:
+                        vm_arch_name = i686
                         image_name = openSUSE-11.1-32
                         install:
                             steps = steps/openSUSE-11.1-32-and-64.steps
@@ -1130,6 +1158,7 @@ variants:
                             md5sum_1m_cd1 = 768ca32503ef92c28f2d144f2a87e4d0
 
                     - 11.2.32:
+                        vm_arch_name = i686
                         image_name = openSUSE-11.2-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
@@ -1160,6 +1189,7 @@ variants:
                             md5sum_1m_cd1 = 11fd11d39744450b898f04c371dde2e7
 
                     - 11.3.32:
+                        vm_arch_name = i686
                         image_name = openSUSE-11.3-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
@@ -1190,6 +1220,7 @@ variants:
                             md5sum_1m_cd1 = e0dd12dac30d296417256775e1234c6e
 
                     - 11.4.32:
+                        vm_arch_name = i686
                         image_name = openSUSE-11.4-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
@@ -1219,6 +1250,7 @@ variants:
                             md5sum_1m_cd1 = 2adcc5623e6c50b5d08acb7f84aa3fb1
 
                     - 12.1.32:
+                        vm_arch_name = i686
                         image_name = openSUSE-12.1-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-12.xml
@@ -1278,6 +1310,7 @@ variants:
                             md5sum_1m_cd1 = ac4963cf50b683972491a3fd1da64cc1
 
                    - 10.4.32:
+                        vm_arch_name = i686
                         image_name = sles10-64
                         unattended_install:
                             kernel_params = "autoyast=device://hdb/autoinst.xml console=ttyS0,115200 console=tty0"
@@ -1294,6 +1327,7 @@ variants:
                             md5sum_1m_cd1 = 282453620102c7b9d7386fc623420b91
 
                    - 11.0.32:
+                        vm_arch_name = i686
                         image_name = sles11-32
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
@@ -1327,6 +1361,7 @@ variants:
                             md5sum_1m_cd1 = 00000951cab7c32e332362fc424c1054
 
                    - 11.1.32:
+                        vm_arch_name = i686
                         image_name = sles11sp1-32
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
@@ -1357,6 +1392,7 @@ variants:
                             md5sum_1m_cd1 = f7f67b5da46923a9f01da8a2b6909654
 
                    - 11.2.32:
+                        vm_arch_name = i686
                         image_name = sles11sp2-32
                         unattended_install:
                             unattended_file = unattended/SLES-11-SP2.xml
@@ -1368,10 +1404,11 @@ variants:
                             boot_path = boot/i386/loader
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/SLES-11-SP2-DVD-i586-GM-DVD1.iso
-                            md5sum_cd1 = a0b34f6237b2b2a6b2174c82b40ed326 
-                            md5sum_1m_cd1 = e5a629f311cdfa7477880e7349a1f00d 
+                            md5sum_cd1 = a0b34f6237b2b2a6b2174c82b40ed326
+                            md5sum_1m_cd1 = e5a629f311cdfa7477880e7349a1f00d
 
                    - 11.2.64:
+                        vm_arch_name = i686
                         image_name = sles11sp2-64
                         unattended_install:
                             unattended_file = unattended/SLES-11-SP2.xml
@@ -1383,7 +1420,7 @@ variants:
                             boot_path = boot/x86_64/loader
                         unattended_install.cdrom:
                             cdrom_cd1 = isos/linux/SLES-11-SP2-DVD-x86_64-GM-DVD1.iso
-                            md5sum_cd1 = 461d82ae6e15062b0807c1338f040497 
+                            md5sum_cd1 = 461d82ae6e15062b0807c1338f040497
                             md5sum_1m_cd1 = 2ad34f9d84267e732929ea977c5be47e
 
 
@@ -1399,6 +1436,7 @@ variants:
 
                 variants:
                     - 6.10-32:
+                        vm_arch_name = i686
                         only install
                         image_name += -6.10-32
                         steps = steps/Ubuntu-6.10-32.steps
@@ -1407,6 +1445,7 @@ variants:
                         md5sum_1m_cd1 = 7531d0a84e7451d17c5d976f1c3f8509
 
                     - 8.04-32:
+                        vm_arch_name = i686
                         skip = yes
                         image_name += -8.04-32
                         install:
@@ -1416,6 +1455,7 @@ variants:
                             steps = steps/Ubuntu-8.04-32-setupssh.steps
 
                     - 8.10-server-32:
+                        vm_arch_name = i686
                         image_name += -8.10-server-32
                         install:
                             steps = steps/Ubuntu-8.10-server-32.steps
@@ -1474,6 +1514,7 @@ variants:
                             md5sum_1m_cd1 = 9aeb5cc81ec78cc117a4976f5c2eb87b
 
             - DSL-4.2.5:
+                vm_arch_name = i686
                 no setup dbench bonnie linux_s3
                 image_name = dsl-4.2.5
                 install:
@@ -1483,6 +1524,7 @@ variants:
                     md5sum_1m_cd1 = 527f2481bd25310f2e3a6e5345ff3d12
 
             - Mandriva-One-2007:
+                vm_arch_name = i686
                 only install
                 image_name = mandriva-one-2007
                 steps = steps/Mandriva-One-2007-32.steps
@@ -1494,6 +1536,8 @@ variants:
     - @Windows:
         vfd_size = 2880k
         os_type = windows
+        # Name of KVM/XEN arch. to use, default to 64-bit.
+        vm_arch_name = x86_64
         use_libvirt_cdrom_switch = yes
         shutdown_command = shutdown /s /f /t 0
         reboot_command = shutdown /r /f /t 0
@@ -1657,6 +1701,7 @@ variants:
                 #image_name = /dev/mapper/vg_some_label
                 #image_type_raw = yes
             - Win2000:
+                vm_arch_name = i686
                 no reboot whql
                 os_variant = win2k
                 image_name = win2000-32
@@ -1682,6 +1727,7 @@ variants:
                 os_variant = winxp
                 variants:
                     - 32:
+                        vm_arch_name = i686
                         image_name += -32
                         whql.submission:
                             desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows XP
@@ -1768,6 +1814,7 @@ variants:
 
                 variants:
                     - 32:
+                        vm_arch_name = i686
                         image_name += -32
                         install:
                             cdrom_cd1 = isos/windows/en_win_srv_2003_r2_enterprise_with_sp2_cd1_x13-05460.iso
@@ -1852,6 +1899,7 @@ variants:
 
                 variants:
                     - 32:
+                        vm_arch_name = i686
                         whql.submission:
                             dd_data_logoarch = X86
                             dd_data_logoos = Windows Vista
@@ -1941,6 +1989,7 @@ variants:
 
                 variants:
                     - 32:
+                        vm_arch_name = i686
                         variants:
                             - sp1:
                                 image_name += -sp1-32
@@ -2032,6 +2081,7 @@ variants:
 
                 variants:
                     - 32:
+                        vm_arch_name = i686
                         image_name += -32
                         unattended_install.cdrom, whql.support_vm_install:
                             cdrom_cd1 = isos/windows/en_windows_7_ultimate_x86_dvd_x15-65921.iso
@@ -2110,9 +2160,12 @@ variants:
         kill_vm = yes
         kill_vm_gracefully = no
         kill_vm_timeout = 0
+        # Name of KVM/XEN arch. to use, default to 64-bit.
+        vm_arch_name = x86_64
 
         variants:
             - NetBSD-1.6.2:
+                vm_arch_name = i686
                 image_name = NetBSD-1.6.2
                 image_size = 4G
                 steps = steps/NetBSD-1.6.2.steps
@@ -2121,6 +2174,7 @@ variants:
                 md5sum_1m_cd1 = f1a9e1e825c90adfb1be35c6177bd9ac
 
             - OpenBSD-4.1:
+                vm_arch_name = i686
                 image_name = OpenBSD-4.1
                 steps = steps/OpenBSD-4.1-32.steps
                 cdrom_cd1 = isos/unix/openbsd41-i386-07-05-06.iso
@@ -2133,26 +2187,10 @@ variants:
         kill_vm = yes
         kill_vm_gracefully = no
         kill_vm_timeout = 0
+        # Name of KVM/XEN arch. to use, default to 64-bit.
+        vm_arch_name = x86_64
 
         variants:
-            - Belenix:
-                steps = steps/Belenix-0.7.1.steps
-                cdrom_cd1 = isos/unix/belenix_0.7.1.iso
-                md5sum_cd1 = 29cea6160cf5250de138e2820e53e342
-                md5sum_1m_cd1 = 427bbef1b85d6d051799b825d686ae94
-
-            - Slax:
-                steps = steps/Slax-6.0.7.steps
-                cdrom_cd1 = isos/linux/slax-6.0.7.iso
-                md5sum_cd1 = cde0ecba3c8289d786e12c44666ded6e
-                md5sum_1m_cd1 = ddf02bc7444f22d1160a6e5a8fc8723f
-
-            - FreeSBIE-2.0.1:
-                steps = steps/FreeSBIE-2.0.1.steps
-                cdrom_cd1 = isos/unix/FreeSBIE-2.0.1-RELEASE.iso
-                md5sum_cd1 = b2f680d27c21bbfaf4fb90dce090a118
-                md5sum_1m_cd1 = 4d81ee7fe0101b0a14225963bfff60c1
-
             - memtest:
                 mem = 128
                 steps = steps/memtest86+.steps
