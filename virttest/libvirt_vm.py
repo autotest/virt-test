@@ -1062,7 +1062,11 @@ class VM(virt_vm.BaseVM):
         """
         Return VM's UUID.
         """
-        return virsh.domuuid(self.name, uri=self.connect_uri)
+        uuid = virsh.domuuid(self.name, uri=self.connect_uri)
+        # only overwrite it if it's not set
+        if self.uuid is None:
+            self.uuid = uuid
+        return self.uuid
 
 
     def get_ifname(self, nic_index=0):
@@ -1212,7 +1216,7 @@ class VM(virt_vm.BaseVM):
                     logging.debug("Updating nic %d with mac %s on vm %s"
                                   % (index, mac, self.name))
                     nic.mac = mac
-                elif nic.mac.upper() != mac:
+                elif nic.mac != mac:
                     logging.warning("Requested mac %s doesn't match mac %s "
                                     "as defined for vm %s" % (nic.mac, mac,
                                     self.name))
