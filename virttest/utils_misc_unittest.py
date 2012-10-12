@@ -329,10 +329,10 @@ class TestPropCanBase(unittest.TestCase):
         class FooBar(utils_misc.PropCanBase):
             __slots__ = ('foo', )
             it_works = False
-            def set_foo(nested_self, value):
-                nested_self.dict_set('foo', value)
+            def set_foo(self, value):
+                self.dict_set('foo', value)
                 if value == 'bar':
-                    nested_self.super_set('it_works', True)
+                    self.super_set('it_works', True)
         testcan = FooBar()
         self.assertEqual(len(testcan), 0)
         self.assertFalse(testcan.it_works)
@@ -347,10 +347,10 @@ class TestPropCanBase(unittest.TestCase):
         class FooBar(utils_misc.PropCanBase):
             __slots__ = ('foo', )
             it_works = False
-            def get_foo(nested_self):
-                value = nested_self.dict_get('foo')
+            def get_foo(self):
+                value = self.dict_get('foo')
                 if value == 'bar':
-                    nested_self.super_set('it_works', True)
+                    self.super_set('it_works', True)
                 return value
         testcan = FooBar()
         self.assertFalse(testcan.it_works)
@@ -368,11 +368,11 @@ class TestPropCanBase(unittest.TestCase):
         class FooBar(utils_misc.PropCanBase):
             __slots__ = ('foo', )
             it_works = False
-            def del_foo(nested_self):
-                value = nested_self.dict_get('foo')
+            def del_foo(self):
+                value = self.dict_get('foo')
                 if value == 'bar':
-                    nested_self.super_set('it_works', True)
-                nested_self.dict_del('foo')
+                    self.super_set('it_works', True)
+                self.dict_del('foo')
         testcan = FooBar()
         self.assertEqual(len(testcan), 0)
         self.assertFalse(testcan.it_works)
@@ -385,6 +385,32 @@ class TestPropCanBase(unittest.TestCase):
         del testcan['foo']
         self.assertEqual(len(testcan), 0)
         self.assertTrue(testcan.it_works)
+
+
+    def test_dict_methods_1(self):
+        class FooBar(utils_misc.PropCanBase):
+            __slots__ = ('foo', 'bar')
+        testcan = FooBar(foo='bar', bar='foo')
+        testdict = {}
+        for key, value in testcan.items():
+            testdict[key] = value
+        self.assertEqual(testcan, testdict)
+
+
+    def test_dict_methods_2(self):
+        class FooBar(utils_misc.PropCanBase):
+            __slots__ = ('foo', 'bar')
+        testcan = FooBar(foo='bar', bar='foo')
+        testdict = testcan.copy()
+        self.assertEqual(testcan, testdict)
+        testcan['foo'] = 'foo'
+        testcan['bar'] = 'bar'
+        self.assertTrue(testcan.foo != testdict.foo)
+        self.assertTrue(testcan.bar != testdict.bar)
+        testdict['foo'] = 'foo'
+        testdict['bar'] = 'bar'
+        self.assertTrue(testcan.foo == testdict.foo)
+        self.assertTrue(testcan.bar == testdict.bar)
 
 
 class TestPropCan(unittest.TestCase):
@@ -497,8 +523,9 @@ class TestVirtIface(unittest.TestCase):
             props[propertea] = utils_misc.generate_random_string(16)
         more_props = {}
         for idx in xrange(0,16):
-            more_props[utils_misc.generate_random_string(
-                16)] = utils_misc.generate_random_string(16)
+            key = utils_misc.generate_random_string(16)
+            value = utils_misc.generate_random_string(16)
+            more_props[key] = value
         #Keep seperated for testing
         apendex_set = {}
         apendex_set.update(props)
@@ -515,7 +542,8 @@ class TestVirtIface(unittest.TestCase):
                          "01:02:03:04:05:", "01:02:03:04::", "01:02::::",
                          "00:::::::::::::::::::", ":::::::::::::::::::",
                          ":"]:
-            result_mac = self.VirtIface.complete_mac_address(test_mac)
+            # Tosses an exception if test_mac can't be completed
+            self.VirtIface.complete_mac_address(test_mac)
         self.assertRaises(TypeError, self.VirtIface.complete_mac_address,
                           '01:f0:0:ba:r!:00')
         self.assertRaises(TypeError, self.VirtIface.complete_mac_address,
@@ -540,23 +568,23 @@ class TestLibvirtIface(TestVirtIface):
 
 class TestVmNetStyle(unittest.TestCase):
 
-    def get_a_map(self, vm_type, driver_type):
+    def get_style(self, vm_type, driver_type):
         return utils_misc.VMNetStyle.get_style(vm_type, driver_type)
 
 
     def test_default_default(self):
-        map = self.get_a_map(utils_misc.generate_random_string(16),
-                             utils_misc.generate_random_string(16))
-        self.assertEqual(map['mac_prefix'], '9a')
-        self.assertEqual(map['container_class'], utils_misc.KVMIface)
-        self.assert_(issubclass(map['container_class'], utils_misc.VirtIface))
+        style = self.get_style(utils_misc.generate_random_string(16),
+                               utils_misc.generate_random_string(16))
+        self.assertEqual(style['mac_prefix'], '9a')
+        self.assertEqual(style['container_class'], utils_misc.KVMIface)
+        self.assert_(issubclass(style['container_class'], utils_misc.VirtIface))
 
 
     def test_libvirt(self):
-        map = self.get_a_map('libvirt',
-                             utils_misc.generate_random_string(16))
-        self.assertEqual(map['container_class'], utils_misc.LibvirtIface)
-        self.assert_(issubclass(map['container_class'], utils_misc.VirtIface))
+        style = self.get_style('libvirt',
+                               utils_misc.generate_random_string(16))
+        self.assertEqual(style['container_class'], utils_misc.LibvirtIface)
+        self.assert_(issubclass(style['container_class'], utils_misc.VirtIface))
 
 
 class TestVmNet(unittest.TestCase):
@@ -1014,7 +1042,7 @@ class TestVmNetSubclasses(unittest.TestCase):
             virtnet.free_mac_address(1)
             # generate new on nic1 to verify mac_index generator catches it
             # and to signify database updated after generation
-            mac = virtnet.generate_mac_address(1,300)
+            virtnet.generate_mac_address(1,300)
             last_db_mac_byte = virtnet['nic2'].mac_str_to_int_list(
                 virtnet['nic2'].mac)[-1]
             self.assertEqual(last_db_mac_byte, last_vm_name_byte)

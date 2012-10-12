@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
-import unittest, logging
+import unittest, time
 import common
-from autotest.client import utils
+
 
 class ModuleLoad(unittest.TestCase):
+
     import virsh
 
 class ConstantsTest(ModuleLoad):
@@ -142,15 +143,10 @@ class ConstructorsTest(ModuleLoad):
 
 
     def test_VirshPersistent(self):
-        test_virsh = self.virsh.Virsh()
-        if test_virsh['virsh_exec'] == '/bin/true':
-            return
-        else:
-            logging.disable(logging.INFO)
-            vp = self.virsh.VirshPersistent()
-            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 1)
-            vp.close_session() # Make sure session gets cleaned up
-            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 0)
+        vp = self.virsh.VirshPersistent()
+        self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 1)
+        vp.close_session() # Make sure session gets cleaned up
+        self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 0)
 
 
     def TestVirshClosure(self):
@@ -160,6 +156,7 @@ class ConstructorsTest(ModuleLoad):
 
 ##### Ensure the following tests ONLY run if a valid virsh command exists #####
 class ModuleLoadCheckVirsh(unittest.TestCase):
+
     import virsh
 
     def run(self, *args, **dargs):
@@ -175,6 +172,7 @@ class VirshHasHelpCommandTest(ModuleLoadCheckVirsh):
     def setUp(self):
         # subclasses override self.virsh
         self.VIRSH_COMMAND_CACHE = self.virsh.VIRSH_COMMAND_CACHE
+
 
     def test_false_command(self):
         self.assertFalse(self.virsh.has_help_command('print'))
@@ -195,11 +193,6 @@ class VirshHasHelpCommandTest(ModuleLoadCheckVirsh):
         self.VIRSH_COMMAND_CACHE = []
         self.assertTrue(self.virsh.has_help_command('uri'))
 
-    def test_subcommand_help(self):
-        regex = r'\s+\[--command\]\s+\<string\>\s+'
-        self.assertTrue(self.virsh.has_command_help_match('help', regex))
-        self.assertFalse(self.virsh.has_command_help_match('uri', regex))
-
 
 class VirshHelpCommandTest(ModuleLoadCheckVirsh):
 
@@ -215,7 +208,6 @@ class VirshHelpCommandTest(ModuleLoadCheckVirsh):
 class VirshClassHasHelpCommandTest(VirshHasHelpCommandTest):
 
     def setUp(self):
-        logging.disable(logging.INFO)
         super(VirshClassHasHelpCommandTest, self).setUp()
         self.virsh = self.virsh.Virsh(debug=False)
 
@@ -223,27 +215,17 @@ class VirshClassHasHelpCommandTest(VirshHasHelpCommandTest):
 class VirshPersistentClassHasHelpCommandTest(VirshHasHelpCommandTest):
 
     def setUp(self):
-        logging.disable(logging.INFO)
         super(VirshPersistentClassHasHelpCommandTest, self).setUp()
         self.VirshPersistent = self.virsh.VirshPersistent
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
         self.virsh = self.VirshPersistent(debug=False)
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
-        self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
-
-
-    def test_recycle_session(self):
-        # virsh can be used as a dict of it's properties
-        another = self.VirshPersistent(**self.virsh)
-        self.assertEqual(self.virsh.session_id, another.session_id)
 
 
     def tearDown(self):
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
-        self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
         self.virsh.close_session()
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
-        self.assertFalse(utils.process_is_alive(self.virsh.virsh_exec))
 
 
 if __name__ == '__main__':
