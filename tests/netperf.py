@@ -105,6 +105,18 @@ def run_netperf(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
 
     session = vm.wait_for_login(timeout=login_timeout)
+    config_cmds = params.get("config_cmds")
+    if config_cmds:
+        for config_cmd in config_cmds.split(","):
+            cmd = params.get(config_cmd.strip())
+            if cmd:
+                s, o = session.cmd_status_output(cmd)
+                if s:
+                    msg = "Fail command: %s. Output: %s" % (cmd, o)
+                    raise error.TestError(msg)
+        if params.get("reboot_after_config", "yes") == "yes":
+            session = vm.reboot(session=session, timeout=login_timeout)
+
     if params.get("rh_perf_envsetup_script"):
         utils_test.service_setup(vm, session, test.virtdir)
     session.close()
