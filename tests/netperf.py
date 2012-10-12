@@ -105,6 +105,18 @@ def run_netperf(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
 
     session = vm.wait_for_login(timeout=login_timeout)
+    config_cmds = params.get("config_cmds")
+    if config_cmds:
+        for config_cmd in config_cmds.split(","):
+            cmd = params.get(config_cmd.strip())
+            if cmd:
+                s, o = session.cmd_status_output(cmd)
+                if s:
+                    msg = "Config command %s failed. Output: %s" % (cmd, o)
+                    raise error.TestError(msg)
+        if params.get("reboot_after_config", "yes") == "yes":
+            session = vm.reboot(session=session, timeout=login_timeout)
+
     if params.get("rh_perf_envsetup_script"):
         utils_test.service_setup(vm, session, test.virtdir)
     session.close()
@@ -112,7 +124,8 @@ def run_netperf(test, params, env):
     server_ip = vm.get_address()
     server_ctl = vm.wait_for_login(timeout=login_timeout)
     server_ctl_ip = server_ip
-    if params.get("os_type") == "windows":
+    if (params.get("os_type") == "windows"
+        and params.get("use_cygwin") == "yes"):
         cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")
         cygwin_start = params.get("cygwin_start")
         server_cyg = vm.wait_for_login(timeout=login_timeout)
@@ -136,12 +149,12 @@ def run_netperf(test, params, env):
     host_ip = host
     if host != "localhost":
         parmas_host = params.object_params("host")
-        host = utils_misc.wait_for_login(params_host.get("shell_client"),
-                                         host_ip,
-                                         params_host.get("shell_port"),
-                                         params_host.get("username"),
-                                         params_host.get("password"),
-                                         params_host.get("shell_prompt"))
+        host = remote.wait_for_login(params_host.get("shell_client"),
+                                     host_ip,
+                                     params_host.get("shell_port"),
+                                     params_host.get("username"),
+                                     params_host.get("password"),
+                                     params_host.get("shell_prompt"))
 
     client = params.get("client", "localhost")
     client_ip = client
@@ -158,12 +171,12 @@ def run_netperf(test, params, env):
             tmp = vm_client.wait_for_login(timeout=login_timeout)
             client_ip = vm_client.get_address()
         elif client != "localhost":
-            tmp = utils_misc.wait_for_login(params.get("shell_client_client"),
-                                            client_ip,
-                                            params.get("shell_port_client"),
-                                            params.get("username_client"),
-                                            params.get("password_client"),
-                                            params.get("shell_prompt_client"))
+            tmp = remote.wait_for_login(params.get("shell_client_client"),
+                                        client_ip,
+                                        params.get("shell_port_client"),
+                                        params.get("username_client"),
+                                        params.get("password_client"),
+                                        params.get("shell_prompt_client"))
         else:
             tmp = "localhost"
         clients.append(tmp)
@@ -353,6 +366,7 @@ def ssh_cmd(session, cmd, timeout=120):
         return session.cmd_output(cmd, timeout=timeout)
 
 
+@error.context_aware
 def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
                   port, params, server_cyg):
     """ Launch netperf clients """
@@ -361,26 +375,37 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
     server_path = "/tmp/netperf-2.4.5/src/netserver"
     # Start netserver
     if params.get("os_type") == "windows":
-        server_path = "netserver.exe"
         timeout = float(params.get("timeout", "240"))
-        netperf_src = params.get("netperf_src")
-        cygwin_root = params.get("cygwin_root")
-        netserv_pattern = params.get("netserv_pattern")
         netserv_start_cmd = params.get("netserv_start_cmd")
-        netperf_install_cmd = params.get("netperf_install_cmd")
-        if "netserver" not in server_ctl.cmd_output("tasklist"):
-            if not start_netserver_win(server_cyg, netserv_start_cmd,
-                                   netserv_pattern):
-                logging.info("Install netserver in Windows guest")
-                output = server_ctl.cmd("dir %s" % cygwin_root)
-                if "netperf" not in output:
-                    cmd = "xcopy %s %s /S /I" % (netperf_src, cygwin_root)
-                    server_ctl.cmd(cmd)
-                server_cyg.cmd_output(netperf_install_cmd, timeout=timeout)
+        msg = "Start netserver on guest using command %s" % netserv_start_cmd
+        error.context(msg, logging.info)
+        if params.get("use_cygwin") == "yes":
+            netperf_src = params.get("netperf_src")
+            cygwin_root = params.get("cygwin_root")
+            netserv_pattern = params.get("netserv_pattern")
+            netperf_install_cmd = params.get("netperf_install_cmd")
+            if "netserver" not in server_ctl.cmd_output("tasklist"):
                 if not start_netserver_win(server_cyg, netserv_start_cmd,
                                            netserv_pattern):
+                    logging.info("Install netserver in Windows guest")
+                    output = server_ctl.cmd("dir %s" % cygwin_root)
+                    if "netperf" not in output:
+                        cmd = "xcopy %s %s /S /I" % (netperf_src, cygwin_root)
+                        server_ctl.cmd(cmd)
+                    server_cyg.cmd_output(netperf_install_cmd,
+                                          timeout=timeout)
+                    if not start_netserver_win(server_cyg, netserv_start_cmd,
+                                               netserv_pattern):
+                        raise error.TestError("Can not start netserver in"
+                                              " Windows guest")
+        else:
+            if "NETSERVER.EXE" not in server_ctl.cmd_output("tasklist"):
+                server_ctl.cmd_output(netserv_start_cmd)
+                o_tasklist = server_ctl.cmd_output("tasklist")
+                if "NETSERVER.EXE" not in o_tasklist:
                     raise error.TestError("Can not start netserver in"
                                           " Windows guest")
+
         get_status_flag = False
     else:
         ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
