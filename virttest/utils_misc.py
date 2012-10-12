@@ -339,22 +339,6 @@ class VlanError(NetError):
                 (self.ifname, self.details))
 
 
-class PropCanKeyError(KeyError, AttributeError):
-    def __init__(self, key, slots):
-        self.key = key
-        self.slots = slots
-
-    def __str__(self):
-        return "Unsupported key name %s (supported keys: %s)" % (
-                    str(self.key), str(self.slots))
-
-
-class PropCanValueError(PropCanKeyError):
-    def __str__(self):
-        return "Instance contains None value for valid key '%s'" % (
-                    str(self.key))
-
-
 class VMNetError(NetError):
     def __str__(self):
         return ("VMNet instance items must be dict-like and contain "
@@ -576,30 +560,6 @@ class Params(UserDict.IterableUserDict):
         return new_dict
 
 
-# Work around for inconsistent builtin closure local reference problem
-# across different versions of python
-class Closure(object):
-    """
-    Callable instances for function with persistent internal state
-    """
-
-    def __init__(self, ref, state):
-        """
-        Initialize to call ref with state
-        """
-        self.state = state
-        self.ref = ref
-
-
-    def __call__(self, *args, **dargs):
-        """
-        Return call to ref on state with args and dargs
-        """
-        # This could be a dict-like access closure
-        ref = getattr(self.state, self.ref)
-        return ref(*args, **dargs)
-
-
 # Can't reliably combine use of properties and __slots__ (both set descriptors)
 class PropCanBase(dict):
     """
@@ -670,6 +630,7 @@ class PropCanBase(dict):
             self.__canhaz__(key, KeyError)
             return self.__getitem__(key)
         except KeyError:
+            # Allow subclasses to define attributes if required
             return super(PropCanBase, self).__getattribute__(key)
 
 
@@ -678,14 +639,16 @@ class PropCanBase(dict):
         try:
             return self.__setitem__(key, value)
         except KeyError, detail:
+            # Prevent subclass instances from defining normal attributes
             raise AttributeError(str(detail))
 
 
     def __delattr__(self, key):
         self.__canhaz__(key)
         try:
-             return self.__delitem__(key)
+            return self.__delitem__(key)
         except KeyError, detail:
+            # Prevent subclass instances from deleting normal attributes
             raise AttributeError(str(detail))
 
 
@@ -696,6 +659,14 @@ class PropCanBase(dict):
             raise excpt("Key '%s' not found in super class attributes or in %s"
                         % (str(key), str(keys)))
 
+
+    def copy(self):
+        return self.__class__(dict(self))
+
+
+    # The following methods are intended for use by accessor-methods
+    # where they may need to bypass the special attribute/key handling
+    # that's setup above.
 
     def dict_get(self, key):
         """
@@ -760,7 +731,7 @@ class PropCan(PropCanBase):
             return False
         # Avoid inf. recursion if value == self
         if issubclass(type(value), type(self)) or value:
-                return True
+            return True
         return False
 
 
@@ -877,7 +848,7 @@ class VirtIface(PropCan):
                 break
         try:
             assert len(mac) < 7
-            for byte_str_index in xrange(0,len(mac)):
+            for byte_str_index in xrange(0, len(mac)):
                 byte_str = mac[byte_str_index]
                 assert isinstance(byte_str, (str, unicode))
                 assert len(byte_str) > 0
@@ -900,7 +871,7 @@ class VirtIface(PropCan):
         """
         Return string formatting of int mac_bytes
         """
-        for byte_index in xrange(0,len(mac_bytes)):
+        for byte_index in xrange(0, len(mac_bytes)):
             mac = mac_bytes[byte_index]
             # Project standardized on lower-case hex
             if mac < 16:
@@ -960,7 +931,7 @@ class VMNet(list):
     """
 
     # don't flood discard warnings
-    DISCARD_WARNINGS=10
+    DISCARD_WARNINGS = 10
 
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
@@ -1015,7 +986,7 @@ class VMNet(list):
         """
         #TODO: Get rid of this function.  it's main purpose is to provide
         # a shared way to setup style (container_class) from params+vm_name
-        # so that unittests can run independantly for each subclass.
+        # so that unittests can run independently for each subclass.
         self.vm_name = vm_name
         self.params = params.object_params(self.vm_name)
         self.vm_type = self.params.get('vm_type', 'default')
@@ -1349,7 +1320,7 @@ class DbNet(VMNet):
             raise DbNoLockError
         # Always wear protection
         try:
-            eval_result = eval(db_entry,{},{})
+            eval_result = eval(db_entry, {}, {})
         except SyntaxError:
             raise ValueError("Error parsing entry for %s from "
                              "database '%s'" % (self.db_key,
