@@ -142,21 +142,6 @@ class HwAddrGetError(NetError):
         return "Can not get mac of interface %s" % self.ifname
 
 
-class PropCanKeyError(KeyError, AttributeError):
-    def __init__(self, key, slots):
-        self.key = key
-        self.slots = slots
-    def __str__(self):
-        return "Unsupported key name %s (supported keys: %s)" % (
-                    str(self.key), str(self.slots))
-
-
-class PropCanValueError(PropCanKeyError):
-    def __str__(self):
-        return "Instance contains None value for valid key '%s'" % (
-                    str(self.key))
-
-
 class VMNetError(NetError):
     def __str__(self):
         return ("VMNet instance items must be dict-like and contain "
@@ -791,7 +776,7 @@ class VMNet(list):
         """
         #TODO: Get rid of this function.  it's main purpose is to provide
         # a shared way to setup style (container_class) from params+vm_name
-        # so that unittests can run independantly for each subclass.
+        # so that unittests can run independently for each subclass.
         self.vm_name = vm_name
         self.params = params.object_params(self.vm_name)
         self.vm_type = self.params.get('vm_type', 'default')

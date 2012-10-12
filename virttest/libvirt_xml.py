@@ -1,7 +1,7 @@
 """
 Intermediate module for working with XML-related virsh functions/methods.
 
-All classes defined here should inherrit from LibvirtXMLBase and utilize
+All classes defined here should inherit from LibvirtXMLBase and utilize
 the XMLTreeFile interface to recover external source XML in case internal
 errors are detected.  Errors originating within this module should raise
 LibvirtXMLError or a subclass of this exception.  Pleae refer to the
@@ -59,7 +59,7 @@ class LibvirtXMLBase(utils_misc.PropCanBase):
         """
         Accessor method for 'xml' property to load using xml_utils.XMLTreeFile
         """
-        # Allways check to see if a "set" accessor is being called from __init__
+        # Always check to see if a "set" accessor is being called from __init__
         if not self.super_get('INITIALIZED'):
             self.dict_set('xml', value)
         else:
@@ -154,7 +154,7 @@ class VMXMLBase(LibvirtXMLBase):
         """
         Accessor method for 'name' property
         """
-        # Allways check to see if accessor is being called from __init__
+        # Always check to see if accessor is being called from __init__
         if not self.super_get('INITIALIZED'):
             self.dict_set('name', value) # Assuming value is None
         else:
@@ -188,7 +188,7 @@ class VMXMLBase(LibvirtXMLBase):
         """
         Set or create a new uuid element for a VM
         """
-        # Allways check to see if accessor is being called from __init__
+        # Always check to see if accessor is being called from __init__
         if not self.super_get('INITIALIZED'):
             self.dict_set('name', value) # Assuming value is None
         else:
