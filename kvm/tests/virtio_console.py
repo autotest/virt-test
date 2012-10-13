@@ -913,13 +913,16 @@ def run_virtio_console(test, params, env):
                     raise error.TestFail("Exit event emited, check the log for"
                                          "send/recv thread failure.")
                 else:
+                    exit_event.set()
                     raise error.TestFail("Send thread died unexpectedly in "
                                          "migration %d", (j + 1))
             for i in range(0, len(ports[1:])):
                 if not threads[i + 1].isAlive():
+                    exit_event.set()
                     raise error.TestFail("Recv thread %d died unexpectedly in "
                                          "migration %d", i, (j + 1))
                 if verified[i] == threads[i + 1].idx:
+                    exit_event.set()
                     raise error.TestFail("No new data in %d console were "
                                          "transfered after migration %d",
                                          i, (j + 1))
