@@ -678,10 +678,16 @@ variants:
                 check_func = "check_usb_device"
                 info_usb_name = "QEMU USB Hub"
                 vendor_id = "(0000|0409)"
-                vendor = ""
+                # vendor = ""
                 product_id = "(0000|55aa)"
                 product = "QEMU USB Hub"
             - storage:
+                check_func = "check_usb_device"
+                info_usb_name = "QEMU USB MSD"
+                vendor_id = "(0000|46f4)"
+                # vendor = ""
+                product_id = "(0000|0001)"
+                product = "QEMU USB HARDDRIVE"
                 # Disable other usb devices
                 usb_devices = ""
                 usbs = usb1
