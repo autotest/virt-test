@@ -987,31 +987,40 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_serial(hlp, serial, serial_filename)
 
         # Add virtio_serial ports
-        i = 0
-        virtio_serial_pcis = []
+        no_virtio_serial_pcis = 0
+        no_virtio_ports = 0
         virtio_port_spread = int(params.get('virtio_port_spread', 2))
         for port_name in params.objects("virtio_ports"):
             port_params = params.object_params(port_name)
-            bus = int(params.get('virtio_port_bus', 0))
-            # If ports should be spread across pcis add bus for every n-th port
-            if (virtio_port_spread and
-                    not len(self.virtio_ports) % virtio_port_spread):
-                bus = len(virtio_serial_pcis)
+            bus = params.get('virtio_port_bus', False)
+            if bus is not False:     # Manually set bus
+                bus = int(bus)
+            elif not virtio_port_spread:
+                # bus not specified, let qemu decide
+                pass
+            elif not no_virtio_ports % virtio_port_spread:
+                # Add new vio-pci every n-th port. (Spread ports)
+                bus = no_virtio_serial_pcis
+            else:  # Port not overriden, use last vio-pci
+                bus = no_virtio_serial_pcis - 1
+                if bus < 0:     # First bus
+                    bus = 0
             # Add virtio_serial_pcis
-            for i in range(len(virtio_serial_pcis), bus + 1):
+            for i in range(no_virtio_serial_pcis, bus + 1):
                 qemu_cmd += (" -device virtio-serial-pci,id=virtio_serial_pci"
                              "%d" % i)
-                virtio_serial_pcis.append("virtio_serial_pci%d" % i)
-            bus = "virtio_serial_pci%d.0" % bus
+                no_virtio_serial_pcis += 1
+            if bus is not False:
+                bus = "virtio_serial_pci%d.0" % bus
             # Add actual ports
             qemu_cmd += add_virtio_port(hlp, port_name, bus,
                                     self.get_virtio_port_filename(port_name),
                                     port_params.get('virtio_port_type'),
                                     port_params.get('virtio_port_chardev'),
                                     port_params.get('virtio_port_name_prefix'),
-                                    i,
+                                    no_virtio_ports,
                                     port_params.get('virtio_port_params', ''))
-            i += 1
+            no_virtio_ports += 1
 
         # Add logging
         qemu_cmd += add_log_seabios(device_help)
