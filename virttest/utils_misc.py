@@ -4467,47 +4467,9 @@ def download_file(url, destination, sha1, interactive=False):
     return had_to_download
 
 
-def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
-                        check_modules, online_docs_url, restore_image=False,
-                        interactive=True):
-    """
-    Common virt test assistant module.
-
-    @param test_name: Test name, such as "kvm".
-    @param test_dir: Path with the test directory.
-    @param base_dir: Base directory used to hold images and isos.
-    @param default_userspace_paths: Important programs for a successful test
-            execution.
-    @param check_modules: Whether we want to verify if a given list of modules
-            is loaded in the system.
-    @param online_docs_url: URL to an online documentation system, such as a
-            wiki page.
-    @param restore_image: Whether to restore the image from the pristine.
-    @param interactive: Whether to ask for confirmation.
-
-    @raise error.CmdError: If JeOS image failed to uncompress
-    @raise ValueError: If 7za was not found
-    """
-    if interactive:
-        logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
-    logging.info("%s test config helper", test_name)
-    step = 0
-    shared_dir = os.path.abspath(os.path.join(sys.modules[__name__].__file__,
-                                              "..", ".."))
-    shared_dir = os.path.join(shared_dir, "shared", "cfg")
-    logging.info("")
-    step += 1
-    logging.info("%d - Verifying directories (check if the directory structure "
-                 "expected by the default test config is there)", step)
-    sub_dir_list = ["images", "isos", "steps_data"]
-    for sub_dir in sub_dir_list:
-        sub_dir_path = os.path.join(base_dir, sub_dir)
-        if not os.path.isdir(sub_dir_path):
-            logging.debug("Creating %s", sub_dir_path)
-            os.makedirs(sub_dir_path)
-        else:
-            logging.debug("Dir %s exists, not creating" %
-                          sub_dir_path)
+def create_config_files(test_dir, shared_dir, interactive, step=None):
+    if step is None:
+        step = 0
     logging.info("")
     step += 1
     logging.info("%d - Creating config files from samples (copy the default "
@@ -4557,6 +4519,51 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
                     logging.debug("Preserving existing %s file" % dst_file)
             else:
                 logging.debug("Config file %s exists, not touching" % dst_file)
+
+
+def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
+                        check_modules, online_docs_url, restore_image=False,
+                        interactive=True):
+    """
+    Common virt test assistant module.
+
+    @param test_name: Test name, such as "kvm".
+    @param test_dir: Path with the test directory.
+    @param base_dir: Base directory used to hold images and isos.
+    @param default_userspace_paths: Important programs for a successful test
+            execution.
+    @param check_modules: Whether we want to verify if a given list of modules
+            is loaded in the system.
+    @param online_docs_url: URL to an online documentation system, such as a
+            wiki page.
+    @param restore_image: Whether to restore the image from the pristine.
+    @param interactive: Whether to ask for confirmation.
+
+    @raise error.CmdError: If JeOS image failed to uncompress
+    @raise ValueError: If 7za was not found
+    """
+    if interactive:
+        logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
+    logging.info("%s test config helper", test_name)
+    step = 0
+    shared_dir = os.path.abspath(os.path.join(sys.modules[__name__].__file__,
+                                              "..", ".."))
+    shared_dir = os.path.join(shared_dir, "shared", "cfg")
+    logging.info("")
+    step += 1
+    logging.info("%d - Verifying directories (check if the directory structure "
+                 "expected by the default test config is there)", step)
+    sub_dir_list = ["images", "isos", "steps_data"]
+    for sub_dir in sub_dir_list:
+        sub_dir_path = os.path.join(base_dir, sub_dir)
+        if not os.path.isdir(sub_dir_path):
+            logging.debug("Creating %s", sub_dir_path)
+            os.makedirs(sub_dir_path)
+        else:
+            logging.debug("Dir %s exists, not creating" %
+                          sub_dir_path)
+
+    create_config_files(test_dir, shared_dir, interactive, step)
 
     logging.info("")
     step += 1
