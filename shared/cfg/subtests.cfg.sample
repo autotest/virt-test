@@ -53,6 +53,7 @@ variants:
             # Additional iso with kickstart is attached into the guest
             - extra_cdrom_ks:
                 only Linux
+                no JeOS
                 unattended_delivery_method = cdrom
                 cdroms += " unattended"
                 drive_index_unattended = 1
@@ -74,6 +75,7 @@ variants:
                 unattended_delivery_method = floppy
             # Only perform a libvirt import. No cdroms, no floppies, no nothing
             - import:
+                virt_test_type = libvirt
                 no cdrom
                 cdroms = ""
                 floppy = ""
@@ -119,7 +121,7 @@ variants:
                 only Linux
                 medium = kernel_initrd
             - import:
-                no JeOS
+                virt_test_type = libvirt
                 no extra_cdrom_ks
                 medium = import
                 force_create_image = no
