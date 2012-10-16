@@ -16,8 +16,7 @@ import time
 from subprocess import Popen
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import kvm_virtio_port, env_process
-from virttest import utils_test
+from virttest import kvm_virtio_port, env_process, utils_test, utils_misc
 
 
 @error.context_aware
@@ -175,10 +174,10 @@ def run_virtio_console(test, params, env):
         @param vm: VM whose ports should be cleaned
         @param guest_worker: guest_worker which should be cleaned/exited
         """
-        error.context("Cleaning virtio_ports.", logging.debug)
-        logging.debug("Cleaning virtio_ports")
+        error.context("Cleaning virtio_ports on guest.")
         if guest_worker:
             guest_worker.cleanup()
+        error.context("Cleaning virtio_ports on host.")
         if vm:
             for port in vm.virtio_ports:
                 port.clean_port()
@@ -667,6 +666,255 @@ def run_virtio_console(test, params, env):
                    "check log for details." % no_errors)
             logging.error(msg)
             raise error.TestFail(msg)
+
+    @error.context_aware
+    def test_interrupted_transfer():
+        """
+        This test creates loopback between 2 ports and interrupts transfer
+        eg. by stopping the machine or by unplugging of the port.
+        """
+        def _stop_cont():
+            """ Stop and resume VM """
+            vm.pause()
+            time.sleep(intr_time)
+            vm.resume()
+
+        def _port_replug(device, port_idx):
+            """ Unplug and replug port with the same name """
+            # FIXME: In Linux vport*p* are used. Those numbers are changing
+            # when replugging port from pci to different pci. We should
+            # either use symlinks (as in Windows) or replug with the busname
+            port = ports[port_idx]
+            vm.monitor.cmd('device_del %s' % port.qemu_id)
+            time.sleep(intr_time)
+            vm.monitor.cmd('device_add %s,id=%s,chardev=dev%s,name=%s'
+                           % (device, port.qemu_id, port.qemu_id, port.name))
+
+        def _serialport_send_replug():
+            """ hepler for executing replug of the sender port """
+            _port_replug('virtserialport', 0)
+
+        def _console_send_replug():
+            """ hepler for executing replug of the sender port """
+            _port_replug('virtconsole', 0)
+
+        def _serialport_recv_replug():
+            """ hepler for executing replug of the receiver port """
+            _port_replug('virtserialport', 1)
+
+        def _console_recv_replug():
+            """ hepler for executing replug of the receiver port """
+            _port_replug('virtconsole', 1)
+
+        def _serialport_random_replug():
+            """ hepler for executing replug of random port """
+            _port_replug('virtserialport', random.choice((0, 1)))
+
+        def _console_random_replug():
+            """ hepler for executing replug of random port """
+            _port_replug('virtconsole', random.choice((0, 1)))
+
+        def _s4():
+            """ Hibernate (S4) and resume the VM """
+            threads[0].migrate_event.clear()
+            threads[1].migrate_event.clear()
+            oldport = vm.virtio_ports[0]
+            portslen = len(vm.virtio_ports)
+            vm.wait_for_login().sendline(set_s4_cmd)
+            suspend_timeout = 240 + int(params.get("smp")) * 60
+            if not utils_misc.wait_for(vm.is_dead, suspend_timeout, 2, 2):
+                raise error.TestFail("VM refuses to go down. Suspend failed.")
+            time.sleep(intr_time)
+            vm.create()
+            for _ in xrange(10):    # Wait until new ports are created
+                try:
+                    if (vm.virtio_ports[0] != oldport and
+                            len(vm.virtio_ports) == portslen):
+                        break
+                except IndexError:
+                    pass
+                time.sleep(1)
+            else:
+                raise error.TestFail("New virtio_ports were not created with"
+                                     "the new VM or the VM failed to start.")
+            if is_serialport:
+                ports = get_virtio_ports(vm)[1]
+            else:
+                ports = get_virtio_ports(vm)[0]
+            threads[0].port = ports[0]
+            threads[1].port = ports[1]
+            threads[0].migrate_event.set()  # Wake up sender thread immediately
+            threads[1].migrate_event.set()
+            guest_worker.reconnect(vm, 30)
+            # DEBUG: When using ThRecv debug, you must wake-up the recv thread
+            # here (it waits only 1s for new data
+            # threads[1].migrate_event.set()
+
+        error.context("Preparing loopback")
+        test_time = max(float(params.get('virtio_console_test_time', 10)), 1)
+        intr_time = float(params.get('virtio_console_intr_time', 0))
+        no_repeats = int(params.get('virtio_console_no_repeats', 1))
+        interruption = params.get('virtio_console_interruption')
+        is_serialport = (params.get('virtio_console_params') == 'serialport')
+        buflen = int(params.get('virtio_console_buflen', 1))
+        if is_serialport:
+            vm, guest_worker = get_vm_with_worker(no_serialports=2)
+            (_, ports) = get_virtio_ports(vm)
+        else:
+            vm, guest_worker = get_vm_with_worker(no_consoles=2)
+            (ports, _) = get_virtio_ports(vm)
+
+        send_pt = ports[0]
+        recv_pt = ports[1]
+
+        recv_pt.open()
+        send_pt.open()
+
+        threads = []
+        queues = [deque()]
+
+        # Start loopback
+        error.context("Starting loopback", logging.info)
+        # TODO: Use normal LOOP_NONE when bz796048 is resolved.
+        guest_worker.cmd("virt.loopback(['%s'], ['%s'], %s, virt.LOOP_"
+                         "RECONNECT_NONE)"
+                         % (send_pt.name, recv_pt.name, buflen), 10)
+
+        exit_event = threading.Event()
+        send_resume_ev = None
+        recv_resume_ev = None
+
+        # Set the interruption function and related variables
+        acceptable_loss = 0
+        if interruption == 'stop':
+            interruption = _stop_cont
+        elif interruption == 'replug_send':
+            if is_serialport:
+                interruption = _serialport_send_replug
+            else:
+                interruption = _console_send_replug
+            acceptable_loss = buflen * 10
+            if buflen < 50:
+                acceptable_loss = 500
+        elif interruption == 'replug_recv':
+            if is_serialport:
+                interruption = _serialport_recv_replug
+            else:
+                interruption = _console_recv_replug
+            acceptable_loss = buflen * 5
+        elif interruption == 'replug_random':
+            if is_serialport:
+                interruption = _serialport_random_replug
+            else:
+                interruption = _console_random_replug
+            acceptable_loss = buflen * 10
+            if buflen < 50:
+                acceptable_loss = 500
+        elif interruption == 's4':
+            interruption = _s4
+            session = vm.wait_for_login()
+            ret = session.cmd_status(params.get("check_s4_support_cmd"))
+            print repr(ret)
+            if ret:
+                raise error.TestNAError("Suspend to disk S4 not supported.")
+            set_s4_cmd = params.get('set_s4_cmd')
+            acceptable_loss = 102400
+            send_resume_ev = threading.Event()
+            recv_resume_ev = threading.Event()
+        else:
+            raise error.TestNAError("virtio_console_interruption = '%s' "
+                                    "is unknown." % interruption)
+
+        threads.append(kvm_virtio_port.ThSendCheck(send_pt, exit_event, queues,
+                                                   buflen, send_resume_ev))
+        threads[-1].start()
+        threads.append(kvm_virtio_port.ThRecvCheck(recv_pt, queues[0],
+                                    exit_event, buflen, acceptable_loss,
+                                    recv_resume_ev,
+                                    debug=params.get('virtio_console_debug')))
+        threads[-1].start()
+
+        logging.info('Starting the loop 2+%d*(%d+%d+intr_overhead)+2 >= %ss',
+                     no_repeats, intr_time, test_time,
+                     (4 + no_repeats * (intr_time + test_time)))
+        # Lets transfer some data before the interruption
+        time.sleep(2)
+        if not threads[0].isAlive():
+            raise error.TestFail("Sender thread died before interruption.")
+        if not threads[0].isAlive():
+            raise error.TestFail("Receiver thread died before interruption.")
+        for i in xrange(no_repeats):
+            error.context("Interruption nr. %s" % i)
+            threads[1].sendidx = acceptable_loss
+            interruption()
+            count = threads[1].idx
+            logging.debug('Transfered data: %s', count)
+            # Be friendly to very short test_time values
+            for _ in xrange(3):
+                time.sleep(test_time)
+                logging.debug('Transfered data2: %s', threads[1].idx)
+                if count == threads[1].idx and threads[1].isAlive():
+                    logging.warn('No data received after %ds, extending '
+                                 'test_time', test_time)
+                else:
+                    break
+            if count == threads[1].idx or not threads[1].isAlive():
+                if not threads[1].isAlive():
+                    logging.error('RecvCheck thread stopped unexpectedly.')
+                if count == threads[1].idx:
+                    logging.error('No data transfered after interruption!')
+                logging.info('Output from GuestWorker:\n%s',
+                             guest_worker.read_nonblocking())
+                try:
+                    session = vm.login()
+                    data = session.cmd_output('dmesg')
+                    if 'WARNING:' in data:
+                        logging.warning('There are warnings in dmesg:\n%s',
+                                        data)
+                except Exception, inst:
+                    logging.warn("Can't verify dmesg: %s", inst)
+                try:
+                    vm.monitor.info('qtree')
+                except Exception, inst:
+                    logging.warn("Failed to get info qtree", inst)
+                exit_event.set()
+                vm.verify_kernel_crash()
+                raise error.TestFail('No data transfered after interruption.')
+
+        error.context("Stopping loopback", logging.info)
+        exit_event.set()
+        logging.debug('Joining sender thread')
+        threads[0].join()
+        logging.debug('Joining receiver thread')
+        threads[1].join()
+        logging.info('%d data sent; %d data received and verified; %d '
+                     'interruptions %ds each.', threads[0].idx, threads[1].idx,
+                     no_repeats, test_time)
+        err = ""
+        if threads[0].ret_code:
+            err += "sender, "
+        if threads[1].ret_code:
+            err += "receiver, "
+        if err:
+            raise error.TestFail("Background thread(s) %s failed" % err[:-2])
+
+        # Ports might change (in suspend S4)
+        if is_serialport:
+            (send_pt, recv_pt) = get_virtio_ports(vm)[1][:2]
+        else:
+            (send_pt, recv_pt) = get_virtio_ports(vm)[0][:2]
+
+        # Read-out all remaining data
+        while select.select([recv_pt.sock], [], [], 0.1)[0]:
+            recv_pt.sock.recv(1024)
+
+        # VM might be recreated se we have to reconnect.
+        guest_worker.safe_exit_loopback_threads([send_pt], [recv_pt])
+
+        del exit_event
+        del threads[:]
+
+        cleanup(env.get_vm(params.get("main_vm")), guest_worker)
 
     @error.context_aware
     def _process_stats(stats, scale=1.0):
