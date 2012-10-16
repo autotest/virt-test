@@ -45,7 +45,7 @@ class StreamProxy(object):
             self.stream = self.log
 
 
-def bootstrap(options):
+def bootstrap(options, cartesian_parser):
     bcolors = standalone_test.bcolors
     standalone_test.print_stdout(bcolors.HEADER + "SETUP:" + bcolors.ENDC,
                                  end=False)
@@ -53,7 +53,8 @@ def bootstrap(options):
     test_dir = os.path.dirname(sys.modules[__name__].__file__)
     test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
                                             options.type))
-    base_dir = "/var/tmp/virt_test"
+    params = cartesian_parser.get_dicts().next()
+    base_dir = os.path.dirname(os.path.dirname(params.get("image_name")))
     default_userspace_paths = None
     check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
@@ -150,8 +151,6 @@ if __name__ == '__main__':
     standalone_test.configure_logging()
     standalone_test.configure_console_logging()
 
-    bootstrap(options)
-
     cartesian_parser = cartesian_config.Parser()
     if options.config is not None:
         cfg = os.path.abspath(options.config)
@@ -159,6 +158,8 @@ if __name__ == '__main__':
         cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
     cartesian_parser.parse_file(cfg)
+
+    bootstrap(options, cartesian_parser)
 
     if options.list:
         try:
