@@ -697,23 +697,16 @@ def resume(name, **dargs):
         return False
 
 
-def save(name, path, **dargs):
+def save(option, path, **dargs):
     """
     Store state of VM into named file.
 
-    @param: name: VM Name to operate on
+    @param: option: save command's first option, vm'name, id or uuid.
     @param: path: absolute path to state file
     @param: dargs: standardized virsh function API keywords
+    @return: CmdResult instance
     """
-    state = domstate(name, **dargs)
-    if state not in ('paused',):
-        raise virt_vm.VMStatusError("Cannot save a VM that is %s" % state)
-    logging.debug("Saving VM %s to %s" %(name, path))
-    command("save %s %s" % (name, path), **dargs)
-    # libvirt always stops VM after saving
-    state = domstate(name, **dargs)
-    if state not in ('shut off',):
-        raise virt_vm.VMStatusError("VM not shut off after save")
+    return command("save %s %s" % (option, path), **dargs)
 
 
 def restore(name, path, **dargs):
