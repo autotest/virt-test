@@ -759,7 +759,7 @@ class MultihostMigration(object):
                     mig_error = True
                     raise
             finally:
-                if not mig_error:
+                if not mig_error and cancel_delay is None:
                     self._hosts_barrier(self.hosts,
                                         mig_data.mig_id,
                                         'test_finihed',
