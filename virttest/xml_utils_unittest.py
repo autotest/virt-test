@@ -1,9 +1,13 @@
 #!/usr/bin/python
 
 import unittest, tempfile, os, glob, logging
-import common
-import xml_utils
-from virttest import element_tree as ElementTree
+
+try:
+    import autotest.common as common
+except ImportError:
+    import common
+
+from autotest.client.shared import xml_utils, ElementTree
 
 
 class xml_test_data(unittest.TestCase):
@@ -13,7 +17,6 @@ class xml_test_data(unittest.TestCase):
         return glob.glob(path_string)
 
     def setUp(self):
-        xml_utils.TMPPFX = 'xml_utils_unittest_temp_'
         # Previous testing may have failed / left behind extra files
         for filename in self.get_tmp_files(xml_utils.TMPPFX, xml_utils.TMPSFX):
             os.unlink(filename)
@@ -188,12 +191,6 @@ class test_XMLBackup(xml_test_data):
 class test_XMLTreeFile(test_XMLBackup):
 
     class_to_test = xml_utils.XMLTreeFile
-
-    def test_stringify(self):
-        xml = self.class_to_test(self.XMLFILE)
-        # initialize second copy from parsed string output of first
-        testxml = self.class_to_test(str(xml))
-        self.assertTrue(self.is_same_contents(xml.name, testxml.name))
 
     def test_sourcebackupfile_closed_file(self):
         xml = self.class_to_test(self.XMLFILE)

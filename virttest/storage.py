@@ -7,7 +7,11 @@ This exports:
 """
 import logging, os, shutil, re
 from autotest.client import utils
-from autotest.client.shared import iscsi
+try:
+    from autotest.client.shared import iscsi
+except ImportError:
+    from virttest import iscsi
+
 import utils_misc, virt_vm
 
 

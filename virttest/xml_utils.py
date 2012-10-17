@@ -36,10 +36,19 @@
     module for examples.
 """
 
-import os, shutil, tempfile, string, StringIO, logging
-from xml.parsers import expat
-# We *have* to use our ElementTree fork :(
-from virttest import element_tree as ElementTree
+import os.path, shutil, tempfile, string
+
+try:
+    import autotest.common as common
+except ImportError:
+    import common
+
+import logging
+
+try:
+    from autotest.client.shared import ElementTree
+except ImportError:
+    from virttest import ElementTree
 
 # Also used by unittests
 TMPPFX = 'xml_utils_temp_'
@@ -92,10 +101,7 @@ class TempXMLFile(file):
         # there was an exception
         if None not in (exc_type, exc_value, traceback):
             os.rename(self.name, self.name + EXSFX)
-        else:
-            self.unlink() # safe if file was renamed
-        if hasattr(super(TempXMLFile, self), '__exit__'):
-            super(TempXMLFile, self).__exit__(exc_type, exc_value, traceback)
+        self.unlink() # safe if file was renamed
 
 
     def __del__(self):
@@ -193,11 +199,8 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
             self.sourcebackupfile.close()
         # sourcebackupfile now safe to use for base class initialization
         XMLBackup.__init__(self, self.sourcebackupfile.name)
-        try:
-            ElementTree.ElementTree.__init__(self, element=None,
-                                             file=self.name)
-        except expat.ExpatError:
-            raise IOError("Error parsing XML: '%s'" % xml)
+        ElementTree.ElementTree.__init__(self, element=None,
+                                         file=self.name)
         # Required for TemplateXML class to work
         self.write()
         self.flush() # make sure it's on-disk
@@ -206,27 +209,11 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
     def __str__(self):
         self.write()
         self.flush()
-        xmlstr = StringIO.StringIO()
-        self.write(xmlstr)
-        return xmlstr.getvalue()
-
+        return self.sourcebackupfile.read()
 
     def backup_copy(self):
         """Return a copy of instance, including copies of files"""
         return self.__class__(self.name)
-
-
-    def reroot(self, xpath):
-        """
-        Return a copy of instance, re-rooted onto xpath
-        """
-        rerooted = self.backup_copy()
-        element = rerooted.find(xpath)
-        if element is None:
-            del rerooted # cleanup files
-            raise KeyError("No element found at %s" % xpath)
-        rerooted._setroot(element)
-        return rerooted
 
 
     def get_parent_map(self, element=None):
@@ -235,11 +222,8 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
 
         param: element: Search only below this element
         """
-        d = {}
-        for p in self.getiterator(element):
-            for c in p:
-                d[c] = p
-        return d
+        # Comprehension loop over all children in all parents
+        return dict((c, p) for p in self.getiterator(element) for c in p)
 
 
     def get_parent(self, element, relative_root=None):

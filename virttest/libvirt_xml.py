@@ -24,9 +24,7 @@ Please refer to the xml_utils module documentation for more information
 on working with XMLTreeFile instances.  Please see the virsh and utils_misc
 modules for information on working with Virsh and PropCanBase classes.
 """
-
-from autotest.client.shared import xml_utils
-import utils_misc, virsh
+from virttest import virsh, utils_misc, xml_utils
 
 
 class LibvirtXMLError(Exception):
