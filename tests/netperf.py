@@ -1,4 +1,4 @@
-import logging, os, commands, threading, re, glob
+import logging, os, commands, threading, re, glob, time
 from autotest.client import utils
 from autotest.client.shared import ssh_key
 from virttest import utils_test, utils_misc, remote
@@ -124,7 +124,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                 return -1
         return thu
 
-    fd = open("%s/netperf-result.RHS" % resultsdir, "w")
+    fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
     category = 'size|sessions|throughput|%CPU|thr/%CPU|@tx-pkts|@rx-pkts|@tx-byts|@rx-byts|@re-trans|@tx-intr|@rx-intr|@io_exit|@irq_inj|@tpkt/@exit|@rpkt/@irq'
 
