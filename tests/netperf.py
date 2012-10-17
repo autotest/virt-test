@@ -194,10 +194,6 @@ def run_netperf(test, params, env):
         session2.close()
         _pin_vm_threads(vm2, numa_node)
 
-    shell_port = int(params["shell_port"])
-    password = params["password"]
-    username = params["username"]
-
     error.context("Prepare env of server/client/host", logging.info)
     prepare_list = set([server_ctl, client, host])
     tag_dict = {server_ctl: "server", client: "client", host: "host"}
@@ -205,6 +201,9 @@ def run_netperf(test, params, env):
     for i in prepare_list:
         params_tmp = params.object_params(tag_dict[i])
         if params_tmp.get("os_type") == "linux":
+            shell_port = int(params_tmp["shell_port"])
+            password = params_tmp["password"]
+            username = params_tmp["username"]
             env_setup(i, ip_dict[i], username, shell_port, password)
 
     error.context("Start netperf testing", logging.info)
