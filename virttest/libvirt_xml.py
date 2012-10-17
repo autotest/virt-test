@@ -8,7 +8,11 @@
     xml_utils module documentation for more information on working with
     XMLTreeFile instances.
 """
-from autotest.client.shared import xml_utils
+try:
+    from autotest.client.shared import xml_utils
+except ImportError:
+    from virttest import xml_utils
+
 from virttest import virsh
 
 
