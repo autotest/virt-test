@@ -1763,6 +1763,12 @@ variants:
         shell_client_client = ssh
         shell_port_client = 22
         shell_prompt_client =  \[root@.{0,50}][\#\$]
+        shell_port_host = 22
+        password_host = redhat
+        username_host = root
+        os_type_client = linux
+        os_type_host = linux
+        shell_prompt_host =  \[root@.{0,50}][\#\$]
         ver_cmd = rpm -qa |grep kvm
         variants:
             - netperf_exe:
