@@ -195,7 +195,8 @@ if __name__ == '__main__':
         cartesian_parser.parse_string("qemu_binary = %s" % options.qemu)
         cartesian_parser.parse_string("qemu_img_binary = %s" %
                             os.path.join(d, 'qemu-img'))
-        cartesian_parser.parse_string("qemu_io_binary = %s" % os.path.join(d, 'qemu-io'))
+        cartesian_parser.parse_string("qemu_io_binary = %s" %
+                                      os.path.join(d, 'qemu-io'))
 
     if options.type and options.tests:
         if options.config:
@@ -208,6 +209,9 @@ if __name__ == '__main__':
         if options.type == 'kvm':
             cartesian_parser.parse_string("only migrate")
         elif options.type == 'libvirt':
-            cartesian_parser.parse_string("only virsh_domname")
+            cartesian_parser.parse_string("only "
+                                          "unattended_install.import.import, "
+                                          "virsh_domname, "
+                                          "remove_guest.without_disk")
 
     standalone_test.run_tests(cartesian_parser)
