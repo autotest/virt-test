@@ -510,14 +510,18 @@ class MultihostMigration(object):
         For change way how machine migrates is necessary
         re implement this method.
         """
-        def mig_wrapper(vm, dsthost, vm_ports):
-            vm.migrate(dest_host=dsthost, remote_port=vm_ports[vm.name])
+        def mig_wrapper(vm, cancel_delay, dsthost, vm_ports):
+            vm.migrate(cancel_delay=cancel_delay, dest_host=dsthost,
+                       remote_port=vm_ports[vm.name])
 
         logging.info("Start migrating now...")
+        cancel_delay = mig_data.params.get("cancel_delay")
+        if cancel_delay is not None:
+            cancel_delay = int(cancel_delay)
         multi_mig = []
         for vm in mig_data.vms:
-            multi_mig.append((mig_wrapper, (vm, mig_data.dst,
-                                            mig_data.vm_ports)))
+            multi_mig.append((mig_wrapper, (vm, cancel_delay,
+                                            mig_data.dst, mig_data.vm_ports)))
         utils_misc.parallel(multi_mig)
 
 
@@ -710,6 +714,7 @@ class MultihostMigration(object):
             error = None
             mig_data = MigrationData(self.params, srchost, dsthost,
                                      vms_name, params_append)
+            cancel_delay = self.params.get("cancel_delay", None)
             try:
                 try:
                     if mig_data.is_src():
@@ -726,21 +731,21 @@ class MultihostMigration(object):
                     self.migrate_vms(mig_data)
 
                     timeout = 30
-                    if not mig_data.is_src():
-                        timeout = self.mig_timeout
-                    self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
-                                        'mig_finished', timeout)
+                    if cancel_delay is None:
+                        if (not mig_data.is_src()):
+                            timeout = self.mig_timeout
+                        self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
+                                            'mig_finished', timeout)
 
-                    if mig_data.is_dst():
-                        self.check_vms(mig_data)
-                        if check_work:
-                            check_work(mig_data)
-
+                        if mig_data.is_dst():
+                            self.check_vms(mig_data)
+                            if check_work:
+                                check_work(mig_data)
                 except:
                     error = True
                     raise
             finally:
-                if not error:
+                if not error and cancel_delay is None:
                     self._hosts_barrier(self.hosts,
                                         mig_data.mig_id,
                                         'test_finihed',
