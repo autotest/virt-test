@@ -17,6 +17,7 @@ def run_virsh_uri(test, params, env):
 
     option = params.get("options")
     target_uri = params.get("target_uri")
+    remote_ref = params.get("uri_remote_ref", "")
     if target_uri:
         if target_uri.count('EXAMPLE.COM'):
             raise error.TestError('target_uri configuration set to sample value')
@@ -35,6 +36,8 @@ def run_virsh_uri(test, params, env):
     # Run test case
     logging.info("The command: %s", cmd)
     try:
+        if remote_ref == "remote":
+            connect_uri = target_uri
         uri_test = virsh.canonical_uri(option, uri=connect_uri,
                              ignore_status=False,
                              debug=True)
