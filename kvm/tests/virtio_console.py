@@ -1457,7 +1457,7 @@ def run_virtio_console(test, params, env):
         if use_serialport:
             port = get_virtio_ports(vm)[1][0]
         else:
-            port = get_virtio_ports(vm)[0][1]
+            port = get_virtio_ports(vm)[0][0]
         if not port.is_open():
             port.open()
         else:
