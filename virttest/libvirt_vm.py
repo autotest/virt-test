@@ -1295,7 +1295,14 @@ class VM(virt_vm.BaseVM):
         """
         Override BaseVM save_to_file method
         """
+        state = virsh.domstate(self.name)
+        if state not in ('paused',):
+            raise virt_vm.VMStatusError("Cannot save a VM that is %s" % state)
+        logging.debug("Saving VM %s to %s" %(self.name, path))
         virsh.save(self.name, path, uri=self.connect_uri)
+        state = virsh.domstate(self.name)
+        if state not in ('shut off',):
+            raise virt_vm.VMStatusError("VM not shut off after save")
 
 
     def restore_from_file(self, path):
