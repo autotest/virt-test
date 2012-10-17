@@ -40,6 +40,7 @@ def run_virtio_console(test, params, env):
     ######################################################################
     # General helpers
     ######################################################################
+    @error.context_aware
     def get_vm_with_ports(no_consoles=0, no_serialports=0, spread=None,
                            quiet=False, strict=False):
         """
@@ -114,6 +115,7 @@ def run_virtio_console(test, params, env):
         vm.verify_kernel_crash()
         return vm
 
+    @error.context_aware
     def get_vm_with_worker(no_consoles=0, no_serialports=0, spread=None,
                                quiet=False):
         """
@@ -131,6 +133,7 @@ def run_virtio_console(test, params, env):
         guest_worker = kvm_virtio_port.GuestWorker(vm)
         return vm, guest_worker
 
+    @error.context_aware
     def get_vm_with_single_port(port_type='serialport'):
         """
         Wrapper which returns vm, guest_worker and virtio_ports with at lest
@@ -148,6 +151,7 @@ def run_virtio_console(test, params, env):
             virtio_ports = get_virtio_ports(vm)[0][0]
         return vm, guest_worker, virtio_ports
 
+    @error.context_aware
     def get_virtio_ports(vm):
         """
         Returns separated virtconsoles and virtserialports
@@ -183,6 +187,7 @@ def run_virtio_console(test, params, env):
     ######################################################################
     # Smoke tests
     ######################################################################
+    @error.context_aware
     def test_open():
         """
         Try to open virtioconsole port.
@@ -195,6 +200,7 @@ def run_virtio_console(test, params, env):
         port.open()
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_check_zero_sym():
         """
         Check if port /dev/vport0p0 was created.
@@ -208,6 +214,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("virt.check_zero_sym()", 10)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_multi_open():
         """
         Try to open the same port twice.
@@ -236,6 +243,7 @@ def run_virtio_console(test, params, env):
         port.open()
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_close():
         """
         Close the socket on the guest side
@@ -248,6 +256,7 @@ def run_virtio_console(test, params, env):
         port.close()
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_polling():
         """
         Test correct results of poll with different cases.
@@ -284,6 +293,7 @@ def run_virtio_console(test, params, env):
                          2)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_sigio():
         """
         Test whether port use generates sigio signals correctly.
@@ -338,6 +348,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("virt.async('%s', False, 0)" % (port.name), 10)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_lseek():
         """
         Tests the correct handling of lseek
@@ -351,6 +362,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("virt.lseek('%s', 0, 0)" % (port.name), 10)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_rw_host_offline():
         """
         Try to read from/write to host on guest when host is disconnected.
@@ -378,6 +390,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("print('PASS: nothing')", 10)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_rw_host_offline_big_data():
         """
         Try to read from/write to host on guest when host is disconnected
@@ -414,6 +427,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("print('PASS: nothing')", 10)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_rw_blocking_mode():
         """
         Try to read/write data in blocking mode.
@@ -439,6 +453,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("print('PASS: nothing')", 10)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_rw_nonblocking_mode():
         """
         Try to read/write data in non-blocking mode.
@@ -466,6 +481,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("virt.recv('%s', 10, 1024, False)" % port.name, 10)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_basic_loopback():
         """
         Simple loop back test with loop over two ports.
@@ -651,6 +667,7 @@ def run_virtio_console(test, params, env):
             logging.error(msg)
             raise error.TestFail(msg)
 
+    @error.context_aware
     def _process_stats(stats, scale=1.0):
         """
         Process the stats to human readable form.
@@ -1040,6 +1057,7 @@ def run_virtio_console(test, params, env):
         raise error.TestFail("Removing port which is not in vm.virtio_ports"
                              " ...-%d-%d" % (pci_id, port_id))
 
+    @error.context_aware
     def test_hotplug():
         """
         Check the hotplug/unplug of virtio-consoles ports.
@@ -1173,6 +1191,7 @@ def run_virtio_console(test, params, env):
     ######################################################################
     # Destructive tests
     ######################################################################
+    @error.context_aware
     def test_rw_notconnect_guest():
         """
         Try to send to/read from guest on host while guest not recvs/sends any
@@ -1237,6 +1256,7 @@ def run_virtio_console(test, params, env):
         guest_worker = kvm_virtio_port.GuestWorker(vm)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_rmmod():
         """
         Remove and load virtio_console kernel module.
@@ -1256,6 +1276,7 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("virt.clean_port('%s'),1024" % port.name, 2)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_max_ports():
         """
         Try to start and initialize machine with maximum supported number of
@@ -1272,6 +1293,7 @@ def run_virtio_console(test, params, env):
         guest_worker = kvm_virtio_port.GuestWorker(vm)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_max_serials_and_conosles():
         """
         Try to start and initialize machine with maximum supported number of
@@ -1283,6 +1305,7 @@ def run_virtio_console(test, params, env):
         guest_worker = kvm_virtio_port.GuestWorker(vm)
         cleanup(vm, guest_worker)
 
+    @error.context_aware
     def test_shutdown():
         """
         Try to gently shutdown the machine while sending data through virtio
@@ -1321,6 +1344,7 @@ def run_virtio_console(test, params, env):
         for port in vm.virtio_ports:
             port.close()
 
+    @error.context_aware
     def test_failed_boot():
         """
         Start VM and check if it failed with the right error message.
@@ -1344,6 +1368,7 @@ def run_virtio_console(test, params, env):
     ######################################################################
     # Debug and dummy tests
     ######################################################################
+    @error.context_aware
     def test_delete_guest_script():
         """
         This dummy test only removes the guest_worker_script. Use this it
