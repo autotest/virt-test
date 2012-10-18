@@ -5,14 +5,11 @@ Virtualization test utility functions.
 """
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
-import fcntl, shelve, ConfigParser, threading, sys, UserDict, inspect, tarfile
-import struct, shutil, glob
-from autotest_lib.client.bin import utils, os_dep
-from autotest_lib.client.common_lib import logging_config, logging_manager
-from autotest_lib.client.common_lib import error, git
-from autotest_lib.client.common_lib.syncdata import SyncData, SyncListenServer
-import rss_client, aexpect, virt_storage, virt_env_process
-import platform
+import fcntl, shelve, ConfigParser, sys, UserDict, inspect, tarfile
+import struct, shutil, glob, HTMLParser, urllib, traceback, platform
+from autotest.client import utils, os_dep
+from autotest.client.shared import error, logging_config
+from autotest.client.shared import logging_manager, git, cartesian_config
 
 try:
     import koji
@@ -1614,6 +1611,33 @@ def run_tests(parser, job):
     setup_flag = 1
     cleanup_flag = 2
     for dict in parser.get_dicts():
+        if dict.has_key("prepare_case"):
+            prepare_case = d["prepare_case"]
+        if dict.get("case_type") == "prepare":
+            case_mark = ""
+            for case in prepare_case:
+                if case in d["name"]:
+                    img_name = d['image_name'] + '-' + d['image_format']
+                    case_mark = "%s-%s" % (case, img_name)
+            if case_mark:
+                if case_mark in pass_list:
+                    continue
+                else:
+                    pass_list.append(case_mark)
+
+        for key in dict:
+            if key.endswith("_equal"):
+                t_key = key.split("_equal")[0]
+                dict[t_key] = dict[key]
+            elif key.endswith("_min"):
+                t_key = key.split("_min")[0]
+                if cartesian_config.compare_string(dict[t_key], dict[key]) < 0:
+                   dict[t_key] = dict[key]
+            elif key.endswith("_max"):
+                tmp_key = key.split("_max")[0]
+                if cartesian_config.compare_string(dict[t_key], dict[key]) > 0:
+                    dict[t_key] = dict[key]
+ 
         if index == 0:
             if dict.get("host_setup_flag", None) is not None:
                 flag = int(dict["host_setup_flag"])
