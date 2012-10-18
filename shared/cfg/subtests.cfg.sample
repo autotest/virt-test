@@ -3097,12 +3097,18 @@ variants:
             - check_powerdown:
                 gagent_check_type = powerdown
             - check_reboot:
+                only Linux
                 gagent_check_type = reboot
             - check_halt:
                 gagent_check_type = halt
             - check_fsfreeze:
                 gagent_check_type = fsfreeze
                 gagent_fs_test_cmd = "rm -f /tmp/foo; echo foo > /tmp/foo"
+            - check_snapshot:
+                type = qemu_guest_agent_snapshot
+                gagent_check_type = fsfreeze
+                gagent_fs_test_cmd = "rm -f /tmp/foo; echo foo > /tmp/foo"
+                gagent_fs_check_cmd = "grep foo /tmp/foo"
         variants:
             - virtio_serial:
                 gagent_serial_type = virtio
