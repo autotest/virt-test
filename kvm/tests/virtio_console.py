@@ -517,8 +517,8 @@ def run_virtio_console(test, params, env):
             if len(tmp) >= len(data):
                 break
         if tmp != data:
-            raise error.TestFail("Incorrect data: '%s' != '%s'",
-                                 data, tmp)
+            raise error.TestFail("Incorrect data: '%s' != '%s'"
+                                 % (data, tmp))
         guest_worker.safe_exit_loopback_threads([send_port], [recv_port])
         cleanup(vm, guest_worker)
 
@@ -1181,17 +1181,17 @@ def run_virtio_console(test, params, env):
                 else:
                     exit_event.set()
                     raise error.TestFail("Send thread died unexpectedly in "
-                                         "migration %d", (j + 1))
+                                         "migration %d" % (j + 1))
             for i in range(0, len(ports[1:])):
                 if not threads[i + 1].isAlive():
                     exit_event.set()
                     raise error.TestFail("Recv thread %d died unexpectedly in "
-                                         "migration %d", i, (j + 1))
+                                         "migration %d" % (i, (j + 1)))
                 if verified[i] == threads[i + 1].idx:
                     exit_event.set()
                     raise error.TestFail("No new data in %d console were "
-                                         "transfered after migration %d",
-                                         i, (j + 1))
+                                         "transfered after migration %d"
+                                         % (i, (j + 1)))
                 verified[i] = threads[i + 1].idx
             logging.info("%d out of %d migration(s) passed", (j + 1),
                          no_migrations)
@@ -1632,7 +1632,7 @@ def run_virtio_console(test, params, env):
             port = vm.virtio_ports.pop()
             ret = vm.monitor.cmd("device_del %s" % port.qemu_id)
             if ret != "":
-                raise error.TestFail("Can't unplug port %s: %s" % port, ret)
+                raise error.TestFail("Can't unplug port %s: %s" % (port, ret))
         session = vm.wait_for_login()
 
         # Power off the computer
