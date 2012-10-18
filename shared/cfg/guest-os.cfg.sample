@@ -1765,6 +1765,9 @@ variants:
                 os_variant = win2k3
                 image_name = win2003
                 image_size = 20G
+                netperf_win.netperf_exe.best_registry_setting:
+                    shell_port = 23
+                    shell_client = telnet
 
                 variants:
                     - 32:
@@ -1938,6 +1941,9 @@ variants:
                 os_variant = win2k8
                 image_name = win2008
                 image_size = 20G
+                netperf_win.netperf_exe.best_registry_setting:
+                    shell_port = 23
+                    shell_client = telnet
 
                 variants:
                     - 32:
