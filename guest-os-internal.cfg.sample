@@ -994,7 +994,7 @@ variants:
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
-                block_hotplug, format_disk, multi_disk, usb_multi_disk, physical_resources_check, iometer_windows, iometer_performance:
+                block_hotplug, format_disk, multi_disk, usb_multi_disk, physical_resources_check, iometer_windows, iometer_performance, netperf_win.netperf_exe.best_registry_setting:
                     shell_port = 23
                     shell_client = telnet
                 guest_s3:
@@ -1110,7 +1110,9 @@ variants:
                 reboot_command = shutdown /r /f /t 0
                 guest_test.autoit.disk_dfrg:
                     dst_rsc_path = "C:\DiskDefragment\difrag2008.au3"
-
+                netperf_win.netperf_exe.best_registry_setting:
+                    shell_port = 23
+                    shell_client = telnet
                 variants:
                     - 32:
                         image_name += -32
@@ -1228,6 +1230,9 @@ variants:
 
                 iozone_windows:
                     iozone_cmd = "E:\iozone\iozone -azR -r 64k -n 1G -g 4G -M -b iozone.xls -f c:\testfile"
+                netperf_win.netperf_exe.best_registry_setting:
+                    shell_port = 23
+                    shell_client = telnet
                 variants:
                     - 64:
                         image_name += -64

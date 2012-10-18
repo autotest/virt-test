@@ -1748,12 +1748,6 @@ variants:
         nic_mode = tap
         netperf_files = netperf-2.4.5.tar.bz2 wait_before_data.patch
         setup_cmd = "cd /tmp && rm -rf netperf-2.4.5 && tar xvfj netperf-2.4.5.tar.bz2 && cd netperf-2.4.5 && patch -p0 < ../wait_before_data.patch && ./configure --enable-burst && make"
-        netperf_src = D:\netperf\netperf-2.4.5
-        cygwin_root = C:\rhcygwin\home\Administrator
-        cygwin_start = C:\rhcygwin\Cygwin.bat -i /Cygwin-Terminal.ico -
-        netserv_pattern = "hostname\s+[\d+\.]+\s+port\s+\d+"
-        netserv_start_cmd = netserver
-        netperf_install_cmd = cd netperf-2.4.5; ./configure --enable-burst; make; make install
         guest_ver_cmd = "ver"
         netperf_with_numa = yes
         # configure netperf test parameters
@@ -1770,6 +1764,35 @@ variants:
         shell_port_client = 22
         shell_prompt_client =  \[root@.{0,50}][\#\$]
         ver_cmd = rpm -qa |grep kvm
+        variants:
+            - netperf_exe:
+                use_cygwin = no
+                netserv_start_cmd = "(dir C:\temp || mkdir C:\temp) && start /b D:\netserver.exe"
+                variants:
+                    - default_setting:
+                    - best_registry_setting:
+                        reboot_after_config = yes
+                        # For more information about windows registry setting document, please refer to http://www.linux-kvm.org/page/WindowsGuestDrivers/kvmnet/registry
+                        config_cmds = afd_cmd1,afd_cmd2,afd_cmd3, tcpip_cmd1,tcpip_cmd2
+                        afd_cmd1 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v DefaultSendWindow /d 0x00100000 /t REG_DWORD /f
+                        afd_cmd2 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v DefaultReceiveWindow /d 0x00100000 /t REG_DWORD /f
+                        afd_cmd3 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /d 0x00004000 /t REG_DWORD /f
+                        tcpip_cmd1 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /d 0x00000001 /t REG_DWORD /f
+                        tcpip_cmd2 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpWindowSize /d 0x00100000 /t REG_DWORD /f
+                        disable_tcp_heuristics_cmd = "netsh int tcp set heuristics disabled"
+                        disabled_tcp_autotuning_cmd = "netsh int tcp set global autotuninglevel=disabled"
+                        enable_ctcp_cmd = "netsh int tcp set global congestionprovider=ctcp"
+                        Win2008, Win2008r2, Win7:
+                            config_cmds += ,disable_tcp_heuristics_cmd,disabled_tcp_autotuning_cmd,enable_ctcp_cmd
+            - netperf_cygwin:
+                use_cygwin = yes
+                netperf_src = D:\netperf\netperf-2.4.5
+                cygwin_root = C:\rhcygwin\home\Administrator
+                cygwin_start = C:\rhcygwin\Cygwin.bat -i /Cygwin-Terminal.ico -
+                netserv_pattern = "hostname\s+[\d+\.]+\s+port\s+\d+"
+                netserv_start_cmd = netserver
+                netperf_install_cmd = cd netperf-2.4.5; ./configure --enable-burst; make; make install
+
 
     - ethtool:
         only Linux
