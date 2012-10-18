@@ -9,7 +9,7 @@ import fcntl, shelve, ConfigParser, sys, UserDict, inspect, tarfile
 import struct, shutil, glob, HTMLParser, urllib, traceback, platform
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
-from autotest.client.shared import logging_manager, git
+from autotest.client.shared import logging_manager, git, cartesian_config
 
 try:
     import koji
@@ -1622,6 +1622,19 @@ def run_tests(parser, job):
                 else:
                     pass_list.append(case_mark)
 
+        for key in dict:
+            if key.endswith("_equal"):
+                t_key = key.split("_equal")[0]
+                dict[t_key] = dict[key]
+            elif key.endswith("_min"):
+                t_key = key.split("_min")[0]
+                if cartesian_config.compare_string(dict[t_key], dict[key]) < 0:
+                   dict[t_key] = dict[key]
+            elif key.endswith("_max"):
+                tmp_key = key.split("_max")[0]
+                if cartesian_config.compare_string(dict[t_key], dict[key]) > 0:
+                    dict[t_key] = dict[key]
+ 
         if index == 0:
             if dict.get("host_setup_flag", None) is not None:
                 flag = int(dict["host_setup_flag"])
