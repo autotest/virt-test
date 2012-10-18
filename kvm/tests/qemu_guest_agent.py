@@ -1,6 +1,9 @@
 import logging
+import time
 from autotest.client.shared import error
 from virttest import guest_agent
+from virttest import utils_misc
+from virttest import aexpect
 
 
 class BaseVirtTest(object):
@@ -156,7 +159,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         error.context("Setup guest agent in VM '%s'" % vm.name)
         self.gagent_install(params, vm, *[params.get("gagent_install_cmd")])
         self.gagent_start(params, vm, *[params.get("gagent_start_cmd")])
-        args = [params.get("gagent_serial_type"), params.get("gagent_name")] 
+        args = [params.get("gagent_serial_type"), params.get("gagent_name")]
         self.gagent_create(params, vm, *args)
 
 
@@ -197,16 +200,215 @@ class QemuGuestAgentTest(BaseVirtTest):
         self._cleanup_open_session()
 
 
+class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
+
+    def __init__(self, test, params, env):
+        QemuGuestAgentTest.__init__(self, test, params, env)
+
+        self.exception_list = []
+
+    def gagent_check_install(self, test, params, env):
+        pass
+
+
+    @error.context_aware
+    def gagent_check_sync(self, test, params, env):
+        """
+        Execute "guest-sync" command to guest agent
+
+        Test steps:
+        1) Send "guest-sync" command in the host side.
+
+        @param test: kvm test object
+        @param params: Dictionary with the test parameters
+        @param env: Dictionary with test environmen.
+        """
+        error.context("Check guest agent command 'guest-sync'", logging.info)
+        self.gagent.sync()
+
+
+    @error.context_aware
+    def __gagent_check_shutdown(self, shutdown_mode):
+        error.context("Check guest agent command 'guest-shutdown'"
+                      ", shutdown mode '%s'" % shutdown_mode, logging.info)
+        if not self.env or not self.params:
+            raise error.TestError("You should run 'setup' method before test")
+
+        if not (self.vm and self.vm.is_alive()):
+            vm = self.env.get_vm(self.params["main_vm"])
+            vm.verify_alive()
+            self.vm = vm
+        self.gagent.shutdown(shutdown_mode)
+
+
+    def __gagent_check_serial_output(self, pattern):
+        start_time = time.time()
+        while (time.time() - start_time) < self.vm.REBOOT_TIMEOUT:
+            if pattern in self.vm.serial_console.get_output():
+                return True
+        return False
+
+
+    def gagent_check_powerdown(self, test, params, env):
+        """
+        Shutdown guest with guest agent command "guest-shutdown"
+
+        @param test: kvm test object
+        @param params: Dictionary with the test parameters
+        @param env: Dictionary with test environmen.
+        """
+        self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
+        if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
+            raise error.TestFail("Could not shutdown VM via guest agent'")
+
+
+    @error.context_aware
+    def gagent_check_reboot(self, test, params, env):
+        """
+        Reboot guest with guest agent command "guest-shutdown"
+
+        @param test: kvm test object
+        @param params: Dictionary with the test parameters
+        @param env: Dictionary with test environmen.
+        """
+        self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_REBOOT)
+        # XXX: This way of checking if VM is rebooted can only work with
+        # Linux guest, is there any way to check windows guest reboot?
+        pattern = "machine restart"
+        error.context("Verify serial output has '%s'" % pattern)
+        rebooted = self.__gagent_check_serial_output(pattern)
+        if not rebooted:
+            raise error.TestFail("Could not reboot VM via guest agent")
+
+
+    @error.context_aware
+    def gagent_check_halt(self, test, params, env):
+        """
+        Halt guest with guest agent command "guest-shutdown"
+
+        @param test: kvm test object
+        @param params: Dictionary with the test parameters
+        @param env: Dictionary with test environmen.
+        """
+        self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_HALT)
+        # XXX: This way of checking if VM is halted can only work with
+        # Linux guest, is there any way to check windows guest halt?
+        pattern = "System halted"
+        error.context("Verify serial output has '%s'" % pattern)
+        halted = self.__gagent_check_serial_output(pattern)
+        if not halted:
+            raise error.TestFail("Could not halt VM via guest agent")
+        # Since VM is halted, force shutdown it.
+        try:
+            self.vm.destroy(gracefully=False)
+        except Exception:
+            pass
+
+
+    @error.context_aware
+    def _action_before_fsfreeze(self, *args):
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+
+
+    @error.context_aware
+    def _action_after_fsfreeze(self, *args):
+        error.context("Verfiy FS is frozen in guest.")
+        if not isinstance(args, tuple):
+            return
+
+        if not self._open_session_list:
+            raise error.TestError("Could not find any opened session")
+        # Use the last opened session to send cmd.
+        session = self._open_session_list[-1]
+        try:
+            session.cmd(self.params.get("gagent_fs_test_cmd"))
+        except aexpect.ShellTimeoutError:
+            logging.debug("FS freeze successfully.")
+        else:
+            raise error.TestFail("FS freeze failed, guest still can"
+                                 " write file")
+
+
+    @error.context_aware
+    def _action_before_fsthaw(self, *args):
+        pass
+
+
+    @error.context_aware
+    def _action_after_fsthaw(self, *args):
+        pass
+
+
+    @error.context_aware
+    def gagent_check_fsfreeze(self, test, params, env):
+        """
+        Test guest agent commands "guest-fsfreeze-freeze/status/thaw"
+
+        Test steps:
+        1) Check the FS is thawed.
+        2) Freeze the FS.
+        3) Check the FS is frozen from both guest agent side and guest os side.
+        4) Thaw the FS.
+
+        @param test: kvm test object
+        @param params: Dictionary with the test parameters
+        @param env: Dictionary with test environmen.
+        """
+        error.base_context("Check guest agent command 'guest-fsfreeze-freeze'",
+                      logging.info)
+        error.context("Verify FS is thawed and freeze the FS.")
+
+        try:
+            expect_status = self.gagent.FSFREEZE_STATUS_THAWED
+            self.gagent.verify_fsfreeze_status(expect_status)
+        except guest_agent.VAgentFreezeStatusError:
+            # Thaw guest FS if the fs status is incorrect.
+            self.gagent.fsthaw(check_status=False)
+
+        self._action_before_fsfreeze(test, params, env)
+        self.gagent.fsfreeze()
+        try:
+            self._action_after_fsfreeze(test, params, env)
+
+            # Next, thaw guest fs.
+            self._action_before_fsthaw(test, params, env)
+            error.context("Thaw the FS.")
+            self.gagent.fsthaw()
+            self._action_after_fsthaw(test, params, env)
+        finally:
+            # Thaw fs finally, avoid problem in following cases.
+            try:
+                self.gagent.fsthaw(check_status=False)
+            except Exception, detail:
+                # Ignore exception for this thaw action.
+                logging.warn("Finally failed to thaw guest fs,"
+                             " detail: '%s'", detail)
+
+
+    def run_once(self, test, params, env):
+        QemuGuestAgentTest.run_once(self, test, params, env)
+
+        gagent_check_type = self.params.get("gagent_check_type")
+        chk_type = "gagent_check_%s" % gagent_check_type
+        if hasattr(self, chk_type):
+            func = getattr(self, chk_type)
+            func(test, params, env)
+        else:
+            raise error.TestError("Could not find matching test, check your"
+                                  " config file")
+
+
 def run_qemu_guest_agent(test, params, env):
     """
     Test qemu guest agent, this case will:
     1) Start VM with virtio serial port.
     2) Install qemu-guest-agent package in guest.
-    3) Create QemuAgent object and test if virt agent works.
+    3) Run some basic test for qemu guest agent.
 
     @param test: kvm test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environmen.
     """
-    gagent_test = QemuGuestAgentTest(test, params, env)
+    gagent_test = QemuGuestAgentBasicCheck(test, params, env)
     gagent_test.execute(test, params, env)
