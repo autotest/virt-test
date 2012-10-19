@@ -207,7 +207,7 @@ class QemuImg(object):
                 # We have to make 2 backups, one of the bad image, another one
                 # of the good image
                 src_bad = filename
-                src_good = filename + ".backup"
+                src_good = os.path.join(backup_dir, "%s.backup" % basename)
                 hsh = utils_misc.generate_random_string(4)
                 dst_bad = (os.path.join(backup_dir, "%s.bad.%s" %
                                         (basename, hsh)))
