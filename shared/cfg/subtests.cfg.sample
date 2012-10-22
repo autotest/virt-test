@@ -1100,6 +1100,13 @@ variants:
                             -timeout_6:
                                 start_migration_timeout = 6
 
+                variants:
+                    # Migration cancel
+                    - @no_cancel:
+                    - cancel_with_delay:
+                        no measure_migration_speed
+                        cancel_delay = 10
+
             - migration_multi_host_with_file_transfer: install setup image_copy unattended_install.cdrom
                 type = migration_multi_host_with_file_transfer
                 vms = "vm1"
