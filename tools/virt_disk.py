@@ -10,7 +10,7 @@ disks just like they're created by the virt unattended test installation.
 
 import sys, optparse
 import common
-from virttest import utils_disk
+from virttest import utils_misc, utils_disk
 
 
 class OptionParser(optparse.OptionParser):
@@ -31,25 +31,21 @@ class OptionParser(optparse.OptionParser):
         media.add_option('-f', '--floppy', dest='floppy', default=False,
                          action='store_true',
                          help=('create a basic floppy image'))
-        media.add_option('--floppy-size', dest='vfd_size',
-                         action='store_true', default="1440k",
-                         help=('Floppy size (1440k or 2880k). '
-                               'defaults to %default'))
         self.add_option_group(media)
 
         path = optparse.OptionGroup(self, 'PATH SELECTION')
         path.add_option('-q', '--qemu-img', dest='qemu_img',
                         default='/usr/bin/qemu-img',
                         help=('qemu-img binary path. defaults to '
-                              '%default'))
+                              '"/usr/bin/qemu-img"'))
         path.add_option('-t', '--temp', dest='temp', default='/tmp',
-                        help='Path to hold temporary files. defaults to %default')
+                        help='qemu-img binary path. defaults to "/tmp"')
         self.add_option_group(path)
 
 
 class App:
     '''
-    Virt Disk Creation App
+    KojiPkgSpec app
     '''
     def __init__(self):
         self.opt_parser = OptionParser()
@@ -78,12 +74,11 @@ class App:
         self.parse_cmdline()
         if self.options.floppy:
             self.disk = utils_disk.FloppyDisk(self.image,
-                                              self.options.qemu_img,
-                                              self.options.temp,
-                                              self.options.vfd_size)
+                                                   self.options.qemu_img,
+                                                   self.options.temp, self.vfd_size)
         elif self.options.cdrom:
             self.disk = utils_disk.CdromDisk(self.image,
-                                             self.options.temp)
+                                                  self.options.temp)
 
         for f in self.files:
             self.disk.copy_to(f)
