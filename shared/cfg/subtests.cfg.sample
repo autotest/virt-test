@@ -1444,6 +1444,11 @@ variants:
         type = block_stream
         alive_test_cmd = uname -a
 
+    - block_mirror:
+        virt_test_type = kvm
+        type = block_mirror
+        block_mirror_cmd = drive_mirror
+
     - stop_continue: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm libvirt
         type = stop_continue
