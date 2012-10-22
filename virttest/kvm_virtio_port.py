@@ -4,6 +4,7 @@ Interfaces and helpers for the virtio_serial ports.
 @copyright: 2012 Red Hat Inc.
 """
 from threading import Thread
+from collections import deque
 import aexpect
 import logging
 import os
@@ -32,11 +33,12 @@ class _VirtioPort(object):
     """
     Define structure to keep information about used port.
     """
-    def __init__(self, name, hostfile):
+    def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
         @param hostfile: Path to port on host side.
         """
+        self.qemu_id = qemu_id
         self.name = name
         self.hostfile = hostfile
         self.is_console = None  # "yes", "no"
@@ -134,23 +136,23 @@ class _VirtioPort(object):
 
 class VirtioSerial(_VirtioPort):
     """ Class for handling virtio-serialport """
-    def __init__(self, name, hostfile):
+    def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
         @param hostfile: Path to port on host side.
         """
-        super(VirtioSerial, self).__init__(name, hostfile)
+        super(VirtioSerial, self).__init__(qemu_id, name, hostfile)
         self.is_console = "no"
 
 
 class VirtioConsole(_VirtioPort):
     """ Class for handling virtio-console """
-    def __init__(self, name, hostfile):
+    def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
         @param hostfile: Path to port on host side.
         """
-        super(VirtioConsole, self).__init__(name, hostfile)
+        super(VirtioConsole, self).__init__(qemu_id, name, hostfile)
         self.is_console = "yes"
 
 
@@ -297,6 +299,16 @@ class GuestWorker(object):
 
         return (match, data)
 
+    def read_nonblocking(self, internal_timeout=None, timeout=None):
+        """
+        Reads-out all remaining output from GuestWorker.
+        @param internal_timeout: Time (seconds) to wait before we give up
+                                 reading from the child process, or None to
+                                 use the default value.
+        @param timeout: Timeout for reading child process output.
+        """
+        return self.session.read_nonblocking(internal_timeout, timeout)
+
     def _cleanup_ports(self):
         """
         Read all data from all ports, in both sides of each port.
@@ -359,6 +371,7 @@ class GuestWorker(object):
                          "&& echo -n PASS: python killed"
                          "|| echo -n PASS: python was already dead", 10)
 
+                self._execute_worker()
                 self._init_guest()
                 self._cleanup_ports()
 
@@ -425,7 +438,7 @@ class ThSendCheck(Thread):
     Random data sender thread.
     """
     def __init__(self, port, exit_event, queues, blocklen=1024,
-                 migrate_event=None):
+                 migrate_event=None, reduced_set=False):
         """
         @param port: Destination port
         @param exit_event: Exit event
@@ -446,10 +459,17 @@ class ThSendCheck(Thread):
         self.migrate_event = migrate_event
         self.idx = 0
         self.ret_code = 1    # sets to 0 when finish properly
+        self.reduced_set = reduced_set
 
     def run(self):
         logging.debug("ThSendCheck %s: run", self.getName())
         too_much_data = False
+        if self.reduced_set:
+            rand_a = 65
+            rand_b = 91
+        else:
+            rand_a = 0
+            rand_b = 255
         while not self.exitevent.isSet():
             # FIXME: workaround the problem with qemu-kvm stall when too
             # much data is sent without receiving
@@ -463,7 +483,7 @@ class ThSendCheck(Thread):
                 # and send them over virtio_console
                 buf = ""
                 for _ in range(self.blocklen):
-                    char = "%c" % random.randrange(255)
+                    char = "%c" % random.randrange(rand_a, rand_b)
                     buf += char
                     for queue in self.queues:
                         queue.append(char)
@@ -473,33 +493,36 @@ class ThSendCheck(Thread):
                         idx = self.port.sock.send(buf)
                     except Exception, inst:
                         # Broken pipe
-                        if inst.errno == 32:
-                            if self.migrate_event is None:
-                                self.exitevent.set()
-                                raise error.TestFail("ThSendCheck %s: Broken "
-                                        "pipe. If this is expected behavior "
-                                        "set migrate_event to support "
-                                        "reconnection." % self.getName())
-                            logging.debug("ThSendCheck %s: Broken pipe "
-                                          ", reconnecting. ", self.getName())
-                            attempt = 10
-                            while (attempt > 1
-                                   and not self.exitevent.isSet()):
-                                # Wait until main thread sets the new self.port
-                                if not self.migrate_event.wait(30):
-                                    self.exitevent.set()
-                                    raise error.TestFail("ThSendCheck %s: "
-                                            "Timeout while waiting for "
-                                            "migrate_event" % self.getName())
-                                self.port.sock = False
-                                self.port.open()
-                                try:
-                                    idx = self.port.sock.send(buf)
-                                except Exception:
-                                    attempt += 1
-                                    time.sleep(10)
-                                else:
-                                    attempt = 0
+                        if inst.errno != 32:
+                            continue
+                        if self.migrate_event is None:
+                            self.exitevent.set()
+                            raise error.TestFail("ThSendCheck %s: Broken "
+                                    "pipe. If this is expected behavior "
+                                    "set migrate_event to support "
+                                    "reconnection." % self.getName())
+                        logging.debug("ThSendCheck %s: Broken pipe "
+                                      ", reconnecting. ", self.getName())
+                        attempt = 10
+                        while (attempt > 1
+                               and not self.exitevent.isSet()):
+                            # Wait until main thread sets the new self.port
+                            while not (self.exitevent.isSet()
+                                            or self.migrate_event.wait(1)):
+                                pass
+                            if self.exitevent.isSet():
+                                break
+                            logging.debug("ThSendCheck %s: Broken pipe resumed"
+                                          ", reconnecting...", self.getName())
+                            self.port.sock = False
+                            self.port.open()
+                            try:
+                                idx = self.port.sock.send(buf)
+                            except Exception:
+                                attempt -= 1
+                                time.sleep(10)
+                            else:
+                                attempt = 0
                     buf = buf[idx:]
                     self.idx += idx
         logging.debug("ThSendCheck %s: exit(%d)", self.getName(),
@@ -554,7 +577,7 @@ class ThRecvCheck(Thread):
     Random data receiver/checker thread.
     """
     def __init__(self, port, buff, exit_event, blocklen=1024, sendlen=0,
-                 migrate_event=None):
+                 migrate_event=None, debug=None):
         """
         @param port: Source port.
         @param buff: Control data buffer (FIFO).
@@ -562,6 +585,7 @@ class ThRecvCheck(Thread):
         @param blocklen: Block length.
         @param sendlen: Block length of the send function (on guest)
         @param migrate_event: Event indicating port was changed and is ready.
+        @param debug: Set the execution mode, when nothing run normal.
         """
         Thread.__init__(self)
         self.port = port
@@ -572,11 +596,34 @@ class ThRecvCheck(Thread):
         self.idx = 0
         self.sendlen = sendlen + 1  # >=
         self.ret_code = 1    # sets to 0 when finish properly
+        self.debug = debug      # see the self.run_* docstrings for details
+        # self.sendidx is the maxiaml number of skipped/duplicated values
+        # 1) autoreload when the host socket is reconnected. In this case
+        #    it waits <30s for migrate_event and reloads sendidx to sendlen
+        # 2) manual write to this value (eg. before you reconnect guest port).
+        #    RecvThread decreases this value whenever data loss/dup occurs.
+        self.sendidx = -1
 
     def run(self):
+        """ Pick the right mode and execute it """
+        if self.debug == 'debug':
+            self.run_debug()
+        elif self.debug == 'normal' or not self.debug:
+            self.run_normal()
+        else:
+            logging.error('ThRecvCheck %s: Unsupported debug mode, using '
+                          'normal mode.', self.getName())
+            self.run_normal()
+
+    def run_normal(self):
+        """
+        Receives data and verifies, whether they match the self.buff (queue).
+        It allow data loss up to self.sendidx which can be manually loaded
+        after host socket reconnection or you can overwrite this value from
+        other thread.
+        """
         logging.debug("ThRecvCheck %s: run", self.getName())
         attempt = 10
-        sendidx = -1
         minsendidx = self.sendlen
         while not self.exitevent.isSet():
             ret = select.select([self.port.sock], [], [], 1.0)
@@ -592,8 +639,8 @@ class ThRecvCheck(Thread):
                             # TODO BUG: data from the socket on host can
                             # be lost during migration
                             while char != _char:
-                                if sendidx > 0:
-                                    sendidx -= 1
+                                if self.sendidx > 0:
+                                    self.sendidx -= 1
                                     _char = self.buff.popleft()
                                 else:
                                     self.exitevent.set()
@@ -620,7 +667,7 @@ class ThRecvCheck(Thread):
                                     logging.info("ThRecvCheck %s: "
                                                 "MaxSendIDX = %d",
                                                 self.getName(),
-                                                (self.sendlen - sendidx))
+                                                (self.sendlen - self.sendidx))
                                     raise error.TestFail("ThRecvCheck %s: "
                                                          "incorrect data" %
                                                          self.getName())
@@ -638,29 +685,185 @@ class ThRecvCheck(Thread):
                         logging.debug("ThRecvCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
                         # TODO BUG: data from the socket on host can be lost
-                        if sendidx >= 0:
-                            minsendidx = min(minsendidx, sendidx)
+                        if self.sendidx >= 0:
+                            minsendidx = min(minsendidx, self.sendidx)
                             logging.debug("ThRecvCheck %s: Previous data "
                                           "loss was %d.",
                                           self.getName(),
-                                          (self.sendlen - sendidx))
-                        sendidx = self.sendlen
+                                          (self.sendlen - self.sendidx))
+                        self.sendidx = self.sendlen
                         # Wait until main thread sets the new self.port
-                        if not self.migrate_event.wait(30):
-                            self.exitevent.set()
-                            raise error.TestFail("ThRecvCheck %s: Timeout "
-                                            "while waiting for migrate_event"
-                                            % self.getName())
+                        while not (self.exitevent.isSet()
+                                   or self.migrate_event.wait(1)):
+                            pass
+                        if self.exitevent.isSet():
+                            break
+                        logging.debug("ThRecvCheck %s: Broken pipe resumed, "
+                                      "reconnecting...", self.getName())
 
                         self.port.sock = False
                         self.port.open()
-        if sendidx >= 0:
-            minsendidx = min(minsendidx, sendidx)
+        if self.sendidx >= 0:
+            minsendidx = min(minsendidx, self.sendidx)
         if (self.sendlen - minsendidx):
             logging.error("ThRecvCheck %s: Data loss occured during socket"
                           "reconnection. Maximal loss was %d per one "
                           "migration.", self.getName(),
                           (self.sendlen - minsendidx))
+        logging.debug("ThRecvCheck %s: exit(%d)", self.getName(),
+                      self.idx)
+        self.ret_code = 0
+
+    def run_debug(self):
+        """
+        viz run_normal.
+        Additionally it stores last n verified characters and in
+        case of failures it quickly receive enough data to verify failure or
+        allowed loss and then analyze this data. It provides more info about
+        the situation.
+        Unlike normal run this one supports booth - loss and duplications.
+        It's not friendly to data corruption.
+        """
+        logging.debug("ThRecvCheck %s: run", self.getName())
+        attempt = 10
+        minsendidx = self.sendlen
+        max_loss = 0
+        sum_loss = 0
+        verif_buf = deque(maxlen=max(self.blocklen, self.sendlen))
+        while not self.exitevent.isSet():
+            ret = select.select([self.port.sock], [], [], 1.0)
+            if ret[0] and (not self.exitevent.isSet()):
+                buf = self.port.sock.recv(self.blocklen)
+                if buf:
+                    # Compare the received data with the control data
+                    for idx_char in xrange(len(buf)):
+                        _char = self.buff.popleft()
+                        if buf[idx_char] == _char:
+                            self.idx += 1
+                            verif_buf.append(_char)
+                        else:
+                            # Detect the duplicated/lost characters.
+                            logging.debug("ThRecvCheck %s: fail to receive "
+                                          "%dth character.", self.getName(),
+                                          self.idx)
+                            buf = buf[idx_char:]
+                            for i in xrange(100):
+                                if len(self.buff) < self.sendidx:
+                                    time.sleep(0.01)
+                                else:
+                                    break
+                            sendidx = min(self.sendidx, len(self.buff))
+                            if sendidx < self.sendidx:
+                                logging.debug("ThRecvCheck %s: sendidx was "
+                                              "lowered as there is not enough "
+                                              "data after 1s. Using sendidx="
+                                              "%s.", self.getName(), sendidx)
+                            for _ in xrange(sendidx / self.blocklen):
+                                if self.exitevent.isSet():
+                                    break
+                                buf += self.port.sock.recv(self.blocklen)
+                            queue = _char
+                            for _ in xrange(sendidx):
+                                queue += self.buff[_]
+                            offset_a = None
+                            offset_b = None
+                            for i in xrange(sendidx):
+                                length = min(len(buf[i:]), len(queue))
+                                if buf[i:] == queue[:length]:
+                                    offset_a = i
+                                    break
+                            for i in xrange(sendidx):
+                                length = min(len(queue[i:]), len(buf))
+                                if queue[i:][:length] == buf[:length]:
+                                    offset_b = i
+                                    break
+
+                            if (offset_b and offset_b < offset_a) or offset_a:
+                                # Data duplication
+                                self.sendidx -= offset_a
+                                max_loss = max(max_loss, offset_a)
+                                sum_loss += offset_a
+                                logging.debug("ThRecvCheck %s: DUP %s (out of "
+                                              "%s)", self.getName(), offset_a,
+                                              sendidx)
+                                buf = buf[offset_a + 1:]
+                                for _ in xrange(len(buf)):
+                                    self.buff.popleft()
+                                verif_buf.extend(buf)
+                                self.idx += len(buf)
+                            elif offset_b:  # Data loss
+                                max_loss = max(max_loss, offset_b)
+                                sum_loss += offset_b
+                                logging.debug("ThRecvCheck %s: LOST %s (out of"
+                                              " %s)", self.getName(), offset_b,
+                                              sendidx)
+                                # Pop-out the lost characters from verif_queue
+                                # (first one is already out)
+                                self.sendidx -= offset_b
+                                for i in xrange(offset_b - 1):
+                                    self.buff.popleft()
+                                for _ in xrange(len(buf)):
+                                    self.buff.popleft()
+                                self.idx += len(buf)
+                                verif_buf.extend(buf)
+                            else:   # Too big data loss or duplication
+                                verif = ""
+                                for _ in xrange(-min(sendidx, len(verif_buf)),
+                                                0):
+                                    verif += verif_buf[_]
+                                logging.error("ThRecvCheck %s: mismatched data"
+                                              ":\nverified: ..%s\nreceived:   "
+                                              "%s\nsent:       %s",
+                                              self.getName(), repr(verif),
+                                              repr(buf), repr(queue))
+                                raise error.TestFail("Recv and sendqueue "
+                                                "don't match with any offset.")
+                            # buf was changed, break from this loop
+                            attempt = 10
+                            break
+                    attempt = 10
+                else:   # ! buf
+                    # Broken socket
+                    if attempt > 0:
+                        attempt -= 1
+                        if self.migrate_event is None:
+                            self.exitevent.set()
+                            raise error.TestFail("ThRecvCheck %s: Broken pipe."
+                                    " If this is expected behavior set migrate"
+                                    "_event to support reconnection." %
+                                    self.getName())
+                        logging.debug("ThRecvCheck %s: Broken pipe "
+                                      ", reconnecting. ", self.getName())
+                        # TODO BUG: data from the socket on host can be lost
+                        if self.sendidx >= 0:
+                            minsendidx = min(minsendidx, self.sendidx)
+                            logging.debug("ThRecvCheck %s: Previous data "
+                                          "loss was %d.",
+                                          self.getName(),
+                                          (self.sendlen - self.sendidx))
+                        self.sendidx = self.sendlen
+                        # Wait until main thread sets the new self.port
+                        while not (self.exitevent.isSet()
+                                   or self.migrate_event.wait(1)):
+                            pass
+                        if self.exitevent.isSet():
+                            break
+                        logging.debug("ThRecvCheck %s: Broken pipe resumed, "
+                                      "reconnecting...", self.getName())
+
+                        self.port.sock = False
+                        self.port.open()
+        if self.sendidx >= 0:
+            minsendidx = min(minsendidx, self.sendidx)
+        if (self.sendlen - minsendidx):
+            logging.debug("ThRecvCheck %s: Data loss occured during socket"
+                          "reconnection. Maximal loss was %d per one "
+                          "migration.", self.getName(),
+                          (self.sendlen - minsendidx))
+        if sum_loss > 0:
+            logging.debug("ThRecvCheck %s: Data offset detected, cumulative "
+                          "err: %d, max err: %d(%d)", self.getName(), sum_loss,
+                          max_loss, float(max_loss) / self.blocklen)
         logging.debug("ThRecvCheck %s: exit(%d)", self.getName(),
                       self.idx)
         self.ret_code = 0
