@@ -1,6 +1,8 @@
 import logging, socket, time, errno, os, fcntl
-from virttest import utils_test, utils_misc
+from virttest import utils_test, utils_misc, remote, virt_vm
+from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData
+
 
 def run_migration_multi_host_fd(test, params, env):
     """
@@ -28,8 +30,12 @@ def run_migration_multi_host_fd(test, params, env):
             re implement this method.
             """
             logging.info("Start migrating now...")
+            cancel_delay = mig_data.params.get("cancel_delay")
+            if cancel_delay is not None:
+                cancel_delay = int(cancel_delay)
             vm = mig_data.vms[0]
             vm.migrate(dest_host=mig_data.dst,
+                       cancel_delay=cancel_delay,
                        protocol="fd",
                        fd_src=mig_data.params['migration_fd'])
 
@@ -77,7 +83,7 @@ def run_migration_multi_host_fd(test, params, env):
             sock.listen(1)
             return sock
 
-        def migration_scenario(self):
+        def migration_scenario(self, worker=None):
             srchost = self.params.get("hosts")[0]
             dsthost = self.params.get("hosts")[1]
             mig_port = None
@@ -123,5 +129,68 @@ def run_migration_multi_host_fd(test, params, env):
                 finally:
                     s.close()
 
-    mig = TestMultihostMigrationFd(test, params, env)
+
+    class TestMultihostMigrationCancel(TestMultihostMigrationFd):
+        def __init__(self, test, params, env):
+            super(TestMultihostMigrationCancel, self).__init__(test, params,
+                                                               env)
+            self.install_path = params.get("cpuflags_install_path", "/tmp")
+            self.vm_mem = int(params.get("mem", "512"))
+            self.srchost = self.params.get("hosts")[0]
+            self.dsthost = self.params.get("hosts")[1]
+            self.vms = params.get("vms").split()
+            self.id = {'src': self.srchost,
+                       'dst': self.dsthost,
+                       "type": "cancel_migration"}
+
+        def check_guest(self):
+            broken_vms = []
+            for vm in self.vms:
+                try:
+                    vm = env.get_vm(vm)
+                    session = vm.wait_for_login(timeout=self.login_timeout)
+                    session.sendline("killall -9 cpuflags-test")
+                except (remote.LoginError, virt_vm.VMError):
+                    broken_vms.append(vm)
+            if broken_vms:
+                raise error.TestError("VMs %s should work on src"
+                                      " host after canceling of"
+                                      " migration." % (broken_vms))
+            # Try migration again without cancel.
+
+        def migration_scenario(self):
+            def worker(mig_data):
+                vm = mig_data.vms[0]
+                session = vm.wait_for_login(timeout=self.login_timeout)
+
+                utils_misc.install_cpuflags_util_on_vm(test, vm,
+                                                       self.install_path,
+                                                   extra_flags="-msse3 -msse2")
+
+                cmd = ("%s/cpuflags-test --stressmem %d %%" %
+                           (os.path.join(self.install_path, "test_cpu_flags"),
+                            self.vm_mem / 2))
+                logging.debug("Sending command: %s" % (cmd))
+                session.sendline(cmd)
+
+            super_cls = super(TestMultihostMigrationCancel, self)
+            super_cls.migration_scenario(worker)
+
+            if params.get("hostid") == self.master_id():
+                self.check_guest()
+
+            self._hosts_barrier(self.hosts, self.id,
+                                'wait_for_cancel', self.login_timeout)
+
+            params["cancel_delay"] = None
+            super(TestMultihostMigrationCancel, self).migration_scenario()
+
+
+    mig = None
+    cancel_delay = params.get("cancel_delay", None)
+    if cancel_delay is None:
+        mig = TestMultihostMigrationFd(test, params, env)
+    else:
+        mig = TestMultihostMigrationCancel(test, params, env)
+
     mig.run()
