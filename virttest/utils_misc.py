@@ -1466,16 +1466,17 @@ def log_line(filename, line):
     @param line: Line to write.
     """
     global _open_log_files, _log_file_dir
-    if filename not in _open_log_files:
-        path = get_path(_log_file_dir, filename)
+
+    path = get_path(_log_file_dir, filename)
+    if path not in _open_log_files:
         try:
             os.makedirs(os.path.dirname(path))
         except OSError:
             pass
-        _open_log_files[filename] = open(path, "w")
+        _open_log_files[path] = open(path, "w")
     timestr = time.strftime("%Y-%m-%d %H:%M:%S")
-    _open_log_files[filename].write("%s: %s\n" % (timestr, line))
-    _open_log_files[filename].flush()
+    _open_log_files[path].write("%s: %s\n" % (timestr, line))
+    _open_log_files[path].flush()
 
 
 def set_log_file_dir(directory):
