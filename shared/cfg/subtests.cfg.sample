@@ -528,6 +528,17 @@ variants:
                 addition_status_error = yes
                 setmem_options_suffix = "xyz"
 
+    - virsh_define: install setup image_copy unattended_install
+        type = virsh_define
+        start_vm = "no"
+        variants:
+            - number:
+                new_name = "12345678"
+            - symbol_letter_number:
+                new_name = "-vm1"
+            - symbol:
+                new_name = "-_-"
+
     - module_probe:
         type = module_probe
         # You can specify your own module list, though it is not needed usually.
