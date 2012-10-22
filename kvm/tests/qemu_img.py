@@ -255,7 +255,6 @@ def run_qemu_img(test, params, env):
 
         @param cmd: qemu-img base command.
         """
-        cmd += " commit"
 
         logging.info("Commit testing started!")
         image_name = params.get("image_name", "image")
@@ -269,7 +268,7 @@ def run_qemu_img(test, params, env):
                 os.remove(backing_file)
 
             # Create the new backing file
-            create_cmd = "qemu-img create -b %s.%s -f %s %s.%s" % (image_name,
+            create_cmd = "%s create -b %s.%s -f %s %s.%s" % (cmd, image_name,
                                                                   image_format,
                                                                   image_format,
                                                              backing_file_name,
@@ -333,7 +332,7 @@ def run_qemu_img(test, params, env):
 
             # Excecute the commit command
             logging.info("Commiting image")
-            cmitcmd = "%s -f %s %s.%s" % (cmd, image_format, backing_file_name,
+            cmitcmd = "%s commit -f %s %s.%s" % (cmd, image_format, backing_file_name,
                                           image_format)
             try:
                 utils.system(cmitcmd)
