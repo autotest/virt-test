@@ -218,7 +218,8 @@ def run_virtio_console(test, params, env):
     def test_multi_open():
         """
         Try to open the same port twice.
-        @note: It should pass with virtconsole and fail with virtserialport
+        @note: On linux it should pass with virtconsole and fail with
+               virtserialport. On Windows booth should fail
         @param cfg: virtio_console_params - which type of virtio port to test
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
@@ -227,8 +228,8 @@ def run_virtio_console(test, params, env):
         guest_worker.cmd("virt.close('%s')" % (port.name), 10)
         guest_worker.cmd("virt.open('%s')" % (port.name), 10)
         (match, data) = guest_worker._cmd("virt.open('%s')" % (port.name), 10)
-        # Console is permitted to open the device multiple times
-        if port.is_console == "yes":    # is console?
+        # Console on linux is permitted to open the device multiple times
+        if port.is_console == "yes" and guest_worker.os_linux:
             if match != 0:  # Multiple open didn't pass
                 raise error.TestFail("Unexpected fail of opening the console"
                                      " device for the 2nd time.\n%s" % data)
