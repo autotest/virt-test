@@ -3896,6 +3896,122 @@ variants:
         start_vm = no
         user_runas = nobody
         type = qemu_nobody
+
+    - systemtap_tracing:
+        #if you want exec command durnning tracing,you can add cmds_exec
+        #this support monitor command and bash command.
+        #the command is madeup of  commands_type:commands[;commands]
+        #commands_type shoule be 'monitro' or 'bash'(if none is bash)
+        #the same type commands split using ";"
+        #the diff type command split using  ","
+        #for example:
+        # cmds_exec = bash:ls /root, monitor:info status;stop, bash:ls;ls
+        # cmds_exec = ls /root, monitor:info status; stop, ls;ls
+        start_vm = yes
+        type = systemtap_tracing
+        profilers = systemtap
+        variants:
+            - balloon_event:
+                extra_params = -device virtio-balloon-pci,id=ballooning
+                probe_var_key = opaque addr
+                stap_script_file = balloon_event.stp
+                cmds_exec = monitor:balloon value=2048
+            - bdrv_aio_readv:
+                probe_var_key = bs sector_num nb_sectors opaque
+                stap_script_file = bdrv_aio_readv.stp
+            - bdrv_aio_writev:
+                probe_var_key = bs sector_num nb_sectors opaque
+                stap_script_file = bdrv_aio_writev.stp
+            - bdrv_lock_medium:
+                probe_var_key = bs locked
+                stap_script_file = bdrv_lock_medium.stp
+                cdrom_cd1 = isos/linux/RHEL3.9-i386-DVD.iso
+            - cpu_get_apic_base:
+                probe_var_key = val
+                stap_script_file = cpu_get_apic_base.stp
+            - cpu_in:
+                probe_var_key = addr   val
+                stap_script_file = cpu_in.stp
+            - cpu_out:
+                probe_var_key = addr val
+                stap_script_file = cpu_out.stp
+            - memalign:
+                probe_var_key = alignment size ptr
+                stap_script_file = memalign.stp
+            - paio_submit:
+                probe_var_key = acb opaque sector_num nb_sectors type
+                stap_script_file = paio_submit.stp
+            - qemu_free:
+                probe_var_key = ptr
+                stap_script_file = qemu_free.stp
+            - qemu_malloc:
+                probe_var_key = size ptr
+                stap_script_file = qemu_malloc.stp
+            - qemu_realloc:
+                probe_var_key = ptr size newptr
+                stap_script_file = qemu_realloc.stp
+            - qemu_vfree:
+                probe_var_key = ptr
+                stap_script_file = qemu_vfree.stp
+            - qemu_vmalloc:
+                probe_var_key = size
+                stap_script_file = qemu_vmalloc.stp
+            - usb_clear_device_feature:
+                probe_var_key = addr feature ret
+                stap_script_file = usb_clear_device_feature.stp
+            - usb_desc_config:
+                probe_var_key = addr index len ret
+                stap_script_file = usb_desc_config.stp
+            - usb_desc_device:
+                probe_var_key = addr len ret
+                stap_script_file = usb_desc_device.stp
+            - usb_desc_string:
+                probe_var_key = addr index len ret
+                stap_script_file = usb_desc_string.stp
+            - usb_port_attach:
+                probe_var_key = bus port
+                stap_script_file = usb_port_attach.stp
+            - usb_port_claim:
+                probe_var_key = bus port
+                stap_script_file = usb_port_claim.stp
+            - usb_set_addr:
+                probe_var_key = addr
+                stap_script_file = usb_set_addr.stp
+            - usb_set_config:
+                probe_var_key = addr config ret
+                stap_script_file = usb_set_config.stp
+            - usb_set_device_feature:
+                probe_var_key =  addr feature ret
+                stap_script_file = usb_set_device_feature.stp
+            - virtio_blk_req_complete:
+                probe_var_key = req status
+                stap_script_file = virtio_blk_req_complete.stp
+            - virtio_blk_rw_complete:
+                probe_var_key = req ret
+                stap_script_file = virtio_blk_rw_complete.stp
+                cmds_exec = dd if=/dev/zero of=/tmp/testvirt bs=1k count=1000
+            - virtio_notify:
+                probe_var_key = vdev vq
+                stap_script_file = virtio_notify.stp
+            - virtio_queue_notify:
+                probe_var_key = vdev n vq
+                stap_script_file = virtio_queue_notify.stp
+                cmds_exec = dd if=/dev/zero of=/tmp/testvirt bs=1k count=1000
+            - virtqueue_fill:
+                probe_var_key = vq elem len idx
+                stap_script_file = virtqueue_fill.stp
+                cmds_exec = dd if=/dev/zero of=/tmp/testvirt bs=1k count=1000
+            - virtqueue_flush:
+                probe_var_key = vq count
+                stap_script_file = virtqueue_flush.stp
+            - virtqueue_pop:
+                probe_var_key = vq elem in_num out_num
+                stap_script_file = virtqueue_pop.stp
+            - vm_state_notify:
+                probe_var_key = running reason
+                stap_script_file = vm_state_notify.stp
+                cmds_exec = monitor:stop;cont
+
  # Internal case configuration end. Don't add any case below this line.
  # (THIS LINE IS RESERVED FOR MERGE)
  # (THIS LINE IS RESERVED FOR MERGE)
