@@ -3007,51 +3007,32 @@ variants:
         kill_vm_gracefully = no
         check_img = yes
 
-    - rv_connect:
-        type = rv_connect
-        vms = vm1 vm2
-        guest_vm = vm1
-        client_vm = vm2
-        image_name_vm2 = client_vm
-        display_vm2 = vnc
-        vga_vm2 = cirrus
+    - qemu_guest_agent: install setup image_copy unattended_install.cdrom
+        no RHEL.3, RHEL.4, RHEL.5
+        no RHEL.6.0, RHEL.6.1, RHEL.6.2
+        no Host_RHEL.5, Host_RHEL.6.1, Host_RHEL.6.2
+        type = qemu_guest_agent
+        gagent_name = "org.qemu.guest_agent.0"
+        virtio_ports += "org.qemu.guest_agent.0"
+        virtio_port_type_org.qemu.guest_agent.0 = "serialport"
+        gagent_install_cmd = "yum install -y qemu-guest-agent && service qemu-ga start"
 
-        variants:
-            - RHEL:
-                variants:
-                    # This is current solution of handling
-                    # multiple guests running exact same OS
-                    -6.3.x86_64:
-                        image_name_vm2 = rhel63-64_client
-                    -6.3.i386:
-                        image_name_vm2 = rhel63-32_client
+# Above lines are reserved for upstream.
+# Please Don't add any case before shutdown.
+# Below cases are only existed in internal tree.
+#
+    - build:
+        testcase = build
+        type = build
+        mode = brew
+        load_modules = yes
+        base_pgk_url = http://download.devel.redhat.com/brewroot/packages/
+        release = kvm-83-142.el5
+        pkg_list = kmod-kvm kvm kvm-qemu-img kvm-tools kvm-debuginfo
+        qemu_bin_paths = /usr/libexec/qemu-kvm /usr/bin/qemu-img
+        vms =
 
-    - rv_connect_win:
-        type = rv_connect
-        vms = vm1 vm2
-        guest_vm = vm1
-        client_vm = vm2
-        image_name_vm2 = client_vm
-        display_vm2 = vnc
-        os_type_vm2 = linux
-        shell_prompt_vm2 = ^\[.*\][\#\$]\s*$
-        shell_client_vm2 = ssh 
-        username_vm2 = root
-        shell_port_vm2 = 22 
-        status_test_command_vm2 = echo $?
-
-        variants:
-            - RHEL:
-                variants:
-                    # This is current solution of handling
-                    # multiple guests running exact same OS
-                    -6.3.beta.x86_64:
-                        image_name_vm2 = rhel63-64_client
-                    -6.3.beta.i386:
-                        image_name_vm2 = rhel63-32_client
-
-
-    - kernel_install:
+    - check_block_size:
         only Linux
         only virtio_blk
         no Host_RHEL.5
