@@ -18,7 +18,7 @@ autopart
 poweroff
 KVM_TEST_LOGGING
 
-%packages
+%packages --ignoremissing
 @base
 @core
 @development
@@ -27,9 +27,8 @@ KVM_TEST_LOGGING
 @network-tools
 NetworkManager
 ntpdate
-watchdog
-coreutils
-usbutils
+redhat-lsb
+qemu-guest-agent
 
 %post
 echo "OS install is completed" > /dev/ttyS0
