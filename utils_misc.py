@@ -1631,7 +1631,7 @@ def run_tests(parser, job):
                 if cartesian_config.compare_string(dict[t_key], dict[key]) < 0:
                    dict[t_key] = dict[key]
             elif key.endswith("_max"):
-                tmp_key = key.split("_max")[0]
+                t_key = key.split("_max")[0]
                 if cartesian_config.compare_string(dict[t_key], dict[key]) > 0:
                     dict[t_key] = dict[key]
  
