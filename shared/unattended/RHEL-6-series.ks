@@ -18,7 +18,7 @@ autopart
 poweroff
 KVM_TEST_LOGGING
 
-%packages
+%packages --ignoremissing
 @base
 @core
 @development
@@ -30,6 +30,7 @@ ntpdate
 watchdog
 coreutils
 usbutils
+qemu-guest-agent
 
 %post
 echo "OS install is completed" > /dev/ttyS0
