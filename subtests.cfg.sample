@@ -2576,6 +2576,11 @@ variants:
                 s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
                 s4_start_cmd = 'echo disk > /sys/power/state'
                 services_up_timeout = 30
+            - check_snapshot:
+                type = qemu_guest_agent_snapshot
+                gagent_check_type = fsfreeze
+                gagent_fs_test_cmd = "rm -f /tmp/foo; echo foo > /tmp/foo"
+                gagent_fs_check_cmd = "grep foo /tmp/foo"
         variants:
             - virtio_serial:
                 gagent_serial_type = virtio
