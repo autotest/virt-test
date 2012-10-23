@@ -2545,7 +2545,7 @@ variants:
         no Host_RHEL.5, Host_RHEL.6.1, Host_RHEL.6.2
         type = qemu_guest_agent
         gagent_name = "org.qemu.guest_agent.0"
-        gagent_install_cmd = "yum install -y qemu-guest-agent"
+        gagent_install_cmd = "rpm -q qemu-guest-agent || yum install -y qemu-guest-agent"
         variants:
             - basic_check:
             - check_suspend:
@@ -2566,12 +2566,12 @@ variants:
                 services_up_timeout = 30
         variants:
             - virtio_serial:
-                serial_type = virtio
+                gagent_serial_type = virtio
                 virtio_ports += " org.qemu.guest_agent.0"
                 virtio_port_type_org.qemu.guest_agent.0 = "serialport"
                 gagent_start_cmd = "service qemu-ga start"
             - isa_serial:
-                serial_type = isa
+                gagent_serial_type = isa
                 isa_serials += " org.qemu.guest_agent.0"
                 gagent_start_cmd = "pgrep qemu-ga || qemu-ga -d -m isa-serial -p /dev/ttyS1"
 
