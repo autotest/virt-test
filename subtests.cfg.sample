@@ -3897,6 +3897,16 @@ variants:
         user_runas = nobody
         type = qemu_nobody
 
+    - valgrind_memalign:
+        type = valgrind_memalign
+        qemu_command_prefix = valgrind
+        valgrind_install_cmd = "yum -y install valgrind"
+        valgring_support_check_cmd = "valgrind --help >/dev/null"
+        disable_kvm = yes
+        enable-kvm = no
+        start_vm = no
+        mem_equal = 1024
+
     - systemtap_tracing:
         #if you want exec command durnning tracing,you can add cmds_exec
         #this support monitor command and bash command.
