@@ -2524,6 +2524,16 @@ variants:
         kill_vm_gracefully = no
         check_img = yes
 
+    - qemu_guest_agent: install setup image_copy unattended_install.cdrom
+        no RHEL.3, RHEL.4, RHEL.5
+        no RHEL.6.0, RHEL.6.1, RHEL.6.2
+        no Host_RHEL.5, Host_RHEL.6.1, Host_RHEL.6.2
+        type = qemu_guest_agent
+        gagent_name = "org.qemu.guest_agent.0"
+        virtio_ports += "org.qemu.guest_agent.0"
+        virtio_port_type_org.qemu.guest_agent.0 = "serialport"
+        gagent_install_cmd = "yum install -y qemu-guest-agent && service qemu-ga start"
+
 # Above lines are reserved for upstream.
 # Please Don't add any case before shutdown.
 # Below cases are only existed in internal tree.
