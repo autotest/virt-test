@@ -17,7 +17,7 @@ clearpart --all --initlabel
 autopart
 xconfig --startxonboot
 
-%packages
+%packages --ignoremissing
 @base
 @core
 @development
@@ -40,6 +40,7 @@ nc
 NetworkManager
 ntpdate
 redhat-lsb
+qemu-guest-agent
 
 %post
 echo "OS install is completed" > /dev/ttyS0
