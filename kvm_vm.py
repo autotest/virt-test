@@ -490,12 +490,13 @@ class VM(virt_vm.BaseVM):
 
         def add_drive(help, filename, index=None, format=None, cache=None,
                       werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=None, blkdebug=None,imgfmt="raw", aio=None,
-                      media="disk", ide_bus=None, ide_unit=None, vdisk=None,
-                      pci_addr=None, readonly=None,
-                      physical_block_size=None, logical_block_size=None,
-                      bus=None, port=None, bootindex=None, removable=None,
-                      min_io_size=None, opt_io_size=None, scsi=None):
+                      boot=None, blkdebug=None, bus=None, port=None,
+                      bootindex=None, removable=None, min_io_size=None,
+                      opt_io_size=None,physical_block_size=None,
+                      logical_block_size=None, readonly=None, scsiid=None,
+                      lun=None, imgfmt="raw", aio=None, media="disk",
+                      ide_bus=None, ide_unit=None, vdisk=None, scsi_disk=None,
+                      pci_addr=None, scsi=None):
 
             dev_format = {"virtio" : "virtio-blk-pci",
                           "ide" : "ide-drive",
@@ -559,7 +560,10 @@ class VM(virt_vm.BaseVM):
                 index = None
             elif format and format.startswith("scsi-"):
                 # handles scsi-{hd, cd, disk, block, generic} targets
-                name = "virtio-scsi%s" % index
+                blkdev_id = "virtio-scsi"
+                if index:
+                    blkdev_id += "%s" % index
+                blkdev_id += "-id%s" % scsi_disk
                 dev += " -device %s" % format
                 dev += _add_option("logical_block_size", logical_block_size)
                 dev += _add_option("physical_block_size", physical_block_size)
@@ -569,16 +573,13 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("serial", serial)
                 dev += _add_option("removable", removable)
                 if bus:
-                    name += "-b%s" % bus
                     dev += _add_option("bus", "virtio_scsi_pci%d.0" % bus)
                 if scsiid:
-                    name += "-i%s" % scsiid
                     dev += _add_option("scsi-id", scsiid)
                 if lun:
-                    name += "-l%s" % lun
                     dev += _add_option("lun", lun)
                 format = "none"
-                dev += _add_option("drive", name)
+                dev += _add_option("drive", blkdev_id)
                 index = None
             if format == "floppy":
                 drivelist = ['driveA','driveB']
@@ -1094,6 +1095,10 @@ class VM(virt_vm.BaseVM):
         ide_bus = 0
         ide_unit = 0
         vdisk = 0
+        scsi_disk = 0
+
+        # init value by default.
+        # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the sound device.
         self.pci_addr_list = [0, 1, 2]
 
         qemu_binary = utils_misc.get_path(root_dir, params.get("qemu_binary",
@@ -1213,33 +1218,48 @@ class VM(virt_vm.BaseVM):
                 for i in range(len(virtio_scsi_pcis), bus + 1):
                     hba = params.get("scsi_hba", "virtio-scsi-pci");
                     qemu_cmd += " -device %s,id=virtio_scsi_pci%d" % (hba, i)
+                    qemu_cmd += ",addr=%s" % get_free_pci_addr(None)
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
             qemu_cmd += add_drive(help,
-                    storage.get_image_filename(image_params, root_dir),
-                    image_params.get("drive_index"),
-                    image_params.get("drive_format"),
-                    image_params.get("drive_cache"),
-                    image_params.get("drive_werror"),
-                    image_params.get("drive_rerror"),
-                    image_params.get("drive_serial"),
-                    image_params.get("image_snapshot"),
-                    image_params.get("image_boot"),
-                    storage.get_image_blkdebug_filename(image_params,
-                                                           self.virt_dir),
-                    bus,
-                    port,
-                    image_params.get("bootindex"),
-                    image_params.get("removable"),
-                    image_params.get("min_io_size"),
-                    image_params.get("opt_io_size"),
-                    image_params.get("physical_block_size"),
-                    image_params.get("logical_block_size"),
-                    image_params.get("image_readonly"),
-                    image_params.get("drive_scsiid"),
-                    image_params.get("drive_lun"))
+                  storage.get_image_filename(image_params, root_dir),
+                  index,
+                  image_params.get("drive_format"),
+                  image_params.get("drive_cache"),
+                  image_params.get("drive_werror"),
+                  image_params.get("drive_rerror"),
+                  image_params.get("drive_serial"),
+                  image_params.get("image_snapshot"),
+                  image_params.get("image_boot"),
+                  storage.get_image_blkdebug_filename(image_params, root_dir),
+                  bus,
+                  port,
+                  image_params.get("bootindex"),
+                  image_params.get("removable"),
+                  image_params.get("min_io_size"),
+                  image_params.get("opt_io_size"),
+                  image_params.get("physical_block_size"),
+                  image_params.get("logical_block_size"),
+                  image_params.get("image_readonly"),
+                  image_params.get("drive_scsiid"),
+                  image_params.get("drive_lun"),
+                  image_params.get("image_format"),
+                  image_params.get("image_aio", "native"),
+                  "disk", ide_bus, ide_unit, vdisk, scsi_disk,
+                  image_params.get("drive_pci_addr"),
+                  scsi=image_params.get("virtio-blk-pci_scsi"))
 
-        # Networking
+            # increase the bus and unit no for ide device
+            format = params.get("drive_format")
+            if format == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            elif format == "virtio":
+                vdisk += 1
+            elif format.startswith("scsi-"):
+                scsi_disk += 1
+
         redirs = []
         for redir_name in params.objects("redirs"):
             redir_params = params.object_params(redir_name)
@@ -1399,9 +1419,33 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += " -device virtio-scsi-pci,id=virtio_scsi_pci%d" % i
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
-                qemu_cmd += add_cdrom(help, utils_misc.get_path(root_dir, iso),
-                                      cdrom_params.get("drive_index"),
-                                      cd_format, bus)
+                iso = utils_misc.get_path(root_dir, iso)
+                if params.get("index_enable") == "yes":
+                    drive_index = cdrom_params.get("drive_index")
+                    if drive_index:
+                        index = drive_index
+                    else:
+                        index_global = get_index(index_global)
+                        index = str(index_global)
+                        index_global += 1
+                else:
+                    index = None
+                if has_option(help, "device"):
+                    if not cd_format.startswith("scsi-"):
+                        cd_format = "ide"
+                    qemu_cmd += add_drive(help, iso, index, cd_format,
+                                          media="cdrom",
+                                          bus = bus,
+                                          scsi_disk = scsi_disk)
+                else:
+                    qemu_cmd += add_cdrom(help, iso, index)
+                if cd_format == "ide":
+                    if ide_unit == 1:
+                        ide_bus += 1
+                    ide_unit ^= 1
+                elif cd_format.startswith("scsi-"):
+                    scsi_disk += 1
+
 
         soundhw = params.get("soundcards")
         if soundhw:
