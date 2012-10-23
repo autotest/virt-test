@@ -70,15 +70,15 @@ variants:
             check_s3_cmd = dmesg |grep -E "ACPI: Waking up from system sleep state S3"\|"ACPI: PCI interrupt for device .* disabled"
             set_s3_cmd = "echo 'mem'  > /sys/power/state"
             kill_bg_cmd = pkill ping
-        guest_s4, acpi_after_hotplug.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
+        acpi_after_hotplug.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
             no virtio_blk
             no virtio_net
-            check_s4_support_cmd = "dmesg -c  && grep -q disk /sys/power/state"
-            bg_cmd = "cd /tmp/; nohup ping localhost"
-            check_bg_cmd = pgrep ping
-            check_s4_cmd = dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"
-            set_s4_cmd = echo disk > /sys/power/state
-            kill_bg_cmd = pkill ping
+            s4_support_chk_cmd = "dmesg -c && grep -q disk /sys/power/state"
+            s4_bg_program_setup_cmd = "cd /tmp/; nohup ping localhost"
+            s4_bg_program_chk_cmd = 'pgrep ping'
+            s4_bg_program_kill_cmd = 'pkill ping'
+            s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
+            s4_start_cmd = 'echo disk > /sys/power/state'
         nic_hotplug:
             modprobe_module = acpiphp
         block_hotplug:
@@ -745,12 +745,12 @@ variants:
             check_bg_cmd =  tasklist | findstr /I /C:"ping.exe"
             kill_bg_cmd = taskkill /IM ping.exe /F
         guest_s4, acpi_after_hotpulg.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
-            check_s4_support_cmd = wevtutil cl system && powercfg -h on
-            bg_cmd = start /B ping /t localhost
-            check_bg_cmd = tasklist | findstr /I /C:"ping.exe"
-            set_s4_cmd = rundll32.exe PowrProf.dll,SetSuspendState
-            check_s4_cmd = wevtutil qe system /f:text | findstr /I /C:"The system has resumed from sleep" /C:"The system is entering sleep"
-            kill_bg_cmd = taskkill /IM ping.exe /F
+            s4_support_chk_cmd = powercfg /hibernate on
+            s4_bg_program_setup_cmd = 'start ping -t localhost'
+            s4_bg_program_chk_cmd = 'tasklist | find /I "ping.exe"'
+            s4_bg_program_kill_cmd = 'taskkill /IM ping.exe /F'
+            s4_start_cmd = 'rundll32.exe PowrProf.dll, SetSuspendState'
+            s4_log_chk_cmd = 'wevtutil qe system /f:text | findstr /I /C:"The system has resumed from sleep" /C:"The system is entering sleep"'
         network_ping:
             interface_status_cmd = ipconfig /all
         nic_hotplug:
@@ -940,8 +940,8 @@ variants:
                     check_s3_cmd = echo "since WinXP / Win2003 doesn't record ACPI event,so there's nothing to do"
                     check_s3_support_cmd = powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"
                 guest_s4:
-                    check_s4_cmd = echo "since WinXP / Win2003 doesn't record ACPI event,so there's nothing to do"
-                    check_s4_support_cmd = powercfg -h on
+                    s4_support_chk_cmd = 'powercfg -h on'
+                    s4_log_chk_cmd = 'echo "Since WinXP does not record ACPI event, Do nothing"'
 
                 variants:
                     - 32:
@@ -1001,8 +1001,8 @@ variants:
                     check_s3_cmd = echo "since WinXP / Win2003 doesn't record ACPI event,so there's nothing to do"
                     check_s3_support_cmd = powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"
                 guest_s4:
-                    check_s4_cmd = echo "since WinXP / Win2003 doesn't record ACPI event,so there's nothing to do"
-                    check_s4_support_cmd = powercfg -h on
+                    s4_support_chk_cmd = 'powercfg -h on'
+                    s4_log_chk_cmd = 'echo "Since Win2003 does not record ACPI event, Do nothing"'
 
                 variants:
                     - 32:
