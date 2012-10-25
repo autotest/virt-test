@@ -30,7 +30,7 @@ except ImportError:
 
 from autotest.client.shared import utils, error, logging_config
 from autotest.client.shared import logging_manager
-from autotest.utils import run_pylint, reindent
+import run_pylint, reindent
 
 # Hostname of patchwork server to use
 PWHOST = "patchwork.virt.bos.redhat.com"
