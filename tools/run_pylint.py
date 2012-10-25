@@ -10,7 +10,7 @@ except ImportError:
     sys.exit(1)
 
 # Classes of errors we ignore on quiet runs
-IGNORED_ERRORS = 'E1002,E1101,E1103,E1120,F0401,I0011'
+IGNORED_ERRORS = 'E1002,E1101,E1103,E1120,F0401'
 # By default, complain about all things
 LINT_VERBOSE = True
 
@@ -83,7 +83,8 @@ def get_pylint_opts():
         else:
             opts = disable_old
 
-    return opts + ['--reports=no', '--include-ids=y', '--rcfile=/dev/null', '--good-names=i,j,k,Run,_,vm']
+    opts += ['--reports=no', '--include-ids=y']
+    return opts
 
 
 def check_file(file_path):
