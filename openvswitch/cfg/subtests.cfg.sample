@@ -4,6 +4,7 @@
 
 variants:
     - ovs_basic:
+        virt_test_type = openvswitch
         type = ovs_basic
         vms = "vm1 vm2 vm3 vm4"
         cpumodel= "core2duo"
@@ -27,6 +28,7 @@ variants:
                 test_type = iperf
 
     - load_module:
+        virt_test_type = openvswitch
         type = load_module
         vms = ""
         mod_loaditer = "100"
