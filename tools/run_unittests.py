@@ -1,9 +1,12 @@
 #!/usr/bin/python -u
 
 import os, sys, unittest, optparse, fcntl
-import common
+try:
+    import autotest.common as common
+except ImportError:
+    import common
+from autotest.utils import parallel
 from autotest.client.shared.test_utils import unittest as custom_unittest
-import parallel
 
 
 class StreamProxy(object):
