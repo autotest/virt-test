@@ -458,11 +458,12 @@ class FileChecker(object):
             unittest_name = stripped_name + "_unittest.py"
             unittest_path = self.path.replace(self.basename, unittest_name)
             if os.path.isfile(unittest_path):
-                module = unittest_path.rstrip(".py")
-                module = module.split("/")
+                mod_names = unittest_path.rstrip(".py")
+                mod_names = mod_names.split("/")
                 try:
-                    mod = common.setup_modules.import_module(module[-1],
-                                                             ".".join(module[:-1]))
+                    from_module = __import__(mod_names[0], globals(), locals(),
+                                             [mod_names[-1]])
+                    mod = getattr(from_module, mod_names[-1])
                     test = unittest.defaultTestLoader.loadTestsFromModule(mod)
                     suite = unittest.TestSuite(test)
                     runner = unittest.TextTestRunner()
@@ -470,12 +471,12 @@ class FileChecker(object):
                     if result.errors or result.failures:
                         success = False
                         msg = '%s had %d failures and %d errors.'
-                        msg = (msg % '.'.join(module), len(result.failures),
+                        msg = (msg % '.'.join(mod_names), len(result.failures),
                                len(result.errors))
                         logging.error(msg)
                 except ImportError:
                     logging.error("Unable to run unittest %s" %
-                                  ".".join(module))
+                                  ".".join(mod_names))
 
         return success
 
