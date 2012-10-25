@@ -470,9 +470,9 @@ class FileChecker(object):
                     result = runner.run(suite)
                     if result.errors or result.failures:
                         success = False
-                        msg = '%s had %d failures and %d errors.'
-                        msg = (msg % '.'.join(mod_names), len(result.failures),
-                               len(result.errors))
+                        msg = ('%s had %d failures and %d errors.' %
+                               ('.'.join(mod_names), len(result.failures),
+                                len(result.errors)))
                         logging.error(msg)
                 except ImportError:
                     logging.error("Unable to run unittest %s" %
