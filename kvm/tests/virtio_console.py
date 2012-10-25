@@ -877,7 +877,7 @@ def run_virtio_console(test, params, env):
                 try:
                     vm.monitor.info('qtree')
                 except Exception, inst:
-                    logging.warn("Failed to get info qtree", inst)
+                    logging.warn("Failed to get info from qtree: %s", inst)
                 exit_event.set()
                 vm.verify_kernel_crash()
                 raise error.TestFail('No data transfered after interruption.')
