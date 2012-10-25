@@ -16,8 +16,7 @@ except ImportError:
 
 
 class VAgentError(MonitorError):
-    def __init__(self):
-        MonitorError.__init__(self)
+    pass
 
 
 class VAgentConnectError(VAgentError):
