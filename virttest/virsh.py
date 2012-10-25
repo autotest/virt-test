@@ -1175,4 +1175,3 @@ def setmem(name, size, options="", **dargs):
     if options:
         cmd += " %s" % options
     return command(cmd, **dargs)
-
