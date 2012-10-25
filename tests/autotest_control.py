@@ -2,7 +2,7 @@ import os
 from virttest import utils_test
 
 
-def run_autotest(test, params, env):
+def run_autotest_control(test, params, env):
     """
     Run an autotest test inside a guest.
 
