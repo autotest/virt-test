@@ -328,4 +328,3 @@ def run_rv_input(test, params, env):
                             "  Expected keycode = %s" % result)
 
     guest_session.close()
-

@@ -1606,7 +1606,7 @@ def run_virtio_console(test, params, env):
 
         # close the virtio ports and process
         for proces in process:
-                proces.terminate()
+            proces.terminate()
         for port in vm.virtio_ports:
             port.close()
         error.context("Executing basic loopback after reboot.", logging.info)
