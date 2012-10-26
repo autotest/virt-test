@@ -26,17 +26,6 @@ other_tests_dirs = ""
 # As for the defaults:
 # * qemu and qemu-img are expected to be found under /usr/bin/qemu-kvm and
 #   /usr/bin/qemu-img respectively.
-# * All image files are expected under /var/tmp/virt_test/images/
-# * All install iso files are expected under /var/tmp/virt_test/isos/
-# * The parameters cdrom_unattended, floppy, kernel and initrd are generated
-#   by KVM autotest, so remember to put them under a writable location
-#   (for example, the cdrom share can be read only)
-image_name(_.*)? ?<= /var/tmp/virt_test/images/
-cdrom(_.*)? ?<= /var/tmp/virt_test/
-floppy(_.*)? ?<= /var/tmp/virt_test/
-Linux..unattended_install:
-    kernel ?<= /var/tmp/virt_test/
-    initrd ?<= /var/tmp/virt_test/
 
 # You may provide information about the DTM server for WHQL tests here:
 #whql:
