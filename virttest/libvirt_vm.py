@@ -523,8 +523,13 @@ class VM(virt_vm.BaseVM):
 
         # Find all supported machine types, so we can rule out an unsupported
         # machine type option passed in the configuration.
-        me = libvirt_xml.LibvirtXML().getroot().findall("./guest/arch/machine")
-        support_machine_type = map(lambda m: m.text, me)
+        hvm_or_pv = params.get("hvm_or_pv", "hvm")
+        # default to 'uname -m' output
+        arch_name = params.get("vm_arch_name", utils.get_current_kernel_arch())
+        capabs = libvirt_xml.LibvirtXML()
+        support_machine_type = capabs.os_arch_machine_map[hvm_or_pv][arch_name]
+        logging.debug("Machine types supported for %s\%s: %s" % (hvm_or_pv,
+                                              arch_name, support_machine_type))
 
         # Start constructing the qemu command
         virt_install_cmd = ""
@@ -538,7 +543,6 @@ class VM(virt_vm.BaseVM):
         virt_install_cmd += add_connect_uri(help, self.connect_uri)
 
         # hvm or pv specificed by libvirt switch (pv used  by Xen only)
-        hvm_or_pv = params.get("hvm_or_pv", "hvm")
         if hvm_or_pv:
             virt_install_cmd += add_hvm_or_pv(help, hvm_or_pv)
 
@@ -1062,7 +1066,11 @@ class VM(virt_vm.BaseVM):
         """
         Return VM's UUID.
         """
-        return virsh.domuuid(self.name, uri=self.connect_uri)
+        uuid = virsh.domuuid(self.name, uri=self.connect_uri)
+        # only overwrite it if it's not set
+        if self.uuid is None:
+            self.uuid = uuid
+        return self.uuid
 
 
     def get_ifname(self, nic_index=0):
@@ -1212,7 +1220,7 @@ class VM(virt_vm.BaseVM):
                     logging.debug("Updating nic %d with mac %s on vm %s"
                                   % (index, mac, self.name))
                     nic.mac = mac
-                elif nic.mac.upper() != mac:
+                elif nic.mac != mac:
                     logging.warning("Requested mac %s doesn't match mac %s "
                                     "as defined for vm %s" % (nic.mac, mac,
                                     self.name))

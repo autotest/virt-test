@@ -4,190 +4,107 @@ Utility classes and functions to handle connection to a libvirt host system
 Suggested usage: import autotest.client.virt.virsh
 
 The entire contents of callables in this module (minus the names defined in
-_NOCLOSE below), will become methods of the Virsh and VirshPersistent classes.
-A Closure class is used to wrap the module functions, and allow for
-Virsh/VrshPersistent instance state to be passed.  This is accomplished
-by encoding state as dictionary of keyword arguments, and passing
-that to the module functions.
+NOCLOSE below), will become methods of the Virsh and VirshPersistent classes.
+A Closure class is used to wrap the module functions, lambda does not
+properly store instance state in this implementation.
 
-Therefor, all virsh module functions _MUST_ include a '**dargs' (variable
-keyword arguments placeholder).  Accessing them is safest by using the
-'dargs.get(<name>, <default>)' call.  The keywords present in **dargs
-is defined by VIRSH_PROPERTIES and possibly VIRSH_SESSION_PROPS.
+Because none of the methods have a 'self' parameter defined, the classes
+are defined to be dict-like, and get passed in to the methods as a the
+special **dargs parameter.  All virsh module functions _MUST_ include a
+special **dargs (variable keyword arguments) to accept non-default
+keyword arguments.
+
+The standard set of keyword arguments to all functions/modules is declared
+in the VirshBase class.  Only the 'virsh_exec' key is guaranteed to always
+be present, the remainder may or may not be provided.  Therefor, virsh
+functions/methods should use the dict.get() method to retrieve with a default
+for non-existant keys.
 
 @copyright: 2012 Red Hat Inc.
 """
 
-import logging, urlparse, re
+import signal, logging, urlparse, re
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import aexpect, virt_vm
-
-# Store runtime namespace for filtering later
-MODULE_CONTENTS = globals()
-
-# Needs to be in-scope for Virsh* class screenshot method and module function
-_SCREENSHOT_ERROR_COUNT = 0
+import aexpect, virt_vm, utils_misc
 
 # list of symbol names NOT to wrap as Virsh class methods
 # Everything else from globals() will become a method of Virsh class
-_NOCLOSE = MODULE_CONTENTS.keys() + [
-    '_SCREENSHOT_ERROR_COUNT', '_NOCLOSE', 'VirshBase', 'DArgMangler',
-    'VirshSession', 'Closure', 'Virsh', 'VirshPersistent', 'VIRSH_EXEC',
-    'VIRSH_COMMAND_CACHE'
+NOCLOSE = globals().keys() + [
+    'NOCLOSE', 'SCREENSHOT_ERROR_COUNT', 'VIRSH_COMMAND_CACHE',
+    'VIRSH_EXEC', 'VirshBase', 'VirshClosure', 'VirshSession', 'Virsh',
+    'VirshPersistent',
 ]
 
-# default virsh executable
-try:
-    VIRSH_EXEC = os_dep.command("virsh")
-except ValueError:
-    VIRSH_EXEC = None
-    logging.info("Command 'virsh' is not installed, please install it")
-
-# Virsh class properties and default values
-# Schema: {<name>:<default>}
-VIRSH_PROPERTIES = {
-    'uri':None,
-    'ignore_status':False,
-    'virsh_exec':VIRSH_EXEC,
-    'debug':False,
-}
-
-# Persistent session virsh class property extension to VIRSH_PROPERTIES
-VIRSH_SESSION_PROPS = {
-    'session':None,
-    'session_id':None
-}
-VIRSH_SESSION_PROPS.update(VIRSH_PROPERTIES)
+# Needs to be in-scope for Virsh* class screenshot method and module function
+SCREENSHOT_ERROR_COUNT = 0
 
 # Cache of virsh commands, used by has_help_command() and help_command()
 VIRSH_COMMAND_CACHE = None
 
-class VirshBase(dict):
+# This is used both inside and outside classes
+try:
+    VIRSH_EXEC = os_dep.command("virsh")
+except ValueError:
+    logging.warning("Virsh executable not set or found on path, "
+                    "virsh module will not function normally")
+    VIRSH_EXEC = '/bin/true'
+
+class VirshBase(utils_misc.PropCanBase):
     """
     Base Class storing libvirt Connection & state to a host
     """
 
-    # properties only work if set on a class, so hit this from __new__
-    @classmethod
-    def _generate_property(cls, property_name):
-        # Used class's getters/setters/delters if they exist
-        getter = getattr(cls, 'get_%s' % property_name,
-                         lambda self: getattr(self, '_'+property_name))
-        setter = getattr(cls, 'set_%s' % property_name,
-                         lambda self,value: setattr(self, '_'+property_name,
-                                                    value))
-        delter = getattr(cls, 'del_%s' % property_name,
-                         lambda self: delattr(self, '_'+property_name))
-        # Don't overwrite existing
-        if not hasattr(cls, property_name):
-            setattr(cls, property_name, property(getter, setter, delter))
+    __slots__ = ('uri', 'ignore_status', 'debug', 'virsh_exec')
 
 
-    def __new__(cls, **dargs):
+    def __init__(self, *args, **dargs):
         """
-        Sets up generic getters/setters/deleteters if not defined for class
+        Initialize instance with virsh_exec always set to something
         """
-        # allow dargs to extend VIRSH_PROPERTIES
-        _dargs = VIRSH_PROPERTIES.copy()
-        _dargs.update(dargs)
-        for name in _dargs.keys():
-            cls._generate_property(name)
-        # Super doesn't work for classes on python 2.4
-        return dict.__new__(cls)
-
-
-    def __init__(self, **dargs):
-        """
-        Initialize libvirt connection/state from VIRSH_PROPERTIES and/or dargs
-        """
-        if VIRSH_EXEC is None:
-            raise ValueError("Command 'virsh' is not installed, "
-                             "please install it.")
-        # Setup defaults, (calls properties)
-        _dargs = VIRSH_PROPERTIES.copy()
-        _dargs.update(dargs)
-        for name,value in _dargs.items():
-            self[name] = value
-
-
-    def __getitem__(self, key):
-        try:
-            return getattr(self, key)
-        except AttributeError:
-            raise KeyError(str(key))
-
-
-    def __setitem__(self, key, value):
-        # Calls property functions if defined
-        setattr(self, key, value)
-
-
-    def __delitem__(self, key):
-        try:
-            delattr(self, key)
-        except AttributeError:
-            raise KeyError(str(key))
-
-
-    def get_ignore_status(self):
-        if self._ignore_status:
-            return True
-        else:
-            return False
+        init_dict = dict(*args, **dargs)
+        init_dict['virsh_exec'] = init_dict.get('virsh_exec', VIRSH_EXEC)
+        init_dict['uri'] = init_dict.get('uri', None)
+        super(VirshBase, self).__init__(init_dict)
 
 
     def set_ignore_status(self, ignore_status):
-        if ignore_status:
-            self._ignore_status = True
+        """
+        Enforce setting ignore_status as a boolean
+        """
+        if bool(ignore_status):
+            self.dict_set('ignore_status', True)
         else:
-            self._ignore_status = False
+            self.dict_set('ignore_status', False)
 
 
     def set_debug(self, debug):
-        if hasattr(self, '_debug') and self._debug != debug:
-            logging.debug("Virsh debugging enabled: %s" % str(debug))
+        """
+        Accessor method for 'debug' property that logs message on change
+        """
+        if not self.INITIALIZED:
+            self.dict_set('debug', debug)
         else:
-            return # no change
-        if debug:
-            self._debug = True
-        else:
-            self._debug = False
+            current_setting = self.dict_get('debug')
+            desired_setting = bool(debug)
+            if not current_setting and desired_setting:
+                self.dict_set('debug', True)
+                logging.debug("Virsh debugging enabled")
+            # current and desired could both be True
+            if current_setting and not desired_setting:
+                self.dict_set('debug', False)
+                logging.debug("Virsh debugging disabled")
 
 
-# Ahhhhh, look out!  It's D Arg mangler comnta gettcha!
-class DArgMangler(dict):
-    """
-    Dict-like class that checks parent before raising KeyError
-    """
-
-    def __init__(self, parent, *args, **dargs):
+    def get_uri(self):
         """
-        Initialize DargMangler dict-like instance.
-
-        param: parent: Parent instance to pull properties from as needed
-        param: *args: passed to ancestors constructor
-        param: **dargs: passed to ancestors constructor
+        Accessor method for 'uri' property that must exist
         """
-        if not issubclass(type(parent), dict):
-            raise ValueError("%s is not a %s" % (
-                              type(parent), dict))
-        self._parent = parent
-        super(DArgMangler, self).__init__(*args, **dargs)
-
-
-    def __getitem__(self, key):
-        """
-        Look up key's value on instance, then parent instance attributes
-
-        @param: key: key to look up non-None value
-        @raises: KeyError: When value is None, undefined locally or on parent.
-        """
+        # self.get() would call get_uri() recursivly
         try:
-            return super(DArgMangler, self).__getitem__(key)
+            return self.dict_get('uri')
         except KeyError:
-            # Assume parent raises KeyError if value == None
-            return self._parent.__getitem__(key)
+            return None
 
 
 class VirshSession(aexpect.ShellSession):
@@ -211,10 +128,13 @@ class VirshSession(aexpect.ShellSession):
         @param prompt: Regular expression describing the shell's prompt line.
         """
 
-        if uri:
-            virsh_exec += " -c '%s'" % uri
+        self.uri = uri
 
-        super(VirshSession, self).__init__(virsh_exec, id, prompt=prompt)
+        if self.uri:
+            virsh_exec += " -c '%s'" % self.uri
+
+        aexpect.ShellSession.__init__(self, virsh_exec, id, prompt=prompt,
+                                      auto_close=False)
 
 
     def cmd_status_output(self, cmd, timeout=60, internal_timeout=None,
@@ -254,26 +174,35 @@ class VirshSession(aexpect.ShellSession):
                                  "Virsh Command returned non-zero exit status")
         return result
 
+
 # Work around for inconsistent builtin closure local reference problem
 # across different versions of python
-class Closure(object):
+class VirshClosure(object):
     """
-    Callable instances for function with persistent internal state
+    Callable that uses dict-like 'self' argument to augment **dargs
     """
 
-    def __init__(self, ref, state):
+
+    def __init__(self, reference_function, dict_like_instance):
         """
-        Initialize state to call ref with mangled keyword args
+        Initialize callable for reference_function on dict_like_instance
         """
-        self._state = state
-        self._ref = ref
+        if not issubclass(dict_like_instance.__class__, dict):
+            raise ValueError("dict_like_instance %s must be dict or subclass"
+                             % dict_like_instance.__class__.__name__)
+        self.reference_function = reference_function
+        self.dict_like_instance = dict_like_instance
 
 
     def __call__(self, *args, **dargs):
         """
-        Retrieve keyword args from state before calling ref function
+        Call reference_function with dict_like_instance augmented by **dargs
+
+        @param: *args: Passthrough to reference_function
+        @param: **dargs: Updates dict_like_instance copy before call
         """
-        return self._ref(*args, **DArgMangler(self._state, dargs))
+        dargs.update(self.dict_like_instance)
+        return self.reference_function(*args, **dargs)
 
 
 class Virsh(VirshBase):
@@ -281,18 +210,24 @@ class Virsh(VirshBase):
     Execute libvirt operations, using a new virsh shell each time.
     """
 
-    def __init__(self, **dargs):
+    __slots__ = VirshBase.__slots__
+
+
+    def __init__(self, *args, **dargs):
         """
         Initialize Virsh instance with persistent options
 
-        @param: **dargs: initial values for VIRSH_PROPERTIES
+        @param: *args: Initial property keys/values
+        @param: **dargs: Initial property keys/values
         """
-        super(Virsh, self).__init__(**dargs)
+        super(Virsh, self).__init__(*args, **dargs)
         # Define the instance callables from the contents of this module
         # to avoid using class methods and hand-written aliases
         for sym, ref in globals().items():
-            if sym not in _NOCLOSE and callable(ref):
-                self[sym] = Closure(ref, self)
+            if sym not in NOCLOSE and callable(ref):
+                # Adding methods, not properties, so avoid special __slots__
+                # handling.  __getattribute__ will still find these.
+                self.super_set(sym, VirshClosure(ref, self))
 
 
 class VirshPersistent(Virsh):
@@ -300,53 +235,71 @@ class VirshPersistent(Virsh):
     Execute libvirt operations using persistent virsh session.
     """
 
-    def __new__(cls, **dargs):
-        # Allow dargs to extend VIRSH_SESSION_PROPS
-        _dargs = VIRSH_SESSION_PROPS.copy()
-        _dargs.update(dargs)
-        # python 2.4 can't use super on class objects
-        return Virsh.__new__(cls, **_dargs)
+    __slots__ = Virsh.__slots__ + ('session_id', )
 
+    # Help detect leftover sessions
+    SESSION_COUNTER = 0
 
-    def __init__(self, **dargs):
-        """
-        Initialize persistent virsh session.
-
-        @param: **dargs: initial values for VIRSH_[PROPERTIES,SESSION_PROPS]
-        """
-
-        _dargs = VIRSH_SESSION_PROPS.copy()
-        _dargs.update(dargs)
-        # new_session() called by super via uri property (below)
-        super(VirshPersistent, self).__init__(**_dargs)
+    def __init__(self, *args, **dargs):
+        super(VirshPersistent, self).__init__(*args, **dargs)
+        # set_uri does not call when INITIALIZED = False
+        self.new_session()
 
 
     def __del__(self):
-        if self['session_id'] and self['session']:
-            self['session'].close()
+        """
+        Try to close session, prefer users call close_session() method directly
+        """
+        self.close_session()
+
+
+    def close_session(self):
+        try:
+            session_id = self.dict_get('session_id')
+            if session_id:
+                existing = VirshSession(id=session_id)
+                if existing.is_alive():
+                    # try nicely first
+                    existing.close()
+                    if existing.is_alive():
+                        # Be mean, incase it's hung
+                        existing.close(sig=signal.SIGTERM)
+                    # Keep count:
+                    self.__class__.SESSION_COUNTER -= 1
+        except KeyError:
+            # Allow other exceptions to be raised
+            pass
 
 
     def new_session(self):
         """
-        Close current virsh session and open new.
+        Open new session, closing any existing
         """
-
-        if self.get('session_id') and self.get('session'):
-            self['session'].close()
-        self['session'] = VirshSession(self['virsh_exec'], self['uri'])
-        self['session_id'] = self['session'].get_id()
+        # Accessors may call this method, avoid recursion
+        virsh_exec = self.dict_get('virsh_exec') # Must exist, can't be None
+        uri = self.dict_get('uri') # Must exist, can be None
+        self.close_session()
+        # Always create new session
+        new_session = VirshSession(virsh_exec, uri, id=None)
+        # Keep count
+        self.__class__.SESSION_COUNTER += 1
+        session_id = new_session.get_id()
+        self.dict_set('session_id', session_id)
 
 
     def set_uri(self, uri):
         """
-        Change instances uri, and re-connect virsh shell session.
-
-        Accessed via property, i.e. virsh.uri = 'qemu://foobar/system'
+        Accessor method for 'uri' property, create new session on change
         """
-        # Don't assume ancestor get/set_uri() wasn't overridden
-        if self['uri'] != uri:
-            super(VirshPersistent, self).uri = uri
-            self.new_session()
+        if not self.INITIALIZED:
+            # Allow __init__ to call new_session
+            self.dict_set('uri', uri)
+        else:
+            # If the uri is changing
+            if self.dict_get('uri') != uri:
+                self.dict_set('uri', uri)
+                self.new_session()
+            # otherwise do nothing
 
 
 ##### virsh module functions follow (See module docstring for API) #####
@@ -362,30 +315,58 @@ def command(cmd, **dargs):
     @raises: CmdError if non-zero exit status and ignore_status=False
     """
 
-    uri = dargs.get('uri', VIRSH_PROPERTIES['uri'])
-    virsh_exec = dargs.get('virsh_exec', VIRSH_PROPERTIES['virsh_exec'])
-    debug = dargs.get('debug', VIRSH_PROPERTIES['debug'])
-    ignore_status = dargs.get('ignore_status',
-                              VIRSH_PROPERTIES['ignore_status'])
+    virsh_exec = dargs.get('virsh_exec', VIRSH_EXEC)
+    uri = dargs.get('uri', None)
+    debug = dargs.get('debug', False)
+    ignore_status = dargs.get('ignore_status', True) # Caller deals with errors
     session_id = dargs.get('session_id', None)
 
+    # Check if this is a VirshPersistent method call
     if session_id:
+        # Retrieve existing session
         session = VirshSession(id=session_id)
-        ret = session.cmd_result(cmd, ignore_status)
+        logging.debug("Reusing session %s" % session_id)
+        # Use existing session only if uri is the same
+        if session.uri is not uri:
+            # Invalidate session for this command
+            if debug:
+                logging.debug("VirshPersistent instance not using persistant "
+                              " session for command %s with different uri %s "
+                              " (persistant uri is %s)"
+                              % (cmd, uri, session.uri))
+                session = None
     else:
-        uri_arg = " "
+        session = None
+
+    if debug:
+        logging.debug("Running virsh command: %s" % cmd)
+
+    if session:
+        # Utilize persistant virsh session
+        ret = session.cmd_result(cmd, ignore_status)
+        # Mark return value with session it came from
+        ret.from_session_id = session_id
+    else:
+        # Normal call to run virsh command
         if uri:
+            # uri argument IS being used
             uri_arg = " -c '%s' " % uri
+        else:
+            uri_arg = " " # No uri argument being used
 
         cmd = "%s%s%s" % (virsh_exec, uri_arg, cmd)
-        if debug:
-            logging.debug("Running command: %s" % cmd)
+        # Raise exception if ignore_status == False
         ret = utils.run(cmd, verbose=debug, ignore_status=ignore_status)
+        # Mark return as not coming from persistant virsh session
+        ret.from_session_id = None
 
+    # Always log debug info, if persistant session or not
     if debug:
         logging.debug("status: %s" % ret.exit_status)
         logging.debug("stdout: %s" % ret.stdout.strip())
         logging.debug("stderr: %s" % ret.stderr.strip())
+
+    # Return CmdResult instance when ignore_status is True
     return ret
 
 
@@ -613,16 +594,17 @@ def screenshot(name, filename, **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: filename
     """
+    global SCREENSHOT_ERROR_COUNT
     dargs['ignore_status'] = False
     try:
         command("screenshot %s %s" % (name, filename), **dargs)
     except error.CmdError, detail:
-        if _SCREENSHOT_ERROR_COUNT < 1:
+        if SCREENSHOT_ERROR_COUNT < 1:
             logging.error("Error taking VM %s screenshot. You might have to "
                           "set take_regular_screendumps=no on your "
                           "tests.cfg config file \n%s.  This will be the "
                           "only logged error message.", name, detail)
-        _SCREENSHOT_ERROR_COUNT += 1
+        SCREENSHOT_ERROR_COUNT += 1
     return filename
 
 
