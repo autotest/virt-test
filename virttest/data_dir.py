@@ -47,8 +47,8 @@ def get_backing_data_dir():
 def set_backing_data_dir(backing_data_dir):
     if os.path.islink(DATA_DIR):
         os.unlink(DATA_DIR)
+    backing_data_dir = os.path.expanduser(backing_data_dir)
     os.symlink(backing_data_dir, DATA_DIR)
-
 
 BACKING_DATA_DIR = get_backing_data_dir()
 set_backing_data_dir(BACKING_DATA_DIR)
