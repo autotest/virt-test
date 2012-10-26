@@ -27,9 +27,10 @@ os.environ['LANG'] = 'en_US.UTF-8'
 #---------------------------------------------------------
 # Enable modules import from current directory (tests/kvm)
 #---------------------------------------------------------
-pwd = os.path.join(os.environ['AUTODIR'],'tests/kvm')
-sys.path.append(pwd)
 
+virt_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt')
+sys.path.insert(0, virt_test_dir)
+from virttest import data_dir
 # ------------------------
 # create required symlinks
 # ------------------------
@@ -44,11 +45,11 @@ sys.path.append(pwd)
 #
 # We create the links only if not already exist, so if one already set up the
 # links for client/local run we do not touch the links.
-rootdir='/var/tmp/virt_test'
-iso=os.path.join(rootdir, 'iso')
-images=os.path.join(rootdir, 'images')
-qemu=os.path.join(rootdir, 'qemu')
-qemu_img=os.path.join(rootdir, 'qemu-img')
+rootdir = data_dir.get_data_dir()
+iso = os.path.join(rootdir, 'iso')
+images = os.path.join(rootdir, 'images')
+qemu = os.path.join(rootdir, 'qemu')
+qemu_img = os.path.join(rootdir, 'qemu-img')
 
 
 def link_if_not_exist(ldir, target, link_name):

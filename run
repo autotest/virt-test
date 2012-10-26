@@ -48,8 +48,11 @@ class StreamProxy(object):
 def create_config_files(options):
     test_dir = os.path.dirname(sys.modules[__name__].__file__)
     shared_dir = os.path.abspath(os.path.join(test_dir, 'shared', 'cfg'))
-    test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
-                                            options.type))
+    if options.type:
+        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
+                                                options.type))
+    elif options.config:
+        test_dir = os.path.abspath(os.path.dirname(os.path.dirname(options.config)))
     utils_misc.create_config_files(test_dir, shared_dir, interactive=False)
 
 
@@ -59,10 +62,12 @@ def bootstrap(options, cartesian_parser):
                                  end=False)
     t_begin = time.time()
     test_dir = os.path.dirname(sys.modules[__name__].__file__)
-    test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
-                                            options.type))
-    params = cartesian_parser.get_dicts().next()
-    base_dir = os.path.dirname(os.path.dirname(params.get("image_name")))
+    if options.type:
+        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
+                                                options.type))
+    elif options.config:
+        test_dir = os.path.abspath(os.path.dirname(os.path.dirname(options.config)))
+    base_dir = data_dir.get_data_dir()
     default_userspace_paths = None
     check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
@@ -88,6 +93,10 @@ def bootstrap(options, cartesian_parser):
         standalone_test.print_fail(t_elapsed)
         standalone_test.print_stdout("Setup error: %s" % reason)
         sys.exit(-1)
+
+    standalone_test.print_stdout(bcolors.HEADER +
+                             "DATA DIR: %s" % data_dir.get_backing_data_dir() +
+                             bcolors.ENDC)
 
 
 if __name__ == '__main__':
@@ -155,7 +164,7 @@ if __name__ == '__main__':
     test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
     sys.path.append(test_dir)
 
-    from virttest import cartesian_config, standalone_test, utils_misc
+    from virttest import cartesian_config, standalone_test, utils_misc, data_dir
 
     standalone_test.configure_logging()
     standalone_test.configure_console_logging()

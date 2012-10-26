@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from virttest import storage
+from virttest import storage, data_dir
 
 from qemu_guest_agent import QemuGuestAgentBasicCheck
 
@@ -22,8 +22,10 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheck):
         image_params = self.params.object_params(image1)
         sn_params =  image_params.copy()
         sn_params["image_name"] += "-snapshot"
-        sn_file = storage.get_image_filename(sn_params, self.test.bindir)
-        base_file = storage.get_image_filename(image_params, self.test.bindir)
+        sn_file = storage.get_image_filename(sn_params,
+                                             data_dir.get_data_dir())
+        base_file = storage.get_image_filename(image_params,
+                                               data_dir.get_data_dir())
         snapshot_format = image_params.get("image_format")
 
         self.vm.live_snapshot(base_file, sn_file, snapshot_format)
