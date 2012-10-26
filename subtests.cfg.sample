@@ -903,6 +903,23 @@ variants:
         s3_start_cmd = "echo mem > /sys/power/state"
         services_up_timeout = 30
         kill_vm_on_error = yes
+        variants:
+            - @default:
+                only RHEL.6.3, RHEL.6.4
+                only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+            - no_virtio:
+                no virtio_net
+                no virtio_blk
+                only RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
+                only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+            - globally_disable_s3:
+                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+                - extra_params = " -global PIIX4_PM.disable_s3=1"
+            - globally_enable_s3:
+                no RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
+                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+                - extra_params = " -global PIIX4_PM.disable_s3=0"
+
 
     - timedrift:
         rtc_clock = "host"
@@ -1428,8 +1445,6 @@ variants:
 
     - guest_s4:
         no RHEL.3
-        no virtio_blk
-        no virtio_net
         #kill_vm = yes
         type = guest_s4
         # The following parameters will be overwirtten in guest os's config.
@@ -1440,6 +1455,22 @@ variants:
         s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
         s4_start_cmd = 'echo disk > /sys/power/state'
         kill_vm_on_error = yes
+        variants:
+            - @default:
+                only RHEL.6.3, RHEL.6.4
+                only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+            - no_virtio:
+                no virtio_net
+                no virtio_blk
+                only RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
+                only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+            - globally_disable_s4:
+                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+                - extra_params = " -global PIIX4_PM.disable_s4=1"
+            - globally_enable_s4:
+                no RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
+                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+                - extra_params = " -global PIIX4_PM.disable_s4=0"
 
     - nic_hotplug:
         no RHEL.3.9
