@@ -6,7 +6,7 @@ from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
 from virttest import kvm_monitor, syslog_server
-from virttest import http_server
+from virttest import http_server, data_dir
 
 
 # Whether to print all shell commands called
@@ -116,7 +116,7 @@ class UnattendedInstallConfig(object):
         @param test: KVM test object.
         @param params: Dictionary with test parameters.
         """
-        root_dir = test.bindir
+        root_dir = data_dir.get_data_dir()
         self.deps_dir = os.path.join(test.virtdir, 'deps')
         self.unattended_dir = os.path.join(test.virtdir, 'unattended')
         self.params = params

@@ -139,7 +139,7 @@ class QemuImg(storage.QemuImg):
                           "image_format": convert_format}
 
         convert_image_filename = storage.get_image_filename(params_convert,
-                                                                 root_dir)
+                                                            root_dir)
 
         cmd = self.image_cmd
         cmd += " convert"
