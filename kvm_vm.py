@@ -1419,6 +1419,8 @@ class VM(virt_vm.BaseVM):
                         cd_format = "ide"
                     qemu_cmd += add_drive(help, iso, index, cd_format,
                                           media="cdrom",
+                                          ide_bus=ide_bus,
+                                          ide_unit=ide_unit,
                                           bus = bus,
                                           scsi_disk = scsi_disk)
                 else:
