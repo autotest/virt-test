@@ -432,7 +432,7 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
         cmd = "%s/rx_packets|xargs cat;%s/tx_packets|xargs cat;" \
              "%s/rx_bytes|xargs cat;%s/tx_bytes|xargs cat" % (path,
                                                    path, path, path)
-        output = ssh_cmd(server_ctl, cmd).split()
+        output = ssh_cmd(server_ctl, cmd).split()[-4:]
 
         nrx = int(output[0])
         ntx = int(output[1])
