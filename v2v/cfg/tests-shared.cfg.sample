@@ -22,18 +22,6 @@ connect_uri = default
 # As for the defaults:
 # * qemu and qemu-img are expected to be found under /usr/bin/qemu-kvm and
 #   /usr/bin/qemu-img respectively.
-# * All image files are expected under /var/tmp/virt_test/images/
-# * All install iso files are expected under /var/tmp/virt_test/isos/
-# * The parameters cdrom_unattended, floppy, kernel and initrd are generated
-#   by LIBVIRT autotest, so remember to put them under a writable location
-#   (for example, the cdrom share can be read only)
-image_name(_.*)? ?<= /var/tmp/virt_test/images/
-cdrom(_.*)? ?<= /var/tmp/virt_test/
-floppy ?<= /var/tmp/virt_test/
-image_dir = /var/tmp/virt_test/
-Linux..unattended_install:
-    kernel ?<= /var/tmp/virt_test/
-    initrd ?<= /var/tmp/virt_test/
 
 # Uncomment the following lines to enable abort-on-error mode:
 #abort_on_error = yes
