@@ -2614,6 +2614,10 @@ variants:
                 gagent_fs_check_cmd = "grep foo /tmp/foo"
         variants:
             - virtio_serial:
+                # XXX: A ugly workaround for the buggy get_free_pci_port
+                # function. virtio console takes an extra pci slot.
+                nic_pci_addr_nic1 = 6
+                init_pci_addr = 7
                 gagent_serial_type = virtio
                 virtio_ports += " org.qemu.guest_agent.0"
                 virtio_port_type_org.qemu.guest_agent.0 = "serialport"
