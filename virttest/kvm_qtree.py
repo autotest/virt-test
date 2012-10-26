@@ -7,6 +7,7 @@ Utility classes and functions to handle KVM Qtree parsing and verification.
 import logging, os, re
 import storage
 
+
 OFFSET_PER_LEVEL = 2
 
 _RE_BLANKS = re.compile(r'^([ ]*)')

@@ -5,7 +5,7 @@ from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
 from virttest import kvm_monitor, remote, syslog_server
-from virttest import http_server
+from virttest import http_server, data_dir
 
 
 # Whether to print all shell commands called
@@ -115,7 +115,7 @@ class UnattendedInstallConfig(object):
         @param test: KVM test object.
         @param params: Dictionary with test parameters.
         """
-        root_dir = test.bindir
+        root_dir = data_dir.get_data_dir()
         self.deps_dir = os.path.join(test.virtdir, 'deps')
         self.unattended_dir = os.path.join(test.virtdir, 'unattended')
         self.params = params
@@ -154,6 +154,14 @@ class UnattendedInstallConfig(object):
             self.cdrom_cd1 = os.path.join(root_dir, self.cdrom_cd1)
         self.cdrom_cd1_mount = tempfile.mkdtemp(prefix='cdrom_cd1_',
                                                 dir=self.tmpdir)
+        if getattr(self, 'cdrom_unattended'):
+            self.cdrom_unattended = os.path.join(root_dir,
+                                                 self.cdrom_unattended)
+        if getattr(self, 'kernel'):
+            self.kernel = os.path.join(root_dir, self.kernel)
+        if getattr(self, 'initrd'):
+            self.initrd = os.path.join(root_dir, self.initrd)
+
         if self.medium == 'nfs':
             self.nfs_mount = tempfile.mkdtemp(prefix='nfs_',
                                               dir=self.tmpdir)

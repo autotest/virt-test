@@ -9,6 +9,7 @@ from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from xml.dom import minidom
 import utils_misc, virt_vm, storage, aexpect, remote, virsh, libvirt_xml
+import data_dir
 
 
 def libvirtd_restart():
@@ -656,7 +657,8 @@ class VM(virt_vm.BaseVM):
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
-            filename = storage.get_image_filename(image_params, root_dir)
+            filename = storage.get_image_filename(image_params,
+                                                  data_dir.get_data_dir())
             if image_params.get("use_storage_pool") == "yes":
                 filename = None
                 virt_install_cmd += add_drive(help,
@@ -722,7 +724,7 @@ class VM(virt_vm.BaseVM):
         # one please modify this part.
         floppy = params.get("floppy_name")
         if floppy:
-            floppy = utils_misc.get_path(root_dir, floppy)
+            floppy = utils_misc.get_path(data_dir.get_data_dir(), floppy)
             virt_install_cmd += add_drive(help, floppy,
                               None,
                               None,
@@ -817,7 +819,7 @@ class VM(virt_vm.BaseVM):
                 (os.path.basename(iso) == 'ks.iso')):
                 continue
             if iso:
-                iso = utils_misc.get_path(root_dir, iso)
+                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
                 if not os.path.exists(iso):
                     raise virt_vm.VMImageMissingError(iso)
                 compare = False
