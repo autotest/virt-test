@@ -9,12 +9,12 @@ try:
     import autotest.common as common
 except ImportError:
     import common
-from virttest import utils_misc
+from virttest import utils_misc, data_dir
 
 test_name = "openvswitch"
 test_dir = os.path.dirname(sys.modules[__name__].__file__)
 test_dir = os.path.abspath(test_dir)
-base_dir = "/tmp/kvm_autotest_root"
+base_dir = data_dir.get_data_dir()
 default_userspace_paths = ["/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
 check_modules = ["openvswitch"]
 online_docs_url = "https://github.com/autotest/autotest/wiki/OpenVSwitch"

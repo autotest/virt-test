@@ -10,6 +10,7 @@ from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, kvm_monitor, aexpect
 import kvm_virtio_port
 import remote
+import data_dir
 
 
 class VM(virt_vm.BaseVM):
@@ -1061,7 +1062,8 @@ class VM(virt_vm.BaseVM):
 
             shared_dir = os.path.join(self.root_dir, "shared")
             qemu_cmd += add_drive(hlp,
-                    storage.get_image_filename(image_params, root_dir),
+                    storage.get_image_filename(image_params,
+                                               data_dir.get_data_dir()),
                     image_params.get("drive_index"),
                     image_params.get("drive_format"),
                     image_params.get("drive_cache"),
@@ -1220,7 +1222,8 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += " -device virtio-scsi-pci,id=virtio_scsi_pci%d" % i
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
-                qemu_cmd += add_cdrom(hlp, utils_misc.get_path(root_dir, iso),
+                qemu_cmd += add_cdrom(hlp,
+                              utils_misc.get_path(data_dir.get_data_dir(), iso),
                                       cdrom_params.get("drive_index"),
                                       cd_format, bus)
 
@@ -1247,7 +1250,7 @@ class VM(virt_vm.BaseVM):
                 floppy_params = params.object_params(floppy_name)
                 floppy_readonly = floppy_params.get("floppy_readonly", "no")
                 floppy_readonly = floppy_readonly == "yes"
-                floppy = utils_misc.get_path(root_dir,
+                floppy = utils_misc.get_path(data_dir.get_data_dir(),
                                              floppy_params.get("floppy_name"))
                 if has_option(hlp,"global"):
                     qemu_cmd += add_drive(hlp, floppy,
@@ -1277,7 +1280,7 @@ class VM(virt_vm.BaseVM):
 
         tftp = params.get("tftp")
         if tftp:
-            tftp = utils_misc.get_path(root_dir, tftp)
+            tftp = utils_misc.get_path(data_dir.get_data_dir(), tftp)
             qemu_cmd += add_tftp(hlp, tftp)
 
         bootp = params.get("bootp")
@@ -1286,7 +1289,7 @@ class VM(virt_vm.BaseVM):
 
         kernel = params.get("kernel")
         if kernel:
-            kernel = utils_misc.get_path(root_dir, kernel)
+            kernel = utils_misc.get_path(data_dir.get_data_dir(), kernel)
             qemu_cmd += add_kernel(hlp, kernel)
 
         kernel_params = params.get("kernel_params")
@@ -1295,7 +1298,7 @@ class VM(virt_vm.BaseVM):
 
         initrd = params.get("initrd")
         if initrd:
-            initrd = utils_misc.get_path(root_dir, initrd)
+            initrd = utils_misc.get_path(data_dir.get_data_dir(), initrd)
             qemu_cmd += add_initrd(hlp, initrd)
 
         for host_port, guest_port in redirs:
@@ -1480,7 +1483,7 @@ class VM(virt_vm.BaseVM):
             cdrom_params = params.object_params(cdrom)
             iso = cdrom_params.get("cdrom")
             if iso:
-                iso = utils_misc.get_path(root_dir, iso)
+                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
                 if not os.path.exists(iso):
                     raise virt_vm.VMImageMissingError(iso)
                 compare = False

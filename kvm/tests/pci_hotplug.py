@@ -1,6 +1,6 @@
 import re
 from autotest.client.shared import error
-from virttest import utils_misc, aexpect, storage
+from virttest import utils_misc, aexpect, storage, data_dir
 
 
 def run_pci_hotplug(test, params, env):
@@ -67,7 +67,7 @@ def run_pci_hotplug(test, params, env):
         elif test_type == "block":
             image_params = params.object_params("stg")
             image_filename = storage.get_image_filename(image_params,
-                                                       test.bindir)
+                                                        data_dir.get_data_dir())
             pci_add_cmd = ("pci_add pci_addr=auto storage file=%s,if=%s" %
                            (image_filename, tested_model))
         # Execute pci_add (should be replaced by a proper monitor method call)
@@ -90,7 +90,7 @@ def run_pci_hotplug(test, params, env):
         elif test_type == "block":
             image_params = params.object_params("stg")
             image_filename = storage.get_image_filename(image_params,
-                                                       test.bindir)
+                                                        data_dir.get_data_dir())
             controller_model = None
             if tested_model == "virtio":
                 tested_model = "virtio-blk-pci"
