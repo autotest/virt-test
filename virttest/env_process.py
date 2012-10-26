@@ -3,7 +3,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
 import libvirt_vm, video_maker, utils_misc, storage, kvm_storage
-import remote, ovirt
+import remote, ovirt, data_dir
 
 try:
     import PIL.Image
@@ -25,11 +25,13 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
+    base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
-        iscsidev = kvm_storage.Iscsidev(params, test.bindir, image_name)
+        iscsidev = kvm_storage.Iscsidev(params, base_dir, image_name)
         params["image_name"] = iscsidev.setup()
     else:
-        image_filename = storage.get_image_filename(params, test.bindir)
+        image_filename = storage.get_image_filename(params,
+                                                    base_dir)
 
         create_image = False
 
@@ -40,7 +42,7 @@ def preprocess_image(test, params, image_name):
             create_image = True
 
         if create_image:
-            image = kvm_storage.QemuImg(params, test.bindir, image_name)
+            image = kvm_storage.QemuImg(params, base_dir, image_name)
             if not image.create(params):
                 raise error.TestError("Could not create image")
 
@@ -118,17 +120,18 @@ def postprocess_image(test, params, image_name):
     @param test: An Autotest test object.
     @param params: A dict containing image postprocessing parameters.
     """
+    base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
-        iscsidev = kvm_storage.Iscsidev(params, test.bindir, image_name)
+        iscsidev = kvm_storage.Iscsidev(params, base_dir, image_name)
         iscsidev.cleanup()
     else:
-        image = kvm_storage.QemuImg(params, test.bindir, image_name)
+        image = kvm_storage.QemuImg(params, base_dir, image_name)
         if params.get("check_image") == "yes":
             try:
-                image.check_image(params, test.bindir)
+                image.check_image(params, base_dir)
             except Exception, e:
                 if params.get("restore_image_on_check_error", "no") == "yes":
-                    image.backup_image(params, test.bindir, "restore", True)
+                    image.backup_image(params, base_dir, "restore", True)
                 raise e
         if params.get("remove_image") == "yes":
             image.remove()
@@ -368,6 +371,7 @@ def preprocess(test, params, env):
                         params.get("pre_command_noncritical") == "yes")
 
     #Clone master image from vms.
+    base_dir = data_dir.get_data_dir()
     if params.get("master_images_clone"):
         for vm_name in params.get("vms").split():
             vm = env.get_vm(vm_name)
@@ -377,8 +381,8 @@ def preprocess(test, params, env):
 
             vm_params = params.object_params(vm_name)
             for image in vm_params.get("master_images_clone").split():
-                image_obj = kvm_storage.QemuImg(params, test.bindir, image)
-                image_obj.clone_image(params, vm_name, image, test.bindir)
+                image_obj = kvm_storage.QemuImg(params, base_dir, image)
+                image_obj.clone_image(params, vm_name, image, base_dir)
 
     # Preprocess all VMs and images
     if params.get("not_preprocess","no") == "no":

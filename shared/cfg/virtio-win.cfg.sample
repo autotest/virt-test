@@ -47,13 +47,13 @@ Windows:
         # cdrom drive
         #cdroms += " virtio"
 
-        # This assumes the virtio iso will be at (/tmp/kvm_autotest_root/isos)
+        # This assumes the virtio iso will be at the data dir.
         #cdrom_virtio = isos/virtio-win.iso
 
         # This ensures the iso will appear to the guest as F:
         #drive_index_virtio = 3
 
-        # This assumes the virtio floppy will be at (/tmp/kvm_autotest_root/)
+        # This assumes the virtio floppy will be at the data dir.
         # This floppy is needed only if you desire to test virtio drivers
         # install for WinXP and Win2003. If you don't, you can leave the line
         # below uncommented

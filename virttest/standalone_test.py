@@ -34,6 +34,7 @@ class Test(object):
                     (params.get("vm_type"), params.get("shortname")))
         self.debugdir = None
         self.outputdir = None
+        self.resultsdir = None
         self.logfile = None
         self.file_handler = None
 
@@ -43,6 +44,9 @@ class Test(object):
         self.outputdir = self.debugdir
         if not os.path.isdir(self.debugdir):
             os.makedirs(self.debugdir)
+        self.resultsdir = os.path.join(self.debugdir, 'results')
+        if not os.path.isdir(self.resultsdir):
+            os.makedirs(self.resultsdir)
         utils_misc.set_log_file_dir(self.debugdir)
         self.logfile = os.path.join(self.debugdir, 'debug.log')
 
@@ -298,8 +302,9 @@ def run_tests(parser):
     if not os.path.isdir(debugdir):
         os.makedirs(debugdir)
     debuglog = os.path.join(debugdir, "debug.log")
-    print_header("DEBUG LOG: %s" % debuglog)
     configure_file_logging(debuglog)
+
+    print_header("DEBUG LOG: %s" % debuglog)
 
     last_index = -1
     for i, d in enumerate(parser.get_dicts()):

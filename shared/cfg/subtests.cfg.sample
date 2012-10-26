@@ -4,6 +4,8 @@
 
 variants:
     - install:
+        no JeOS
+        virt_test_type = kvm
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -14,6 +16,8 @@ variants:
         kill_vm_timeout_on_error = 0
 
     - setup: install
+        virt_test_type = kvm
+        no JeOS
         type = steps
         fail_if_stuck_for = 300
         stuck_detection_history = 2
@@ -21,12 +25,15 @@ variants:
         keep_screendump_history = yes
 
     - image_copy:
+        virt_test_type = kvm
+        no JeOS
         type = image_copy
         vms = ''
         parallel = no
         profilers =
 
     - unattended_install:
+        virt_test_type = kvm libvirt
         type = unattended_install
         start_vm = no
         kill_vm = yes
@@ -46,22 +53,32 @@ variants:
             # Additional iso with kickstart is attached into the guest
             - extra_cdrom_ks:
                 only Linux
+                no JeOS
                 unattended_delivery_method = cdrom
                 cdroms += " unattended"
                 drive_index_unattended = 1
                 drive_index_cd1 = 2
             # Kickstart is packed into the installation iso
             - in_cdrom_ks:
+                no JeOS
                 only Linux, unattended_install.cdrom
                 unattended_delivery_method = integrated
             # Autotest starts simple http server providing kickstart
             - http_ks:
+                no JeOS
                 only Linux
                 unattended_delivery_method = url
             # Image with kickstart is attached into the guest as floppy drive
             - floppy_ks:
+                no JeOS
                 only Linux
                 unattended_delivery_method = floppy
+            # Only perform a libvirt import. No cdroms, no floppies, no nothing
+            - import:
+                virt_test_type = libvirt
+                no cdrom
+                cdroms = ""
+                floppy = ""
 
         variants:
             # Install guest from cdrom
@@ -74,17 +91,20 @@ variants:
                 redirs += " unattended_install"
             # Install guest from http/ftp url
             - url:
+                no JeOS
                 only Linux
                 medium = url
                 url = REPLACE_THIS_WITH_TREE_URL
             # Install guest from nfs nfs_server:nfs_dir
             - nfs:
+                no JeOS
                 only Linux
                 medium = nfs
                 nfs_server = REPLACE_THIS_WITH_NFS_SERVER
                 nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
             # Install guest with a remote kickstart
             - remote_ks:
+                no JeOS
                 only Linux
                 medium = url
                 # TODO: does kvm need to prefix this with '--append'?
@@ -92,18 +112,23 @@ variants:
                 url = REPLACE_THIS_WITH_TREE_URL
             # Install guest using pxe/tftp  (virt-install --pxe)
             - pxe:
+                no JeOS
                 only Linux
                 medium = pxe
             # Install guest using kernel/initrd pair from directory
             - kernel_initrd:
+                no JeOS
                 only Linux
                 medium = kernel_initrd
             - import:
+                virt_test_type = libvirt
+                no extra_cdrom_ks
                 medium = import
                 force_create_image = no
                 create_image = no
 
     - qemu_iotests:
+        virt_test_type = kvm
         type = qemu_iotests
         vms = ''
         profilers = ''
@@ -131,6 +156,7 @@ variants:
                 qemu_io_image_format = vmdk
 
     - qemu_img:
+        virt_test_type = kvm
         type = qemu_img
         vms = ''
         profilers = ''
@@ -177,6 +203,7 @@ variants:
                 subcommand = commit
 
     - pxe:
+        virt_test_type = kvm libvirt
         type = pxe
         images = pxe
         image_name_pxe = pxe-test
@@ -190,6 +217,7 @@ variants:
         pxe_timeout = 60
 
     - virsh_uri: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         type = virsh_uri
         vms = ''
         variants:
@@ -214,6 +242,7 @@ variants:
                 libvirtd = "off"
 
     - virsh_nodecpustats:
+        virt_test_type = libvirt
         type = virsh_nodecpustats
         vms = ''
 
@@ -236,9 +265,11 @@ variants:
                 libvirtd = "off"
 
     - virsh_vcpupin: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         type = virsh_vcpupin
 
     - virsh_version: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         type = virsh_version
         vms = ''
         variants:
@@ -256,6 +287,7 @@ variants:
                 libvirtd = "off"
 
     - virsh_hostname: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         type = virsh_hostname
         vms = ''
         variants:
@@ -273,6 +305,7 @@ variants:
                 libvirtd = "off"
 
     - virsh_capabilities:
+        virt_test_type = libvirt
         type = virsh_capabilities
         vms = ''
         variants:
@@ -290,6 +323,7 @@ variants:
                 libvirtd = "off"
 
     - virsh_nodeinfo:
+        virt_test_type = libvirt
         type = virsh_nodeinfo
         vms = ''
         variants:
@@ -307,6 +341,7 @@ variants:
                 libvirtd = "off"
 
     - virsh_freecell:
+        virt_test_type = libvirt
         type = virsh_freecell
         vms = ''
         variants:
@@ -334,6 +369,7 @@ variants:
                 status_error = "yes"
 
     - virsh_domname:
+        virt_test_type = libvirt
         type = virsh_domname
         kill_vm = yes
         kill_vm_on_error = yes
@@ -385,6 +421,7 @@ variants:
                 libvirtd = "off"
 
     - virsh_list:
+        virt_test_type = libvirt
         type = virsh_list
         vm_start = yes
         kill_vm = yes
@@ -456,6 +493,7 @@ variants:
                         libvirtd = "off"
 
     - virsh_setmem:
+        virt_test_type = libvirt
         type = virsh_setmem
         kill_vm = yes
         kill_vm_on_error = yes
@@ -529,6 +567,7 @@ variants:
                 setmem_options_suffix = "xyz"
 
     - module_probe:
+        virt_test_type = kvm
         type = module_probe
         # You can specify your own module list, though it is not needed usually.
         # mod_list = kvm
@@ -539,12 +578,14 @@ variants:
 
 # Tests that do need installed guests to run
     - boot: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         type = boot
         restart_vm = yes
         kill_vm_on_error = yes
         login_timeout = 240
 
     - boot_with_usb:
+        virt_test_type = kvm
         only Linux
         type = boot
         restart_vm = yes
@@ -650,6 +691,7 @@ variants:
                         drive_format_stg = "usb3"
 
     - reboot: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         type = boot
         reboot_method = shell
         kill_vm_on_error = yes
@@ -659,6 +701,7 @@ variants:
         # rh_perf_envsetup_script = scripts/rh_perf_envsetup.sh
 
     - reboot_with_usb:
+        virt_test_type = kvm
         only Linux
         type = boot
         reboot_method = shell
@@ -764,6 +807,7 @@ variants:
                         drive_format_stg = "usb3"
 
     - dd_test: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         only Linux
         type = dd_test
         images += " stg1"
@@ -802,6 +846,7 @@ variants:
 
 
     - virsh_migrate: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         type = virsh_migrate
         # Migrating non-started VM causes undefined behavior
         start_vm = yes
@@ -994,6 +1039,7 @@ variants:
 
 
     - migrate: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = migration
         migration_test_command = help
         migration_bg_command = "cd /tmp; nohup tcpdump -q -i any -t ip host localhost"
@@ -1022,6 +1068,7 @@ variants:
         variants:
             - @default:
             - with_speed_measurement:
+                no JeOS
                 # migration speed in bytes. Default scaler is M (350 == 350M)
                 only Linux
                 mig_speed = 125M
@@ -1044,6 +1091,7 @@ variants:
                 iterations = 1
                 type = migration_with_file_transfer
             - with_autotest:
+                no JeOS
                 only Linux
                 type = autotest_control
                 migrate_background = yes
@@ -1057,6 +1105,8 @@ variants:
                         test_control_file = monotonic_time.control
 
     - @multi_host:
+        virt_test_type = kvm
+        no JeOS
         variants:
             - migrate_multi_host: install setup image_copy unattended_install.cdrom
                 type = migration_multi_host
@@ -1183,6 +1233,7 @@ variants:
                         machine_type = "rhel6.3.0"
 
     - boot_savevm: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         type = boot_savevm
         savevm_delay = 0.3
         savevm_login_delay = 5
@@ -1192,6 +1243,7 @@ variants:
         kill_vm = yes
 
     - save_restore: install setup image_copy boot
+        virt_test_type = kvm libvirt
         type = save_restore
         # Number of times to repeat save/restore
         save_restore_repeat = 1
@@ -1223,6 +1275,7 @@ variants:
                 save_restore_duration = 5400.0
 
     - autotest: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = autotest_control
         test_timeout = 1800
@@ -1300,18 +1353,22 @@ variants:
                 test_control_file = xfstests.control
 
     - qemu_img_commit:  install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = qemu_img
         subcommand = commit
 
     - block_stream:
+        virt_test_type = kvm
         type = block_stream
         alive_test_cmd = uname -a
 
     - stop_continue: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         type = stop_continue
         kill_vm_on_error = yes
 
     - nfs_corrupt:
+        virt_test_type = kvm
         only Linux
         type = nfs_corrupt
         start_vm = no
@@ -1329,10 +1386,12 @@ variants:
         nfs_stat_chk_re = "running"
 
     - linux_s3: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = linux_s3
 
     - timedrift: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         rtc_drift = "slew"
         variants:
             - ntp:
@@ -1397,6 +1456,7 @@ variants:
                         drift_threshold_single = 3
 
     - time_manage:
+        virt_test_type = kvm
         type = time_manage
         kill_vm = yes
         extra_params +=" -rtc base=utc,driftfix=slew -snapshot"
@@ -1412,6 +1472,7 @@ variants:
         max_vms = 4
 
     - balloon_check: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         no Win2000, Fedora.8, Fedora.9, Fedora.10, RHEL.3, RHEL.4, Unix, livecd
         type = balloon_check
         extra_params += " -balloon virtio"
@@ -1444,17 +1505,20 @@ variants:
                sub_balloon_test_evict = "shutdown"
 
     - watchdog: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only RHEL.5, RHEL.6
         type = watchdog
         extra_params += " -watchdog i6300esb -watchdog-action reset"
         relogin_timeout = 240
 
     - smbios_table: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         type = smbios_table
         start_vm = no
 
     - perf_kvm: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = perf_kvm
         kallsyms_cmd = "cat /proc/kallsyms > /tmp/guest_kallsyms"
         modules_cmd = "cat /proc/modules > /tmp/geust_modules"
@@ -1462,6 +1526,8 @@ variants:
         perf_record_timeout =  100
 
     - softlockup: install setup unattended_install.cdrom
+        virt_test_type = kvm
+        no JeOS
         only Linux
         type = softlockup
         softlockup_files = stress-1.0.4.tar.gz
@@ -1480,6 +1546,7 @@ variants:
         test_length = 0.10
 
     - stress_boot: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt kvm
         type = stress_boot
         max_vms = 5
         alive_test_cmd = uname -a
@@ -1492,6 +1559,7 @@ variants:
         used_mem = 2560
 
     - guest_test: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Windows
         type = guest_test
         login_timeout = 360
@@ -1522,12 +1590,14 @@ variants:
                         dst_rsc_path = "C:\powershell\stub\stub.ps1"
 
     - iozone_windows: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Windows
         type = iozone_windows
         iozone_cmd = "D:\IOzone\iozone.exe -a"
         iozone_timeout = 3600
 
     - whql: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Windows
         # Replace this with the address of an installed DTM server
         server_address = 10.20.30.40
@@ -1699,12 +1769,14 @@ variants:
                                         test_timeout = 7200
 
     - guest_s4: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         type = guest_s4
         relogin_timeout = 240
         # params: check_s4_support_cmd, check_s4_cmd, set_s4_cmd
         # kill_test_s4_cmd, services_up_timeout are set in guest-os.cfg
 
     - nic_hotplug: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         pci_type = nic
         reference_cmd = lspci
         find_pci_cmd = 'lspci | tail -n1'
@@ -1730,6 +1802,7 @@ variants:
 
 
     - block_hotplug: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         type = pci_hotplug
         pci_type = block
         reference_cmd = lspci
@@ -1757,6 +1830,7 @@ variants:
                 image_format_stg = raw
 
     - enospc: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = enospc
         start_vm = no
         images += " stg"
@@ -1773,12 +1847,15 @@ variants:
         kill_vm = yes
 
     - qmp_basic: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = qmp_basic
 
     - qmp_basic_rhel6: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = qmp_basic_rhel6
 
     - vlan: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = vlan
         # subnet should not be used by host
@@ -1794,6 +1871,7 @@ variants:
         kill_vm_gracefully_vm2 = no
 
     - ping: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         type = ping
         counts = 100
         flood_minutes = 10
@@ -1806,10 +1884,12 @@ variants:
 
 
     - jumbo: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         type = jumbo
 
     - file_transfer: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         type = file_transfer
         filesize = 4000
         transfer_timeout = 1000
@@ -1818,6 +1898,7 @@ variants:
                 transfer_type = remote
 
     - nicdriver_unload: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = nicdriver_unload
         filesize = 100
@@ -1826,6 +1907,7 @@ variants:
         sessions_num = 10
 
     - nic_promisc: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = nic_promisc
         filesize = 400
@@ -1833,6 +1915,7 @@ variants:
         transfer_type = remote
 
     - multicast: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = multicast
         mcast = 225.0.0.1
@@ -1840,11 +1923,14 @@ variants:
         flood_minutes = 1
 
     - mac_change: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = mac_change
         kill_vm = yes
 
     - performance:
+        virt_test_type = kvm
+        no JeOS
         type = performance
         kill_vm = yes
         variants:
@@ -1964,6 +2050,8 @@ variants:
 #               test_timeout = 1200
 
     - netperf: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
+        no JeOS
         only Linux
         only virtio_net
         type = netperf
@@ -1998,6 +2086,7 @@ variants:
                 # client = <external host ip>
 
     - ntttcp:
+        virt_test_type = kvm libvirt
         only Windows
         type = ntttcp
         image_snapshot = yes
@@ -2021,11 +2110,13 @@ variants:
             ntttcp_install_cmd = 'cmd /c "D:\autoit3.exe D:\NTttcp\NTttcp.au3 && mkdir C:\NTttcp && copy "C:\Program Files (x86)\Microsoft Corporation\NT Testing TCP Tool\*" C:\NTttcp && cd C:\NTttcp\ && copy NTttcp_%s.exe NTttcps.exe && copy NTttcp_%s.exe NTttcpr.exe"'
 
     - ethtool: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = ethtool
         filesize = 512
 
     - nic_bonding: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         type = nic_bonding
         nics += ' nic2 nic3 nic4'
@@ -2040,6 +2131,7 @@ variants:
         # bonding_params = "mode=active-backup"
 
     - set_link: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = set_link
         test_timeout = 1000
         filesize = 4000
@@ -2048,6 +2140,7 @@ variants:
         kill_vm =yes
 
     - netstress_kill_guest: install setup unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = netstress_kill_guest
         image_snapshot = yes
@@ -2065,6 +2158,7 @@ variants:
                 netperf_cmd = %s/netperf-2.4.5/src/netperf -t %s -H %s -l 60 -- -m %s
 
     - physical_resources_check: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = physical_resources_check
         default_cpu_model = "qemu64"
         cpu_model_vendor = "AuthenticAMD"
@@ -2082,6 +2176,7 @@ variants:
         chk_timeout = 240
 
     - ksm_overcommit: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         # Don't preprocess any vms as we need to change its params
         vms = ''
@@ -2105,10 +2200,12 @@ variants:
                 ksm_mode = "parallel"
 
     - iofuzz: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = iofuzz
 
     - cgroup:
+        virt_test_type = kvm
         only Linux
         type = cgroup
         cgroup_test_time = 60
@@ -2199,6 +2296,8 @@ variants:
                 # cgroup_memory_move_mb = 2048
 
     - virtio_console: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
+        only Linux
         type = virtio_console
         # Console cleanup is not 100%, consider using kill_vm_on_error
         kill_vm_on_error = yes
@@ -2395,6 +2494,8 @@ variants:
     # This unit test module is for older branches of KVM that use the
     # kvmctl test harness (such as the code shipped with RHEL 5.x)
     - unit_test_kvmctl:
+        virt_test_type = libvirt
+        no JeOS
         type = unittest_kvmctl
         vms = ''
         profilers = ''
@@ -2425,6 +2526,7 @@ variants:
                 case = vmexit
 
     - fillup_disk: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         only qcow2
         type = fillup_disk
@@ -2434,6 +2536,7 @@ variants:
         kill_vm = yes
 
     - lvm: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         images += ' stg1 stg2'
         image_name_stg1 = storage_4k
@@ -2474,6 +2577,7 @@ variants:
                 remove_image_stg2 = yes
 
     - ioquit: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         type = ioquit
         background_cmd = "for i in 1 2 3 4; do (dd if=/dev/urandom of=/tmp/file bs=102400 count=10000000 &); done"
@@ -2481,6 +2585,7 @@ variants:
         login_timeout = 360
 
     - multi_disk: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = multi_disk
         force_create_image = yes
         force_create_image_image1 = no
@@ -2553,15 +2658,19 @@ variants:
                 stg_params += "range_0-all_disk:range(n) "
 
     - clock_getres: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
+        no JeOS
         only Linux
         type = clock_getres
 
     - yum_update: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Fedora, RHEL
         type = yum_update
         shell_prompt = "Is this ok"
 
     - kdump: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only RHEL.5, RHEL.6
         type = kdump
         # time waited for the completion of crash dump
@@ -2580,6 +2689,7 @@ variants:
                 crash_cmd = nmi
 
     - vmstop: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = vmstop
         # the path used to store the saved vm state
         # save_path = /tmp
@@ -2587,6 +2697,7 @@ variants:
         clean_save = yes
 
     - cdrom_test: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         type = cdrom
         cdrom_cd1 = orig.iso
@@ -2601,6 +2712,7 @@ variants:
         workaround_eject_time = 0
 
     - floppy_test: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         type = floppy
         start_vm = no
@@ -2608,6 +2720,7 @@ variants:
         floppy_name = images/test_floppy.img
 
     - usb_storage: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         type = usb
         kill_vm = yes
@@ -2644,6 +2757,7 @@ variants:
                 drive_format_stg = "usb3"
 
     - usb_multi_disk: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = multi_disk
         cmd_timeout = 1000
         black_list = C: D:
@@ -2681,6 +2795,7 @@ variants:
                 cmd_timeout = 1000
 
     - nmi_watchdog: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = nmi_watchdog
         get_nmi_cmd = grep NMI /proc/interrupts
         nmi_watchdog_type = 1
@@ -2688,6 +2803,7 @@ variants:
         only Linux
 
     - trans_hugepage: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm libvirt
         only Linux
         thp_test_config = ""
         kill_vm = yes
@@ -2705,6 +2821,8 @@ variants:
                 check_cmd_timeout = 900
 
     - cpuflags: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
+        no JeOS
         type = cpuflags
         extra_params += " -snapshot"
         auto_cpu_model = no
@@ -2754,6 +2872,7 @@ variants:
                         test_type = "test_migration_with_additional_flags"
 
     - cpu_hotplug_test: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = cpu_hotplug
         cpu_hotplug_timeout = 600
         n_cpus_add = 1
@@ -2762,6 +2881,7 @@ variants:
         onoff_iterations = 100
 
     - hdparm: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Linux
         type = hdparm
         get_disk_cmd = \ls /dev/[vhs]da
@@ -2775,12 +2895,14 @@ variants:
             high_status_cmd = hdparm -a256 -r1 %s
 
     - getfd: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = getfd
         restart_vm = yes
         kill_vm = yes
         number_of_files = 900
 
     - qemu_io_blkdebug:
+        virt_test_type = kvm
         only qcow2
         type = qemu_io_blkdebug
         vms = ""
@@ -2801,18 +2923,21 @@ variants:
     # defined (in this order), since the effect of such tests can leave
     # the VM on a bad state.
     - system_powerdown: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = shutdown
         shutdown_method = system_powerdown
         sleep_before_powerdown = 20
         kill_vm = yes
 
     - system_reset: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = boot
         reboot_method = system_reset
         sleep_before_reset = 20
         kill_vm_on_error = yes
 
     - system_reset_bootable: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = system_reset_bootable
         interval = 1
         reset_times = 20
@@ -2820,6 +2945,8 @@ variants:
         kill_vm_on_error = yes
 
     - 9p: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
+        no JeOS
         only Linux
         type = 9p
         9p_mount_dir = /root/mount1
@@ -2833,10 +2960,14 @@ variants:
                 test_timeout = 1800
 
     - negative_create:
+        virt_test_type = kvm libvirt
+        no JeOS
         type = negative_create
         start_vm = no
 
     - fullscreen_setup:
+        virt_test_type = kvm
+        no JeOS
         type = fullscreen_setup
         vms = vm1 vm2
         guest_vm = vm1
@@ -2860,6 +2991,8 @@ variants:
                         image_name_vm2 = rhel63-32_client
 
     - rv_connect:
+        virt_test_type = kvm
+        no JeOS
         type = rv_connect
         vms = vm1 vm2
         guest_vm = vm1
@@ -2885,6 +3018,8 @@ variants:
 
 
     - rv_copyandpaste: rv_connect
+        virt_test_type = kvm
+        no JeOS
         type = rv_copyandpaste
         vms = vm1 vm2
         shell_prompt_vm2 = ^\[.*\][\#\$]\s*$
@@ -2926,6 +3061,8 @@ variants:
 
 
     - rv_connect_win:
+        virt_test_type = kvm
+        no JeOS
         type = rv_connect
         vms = vm1 vm2
         guest_vm = vm1
@@ -2954,6 +3091,7 @@ variants:
                         image_name_vm2 = rhel63-32_client
 
     - rv_input: rv_connect
+        virt_test_type = kvm
         type = rv_input
         vms = vm1 vm2
         guest_vm = vm1
@@ -2980,6 +3118,7 @@ variants:
                         image_name_vm2 = rhel63-32_client
 
     - kernel_install:
+        virt_test_type = kvm
         only Linux
         type = kernel_install
         variants:
@@ -3015,6 +3154,8 @@ variants:
                 test_timeout_install = 3600
 
     - rv_disconnect: rv_connect
+        virt_test_type = kvm
+        no JeOS
         type = rv_disconnect
         vms = vm1 vm2
         guest_vm = vm1
@@ -3039,6 +3180,8 @@ variants:
                         image_name_vm2 = rhel63-32_client
 
     - rv_fullscreen: rv_connect
+        virt_test_type = kvm
+        no JeOS
         type = rv_fullscreen
         vms = vm1 vm2
         guest_vm = vm1
@@ -3064,6 +3207,7 @@ variants:
 
 
     - seabios: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         type = seabios
         start_vm = no
         restart_vm = no
@@ -3076,15 +3220,18 @@ variants:
         boot_device = "iPXE"
 
     - fail-test:
+        virt_test_type = libvirt kvm
         type = fail
 
     - shutdown: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt kvm
         type = shutdown
         shutdown_method = shell
         kill_vm = yes
         kill_vm_gracefully = no
 
     - qemu_guest_agent: install setup image_copy unattended_install.cdrom
+        virt_test_type = kvm
         only Fedora.16, Fedora.17
         type = qemu_guest_agent
         gagent_name = "org.qemu.guest_agent.0"
@@ -3121,6 +3268,7 @@ variants:
                 gagent_start_cmd = "pgrep qemu-ga || qemu-ga -d -m isa-serial -p /dev/ttyS1"
 
     - remove_guest: install setup image_copy unattended_install.cdrom
+        virt_test_type = libvirt
         type = remove_guest
         shutdown_method = shell
         kill_vm = yes

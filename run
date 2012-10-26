@@ -4,7 +4,7 @@ Run virt tests outside the autotest client harness.
 
 @copyright: Red Hat 2012
 """
-import os, sys
+import os, sys, time
 
 
 class StreamProxy(object):
@@ -45,23 +45,89 @@ class StreamProxy(object):
             self.stream = self.log
 
 
+def create_config_files(options):
+    test_dir = os.path.dirname(sys.modules[__name__].__file__)
+    shared_dir = os.path.abspath(os.path.join(test_dir, 'shared', 'cfg'))
+    if options.type:
+        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
+                                                options.type))
+    elif options.config:
+        test_dir = os.path.abspath(os.path.dirname(os.path.dirname(options.config)))
+    utils_misc.create_config_files(test_dir, shared_dir, interactive=False)
+
+
+def bootstrap(options, cartesian_parser):
+    bcolors = standalone_test.bcolors
+    standalone_test.print_stdout(bcolors.HEADER + "SETUP:" + bcolors.ENDC,
+                                 end=False)
+    t_begin = time.time()
+    test_dir = os.path.dirname(sys.modules[__name__].__file__)
+    if options.type:
+        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
+                                                options.type))
+    elif options.config:
+        test_dir = os.path.abspath(os.path.dirname(os.path.dirname(options.config)))
+    base_dir = data_dir.get_data_dir()
+    default_userspace_paths = None
+    check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+    online_docs_url = "https://github.com/autotest/virt-test/wiki"
+    failed = False
+    reason = None
+
+    try:
+        utils_misc.virt_test_assistant(options.type, test_dir, base_dir,
+                                       default_userspace_paths, check_modules,
+                                       online_docs_url,
+                                       restore_image=options.restore,
+                                       interactive=False)
+    except Exception, e:
+        reason = e
+        failed = True
+
+    t_end = time.time()
+    t_elapsed = t_end - t_begin
+
+    if not failed:
+        standalone_test.print_pass(t_elapsed)
+    else:
+        standalone_test.print_fail(t_elapsed)
+        standalone_test.print_stdout("Setup error: %s" % reason)
+        sys.exit(-1)
+
+    standalone_test.print_stdout(bcolors.HEADER +
+                             "DATA DIR: %s" % data_dir.get_backing_data_dir() +
+                             bcolors.ENDC)
+
+
 if __name__ == '__main__':
     import optparse
-    parser = optparse.OptionParser()
-    parser.add_option("-v", "--verbose",
+    option_parser = optparse.OptionParser()
+    option_parser.add_option("-v", "--verbose",
                       action="store_true", dest="verbose",
                       help="Exhibit debug messages")
-    parser.add_option("-t", "--type",
+    option_parser.add_option("-t", "--type",
                       action="store", dest="type",
                       help="Choose test type (kvm, libvirt, v2v)")
-    parser.add_option("-c", "--config",
+    option_parser.add_option("-c", "--config",
                       action="store", dest="config",
                       help="Explicitly choose a cartesian config")
-    options, args = parser.parse_args()
+    option_parser.add_option("-r", "--restore-image",
+                      action="store_true", dest="restore",
+                      help="Restore image from pristine image")
+    option_parser.add_option("--qemu-bin", action="store", dest="qemu",
+                      help="Choose a custom qemu path to be tested")
+    option_parser.add_option("--tests", action="store", dest="tests",
+                      help=("List of space separated tests to be executed"
+                            "(use quotes around them for safety)"))
+    option_parser.add_option("--list-tests", action="store_true", dest="list",
+                      help="List tests available")
+    option_parser.add_option("--data-dir", action="store", dest="datadir",
+                      help="Path to a data dir (that locates ISOS and images)")
+    options, args = option_parser.parse_args()
 
     if (not options.type) and (not options.config):
         print("No type (-t) or config (-c) options specified, aborting...")
-        parser.print_help()
+        option_parser.print_help()
         sys.exit(1)
 
     if not options.verbose:
@@ -100,15 +166,66 @@ if __name__ == '__main__':
     test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
     sys.path.append(test_dir)
 
-    from virttest import cartesian_config, standalone_test
+    from virttest import cartesian_config, standalone_test, utils_misc, data_dir
 
     standalone_test.configure_logging()
     standalone_test.configure_console_logging()
-    parser = cartesian_config.Parser()
+
+    if options.datadir:
+        data_dir.set_backing_data_dir(options.datadir)
+
+    create_config_files(options)
+
+    cartesian_parser = cartesian_config.Parser()
     if options.config is not None:
         cfg = os.path.abspath(options.config)
-    else:
+    if options.config is None or options.list:
         cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
-    parser.parse_file(cfg)
-    standalone_test.run_tests(parser)
+    cartesian_parser.parse_file(cfg)
+
+    if options.list:
+        try:
+            less_cmd = utils_misc.find_command('less')
+            pipe = os.popen('%s -FRSX' % less_cmd, 'w')
+        except ValueError:
+            pipe = sys.stdout
+        index = 0
+        for params in cartesian_parser.get_dicts():
+            virt_test_type = params.get('virt_test_type', "")
+            supported_virt_backends = virt_test_type.split(" ")
+            if options.type in supported_virt_backends:
+                index +=1
+                shortname = params['shortname'].split(".")[6:]
+                shortname = ".".join(shortname)
+                pipe.write("%d %s\n" % (index, shortname))
+        sys.exit(0)
+    else:
+        bootstrap(options, cartesian_parser)
+
+
+    if options.qemu:
+        d = os.path.dirname(options.qemu)
+        cartesian_parser.parse_string("qemu_binary = %s" % options.qemu)
+        cartesian_parser.parse_string("qemu_img_binary = %s" %
+                            os.path.join(d, 'qemu-img'))
+        cartesian_parser.parse_string("qemu_io_binary = %s" %
+                                      os.path.join(d, 'qemu-io'))
+
+    if options.type and options.tests:
+        if options.config:
+            standalone_test.print_stdout("You can't use -c together "
+                                         "with -t or --tests")
+            sys.exit(-1)
+        tests = options.tests.split(" ")
+        cartesian_parser.parse_string("only %s" % ", ".join(tests))
+    elif options.type and not options.tests:
+        if options.type == 'kvm':
+            cartesian_parser.parse_string("only migrate")
+        elif options.type == 'libvirt':
+            cartesian_parser.parse_string("only "
+                                          "unattended_install.import.import, "
+                                          "virsh_domname, "
+                                          "remove_guest.without_disk")
+
+    standalone_test.run_tests(cartesian_parser)

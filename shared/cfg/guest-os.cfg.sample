@@ -103,11 +103,27 @@ variants:
             services_up_timeout = 30
 
         variants:
-            - CustomGuestLinux:
-                image_name = custom_image
-                image_size = 10G
-                #image_name = /dev/mapper/vg_some_label
-                #image_type_raw = yes
+            - JeOS:
+                no setup
+                shell_prompt = "^\[.*\][\#\$]\s*$"
+
+                variants:
+                    - 17.64:
+                        image_name = images/jeos-17-64
+                        unattended_install:
+                            boot_path = "images/pxeboot"
+                            anaconda_log = "yes"
+                            unattended_file = unattended/JeOS-17.ks
+                            cdrom_unattended = images/jeos-17-64/ks.iso
+                            kernel = images/jeos-17-64/vmlinuz
+                            initrd = images/jeos-17-64/initrd.img
+                            syslog_server_proto = tcp
+                        unattended_install.cdrom:
+                            cdrom_cd1 = isos/linux/Fedora-17-x86_64-DVD.iso
+                            md5sum_cd1 = 26f3358a5f8973f0956093f28a0106e7
+                            md5sum_1m_cd1 = 51988b8593ad488fe5a790a183cf3d81
+                            kernel_params = "repo=cdrom:/dev/sr1 ks=cdrom:/dev/sr0 nicdelay=60 console=ttyS0,115200 console=tty0"
+
 
             - Fedora:
                 no setup
@@ -122,7 +138,7 @@ variants:
                 variants:
                     - 8.32:
                         no setup
-                        image_name = f8-32
+                        image_name = images/f8-32
                         install:
                             steps = steps/Fedora-8-i386.steps
                             cdrom_cd1 = isos/linux/Fedora-8-i386-DVD.iso
@@ -142,7 +158,7 @@ variants:
 
                     - 8.64:
                         no setup
-                        image_name = f8-64
+                        image_name = images/f8-64
                         install:
                             steps = steps/Fedora-8-64.steps
                             cdrom_cd1 = isos/linux/Fedora-8-x86_64-DVD.iso
@@ -161,7 +177,7 @@ variants:
                             md5sum_1m_cd1 = 145f6414e19492649a56c89f0a45e719
 
                     - 9.32:
-                        image_name = f9-32
+                        image_name = images/f9-32
                         install:
                             steps = steps/Fedora-9-i386.steps
                             cdrom_cd1 = isos/linux/Fedora-9-i386-DVD.iso
@@ -181,7 +197,7 @@ variants:
 
 
                     - 9.64:
-                        image_name = f9-64
+                        image_name = images/f9-64
                         install:
                             steps = steps/Fedora-9-64.steps
                             cdrom_cd1 = isos/linux/Fedora-9-x86_64-DVD.iso
@@ -201,7 +217,7 @@ variants:
 
 
                     - 10.32:
-                        image_name = f10-32
+                        image_name = images/f10-32
                         unattended_install:
                             unattended_file = unattended/Fedora-10.ks
                             #floppies = "fl"
@@ -215,7 +231,7 @@ variants:
                             md5sum_1m_cd1 = bd67c68bdf595e4ba7131ec702159181
 
                     - 10.64:
-                        image_name = f10-64
+                        image_name = images/f10-64
                         unattended_install:
                             unattended_file = unattended/Fedora-10.ks
                             #floppies = "fl"
@@ -229,7 +245,7 @@ variants:
                             md5sum_1m_cd1 = 732857cbf40c80c34683e874601d982c
 
                     - 11.32:
-                        image_name = f11-32
+                        image_name = images/f11-32
                         install:
                             steps = steps/Fedora-11-32.steps
                         unattended_install:
@@ -245,7 +261,7 @@ variants:
                             md5sum_1m_cd1 = dc8ddf90648c247339c721395aa49714
 
                     - 11.64:
-                        image_name = f11-64
+                        image_name = images/f11-64
                         unattended_install:
                             unattended_file = unattended/Fedora-11.ks
                             #floppies = "fl"
@@ -259,7 +275,7 @@ variants:
                             md5sum_1m_cd1 = 405ee05e2387a2e4328b008d5bcbdd1e
 
                     - 12.32:
-                        image_name = f12-32
+                        image_name = images/f12-32
                         unattended_install:
                             unattended_file = unattended/Fedora-12.ks
                             #floppies = "fl"
@@ -273,7 +289,7 @@ variants:
                             md5sum_1m_cd1 = eee935d7f0cf2ef03f6ddce3a2a50050
 
                     - 12.64:
-                        image_name = f12-64
+                        image_name = images/f12-64
                         unattended_install:
                             unattended_file = unattended/Fedora-12.ks
                             #floppies = "fl"
@@ -287,7 +303,7 @@ variants:
                             md5sum_1m_cd1 = 514efbd7698b55ff6768c8605438bfc5
 
                     - 13.32:
-                        image_name = f13-32
+                        image_name = images/f13-32
                         unattended_install:
                             unattended_file = unattended/Fedora-13.ks
                             #floppies = "fl"
@@ -301,7 +317,7 @@ variants:
                             md5sum_1m_cd1 = 4e1578a6ed5a6e7cd03b8fb074030746
 
                     - 13.64:
-                        image_name = f13-64
+                        image_name = images/f13-64
                         unattended_install:
                             unattended_file = unattended/Fedora-13.ks
                             #floppies = "fl"
@@ -315,7 +331,7 @@ variants:
                             md5sum_1m_cd1 = 68821b9de4d3b5975d6634334e7f47a6
 
                     - 14.32:
-                        image_name = f14-32
+                        image_name = images/f14-32
                         unattended_install:
                             unattended_file = unattended/Fedora-14.ks
                             #floppies = "fl"
@@ -333,7 +349,7 @@ variants:
                             nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
 
                     - 14.64:
-                        image_name = f14-64
+                        image_name = images/f14-64
                         unattended_install:
                             unattended_file = unattended/Fedora-14.ks
                             #floppies = "fl"
@@ -351,7 +367,7 @@ variants:
                             nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
 
                     - 15.32:
-                        image_name = f15-32
+                        image_name = images/f15-32
                         unattended_install:
                             unattended_file = unattended/Fedora-15.ks
                             #floppies = "fl"
@@ -370,7 +386,7 @@ variants:
                             nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
 
                     - 15.64:
-                        image_name = f15-64
+                        image_name = images/f15-64
                         unattended_install:
                             unattended_file = unattended/Fedora-15.ks
                             #floppies = "fl"
@@ -389,7 +405,7 @@ variants:
                             nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
 
                     - 16.32:
-                        image_name = f16-32
+                        image_name = images/f16-32
                         unattended_install:
                             unattended_file = unattended/Fedora-16.ks
                             #floppies = "fl"
@@ -408,7 +424,7 @@ variants:
                             nfs_dir = REPLACE_THIS_WITH_NFS_DIRECTORY
 
                     - 16.64:
-                        image_name = f16-64
+                        image_name = images/f16-64
                         unattended_install:
                             unattended_file = unattended/Fedora-16.ks
                             #floppies = "fl"
@@ -423,7 +439,7 @@ variants:
                             md5sum_1m_cd1 = e25ea147176f24239d38a46f501bd25e
 
                     - 16.ppc64:
-                        image_name = f16-ppc64
+                        image_name = images/f16-ppc64
                         machine_type = pseries
                         unattended_install:
                             unattended_file = unattended/Fedora-16.ks
@@ -439,7 +455,7 @@ variants:
                             kernel_params = "root=live:CDLABEL=Fedora-16-ppc64 ks=cdrom:/ks.cfg console=hvc0 serial rd_NO_PLYMOUTH"
 
                     - 17.32:
-                        image_name = f17-32
+                        image_name = images/f17-32
                         unattended_install:
                             unattended_file = unattended/Fedora-17.ks
                             #floppies = "fl"
@@ -455,7 +471,7 @@ variants:
                             kernel_params = "repo=cdrom:/dev/sr1 ks=cdrom:/dev/sr0 nicdelay=60 console=ttyS0,115200 console=tty0"
 
                     - 17.64:
-                        image_name = f17-64
+                        image_name = images/f17-64
                         unattended_install:
                             unattended_file = unattended/Fedora-17.ks
                             #floppies = "fl"
@@ -487,7 +503,7 @@ variants:
                     - 3.9.i386:
                         no setup autotest linux_s3 guest_s4 shutdown multi_disk
                         no usb_multi_disk
-                        image_name = rhel39-32
+                        image_name = images/rhel39-32
                         mem_chk_cmd = dmidecode | awk -F: '/Maximum Capacity/ {print $2}'
                         install:
                             steps = steps/RHEL-3.9-i386.steps
@@ -511,7 +527,7 @@ variants:
                     - 3.9.x86_64:
                         no setup autotest linux_s3 guest_s4 shutdown multi_disk
                         no usb_multi_disk
-                        image_name = rhel39-64
+                        image_name = images/rhel39-64
                         mem_chk_cmd = dmidecode | awk -F: '/Maximum Capacity/ {print $2}'
                         install:
                             steps = steps/RHEL-3.9-x86_64.steps
@@ -534,7 +550,7 @@ variants:
 
                     - 4.7.i386:
                         no setup autotest
-                        image_name = rhel47-32
+                        image_name = images/rhel47-32
                         install:
                             steps = steps/RHEL-4.7-i386.steps
                             cdrom_cd1 = isos/linux/RHEL-4.7-i386-DVD.iso
@@ -558,7 +574,7 @@ variants:
 
                     - 4.7.x86_64:
                         no setup autotest
-                        image_name = rhel47-64
+                        image_name = images/rhel47-64
                         install:
                             steps = steps/RHEL-4.7-x86_64.steps
                             cdrom_cd1 = isos/linux/RHEL-4.7-x86_64-DVD.iso
@@ -582,7 +598,7 @@ variants:
 
                     - 4.8.i386:
                         no setup autotest
-                        image_name = rhel48-32
+                        image_name = images/rhel48-32
                         unattended_install:
                             unattended_file = unattended/RHEL-4-series.ks
                             #floppies = "fl"
@@ -604,7 +620,7 @@ variants:
 
                     - 4.8.x86_64:
                         no setup autotest
-                        image_name = rhel48-64
+                        image_name = images/rhel48-64
                         unattended_install:
                             unattended_file = unattended/RHEL-4-series.ks
                             #floppies = "fl"
@@ -626,7 +642,7 @@ variants:
 
                     - 5.3.i386:
                         no setup
-                        image_name = rhel53-32
+                        image_name = images/rhel53-32
                         install:
                             steps = steps/RHEL-5.3-i386.steps
                             cdrom_cd1 = isos/linux/RHEL-5.3-i386-DVD.iso
@@ -649,7 +665,7 @@ variants:
 
                     - 5.3.x86_64:
                         no setup
-                        image_name = rhel53-64
+                        image_name = images/rhel53-64
                         install:
                             steps = steps/RHEL-5.3-x86_64.steps
                             cdrom_cd1 = isos/linux/RHEL-5.3-x86_64-DVD.iso
@@ -672,7 +688,7 @@ variants:
 
                     - 5.4.i386:
                         no setup
-                        image_name = rhel54-32
+                        image_name = images/rhel54-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -690,7 +706,7 @@ variants:
 
                     - 5.4.x86_64:
                         no setup
-                        image_name = rhel54-64
+                        image_name = images/rhel54-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -708,7 +724,7 @@ variants:
 
                     - 5.5.i386:
                         no setup
-                        image_name = rhel55-32
+                        image_name = images/rhel55-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -726,7 +742,7 @@ variants:
 
                     - 5.5.x86_64:
                         no setup
-                        image_name = rhel55-64
+                        image_name = images/rhel55-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -744,7 +760,7 @@ variants:
 
                     - 5.6.i386:
                         no setup
-                        image_name = rhel56-32
+                        image_name = images/rhel56-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -762,7 +778,7 @@ variants:
 
                     - 5.6.x86_64:
                         no setup
-                        image_name = rhel56-64
+                        image_name = images/rhel56-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -780,7 +796,7 @@ variants:
 
                     - 5.7.i386:
                         no setup
-                        image_name = rhel57-32
+                        image_name = images/rhel57-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -806,7 +822,7 @@ variants:
 
                     - 5.7.x86_64:
                         no setup
-                        image_name = rhel57-64
+                        image_name = images/rhel57-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -833,7 +849,7 @@ variants:
 
                     - 5.8.i386:
                         no setup
-                        image_name = rhel58-32
+                        image_name = images/rhel58-32
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -859,7 +875,7 @@ variants:
 
                     - 5.8.x86_64:
                         no setup
-                        image_name = rhel58-64
+                        image_name = images/rhel58-64
                         unattended_install:
                             unattended_file = unattended/RHEL-5-series.ks
                             #floppies = "fl"
@@ -889,7 +905,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel60-32
+                        image_name = images/rhel60-32
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
                             #floppies = "fl"
@@ -909,7 +925,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel60-64
+                        image_name = images/rhel60-64
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
                             #floppies = "fl"
@@ -929,7 +945,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel61-32
+                        image_name = images/rhel61-32
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
                             #floppies = "fl"
@@ -949,7 +965,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel61-64
+                        image_name = images/rhel61-64
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
                             #floppies = "fl"
@@ -969,7 +985,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel62-32
+                        image_name = images/rhel62-32
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
                             #floppies = "fl"
@@ -989,7 +1005,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel62-64
+                        image_name = images/rhel62-64
                         unattended_install:
                             unattended_file = unattended/RHEL-6-series.ks
                             #floppies = "fl"
@@ -1009,7 +1025,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel63-32
+                        image_name = images/rhel63-32
                         unattended_install:
                             unattended_file = unattended/RHEL-6.3.ks
                             #floppies = "fl"
@@ -1029,7 +1045,7 @@ variants:
                             modprobe_module =
                         block_hotplug:
                             modprobe_module =
-                        image_name = rhel63-64
+                        image_name = images/rhel63-64
                         unattended_install:
                             unattended_file = unattended/RHEL-6.3.ks
                             #floppies = "fl"
@@ -1055,7 +1071,7 @@ variants:
 
                 variants:
                     - 11.0.32:
-                        image_name = openSUSE-11.0-32
+                        image_name = images/openSUSE-11.0-32
                         install:
                             steps = steps/openSUSE-11.0-32.steps
                             cdrom_cd1 = isos/linux/openSUSE-11.0-DVD-i386.iso
@@ -1075,7 +1091,7 @@ variants:
                             md5sum_1m_cd1 = c720b30557af758e69de450409516369
 
                     - 11.0.64:
-                        image_name = openSUSE-11.0-64
+                        image_name = images/openSUSE-11.0-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
                             #floppies = "fl"
@@ -1090,7 +1106,7 @@ variants:
                             md5sum_1m_cd1 = 661aa4cd031df2f25ea0102318a3f4d1
 
                     - 11.1.32:
-                        image_name = openSUSE-11.1-32
+                        image_name = images/openSUSE-11.1-32
                         install:
                             steps = steps/openSUSE-11.1-32-and-64.steps
                             cdrom_cd1 = isos/linux/openSUSE-11.1-DVD-i586.iso
@@ -1110,7 +1126,7 @@ variants:
                             md5sum_1m_cd1 = b70217417468389083429f81ba7ce2bd
 
                     - 11.1.64:
-                        image_name = openSUSE-11.1-64
+                        image_name = images/openSUSE-11.1-64
                         install:
                             steps = steps/openSUSE-11.1-32-and-64.steps
                             cdrom_cd1 = isos/linux/openSUSE-11.1-DVD-x86_64.iso
@@ -1130,7 +1146,7 @@ variants:
                             md5sum_1m_cd1 = 768ca32503ef92c28f2d144f2a87e4d0
 
                     - 11.2.32:
-                        image_name = openSUSE-11.2-32
+                        image_name = images/openSUSE-11.2-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
                             #floppies = "fl"
@@ -1145,7 +1161,7 @@ variants:
                             md5sum_1m_cd1 = 1f8767d00acb492be5a5627c834e543f
 
                     - 11.2.64:
-                        image_name = openSUSE-11.2-64
+                        image_name = images/openSUSE-11.2-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
                             #floppies = "fl"
@@ -1160,7 +1176,7 @@ variants:
                             md5sum_1m_cd1 = 11fd11d39744450b898f04c371dde2e7
 
                     - 11.3.32:
-                        image_name = openSUSE-11.3-32
+                        image_name = images/openSUSE-11.3-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
                             #floppies = "fl"
@@ -1175,7 +1191,7 @@ variants:
                             md5sum_1m_cd1 = 4dd26906ce6cb3946519cb0b0de4b0f8
 
                     - 11.3.64:
-                        image_name = openSUSE-11.3-64
+                        image_name = images/openSUSE-11.3-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
                             #floppies = "fl"
@@ -1190,7 +1206,7 @@ variants:
                             md5sum_1m_cd1 = e0dd12dac30d296417256775e1234c6e
 
                     - 11.4.32:
-                        image_name = openSUSE-11.4-32
+                        image_name = images/openSUSE-11.4-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
                             #floppies = "fl"
@@ -1204,7 +1220,7 @@ variants:
                             md5sum_cd1 = 5f6d6d67c3e256b2513311f4ed650515
 
                     - 11.4.64:
-                        image_name = openSUSE-11.4-64
+                        image_name = images/openSUSE-11.4-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-11.xml
                             #floppies = "fl"
@@ -1219,7 +1235,7 @@ variants:
                             md5sum_1m_cd1 = 2adcc5623e6c50b5d08acb7f84aa3fb1
 
                     - 12.1.32:
-                        image_name = openSUSE-12.1-32
+                        image_name = images/openSUSE-12.1-32
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-12.xml
                             #floppies = "fl"
@@ -1234,7 +1250,7 @@ variants:
                             md5sum_1m_cd1 = 17013a2e8dcaea45505955c157d6b5b4
 
                     - 12.1.64:
-                        image_name = openSUSE-12.1-64
+                        image_name = images/openSUSE-12.1-64
                         unattended_install:
                             unattended_file = unattended/OpenSUSE-12.xml
                             #floppies = "fl"
@@ -1262,7 +1278,7 @@ variants:
 
                 variants:
                    - 10.4.64:
-                        image_name = sles10-64
+                        image_name = images/sles10-64
                         unattended_install:
                             kernel_params = "autoyast=device://hdb/autoinst.xml console=ttyS0,115200 console=tty0"
                             unattended_file = unattended/SLES-10.xml
@@ -1278,7 +1294,7 @@ variants:
                             md5sum_1m_cd1 = ac4963cf50b683972491a3fd1da64cc1
 
                    - 10.4.32:
-                        image_name = sles10-64
+                        image_name = images/sles10-64
                         unattended_install:
                             kernel_params = "autoyast=device://hdb/autoinst.xml console=ttyS0,115200 console=tty0"
                             unattended_file = unattended/SLES-10.xml
@@ -1294,7 +1310,7 @@ variants:
                             md5sum_1m_cd1 = 282453620102c7b9d7386fc623420b91
 
                    - 11.0.32:
-                        image_name = sles11-32
+                        image_name = images/sles11-32
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
                             #floppies = "fl"
@@ -1309,7 +1325,7 @@ variants:
                             md5sum_1m_cd1 = 1f19d4eff5bcead2a3e5b8b4212b6796
 
                    - 11.0.64:
-                        image_name = sles11-64
+                        image_name = images/sles11-64
                         cdrom_cd1 = isos/linux/SLES-11-DVD-x86_64-GM-DVD1.iso
                         md5sum_cd1 = 50a2bd45cd12c3808c3ee48208e2586b
                         md5sum_1m_cd1 = 00000951cab7c32e332362fc424c1054
@@ -1327,7 +1343,7 @@ variants:
                             md5sum_1m_cd1 = 00000951cab7c32e332362fc424c1054
 
                    - 11.1.32:
-                        image_name = sles11sp1-32
+                        image_name = images/sles11sp1-32
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
                             #floppies = "fl"
@@ -1342,7 +1358,7 @@ variants:
                             md5sum_1m_cd1 = a626a3d50813410e3ac42794e05773bb
 
                    - 11.1.64:
-                        image_name = sles11sp1-64
+                        image_name = images/sles11sp1-64
                         unattended_install:
                             unattended_file = unattended/SLES-11.xml
                             #floppies = "fl"
@@ -1357,7 +1373,7 @@ variants:
                             md5sum_1m_cd1 = f7f67b5da46923a9f01da8a2b6909654
 
                    - 11.2.32:
-                        image_name = sles11sp2-32
+                        image_name = images/sles11sp2-32
                         unattended_install:
                             unattended_file = unattended/SLES-11-SP2.xml
                             #floppies = "fl"
@@ -1372,7 +1388,7 @@ variants:
                             md5sum_1m_cd1 = e5a629f311cdfa7477880e7349a1f00d 
 
                    - 11.2.64:
-                        image_name = sles11sp2-64
+                        image_name = images/sles11sp2-64
                         unattended_install:
                             unattended_file = unattended/SLES-11-SP2.xml
                             #floppies = "fl"
@@ -1390,7 +1406,7 @@ variants:
             - Ubuntu:
                 shell_prompt = "^root@.*[\#\$]\s*$"
                 password = 12345678
-                image_name = ubuntu
+                image_name = images/ubuntu
                 unattended_install:
                     kernel = linux
                     initrd = initrd
@@ -1475,7 +1491,7 @@ variants:
 
             - DSL-4.2.5:
                 no setup dbench bonnie linux_s3
-                image_name = dsl-4.2.5
+                image_name = images/dsl-4.2.5
                 install:
                     steps = steps/DSL-4.2.5.steps
                     cdrom_cd1 = isos/linux/dsl-4.2.5.iso
@@ -1484,7 +1500,7 @@ variants:
 
             - Mandriva-One-2007:
                 only install
-                image_name = mandriva-one-2007
+                image_name = images/mandriva-one-2007
                 steps = steps/Mandriva-One-2007-32.steps
                 cdrom_cd1 = isos/linux/mandriva-one-2007-i386.iso
                 md5sum_cd1 = 7e9e183dc11b9d39f480238e4e12bb05
@@ -1652,14 +1668,14 @@ variants:
 
         variants:
             - CustomGuestWindows:
-                image_name = custom_image
+                image_name = images/custom_image
                 image_size = 20G
                 #image_name = /dev/mapper/vg_some_label
                 #image_type_raw = yes
             - Win2000:
                 no reboot whql
                 os_variant = win2k
-                image_name = win2000-32
+                image_name = images/win2000-32
                 kill_vm_gracefully = no
                 install:
                     steps = steps/Win2000-32.steps
@@ -1678,7 +1694,7 @@ variants:
                     floppy_name = images/win2000-32/answer.vfd
 
             - WinXP:
-                image_name = winXP
+                image_name = images/winXP
                 os_variant = winxp
                 variants:
                     - 32:
@@ -1763,7 +1779,7 @@ variants:
 
             - Win2003:
                 os_variant = win2k3
-                image_name = win2003
+                image_name = images/win2003
                 image_size = 20G
 
                 variants:
@@ -1843,7 +1859,7 @@ variants:
 
             - WinVista:
                 os_variant = vista
-                image_name = winvista
+                image_name = images/winvista
                 image_size = 20G
                 whql.submission:
                     desc_path_desc1 = $\WDK\Logo Type\Device Logo\Vista Client\Device Premium
@@ -1936,7 +1952,7 @@ variants:
             - Win2008:
                 no whql
                 os_variant = win2k8
-                image_name = win2008
+                image_name = images/win2008
                 image_size = 20G
 
                 variants:
@@ -2021,7 +2037,7 @@ variants:
 
             - Win7:
                 os_variant = win7
-                image_name = win7
+                image_name = images/win7
                 image_size = 20G
                 whql.submission:
                     desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows 7 Client\Logo
@@ -2113,7 +2129,7 @@ variants:
 
         variants:
             - NetBSD-1.6.2:
-                image_name = NetBSD-1.6.2
+                image_name = images/NetBSD-1.6.2
                 image_size = 4G
                 steps = steps/NetBSD-1.6.2.steps
                 cdrom_cd1 = isos/bsd/netbsd-1.6.2-i386.iso
@@ -2121,7 +2137,7 @@ variants:
                 md5sum_1m_cd1 = f1a9e1e825c90adfb1be35c6177bd9ac
 
             - OpenBSD-4.1:
-                image_name = OpenBSD-4.1
+                image_name = images/OpenBSD-4.1
                 steps = steps/OpenBSD-4.1-32.steps
                 cdrom_cd1 = isos/unix/openbsd41-i386-07-05-06.iso
                 md5sum_cd1 = 984790db10ebdd6fc7a9cf97abc7c967
