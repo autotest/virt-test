@@ -925,7 +925,7 @@ class VM(virt_vm.BaseVM):
 
         self.qemu_binary = qemu_binary
         hlp = commands.getoutput("%s -help" % qemu_binary)
-        support_cpu_model = commands.getoutput("%s -cpu ?list" % qemu_binary)
+        support_cpu_model = commands.getoutput("%s -cpu ?" % qemu_binary)
         support_machine_type = commands.getoutput("%s -M ?" % qemu_binary)
 
         device_help = ""
