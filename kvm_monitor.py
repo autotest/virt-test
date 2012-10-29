@@ -534,6 +534,73 @@ class HumanMonitor(Monitor):
         return self.cmd(cmd)
 
 
+    def block_stream(self, device, speed=None, base=None):
+        """
+        Start block-stream job;
+
+        @param device: device ID
+        @param speed: int value, limited speed value, unit is MB/s
+        @param base: base file
+
+        @return: The command's output
+        """
+        cmd = "block-stream %s" % device
+        if speed is not None:
+            cmd = "%s %s" % (cmd, speed)
+        if base:
+            cmd = "%s %s" % (cmd, base)
+        return self.cmd(cmd)
+
+
+    def set_block_job_speed(self, device, speed=0):
+        """
+        Set limited speed for runnig job on the device
+
+        @param device: device ID
+        @param speed: int type, limited speed value, unit is MB/s
+
+        @return: The command's output
+        """
+        cmd = "block-job-set-speed %s %s" % (device, speed)
+        return self.cmd(cmd)
+
+
+    def cancel_block_job(self, device):
+        """
+        Cancel running block stream/mirror job on the device
+
+        @param device: device ID
+
+        @return: The command's output
+        """
+        return self.send_args_cmd("block-job-cancel %s" % device)
+
+
+    def query_block_job(self, device):
+        """
+        Get block job status on the device
+
+        @param device: device ID
+
+        @return: dict about job info, return empty dict if no active job
+        """
+        job = dict()
+        output = str(self.info("block-jobs"))
+        for line in output.split("\n"):
+            if "No" in re.match("\w+",output).group(0):
+                continue
+            if device in line:
+                if "Streaming" in re.match("\w+", output).group(0):
+                    job["type"] = "stream"
+                else:
+                    job["type"] = "mirror"
+                job["offset"] = int(re.findall("\d+", output)[-3])
+                job["len"] = int(re.findall("\d+", output)[-2])
+                job["speed"] = int(re.findall("\d+", output)[-1])
+                break
+        return job
+
+
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
         """
         Migrate.
@@ -1259,6 +1326,68 @@ class QMPMonitor(Monitor):
                 "snapshot-file": snapshot_file,
                 "format": snapshot_format}
         return self.cmd("blockdev-snapshot-sync", args)
+
+
+    def block_stream(self, device, speed=None, base=None):
+        """
+        Start block-stream job;
+
+        @param device: device ID
+        @param speed: int value, limited speed value, unit is MB/s
+        @param base: base file
+
+        @return: The command's output
+        """
+        args = {"device": device}
+        if speed is not None:
+            args["speed"] = int(speed) * 1048576
+        if base:
+            args["base"] = base
+        return self.cmd("block-stream", args)
+
+
+    def set_block_job_speed(self, device, speed=0):
+        """
+        Set limited speed for runnig job on the device
+
+        @param device: device ID
+        @param speed: int type, limited speed value, unit is MB/s
+
+        @return: The command's output
+        """
+        args = {"device": device,
+                "speed": int(speed) * 1048576}
+        return self.cmd("block-job-set-speed", args)
+
+
+    def cancel_block_job(self, device):
+        """
+        Cancel running block stream/mirror job on the device
+
+        @param device: device ID
+
+        @return: The command's output
+        """
+        args = {"device": device}
+        return self.cmd("block-job-cancel", args)
+
+
+    def query_block_job(self, device):
+        """
+        Get block job status on the device
+
+        @param device: device ID
+
+        @return: dict about job info, return empty dict if no active job
+        """
+        job = dict()
+        output = str(self.info("block-jobs"))
+        try:
+            job = filter(lambda x: x.get("device") == device,
+                         eval(output))[0]
+        except Exception:
+            pass
+        return job
 
 
     def getfd(self, fd, name):
