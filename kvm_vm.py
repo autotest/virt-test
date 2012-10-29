@@ -1069,7 +1069,7 @@ class VM(virt_vm.BaseVM):
                                                               "qemu"))
         self.qemu_binary = qemu_binary
         help = commands.getoutput("%s -help" % qemu_binary)
-        support_cpu_model = commands.getoutput("%s -cpu ?list" % qemu_binary)
+        support_cpu_model = commands.getoutput("%s -cpu ?" % qemu_binary)
 
         index_global = 0
         # init the dict index_in_use
