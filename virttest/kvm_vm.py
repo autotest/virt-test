@@ -1493,8 +1493,7 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += " -device virtio-scsi-pci,id=virtio_scsi_pci%d" % i
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
-<<<<<<< HEAD
-                iso = utils_misc.get_path(root_dir, iso)
+                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
             elif params.get("cdrom_without_file") != "yes":
                 continue
 
@@ -1526,12 +1525,6 @@ class VM(virt_vm.BaseVM):
                 ide_unit ^= 1
             elif cd_format.startswith("scsi-"):
                 scsi_disk += 1
-=======
-                qemu_cmd += add_cdrom(hlp,
-                              utils_misc.get_path(data_dir.get_data_dir(), iso),
-                                      cdrom_params.get("drive_index"),
-                                      cd_format, bus)
->>>>>>> Make all images to be found in the central data dir
 
         soundhw = params.get("soundcards")
         if soundhw:
