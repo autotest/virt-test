@@ -4232,6 +4232,8 @@ variants:
 
 # URLs/Remote links for RHEL installation and update, put them together.
 unattended_install.url:
+    RHEL.7.0.64:
+        url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-7/compose/Server/x86_64/os/
     RHEL.6.4.64:
         url = http://tree.englab.nay.redhat.com/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/x86_64/os/ 
     RHEL.6.4.32:
@@ -4270,6 +4272,9 @@ unattended_install.url:
 unattended_install.nfs:
     nfs_server = nfs.englab.nay.redhat.com
     nfs_dir = /pub/rhel/released/
+    RHEL.7.0.64:
+        nfs_server = nfs.englab.nay.redhat.com
+        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-7/compose/Server/x86_64/os
     RHEL.6.4.64:
         nfs_server = tree.englab.nay.redhat.com
         nfs_dir = /tree/pub/rhel/rel-eng/RHEL6.3/RHEL6.3-latest/x86_64/os
@@ -4309,6 +4314,10 @@ unattended_install.nfs:
         nfs_dir = /tree/pub/rhel/released/RHEL-3/U9/i386/os/
 
 rh_kernel_update, kexec:
+    RHEL.7.0.64:
+        kernel_version = kernel-3.6.0-0.28.el7.x86_64
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/3.6.0/0.28.el7/x86_64/kernel-3.6.0-0.28.el7.x86_64.rpm
+        kernel_suffix = el7.x86_64
     RHEL.6.4.64:
         kernel_version = 2.6.32-298.el6.x86_64
         kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/298.el6/x86_64/kernel-2.6.32-298.el6.x86_64.rpm
