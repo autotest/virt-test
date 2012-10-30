@@ -1,6 +1,7 @@
 import logging, time, re, os, tempfile, ConfigParser
 import threading
 import xml.dom.minidom
+import errno
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
@@ -906,7 +907,15 @@ def run_unattended_install(test, params, env):
                 serial_log_file = open(log_file, 'r')
                 serial_log_msg = serial_log_file.read()
             except Exception, e:
-                logging.warn("Can not read from serail log file: %s", e)
+                if e.errno == errno.ENOENT:
+                    logging.warn("Log file '%s' doesn't exist,"
+                                 " just create it.", log_file)
+                    try:
+                        open(log_file, 'w').close()
+                    except Exception:
+                        pass
+                else:
+                    logging.warn("Can not read from serail log file: %s", e)
         finally:
             if serial_log_file and not serial_log_file.closed:
                 serial_log_file.close()
