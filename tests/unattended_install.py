@@ -872,8 +872,14 @@ def run_unattended_install(test, params, env):
 
     start_time = time.time()
 
-    log_file = utils_misc.get_path(test.outputdir,
-                                   "debug/serial-%s.log" % vm.name))
+    try:
+        serial_name = vm.serial_ports[0]
+    except IndexError:
+        raise virt_vm.VMConfigMissingError(vm.name, "isa_serial")
+
+    log_file = utils_misc.get_path(test.debugdir,
+                                   "serial-%s-%s.log" % (serial_name,
+                                                         vm.name))
     serial_log_msg = ""
     serial_log_file = None
 
