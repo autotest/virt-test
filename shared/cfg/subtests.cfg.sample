@@ -1210,15 +1210,9 @@ variants:
                 variants:
                     #Migration protocol.
                     -tcp:
-                        variants:
-                            - @default:
-                                type = migration_multi_host
-                            - measure_migration_speed:
-                                only Linux
-                                mig_speed = 1G
-                                type = migration_multi_host_with_speed_measurement
+                        mig_protocol = "tcp"
                     -fd:
-                        type = migration_multi_host_fd
+                        mig_protocol = "fd"
 
                 variants:
                     #Time when start migration
@@ -1235,30 +1229,53 @@ variants:
                                 start_migration_timeout = 6
 
                 variants:
-                    # Migration cancel
-                    - @no_cancel:
+                    # Migration properties
+                    - @default:
+                        type = migration_multi_host
                     - cancel_with_delay:
-                        no measure_migration_speed
+                        type = migration_multi_host_cancel
+                        only after_login_vm
                         cancel_delay = 10
-
-            - migration_multi_host_with_file_transfer: install setup image_copy unattended_install.cdrom
-                type = migration_multi_host_with_file_transfer
-                vms = "vm1"
-                start_vm = no
-                kill_vm_on_error = yes
-                used_mem = 1024
-                mig_timeout = 4800
-                disk_prepare_timeout = 360
-                comm_port = 13234
-                #path where file is stored on guest.
-                guest_path = "/tmp/file"
-                #size of generated file.
-                file_size = 500
-                transfer_timeout = 240
-                #Transfer speed in Mb
-                transfer_speed = 100
-                #Count of migration during file transfer.
-                migrate_count = 3
+                    - measure_speed:
+                        only Linux
+                        only after_login_vm
+                        not_wait_for_migration = yes
+                        mig_speed = 1G
+                        type = migration_multi_host_with_speed_measurement
+                    - with_file_transfer:
+                        only Linux
+                        only after_login_vm
+                        type = migration_multi_host_with_file_transfer
+                        comm_port = 13234
+                        #path where file is stored on guest.
+                        guest_path = "/tmp/file"
+                        #size of generated file in MB.
+                        file_size = 512
+                        transfer_timeout = 440
+                        #Transfer speed in Mb
+                        transfer_speed = 300
+                        #Count of migration during file transfer.
+                        migrate_count = 3
+                    - downtime:
+                        only after_login_vm
+                        sub_type = downtime
+                        # downtime in seconds.
+                        max_downtime = 10
+                        not_wait_for_migration = yes
+                        type = migration_multi_host_downtime_and_speed
+                    - speed:
+                        only after_login_vm
+                        sub_type = speed
+                        # speed in Mb
+                        min_migration_speed = 10M
+                        max_migration_speed = 500M
+                        # time interval in seconds.
+                        # set how fast is migration speed changed.
+                        change_speed_interval = 1
+                        # speed is changed x time per min max interval
+                        count_of_change = 10
+                        not_wait_for_migration = yes
+                        type = migration_multi_host_downtime_and_speed
 
             - cpuflags_multi_host:
                 type = cpuflags
