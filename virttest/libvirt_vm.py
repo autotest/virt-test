@@ -1309,7 +1309,15 @@ class VM(virt_vm.BaseVM):
         """
         Override BaseVM restore_from_file method
         """
-        virsh.restore(self.name, path, uri=self.connect_uri)
+        state = domstate(self.name, **dargs)
+        if state not in ('shut off',):
+            raise virt_vm.VMStatusError("Can not restore VM that is %s" % state)
+        logging.debug("Restoring VM from %s" % path)
+        virsh.restore(path, uri=self.connect_uri)
+        state = domstate(self.name, **dargs)
+        if state not in ('paused','running'):
+            raise virt_vm.VMStatusError("VM not paused after restore, it is %s." %
+                   state)
 
 
     def vcpupin(self, vcpu, cpu):
