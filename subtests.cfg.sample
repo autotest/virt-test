@@ -306,9 +306,9 @@ variants:
                 usb_max_port_usb1 = 6
                 check_func = "check_usb_device"
                 info_usb_name = ""
-                vendor_id = "1d6b"
+                vendor_id = "(0000|1d6b)"
                 vendor = "Linux Foundation"
-                product_id = "0002"
+                product_id = "(0000|0002)"
                 product = "EHCI Host Controller"
             - keyboard:
                 usb_devices = kbd1
@@ -386,9 +386,9 @@ variants:
             - ehci:
                 check_func = "check_usb_device"
                 # info_usb_name = ""
-                vendor_id = "1d6b"
+                vendor_id = "(0000|1d6b)"
                 vendor = "Linux Foundation"
-                product_id = "0002"
+                product_id = "(0000|0002)"
                 product = "EHCI Host Controller"
                 # Disable other usb devices
                 usb_devices = ""
