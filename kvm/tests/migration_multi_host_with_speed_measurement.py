@@ -25,6 +25,11 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
+    mig_protocol = params.get("mig_protocol", "tcp")
+    base_class = utils_test.MultihostMigration
+    if mig_protocol == "fd":
+        base_class = utils_test.MultihostMigrationFd
+
     install_path = params.get("cpuflags_install_path", "/tmp")
 
     vm_mem = int(params.get("mem", "512"))
@@ -71,7 +76,7 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
 
         return mig_stat
 
-    class TestMultihostMigration(utils_test.MultihostMigration):
+    class TestMultihostMigration(base_class):
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.mig_stat = None
@@ -99,10 +104,9 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
             For change way how machine migrates is necessary
             re implement this method.
             """
+            super_cls = super(TestMultihostMigration, self)
+            super_cls.migrate_vms_src(mig_data)
             vm = mig_data.vms[0]
-            vm.migrate(dest_host=mig_data.dst,
-                       remote_port=mig_data.vm_ports[vm.name],
-                       not_wait_for_migration=True)
             self.mig_stat = get_migration_statistic(vm)
 
         def migration_scenario(self):
