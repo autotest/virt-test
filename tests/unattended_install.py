@@ -1,10 +1,11 @@
 import logging, time, re, os, tempfile, ConfigParser
 import threading
 import xml.dom.minidom
+import errno
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from autotest.client.virt import virt_vm, utils_misc, utils_disk
-from autotest.client.virt import kvm_monitor, remote, syslog_server
+from autotest.client.virt import kvm_monitor, syslog_server
 from autotest.client.virt import http_server
 
 
@@ -986,7 +987,7 @@ def run_unattended_install(test, params, env):
 
     log_file = utils_misc.get_path(test.outputdir,
                            "debug/serial-%s-%s.log" % (serial_name, vm.name))
-    finish_signal = ""
+    serial_log_msg = ""
     fd = None
 
     while (time.time() - start_time) < install_timeout:
@@ -1006,15 +1007,23 @@ def run_unattended_install(test, params, env):
         try:
             try:
                 fd = open(log_file, 'r')
-                finish_signal = fd.read()
+                serial_log_msg = fd.read()
             except Exception, e:
-                logging.warn("Can not read from serail log file: %s" % e)
+                if e.errno == errno.ENOENT:
+                    logging.warn("Log file '%s' doesn't exist,"
+                                 " just create it.", log_file)
+                    try:
+                        open(log_file, 'w').close()
+                    except Exception:
+                        pass
+                else:
+                    logging.warn("Can not read from serail log file: %s", e)
         finally:
             if fd and not fd.closed:
                 fd.close()
 
         if params.get("wait_no_ack", "no") == "no" and\
-            post_finish_str in finish_signal:
+            post_finish_str in serial_log_msg:
             break
 
         if migrate_background:
