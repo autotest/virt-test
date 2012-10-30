@@ -1,0 +1,72 @@
+import re, logging, os
+from autotest.client.shared import error
+from virttest import libvirt_vm, virsh
+
+def run_virsh_restore(test, params, env):
+    """
+    Test command: virsh restore.
+
+    Restore a domain from a saved state in a file
+    1.Prepare test environment.
+    2.When the libvirtd == "off", stop the libvirtd service.
+    3.Run virsh restore command with assigned option.
+    4.Recover test environment.
+    5.Confirm the test result.
+    """
+
+    vm_name = params.get("main_vm", "vm1")
+    vm = env.get_vm(params["main_vm"])
+    session = vm.wait_for_login()
+
+    os_type = params.get("os_type")
+    status_error = params.get("restore_status_error")
+    libvirtd = params.get("restore_libvirtd")
+    extra_param = params.get("restore_extra_param")
+    pre_status =  params.get("restore_pre_status")
+    vm_ref = params.get("restore_vm_ref")
+
+    #run test
+    if vm_ref =="" or vm_ref == "xyz":
+        status = virsh.restore(vm_ref, ignore_status=True).exit_status
+    else:
+        if os_type == "linux":
+            cmd = "cat /proc/cpuinfo"
+            status, output = session.cmd_status_output(cmd,
+                                                       internal_timeout = 10)
+            session.close()
+            if not re.search("processor", output):
+                raise error.TestFail("Unable to read /proc/cpuinfo")
+        tmp_file = vm_ref
+        if vm_ref == "/tmp/save.file":
+            virsh.save(vm_name, vm_ref)
+            vm_ref = "%s %s" % (vm_ref, extra_param)
+        elif  vm_ref == "/tmp/new.file":
+            open(vm_ref, 'w').close()
+        if vm.is_alive():
+            vm.destroy()
+        if pre_status == "start":
+            virsh.start(vm_name)
+        if libvirtd == "off":
+            libvirt_vm.libvirtd_stop()
+        status = virsh.restore(vm_ref, ignore_status=True).exit_status
+        os.unlink(tmp_file)
+    if status_error == "no":
+        list_output = virsh.dom_list().stdout.strip()
+
+    session.close()
+
+    #recover libvirtd service start
+    if libvirtd == "off":
+        libvirt_vm.libvirtd_start()
+    if vm.is_alive():
+        vm.destroy()
+
+    if status_error == "yes":
+        if status == 0:
+            raise error.TestFail("Run successfully with wrong command!")
+    elif status_error == "no":
+        if status != 0:
+            raise error.TestFail("Run failed with right command")
+        else:
+            if not re.search(vm_name, list_output):
+                raise error.TestFail("Run failed with right command")
