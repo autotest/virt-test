@@ -1,4 +1,4 @@
-import re, os
+import re, logging, os
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
 
@@ -14,7 +14,7 @@ def run_virsh_restore(test, params, env):
     5.Confirm the test result.
     """
 
-    vm_name = params.get("main_vm")
+    vm_name = params.get("main_vm", "vm1")
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
 
