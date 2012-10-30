@@ -117,8 +117,8 @@ if __name__ == '__main__':
     option_parser.add_option("--qemu-bin", action="store", dest="qemu",
                       help="Choose a custom qemu path to be tested")
     option_parser.add_option("--tests", action="store", dest="tests",
-                      help=("List of space separated tests to be executed"
-                            "(use quotes around them for safety)"))
+                      help=('List of space separated tests to be executed'
+                            ' - example: --tests "boot, reboot, shutdown"'))
     option_parser.add_option("--list-tests", action="store_true", dest="list",
                       help="List tests available")
     option_parser.add_option("--data-dir", action="store", dest="datadir",
