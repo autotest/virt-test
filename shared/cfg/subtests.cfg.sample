@@ -420,6 +420,29 @@ variants:
                 addition_status_error = "yes"
                 libvirtd = "off"
 
+    - virsh_restore:
+        virt_test_type = libvirt
+        type = virsh_restore
+        restore_status_error = "yes"
+        restore_vm_ref = "/tmp/save.file"
+        restore_extra_param = ""
+        restore_libvirtd = "on"
+        variants:
+            - expected_option:
+                restore_status_error = "no"
+            - no_option:
+                restore_vm_ref = ""
+            - unexpected_option:
+                restore_vm_ref = "xyz"
+            - new_file_option:
+                restore_vm_ref = "/tmp/new.file"
+            - start_option:
+                restore_pre_status = "start"
+            - extra_option:
+                restore_extra_param = "xyz"
+            - with_libvirt_stop:
+                restore_libvirtd = "off"
+
     - virsh_save:
         type = virsh_save
         virt_test_type = libvirt
