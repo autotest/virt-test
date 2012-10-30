@@ -709,25 +709,14 @@ def save(option, path, **dargs):
     return command("save %s %s" % (option, path), **dargs)
 
 
-def restore(name, path, **dargs):
+def restore(path, **dargs):
     """
     Load state of VM from named file and remove file.
 
-    @param: name: VM Name to operate on
     @param: path: absolute path to state file.
     @param: dargs: standardized virsh function API keywords
     """
-    # Blindly assume named VM corresponds with state in path
-    # rely on higher-layers to take exception if mismatch
-    state = domstate(name, **dargs)
-    if state not in ('shut off',):
-        raise virt_vm.VMStatusError("Can not restore VM that is %s" % state)
-    logging.debug("Restoring VM from %s" % path)
-    command("restore %s" % path, **dargs)
-    state = domstate(name, **dargs)
-    if state not in ('paused','running'):
-        raise virt_vm.VMStatusError("VM not paused after restore, it is %s." %
-                state)
+    return command("restore %s" % path, **dargs)
 
 
 def start(name, **dargs):
