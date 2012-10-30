@@ -288,9 +288,11 @@ class QemuImg(object):
                 m_image_fn = get_image_filename(params, root_dir)
                 image_fn = get_image_filename(image_params, root_dir)
 
-                logging.info("Clone master image for vms.")
-                utils.run(params.get("image_clone_commnad") % (m_image_fn,
-                                                               image_fn))
+                force_clone = params.get("force_image_clone", "no")
+                if not os.path.exists(image_fn) or force_clone == "yes":
+                    logging.info("Clone master image for vms.")
+                    utils.run(params.get("image_clone_commnad") % (m_image_fn,
+                                                                   image_fn))
 
             params["image_name_%s_%s" % (image_name, vm_name)] = vm_image_name
 
