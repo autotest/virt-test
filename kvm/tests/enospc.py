@@ -68,7 +68,7 @@ class EnospcConfig(object):
     @error.context_aware
     def cleanup(self):
         error.context("performing enospc cleanup")
-        if os.path.isfile(self.lvtest_device):
+        if os.path.islink(self.lvtest_device):
             utils.run("fuser -k %s" % self.lvtest_device)
             time.sleep(2)
         l_result = utils.run("lvdisplay")
