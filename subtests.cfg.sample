@@ -3982,7 +3982,7 @@ whql.support_vm_install, whql.client_install.support_vm:
                 head_pattern = "\d+:\d+:\d+\s+[AP]M\s+(\w+)\s+"
                 row_pattern = "CPU"
                 categories = "LargeFile Creates(256KB)|LargeFile Create(8KB)|Mail Server(8KB)|Radom Reads(8KB)|Random Writes(8KB)|Sequential Reads(256KB)|Sequential Reads(8KB)"
-                threads = "1 4 8"
+                threads = "1 4 16"
                 variants:
                     - file_prepare:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
@@ -3992,10 +3992,10 @@ whql.support_vm_install, whql.client_install.support_vm:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_256k_16.patch"
                         test_cmd = "ffsb examples/sequential_reads_256k_16.ffsb"
-                    - sequential_reads_256k_8:
+                    - sequential_reads_256k_4:
                         force_create_image = no
-                        test_patch = "ffsb_sequential_reads_256k_8.patch"
-                        test_cmd = "ffsb examples/sequential_reads_256k_8.ffsb"
+                        test_patch = "ffsb_sequential_reads_256k_4.patch"
+                        test_cmd = "ffsb examples/sequential_reads_256k_4.ffsb"
                     - sequential_reads_256k_1:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_256k_1.patch"
@@ -4004,10 +4004,10 @@ whql.support_vm_install, whql.client_install.support_vm:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_8k_16.patch"
                         test_cmd = "ffsb examples/sequential_reads_8k_16.ffsb"
-                    - sequential_reads_8k_8:
+                    - sequential_reads_8k_4:
                         force_create_image = no
-                        test_patch = "ffsb_sequential_reads_8k_8.patch"
-                        test_cmd = "ffsb examples/sequential_reads_8k_8.ffsb"
+                        test_patch = "ffsb_sequential_reads_8k_4.patch"
+                        test_cmd = "ffsb examples/sequential_reads_8k_4.ffsb"
                     - sequential_reads_8k_1:
                         force_create_image = no
                         test_patch = "ffsb_sequential_reads_8k_1.patch"
@@ -4016,10 +4016,10 @@ whql.support_vm_install, whql.client_install.support_vm:
                         force_create_image = no
                         test_patch = "ffsb_random_reads_8k_16.patch"
                         test_cmd = "ffsb examples/random_reads_8k_16.ffsb"
-                    - random_read_8k_8:
+                    - random_read_8k_4:
                         force_create_image = no
-                        test_patch = "ffsb_random_reads_8k_8.patch"
-                        test_cmd = "ffsb examples/random_reads_8k_8.ffsb"
+                        test_patch = "ffsb_random_reads_8k_4.patch"
+                        test_cmd = "ffsb examples/random_reads_8k_4.ffsb"
                     - random_read_8k_1:
                         force_create_image = no
                         test_patch = "ffsb_random_reads_8k_1.patch"
@@ -4028,10 +4028,10 @@ whql.support_vm_install, whql.client_install.support_vm:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_256k_16.patch"
                         test_cmd = "ffsb examples/large_file_creates_256k_16.ffsb"
-                    - large_file_creates_256k_8:
+                    - large_file_creates_256k_4:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
-                        test_patch = "ffsb_large_file_creates_256k_8.patch"
-                        test_cmd = "ffsb examples/large_file_creates_256k_8.ffsb"
+                        test_patch = "ffsb_large_file_creates_256k_4.patch"
+                        test_cmd = "ffsb examples/large_file_creates_256k_4.ffsb"
                     - large_file_creates_256k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_256k_1.patch"
@@ -4040,10 +4040,10 @@ whql.support_vm_install, whql.client_install.support_vm:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_8k_16.patch"
                         test_cmd = "ffsb examples/large_file_creates_8k_16.ffsb"
-                    - large_file_creates_8k_8:
+                    - large_file_creates_8k_4:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
-                        test_patch = "ffsb_large_file_creates_8k_8.patch"
-                        test_cmd = "ffsb examples/large_file_creates_8k_8.ffsb"
+                        test_patch = "ffsb_large_file_creates_8k_4.patch"
+                        test_cmd = "ffsb examples/large_file_creates_8k_4.ffsb"
                     - large_file_creates_8k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_large_file_creates_8k_1.patch"
@@ -4052,10 +4052,10 @@ whql.support_vm_install, whql.client_install.support_vm:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_mail_server_8k_16.patch"
                         test_cmd = "ffsb examples/mail_server_8k_16.ffsb"
-                    - mail_server_8k_8:
+                    - mail_server_8k_4:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
-                        test_patch = "ffsb_mail_server_8k_8.patch"
-                        test_cmd = "ffsb examples/mail_server_8k_8.ffsb"
+                        test_patch = "ffsb_mail_server_8k_4.patch"
+                        test_cmd = "ffsb examples/mail_server_8k_4.ffsb"
                     - mail_server_8k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_mail_server_8k_1.patch"
@@ -4064,10 +4064,10 @@ whql.support_vm_install, whql.client_install.support_vm:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_random_write_8k_16.patch"
                         test_cmd = "ffsb examples/random_write_8k_16.ffsb"
-                    - random_write_8k_8:
+                    - random_write_8k_4:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
-                        test_patch = "ffsb_random_write_8k_8.patch"
-                        test_cmd = "ffsb examples/random_write_8k_8.ffsb"
+                        test_patch = "ffsb_random_write_8k_4.patch"
+                        test_cmd = "ffsb examples/random_write_8k_4.ffsb"
                     - random_write_8k_1:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_random_write_8k_1.patch"
