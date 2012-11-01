@@ -116,10 +116,6 @@ def run_qmp_basic(test, params, env):
         if classname and resp["error"]["class"] != classname:
             raise error.TestFail("got error class '%s' expected '%s'" %
                                  (resp["error"]["class"], classname))
-        check_key_is_dict(resp["error"], "data")
-        if datadict and resp["error"]["data"] != datadict:
-            raise error.TestFail("got data dict '%s' expected '%s'" %
-                                 (resp["error"]["data"], datadict))
 
 
     def test_version(version):
@@ -190,7 +186,7 @@ def run_qmp_basic(test, params, env):
 
         for cmd in bad_json:
             resp = monitor.cmd_raw(cmd)
-            check_error_resp(resp, "JSONParsing")
+            check_error_resp(resp, "GenericError")
 
 
     def test_id_key(monitor):
@@ -225,7 +221,7 @@ def run_qmp_basic(test, params, env):
         names must be detected.
         """
         resp = monitor.cmd_obj({ "execute": "eject", "foobar": True })
-        check_error_resp(resp, "QMPExtraInputObjectMember",
+        check_error_resp(resp, "GenericError",
                          { "member": "foobar" })
 
 
@@ -239,7 +235,7 @@ def run_qmp_basic(test, params, env):
         """
         for item in [ True, [], 1, "foo" ]:
             resp = monitor.cmd_obj({ "execute": "eject", "arguments": item })
-            check_error_resp(resp, "QMPBadInputObjectMember",
+            check_error_resp(resp, "GenericError",
                              { "member": "arguments", "expected": "object" })
 
 
@@ -249,7 +245,7 @@ def run_qmp_basic(test, params, env):
         """
         for item in [ False, 1, {}, [] ]:
             resp = monitor.cmd_obj({ "execute": item })
-            check_error_resp(resp, "QMPBadInputObjectMember",
+            check_error_resp(resp, "GenericError",
                              { "member": "execute", "expected": "string" })
 
 
@@ -270,7 +266,7 @@ def run_qmp_basic(test, params, env):
         """
         for cmd in [ "foo", [], True, 1 ]:
             resp = monitor.cmd_obj(cmd)
-            check_error_resp(resp, "QMPBadInputObject", { "expected":"object" })
+            check_error_resp(resp, "GenericError", { "expected":"object" })
 
 
     def test_good_input_obj(monitor):
@@ -321,16 +317,16 @@ def run_qmp_basic(test, params, env):
         """
         # stop doesn't take arguments
         resp = monitor.cmd_qmp("stop", { "foo": 1 })
-        check_error_resp(resp, "InvalidParameter", { "name": "foo" })
+        check_error_resp(resp, "GenericError", { "name": "foo" })
 
         # required argument omitted
         resp = monitor.cmd_qmp("screendump")
-        check_error_resp(resp, "MissingParameter", { "name": "filename" })
+        check_error_resp(resp, "GenericError", { "name": "filename" })
 
         # 'bar' is not a valid argument
         resp = monitor.cmd_qmp("screendump", { "filename": "outfile",
                                                "bar": "bar" })
-        check_error_resp(resp, "InvalidParameter", { "name": "bar"})
+        check_error_resp(resp, "GenericError", { "name": "bar"})
 
         # test optional argument: 'force' is omitted, but it's optional, so
         # the handler has to be called. Test this happens by checking an
@@ -341,26 +337,26 @@ def run_qmp_basic(test, params, env):
         # filename argument must be a json-string
         for arg in [ {}, [], 1, True ]:
             resp = monitor.cmd_qmp("screendump", { "filename": arg })
-            check_error_resp(resp, "InvalidParameterType",
+            check_error_resp(resp, "GenericError",
                              { "name": "filename", "expected": "string" })
 
         # force argument must be a json-bool
         for arg in [ {}, [], 1, "foo" ]:
             resp = monitor.cmd_qmp("eject", { "force": arg, "device": "foo" })
-            check_error_resp(resp, "InvalidParameterType",
+            check_error_resp(resp, "GenericError",
                              { "name": "force", "expected": "bool" })
 
         # val argument must be a json-int
         for arg in [ {}, [], True, "foo" ]:
             resp = monitor.cmd_qmp("memsave", { "val": arg, "filename": "foo",
                                                 "size": 10 })
-            check_error_resp(resp, "InvalidParameterType",
+            check_error_resp(resp, "GenericError",
                              { "name": "val", "expected": "int" })
 
         # value argument must be a json-number
         for arg in [ {}, [], True, "foo" ]:
             resp = monitor.cmd_qmp("migrate_set_speed", { "value": arg })
-            check_error_resp(resp, "InvalidParameterType",
+            check_error_resp(resp, "GenericError",
                              { "name": "value", "expected": "number" })
 
         # qdev-type commands have their own argument checker, all QMP does
@@ -369,7 +365,7 @@ def run_qmp_basic(test, params, env):
         # an error message from qdev
         resp = monitor.cmd_qmp("device_add", { "driver": "e1000",
                                               "foo": "bar" })
-        check_error_resp(resp, "PropertyNotFound",
+        check_error_resp(resp, "GenericError",
                                {"device": "e1000", "property": "foo"})
 
 
