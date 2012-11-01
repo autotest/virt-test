@@ -26,7 +26,7 @@ for non-existant keys.
 import signal, logging, urlparse, re
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import aexpect, virt_vm, utils_misc
+import aexpect, utils_misc
 
 # list of symbol names NOT to wrap as Virsh class methods
 # Everything else from globals() will become a method of Virsh class
@@ -1082,6 +1082,7 @@ def help_command(options='', cache=False, **dargs):
     @param: options: additional options to pass to help command
     @param: cache: Return cached result if True, or refreshed cache if False
     @param: dargs: standardized virsh function API keywords
+    @return: List of command names
     """
     # global needed to support this function's use in Virsh method closure
     global VIRSH_COMMAND_CACHE
@@ -1101,13 +1102,26 @@ def help_command(options='', cache=False, **dargs):
 
 def has_help_command(cmd, options='', **dargs):
     """
-    Regex Search for '^\s+<command>\s+' in virsh help output
+    String match on cmd in help output command list
 
     @param: cmd: Name of command to look for
     @param: options: Additional options to send to help command
     @return: True/False
     """
     return bool(help_command(options, cache=True, **dargs).count(cmd))
+
+
+def has_command_help_match(cmd, regex, **dargs):
+    """
+    Regex search on subcommand help output
+
+    @param: cmd: Name of command to match help output
+    @param: regex: regular expression string to match
+    @param: dargs: standardized virsh function API keywords
+    @return: re match object
+    """
+    command_help_output = command("help %s" % cmd, **dargs).stdout.strip()
+    return re.search(regex, command_help_output)
 
 
 def schedinfo(domain, options="", **dargs):
@@ -1121,21 +1135,28 @@ def schedinfo(domain, options="", **dargs):
     return command(cmd, **dargs)
 
 
-def setmem(name, size, options="", **dargs):
+def setmem(domainarg=None, sizearg=None, domain=None,
+           size=None, flagstr="", **dargs):
     """
     Change the current memory allocation in the guest domain.
 
-    @param name: name of domain.
-    @param size: the memory size to set.
-    @param options: options of command virsh setmem, it can be
-                --config/--live/--current or mix them.
+    @param: domainarg: Domain name (first pos. parameter)
+    @param: sizearg: Memory size in KiB (second. pos. parameter)
+    @param: domain: Option to --domain parameter
+    @param: size: Option to --size parameter
+    @param: flagstr: string of "--config, --live, --current, etc."
+    @returns: CmdResult instance
     """
 
     cmd = "setmem"
-    if name:
-        cmd += " --domain %s" % name
-    if size:
-        cmd += " %s" % size
-    if options:
-        cmd += " %s" % options
+    if domainarg is not None: # Allow testing of ""
+        cmd += " %s" % domainarg
+    if sizearg is not None: # Allow testing of 0 and ""
+        cmd += " %s" % sizearg
+    if domain is not None: # Allow testing of --domain ""
+        cmd += " --domain %s" % domain
+    if size is not None: # Allow testing of --size "" or --size 0
+        cmd += " --size %s" % size
+    if len(flagstr) > 0:
+        cmd += " %s" % flagstr
     return command(cmd, **dargs)

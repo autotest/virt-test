@@ -193,6 +193,11 @@ class VirshHasHelpCommandTest(ModuleLoadCheckVirsh):
         self.VIRSH_COMMAND_CACHE = []
         self.assertTrue(self.virsh.has_help_command('uri'))
 
+    def test_subcommand_help(self):
+        regex = r'\s+\[--command\]\s+\<string\>\s+'
+        self.assertTrue(self.virsh.has_command_help_match('help', regex))
+        self.assertFalse(self.virsh.has_command_help_match('uri', regex))
+
 
 class VirshHelpCommandTest(ModuleLoadCheckVirsh):
 
