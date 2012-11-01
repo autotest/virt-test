@@ -164,7 +164,7 @@ class VM(virt_vm.BaseVM):
         return VM(name, params, root_dir, address_cache, state)
 
 
-    def __make_qemu_command(self, name=None, params=None, root_dir=None):
+    def make_create_command(self, name=None, params=None, root_dir=None):
         """
         Generate a qemu command line. All parameters are optional. If a
         parameter is not supplied, the corresponding value stored in the
@@ -1751,7 +1751,7 @@ class VM(virt_vm.BaseVM):
                         raise virt_vm.VMBadPATypeError(pa_type)
                 else:
                     # fill in key values, validate nettype
-                    # note: __make_qemu_command() calls vm.add_nic (i.e. on a copy)
+                    # note: make_create_command() calls vm.add_nic (i.e. on a copy)
                     if nic_params.get('netdst') == 'private':
                         nic.netdst = (test_setup.
                                       PrivateBridgeConfig(nic_params).brname)
@@ -1808,7 +1808,7 @@ class VM(virt_vm.BaseVM):
                     raise virt_vm.VMPAError(pa_type)
 
             # Make qemu command
-            qemu_command = self.__make_qemu_command()
+            qemu_command = self.make_create_command()
 
             # Add migration parameters if required
             if migration_mode == "tcp":
@@ -2878,18 +2878,6 @@ class VM(virt_vm.BaseVM):
                     migration_exec_cmd="cat "+path, mac_source=self)
         self.verify_status('running') # Throws exception if not
 
-    def needs_restart(self, name, params, basedir):
-        """
-        Verifies whether the current qemu commandline matches the requested
-        one, based on the test parameters.
-        """
-        if (self.__make_qemu_command() !=
-                self.__make_qemu_command(name, params, basedir)):
-            logging.debug("VM params in env don't match requested, restarting.")
-            return True
-        else:
-            logging.debug("VM params in env do match requested, continuing.")
-            return False
 
     def pause(self):
         """
