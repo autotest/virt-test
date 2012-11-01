@@ -1136,16 +1136,18 @@ def schedinfo(domain, options="", **dargs):
 
 
 def setmem(domainarg=None, sizearg=None, domain=None,
-           size=None, flagstr="", **dargs):
+           size=None, use_kilobytes=False, flagstr="", **dargs):
     """
     Change the current memory allocation in the guest domain.
 
     @param: domainarg: Domain name (first pos. parameter)
     @param: sizearg: Memory size in KiB (second. pos. parameter)
     @param: domain: Option to --domain parameter
-    @param: size: Option to --size parameter
+    @param: size: Option to --size or --kilobytes parameter
+    @param: use_kilobytes: True for --kilobytes, False for --size
     @param: flagstr: string of "--config, --live, --current, etc."
     @returns: CmdResult instance
+    @raises: error.CmdError: if libvirtd is not running!!!!!!
     """
 
     cmd = "setmem"
@@ -1156,7 +1158,10 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     if domain is not None: # Allow testing of --domain ""
         cmd += " --domain %s" % domain
     if size is not None: # Allow testing of --size "" or --size 0
-        cmd += " --size %s" % size
+        if use_kilobytes:
+            cmd += " --kilobytes %s" % size
+        else:
+            cmd += " --size %s" % size
     if len(flagstr) > 0:
         cmd += " %s" % flagstr
     return command(cmd, **dargs)

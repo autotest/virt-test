@@ -564,20 +564,35 @@ variants:
     - virsh_setmem:
         virt_test_type = libvirt
         type = virsh_setmem
-        kill_vm = yes
-        kill_vm_on_error = yes
-        setmem_options = ""
-        setmem_options_prefix = ""
-        setmem_options_suffix = ""
-        setmem_vm = "%s"
+        kill_vm_on_error = "no"
+        # TODO: Add variants for --config, --live, --current
+        setmem_flags = ""
         # The percentage allowed between
         # inside and outside vm's memory.
         setmem_delta_per = 15
+        # Seconds to allow VM kernel to settle
+        # on new memory
+        setmem_quiesce_delay = 3
+        # Select between two main sub-variants
+        # for status_error expectation.  The third
+        # variant, contains items that are only
+        # expected to fail on older libvirt.
+        setmem_old_libvirt_fail = "no"
         variants:
-            - with_valid_vm:
-                #status_error here flags if error should be included
-                #in result when test with this option.
-                status_error = no
+            - valid_options:
+                # These should not fail
+                status_error = "no"
+                variants:
+                    - dom_arg_size_arg:
+                        # Select domain with <domain> argument
+                        setmem_domarg = "yes"
+                        # Select size with <size> argument
+                        setmem_sizearg = "yes"
+                    - dom_opt_size_opt:
+                        # Select domain with --domain <name> option
+                        setmem_domarg = "no"
+                        # Select size with --size <size> option
+                        setmem_sizearg = "no"
                 variants:
                     - domid:
                         #the type to help get vm
@@ -586,54 +601,62 @@ variants:
                         setmem_vm_ref = "domname"
                     - domuuid:
                         setmem_vm_ref = "domuuid"
-            - with_invalid_vm:
-                status_error = yes
                 variants:
-                    - none:
-                        setmem_vm_ref = ""
-                    - hex_domid:
-                        setmem_vm_ref = "domid"
-                        setmem_vm = "%x"
-                    - invalid_domid:
-                        setmem_vm_ref = "9999"
-                    - invalid_domuuid:
-                        setmem_vm_ref = "99999999-9999-9999-9999-999999999999"
-        variants:
-            - with_valid_mem:
-                #whether this mem is suitable to this case
-                status_error = no
-                #the type to help get memory
-                setmem_mem_ref = "default_half"
-            - with_invalid_mem:
-                status_error = yes
+                    - half_mem:
+                        setmem_mem_ref = "halfless"
+                    - same_mem:
+                        setmem_mem_ref = "same"
                 variants:
-                    - none:
-                        setmem_mem_ref = ""
-                    - zero:
-                        setmem_mem_ref = "0"
-                    - memory1:
-                        setmem_mem_ref = "8388608"
-        variants:
-            - normal_test:
-            - with_vm_state:
-                only with_valid_mem.with_valid_vm.domname
-                variants:
+                    - running:
+                        start_vm = "yes"
                     - paused:
-                        addition_status_error = no
-                        paused_after_start_vm = yes
+                        paused_after_start_vm = "yes"
+            - invalid_options:
+                # These should fail on all versions
+                status_error = "yes"
+                variants:
+                    - missing_name:
+                        setmem_vm_ref = "none"
+                    - blank_name:
+                        setmem_vm_ref = "emptystring"
+                    - nonsense_name:
+                        setmem_vm_ref = "/dev/null"
+                    - outrange_domid:
+                        setmem_vm_ref = "9999"
+                    - bad_domuuid:
+                        setmem_vm_ref = "99999999-9999-9999-9999-999999999999"
+                variants:
+                    - empty_size:
+                        setmem_mem_ref = "emptystring"
+                    - zero_size:
+                        setmem_mem_ref = "zero"
+                    - small_size:
+                        setmem_mem_ref = "toosmall"
+                    - big_size:
+                        setmem_mem_ref = "toobig"
+                    - double_mem:
+                        setmem_mem_ref = "halfmore"
+                    - missing_size:
+                        setmem_mem_ref = "none"
+                variants:
                     - shut_off:
-                        addition_status_error = yes
-                        start_vm = no
-            - with_libvirtd_stop:
-                only with_valid_mem.with_valid_vm.domname
-                #addition_status_error here flags if error should
-                #be included in result when test with this feature.
-                addition_status_error = yes
-                libvirt = "off"
-            - with_addtion_args:
-                only with_valid_mem.with_valid_vm.domname
-                addition_status_error = yes
-                setmem_options_suffix = "xyz"
+                        kill_vm = "yes"
+                        start_vm = "no"
+                    - libvirtd_stop:
+                        libvirt = "off"
+                    - addtional_args:
+                        setmem_flags = "--xyz"
+            - invalid_old_libvirt:
+                # These should fail only on older libvirt
+                status_error = "no"
+                setmem_old_libvirt_fail = "yes"
+                variants:
+                    - dom_opt_size_arg:
+                        setmem_domarg = "no"
+                        setmem_sizearg = "yes"
+                    - dom_arg_size_opt:
+                        setmem_domarg = "yes"
+                        setmem_sizearg = "no"
 
     - virsh_define: install setup image_copy unattended_install
         type = virsh_define
