@@ -749,12 +749,14 @@ variants:
                 test_control_file = monotonic_time.control
                 required_cpu_flags = "constant_tsc"
                 pre_command = "/usr/bin/python ../../virt/scripts/check_cpu_flag.py"
+                smp_min = 2
             - tsc:
                 no RHEL.3.9
                 test_name = tsc
                 test_control_file = tsc.control
                 required_cpu_flags = "constant_tsc"
                 pre_command = "/usr/bin/python ../../virt/scripts/check_cpu_flag.py"
+                smp_min = 2
             - cpu_hotplug:
                 no RHEL.3.9
                 no RHEL.4
@@ -1038,6 +1040,7 @@ variants:
                 online_cpu_cmd = echo 1 > /sys/devices/system/cpu/cpu1/online
                 interval_gettime = 120
                 test_duration = 600
+                smp_min =2
         variants:
             - @default:
                 no RHEL.5
@@ -2073,7 +2076,7 @@ variants:
                 # Test creats VMs according to no_host_cpus
                 # We want to be sure 1st VM have only 1 vCPU
                 vms = vm1
-                smp = 1
+                smp_equal = 1
                 extra_params += " -snapshot"
                 cgroup_test = "cpu_cfs_util"
                 # cgroup_test_time, cgroup_limit
@@ -2081,7 +2084,7 @@ variants:
                 # Test creats VMs according to smp and cgroup_speeds
                 vms = ""
                 # When smp = 0 => it sets smp = no_host_cpus (optimal for test)
-                smp = 0
+                smp_equal = 0
                 # problem with multiple preprocess, turn off the screendumps
                 extra_params += " -snapshot"
                 cgroup_test = "cpu_share"
@@ -3205,6 +3208,7 @@ variants:
         interval = 30
         required_cpu_flags = "constant_tsc"
         pre_command = "/usr/bin/python ../../virt/scripts/check_cpu_flag.py"
+        smp_min = 2
 
     - format_disk:
         type = format_disk
@@ -3475,7 +3479,7 @@ variants:
                 event_cmd_type = monitor_cmd
             - qmp_cpu:
                 event_cmd_type = qmp_cmd
-                smp = 2
+                smp_equal= 2
                 pre_cmd = "cpu index=1"
                 qmp_cmd = "query-cpus"
                 cmd_result_check = contain
