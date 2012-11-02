@@ -506,6 +506,10 @@ class BaseVM(object):
         # TODO: Determine port redirection in use w/o checking nettype
         if nic.nettype != 'bridge':
             return "localhost"
+        if not nic.has_key('mac') and self.params.get('vm_type') == 'libvirt':
+            # Look it up from xml
+            nic.mac = self.get_virsh_mac_address(index)
+        # else TODO: Look up mac from existing qemu-kvm process
         if not nic.has_key('mac'):
             raise VMMACAddressMissingError(index)
         else:
