@@ -5,7 +5,7 @@ Utility classes and functions to handle Virtual Machine creation using libvirt.
 """
 
 import time, os, logging, fcntl, re, shutil, urlparse, tempfile
-from autotest.client.shared import error
+from autotest.client.shared import error, xml_utils
 from autotest.client import utils, os_dep
 from xml.dom import minidom
 import utils_misc, virt_vm, storage, aexpect, remote, virsh, libvirt_xml
@@ -1078,6 +1078,7 @@ class VM(virt_vm.BaseVM):
     def get_ifname(self, nic_index=0):
         raise NotImplementedError
 
+
     def get_virsh_mac_address(self, nic_index=0):
         """
         Get the MAC of this VM domain.
@@ -1087,14 +1088,16 @@ class VM(virt_vm.BaseVM):
                 requested NIC
         """
         thexml = virsh.dumpxml(self.name, uri=self.connect_uri)
-        dom = minidom.parseString(thexml)
-        count = 0
-        for node in dom.getElementsByTagName('interface'):
-            source = node.childNodes[1]
-            x = source.attributes["address"]
-            if nic_index == count:
-                return x.value
-            count += 1
+        xtf = xml_utils.XMLTreeFile(thexml)
+        interfaces = xtf.find('devices').findall('interface')
+        # Range check
+        try:
+            mac = interfaces[nic_index].find('mac').get('address')
+            if mac is not None:
+                return mac
+        except IndexError:
+            pass # Allow other exceptions through
+        # IndexError (range check) or mac == None
         raise virt_vm.VMMACAddressMissingError(nic_index)
 
 
