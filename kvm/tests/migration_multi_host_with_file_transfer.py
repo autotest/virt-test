@@ -45,6 +45,11 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
         transfer_speed: File transfer speed limit.
         guest_path: Path where file is stored on guest.
     """
+    mig_protocol = params.get("mig_protocol", "tcp")
+    base_class = utils_test.MultihostMigration
+    if mig_protocol == "fd":
+        base_class = utils_test.MultihostMigrationFd
+
     guest_root = params.get("guest_root", "root")
     guest_pass = params.get("password", "123456")
 
@@ -66,7 +71,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
     #Count of migration during file transfer.
     migrate_count = int(params.get("migrate_count", "3"))
 
-    class TestMultihostMigration(utils_test.MultihostMigration):
+    class TestMultihostMigration(base_class):
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.vm = None
@@ -86,6 +91,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
             @param mig_data: object with migration data.
             """
             for vm in mig_data.vms:
+                vm.resume()
                 if not utils_test.guest_active(vm):
                     raise error.TestFail("Guest not active after migration")
 

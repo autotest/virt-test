@@ -120,6 +120,7 @@ def postprocess_image(test, params, image_name):
     @param test: An Autotest test object.
     @param params: A dict containing image postprocessing parameters.
     """
+    clone_master = params.get("clone_master", None)
     base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
         iscsidev = kvm_storage.Iscsidev(params, base_dir, image_name)
@@ -128,13 +129,25 @@ def postprocess_image(test, params, image_name):
         image = kvm_storage.QemuImg(params, base_dir, image_name)
         if params.get("check_image") == "yes":
             try:
-                image.check_image(params, base_dir)
+                if clone_master is None:
+                    image.check_image(params, base_dir)
+                elif clone_master == "yes":
+                    if image_name in params.get("master_images_clone").split():
+                        image.check_image(params, base_dir)
             except Exception, e:
                 if params.get("restore_image_on_check_error", "no") == "yes":
                     image.backup_image(params, base_dir, "restore", True)
+                if params.get("remove_image_on_check_error", "no") == "yes":
+                    cl_images = params.get("master_images_clone", "")
+                    if image_name in cl_images.split():
+                        image.remove()
                 raise e
         if params.get("remove_image") == "yes":
-            image.remove()
+            if clone_master is None:
+                image.remove()
+            elif clone_master == "yes":
+                if image_name in params.get("master_images_clone").split():
+                    image.remove()
 
 
 def postprocess_vm(test, params, env, name):

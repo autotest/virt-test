@@ -21,7 +21,7 @@ More specifically:
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, re, signal, imp, tempfile, commands
+import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl, socket
 import threading, shelve
 from Queue import Queue
 from autotest.client.shared import error, global_config
@@ -501,6 +501,11 @@ class MultihostMigration(object):
         raise NotImplementedError
 
 
+    def post_migration(self, vm, cancel_delay, dsthost, vm_ports,
+                             not_wait_for_migration, fd):
+        pass
+
+
     def migrate_vms_src(self, mig_data):
         """
         Migrate vms source.
@@ -510,18 +515,27 @@ class MultihostMigration(object):
         For change way how machine migrates is necessary
         re implement this method.
         """
-        def mig_wrapper(vm, cancel_delay, dsthost, vm_ports):
+        def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
+                        not_wait_for_migration):
             vm.migrate(cancel_delay=cancel_delay, dest_host=dsthost,
-                       remote_port=vm_ports[vm.name])
+                       remote_port=vm_ports[vm.name],
+                       not_wait_for_migration=not_wait_for_migration)
+
+            self.post_migration(vm, cancel_delay, dsthost, vm_ports,
+                                not_wait_for_migration, None)
 
         logging.info("Start migrating now...")
         cancel_delay = mig_data.params.get("cancel_delay")
         if cancel_delay is not None:
             cancel_delay = int(cancel_delay)
+        not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
+        if not_wait_for_migration == "yes":
+            not_wait_for_migration = True
         multi_mig = []
         for vm in mig_data.vms:
             multi_mig.append((mig_wrapper, (vm, cancel_delay,
-                                            mig_data.dst, mig_data.vm_ports)))
+                                            mig_data.dst, mig_data.vm_ports,
+                                            not_wait_for_migration)))
         utils_misc.parallel(multi_mig)
 
 
@@ -674,7 +688,7 @@ class MultihostMigration(object):
         """
         Kill vms and delete cloned images.
         """
-        storage.postprocess_images(self.test.bindir, self.params)
+        pass
 
 
     def migrate(self, vms_name, srchost, dsthost, start_work=None,
@@ -759,7 +773,7 @@ class MultihostMigration(object):
                     mig_error = True
                     raise
             finally:
-                if not mig_error:
+                if not mig_error and cancel_delay is None:
                     self._hosts_barrier(self.hosts,
                                         mig_data.mig_id,
                                         'test_finihed',
@@ -829,6 +843,160 @@ class MultihostMigration(object):
                                 self.finish_timeout)
         finally:
             self.cleanup()
+
+
+class MultihostMigrationFd(MultihostMigration):
+    def __init__(self, test, params, env):
+        super(MultihostMigrationFd, self).__init__(test, params, env)
+
+    def migrate_vms_src(self, mig_data):
+        """
+        Migrate vms source.
+
+        @param mig_Data: Data for migration.
+
+        For change way how machine migrates is necessary
+        re implement this method.
+        """
+        def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
+                        not_wait_for_migration, fd):
+            vm.migrate(cancel_delay=cancel_delay, dest_host=dsthost,
+                       not_wait_for_migration=not_wait_for_migration,
+                       protocol="fd",
+                       fd_src=fd)
+
+            self.post_migration(vm, cancel_delay, dsthost, vm_ports,
+                                not_wait_for_migration, fd)
+
+        logging.info("Start migrating now...")
+        cancel_delay = mig_data.params.get("cancel_delay")
+        if cancel_delay is not None:
+            cancel_delay = int(cancel_delay)
+        not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
+        if not_wait_for_migration == "yes":
+            not_wait_for_migration = True
+
+        multi_mig = []
+        for vm in mig_data.vms:
+            fd = vm.params.get("migration_fd")
+            multi_mig.append((mig_wrapper, (vm, cancel_delay,
+                                            mig_data.dst, mig_data.vm_ports,
+                                            not_wait_for_migration,
+                                            fd)))
+        utils_misc.parallel(multi_mig)
+
+    def _check_vms_source(self, mig_data):
+        start_mig_tout = mig_data.params.get("start_migration_timeout", None)
+        if start_mig_tout is None:
+            for vm in mig_data.vms:
+                vm.wait_for_login(timeout=self.login_timeout)
+        self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
+                            'prepare_VMS', 60)
+
+    def _check_vms_dest(self, mig_data):
+        self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
+                             'prepare_VMS', 120)
+        for vm in mig_data.vms:
+            fd = vm.params.get("migration_fd")
+            os.close(fd)
+
+    def _connect_to_server(self, host, port, timeout=60):
+        """
+        Connect to network server.
+        """
+        endtime = time.time() + timeout
+        sock = None
+        while endtime > time.time():
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                sock.connect((host, port))
+                break
+            except socket.error, err:
+                (code, _) = err
+                if (code != errno.ECONNREFUSED):
+                    raise
+                time.sleep(1)
+
+        return sock
+
+    def _create_server(self, port, timeout=60):
+        """
+        Create network server.
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.settimeout(timeout)
+        sock.bind(('', port))
+        sock.listen(1)
+        return sock
+
+    def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
+                      check_work=None, mig_mode="fd", params_append=None):
+        vms_count = len(vms_name)
+        mig_ports = []
+
+        if self.params.get("hostid") == srchost:
+            last_port = 5199
+            for _ in range(vms_count):
+                last_port = utils_misc.find_free_port(last_port+1, 6000)
+                mig_ports.append(last_port)
+
+        sync = SyncData(self.master_id(), self.hostid,
+                         self.params.get("hosts"),
+                         {'src': srchost, 'dst': dsthost,
+                          'port': "ports"}, self.sync_server)
+
+        mig_ports = sync.sync(mig_ports, timeout=120)
+        mig_ports = mig_ports[srchost]
+        logging.debug("Migration port %s" % (mig_ports))
+
+        if self.params.get("hostid") != srchost:
+            sockets = []
+            for mig_port in mig_ports:
+                sockets.append(self._connect_to_server(srchost, mig_port))
+            try:
+                fds = {}
+                for s, vm_name in zip(sockets, vms_name):
+                    fds["migration_fd_%s" % vm_name] = s.fileno()
+                logging.debug("File descrtiptors %s used for"
+                              " migration." % (fds))
+
+                super_cls = super(MultihostMigrationFd, self)
+                super_cls.migrate_wait(vms_name, srchost, dsthost,
+                                  start_work=start_work, mig_mode="fd",
+                                  params_append=fds)
+            finally:
+                for s in sockets:
+                    s.close()
+        else:
+            sockets = []
+            for mig_port in mig_ports:
+                sockets.append(self._create_server(mig_port))
+            try:
+                conns = []
+                for s in sockets:
+                    conns.append(s.accept()[0])
+                fds = {}
+                for conn, vm_name in zip(conns, vms_name):
+                    fds["migration_fd_%s" % vm_name] = conn.fileno()
+                logging.debug("File descrtiptors %s used for"
+                              " migration." % (fds))
+
+                #Prohibits descriptor inheritance.
+                for fd in fds.values():
+                    flags = fcntl.fcntl(fd, fcntl.F_GETFD)
+                    flags |= fcntl.FD_CLOEXEC
+                    fcntl.fcntl(fd, fcntl.F_SETFD, flags)
+
+                super_cls = super(MultihostMigrationFd, self)
+                super_cls.migrate_wait(vms_name, srchost, dsthost,
+                                  start_work=start_work, mig_mode="fd",
+                                  params_append=fds)
+                for conn in conns:
+                    conn.close()
+            finally:
+                for s in sockets:
+                    s.close()
 
 
 def stop_windows_service(session, service, timeout=120):
