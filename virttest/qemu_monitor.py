@@ -522,6 +522,8 @@ class HumanMonitor(Monitor):
                 self._passfd.sendfd(self._socket, fd, "%s\n" % cmd)
             else:
                 # Send command
+                if debug:
+                    logging.debug("Send command: %s" % cmd)
                 self._send(cmd)
             # Read output
             s, o = self._read_up_to_qemu_prompt(timeout)
@@ -605,7 +607,6 @@ class HumanMonitor(Monitor):
         """
         cmd_output = []
         for cmdline in cmdlines.split(";"):
-            logging.info(cmdline)
             if not convert:
                 return self.cmd(cmdline, timeout)
             if "=" in cmdline:
@@ -616,7 +617,7 @@ class HumanMonitor(Monitor):
             else:
                 command = cmdline
             cmd_output.append(self.cmd(command, timeout))
-        if len(cmdlines.split(";")) == 1:
+        if len(cmd_output) == 1:
             return cmd_output[0]
         return cmd_output
 
@@ -1187,6 +1188,8 @@ class QMPMonitor(Monitor):
             # Send command
             q_id = utils_misc.generate_random_string(8)
             cmdobj = self._build_cmd(cmd, args, q_id)
+            if debug:
+                logging.debug("Send command: %s" % cmdobj)
             if fd is not None:
                 if self._passfd is None:
                     self._passfd = passfd_setup.import_passfd()
@@ -1440,7 +1443,7 @@ class QMPMonitor(Monitor):
                     except:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))
-        if len(cmdlines.split(";")) == 1:
+        if len(cmd_output) == 1:
             return cmd_output[0]
         return cmd_output
 
