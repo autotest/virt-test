@@ -603,7 +603,7 @@ class HumanMonitor(Monitor):
         @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
                 found after sending the command
         """
-        cmd_output = ""
+        cmd_output = []
         for cmdline in cmdlines.split(";"):
             logging.info(cmdline)
             if not convert:
@@ -615,7 +615,9 @@ class HumanMonitor(Monitor):
                     command += " " + arg.split("=")[-1]
             else:
                 command = cmdline
-            cmd_output += self.cmd(command, timeout)
+            cmd_output.append(self.cmd(command, timeout))
+        if len(cmdlines.split(";")) == 1:
+            return cmd_output[0]
         return cmd_output
 
 
@@ -1424,6 +1426,8 @@ class QMPMonitor(Monitor):
                     except:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))
+        if len(cmdlines.split(";")) == 1:
+            return cmd_output[0]
         return cmd_output
 
     def quit(self):
