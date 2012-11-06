@@ -2185,6 +2185,7 @@ variants:
         # this script is used to setup test env for (linux)guest/host
         # before performance testing
         # rh_perf_envsetup_script = scripts/rh_perf_envsetup.sh
+        client = vm2
         variants:
             - guest_guest:
                 vms += " vm2"
@@ -2193,6 +2194,82 @@ variants:
                 client = localhost
                 # to test exthost <-> guest:
                 # client = <external host ip>
+    - netperf_win:
+        only Windows
+        # only support guest run netserver and host run netperf now.
+        host = localhost
+        # this is a default value in test env
+        # please change this to your client machine ip if your guest
+        # uses static ip
+        client = vm2
+        type = netperf
+        kill_vm = yes
+        image_snapshot = yes
+        pci_model_nic1 = virtio_net
+        # Please update following comments params when you need special cfg for
+        # your test nic cards
+        # please fix the mac for nic2 if you needed with this, this can be empty
+        # nic_mac_nic2 =
+        # bridge_nic1 =
+        # please add the physical nic you want to add to your private bridge
+        # this can be empty
+        # physical_nic =
+        # bridge_force_create=yes
+        pci_model_nic2 = e1000
+        nics += ' nic2'
+        nic_mode = tap
+        netperf_files = netperf-2.4.5.tar.bz2 wait_before_data.patch
+        setup_cmd = "cd /tmp && rm -rf netperf-2.4.5 && tar xvfj netperf-2.4.5.tar.bz2 && cd netperf-2.4.5 && patch -p0 < ../wait_before_data.patch && ./configure --enable-burst && make"
+        guest_ver_cmd = "ver"
+        netperf_with_numa = yes
+        # configure netperf test parameters
+        l = 30
+        protocols = "TCP_STREAM TCP_MAERTS TCP_RR"
+        sessions_rr="1 25 50 100"
+        sessions="1 2 4"
+        sizes_rr="256"
+        sizes="256 1024 4096 16384 65535"
+        numa_node = -1
+        username_client = root
+        password_client = 123456
+        shell_client_client = ssh
+        shell_port_client = 22
+        shell_prompt_client =  \[root@.{0,50}][\#\$]
+        shell_port_host = 22
+        password_host = 123456
+        username_host = root
+        os_type_client = linux
+        os_type_host = linux
+        shell_prompt_host =  \[root@.{0,50}][\#\$]
+        ver_cmd = rpm -qa |grep kvm
+        variants:
+            - netperf_exe:
+                use_cygwin = no
+                netserv_start_cmd = "(dir C:\temp || mkdir C:\temp) && start /b D:\netserver.exe"
+                variants:
+                    - default_setting:
+                    - best_registry_setting:
+                        reboot_after_config = yes
+                        # For more information about windows registry setting document, please refer to http://www.linux-kvm.org/page/WindowsGuestDrivers/kvmnet/registry
+                        config_cmds = afd_cmd1,afd_cmd2,afd_cmd3, tcpip_cmd1,tcpip_cmd2
+                        afd_cmd1 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v DefaultSendWindow /d 0x00100000 /t REG_DWORD /f
+                        afd_cmd2 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v DefaultReceiveWindow /d 0x00100000 /t REG_DWORD /f
+                        afd_cmd3 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /d 0x00004000 /t REG_DWORD /f
+                        tcpip_cmd1 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /d 0x00000001 /t REG_DWORD /f
+                        tcpip_cmd2 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpWindowSize /d 0x00100000 /t REG_DWORD /f
+                        disable_tcp_heuristics_cmd = "netsh int tcp set heuristics disabled"
+                        disabled_tcp_autotuning_cmd = "netsh int tcp set global autotuninglevel=disabled"
+                        enable_ctcp_cmd = "netsh int tcp set global congestionprovider=ctcp"
+                        Win2008, Win2008r2, Win7:
+                            config_cmds += ,disable_tcp_heuristics_cmd,disabled_tcp_autotuning_cmd,enable_ctcp_cmd
+            - netperf_cygwin:
+                use_cygwin = yes
+                netperf_src = D:\netperf\netperf-2.4.5
+                cygwin_root = C:\rhcygwin\home\Administrator
+                cygwin_start = C:\rhcygwin\Cygwin.bat -i /Cygwin-Terminal.ico -
+                netserv_pattern = "hostname\s+[\d+\.]+\s+port\s+\d+"
+                netserv_start_cmd = netserver
+                netperf_install_cmd = cd netperf-2.4.5; ./configure --enable-burst; make; make install
 
     - ntttcp:
         virt_test_type = kvm libvirt
