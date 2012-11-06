@@ -455,6 +455,7 @@ class HumanMonitor(Monitor):
 
         try:
             try:
+                logging.debug("Send command: %s" % cmd)
                 self._socket.sendall(cmd + "\n")
                 self._log_lines(cmd)
             except socket.error, e:
@@ -605,7 +606,6 @@ class HumanMonitor(Monitor):
         """
         cmd_output = []
         for cmdline in cmdlines.split(";"):
-            logging.info(cmdline)
             if not convert:
                 return self.cmd(cmdline, timeout)
             if "=" in cmdline:
@@ -616,7 +616,7 @@ class HumanMonitor(Monitor):
             else:
                 command = cmdline
             cmd_output.append(self.cmd(command, timeout))
-        if len(cmdlines.split(";")) == 1:
+        if len(cmd_output) == 1:
             return cmd_output[0]
         return cmd_output
 
@@ -1178,6 +1178,7 @@ class QMPMonitor(Monitor):
             # Send command
             q_id = utils_misc.generate_random_string(8)
             cmdobj = self._build_cmd(cmd, args, q_id)
+            logging.debug("Send command: %s" % cmdobj)
             if fd is not None:
                 if self._passfd is None:
                     self._passfd = passfd_setup.import_passfd()
@@ -1431,7 +1432,7 @@ class QMPMonitor(Monitor):
                     except:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))
-        if len(cmdlines.split(";")) == 1:
+        if len(cmd_output) == 1:
             return cmd_output[0]
         return cmd_output
 
