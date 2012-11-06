@@ -130,14 +130,14 @@ def run_netperf(test, params, env):
         cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")
         cygwin_start = params.get("cygwin_start")
         server_cyg = vm.wait_for_login(timeout=login_timeout)
+        server_cyg.set_prompt(cygwin_prompt)
+        server_cyg.cmd_output(cygwin_start)
+    else:
+        server_cyg = None
+
     if len(params.get("nics", "").split()) > 1:
         server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
         server_ctl_ip = vm.get_address(1)
-
-    cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")
-    cygwin_start = params.get("cygwin_start")
-    server_cyg.set_prompt(cygwin_prompt)
-    server_cyg.cmd_output(cygwin_start)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
