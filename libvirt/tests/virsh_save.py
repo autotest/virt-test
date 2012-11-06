@@ -1,4 +1,4 @@
-import os, os.path
+import os
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
 
@@ -29,7 +29,7 @@ def run_virsh_save(test, params, env):
     extra_param = params.get("save_extra_param")
     vm_ref = params.get("save_vm_ref")
 
-    #prepare the environment
+    # prepare the environment
     if vm_ref == "name" and pre_vm_state == "paused":
         virsh.suspend(vm_name)
     elif vm_ref == "name"  and pre_vm_state == "shut off":
@@ -54,16 +54,16 @@ def run_virsh_save(test, params, env):
         libvirt_vm.libvirtd_stop()
     status = virsh.save(vm_ref, savefile, ignore_status=True).exit_status
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         libvirt_vm.libvirtd_start()
 
-    #Cleanup
+    # cleanup
     if os.path.exists(savefile):
-        virsh.restore(vm_name, savefile)
+        virsh.restore(savefile)
         os.remove(savefile)
 
-    #check status_error
+    # check status_error
     status_error = params.get("save_status_error")
     if status_error == "yes":
         if status == 0:
