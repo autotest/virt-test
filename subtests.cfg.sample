@@ -3969,34 +3969,45 @@ variants:
                 nics = "nic1 nic2"
                 unplug_pci_num = 2
 
-
     - qcow2perf:
         only qcow2
         type = qcow2perf
         image_chain = "base"
         image_name_base = base
         image_format_base = qcow2
-        op_type = read
         start_vm = no
         image_size_base = 8G
+        writecmd = "for i in $(seq 1 %s); do  echo write $((%s + i * %s))%s %s%s; done"
+        iocmd = "time %s |qemu-io -%s %s > /dev/null 2>&1"
         variants:
-            - write:
-                op_type = write
+            - writeoffset0:
+                op_type = writeoffset0
+            - writeoffset1:
+                op_type = writeoffset1
             - read:
                 op_type = read
+                opcmd = "time echo read 0 1G | qemu-io -%s %s"
             - convert:
                 op_type = convert
                 image_convert = "convert"
+                image_size_convert = 8G
                 image_name_convert = "base-qcow2"
                 image_format_convert = qcow2
+                opcmd = "time strace -c qemu-img convert -f qcow2 %s -O qcow2 -t %s %s"
                 variants:
-                    cache_none:
+                    - default_test:
+                        only Host_RHEL.5   
+                    - cache_none:
+                        no Host_RHEL.5
                         cache_mode = none
-                    cache_unsafe:
+                    - cache_unsafe:
+                        no Host_RHEL.5
                         cache_mode = unsafe
-                    cache_writeback:
+                    - cache_writeback:
+                        no Host_RHEL.5
                         cache_mode = writeback
-                    cache_writethrough:
+                    - cache_writethrough:
+                        no Host_RHEL.5
                         cache_mode = writethrough
             - rebase:
                 op_type = rebase
@@ -4007,30 +4018,48 @@ variants:
                 image_name_sn2 = "sn2"
                 image_name_sn3 = "sn3"
                 image_name_base1 = "base1"
+                image_size_sn1 = 8G
+                image_size_sn2 = 8G
+                image_size_sn3 = 8G
+                image_size_base1 = 8G
+                opcmd = "time strace -c qemu-img rebase -F qcow2 -b %s -f qcow2 -t %s %s"
                 variants:
-                    cache_none:
+                    - default_test:
+                        only Host_RHEL.5
+                    - cache_none:
+                        no Host_RHEL.5
                         cache_mode = none
-                    cache_unsafe:
+                    - cache_unsafe:
+                        no Host_RHEL.5
                         cache_mode = unsafe
-                    cache_writeback:
+                    - cache_writeback:
+                        no Host_RHEL.5
                         cache_mode = writeback
-                    cache_writethrough:
+                    - cache_writethrough:
+                        no Host_RHEL.5
                         cache_mode = writethrough
             - commit:
                 op_type = commit
                 image_chain += " sn1"
                 image_name_sn1 = "sn1"
+                image_size_sn1 = 8G
                 test_image = 1
+                opcmd = "time strace -c qemu-img commit -f qcow2 -t %s %s"
                 variants:
-                    cache_none:
+                    - default_test:
+                        only Host_RHEL.5
+                    - cache_none:
+                        no Host_RHEL.5
                         cache_mode = none
-                    cache_unsafe:
+                    - cache_unsafe:
+                        no Host_RHEL.5
                         cache_mode = unsafe
-                    cache_writeback:
+                    - cache_writeback:
+                        no Host_RHEL.5
                         cache_mode = writeback
-                    cache_writethrough:
+                    - cache_writethrough:
+                        no Host_RHEL.5
                         cache_mode = writethrough
-
 
     - qemu_nobody:
         start_vm = no
