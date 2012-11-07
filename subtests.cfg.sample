@@ -274,164 +274,23 @@ variants:
         type = virsh_version
         vms = ''
         variants:
-            - no_option:
-                options = ""
-                status_error = "no"
-                libvirtd = "on"
-            - unexpect_option:
-                options = " xyz"
-                status_error = "yes"
-                libvirtd = "on"
-            - with_libvirtd_stop:
-                options = ""
-                status_error = "yes"
-                libvirtd = "off"
-
-    - virsh_hostname: install setup image_copy unattended_install.cdrom
-        type = virsh_hostname
-        vms = ''
-        variants:
-            - no_option:
-                options = ""
-                status_error = "no"
-                libvirtd = "on"
-            - unexpect_option:
-                options = " xyz"
-                status_error = "yes"
-                libvirtd = "on"
-            - with_libvirtd_stop:
-                options = ""
-                status_error = "yes"
-                libvirtd = "off"
-
-    - virsh_hostname: install setup image_copy unattended_install.cdrom
-        type = virsh_hostname
-        vms = ''
-        variants:
-            - no_option:
-                options = ""
-                status_error = "no"
-                libvirtd = "on"
-            - unexpect_option:
-                options = " xyz"
-                status_error = "yes"
-                libvirtd = "on"
-            - with_libvirtd_stop:
-                options = ""
-                status_error = "yes"
-                libvirtd = "off"
-
-    - virsh_capabilities:
-        type = virsh_capabilities
-        vms = ''
-        variants:
-            - no_option:
-                virsh_cap_options = ""
-                status_error = "no"
-                libvirtd = "on"
-            - unexpect_option:
-                virsh_cap_options = "xyz"
-                status_error = "yes"
-                libvirtd = "on"
-            - with_libvirtd_stop:
-                virsh_cap_options = ""
-                status_error = "yes"
-                libvirtd = "off"
-
-    - virsh_nodeinfo:
-        type = virsh_nodeinfo
-        vms = ''
-        variants:
-            - no_option:
-                virsh_node_options = ""
-                status_error = "no"
-                libvirtd = "on"
-            - unexpect_option:
-                virsh_node_options = "xyz"
-                status_error = "yes"
-                libvirtd = "on"
-            - with_libvirtd_stop:
-                virsh_node_options = ""
-                status_error = "yes"
-                libvirtd = "off"
-
-    - virsh_freecell:
-        type = virsh_freecell
-        vms = ''
-        variants:
-            - expected_options:
-                status_error = "no"
+            - etherboot:
+                pre_command = "alternatives --display qemu-pxe-roms |grep -q etherboot && alternatives --set 'qemu-pxe-roms' /usr/share/etherboot || true"
+                no Host_RHEL.6
                 variants:
-                    - no_option:
-                        virsh_freecell_options = ""
-                    - expected_option_all:
-                        virsh_freecell_options = "--all"
-                    - expected_option_0:
-                        virsh_freecell_options = 0
-            - error_test:
-                status_error = "yes"
+                    - @default:
+                    - with_query_cpu:
+                        type = query_cpus_when_pxeboot
+                        feature_map = "intel:ept amd:npt"
+                        mmu_check_cmd = "cat /sys/module/kvm_%s/parameters/%s"
+            - gpxe:
+                pre_command = "alternatives --display qemu-pxe-roms |grep -q gpxe || alternatives --install /usr/share/qemu-pxe-roms qemu-pxe-roms /usr/share/gpxe 1; alternatives --set 'qemu-pxe-roms' /usr/share/gpxe"
                 variants:
-                    - unexpected_option_xyz:
-                        virsh_freecell_options = "xyz"
-                    - unexpected_option_12345:
-                        virsh_freecell_options = 12345
-        variants:
-            - libvirton:
-                libvirtd = "on"
-            - libvirtoff:
-                libvirtd = "off"
-                status_error = "yes"
-
-    - virsh_domname:
-        type = virsh_domname
-        kill_vm = yes
-        kill_vm_on_error = yes
-        options = "%s"
-        options_suffix = ""
-        variants:
-            - with_valid_option:
-                status_error = "no"
-                # status_error means the correctness of the options
-                variants:
-                    - domid:
-                        options_ref = "id"
-                    - uuid:
-                        options_ref = "uuid"
-            - with_invalid_option:
-                status_error = "yes"
-                variants:
-                    - none:
-                        options_ref = ""
-                    - hex_domid:
-                        options_ref = "id"
-                        options = "%x"
-                    - invalid_domid:
-                        options_ref = "9999"
-                    - invalid_uuid:
-                        options_ref = "99999999-9999-9999-9999-999999999999"
-                    - addition_invalid_param:
-                        options_ref = "id"
-                        options_suffix = "xyz"
-                    - vm_name:
-                        options_ref = "name"
-        variants:
-            - vm_state:
-                variants:
-                    - vm_running:
-                        addition_status_error = "no"
-                        start_vm = "yes"
-                    - vm_paused:
-                        addition_status_error = "no"
-                        paused_after_start_vm = "yes"
-                    - vm_shut_off:
-                        addition_status_error = "yes"
-                        start_vm = "no"
-            - with_libvirtd_stop:
-                only with_valid_option
-                # addition_status_error means the correctness of the operation.
-                # only when the two status_error are ok, the result will be ok.
-                addition_status_error = "yes"
-                libvirtd = "off"
+                    - @default:
+                    - with_query_cpu:
+                        type = query_cpus_when_pxeboot
+                        mmu_check_cmd = "cat /sys/module/kvm_%s/parameters/%s"
+                        feature_map = "intel:ept amd:npt"
 
     - module_probe:
         type = module_probe
