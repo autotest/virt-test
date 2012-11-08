@@ -2706,8 +2706,12 @@ variants:
         no RHEL.3.9
         type = rh_kernel_update
         rpm_timeout = 1200
-        kernel_version = 2.6.18-164.8.1.el5
-        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/164.8.1.el5/x86_64/kernel-2.6.18-164.8.1.el5.x86_64.rpm
+        ## Please set install_rpm_from_local, if want copy rpm to guest, then install it. 
+        # install_rpm_from_local = yes
+        # kernel_version, kernel_rpm will be used when set method to link.
+        # These two parameters are set at bottom of this file when udpating this patch.
+        # kernel_version = 2.6.18-164.8.1.el5
+        # kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/164.8.1.el5/x86_64/kernel-2.6.18-164.8.1.el5.x86_64.rpm
         args_removed = "rhgb quiet"
         args_added = "console=ttyS0,115200 console=tty0"
         method = brew
