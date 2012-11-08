@@ -1350,7 +1350,7 @@ class VM(virt_vm.BaseVM):
             vcpu_cores = vcpu_cores or 1
             vcpu_threads = vcpu_threads or 1
             if smp and vcpu_sockets == 0:
-                vcpu_sockets = smp / (vcpu_cores * vcpu_threads)
+                vcpu_sockets = int(smp / (vcpu_cores * vcpu_threads)) or 1
             else:
                 vcpu_sockets = vcpu_sockets or 1
             if smp == 0:
@@ -1358,9 +1358,9 @@ class VM(virt_vm.BaseVM):
         else:
             if vcpu_cores == 0:
                 vcpu_threads = vcpu_threads or 1
-                vcpu_cores = smp / (vcpu_sockets * vcpu_threads)
+                vcpu_cores = int(smp / (vcpu_sockets * vcpu_threads)) or 1
             else:
-                vcpu_threads = smp / (vcpu_cores * vcpu_sockets)
+                vcpu_threads = int(smp / (vcpu_cores * vcpu_sockets)) or 1
 
         self.cpuinfo.smp = smp
         self.cpuinfo.maxcpus = vcpu_maxcpus or smp
