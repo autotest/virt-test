@@ -666,7 +666,7 @@ variants:
         mem_chk_cur_cmd = wmic memphysical
 
         get_time_cmd = "cmd /c echo TIME: %date% %time%"
-        migration_test_command = dir
+        migration_test_command = ver && vol
         get_nmi_cmd = ::no_cmd
         images_good = 10.66.90.128:/vol/S2/kvmauto/windows_img
         dst_dir = /mnt/windows
