@@ -103,6 +103,11 @@ variants:
         variants:
             # Install guest from cdrom
             - cdrom:
+                # set copy_to_local if you want copy files from nfs to local host before testing.
+                # local_dir: local folder used to save nfs file, kvm folder will be used by default.
+                # Both absolute path and relative path are supported in local_dir
+                # local_dir = /root/
+                # copy_to_local = cdrom_cd1 cdrom_winutils
                 medium = cdrom
                 installation = cdrom
                 #redirs += " unattended_install"

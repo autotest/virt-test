@@ -958,6 +958,30 @@ def run_unattended_install(test, params, env):
                 raise error.TestError(e)
 
     vm = env.get_vm(params["main_vm"])
+    local_dir = params.get("local_dir")
+    if local_dir:
+        local_dir = utils_misc.get_path(test.bindir, local_dir)
+    else:
+        local_dir = test.bindir
+    if params.get("copy_to_local"):
+        for param in params.get("copy_to_local").split():
+            l_value = params.get(param)
+            if l_value:
+                need_copy = True
+                nfs_link = utils_misc.get_path(test.bindir, l_value)
+                i_name = os.path.basename(l_value)
+                local_link = os.path.join(local_dir, i_name)
+                if os.path.isfile(local_link):
+                    file_hash = utils.hash_file(local_link, "md5")
+                    expected_hash = utils.hash_file(nfs_link, "md5")
+                    if file_hash == expected_hash:
+                        need_copy = False
+                if need_copy:
+                    msg = "Copy %s to %s in local host." % (i_name, local_link)
+                    error.context(msg, logging.info)
+                    utils.get_file(nfs_link, local_link)
+                    params[param] = local_link
+
     unattended_install_config = UnattendedInstallConfig(test, params, vm)
     unattended_install_config.setup()
 
