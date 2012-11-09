@@ -14,6 +14,7 @@ import socket
 import time
 from autotest.client.shared import error
 import utils_test
+import data_dir
 
 
 SOCKET_SIZE = 2048
@@ -201,9 +202,9 @@ class GuestWorker(object):
             try:
                 base_path = os.environ['AUTODIR']
             except KeyError:
-                base_path = os.path.join(os.environ['AUTOTEST_PATH'], 'client')
-            vksmd_src = os.path.join(base_path, 'tests', 'virt',
-                                     'shared', 'scripts', 'virtio_console_guest.py')
+                base_path = os.path.dirname(data_dir.get_data_dir())
+            vksmd_src = os.path.join(base_path, 'scripts',
+                                                'virtio_console_guest.py')
             dst_dir = "/tmp"
 
             self.vm.copy_files_to(vksmd_src, guest_script_path)
