@@ -2975,6 +2975,7 @@ variants:
 
     - qemu_killer_report:
         type = qemu_killer_report
+        qemu_error_re = signal 15 from pid ([0-9]*) 
 
     - netperf_udp:
         only Linux
