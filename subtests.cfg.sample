@@ -3510,8 +3510,6 @@ variants:
                 ignore_pattern = "Linux|^(\n)"
                 head_pattern = "\d+:\d+:\d+\s+[AP]M\s+(\w+)\s+"
                 row_pattern = "CPU"
-                categories = "LargeFile Creates(256KB)|LargeFile Create(8KB)|Mail Server(8KB)|Radom Reads(8KB)|Random Writes(8KB)|Sequential Reads(256KB)|Sequential Reads(8KB)"
-                threads = "1 4 16"
                 variants:
                     - file_prepare:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
@@ -3601,9 +3599,12 @@ variants:
                         prepare_cmd = "echo y|mkfs  -t ext4 /dev/[sv]db; mount /dev/[sv]db /mnt; rm -rf /mnt/ffsb1;mkdir -p /mnt/ffsb1"
                         test_patch = "ffsb_random_write_8k_1.patch"
                         test_cmd = "ffsb examples/random_write_8k_1.ffsb"
-                    - summary_results:
+                    - summary_results_ffsb:
                         summary_results = "yes"
-                        test = "ffsb
+                        test = "ffsb"
+                        marks = "IOPS:(\d+\.\d+)\s+Transactions\s+per\s+Second Thro-MBps:[Read|Write]\s+Throughput.\s+([\d\.\w]+)"
+                        sum_marks = "Thro-MBps Hostcpu"
+                        mpstat = yes
             - iozone:
                 test_timeout = 1200
                 monitor_cmd = "mpstat -P ALL 1"
@@ -3622,12 +3623,17 @@ variants:
                 force_create_image = yes
                 force_create_image_image1 = no
                 variants:
-                    - incache:
+                    - incache_64k:
                         test_patch = "iozone_incache.patch"
-                    - outcache:
+                    - outcache_64k:
                         test_patch = "iozone_outcache.patch"
-                    - dio:
+                    - dio_64k:
                         test_patch = "iozone_dio.patch"
+                    - summary_results_iozone:
+                        summary_results = yes
+                        test = iozone
+                        marks = "Write_Thro-KBps:\"Writer\s+report\"\n\s+\"\d+\"\n\"\d+\"\s+(\d+) ReWrite_Thro-KBps:\"Re-writer\s+report\"\n\s+\"\d+\"\n\"\d+\"\s+(\d+) Read_Thro-KBps:\"Reader\s+report\"\n\s+\"\d+\"\n\"\d+\"\s+(\d+) Reread_Thro-KBps:\"Re-Reader\s+report\"\n\s+\"\d+\"\n\"\d+\"\s+(\d+)"
+                        mpstat = yes
 
     - kernbench2:
         only RHEL.6
@@ -4060,6 +4066,15 @@ variants:
                     - cache_writethrough:
                         no Host_RHEL.5
                         cache_mode = writethrough
+           - summary_qcow2perf:
+                start_vm = yes
+                type = performance
+                test = qcow2perf
+                summary_results = yes
+                marks = "TIME:real\s+([\d\.]+)h([\d\.]+)m([\d\.]+)s|real\s+([\d\.]+)m([\d\.]+)s|real\s+([\d\.]+)s"
+                file_list = "qcow2perf.*results"
+                no_table_list = "read writeoffset0 writeoffset1"
+                thread_tag = " "
 
     - qemu_nobody:
         start_vm = no
