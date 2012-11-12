@@ -289,10 +289,12 @@ def preprocess(test, params, env):
         if params.get('netdst_%s' % nic) == 'private':
             setup_pb = True
             params_pb = params.object_params(nic)
+            params['netdst_%s' % nic] = params.get("priv_brname", 'atbr0')
             break
     else:
         setup_pb = params.get("netdst") == 'private'
         params_pb = params
+        params['netdst'] = params.get("priv_brname", 'atbr0')
 
     if setup_pb:
         brcfg = test_setup.PrivateBridgeConfig(params_pb)
