@@ -2256,7 +2256,13 @@ variants:
                 # cgroup_memory_move_mb = 2048
 
     - virtio_console: install setup image_copy unattended_install.cdrom
-        only Linux
+        no Host_RHEL.5
+        no RHEL.3
+        no RHEL.4
+        # Use human monitor
+        monitor_type = human
+        monitors = humanmonitor1
+        main_monitor = humanmonitor1
         type = virtio_console
         # Console cleanup is not 100%, consider using kill_vm_on_error
         kill_vm_on_error = yes
@@ -2290,29 +2296,37 @@ variants:
                             - open:
                                virtio_console_test = open
                             - check_zero_sym:
+                                only Linux
                                 virtio_console_test = check_zero_sym
                             - multi_open:
                                 virtio_console_test = multi_open
                             - close:
                                 virtio_console_test = close
                             - polling:
+                                only Linux
                                 virtio_console_test = polling
                             - sigio:
+                                only Linux
                                 virtio_console_test = sigio
                             - lseek:
+                                only Linux
                                 virtio_console_test = lseek
                             - rw_host_offline:
                                 virtio_console_test = rw_host_offline
                             - rw_host_offline_big_data:
+                                only Linux
                                 virtio_console_test = rw_host_offline_big_data
                             - rw_blocking_mode:
+                                only Linux
                                 virtio_console_test = rw_blocking_mode
                             - rw_nonblocking_mode:
+                                only Linux
                                 virtio_console_test = rw_nonblocking_mode
                             - basic_loopback:
                                 virtio_console_test = basic_loopback
                             # Destructive tests
                             - rmmod:
+                                only Linux
                                 virtio_console_test = rmmod
                             - migration:
                                 virtio_console_no_migrations = 5
@@ -2381,6 +2395,7 @@ variants:
             # Spread consoles across multiple virtio-serial-pcis
             - spread_2:
                 virtio_port_spread = 2
+
 
     # This unit test module is for older branches of KVM that use the
     # kvmctl test harness (such as the code shipped with RHEL 5.x)
