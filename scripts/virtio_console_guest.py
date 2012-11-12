@@ -28,6 +28,7 @@ SYSFSPATH = "/sys/class/virtio-ports/"
 DEVPATH = "/dev/virtio-ports/"
 
 exiting = False
+virt = None
 
 
 class VirtioGuest:
@@ -37,6 +38,7 @@ class VirtioGuest:
     LOOP_NONE = 0
     LOOP_POLL = 1
     LOOP_SELECT = 2
+    LOOP_RECONNECT_NONE = 3
 
     def __init__(self):
         self.files = {}
@@ -334,7 +336,6 @@ class VirtioGuestPosix(VirtioGuest):
             @param cachesize: Block to receive and send.
             """
             Thread.__init__(self, name="Switch")
-
             self.in_files = in_files
             self.out_files = out_files
             self.exit_thread = event
@@ -402,13 +403,81 @@ class VirtioGuestPosix(VirtioGuest):
                     for desc in ret[1]:
                         os.write(desc, data)
 
+        def _reconnect_none_mode(self):
+            """
+            Read and write to device in blocking mode, close and reopen device
+            when it get OSError.
+            This is workaround for hotplugging of virtio port.
+            """
+            # TODO: Remove port unplugging after failure from guest_worker
+            #       when bz796048 is resolved.
+            data = ""
+            while not self.exit_thread.isSet():
+                data = ""
+                for desc in self.in_files:
+                    try:
+                        data += os.read(desc, self.cachesize)
+                    except OSError, inst:
+                        print "Reconnecting, readerr %s" % inst
+                        _desc = desc
+                        for item in virt.files.iteritems():
+                            if item[1] == desc:
+                                path = item[0]
+                                break
+                        for item in virt.ports.iteritems():
+                            if item[1]['path'] == path:
+                                name = item[0]
+                                break
+                        virt.close(name)
+                        while not self.exit_thread.isSet():
+                            try:
+                                desc = virt._open([name])[0]
+                                print "PASS: Opened %s" % name
+                                break
+                            except OSError:
+                                time.sleep(1)
+                        self.in_files[self.in_files.index(_desc)] = desc
+                if data != "":
+                    for desc in self.out_files:
+                        written = False
+                        while not written:
+                            try:
+                                os.write(desc, data)
+                                written = True
+                            except OSError, inst:
+                                print "Reconnecting, writeerr %s" % inst
+                                _desc = desc
+                                for item in virt.files.iteritems():
+                                    if item[1] == desc:
+                                        path = item[0]
+                                        break
+                                for item in virt.ports.iteritems():
+                                    if item[1]['path'] == path:
+                                        name = item[0]
+                                        break
+                                virt.close(name)
+                                while not self.exit_thread.isSet():
+                                    try:
+                                        desc = virt._open([name])[0]
+                                        print "PASS: Opened %s" % name
+                                        break
+                                    except OSError:
+                                        time.sleep(1)
+                                _desc = self.out_files.index(_desc)
+                                self.out_files[_desc] = desc
+
         def run(self):
             if (self.method == VirtioGuest.LOOP_POLL):
                 self._poll_mode()
             elif (self.method == VirtioGuest.LOOP_SELECT):
                 self._select_mode()
-            else:
+            elif (self.method == VirtioGuest.LOOP_RECONNECT_NONE):
+                self._reconnect_none_mode()
+            elif (self.method == VirtioGuest.LOOP_NONE):
                 self._none_mode()
+            else:
+                print "WARNIGN: Unknown mode %s, using LOOP_NONE" % self.method
+                self._reconnect_none_mode()
 
     class Sender(Thread):
         """
@@ -440,18 +509,18 @@ class VirtioGuestPosix(VirtioGuest):
         f = []
 
         for item in in_files:
-            name = self.ports[item]["path"]
-            if (name in self.files):
-                f.append(self.files[name])
+            path = self.ports[item]["path"]
+            if (path in self.files):
+                f.append(self.files[path])
             else:
                 try:
-                    self.files[name] = os.open(name, os.O_RDWR)
+                    self.files[path] = os.open(path, os.O_RDWR)
                     if (self.ports[item]["is_console"] == "yes"):
-                        print os.system("stty -F %s raw -echo" % (name))
-                        print os.system("stty -F %s -a" % (name))
-                    f.append(self.files[name])
+                        print os.system("stty -F %s raw -echo" % (path))
+                        print os.system("stty -F %s -a" % (path))
+                    f.append(self.files[path])
                 except Exception, inst:
-                    print "FAIL: Failed to open file %s" % (name)
+                    print "FAIL: Failed to open file %s" % (path)
                     raise inst
         return f
 
@@ -1306,6 +1375,7 @@ class Daemon:
         """
         Run guest main thread
         """
+        global virt
         global exiting
         virt = VirtioGuestPosix()
         slave = Thread(target=worker, args=(virt,))
@@ -1383,6 +1453,8 @@ def main_nt():
     """
     Main function for Windows NT with infinite loop.
     """
+    global virt
+    global exiting
     virt = VirtioGuestNt()
     print "PASS: Start"
     sys.stdout.flush()
