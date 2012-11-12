@@ -351,7 +351,7 @@ class VM(virt_vm.BaseVM):
 
 
         def add_virtio_port(help, name, bus, filename, porttype, chardev,
-                            name_prefix=None, index=None):
+                            name_prefix=None, index=None, extra_params=""):
             """
             Appends virtio_serialport or virtio_console device to cmdline.
             @param help: qemu -h output
@@ -362,6 +362,7 @@ class VM(virt_vm.BaseVM):
             @param chardev: Which chardev to use (*socket, spicevmc)
             @param name_prefix: Custom name prefix (port index is appended)
             @param index: Index of the current virtio_port
+            @param extra_params: Space sepparated chardev params
             """
             cmd = ''
             # host chardev
@@ -381,6 +382,11 @@ class VM(virt_vm.BaseVM):
                 port_name = name
             cmd += ",chardev=dev%s,name=%s,id=%s" % (name, port_name, name)
             cmd += _add_option("bus", bus)
+            # Space sepparated chardev params
+            _params = ""
+            for parm in extra_params.split():
+                _params += ',' + parm
+            cmd += _params
             return cmd
 
 
@@ -1159,7 +1165,8 @@ class VM(virt_vm.BaseVM):
                                     port_params.get('virtio_port_type'),
                                     port_params.get('virtio_port_chardev'),
                                     port_params.get('virtio_port_name_prefix'),
-                                    i)
+                                    i,
+                                    port_params.get('virtio_port_params', ''))
             i += 1
 
         # Add logging
