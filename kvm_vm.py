@@ -360,13 +360,17 @@ class VM(virt_vm.BaseVM):
             @param filename: Path to chardev filename
             @param porttype: Type of the port (*serialport, console)
             @param chardev: Which chardev to use (*socket, spicevmc)
+            @param name_prefix: Custom name prefix (port index is appended)
+            @param index: Index of the current virtio_port
             """
             cmd = ''
+            # host chardev
             if chardev == "spicevmc":   # SPICE
                 cmd += " -chardev spicevmc,id=dev%s,name=%s" % (name, name)
             else:   # SOCKET
                 cmd = (" -chardev socket,id=dev%s,path=%s,server,nowait"
                                                         % (name, filename))
+            # virtport device
             if porttype in ("console", "virtio_console"):
                 cmd += " -device virtconsole"
             else:
