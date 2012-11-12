@@ -70,7 +70,7 @@ variants:
             s3_bg_program_kill_cmd = 'pkill ping'
             s3_log_chk_cmd = 'dmesg |grep -E "ACPI: Waking up from system sleep state S3"\|"ACPI: PCI interrupt for device .* disabled"'
             s3_start_cmd = "echo mem > /sys/power/state"
-        guest_s4, acpi_after_hotplug.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
+        guest_s4, hibernate, acpi_after_hotplug.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
             s4_support_chk_cmd = "dmesg -c && grep -q disk /sys/power/state"
             s4_bg_program_setup_cmd = "cd /tmp/; nohup ping localhost"
             s4_bg_program_chk_cmd = 'pgrep ping'
@@ -780,7 +780,7 @@ variants:
             s3_bg_program_chk_cmd = 'tasklist | findstr /I /C:"ping.exe"'
             s3_bg_program_kill_cmd = 'taskkill /IM ping.exe /F'
             s3_log_chk_cmd = 'wevtutil qe system /f:text  | findstr /I /C:"The system has resumed from sleep" /C:"The system is entering sleep"'
-        guest_s4, acpi_after_hotpulg.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
+        guest_s4, hibernate, acpi_after_hotpulg.acpi_guest_s4, balloon_check.enable.balloon-guest_s4:
             s4_support_chk_cmd = powercfg /hibernate on
             s4_bg_program_setup_cmd = 'start ping -t localhost'
             s4_bg_program_chk_cmd = 'tasklist | find /I "ping.exe"'
@@ -975,7 +975,7 @@ variants:
                 guest_s3:
                     s3_support_chk_cmd = 'powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
                     s3_log_chk_cmd = 'echo "Since WinXP does not record ACPI event, Do nothing"'
-                guest_s4:
+                guest_s4, hibernate:
                     s4_support_chk_cmd = 'powercfg -h on'
                     s4_log_chk_cmd = 'echo "Since WinXP does not record ACPI event, Do nothing"'
 
@@ -1036,7 +1036,7 @@ variants:
                 guest_s3:
                     s3_support_chk_cmd = 'powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
                     s3_log_chk_cmd = 'echo "Since Win2003 does not record ACPI event, Do nothing"'
-                guest_s4:
+                guest_s4, hibernate:
                     s4_support_chk_cmd = 'powercfg -h on'
                     s4_log_chk_cmd = 'echo "Since Win2003 does not record ACPI event, Do nothing"'
 

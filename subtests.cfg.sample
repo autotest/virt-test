@@ -2174,6 +2174,36 @@ variants:
                                         virtio_console_test = stressed_restart
                                     - unplugged_ports:
                                         virtio_console_test = unplugged_restart
+                            - interrupted_transfer:
+                                only Linux
+                                virtio_console_test = interrupted_transfer
+                                virtio_console_buflen = 7
+                                virtio_console_debug = normal
+                                variants:
+                                    - short:
+                                        virtio_console_no_repeats = 60
+                                        virtio_console_test_time = 1
+                                        virtio_console_intr_time = 0.5
+                                    - long:
+                                        virtio_console_no_repeats = 1
+                                        virtio_console_test_time = 30
+                                        virtio_console_intr_time = 180
+                                variants:
+                                    - stop_cont:
+                                        virtio_console_interruption = stop
+                                    - replug_recv:
+                                        only spread_linear
+                                        virtio_console_interruption = replug_recv
+                                    - replug_send:
+                                        only spread_linear
+                                        virtio_console_interruption = replug_send
+                                    - replug_random:
+                                        only spread_linear
+                                        virtio_console_interruption = replug_random
+                                    - hibernate:
+                                        # set_s4_cmd and check_s4_support_cmd must
+                                        # be set in guest-os.cfg
+                                        virtio_console_interruption = s4
                     # Tests which creates own VMs
                     - @without_vm:
                         vms = ""
