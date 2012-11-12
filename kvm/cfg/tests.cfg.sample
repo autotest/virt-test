@@ -4,6 +4,7 @@
 
 # Include the base config files.
 include tests-shared.cfg
+nettype = user
 
 # Here are the test sets variants
 variants:
