@@ -360,6 +360,7 @@ class GuestWorker(object):
                          "&& echo -n PASS: python killed"
                          "|| echo -n PASS: python was already dead", 10)
 
+                self._execute_worker()
                 self._init_guest()
                 self._cleanup_ports()
 
