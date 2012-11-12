@@ -475,33 +475,36 @@ class ThSendCheck(Thread):
                         idx = self.port.sock.send(buf)
                     except Exception, inst:
                         # Broken pipe
-                        if inst.errno == 32:
-                            if self.migrate_event is None:
-                                self.exitevent.set()
-                                raise error.TestFail("ThSendCheck %s: Broken "
-                                        "pipe. If this is expected behavior "
-                                        "set migrate_event to support "
-                                        "reconnection." % self.getName())
-                            logging.debug("ThSendCheck %s: Broken pipe "
-                                          ", reconnecting. ", self.getName())
-                            attempt = 10
-                            while (attempt > 1
-                                   and not self.exitevent.isSet()):
-                                # Wait until main thread sets the new self.port
-                                if not self.migrate_event.wait(30):
-                                    self.exitevent.set()
-                                    raise error.TestFail("ThSendCheck %s: "
-                                            "Timeout while waiting for "
-                                            "migrate_event" % self.getName())
-                                self.port.sock = False
-                                self.port.open()
-                                try:
-                                    idx = self.port.sock.send(buf)
-                                except Exception:
-                                    attempt += 1
-                                    time.sleep(10)
-                                else:
-                                    attempt = 0
+                        if inst.errno != 32:
+                            continue
+                        if self.migrate_event is None:
+                            self.exitevent.set()
+                            raise error.TestFail("ThSendCheck %s: Broken "
+                                    "pipe. If this is expected behavior "
+                                    "set migrate_event to support "
+                                    "reconnection." % self.getName())
+                        logging.debug("ThSendCheck %s: Broken pipe "
+                                      ", reconnecting. ", self.getName())
+                        attempt = 10
+                        while (attempt > 1
+                               and not self.exitevent.isSet()):
+                            # Wait until main thread sets the new self.port
+                            while not (self.exitevent.isSet()
+                                            or self.migrate_event.wait(1)):
+                                pass
+                            if self.exitevent.isSet():
+                                break
+                            logging.debug("ThSendCheck %s: Broken pipe resumed"
+                                          ", reconnecting...", self.getName())
+                            self.port.sock = False
+                            self.port.open()
+                            try:
+                                idx = self.port.sock.send(buf)
+                            except Exception:
+                                attempt -= 1
+                                time.sleep(10)
+                            else:
+                                attempt = 0
                     buf = buf[idx:]
                     self.idx += idx
         logging.debug("ThSendCheck %s: exit(%d)", self.getName(),
