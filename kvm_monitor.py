@@ -354,9 +354,6 @@ class HumanMonitor(Monitor):
         @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
                 found after sending the command
         """
-        if debug:
-            logging.debug("(monitor %s) Sending command '%s'",
-                          self.name, cmd)
         self._log_command(cmd, debug)
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
@@ -379,10 +376,6 @@ class HumanMonitor(Monitor):
             o = "\n".join(o.splitlines()[1:])
             # Report success/failure
             if s:
-                if debug:
-                    logging.debug("(monitor %s) "
-                                  "Response to '%s'", self.name,
-                                  cmd)
                 if o:
                     self._log_response(cmd, o, debug)
                 return o
@@ -891,7 +884,7 @@ class QMPMonitor(Monitor):
 
         if self.debug_log or debug:
             logging.debug("(monitor %s) Response to '%s' "
-                          "(re-formated)", self.name, cmd)
+                          "(re-formatted)", self.name, cmd)
             if isinstance(resp, dict):
                 _dump_dict(resp)
             elif isinstance(resp, list):
@@ -926,9 +919,6 @@ class QMPMonitor(Monitor):
                              where data is the error data)
         """
         self._log_command(cmd, debug)
-        if debug:
-            logging.debug("(monitor %s) Sending command '%s'",
-                          self.name, cmd)
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
                                    "QMP command '%s'" % cmd)
@@ -956,9 +946,6 @@ class QMPMonitor(Monitor):
                                            % cmd)
             if "return" in r:
                 ret = r["return"]
-                if debug and r["return"]:
-                    logging.debug("(monitor %s) "
-                                  "Response to '%s'", self.name, cmd)
                 if ret:
                     self._log_response(cmd, ret, debug)
                 return ret
