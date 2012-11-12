@@ -2192,6 +2192,7 @@ variants:
                                 only spread_linear
                                 virtio_port_spread = 0
                                 virtio_console_test = max_ports
+
                 # Use serialport or console as the main virtioport fpr the tests above
                 variants:
                     - virtserialport:
@@ -2222,6 +2223,13 @@ variants:
                         vms = ""
                         virtio_port_spread = 0
                         virtio_console_test = max_serials_and_conosles
+                    - boot_nr0:
+                        start_vm = 0
+                        virtio_console_test = failed_boot
+                        virtio_console_params = "Port number 0 on virtio-serial devices reserved for virtconsole devices for backward compatibility."
+                        virtio_ports = "vs1"
+                        virtio_port_type_vs1 = serialport
+                        virtio_port_params_vs1 = "nr=0"
         variants:
             # Use only single virtio-serial-pci
             - spread_linear:
