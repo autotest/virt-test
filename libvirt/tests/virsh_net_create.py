@@ -1,80 +1,180 @@
-import re, logging, commands
-from autotest.client.shared import utils, error
-from virttest import virsh, libvirt_vm, libvirt_xml
+import logging
+from autotest.client.shared import error
+from virttest import libvirt_vm, libvirt_xml, virsh, xml_utils
+
+def do_low_level_test(virsh_dargs, test_xml, options_ref, extra):
+
+    # Process command-line argument/option parameters
+    if options_ref == "file_arg":
+        alt_file = "--file %s" % test_xml.name # returns filename
+    elif options_ref == "no_file":
+        alt_file = "''" # empty string will be passed
+    elif options_ref == "extra_file":
+        alt_file = "%s %s" % (test_xml.name, test_xml.name)
+    elif options_ref == "no_exist_file":
+        alt_file = "foobar" + test_xml.name
+    else:
+        alt_file = test_xml.name
+
+    logging.debug("Calling virsh net-create with alt_file '%s' and "
+                  "extra '%s'", alt_file, extra)
+
+    try:
+        virsh.net_create(alt_file, extra, **virsh_dargs) # ignore_status==False
+        return True
+    except (error.CmdError), cmd_excpt:
+        # CmdError catches failing virsh commands
+        logging.debug("Exception-thrown: " + str(cmd_excpt))
+        return False
+
+
+def do_high_level_test(virsh_dargs, test_xml, net_name, net_uuid, bridge):
+
+    test_netxml = libvirt_xml.NetworkXML("NoName", virsh.Virsh(**virsh_dargs))
+    test_netxml.xml = test_xml.name
+
+    # modify XML if called for
+    if net_name is not "":
+        test_netxml.name = net_name
+    else:
+        test_netxml.name = "default"
+    if net_uuid is not "":
+        test_netxml.uuid = net_uuid
+    else:
+        del test_netxml.uuid # let libvirt auto-generate
+    if bridge is not None:
+        test_netxml.bridge = bridge
+
+    # TODO: Test other network parameters
+
+    # Network XML is not big, just print out.
+    logging.debug("Modified XML:")
+    test_netxml.debug_xml()
+
+    try:
+        test_netxml.create()
+        return test_netxml.defined
+    except (IOError, error.CmdError), cmd_excpt:
+        # CmdError catches failing virsh commands
+        # IOError catches corrupt XML data
+        logging.debug("Exception-thrown: " + str(cmd_excpt))
+        return False
 
 
 def run_virsh_net_create(test, params, env):
     """
     Test command: virsh net-create.
 
-    1) Create a new network's config file from a source file.
-    2) Prepare current environment for new network.
-    3) Run test.
-    4) Recover libvirtd and network.
+    1) Gather test parameters
+    2) Store current libvirt host network state
+    3) Call virsh net create on possibly modified network XML
+    4) Recover original libvirtd and network.
     5) Check result.
     """
 
-    #Create network's xml file
-    source_file = params.get("net_source_file",
-                         "/etc/libvirt/qemu/networks/default.xml")
-    net_name = params.get("network_name", "")
-    net_uuid = params.get("network_uuid", "")
-    options_ref = params.get("net_create_options_ref", "default")
-    extra = params.get("net_create_options_extra", "")
+    # Gather test parameters
+    uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
+                                                       "default"))
+    status_error = "yes" == params.get("status_error", "no")
+    # libvirtd also controls use of Virsh or VirshPersistent
+    libvirtd = "on" == params.get("libvirtd", "on")
+    net_name = params.get("net_create_net_name", "") # default is tested
+    net_uuid = params.get("net_create_net_uuid", "") # default is tested
+    options_ref = params.get("net_create_options_ref", "") # default is tested
+    extra = params.get("net_create_options_extra", "") # extra cmd-line params.
+    corrupt = "yes" == params.get("net_create_corrupt_xml", "no")
+    remove_existing = "yes" == params.get("net_create_remove_existing", "yes")
+    # Dictionary or None value
+    bridge = eval(params.get("net_create_bridge", "None"),
+                  {'__builtins__':None}, {})
+    # make easy to maintain
+    virsh_dargs = {'uri':uri, 'debug':False, 'ignore_status':False}
+    vrsh = virsh.VirshPersistent(**virsh_dargs)
 
-    network_xml = libvirt_xml.NetworkXML()
-    network_xml.new_from_file(source_file)
-    if net_name:
-        network_xml.set_network_name(net_name)
-    if net_uuid:
-        network_xml.set_network_name(net_uuid)
-    #TODO:other configuration
-    print network_xml.xml
-    xml_info = commands.getoutput("cat %s" % network_xml.xml)
-    logging.info("XMLInfo:\n%s", xml_info)
+    # Prepare environment and record current net_state_dict
+    backup = libvirt_xml.NetworkXML.new_all_networks_dict(vrsh)
+    backup_state = vrsh.net_state_dict()
+    logging.debug("Backed up network(s): %s", backup_state)
 
-    #Prepare network environment
-    list_output = virsh.net_list("", print_info=True).stdout.strip()
-    if re.search(net_name, list_output):
-        virsh.net_destroy(net_name, print_info=True)
+    # Make some XML to use for testing, for now we just copy 'default'
+    test_xml = xml_utils.TempXMLFile() # temporary file
+    try:
+        # LibvirtXMLBase.__str__ returns XML content
+        test_xml.write(str(backup['default']))
+        test_xml.flush()
+    except (KeyError, AttributeError):
+        raise error.TestNAError("Test requires default network to exist")
+    if corrupt:
+        # find file size
+        test_xml.seek(0, 2) # end
+        # write garbage at middle of file
+        test_xml.seek(test_xml.tell() / 2)
+        test_xml.write('"<network><<<BAD>>><\'XML</network\>'
+                       '!@#$%^&*)>(}>}{CORRUPTE|>!')
+        test_xml.flush()
+        # Assume next user might want to read
+        test_xml.seek(0)
+
+    if remove_existing:
+        for netxml in backup.values():
+            netxml.orbital_nuclear_strike()
 
     #Run test case
-    if options_ref == "exist_file":
-        options_ref = network_xml.xml + extra
 
-    #Prepare libvirtd status
-    libvirtd = params.get("libvirtd", "on")
-    if libvirtd == "off":
+    # Prepare libvirtd status
+    if not libvirtd: # TODO: Support stop on remote system
+        vrsh.close_session() # all virsh commands will probably fail
         libvirt_vm.service_libvirtd_control("stop")
 
-    result = virsh.net_create(options_ref, extra, ignore_status=True, print_info=True)
-    status = result.exit_status
-    output = result.stdout.strip()
+    # Be nice to user
+    if status_error:
+        logging.info("The following is expected to fail...")
 
-    #Recover libvirtd service start
-    if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("start")
+    try:
+        # Determine depth of test - if low-level calls are needed
+        if (options_ref or extra or corrupt):
+            logging.debug("Performing low-level net-create test")
+            # vrsh will act like it's own virsh-dargs, i.e. it is dict-like
+            test_passed = do_low_level_test(vrsh, test_xml, options_ref, extra)
+        else: # high-level test
+            logging.debug("Performing high-level net-create test")
+            # vrsh will act like it's own virsh-dargs, i.e. it is dict-like
+            test_passed = do_high_level_test(vrsh, test_xml, net_name,
+                          net_uuid, bridge)
+    finally:
+        # Be nice to user
+        if status_error:
+            # In case test itself has errors, warn they are real.
+            logging.info("The following is NOT expected to fail...")
 
-    #Recover network
-    #Remove added network(not 'default') during test.
-    list_output = virsh.net_list("", print_info=True).stdout.strip()
-    if re.search(net_name, list_output) and net_name != "default":
-        virsh.net_destroy(net_name, print_info=True)
+        # Recover libvirtd service start
+        if not libvirtd: # TODO: Support start on remote system
+            libvirt_vm.service_libvirtd_control("start")
+            vrsh.new_session() # Virsh instance shared with backup netxml values
 
-    #Keep default network exist for test's need.
-    list_output = virsh.net_list("", print_info=True).stdout.strip()
-    if not re.search("default", list_output):
-        virsh.net_create(source_file, print_info=True)
+        # Done with file, cleanup
+        del test_xml
 
-    #Check Result
-    status_error = params.get("status_error", "no")
-    addition_status_error = params.get("addition_status_error", "no")
-    status_error = (status_error == "no") and (addition_status_error == "no")
-    if not status_error:
-        if status == 0:
-            raise error.TestFail("Run successful with wrong command!")
-    else:
-        if status != 0:
-            raise error.TestFail("Run failed with right command.")
-        if not re.search(net_name, output):
-            raise error.TestFail("Run successful but result is not expected.")
+        # Recover environment
+        leftovers = libvirt_xml.NetworkXML.new_all_networks_dict(vrsh)
+        for netxml in leftovers.values():
+            netxml.orbital_nuclear_strike()
+
+        # Recover from backup
+        for netxml in backup.values():
+            netxml.create()
+            # autostart = True requires persistent = True first!
+            for state in ['active', 'persistent', 'autostart']:
+                netxml[state] = backup_state[netxml.name][state]
+
+        # Close down persistent virsh session (including for all netxml copies)
+        if hasattr(vrsh, 'close_session'):
+            vrsh.close_session()
+
+    # Check Result
+    if status_error: # An error was expected
+        if test_passed: # Error was not produced
+            raise error.TestFail("Error test did not fail!")
+    else: # no error expected
+        if not test_passed:
+            raise error.TestFail("Normal test returned failure")
