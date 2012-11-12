@@ -2171,8 +2171,13 @@ variants:
                                         virtio_console_test = migrate_offline
                                     - online:
                                         virtio_console_test = migrate_online
-                            - poweroff:
-                                virtio_console_test = shutdown
+                            - reboot:
+                                virtio_console_method = shell
+                                variants:
+                                    - stressed:
+                                        virtio_console_test = stressed_restart
+                                    - unplugged_ports:
+                                        virtio_console_test = unplugged_restart
                     # Tests which creates own VMs
                     - @without_vm:
                         vms = ""
