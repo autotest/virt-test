@@ -919,11 +919,11 @@ variants:
                 only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
             - globally_disable_s3:
                 no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-                - extra_params = " -global PIIX4_PM.disable_s3=1"
+                extra_params = " -global PIIX4_PM.disable_s3=1"
             - globally_enable_s3:
                 no RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
                 no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-                - extra_params = " -global PIIX4_PM.disable_s3=0"
+                extra_params = " -global PIIX4_PM.disable_s3=0"
 
 
     - timedrift:
@@ -1473,11 +1473,11 @@ variants:
                 only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
             - globally_disable_s4:
                 no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-                - extra_params = " -global PIIX4_PM.disable_s4=1"
+                extra_params = " -global PIIX4_PM.disable_s4=1"
             - globally_enable_s4:
                 no RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
                 no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-                - extra_params = " -global PIIX4_PM.disable_s4=0"
+                extra_params = " -global PIIX4_PM.disable_s4=0"
 
     - nic_hotplug:
         no RHEL.3.9
