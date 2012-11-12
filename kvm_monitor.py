@@ -894,7 +894,7 @@ class QMPMonitor(Monitor):
 
         if self.debug_log or debug:
             logging.debug("(monitor %s) Response to '%s' "
-                          "(re-formated)", self.name, cmd)
+                          "(re-formatted)", self.name, cmd)
             if isinstance(resp, dict):
                 _dump_dict(resp)
             elif isinstance(resp, list):
