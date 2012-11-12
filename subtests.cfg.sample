@@ -1488,13 +1488,9 @@ variants:
         no RHEL.3
         #kill_vm = yes
         type = guest_s4
-        # The following parameters will be overwirtten in guest os's config.
-        s4_support_chk_cmd = "dmesg -c && grep -q disk /sys/power/state"
-        s4_bg_program_setup_cmd = "cd /tmp/; nohup ping localhost"
-        s4_bg_program_chk_cmd = 'pgrep ping'
-        s4_bg_program_kill_cmd = 'pkill ping'
-        s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
-        s4_start_cmd = 'echo disk > /sys/power/state'
+        # params: s4_support_chk_cmd, s4_bg_program_setup_cmd,
+        # s4_bg_program_chk_cmd, s4_bg_program_kill_cmd, s4_log_chk_cmd,
+        # s4_start_cmd and services_up_timeout are set in guest-os.cfg
         kill_vm_on_error = yes
         variants:
             - @default:
