@@ -2243,9 +2243,9 @@ variants:
                             - virtserialport:
                                 variants:
                                     - serialport_small:
-                                        virtio_console_params = "serialport@4:serialport@2:serialport@4:serialport@8:8
+                                        virtio_console_params = "serialport@4:serialport@2:serialport@4:serialport@8:8"
                                     - serialport_big:
-                                        virtio_console_params = "serialport@16384:serialport@2048:serialport@4096:serialport@8192:8192
+                                        virtio_console_params = "serialport@16384:serialport@2048:serialport@4096:serialport@8192:8192"
                             - virtconsole:
                                 variants:
                                     - console_small:
@@ -2257,7 +2257,7 @@ variants:
                                     - mixed_small:
                                         virtio_console_params = "serialport@4:console@2:serialport@5:console@6:8"
                                     - mixed_big:
-                                        virtio_console_params = "console@16384:serialport@2048:console@4096:serialport@8192:8192
+                                        virtio_console_params = "console@16384:serialport@2048:console@4096:serialport@8192:8192"
                     - performance:
                         virtio_console_test = perf
                         virtio_console_params = "serialport;serialport@1000000"
