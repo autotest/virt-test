@@ -2171,7 +2171,7 @@ variants:
                                         virtio_console_test = migrate_offline
                                     - online:
                                         virtio_console_test = migrate_online
-                            - reboot:
+                            - restart:
                                 virtio_console_method = shell
                                 variants:
                                     - stressed:
