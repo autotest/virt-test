@@ -4421,7 +4421,7 @@ def standard_value(value_str, standard_unit="M", base="1024"):
 
     unit_list = ['B', 'K', 'M', 'G', 'T']
     try:
-        data = float(re.findall("\d+",value_str)[0])
+        data = float(re.findall("[\d\.]+",value_str)[0])
     except IndexError:
         logging.warn("The format is not right. Please check %s"
                      " has both data and unit." % value_str)
