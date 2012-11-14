@@ -590,7 +590,10 @@ class VM(virt_vm.BaseVM):
                 virt_install_cmd += add_cdrom(help, params.get("cdrom_cd1"))
             elif params.get("unattended_delivery_method") == "integrated":
                 virt_install_cmd += add_cdrom(help,
-                                              params.get("cdrom_unattended"))
+                                              os.path.join(
+                                                data_dir.get_data_dir(),
+                                                params.get("cdrom_unattended")
+                                             ))
             else:
                 location = params.get("image_dir")
                 kernel_dir = os.path.dirname(params.get("kernel"))
