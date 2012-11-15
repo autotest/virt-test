@@ -420,75 +420,6 @@ variants:
                 addition_status_error = "yes"
                 libvirtd = "off"
 
-    - virsh_restore:
-        virt_test_type = libvirt
-        type = virsh_restore
-        restore_status_error = "yes"
-        restore_vm_ref = "/tmp/save.file"
-        restore_extra_param = ""
-        restore_libvirtd = "on"
-        variants:
-            - expected_option:
-                restore_status_error = "no"
-            - no_option:
-                restore_vm_ref = ""
-            - unexpected_option:
-                restore_vm_ref = "xyz"
-            - new_file_option:
-                restore_vm_ref = "/tmp/new.file"
-            - start_option:
-                restore_pre_status = "start"
-            - extra_option:
-                restore_extra_param = "xyz"
-            - with_libvirt_stop:
-                restore_libvirtd = "off"
-
-    - virsh_save:
-        type = virsh_save
-        virt_test_type = libvirt
-        save_file = "/tmp/save.file"
-        save_libvirtd = "on"
-        save_extra_param = ""
-        variants:
-            - normal_test:
-                save_status_error = "no"
-                variants:
-                    - id_option:
-                        save_vm_ref = "id"
-                    - normal_option:
-                        save_vm_ref = "name"
-                    - paused_option:
-                        save_vm_ref = "name"
-                        save_pre_vm_state = "paused"
-                    - uuid_option:
-                        save_vm_ref = "uuid"
-            - error_test:
-                save_status_error = "yes"
-                variants:
-                    - no_option:
-                        save_vm_ref = ""
-                    - hex_id_option:
-                        save_vm_ref = "hex_id"
-                    - invalid_id_option:
-                        save_vm_ref = "save_invalid_id"
-                        save_invalid_id = "9999"
-                    - unexpect_option:
-                        save_vm_ref = "\#"
-                    - invalid_uuid_option:
-                        save_vm_ref = "save_invalid_uuid"
-                        save_invalid_uuid = "99999999-9999-9999-9999-999999999999"
-                    - extra_option:
-                        save_vm_ref = "extra_param"
-                        save_extra_param = "xyz"
-                    - shut_off_option:
-                        save_vm_ref = "name"
-                        save_pre_vm_state = "shut off"
-                    - only_name_option:
-                        save_vm_ref = "only_name"
-                    - libvirtd_stop_option:
-                        save_vm_ref = "name"
-                        save_libvirtd = "off"
-
     - virsh_list:
         virt_test_type = libvirt
         type = virsh_list
@@ -1187,10 +1118,13 @@ variants:
                         test_control_file = monotonic_time.control
 
     - @multi_host:
-        remove_image_on_check_error = yes
-        force_image_clone = no
+<<<<<<< HEAD
         virt_test_type = kvm
         no JeOS
+=======
+        remove_image_on_check_error = yes
+        force_image_clone = no
+>>>>>>> virt: Multihost-migrate stops unnecessary vm disk clone.
         variants:
             - migrate_multi_host: install setup image_copy unattended_install.cdrom
                 type = migration_multi_host
@@ -1210,9 +1144,15 @@ variants:
                 variants:
                     #Migration protocol.
                     -tcp:
-                        mig_protocol = "tcp"
+                        variants:
+                            - @default:
+                                type = migration_multi_host
+                            - measure_migration_speed:
+                                only Linux
+                                mig_speed = 1G
+                                type = migration_multi_host_with_speed_measurement
                     -fd:
-                        mig_protocol = "fd"
+                        type = migration_multi_host_fd
 
                 variants:
                     #Time when start migration
@@ -1229,74 +1169,30 @@ variants:
                                 start_migration_timeout = 6
 
                 variants:
-                    # Migration properties
-                    - @default:
-                        type = migration_multi_host
+                    # Migration cancel
+                    - @no_cancel:
                     - cancel_with_delay:
-                        type = migration_multi_host_cancel
-                        only after_login_vm
+                        no measure_migration_speed
                         cancel_delay = 10
-                    - measure_speed:
-                        only Linux
-                        only after_login_vm
-                        not_wait_for_migration = yes
-                        mig_speed = 1G
-                        type = migration_multi_host_with_speed_measurement
-                    - with_file_transfer:
-                        only Linux
-                        only after_login_vm
-                        type = migration_multi_host_with_file_transfer
-                        comm_port = 13234
-                        #path where file is stored on guest.
-                        guest_path = "/tmp/file"
-                        #size of generated file in MB.
-                        file_size = 512
-                        transfer_timeout = 440
-                        #Transfer speed in Mb
-                        transfer_speed = 300
-                        #Count of migration during file transfer.
-                        migrate_count = 3
-                    - downtime:
-                        only after_login_vm
-                        sub_type = downtime
-                        # downtime in seconds.
-                        max_downtime = 10
-                        not_wait_for_migration = yes
-                        type = migration_multi_host_downtime_and_speed
-                    - speed:
-                        only after_login_vm
-                        sub_type = speed
-                        # speed in Mb
-                        min_migration_speed = 10M
-                        max_migration_speed = 500M
-                        # time interval in seconds.
-                        # set how fast is migration speed changed.
-                        change_speed_interval = 1
-                        # speed is changed x time per min max interval
-                        count_of_change = 10
-                        not_wait_for_migration = yes
-                        type = migration_multi_host_downtime_and_speed
-                    - ping-pong-stress:
-                        # amount of memory used for migration stress
-                        # amount of memory shouldn't be too high otherwise
-                        # migration will never end
-                        only after_login_vm
-                        type = migration_multi_host_ping_pong
-                        # stress_memory should be less than troughput of
-                        # migration
-                        stress_memory = 50
-                        migrate_count = 3
-                        migration_timeout = 240
-                        variants:
-                            - @no_stress:
-                                stress_type = none
-                            - cpu_memory:
-                                stress_type = cpu_memory
-                            - disk:
-                                disk_usage = 200
-                                stress_type = disk
-                            - all:
-                                stress_type = all
+
+            - migration_multi_host_with_file_transfer: install setup image_copy unattended_install.cdrom
+                type = migration_multi_host_with_file_transfer
+                vms = "vm1"
+                start_vm = no
+                kill_vm_on_error = yes
+                used_mem = 1024
+                mig_timeout = 4800
+                disk_prepare_timeout = 360
+                comm_port = 13234
+                #path where file is stored on guest.
+                guest_path = "/tmp/file"
+                #size of generated file.
+                file_size = 500
+                transfer_timeout = 240
+                #Transfer speed in Mb
+                transfer_speed = 100
+                #Count of migration during file transfer.
+                migrate_count = 3
 
             - cpuflags_multi_host:
                 type = cpuflags
@@ -1483,11 +1379,6 @@ variants:
         virt_test_type = kvm
         type = block_stream
         alive_test_cmd = uname -a
-
-    - block_mirror:
-        virt_test_type = kvm
-        type = block_mirror
-        block_mirror_cmd = drive_mirror
 
     - stop_continue: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm libvirt
@@ -1976,9 +1867,6 @@ variants:
     - qmp_basic: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm
         type = qmp_basic
-        monitors = qmp1
-        monitor_type = qmp
-        vcpu_thread_pattern = "u'thread_id':\s+(\d+)"
 
     - qmp_basic_rhel6: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm
@@ -2206,7 +2094,6 @@ variants:
         # this script is used to setup test env for (linux)guest/host
         # before performance testing
         # rh_perf_envsetup_script = scripts/rh_perf_envsetup.sh
-        client = vm2
         variants:
             - guest_guest:
                 vms += " vm2"
@@ -2215,82 +2102,6 @@ variants:
                 client = localhost
                 # to test exthost <-> guest:
                 # client = <external host ip>
-    - netperf_win:
-        only Windows
-        # only support guest run netserver and host run netperf now.
-        host = localhost
-        # this is a default value in test env
-        # please change this to your client machine ip if your guest
-        # uses static ip
-        client = vm2
-        type = netperf
-        kill_vm = yes
-        image_snapshot = yes
-        pci_model_nic1 = virtio_net
-        # Please update following comments params when you need special cfg for
-        # your test nic cards
-        # please fix the mac for nic2 if you needed with this, this can be empty
-        # nic_mac_nic2 =
-        # bridge_nic1 =
-        # please add the physical nic you want to add to your private bridge
-        # this can be empty
-        # physical_nic =
-        # bridge_force_create=yes
-        pci_model_nic2 = e1000
-        nics += ' nic2'
-        nic_mode = tap
-        netperf_files = netperf-2.4.5.tar.bz2 wait_before_data.patch
-        setup_cmd = "cd /tmp && rm -rf netperf-2.4.5 && tar xvfj netperf-2.4.5.tar.bz2 && cd netperf-2.4.5 && patch -p0 < ../wait_before_data.patch && ./configure --enable-burst && make"
-        guest_ver_cmd = "ver"
-        netperf_with_numa = yes
-        # configure netperf test parameters
-        l = 30
-        protocols = "TCP_STREAM TCP_MAERTS TCP_RR"
-        sessions_rr="1 25 50 100"
-        sessions="1 2 4"
-        sizes_rr="256"
-        sizes="256 1024 4096 16384 65535"
-        numa_node = -1
-        username_client = root
-        password_client = 123456
-        shell_client_client = ssh
-        shell_port_client = 22
-        shell_prompt_client =  \[root@.{0,50}][\#\$]
-        shell_port_host = 22
-        password_host = 123456
-        username_host = root
-        os_type_client = linux
-        os_type_host = linux
-        shell_prompt_host =  \[root@.{0,50}][\#\$]
-        ver_cmd = rpm -qa |grep kvm
-        variants:
-            - netperf_exe:
-                use_cygwin = no
-                netserv_start_cmd = "(dir C:\temp || mkdir C:\temp) && start /b D:\netserver.exe"
-                variants:
-                    - default_setting:
-                    - best_registry_setting:
-                        reboot_after_config = yes
-                        # For more information about windows registry setting document, please refer to http://www.linux-kvm.org/page/WindowsGuestDrivers/kvmnet/registry
-                        config_cmds = afd_cmd1,afd_cmd2,afd_cmd3, tcpip_cmd1,tcpip_cmd2
-                        afd_cmd1 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v DefaultSendWindow /d 0x00100000 /t REG_DWORD /f
-                        afd_cmd2 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v DefaultReceiveWindow /d 0x00100000 /t REG_DWORD /f
-                        afd_cmd3 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /d 0x00004000 /t REG_DWORD /f
-                        tcpip_cmd1 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /d 0x00000001 /t REG_DWORD /f
-                        tcpip_cmd2 = reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpWindowSize /d 0x00100000 /t REG_DWORD /f
-                        disable_tcp_heuristics_cmd = "netsh int tcp set heuristics disabled"
-                        disabled_tcp_autotuning_cmd = "netsh int tcp set global autotuninglevel=disabled"
-                        enable_ctcp_cmd = "netsh int tcp set global congestionprovider=ctcp"
-                        Win2008, Win2008r2, Win7:
-                            config_cmds += ,disable_tcp_heuristics_cmd,disabled_tcp_autotuning_cmd,enable_ctcp_cmd
-            - netperf_cygwin:
-                use_cygwin = yes
-                netperf_src = D:\netperf\netperf-2.4.5
-                cygwin_root = C:\rhcygwin\home\Administrator
-                cygwin_start = C:\rhcygwin\Cygwin.bat -i /Cygwin-Terminal.ico -
-                netserv_pattern = "hostname\s+[\d+\.]+\s+port\s+\d+"
-                netserv_start_cmd = netserver
-                netperf_install_cmd = cd netperf-2.4.5; ./configure --enable-burst; make; make install
 
     - ntttcp:
         virt_test_type = kvm libvirt
@@ -2654,9 +2465,9 @@ variants:
                             - virtserialport:
                                 variants:
                                     - serialport_small:
-                                        virtio_console_params = "serialport@4:serialport@2:serialport@4:serialport@8:8"
+                                        virtio_console_params = "serialport@4:serialport@2:serialport@4:serialport@8:8
                                     - serialport_big:
-                                        virtio_console_params = "serialport@16384:serialport@2048:serialport@4096:serialport@8192:8192"
+                                        virtio_console_params = "serialport@16384:serialport@2048:serialport@4096:serialport@8192:8192
                             - virtconsole:
                                 variants:
                                     - console_small:
@@ -2668,7 +2479,7 @@ variants:
                                     - mixed_small:
                                         virtio_console_params = "serialport@4:console@2:serialport@5:console@6:8"
                                     - mixed_big:
-                                        virtio_console_params = "console@16384:serialport@2048:console@4096:serialport@8192:8192"
+                                        virtio_console_params = "console@16384:serialport@2048:console@4096:serialport@8192:8192
                     - performance:
                         virtio_console_test = perf
                         virtio_console_params = "serialport;serialport@1000000"
