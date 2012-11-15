@@ -3969,6 +3969,28 @@ def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
     session.close()
 
 
+def install_disktest_on_vm(test, vm, src_dir, dst_dir):
+    """
+    Install stress to vm.
+
+    @param vm: virtual machine.
+    @param src_dir: Source path.
+    @param dst_dir: Instaltation path.
+    """
+    disktest_src = src_dir
+    disktest_dst = os.path.join(dst_dir, "disktest")
+    session = vm.wait_for_login()
+    session.cmd("rm -rf %s" % (disktest_dst))
+    session.cmd("mkdir -p %s" % (disktest_dst))
+    session.cmd("sync")
+    vm.copy_files_to(disktest_src, disktest_dst)
+    session.cmd("sync")
+    session.cmd("cd %s; make;" %
+                    (os.path.join(disktest_dst, "src")))
+    session.cmd("sync")
+    session.close()
+
+
 def qemu_has_option(option, qemu_path):
     """
     Helper function for command line option wrappers
