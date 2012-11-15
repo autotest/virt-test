@@ -1266,9 +1266,9 @@ class VM(virt_vm.BaseVM):
                 downscript = nic_params.get("nic_downscript")
                 vhost = nic_params.get("vhost")
                 if script:
-                    script = utils_misc.get_path(root_dir, script)
+                    script = utils_misc.get_path(self.virt_dir, script)
                 if downscript:
-                    downscript = utils_misc.get_path(root_dir, downscript)
+                    downscript = utils_misc.get_path(self.virt_dir, downscript)
                 # setup nic parameters as needed
                 nic = vm.add_nic(**dict(nic)) # add_netdev if netdev_id not set
                 # gather set values or None if unset
