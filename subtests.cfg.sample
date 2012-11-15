@@ -2136,8 +2136,9 @@ variants:
         cpu_threads_chk_cmd = "lscpu | grep '^Thread'"
         chk_timeout = 240
 
-    - ksm_overcommit: install setup image_copy unattended_install.cdrom
-        only Linux
+    - ksm_overcommit:
+        no Windows
+        no hugepages
         # Don't preprocess any vms as we need to change its params
         vms = ''
         image_snapshot = yes
@@ -2150,9 +2151,10 @@ variants:
         ksm_overcommit_ratio = 3
         # Max paralel runs machine
         ksm_parallel_ratio = 4
-        # Host memory reserve (default - best fit for used mem)
-        # ksm_host_reserve = 512
-        # ksm_guest_reserve = 1024
+        # Host memory reserve
+        ksm_host_reserve = 512
+        ksm_guest_reserve = 1024
+        netdst_equal = private
         variants:
             - ksm_serial:
                 ksm_mode = "serial"
