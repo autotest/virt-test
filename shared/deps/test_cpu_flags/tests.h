@@ -71,7 +71,7 @@ int ssse3();
 int fma4();
 int xop();
 void stress(inst in);
-void stressmem(unsigned int sizeMB);
+void stressmem(unsigned int sizeMB, unsigned int fillMB);
 
 
 #endif /* TEST_H_ */
