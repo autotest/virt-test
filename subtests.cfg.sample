@@ -1978,8 +1978,6 @@ variants:
     - ksm_overcommit:
         no Windows
         no hugepages
-        pre_command = "grep -q el5 /proc/version && ([ -e /dev/ksm ] && true || modprobe ksm && ksmctl start 5000 50 ) || (echo 1 > /sys/kernel/mm/ksm/run && echo 5000 > /sys/kernel/mm/ksm/pages_to_scan && echo 50 > /sys/kernel/mm/ksm/sleep_millisecs); scripts/private_br.sh notftp;"
-        post_command = "scripts/private_br.sh;"
         # Don't preprocess any vms as we need to change its params
         vms = ''
         image_snapshot = yes
@@ -1994,8 +1992,7 @@ variants:
         # Host memory reserve
         ksm_host_reserve = 512
         ksm_guest_reserve = 1024
-        netdst = private
-        nic_script = scripts/qemu-ifup-vbr0
+        netdst_equal = private
         variants:
             - ksm_serial:
                 ksm_mode = "serial"
