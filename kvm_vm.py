@@ -1304,16 +1304,28 @@ class VM(virt_vm.BaseVM):
                 tftp = nic_params.get("tftp")
                 vhost = nic_params.get("vhost")
                 if script:
-                    script = virt_utils.get_path(root_dir, script)
+                    script = utils_misc.get_path(self.virt_dir, script)
                 if downscript:
-                    downscript = virt_utils.get_path(root_dir, downscript)
-                if tftp:
-                    tftp = virt_utils.get_path(root_dir, tftp)
-                if nic_params.get("nic_mode") == "tap":
-                    try:
-                        tapfd = vm.tapfds[vlan]
-                    except Exception:
-                        tapfd = None
+                    downscript = utils_misc.get_path(self.virt_dir, downscript)
+                # setup nic parameters as needed
+                nic = vm.add_nic(**dict(nic)) # add_netdev if netdev_id not set
+                # gather set values or None if unset
+                vlan = int(nic.get('vlan'))
+                netdev_id = nic.get('netdev_id')
+                device_id = nic.get('device_id')
+                mac = nic.get('mac')
+                nic_model = nic.get("nic_model")
+                nic_extra = nic.get("nic_extra_params")
+                netdev_extra = nic.get("netdev_extra_params")
+                bootp = nic.get("bootp")
+                if nic.get("tftp"):
+                    tftp = utils_misc.get_path(root_dir, nic.get("tftp"))
+                else:
+                    tftp = None
+                nettype = nic.get("nettype", "bridge")
+                # don't force conversion of add_nic()/add_net() optional parameter
+                if nic.has_key('tapfd'):
+                    tapfd = int(nic.tapfd)
                 else:
                     tapfd = None
                 qemu_cmd += add_net(help, vlan, nic_params.get("nic_mode", "user"),
