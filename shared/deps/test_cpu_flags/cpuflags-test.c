@@ -5,18 +5,20 @@
 
 void print_help(){
 	printf(
-			"  --sse3                     test sse3 instruction.\n"
-			"  --ssse3                    test ssse3 instruction.\n"
-			"  --sse4                     test sse4 instruction.\n"
-			"  --sse4a                    test sse4a instruction.\n"
-			"  --avx                      test avx instruction.\n"
-			"  --aes                      test aes instruction.\n"
-			"  --pclmul                   test carry less multiplication.\n"
-			"  --rdrand                   test rdrand instruction.\n"
-			"  --fma4                     test fma4 instruction.\n"
-			"  --xop                      test fma4 instruction.\n"
-			"  --stress n_cpus,avx,aes    start stress on n_cpus.and cpuflags.\n"
-			"  --stressmem mem_size       start stressmem with mem_size.\n");
+			"  --sse3                           test sse3 instruction.\n"
+			"  --ssse3                          test ssse3 instruction.\n"
+			"  --sse4                           test sse4 instruction.\n"
+			"  --sse4a                          test sse4a instruction.\n"
+			"  --avx                            test avx instruction.\n"
+			"  --aes                            test aes instruction.\n"
+			"  --pclmul                         test carry less multiplication.\n"
+			"  --rdrand                         test rdrand instruction.\n"
+			"  --fma4                           test fma4 instruction.\n"
+			"  --xop                            test fma4 instruction.\n"
+			"  --stress n_cpus,avx,aes          start stress on n_cpus.and cpuflags.\n"
+			"  --stressmem mem_size[,max_mem]   start stressmem\n"
+			"                                   mem_size/s amount of mem in MB filled by one second.\n"
+			"                                   max_mem in MB which can be use for filling.\n");
 }
 
 
@@ -64,6 +66,24 @@ inst parse_Inst(char * optarg){
 	return i;
 }
 
+void parse_mem(char * optarg, unsigned int *stressmem, unsigned int *maxmem) {
+	char * pch;
+
+	pch = strtok(optarg, ",");
+	if (pch != NULL ) {
+		*stressmem = (unsigned int) atoi(pch);
+		pch = strtok(NULL, ",");
+		if (pch != NULL ) {
+			*maxmem = (unsigned int) atoi(pch);
+		} else {
+			*maxmem = *stressmem;
+		}
+	} else {
+		print_help();
+		exit(-1);
+	}
+}
+
 int main(int argc, char **argv) {
 	int c;
 	int digit_optind = 0;
@@ -101,9 +121,13 @@ int main(int argc, char **argv) {
 			case 0:
 				stress(parse_Inst(optarg));
 				break;
-			case 1:
-				stressmem(atoi(optarg));
+			case 1: {
+				unsigned int p_maxmem = 0;
+				unsigned int p_stressmem = 0;
+				parse_mem(optarg, &p_stressmem, &p_maxmem);
+				stressmem(p_maxmem, p_stressmem);
 				break;
+			}
 			case 2:
 				ret += sse3();
 				break;
@@ -148,6 +172,7 @@ int main(int argc, char **argv) {
 		}
 		opt_count += 1;
 	}
+
 	if (ret > 0) {
 		printf("%d test fail.\n", ret);
 		exit(-1);
