@@ -1,7 +1,7 @@
 import os, logging
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, utils_test
+from virttest import utils_misc, utils_test, data_dir
 
 
 @error.context_aware
@@ -38,7 +38,8 @@ def run_image_copy(test, params, env):
 
     image = '%s.%s' % (os.path.basename(image_name), image_format)
     src_path = os.path.join(mount_dest_dir, image)
-    dst_path = '.'.join([image_name, image_format])
+    dst_path = '%s/%s.%s' % (data_dir.get_data_dir(), params['image_name'],
+                             params['image_format'])
     pwd = os.path.join(test.bindir, "images")
     dst_path = os.path.join(test.bindir, dst_path)
     if params.get("rename_error_image", "no") == "yes":
