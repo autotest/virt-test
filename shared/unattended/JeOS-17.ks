@@ -27,6 +27,8 @@ ethtool
 tcpdump
 tar
 bzip2
+pciutils
+usbutils
 -yum-utils
 -cryptsetup
 -vconfig
@@ -91,7 +93,6 @@ bzip2
 -sssd
 -pcmciautils
 -tree
--usbutils
 -hunspell
 -irda-utils
 -time
@@ -150,9 +151,7 @@ bzip2
 -audit
 -e2fsprogs-libs
 -e2fsprogs
--pciutils-libs
 -biosdevname
--pciutils
 -dbus-glib
 -libdrm
 -setserial
