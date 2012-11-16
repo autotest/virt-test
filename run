@@ -219,7 +219,7 @@ if __name__ == '__main__':
             sys.exit(-1)
         tests = options.tests.split(" ")
         cartesian_parser.parse_string("only %s" % ", ".join(tests))
-    elif options.type and not options.tests:
+    elif options.type and not options.tests and not options.config:
         if options.type == 'kvm':
             cartesian_parser.parse_string("only migrate")
         elif options.type == 'libvirt':
