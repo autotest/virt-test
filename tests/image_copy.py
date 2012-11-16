@@ -1,7 +1,7 @@
 import os, logging
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc
+from virttest import utils_misc, data_dir
 
 
 def run_image_copy(test, params, env):
@@ -30,7 +30,7 @@ def run_image_copy(test, params, env):
     image = '%s.%s' % (os.path.split(params['image_name'])[1],
                        params['image_format'])
     src_path = os.path.join(mount_dest_dir, image)
-    dst_path = '%s.%s' % (params['image_name'], params['image_format'])
+    dst_path = '%s/%s.%s' % (data_dir.get_data_dir(), params['image_name'], params['image_format'])
     cmd = 'cp %s %s' % (src_path, dst_path)
 
     if not utils_misc.mount(src, mount_dest_dir, 'nfs', 'ro'):
