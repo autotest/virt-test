@@ -213,10 +213,6 @@ if __name__ == '__main__':
                                       os.path.join(d, 'qemu-io'))
 
     if options.type and options.tests:
-        if options.config:
-            standalone_test.print_stdout("You can't use -c together "
-                                         "with -t or --tests")
-            sys.exit(-1)
         tests = options.tests.split(" ")
         cartesian_parser.parse_string("only %s" % ", ".join(tests))
     elif options.type and not options.tests and not options.config:
