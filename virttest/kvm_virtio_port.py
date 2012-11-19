@@ -199,13 +199,9 @@ class GuestWorker(object):
         timeout = 10
         if self.session.cmd_status(cmd_already_compiled_chck):
             # Copy virtio_console_guest.py into guests
-            try:
-                base_path = os.environ['AUTODIR']
-            except KeyError:
-                base_path = os.path.dirname(data_dir.get_data_dir())
+            base_path = os.path.dirname(data_dir.get_data_dir())
             vksmd_src = os.path.join(base_path, 'scripts',
                                                 'virtio_console_guest.py')
-            dst_dir = "/tmp"
 
             self.vm.copy_files_to(vksmd_src, guest_script_path)
 
