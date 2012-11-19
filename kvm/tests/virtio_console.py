@@ -634,13 +634,20 @@ def run_virtio_console(test, params, env):
             time.sleep(test_time)
             exit_event.set()
             # TEST END
-            logging.debug('Joining th1')
-            threads[0].join()
+            workaround_unfinished_threads = False
+            logging.debug('Joining %s', threads[0])
+            threads[0].join(5)
+            if threads[0].isAlive():
+                workaround_unfinished_threads = True
+                logging.debug("Unable to destroy the thread %s", threads[0])
             tmp = "%d data sent; " % threads[0].idx
             err = ""
             for thread in threads[1:]:
                 logging.debug('Joining %s', thread)
-                thread.join()
+                thread.join(5)
+                if thread.isAlive():
+                    workaround_unfinished_threads = True
+                    logging.debug("Unable to destroy the thread %s", thread)
                 tmp += "%d, " % thread.idx
                 if thread.ret_code:
                     err += "%s, " % thread
@@ -658,6 +665,13 @@ def run_virtio_console(test, params, env):
 
             guest_worker.safe_exit_loopback_threads([send_pt], recv_pts)
 
+            for thread in threads:
+                if thread.isAlive():
+                    del exit_event
+                    del threads[:]
+                    raise error.TestError("Not all threads finished.")
+            if workaround_unfinished_threads:
+                logging.debug("All threads finished at this point.")
             del exit_event
             del threads[:]
 
@@ -884,10 +898,13 @@ def run_virtio_console(test, params, env):
 
         error.context("Stopping loopback", logging.info)
         exit_event.set()
-        logging.debug('Joining sender thread')
-        threads[0].join()
-        logging.debug('Joining receiver thread')
-        threads[1].join()
+        workaround_unfinished_threads = False
+        for thread in threads:
+            logging.debug('Joining %s', thread)
+            thread.join(5)
+            if thread.isAlive():
+                workaround_unfinished_threads = True
+                logging.debug("Unable to destroy the thread %s", thread)
         logging.info('%d data sent; %d data received and verified; %d '
                      'interruptions %ds each.', threads[0].idx, threads[1].idx,
                      no_repeats, test_time)
@@ -911,6 +928,14 @@ def run_virtio_console(test, params, env):
 
         # VM might be recreated se we have to reconnect.
         guest_worker.safe_exit_loopback_threads([send_pt], [recv_pt])
+
+        for thread in threads:
+            if thread.isAlive():
+                del exit_event
+                del threads[:]
+                raise error.TestError("Not all threads finished.")
+        if workaround_unfinished_threads:
+            logging.debug("All threads finished at this point.")
 
         del exit_event
         del threads[:]
@@ -1204,16 +1229,19 @@ def run_virtio_console(test, params, env):
         # FINISH
         exit_event.set()
         # Send thread might fail to exit when the guest stucks
-        i = 30
-        while threads[0].isAlive():
-            if i <= 0:
-                raise error.TestFail("Send thread did not finish")
-            time.sleep(1)
-            i -= 1
+        workaround_unfinished_threads = False
+        threads[0].join(5)
+        if threads[0].isAlive():
+            workaround_unfinished_threads = True
+            logging.debug("Unable to destroy the thread %s", threads[0])
         tmp = "%d data sent; " % threads[0].idx
         err = ""
+
         for thread in threads[1:]:
-            thread.join()
+            thread.join(5)
+            if thread.isAlive():
+                workaround_unfinished_threads = True
+                logging.debug("Unable to destroy the thread %s", thread)
             tmp += "%d, " % thread.idx
             if thread.ret_code:
                 err += "%s, " % thread
@@ -1226,6 +1254,14 @@ def run_virtio_console(test, params, env):
 
         # CLEANUP
         guest_worker.safe_exit_loopback_threads([ports[0]], ports[1:])
+
+        for thread in threads:
+            if thread.isAlive():
+                del exit_event
+                del threads[:]
+                raise error.TestError("Not all threads finished.")
+        if workaround_unfinished_threads:
+            logging.debug("All threads finished at this point.")
         del exit_event
         del threads[:]
         cleanup(vm, guest_worker)
