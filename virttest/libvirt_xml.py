@@ -151,6 +151,8 @@ class LibvirtXML(LibvirtXMLBase):
         for guest in xmltreefile.findall('guest'):
             os_type_name = guest.find('os_type').text
             # Multiple guest definitions can share same os_type (e.g. hvm, pvm)
+            if os_type_name == 'xen':
+                os_type_name = 'pv'
             amm = oamm.get(os_type_name, {})
             for arch in guest.findall('arch'):
                 arch_name = arch.get('name')
