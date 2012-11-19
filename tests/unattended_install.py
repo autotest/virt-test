@@ -120,14 +120,15 @@ class UnattendedInstallConfig(object):
         self.unattended_dir = os.path.join(test.virtdir, 'unattended')
         self.params = params
 
-        attributes = ['kernel_args', 'finish_program', 'cdrom_cd1',
-                      'unattended_file', 'medium', 'url', 'kernel', 'initrd',
-                      'nfs_server', 'nfs_dir', 'install_virtio',
-                      'floppy_name', 'cdrom_unattended', 'boot_path',
-                      'kernel_params', 'extra_params', 'qemu_img_binary',
-                      'cdkey', 'finish_program', 'vm_type', 'process_check', 'vfd_size']
+        self.attributes = ['kernel_args', 'finish_program', 'cdrom_cd1',
+                           'unattended_file', 'medium', 'url', 'kernel',
+                           'initrd', 'nfs_server', 'nfs_dir', 'install_virtio',
+                           'floppy_name', 'cdrom_unattended', 'boot_path',
+                           'kernel_params', 'extra_params', 'qemu_img_binary',
+                           'cdkey', 'finish_program', 'vm_type',
+                           'process_check', 'vfd_size']
 
-        for a in attributes:
+        for a in self.attributes:
             setattr(self, a, params.get(a, ''))
 
         if self.install_virtio == 'yes':
@@ -140,10 +141,12 @@ class UnattendedInstallConfig(object):
         self.tmpdir = test.tmpdir
 
         if getattr(self, 'unattended_file'):
-            self.unattended_file = os.path.join(test.virtdir, self.unattended_file)
+            self.unattended_file = os.path.join(test.virtdir,
+                                                self.unattended_file)
 
         if getattr(self, 'finish_program'):
-            self.finish_program = os.path.join(test.virtdir, self.finish_program)
+            self.finish_program = os.path.join(test.virtdir,
+                                               self.finish_program)
 
         if getattr(self, 'qemu_img_binary'):
             if not os.path.isfile(getattr(self, 'qemu_img_binary')):
@@ -432,7 +435,6 @@ class UnattendedInstallConfig(object):
         ks_param = 'ks=http://%s:%s/%s' % (self.url_auto_content_ip,
                                            self.unattended_server_port,
                                            dest_fname)
-        self.kernel_params = getattr(self, 'kernel_params')
         if 'ks=' in self.kernel_params:
             kernel_params = re.sub('ks\=[\w\d\:\.\/]+',
                                   ks_param,
@@ -442,7 +444,6 @@ class UnattendedInstallConfig(object):
 
         # reflect change on params
         self.kernel_params = kernel_params
-        self.params['kernel_params'] = self.kernel_params
 
 
     def setup_boot_disk(self):
@@ -466,7 +467,7 @@ class UnattendedInstallConfig(object):
             dest_fname = 'ks.cfg'
             if self.params.get('unattended_delivery_method') == 'integrated':
                 ks_param = 'ks=cdrom:/dev/sr0:/isolinux/%s' % dest_fname
-                kernel_params = getattr(self, 'kernel_params')
+                kernel_params = self.kernel_params
                 if 'ks=' in kernel_params:
                     kernel_params = re.sub('ks\=[\w\d\:\.\/]+',
                                            ks_param,
@@ -482,7 +483,7 @@ class UnattendedInstallConfig(object):
                                            'repo=cdrom:/dev/sr0',
                                            kernel_params)
 
-                self.params['kernel_params'] = ''
+                self.kernel_params = None
                 boot_disk = utils_disk.CdromInstallDisk(
                     self.cdrom_unattended,
                     self.tmpdir,
@@ -500,7 +501,7 @@ class UnattendedInstallConfig(object):
                                           self.unattended_server_port,
                                           dest_fname)
                 ks_param = 'ks=%s' % boot_disk.get_url()
-                kernel_params = getattr(self, 'kernel_params')
+                kernel_params = self.kernel_params
                 if 'ks=' in kernel_params:
                     kernel_params = re.sub('ks\=[\w\d\:\.\/]+',
                                           ks_param,
@@ -524,7 +525,7 @@ class UnattendedInstallConfig(object):
                                                'repo=cdrom:/dev/sr0',
                                                kernel_params)
 
-                self.params['kernel_params'] = kernel_params
+                self.kernel_params = kernel_params
             elif self.params.get('unattended_delivery_method') == 'cdrom':
                 boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
                                                       self.tmpdir)
@@ -716,7 +717,7 @@ class UnattendedInstallConfig(object):
 
     def setup_import(self):
         self.unattended_file = None
-        self.params['kernel_params'] = None
+        self.kernel_params = None
 
 
     def setup(self):
@@ -748,6 +749,10 @@ class UnattendedInstallConfig(object):
                              self.medium)
         if self.unattended_file and (self.floppy or self.cdrom_unattended):
             self.setup_boot_disk()
+
+        # Update params dictionary as some of the values could be updated
+        for a in self.attributes:
+            self.params[a] =  getattr(self, a)
 
 
 def start_syslog_server_thread(address, port, tcp):
