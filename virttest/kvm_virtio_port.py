@@ -201,6 +201,7 @@ class GuestWorker(object):
             # Copy virtio_console_guest.py into guests
             try:
                 base_path = os.environ['AUTODIR']
+                base_path = os.path.join(base_path, 'tests', 'virt', 'shared')
             except KeyError:
                 base_path = os.path.dirname(data_dir.get_data_dir())
             vksmd_src = os.path.join(base_path, 'scripts',
