@@ -58,7 +58,16 @@ def run_image_copy(test, params, env):
                                   (src, mount_dest_dir))
 
         error.context("Check the existence of source image")
-        if not os.path.exists(src_path):
+        if os.path.exists("%s.xz" % src_path):
+            logging.debug('Copying image %s (from xz) ...', image)
+            cmd = "xz -cd %s.xz > %s" % (src_path, dst_path)
+        elif os.path.exists("%s.gz" % src_path):
+            logging.debug('Copying image %s (from gzip) ...', image)
+            cmd = "gzip -cd %s.gz > %s" % (src_path, dst_path)
+        elif os.path.exists(src_path):
+            logging.debug('Copying image %s (uncompressed) ...', image)
+            cmd = 'cp %s %s' % (src_path, dst_path)
+        else:
             raise error.TestError('Could not find %s in NFS share' % src_path)
 
         error.context("Copy image '%s' from NFS" % image, logging.info)
