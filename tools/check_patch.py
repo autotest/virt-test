@@ -65,7 +65,7 @@ class VCS(object):
     def guess_vcs_name(self):
         if os.path.isdir(".svn"):
             return "SVN"
-        elif os.path.isdir(".git"):
+        elif os.path.exists(".git"):
             return "git"
         else:
             logging.error("Could not figure version control system. Are you "
@@ -366,8 +366,7 @@ class FileChecker(object):
         self.check_exceptions = ['client/tests/virt/kvm/tests/stepmaker.py']
 
         if self.is_python:
-            logging.debug("Checking file %s",
-                          self.path.replace("./", "autotest/"))
+            logging.debug("Checking file %s", self.path)
         if self.is_python and not self.path.endswith(".py"):
             self.bkp_path = "%s-cp.py" % self.path
             shutil.copyfile(self.path, self.bkp_path)
