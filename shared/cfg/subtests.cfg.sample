@@ -2533,15 +2533,21 @@ variants:
                                 only Linux
                                 virtio_console_test = lseek
                             - rw_host_offline:
+                                # console is always connected to underneath virtserialport.
+                                only virtserialport
                                 virtio_console_test = rw_host_offline
                             - rw_host_offline_big_data:
                                 only Linux
+                                # console is always connected to underneath virtserialport.
+                                only virtserialport
                                 virtio_console_test = rw_host_offline_big_data
                             - rw_blocking_mode:
                                 only Linux
                                 virtio_console_test = rw_blocking_mode
                             - rw_nonblocking_mode:
                                 only Linux
+                                # console uses blocking mode to connect to underneath virtserialport.
+                                only virtserialport
                                 virtio_console_test = rw_nonblocking_mode
                             - basic_loopback:
                                 virtio_console_test = basic_loopback
