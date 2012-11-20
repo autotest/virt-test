@@ -5,11 +5,11 @@ Utility classes and functions to handle Virtual Machine creation using libvirt.
 """
 
 import time, os, logging, fcntl, re, shutil, urlparse, tempfile
-from autotest.client.shared import error, xml_utils
+from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from xml.dom import minidom
 import utils_misc, virt_vm, storage, aexpect, remote, virsh, libvirt_xml
-import data_dir
+import data_dir, xml_utils
 
 
 def libvirtd_restart():
