@@ -1276,6 +1276,27 @@ variants:
                         count_of_change = 10
                         not_wait_for_migration = yes
                         type = migration_multi_host_downtime_and_speed
+                    - ping-pong-stress:
+                        # amount of memory used for migration stress
+                        # amount of memory shouldn't be too high otherwise
+                        # migration will never end
+                        only after_login_vm
+                        type = migration_multi_host_ping_pong
+                        # stress_memory should be less than troughput of
+                        # migration
+                        stress_memory = 50
+                        migrate_count = 3
+                        migration_timeout = 240
+                        variants:
+                            - @no_stress:
+                                stress_type = none
+                            - cpu_memory:
+                                stress_type = cpu_memory
+                            - disk:
+                                disk_usage = 200
+                                stress_type = disk
+                            - all:
+                                stress_type = all
 
             - cpuflags_multi_host:
                 type = cpuflags
