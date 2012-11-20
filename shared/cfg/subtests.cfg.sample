@@ -1921,9 +1921,14 @@ variants:
     - guest_s4: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm libvirt
         type = guest_s4
-        relogin_timeout = 240
-        # params: check_s4_support_cmd, check_s4_cmd, set_s4_cmd
-        # kill_test_s4_cmd, services_up_timeout are set in guest-os.cfg
+        # The following parameters will be overwirtten in guest os's config.
+        s4_support_chk_cmd = "dmesg -c && grep -q disk /sys/power/state"
+        s4_bg_program_setup_cmd = "cd /tmp/; nohup ping localhost"
+        s4_bg_program_chk_cmd = 'pgrep ping'
+        s4_bg_program_kill_cmd = 'pkill ping'
+        s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
+        s4_start_cmd = 'echo disk > /sys/power/state'
+        services_up_timeout = 30
 
     - nic_hotplug: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm
