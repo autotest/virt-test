@@ -358,7 +358,8 @@ class QtreeDisksContainer(object):
         self.disks = []
         for node in nodes:
             if isinstance(node, QtreeDisk):
-                self.disks.append(node)
+                if node.get_qname() != '<null>':
+                    self.disks.append(node)
 
     def parse_info_block(self, info):
         """
