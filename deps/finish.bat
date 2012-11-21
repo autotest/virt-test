@@ -26,5 +26,6 @@ reg add "HKLM\System\CurrentControlSet\Control\CrashControl" /v DumpFile /d %Sys
 reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v bsod /d "D:\autoit3.exe D:\dump_control.au3" /t REG_SZ /f
 reg add "HKLM\System\CurrentControlSet\Control\CrashControl" /v AlwaysKeepMemoryDump /d 1 /t REG_DWORD /f
 reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\Windows Error Reporting" /v Disabled /d 1 /t REG_DWORD /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\vds" /v Start /t REG_DWORD /d 3 /f
 
 echo Post set up finished>  COM1
