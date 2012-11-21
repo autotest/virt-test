@@ -10,7 +10,7 @@ firewall --disabled
 selinux --disabled
 timezone --utc America/New_York
 firstboot --disable
-bootloader --location=mbr --timeout=0 --append="console=tty0 console=ttyS0,115200"
+bootloader --location=mbr --timeout=0 --append="console=tty0 console=ttyS0,115200 plymouth.enable=0"
 zerombr
 poweroff
 services --enabled network
@@ -75,6 +75,7 @@ usbutils
 -pinfo
 -rdate
 -system-config-firewall-tui
+-system-config-firewall-base
 -nfs-utils
 -words
 -cifs-utils
@@ -169,15 +170,39 @@ usbutils
 -procmail
 -libuser
 -polkit
+-rsyslog
 %end
 
 %post --interpreter /usr/bin/python
 import os
 os.system('grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)')
-os.system('dhclient')
-os.system('chkconfig sshd on')
-os.system('iptables -F')
+os.system('dracut --nomdadmconf --nolvmconf -H -f /boot/initramfs-3.3.4-5.fc17.x86_64.img 3.3.4-5.fc17.x86_64')
 os.system('echo 0 > /selinux/enforce')
+os.system('systemctl enable sshd.service')
+os.system('systemctl mask fedora-wait-storage.service')
+os.system('systemctl mask fedora-storage-init-late.service')
+os.system('systemctl mask fedora-storage-init.service')
+os.system('systemctl mask fedora-autoswap.service')
+os.system('systemctl mask fedora-configure.service')
+os.system('systemctl mask fedora-loadmodules.service')
+os.system('systemctl mask fedora-readonly.service')
+os.system('systemctl mask systemd-readahead-collect.service')
+os.system('systemctl mask plymouth-start.service')
+os.system('systemctl mask network.service')
+os.system('systemctl mask remote-fs.target')
+os.system('systemctl mask cryptsetup.target')
+os.system('systemctl mask sys-devices-virtual-tty-tty2.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty3.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty4.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty5.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty6.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty7.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty8.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty9.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty10.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty11.device')
+os.system('systemctl mask sys-devices-virtual-tty-tty12.device')
+os.system('mkdir -p /var/log/journal')
 os.system('echo Post set up finished > /dev/ttyS0')
 os.system('echo Post set up finished > /dev/hvc0')
 %end
