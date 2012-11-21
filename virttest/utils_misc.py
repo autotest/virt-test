@@ -6,7 +6,7 @@ Virtualization test utility functions.
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
 import fcntl, shelve, ConfigParser, sys, UserDict, inspect, tarfile
-import struct, shutil, glob, HTMLParser, urllib, traceback, platform
+import struct, shutil, glob, HTMLParser, urllib, traceback, platform, urllib2
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import logging_manager, git
@@ -4447,7 +4447,7 @@ def get_module_params(sys_path, module_name):
     return module_params
 
 
-def download_file(url, destination, sha1, interactive=False):
+def download_file(url, destination, sha1_url, interactive=False):
     """
     Verifies if file that can be find on url is on destination with right hash.
 
@@ -4456,46 +4456,69 @@ def download_file(url, destination, sha1, interactive=False):
 
     @param url: URL where the file can be found.
     @param destination: Directory in local disk where we'd like the file to be.
-    @param iso_sha1: SHA1 hash for the file.
+    @param sha1_url: URL with a file containing the sha1sum of the file in the
+            form: sha1sum  filename
     @return: True, if file had to be downloaded
              False, if file didn't have to be downloaded
     """
     file_ok = False
     had_to_download = False
+    sha1 = None
+
+    try:
+        logging.info("Verifying expected SHA1 sum from %s", sha1_url)
+        sha1_file = urllib2.urlopen(sha1_url)
+        sha1_contents = sha1_file.read()
+        sha1 = sha1_contents.split(" ")[0]
+        logging.info("Expected SHA1 sum: %s", sha1)
+    except Exception, e:
+        logging.error("Failed to get SHA1 from file: %s", e)
+
     if not os.path.isdir(destination):
         os.makedirs(destination)
+
     path = os.path.join(destination, os.path.basename(url))
     if not os.path.isfile(path):
         logging.warning("File %s not found", path)
-        logging.warning("Expected SHA1 sum: %s", sha1)
         if interactive:
             answer = utils.ask("Would you like to download it from %s?" % url)
         else:
             answer = 'y'
         if answer == 'y':
-            utils.interactive_download(url, path)
+            utils.interactive_download(url, path, "JeOS x86_64 image")
             had_to_download = True
         else:
             logging.warning("Missing file %s", path)
-            return had_to_download
     else:
         logging.info("Found %s", path)
-        logging.info("Expected SHA1 sum: %s", sha1)
         if interactive:
-            answer = utils.ask("Would you like to check %s? It might take a"
-                               "while" % path)
+            if sha1 is None:
+                answer = 'n'
+            else:
+                answer = utils.ask("Would you like to check %s SHA1 sum?" % path)
         else:
             answer = 'y'
+
         if answer == 'y':
             actual_sha1 = utils.hash_file(path, method='sha1')
             if actual_sha1 != sha1:
                 logging.error("Actual SHA1 sum: %s", actual_sha1)
+                if interactive:
+                    answer = utils.ask("The file seems corrupted or outdated. "
+                                       "Would you like to download it?")
+                else:
+                    answer = 'y'
+                if answer == 'y':
+                    logging.info("Updating image to the latest available...")
+                    utils.interactive_download(url, path, "JeOS x86_64 image")
+                    had_to_download = True
+                    file_ok = True
             else:
+                file_ok = True
                 logging.info("SHA1 sum check OK")
         else:
-            logging.info("File %s present, but chose to not verify it",
+            logging.info("File %s present, but did not verify integrity",
                          path)
-            return had_to_download
 
     if file_ok:
         logging.info("%s present, with proper checksum", path)
@@ -4611,9 +4634,11 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
         raise ValueError("Command 7za not installed. Please install p7zip "
                          "(Red Hat based) or the equivalent for your host")
 
+    sha1_file = "SHA1SUM"
     guest_tarball = "jeos-17-64.qcow2.7z"
-    url = os.path.join("http://lmr.fedorapeople.org/jeos/", guest_tarball)
-    tarball_sha1 = "321fc6bacb507a0d30ee6ca7c474800d533cc1a7"
+    base_location = "http://lmr.fedorapeople.org/jeos/"
+    url = os.path.join(base_location, guest_tarball)
+    tarball_sha1_url = os.path.join(base_location, sha1_file)
     destination = os.path.join(base_dir, 'images')
 
     if (interactive and not
@@ -4624,7 +4649,8 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
         answer = "y"
 
     if answer == "y":
-        had_to_download = download_file(url, destination, tarball_sha1)
+        had_to_download = download_file(url, destination, tarball_sha1_url,
+                                        interactive=interactive)
         restore_image = (restore_image or had_to_download)
         tarball_path = os.path.join(destination, guest_tarball)
         if os.path.isfile(tarball_path) and restore_image:
