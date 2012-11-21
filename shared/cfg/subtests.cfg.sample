@@ -1193,6 +1193,7 @@ variants:
                 iterations = 1
                 type = migration_with_reboot
             - with_file_transfer:
+                no JeOS
                 iterations = 1
                 type = migration_with_file_transfer
             - with_autotest:
