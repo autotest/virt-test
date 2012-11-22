@@ -2,6 +2,55 @@
 Linux Virtualization Tests (virt-test)
 ======================================
 
+Really quick start guide (Fedora)
+---------------------------------
+
+At the moment, the most convenient distro to run virt-test on is Fedora,
+since we have the autotest libs packaged on this distro [1].
+
+Install dependencies
+--------------------
+
+Install the p7zip file archiver so you can uncompress the JeOS [2] image.
+
+# yum install -y p7zip
+
+Install the autotest-framework package, to provide the needed autotest libs.
+
+# yum install autotest-framework
+
+Execute the bootstrap script
+------------------------
+
+Let's say you're interested in the kvm tests:
+
+kvm/get_started.py
+
+The script can help you to setup a data dir, copy the sample config files
+to actual config files, and download the JeOS image.
+
+Execute the runner script
+-------------------------
+
+You can execute the main runner script, called run. The script offers you
+some options, all explained in the script help. A really really simple execution
+of the script for kvm tests is:
+
+./run -t kvm
+
+This will execute a subset of the tests available.
+
+Note: If you execute the runner before the bootstrap, things will work,
+but then you won't get prompted and the runner will download the JeOS
+automatically.
+
+[1] If you want to use it without the packaged rpm, you need to have a clone
+of the autotest code (git://github.com/autotest/autotest.git) and set the
+env variable AUTOTEST_PATH pointing to the path of the clone. We do have
+plans to package the libs to more distributions.
+
+[2] JeOS: Minimal guest OS image (x86_64)
+
 Actual documentation website
 ----------------------------
 
