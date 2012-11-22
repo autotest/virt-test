@@ -5,10 +5,7 @@ Program to help setup kvm test environment
 @copyright: Red Hat 2010
 """
 import os, sys, logging
-try:
-    import autotest.common as common
-except ImportError:
-    import common
+import common
 from virttest import utils_misc, data_dir
 
 test_name = "kvm"
