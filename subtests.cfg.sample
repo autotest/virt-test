@@ -2163,15 +2163,18 @@ variants:
                                 only Linux
                                 virtio_console_test = lseek
                             - rw_host_offline:
+                                only virtserialport
                                 virtio_console_test = rw_host_offline
                             - rw_host_offline_big_data:
                                 only Linux
+                                only virtserialport
                                 virtio_console_test = rw_host_offline_big_data
                             - rw_blocking_mode:
                                 only Linux
                                 virtio_console_test = rw_blocking_mode
                             - rw_nonblocking_mode:
                                 only Linux
+                                only virtserialport
                                 virtio_console_test = rw_nonblocking_mode
                             - basic_loopback:
                                 virtio_console_test = basic_loopback
