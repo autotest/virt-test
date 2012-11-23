@@ -10,7 +10,7 @@ import struct, shutil, glob, HTMLParser, urllib, traceback, platform, urllib2
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import logging_manager, git
-import openvswitch
+import openvswitch, data_dir
 
 try:
     import koji
@@ -3732,7 +3732,8 @@ class LinuxKernelBuildHelper(object):
         self.build_target = self.params.get(build_target_key, 'bzImage')
 
         kernel_path_key = '%s_kernel_path' % self.prefix
-        default_kernel_path = os.path.join('/var/tmp/virt_test/images',
+        image_dir = os.path.join(data_dir.get_data_dir(), 'images')
+        default_kernel_path = os.path.join(image_dir,
                                            self.build_target)
         self.kernel_path = self.params.get(kernel_path_key,
                                            default_kernel_path)
