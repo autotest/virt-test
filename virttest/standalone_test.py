@@ -387,9 +387,6 @@ def bootstrap(options):
         print_stdout("Setup error: %s" % reason)
         sys.exit(-1)
 
-    print_stdout(bcolors.HEADER +
-                 "DATA DIR: %s" % data_dir.get_backing_data_dir() +
-                 bcolors.ENDC)
     return True
 
 
@@ -407,6 +404,10 @@ def run_tests(parser):
         os.makedirs(debugdir)
     debuglog = os.path.join(debugdir, "debug.log")
     configure_file_logging(debuglog)
+
+    print_stdout(bcolors.HEADER +
+                 "DATA DIR: %s" % data_dir.get_backing_data_dir() +
+                 bcolors.ENDC)
 
     print_header("DEBUG LOG: %s" % debuglog)
 
