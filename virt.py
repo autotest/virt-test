@@ -77,7 +77,7 @@ class virt(test.test):
 
                     other_subtests_dirs = params.get("other_tests_dirs", "")
                     for d in other_subtests_dirs.split():
-                        #replace split char.
+                        # Replace split char.
                         d = os.path.join(*d.split("/"))
                         subtestdir = os.path.join(tests_dir, d, "tests")
                         if not os.path.isdir(subtestdir):
@@ -103,12 +103,13 @@ class virt(test.test):
                                 subtest_dir = d
                                 break
                         if subtest_dir is None:
-                            msg = "Could not find test file %s.py on tests"\
-                                  "dirs %s" % (t_type, subtest_dirs)
+                            msg = ("Could not find test file %s.py on tests"
+                                   "dirs %s" % (t_type, subtest_dirs))
                             raise error.TestError(msg)
                         # Load the test module
                         f, p, d = imp.find_module(t_type, [subtest_dir])
-                        test_modules.append((t_type, imp.load_module(t_type, f, p, d)))
+                        test_modules.append((t_type,
+                                             imp.load_module(t_type, f, p, d)))
                         f.close()
                     # Preprocess
                     try:
