@@ -40,6 +40,9 @@ def preprocess_image(test, params, image_name):
               os.path.exists(image_filename)):
             create_image = True
 
+        if params.get("backup_image_before_testing", "no") == "yes":
+            image = kvm_storage.QemuImg(params, test.bindir, image_name)
+            image.backup_image(params, test.bindir, "backup", True)
         if create_image:
             image = kvm_storage.QemuImg(params, test.bindir, image_name)
             if not image.create(params):
@@ -144,6 +147,8 @@ def postprocess_image(test, params, image_name):
                 if params.get("restore_image_on_check_error", "no") == "yes":
                     image.backup_image(params, test.bindir, "restore", True)
                 raise e
+        if params.get("restore_image_after_testing", "no") == "yes":
+            image.backup_image(params, test.bindir, "restore", True)
         if params.get("remove_image") == "yes":
             image.remove()
 
