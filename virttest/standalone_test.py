@@ -201,6 +201,7 @@ class Bcolors(object):
         self.PASS = '\033[92m'
         self.SKIP = '\033[93m'
         self.FAIL = '\033[91m'
+        self.WARN = '\033[93m'
         self.ENDC = '\033[0m'
         allowed_terms = ['linux', 'xterm', 'xterm-256color', 'vt100']
         term = os.environ.get("TERM")
@@ -244,6 +245,13 @@ def print_fail(t_elapsed):
     Print FAIL to stdout with FAIL (red) color.
     """
     print_stdout(bcolors.FAIL + "FAIL" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
+
+
+def print_warn(t_elapsed):
+    """
+    Print WARN to stdout with WARN (yellow) color.
+    """
+    print_stdout(bcolors.WARN + "WARN" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
 
 
 def configure_logging():
@@ -382,6 +390,20 @@ def run_tests(parser):
                 finally:
                     t_end = time.time()
                     t_elapsed = t_end - t_begin
+            except error.TestNAError, reason:
+                logging.info("SKIP -> %s: %s", reason.__class__.__name__,
+                             reason)
+                t.stop_file_logging()
+                print_skip()
+                status_dct[dct.get("name")] = False
+                continue
+            except error.TestWarn, reason:
+                logging.info("WARN -> %s: %s", reason.__class__.__name__,
+                             reason)
+                t.stop_file_logging()
+                print_warn(t_elapsed)
+                status_dct[dct.get("name")] = True
+                continue
             except Exception, reason:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 logging.error("")
@@ -399,6 +421,7 @@ def run_tests(parser):
             skip_tag = "%s.%s" % (dct.get("vm_type"), dct.get("shortname"))
             print_stdout("%s:" % skip_tag, end=False)
             print_skip()
+            status_dct[dct.get("name")] = False
             continue
 
         if not current_status:
