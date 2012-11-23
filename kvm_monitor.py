@@ -595,6 +595,24 @@ class HumanMonitor(Monitor):
         return job
 
 
+    def get_backingfile(self, device):
+        """
+        Return "backing_file" path of the device
+
+        @param device: device ID
+
+        @return: string, backing_file path
+        """
+        backing_file = None
+        block_info = self.query("block")
+        try:
+            pattern = "%s:.*backing_file=([\w./]*)" % device
+            backing_file = re.search(pattern, block_info, re.M).group(1)
+        except Exception:
+            pass
+        return backing_file
+
+
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
         """
         Migrate.
@@ -1378,6 +1396,24 @@ class QMPMonitor(Monitor):
         except Exception:
             pass
         return job
+
+
+    def get_backingfile(self, device):
+        """
+        Return "backing_file" path of the device
+
+        @param device: device ID
+
+        @return: string, backing_file path
+        """
+        backing_file = None
+        block_info = self.query("block")
+        try:
+            image_info = filter(lambda x:x["device"] == device, block_info)[0]
+            backing_file = image_info["inserted"].get("backing_file")
+        except Exception:
+            pass
+        return backing_file
 
 
     def getfd(self, fd, name):
