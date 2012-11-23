@@ -4222,6 +4222,37 @@ variants:
                 stap_script_file = vm_state_notify.stp
                 cmds_exec = monitor:stop;cont
 
+    - block_stream:
+        only Host_RHEL.6
+        no RHEL.6.1
+        no RHEL.6.2
+        kill_vm = yes
+        alive_check_cmd = dir
+        variants:
+            - when_boot:
+                type = block_stream_boot
+            - when_reboot:
+                pre_cmd = "reboot"
+                type = block_stream_boot
+            - set_speed:
+                type = block_stream_set_speed
+                limited_speed = 10
+                variants:
+                    - set_limited_speed:
+                    - reset_limited_speed:
+                        init_speed = 8
+            - cancel:
+                type = block_stream_cancel
+                wait_time = 5
+                variants:
+                    - sync:
+                    - async:
+                        limited_speed = 10
+            - drop_backingfile:
+                type = block_stream_drop_backingfile
+                limited_speed = 10
+                snapshot_check_cmd = "lsof -p %s|awk '{print $9}'|grep ^/"
+
  # Internal case configuration end. Don't add any case below this line.
  # (THIS LINE IS RESERVED FOR MERGE)
  # (THIS LINE IS RESERVED FOR MERGE)
