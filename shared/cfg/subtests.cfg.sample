@@ -3456,9 +3456,20 @@ variants:
         # Specify the boot device name which you want to test here.
         boot_device = "iPXE"
 
-    - fail-test:
-        virt_test_type = libvirt kvm
+    - fail_test:
+        virt_test_type = libvirt kvm openvswitch v2v
         type = fail
+        vms = ""
+
+    - warning_test:
+        virt_test_type = libvirt kvm openvswitch v2v
+        type = warning
+        vms = ""
+
+    - skip_test:
+        virt_test_type = libvirt kvm openvswitch v2v
+        type = skip
+        vms = ""
 
     - shutdown: install setup image_copy unattended_install.cdrom
         virt_test_type = libvirt kvm
