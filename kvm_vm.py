@@ -1370,20 +1370,13 @@ class VM(virt_vm.BaseVM):
         qemu_cmd += add_smp(help)
 
         cpu_model = params.get("cpu_model")
-        flags = params.get("cpu_model_flags", "")
-
-        use_default_cpu_model = True
         if cpu_model:
-            for model in re.split(",", cpu_model):
-                if model in support_cpu_model:
-                    use_default_cpu_model = False
-                    cpu_model = model
-                    break
+            if params.get("auto_cpu_model") == "yes":
+                for model in re.split(",", cpu_model):
+                    if model in support_cpu_model:
+                        cpu_model = model
+                        break
 
-        if use_default_cpu_model:
-            cpu_model = params.get("default_cpu_model")
-
-        if cpu_model:
             vendor = params.get("cpu_model_vendor")
             flags = params.get("cpu_model_flags")
             family = params.get("cpu_family")
