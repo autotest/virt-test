@@ -1,7 +1,7 @@
 import os, logging, imp, sys, time, traceback
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, env_process
+import utils_misc, env_process, data_dir
 
 
 _root_path = os.path.join(sys.modules[__name__].__file__, "..", "..")
@@ -183,12 +183,18 @@ class Test(object):
 
 
 def print_stdout(sr, end=True):
-    sys.stdout.switch()
+    try:
+        sys.stdout.switch()
+    except AttributeError:
+        pass
     if end:
         print(sr)
     else:
         print(sr),
-    sys.stdout.switch()
+    try:
+        sys.stdout.switch()
+    except AttributeError:
+        pass
 
 
 class Bcolors(object):
@@ -295,6 +301,96 @@ def configure_file_logging(logfile):
     logger.addHandler(file_handler)
 
     return file_handler
+
+
+def create_config_files(options):
+    """
+    Check if the appropriate configuration files are present.
+
+    If the files are not present, create them.
+
+    @param options: OptParser object with options.
+    """
+    test_dir = os.path.dirname(sys.modules[__name__].__file__)
+    shared_dir = os.path.abspath(os.path.join(test_dir, 'shared', 'cfg'))
+    if options.type:
+        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
+                                                options.type))
+    elif options.config:
+        test_dir = os.path.dirname(os.path.dirname(options.config))
+        test_dir = os.path.abspath(test_dir)
+    utils_misc.create_config_files(test_dir, shared_dir, interactive=False)
+
+
+def bootstrap(options):
+    """
+    Bootstrap process (download the appropriate JeOS file to data dir).
+
+    This function will check whether the JeOS is in the right location of the
+    data dir, if not, it will download it non interactively.
+
+    @param options: OptParse object with program command line options.
+    """
+    test_dir = os.path.dirname(sys.modules[__name__].__file__)
+
+    if options.type:
+        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
+                                                options.type))
+    elif options.config:
+        test_dir = os.path.dirname(os.path.dirname(options.config))
+        test_dir = os.path.abspath(test_dir)
+
+    check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+    online_docs_url = "https://github.com/autotest/virt-test/wiki"
+
+    kwargs = {'test_name': options.type,
+              'test_dir': test_dir,
+              'base_dir': data_dir.get_data_dir(),
+              'default_userspace_paths': None,
+              'check_modules': check_modules,
+              'online_docs_url': online_docs_url,
+              'restore_image': options.restore,
+              'interactive': False}
+
+    # Tolerance we have without printing a message for the user to wait (3 s)
+    tolerance = 3
+    failed = False
+    wait_message_printed = False
+
+    bg = utils.InterruptedThread(utils_misc.virt_test_assistant, kwargs=kwargs)
+    t_begin = time.time()
+    bg.start()
+
+    while bg.isAlive():
+        t_elapsed = time.time() - t_begin
+        if t_elapsed > tolerance and not wait_message_printed:
+            print_stdout("Running setup. Please wait...")
+            wait_message_printed = True
+        time.sleep(0.1)
+
+    reason = None
+    try:
+        bg.join()
+    except Exception, e:
+        failed = True
+        reason = e
+
+    t_end = time.time()
+    t_elapsed = t_end - t_begin
+
+    print_stdout(bcolors.HEADER + "SETUP:" + bcolors.ENDC, end=False)
+
+    if not failed:
+        print_pass(t_elapsed)
+    else:
+        print_fail(t_elapsed)
+        print_stdout("Setup error: %s" % reason)
+        sys.exit(-1)
+
+    print_stdout(bcolors.HEADER +
+                 "DATA DIR: %s" % data_dir.get_backing_data_dir() +
+                 bcolors.ENDC)
+    return True
 
 
 def run_tests(parser):
