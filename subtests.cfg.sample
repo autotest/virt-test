@@ -3583,7 +3583,6 @@ variants:
                 image_aio = threads
 
     - iometer_performance:
-        no Host_RHEL.6
         only Windows
         type = iometer_windows
         images += " disk1"

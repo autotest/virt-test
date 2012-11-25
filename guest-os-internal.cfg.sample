@@ -912,12 +912,11 @@ variants:
             create_partition_cmd = "echo select disk 1 > imDiskpart.script && echo create partition primary >> imDiskpart.script && echo assign letter=E >> imDiskpart.script && echo exit >> imDiskpart.script && diskpart /s imDiskpart.script"
             format_cmd = format E: /FS:NTFS /V:local /Q /y
             cdrom_cd1 = isos/windows/winutils.iso
-            iometer_installation_cmd = "cmd /c D:\autoit3.exe D:\Iometer\iometer.au3"
-            iometer_reg = "cmd /c D:\autoit3.exe D:\Iometer\iometer-reg.au3"
-            iometer_run = "cmd /c C:\Iometer\Iometer.exe /c D:\Iometer\iometer-block-2-256-queue-1-128-E.icf /r C:\autotest_iometer_result.csv"
+            iometer_installation_cmd = "cmd /c WIN_UTILS:\autoit3.exe WIN_UTILS:\Iometer\iometer.au3"
+            iometer_reg = "cmd /c WIN_UTILS:\autoit3.exe WIN_UTILS:\Iometer\iometer-reg.au3"
+            iometer_run = "cmd /c C:\Iometer\Iometer.exe /c WIN_UTILS:\Iometer\iometer-block-2-256-queue-1-128-E.icf /r C:\autotest_iometer_result.csv"
             iometer_timeout = 23400
             guest_path = "C:\autotest_iometer_result.csv"
-            host_path = "debug/autotest_iometer_result_%s_%s.csv"
         sysprep:
             shell_client = telnet
             shell_port = 23
