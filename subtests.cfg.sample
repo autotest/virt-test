@@ -2743,6 +2743,7 @@ variants:
                 test_timeout = 1800
 
     - seabios: install setup image_copy unattended_install.cdrom
+        only Host_RHEL.6
         type = seabios
         start_vm = no
         restart_vm = no
@@ -2750,9 +2751,15 @@ variants:
         boot_menu = on
         enable_sga = yes
         boot_menu_key = "f12"
+        restart_key = "ctrl-alt-delete"
         boot_menu_hint = "Press F12 for boot menu"
         # Specify the boot device name which you want to test here.
         boot_device = "iPXE"
+        # SGA Bios info message, using sep as ";"
+        sgabios_info = "Google, Inc.;"
+        sgabios_info += "Serial Graphics Adapter 07/26/11;"
+        sgabios_info += "SGABIOS $Id: sgabios.S 8 2010-04-22 00:03:40Z nlaredo $ (mockbuild@hs20-bc2-3.build.redhat.com) Tue Jul 26 15:05:08 UTC 2011;"
+        sgabios_info += "4 0"
 
     - shutdown:
         type = shutdown
