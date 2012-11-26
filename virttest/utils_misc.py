@@ -1729,7 +1729,7 @@ def generate_random_string(length, ignore_str=string.punctuation,
     @return: The generated random string.
     """
     r = random.SystemRandom()
-    str = ""
+    sr = ""
     chars = string.letters + string.digits + string.punctuation
     if not ignore_str:
         ignore_str = ""
@@ -1740,9 +1740,9 @@ def generate_random_string(length, ignore_str=string.punctuation,
         tmp = r.choice(chars)
         if convert_str and (tmp in convert_str):
             tmp = "\\%s" % tmp
-        str += tmp
+        sr += tmp
         length -= 1
-    return str
+    return sr
 
 
 def generate_random_id():
