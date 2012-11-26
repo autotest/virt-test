@@ -1393,7 +1393,7 @@ variants:
                 cdrom_whql = images/winXP/whql.iso
                 force_create_image = yes
                 force_create_image_image1 = no
-                update_cmd = cmd /c E:\wua_update.exe && cmd /c net stop wuauserv && cmd /c net start wuauserv && cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1" 
+                update_cmd = cmd /c E:\wua_update.exe && cmd /c net stop wuauserv && cmd /c net start wuauserv && cmd /c D:\whql\WUInstall.exe /install /criteria "IsHidden=0 and IsInstalled=0 and IsAssigned=1" && dir
                 auto_restart = "cmd /c regedit /s D:\whql\auto_restart_disable.reg"
                 disable_uas =  "cmd /c regedit /s D:\whql\UAC_disable.reg"
                 dbgview_cmd = "cmd /c E:\dbgview_install.exe"
@@ -1408,6 +1408,7 @@ variants:
                 src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/auto_restart_disable.reg"
                 src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/dbgview_install.exe"
                 src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/whql_nic_set.exe"
+                src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/whql_nic_set_64.exe"
                 src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/WindowsUpdateAgent30-x86.exe"
                 src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/misc_tools/wua_update.exe"
                 src_list += ",http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/whql/dbg_tools/dbg_install.bat"
@@ -1417,8 +1418,10 @@ variants:
                     - nic_device:
                         nics += ' nic2 nic3'
                         nic_model = virtio
-                        nic_model_nic1 = rtl8139
+                        nic_model_nic1 = e1000
                         nic_config_cmd = "cmd /c D:\whql\whql_nic_set.exe"
+                        nic_setup_params_nic2 = Init.MaxRxBuffers:256;Init.MaxTxBuffers:256
+                        nic_setup_params_nic3 = Init.MaxRxBuffers:256;Init.MaxTxBuffers:256
 
                     - block_device:
                         image_snapshot = yes
