@@ -1,8 +1,7 @@
 import logging, time, random, math, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, utils_test, aexpect
-from virttest import env_process
+from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
 
 
 def run_ksm_overcommit(test, params, env):
@@ -596,8 +595,8 @@ def run_ksm_overcommit(test, params, env):
     logging.debug(utils_test.get_memory_info(lvms))
 
     # Copy ksm_overcommit_guest.py into guests
-    virt_dir = os.path.join(os.environ['AUTODIR'], 'virt')
-    vksmd_src = os.path.join(virt_dir, "scripts", "ksm_overcommit_guest.py")
+    shared_dir = os.path.dirname(data_dir.get_data_dir())
+    vksmd_src = os.path.join(shared_dir, "scripts", "ksm_overcommit_guest.py")
     dst_dir = "/tmp"
     for vm in lvms:
         vm.copy_files_to(vksmd_src, dst_dir)
