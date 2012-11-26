@@ -6,7 +6,7 @@ Virtualization test utility functions.
 
 import time, string, random, socket, os, signal, re, logging, commands, cPickle
 import fcntl, shelve, ConfigParser, sys, UserDict, inspect, tarfile
-import struct, shutil, glob, HTMLParser, urllib, traceback, platform, urllib2
+import struct, shutil, glob, HTMLParser, urllib, platform, urllib2
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import logging_manager, git
