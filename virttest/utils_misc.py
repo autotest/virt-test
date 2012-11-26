@@ -4641,6 +4641,9 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     url = os.path.join(base_location, guest_tarball)
     tarball_sha1_url = os.path.join(base_location, sha1_file)
     destination = os.path.join(base_dir, 'images')
+    uncompressed_file_path = os.path.join(base_dir, 'images',
+                                          'jeos-17-64.qcow2')
+    uncompressed_file_exists = os.path.isfile(uncompressed_file_path)
 
     if (interactive and not
         os.path.isfile(os.path.join(destination, guest_tarball))):
@@ -4652,7 +4655,8 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     if answer == "y":
         had_to_download = download_file(url, destination, tarball_sha1_url,
                                         interactive=interactive)
-        restore_image = (restore_image or had_to_download)
+        restore_image = (restore_image or had_to_download or not
+                         uncompressed_file_exists)
         tarball_path = os.path.join(destination, guest_tarball)
         if os.path.isfile(tarball_path) and restore_image:
             os.chdir(destination)
