@@ -390,9 +390,9 @@ class Env(UserDict.IterableUserDict):
                     self.data = empty
             # Almost any exception can be raised during unpickling, so let's
             # catch them all
-            except:
+            except Exception, e:
                 logging.warn("Exception thrown while loading env")
-                traceback.print_last()
+                logging.warn(e)
                 logging.warn("Creating new, empty env file")
                 self.data = empty
         else:
