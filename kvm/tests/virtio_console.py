@@ -730,7 +730,18 @@ def run_virtio_console(test, params, env):
             _port_replug('virtconsole', random.choice((0, 1)))
 
         def _s4():
-            """ Hibernate (S4) and resume the VM """
+            """
+            Hibernate (S4) and resume the VM.
+            @note: data loss is handled differently in this case. First we
+                   set data loss to (almost) infinity. After the resume we
+                   periodically check the number of transfered and lost data.
+                   When there is no loss and number of transfered data is
+                   sufficient, we take it as the initial data loss is over.
+                   Than we set the allowed loss to 0.
+            """
+            _loss = threads[1].sendidx
+            _count = threads[1].idx
+            # Prepare, hibernate and wake the machine
             threads[0].migrate_event.clear()
             threads[1].migrate_event.clear()
             oldport = vm.virtio_ports[0]
@@ -761,6 +772,27 @@ def run_virtio_console(test, params, env):
             threads[0].migrate_event.set()  # Wake up sender thread immediately
             threads[1].migrate_event.set()
             guest_worker.reconnect(vm, 30)
+            logging.debug("S4: watch 1s for initial data loss stabilization.")
+            for _ in xrange(10):
+                time.sleep(0.1)
+                loss = threads[1].sendidx
+                count = threads[1].idx
+                dloss = _loss - loss
+                dcount = count - _count
+                logging.debug("loss=%s, verified=%s", dloss, dcount)
+                if dcount < 100:
+                    continue
+                if dloss == 0:
+                    # at least 100 chars were transfered without data loss
+                    # the initial loss is over
+                    break
+                _loss = loss
+                _count = count
+            else:
+                raise error.TestFail("Initial data loss is not over after 1s "
+                                     "or no new data were received.")
+            # now no loss is allowed
+            threads[1].sendidx = 0
             # DEBUG: When using ThRecv debug, you must wake-up the recv thread
             # here (it waits only 1s for new data
             # threads[1].migrate_event.set()
@@ -833,7 +865,7 @@ def run_virtio_console(test, params, env):
             if ret:
                 raise error.TestNAError("Suspend to disk S4 not supported.")
             set_s4_cmd = params.get('set_s4_cmd')
-            acceptable_loss = 102400
+            acceptable_loss = 99999999      # loss is set in S4 rutine
             send_resume_ev = threading.Event()
             recv_resume_ev = threading.Event()
         else:
