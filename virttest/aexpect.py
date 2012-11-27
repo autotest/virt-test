@@ -389,6 +389,7 @@ class Spawn:
                 child process by sendline().
         """
         self.id = id or utils_misc.generate_random_string(8)
+        self.log_file = None
 
         # Define filenames for communication with server
         try:
@@ -696,6 +697,7 @@ class Tail(Spawn):
         # Add a reader and a close hook
         self._add_reader("tail")
         self._add_close_hook(Tail._join_thread)
+        self._add_close_hook(Tail._close_log_file)
 
         # Init the superclass
         Spawn.__init__(self, command, id, auto_close, echo, linesep)
@@ -773,6 +775,20 @@ class Tail(Spawn):
                 output_func (see set_output_callback()).
         """
         self.output_prefix = output_prefix
+
+
+    def set_log_file(self, filename):
+        """
+        Set a log file name for this tail instance.
+
+        @param filename: Base name of the log.
+        """
+        self.log_file = filename
+
+
+    def _close_log_file(self):
+        if self.log_file is not None:
+            utils_misc.close_log_file(self.log_file)
 
 
     def _tail(self):
