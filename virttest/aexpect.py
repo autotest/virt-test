@@ -7,6 +7,7 @@ A class and functions used for running and controlling child processes.
 
 import os, sys, pty, select, termios, fcntl
 
+BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
 
 # The following helper functions are shared by the server and the client.
 
@@ -62,16 +63,15 @@ if __name__ == "__main__":
     command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % id
 
     # Define filenames to be used for communication
-    base_dir = "/tmp/kvm_spawn"
     (shell_pid_filename,
      status_filename,
      output_filename,
      inpipe_filename,
      lock_server_running_filename,
-     lock_client_starting_filename) = _get_filenames(base_dir, id)
+     lock_client_starting_filename) = _get_filenames(BASE_DIR, id)
 
     # Populate the reader filenames list
-    reader_filenames = [_get_reader_filename(base_dir, id, reader)
+    reader_filenames = [_get_reader_filename(BASE_DIR, id, reader)
                         for reader in readers]
 
     # Set $TERM = dumb
@@ -391,9 +391,8 @@ class Spawn:
         self.id = id or utils_misc.generate_random_string(8)
 
         # Define filenames for communication with server
-        base_dir = "/tmp/kvm_spawn"
         try:
-            os.makedirs(base_dir)
+            os.makedirs(BASE_DIR)
         except Exception:
             pass
         (self.shell_pid_filename,
@@ -401,7 +400,7 @@ class Spawn:
          self.output_filename,
          self.inpipe_filename,
          self.lock_server_running_filename,
-         self.lock_client_starting_filename) = _get_filenames(base_dir,
+         self.lock_client_starting_filename) = _get_filenames(BASE_DIR,
                                                               self.id)
 
         # Remember some attributes
@@ -417,7 +416,7 @@ class Spawn:
 
         # Define the reader filenames
         self.reader_filenames = dict(
-            (reader, _get_reader_filename(base_dir, self.id, reader))
+            (reader, _get_reader_filename(BASE_DIR, self.id, reader))
             for reader in self.readers)
 
         # Let the server know a client intends to open some pipes;
@@ -594,7 +593,7 @@ class Spawn:
                 pass
         self.reader_fds = {}
         # Remove all used files
-        for filename in (_get_filenames("/tmp/kvm_spawn", self.id) +
+        for filename in (_get_filenames(BASE_DIR, self.id) +
                          self.reader_filenames.values()):
             try:
                 os.unlink(filename)
