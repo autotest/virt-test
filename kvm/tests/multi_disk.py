@@ -173,8 +173,13 @@ def run_multi_disk(test, params, env):
                      utils.matrix_to_string(param_table, param_table_header))
         return
 
-    # Always recreate VM (disks are already marked for deletion
-    env_process.preprocess(test, params, env)
+    # Always recreate VMs and disks
+    for vm_name in params.objects("vms"):
+        vm_params = params.object_params(vm_name)
+        for image_name in vm_params.objects("images"):
+            image_params = vm_params.object_params(image_name)
+            env_process.preprocess_image(test, image_params, image_name)
+
     vm = env.get_vm(params["main_vm"])
     vm.create(timeout=max(10, stg_image_num))
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
