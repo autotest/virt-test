@@ -578,7 +578,7 @@ class KojiInstaller(BaseInstaller):
     def _install_phase_install(self):
         os.chdir(self.test_srcdir)
         rpm_file_names = " ".join(self._get_rpm_file_names())
-        utils.system("yum --nogpgcheck -y localinstall %s" % rpm_file_names)
+        utils.system("yum --nogpgcheck -y install %s" % rpm_file_names)
 
 
 class BaseLocalSourceInstaller(BaseInstaller):
