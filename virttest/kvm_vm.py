@@ -2116,12 +2116,12 @@ class VM(virt_vm.BaseVM):
 
             for key, value in self.logs.items():
                 outfile = "%s-%s.log" % (key, name)
-                logging.debug("Add log: %s" % outfile)
                 self.logsessions[key] = aexpect.Tail(
                     "nc -U %s" % value,
                     auto_close=False,
                     output_func=utils_misc.log_line,
                     output_params=(outfile,))
+                self.logsessions[key].set_log_file(outfile)
 
             if params.get("paused_after_start_vm") != "yes":
                 # start guest
