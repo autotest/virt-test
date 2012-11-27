@@ -166,13 +166,6 @@ if __name__ == "__main__":
         # Wait for the client to finish initializing
         _wait(lock_client_starting_filename)
 
-        # Delete FIFOs
-        for filename in reader_filenames + [inpipe_filename]:
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
-
         # Close all files and pipes
         output_file.close()
         os.close(inpipe_fd)
@@ -574,7 +567,7 @@ class Spawn:
 
     def close(self, sig=signal.SIGKILL):
         """
-        Kill the child process if it's alive and remove temporary files.
+        Kill the child process if it's alive and close file descriptors.
 
         @param sig: The signal to send the process when attempting to kill it.
         """
@@ -593,13 +586,6 @@ class Spawn:
             except Exception:
                 pass
         self.reader_fds = {}
-        # Remove all used files
-        for filename in (_get_filenames(BASE_DIR, self.id) +
-                         self.reader_filenames.values()):
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
 
 
     def set_linesep(self, linesep):
