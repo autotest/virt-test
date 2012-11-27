@@ -105,6 +105,7 @@ class Monitor:
         # Automatically close the connection when the instance is garbage
         # collected
         self._close_sock()
+        utils_misc.close_log_file(self.log_file)
 
 
     # The following two functions are defined to make sure the state is set
