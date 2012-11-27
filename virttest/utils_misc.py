@@ -1681,15 +1681,7 @@ def log_line(filename, line):
     path = get_path(_log_file_dir, filename)
     if path not in _open_log_files:
         # First, let's close the log files opened in old directories
-        remove = []
-        for k in _open_log_files:
-            if os.path.basename(k) == filename:
-                f = _open_log_files[k]
-                f.close()
-                remove.append(k)
-        if remove:
-            for key_to_remove in remove:
-                _open_log_files.pop(key_to_remove)
+        close_log_file(filename)
         # Then, let's open the new file
         try:
             os.makedirs(os.path.dirname(path))
@@ -1709,6 +1701,19 @@ def set_log_file_dir(directory):
     """
     global _log_file_dir
     _log_file_dir = directory
+
+
+def close_log_file(filename):
+    global _open_log_files, _log_file_dir
+    remove = []
+    for k in _open_log_files:
+        if os.path.basename(k) == filename:
+            f = _open_log_files[k]
+            f.close()
+            remove.append(k)
+    if remove:
+        for key_to_remove in remove:
+            _open_log_files.pop(key_to_remove)
 
 
 # The following are miscellaneous utility functions.
