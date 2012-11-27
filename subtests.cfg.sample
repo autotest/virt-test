@@ -4407,6 +4407,21 @@ variants:
                 type = block_stream_drop_backingfile
                 limited_speed = 10
                 snapshot_check_cmd = "lsof -p %s|awk '{print $9}'|grep ^/"
+            - with_stress:
+                type = block_stream_with_stress
+                variants:
+                    - stress2:
+                        only Linux
+                        pre_test = stress_install
+                        start_cmd = "stress --cpu {cpu} --vm {vm} --vm-bytes {mem}M --quiet"
+                        url = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/auto_rsc/stress-1.0.4.tar.gz"
+                        md5 = "a607afa695a511765b40993a64c6e2f4"
+                    - heavyload2:
+                        only Windows
+                        pre_test = heavyload_install
+                        url = "http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/auto_rsc/HeavyLoadSetup.exe"
+                        md5 = "dceb57331948a1599e4f5b2b915ab1b8"
+                        start_cmd = "heavload.exe /CPU /MEMORY /START"
 
  # Internal case configuration end. Don't add any case below this line.
  # (THIS LINE IS RESERVED FOR MERGE)
