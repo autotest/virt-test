@@ -164,6 +164,14 @@ def postprocess_vm(test, params, env, name):
     if not vm:
         return
 
+    # Close all SSH sessions that might be active to this VM
+    for s in vm.remote_sessions:
+        try:
+            s.close()
+            vm.remote_sessions.remove(s)
+        except Exception:
+            pass
+
     # Encode an HTML 5 compatible video from the screenshots produced?
     screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
     if (params.get("encode_video_files", "yes") == "yes" and
