@@ -414,6 +414,7 @@ class BaseVM(object):
         # is or behaves like aexpect.ShellSession.
         #
         self.serial_console = None
+        self.remote_sessions = []
         # Create instance if not already set
         if not hasattr(self, 'instance'):
             self._generate_unique_id()
@@ -773,6 +774,7 @@ class BaseVM(object):
                                            log_filename, timeout)
         session.set_status_test_command(self.params.get("status_test_command",
                                                         ""))
+        self.remote_sessions.append(session)
         return session
 
 
