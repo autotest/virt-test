@@ -9,7 +9,7 @@ custom logic for each virtualization hypervisor/software.
 import os, logging
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import utils_misc
+import utils_misc, yumrepo
 
 class VirtInstallException(Exception):
     '''
@@ -487,6 +487,8 @@ class KojiInstaller(BaseInstaller):
         self.koji_scratch_pkgs = params.get("%s_scratch_pkgs" %
                                             self.param_key_prefix,
                                             "").split()
+        self.koji_yumrepo_baseurl = params.get("%s_yumrepo_baseurl" %
+                                               self.param_key_prefix, None)
         if self.install_debug_info:
             self._expand_koji_pkgs_with_debuginfo()
 
@@ -576,9 +578,21 @@ class KojiInstaller(BaseInstaller):
 
 
     def _install_phase_install(self):
+        if self.koji_yumrepo_baseurl is not None:
+            repo = yumrepo.YumRepo(self.param_key_prefix,
+                                   self.koji_yumrepo_baseurl)
+            logging.debug('Enabling YUM Repo "%s" at "%s"',
+                          self.param_key_prefix, self.koji_yumrepo_baseurl)
+            repo.save()
+
         os.chdir(self.test_srcdir)
         rpm_file_names = " ".join(self._get_rpm_file_names())
         utils.system("yum --nogpgcheck -y install %s" % rpm_file_names)
+
+        if self.koji_yumrepo_baseurl is not None:
+            logging.debug('Disabling YUM Repo "%s" at "%s"',
+                          self.param_key_prefix, self.koji_yumrepo_baseurl)
+            repo.remove()
 
 
 class BaseLocalSourceInstaller(BaseInstaller):
