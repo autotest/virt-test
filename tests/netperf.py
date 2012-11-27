@@ -230,7 +230,7 @@ def run_netperf(test, params, env):
                params=params, server_cyg=server_cyg)
 
 @error.context_aware
-def start_test(server, server_ctl, host, client, resultsdir, l=60,
+def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                sessions_rr="50 100 250 500", sessions="1 2 4",
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
@@ -242,7 +242,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     @param server: netperf server ip for data connection
     @param server_ctl: ip to control netperf server
     @param host: localhost ip
-    @param client: netperf client ip
+    @param clients: netperf clients' ip
     @param resultsdir: directory to restore the results
     @param l: test duration
     @param sessions_rr: sessions number list for RR test
@@ -319,17 +319,17 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
         for i in sizes_test:
             for j in sessions_test:
                 if (protocol == "TCP_RR"):
-                    ret = launch_client(1, server, server_ctl, host, client, l,
+                    ret = launch_client(1, server, server_ctl, host, clients, l,
                     "-t %s -v 0 -P -0 -- -r %s,%s -b %s" % (protocol, i, i, j),
                     netserver_port, params, server_cyg)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 0)
                 elif (protocol == "TCP_MAERTS"):
-                    ret = launch_client(j, server, server_ctl, host, client, l,
+                    ret = launch_client(j, server, server_ctl, host, clients, l,
                                      "-C -c -t %s -- -m ,%s" % (protocol, i),
                                      netserver_port, params, server_cyg)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
                 else:
-                    ret = launch_client(j, server, server_ctl, host, client, l,
+                    ret = launch_client(j, server, server_ctl, host, clients, l,
                                      "-C -c -t %s -- -m %s" % (protocol, i),
                                      netserver_port, params, server_cyg)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
@@ -384,7 +384,7 @@ def ssh_cmd(session, cmd, timeout=120):
 
 
 @error.context_aware
-def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
+def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                   port, params, server_cyg):
     """ Launch netperf clients """
 
@@ -498,7 +498,7 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
     for i in range(int(sessions)):
         t = threading.Thread(target=netperf_thread,
                              kwargs={"i": i, "numa_enable": numa_enable,
-                                     "client_s":client[i]})
+                                     "client_s":clients[i]})
         threads.append(t)
         t.start()
     ret = {}
