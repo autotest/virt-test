@@ -201,6 +201,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     if log_filename:
         session.set_output_func(utils_misc.log_line)
         session.set_output_params((log_filename,))
+        session.set_log_file(log_filename)
     return session
 
 
