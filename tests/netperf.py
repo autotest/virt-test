@@ -160,8 +160,9 @@ def run_netperf(test, params, env):
     clients_n = 1
     # Get the sessions that needed when run netperf parallel
     # The default client connect is the first one.
-    if params.get("sessions"):
-        for i in re.split("\s+", params.get('sessions')):
+    if params.get("sessions") or params.get("sessions_rr"):
+        sessions_str = params.get('sessions') + " " + params.get("sessions_rr")
+        for i in sessions_str.split():
             clients_n = max(clients_n, int(i.strip()))
     for i in range(clients_n):
         if client in params.get("vms"):
@@ -307,8 +308,8 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
         for i in sizes_test:
             for j in sessions_test:
                 if (protocol == "TCP_RR"):
-                    ret = launch_client(1, server, server_ctl, host, clients, l,
-                    "-t %s -v 0 -P -0 -- -r %s,%s -b %s" % (protocol, i, i, j),
+                    ret = launch_client(j, server, server_ctl, host, clients, l,
+                    "-t %s -v 0 -P -0 -- -r %s,%s" % (protocol, i, i),
                     netserver_port, params, server_cyg)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 0)
                 elif (protocol == "TCP_MAERTS"):
