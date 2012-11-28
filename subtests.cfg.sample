@@ -1731,6 +1731,17 @@ variants:
         type = ping
         counts = 100
         flood_minutes = 10
+        variants:
+            - default:
+            - multi_nics:
+                nics += ' nic2'
+            - ext_host:
+                ping_ext_host = "yes"
+                # The gateway can't response large ping packet in NAY office,
+                # so hard code an server address here.
+                ext_host_get_cmd = "echo fileshare.englab.nay.redhat.com"
+                #ext_host_get_cmd = "ip route | awk '/default/ { print $3 }'"
+
 
     - jumbo:
         only Linux
