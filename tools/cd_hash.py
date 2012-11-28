@@ -6,10 +6,8 @@ Program that calculates several hashes for a given CD image.
 """
 
 import os, sys, optparse, logging
-try:
-    import autotest.common as common
-except ImportError:
-    import common
+
+import common
 from autotest.client.shared import logging_manager
 from autotest.client import utils
 from virttest import utils_misc
