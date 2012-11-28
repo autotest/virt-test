@@ -1,13 +1,8 @@
 #!/usr/bin/python
 
 import unittest, tempfile, os, glob, logging
-
-try:
-    import autotest.common as common
-except ImportError:
-    import common
-
-from autotest.client.shared import xml_utils, ElementTree
+import common
+import xml_utils, ElementTree
 
 
 class xml_test_data(unittest.TestCase):
