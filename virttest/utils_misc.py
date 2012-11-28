@@ -4829,6 +4829,7 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
         logging.info("%d - Checking if the appropriate userspace programs are "
                      "installed", step)
         for path in default_userspace_paths:
+            logging.info(path)
             if not os.path.isfile(path):
                 logging.warning("No %s found. You might need to install %s.",
                                 path, os.path.basename(path))
