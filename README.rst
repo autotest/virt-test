@@ -13,11 +13,11 @@ Install dependencies
 
 Install the p7zip file archiver so you can uncompress the JeOS [2] image.
 
-# yum install -y p7zip
+# yum install p7zip
 
 Install the autotest-framework package, to provide the needed autotest libs.
 
-# yum install autotest-framework
+# yum --enable-repo=updates-testing install autotest-framework
 
 Execute the bootstrap script
 ------------------------
