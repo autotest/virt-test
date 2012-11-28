@@ -7,7 +7,7 @@ except ImportError:
     import common
 from autotest.client.shared import base_utils
 from autotest.client.shared.test_utils import mock
-
+import versionable_class
 
 class TestVersionableClass(unittest.TestCase):
     def setUp(self):
@@ -25,7 +25,7 @@ class TestVersionableClass(unittest.TestCase):
         pass
 
     #Not implemented get_version -> not used for versioning.
-    class VCP(FooC, base_utils.VersionableClass):
+    class VCP(FooC, versionable_class.VersionableClass):
         def __new__(cls, *args, **kargs):
             TestVersionableClass.VCP.version = 1       # Only for unittesting.
             TestVersionableClass.VCP.master_class = TestVersionableClass.VCP
@@ -36,7 +36,7 @@ class TestVersionableClass(unittest.TestCase):
         def foo(self):
             pass
 
-    class VC2(VCP, base_utils.VersionableClass):
+    class VC2(VCP, versionable_class.VersionableClass):
         @classmethod
         def get_version(cls):
             return cls.version
@@ -55,7 +55,7 @@ class TestVersionableClass(unittest.TestCase):
             logging.info("func2")
 
     # get_version could be inherited.
-    class VC3(VC2, base_utils.VersionableClass):
+    class VC3(VC2, versionable_class.VersionableClass):
         @classmethod
         def is_right_version(cls, version):
             if version is not None:
@@ -66,14 +66,14 @@ class TestVersionableClass(unittest.TestCase):
         def func2(self):
             logging.info("func2_2")
 
-    class PP(base_utils.VersionableClass):
+    class PP(versionable_class.VersionableClass):
         def __new__(cls, *args, **kargs):
             TestVersionableClass.PP.version = 1       # Only for unittesting.
             TestVersionableClass.PP.master_class = TestVersionableClass.PP
             return (super(TestVersionableClass.PP, cls)
                                                  .__new__(cls, *args, **kargs))
 
-    class PP2(PP, base_utils.VersionableClass):
+    class PP2(PP, versionable_class.VersionableClass):
         @classmethod
         def get_version(cls):
             return cls.version
@@ -89,14 +89,14 @@ class TestVersionableClass(unittest.TestCase):
             print "PP func1"
 
 
-    class WP(base_utils.VersionableClass):
+    class WP(versionable_class.VersionableClass):
         def __new__(cls, *args, **kargs):
             TestVersionableClass.WP.version = 1       # Only for unittesting.
             TestVersionableClass.WP.master_class = TestVersionableClass.WP
             return (super(TestVersionableClass.WP, cls)
                                                  .__new__(cls, *args, **kargs))
 
-    class WP2(WP, base_utils.VersionableClass):
+    class WP2(WP, versionable_class.VersionableClass):
         @classmethod
         def get_version(cls):
             return cls.version
