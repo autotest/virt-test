@@ -16,6 +16,8 @@ def get_backing_data_dir():
         else:
             # Invalid symlink
             os.unlink(DATA_DIR)
+    elif os.path.isdir(DATA_DIR):
+        return DATA_DIR
 
     try:
         return os.environ['VIRT_TEST_DATA_DIR']
@@ -50,7 +52,8 @@ def set_backing_data_dir(backing_data_dir):
     backing_data_dir = os.path.expanduser(backing_data_dir)
     if not os.path.isdir(backing_data_dir):
         os.makedirs(backing_data_dir)
-    os.symlink(backing_data_dir, DATA_DIR)
+    if not backing_data_dir == DATA_DIR:
+        os.symlink(backing_data_dir, DATA_DIR)
 
 BACKING_DATA_DIR = get_backing_data_dir()
 set_backing_data_dir(BACKING_DATA_DIR)
