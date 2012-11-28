@@ -4,7 +4,7 @@ Run virt tests outside the autotest client harness.
 
 @copyright: Red Hat 2012
 """
-import os, sys
+import os, sys, traceback
 
 class StreamProxy(object):
     """
@@ -90,89 +90,108 @@ if __name__ == '__main__':
     else:
         # We have full stdout output
         sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
-
+    # From now on, since the stdout might be proxied, let's run this all under
+    # a try/except block, if something goes wrong we tell the user to use
+    # --verbose.
     try:
-        from autotest.client import setup_modules
-    except ImportError:
         try:
-            autotest_dir = os.environ['AUTOTEST_PATH']
-        except KeyError:
+            from autotest.client import setup_modules
+        except ImportError:
+            try:
+                autotest_dir = os.environ['AUTOTEST_PATH']
+            except KeyError:
+                try:
+                    sys.stdout.switch()
+                except AttributeError:
+                    pass
+                print("Environment variable $AUTOTEST_PATH not set. "
+                      "please set it to a path containing an autotest checkout")
+                sys.exit(1)
+            client_dir = os.path.join(autotest_dir, 'client')
+            sys.path.insert(0, client_dir)
+            import setup_modules
+            sys.path.pop(0)
+            setup_modules.setup(base_path=client_dir,
+                                root_module_name="autotest.client")
+
+        test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
+        sys.path.append(test_dir)
+
+        from virttest import cartesian_config, standalone_test, utils_misc, data_dir
+
+        standalone_test.configure_logging()
+        standalone_test.configure_console_logging()
+
+        if options.datadir:
+            data_dir.set_backing_data_dir(options.datadir)
+
+        standalone_test.create_config_files(options)
+
+        cartesian_parser = cartesian_config.Parser()
+        if options.config is not None:
+            cfg = os.path.abspath(options.config)
+        if options.config is None:
+            cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
+
+        cartesian_parser.parse_file(cfg)
+
+        if options.list:
+            try:
+                less_cmd = utils_misc.find_command('less')
+                pipe = os.popen('%s -FRSX' % less_cmd, 'w')
+            except ValueError:
+                pipe = sys.stdout
+            index = 0
+            for params in cartesian_parser.get_dicts():
+                virt_test_type = params.get('virt_test_type', "")
+                supported_virt_backends = virt_test_type.split(" ")
+                if options.type in supported_virt_backends:
+                    index +=1
+                    if options.config is None:
+                        # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
+                        shortname = params['shortname'].split(".")[6:]
+                        shortname = ".".join(shortname)
+                    else:
+                        shortname = params['shortname']
+                    pipe.write("%d %s\n" % (index, shortname))
+            sys.exit(0)
+        else:
+            standalone_test.bootstrap(options)
+
+
+        if options.qemu:
+            d = os.path.dirname(options.qemu)
+            if not os.path.exists(os.path.join(d, 'qemu-img')):
+                d = "/usr/bin"
+            cartesian_parser.parse_string("qemu_binary = %s" % options.qemu)
+            cartesian_parser.parse_string("qemu_img_binary = %s" %
+                                os.path.join(d, 'qemu-img'))
+            cartesian_parser.parse_string("qemu_io_binary = %s" %
+                                          os.path.join(d, 'qemu-io'))
+
+        if options.type and options.tests:
+            tests = options.tests.split(" ")
+            cartesian_parser.parse_string("only %s" % ", ".join(tests))
+        elif options.type and not options.tests and not options.config:
+            if options.type == 'kvm':
+                cartesian_parser.parse_string("only migrate")
+            elif options.type == 'libvirt':
+                cartesian_parser.parse_string("only "
+                                              "unattended_install.import.import, "
+                                              "virsh_domname, "
+                                              "remove_guest.without_disk")
+        standalone_test.run_tests(cartesian_parser)
+
+    except Exception:
+        try:
             sys.stdout.switch()
-            print("Environment variable $AUTOTEST_PATH not set. "
-                  "please set it to a path containing an autotest checkout")
-            sys.exit(1)
-        client_dir = os.path.join(autotest_dir, 'client')
-        sys.path.insert(0, client_dir)
-        import setup_modules
-        sys.path.pop(0)
-        setup_modules.setup(base_path=client_dir,
-                            root_module_name="autotest.client")
-
-    test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
-    sys.path.append(test_dir)
-
-    from virttest import cartesian_config, standalone_test, utils_misc, data_dir
-
-    standalone_test.configure_logging()
-    standalone_test.configure_console_logging()
-
-    if options.datadir:
-        data_dir.set_backing_data_dir(options.datadir)
-
-    standalone_test.create_config_files(options)
-
-    cartesian_parser = cartesian_config.Parser()
-    if options.config is not None:
-        cfg = os.path.abspath(options.config)
-    if options.config is None:
-        cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
-
-    cartesian_parser.parse_file(cfg)
-
-    if options.list:
-        try:
-            less_cmd = utils_misc.find_command('less')
-            pipe = os.popen('%s -FRSX' % less_cmd, 'w')
-        except ValueError:
-            pipe = sys.stdout
-        index = 0
-        for params in cartesian_parser.get_dicts():
-            virt_test_type = params.get('virt_test_type', "")
-            supported_virt_backends = virt_test_type.split(" ")
-            if options.type in supported_virt_backends:
-                index +=1
-                if options.config is None:
-                    # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
-                    shortname = params['shortname'].split(".")[6:]
-                    shortname = ".".join(shortname)
-                else:
-                    shortname = params['shortname']
-                pipe.write("%d %s\n" % (index, shortname))
-        sys.exit(0)
-    else:
-        standalone_test.bootstrap(options)
-
-
-    if options.qemu:
-        d = os.path.dirname(options.qemu)
-        if not os.path.exists(os.path.join(d, 'qemu-img')):
-            d = "/usr/bin"
-        cartesian_parser.parse_string("qemu_binary = %s" % options.qemu)
-        cartesian_parser.parse_string("qemu_img_binary = %s" %
-                            os.path.join(d, 'qemu-img'))
-        cartesian_parser.parse_string("qemu_io_binary = %s" %
-                                      os.path.join(d, 'qemu-io'))
-
-    if options.type and options.tests:
-        tests = options.tests.split(" ")
-        cartesian_parser.parse_string("only %s" % ", ".join(tests))
-    elif options.type and not options.tests and not options.config:
-        if options.type == 'kvm':
-            cartesian_parser.parse_string("only migrate")
-        elif options.type == 'libvirt':
-            cartesian_parser.parse_string("only "
-                                          "unattended_install.import.import, "
-                                          "virsh_domname, "
-                                          "remove_guest.without_disk")
-
-    standalone_test.run_tests(cartesian_parser)
+        except AttributeError:
+            pass
+        print("Internal error, traceback follows...")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        tb_info = traceback.format_exception(exc_type, exc_value,
+                                             exc_traceback.tb_next)
+        tb_info = "".join(tb_info)
+        for e_line in tb_info.splitlines():
+            print(e_line)
+        sys.exit(1)
