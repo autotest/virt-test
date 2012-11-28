@@ -4544,8 +4544,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
         step = 0
     logging.info("")
     step += 1
-    logging.info("%d - Creating config files from samples (copy the default "
-                 "config samples to actual config files)", step)
+    logging.info("%d - Creating config files from samples", step)
     config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg.sample"))
     config_file_list_shared = glob.glob(os.path.join(shared_dir,
                                                      "*.cfg.sample"))
@@ -4595,7 +4594,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
 
 def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
                         check_modules, online_docs_url, restore_image=False,
-                        interactive=True):
+                        interactive=True, verbose=False):
     """
     Common virt test assistant module.
 
@@ -4615,15 +4614,14 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     @raise ValueError: If 7za was not found
     """
     if interactive:
-        logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
+        logging_manager.configure_logging(VirtLoggingConfig(), verbose=verbose)
     logging.info("%s test config helper", test_name)
     step = 0
     shared_dir = os.path.dirname(data_dir.get_data_dir())
     shared_dir = os.path.join(shared_dir, "cfg")
     logging.info("")
     step += 1
-    logging.info("%d - Verifying directories (check if the directory structure "
-                 "expected by the default test config is there)", step)
+    logging.info("%d - Verifying directories", step)
     sub_dir_list = ["images", "isos", "steps_data"]
     for sub_dir in sub_dir_list:
         sub_dir_path = os.path.join(base_dir, sub_dir)
@@ -4637,7 +4635,7 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     create_config_files(test_dir, shared_dir, interactive, step)
 
     logging.info("")
-    step += 1
+    step += 2
     logging.info("%s - Verifying (and possibly downloading) guest image", step)
 
     # If this is not present, we better tell the user straight away
@@ -4685,8 +4683,6 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
                                 path, os.path.basename(path))
             else:
                 logging.debug("%s present", path)
-        logging.info("If you wish to change any userspace program path, "
-                     "you will have to modify tests.cfg")
 
     if check_modules:
         logging.info("")
@@ -4703,10 +4699,10 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
     if online_docs_url:
         logging.info("")
         step += 1
-        logging.info("%d - Verify needed packages to get started", step)
-        logging.info("Please take a look at the online documentation: %s",
-                     online_docs_url)
+        logging.info("%d - Please verify needed packages to get started", step)
         logging.info("")
+        logging.info("Take a look at the online documentation: %s",
+                     online_docs_url)
 
 
 def create_x509_dir(path, cacert_subj, server_subj, passphrase,
