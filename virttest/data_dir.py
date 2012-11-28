@@ -41,7 +41,7 @@ def get_backing_data_dir():
     data_dir = os.path.expanduser('~/virt_test')
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
-    return data_dir
+    return os.path.realpath(data_dir)
 
 
 def set_backing_data_dir(backing_data_dir):
