@@ -311,14 +311,19 @@ def create_config_files(options):
 
     @param options: OptParser object with options.
     """
-    test_dir = os.path.dirname(sys.modules[__name__].__file__)
-    shared_dir = os.path.abspath(os.path.join(test_dir, 'shared', 'cfg'))
-    if options.type:
-        test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
-                                                options.type))
+    shared_dir = os.path.dirname(data_dir.get_data_dir())
+    test_dir = os.path.dirname(shared_dir)
+    shared_dir = os.path.join(shared_dir, "cfg")
+
+    if (options.type and options.config):
+        test_dir = os.path.join(test_dir, options.type)
+    elif options.type:
+        test_dir = os.path.join(test_dir, options.type)
     elif options.config:
-        test_dir = os.path.dirname(os.path.dirname(options.config))
-        test_dir = os.path.abspath(test_dir)
+        parent_config_dir = os.path.dirname(options.config)
+        parent_config_dir = os.path.basename(parent_config_dir)
+        test_dir = os.path.join(test_dir, parent_config_dir)
+
     utils_misc.create_config_files(test_dir, shared_dir, interactive=False)
 
 
