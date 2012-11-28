@@ -4508,11 +4508,8 @@ def download_file(url, destination, sha1_url, interactive=False):
             logging.warning("Missing file %s", path)
     else:
         logging.info("Found %s", path)
-        if interactive:
-            if sha1 is None:
-                answer = 'n'
-            else:
-                answer = utils.ask("Would you like to check %s SHA1 sum?" % path)
+        if sha1 is None:
+            answer = 'n'
         else:
             answer = 'y'
 
