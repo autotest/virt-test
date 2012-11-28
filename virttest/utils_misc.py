@@ -4769,9 +4769,8 @@ def virt_test_assistant(test_name, test_dir, base_dir, default_userspace_paths,
         logging_manager.configure_logging(VirtLoggingConfig(), verbose=True)
     logging.info("%s test config helper", test_name)
     step = 0
-    shared_dir = os.path.abspath(os.path.join(sys.modules[__name__].__file__,
-                                              "..", ".."))
-    shared_dir = os.path.join(shared_dir, "shared", "cfg")
+    shared_dir = os.path.dirname(data_dir.get_data_dir())
+    shared_dir = os.path.join(shared_dir, "cfg")
     logging.info("")
     step += 1
     logging.info("%d - Verifying directories (check if the directory structure "
