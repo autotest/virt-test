@@ -1560,7 +1560,9 @@ variants:
         status_test_command = echo %errorlevel%
         shell_prompt = "^\w:\\.*>\s*$"
         username = Administrator
-        password = 123456
+        # Attention: Changing the password in this file is not supported,
+        # since files in winutils.iso use it.
+        password = 1q2w3eP
         shell_linesep = "\r\n"
         shell_client = nc
         shell_port = 10022
