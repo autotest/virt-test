@@ -2834,6 +2834,7 @@ variants:
                 s4_bg_program_kill_cmd = 'pkill ping'
                 s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
                 s4_start_cmd = 'echo disk > /sys/power/state'
+                extra_params += " -global PIIX4_PM.disable_s3=0 -global PIIX4_PM.disable_s4=0"
                 services_up_timeout = 30
             - check_snapshot:
                 type = qemu_guest_agent_snapshot
