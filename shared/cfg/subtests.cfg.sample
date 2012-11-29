@@ -1421,6 +1421,7 @@ variants:
                 save_restore_duration = 5400.0
 
     - autotest: install setup image_copy unattended_install.cdrom
+        no JeOS
         virt_test_type = kvm libvirt
         only Linux
         type = autotest_control
