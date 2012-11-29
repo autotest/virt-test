@@ -258,6 +258,7 @@ def run_qemu_img(test, params, env):
 
         logging.info("Commit testing started!")
         image_name = params.get("image_name", "image")
+        image_name = os.path.join(data_dir.get_data_dir(), image_name)
         image_format = params.get("image_format", "qcow2")
         backing_file_name = "%s_bak" % (image_name)
 
