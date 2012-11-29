@@ -37,7 +37,7 @@ def run_image_copy(test, params, env):
     dst_path = '%s/%s.%s' % (data_dir.get_data_dir(), params['image_name'], params['image_format'])
     pwd = os.path.join(test.bindir, "images")
     if params.get("rename_error_image", "no") == "yes":
-        error_image = os.path.basename(image_name) + "-error"
+        error_image = os.path.basename(params['image_name']) + "-error"
         error_image += '.' + params['image_format']
         error_dst_path = os.path.join(pwd, error_image)
         mv_cmd = "/bin/mv %s %s" % (dst_path, error_dst_path)
