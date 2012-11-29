@@ -161,6 +161,9 @@ if __name__ == '__main__':
 
 
         if options.qemu:
+            if not os.path.isfile(options.qemu):
+                raise RuntimeError("Invalid qemu binary provided (%s)" %
+                                   options.qemu)
             qemu_dirname = os.path.dirname(options.qemu)
             parent_qemu_dirname = os.path.dirname(qemu_dirname)
             qemu_img_path = os.path.join(parent_qemu_dirname, 'qemu-img')
