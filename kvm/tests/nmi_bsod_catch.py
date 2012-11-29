@@ -80,9 +80,8 @@ def run_nmi_bsod_catch(test, params, env):
                 pass
             s, o = session.cmd_status_output(analyze_cmd, timeout=1200)
             if s:
-                raise error.TestFail("Fail command: %s. Output: %s" % \
-                                      (analyze_cmd, o))
-                vm.copy_files_from("%s/*.log" % dst_path, ".")
+                raise error.TestFail("Fail command: %s. Output: %s" %
+                                     (analyze_cmd, o))
     finally:
         if session is not None and del_dump_cmd:
             session.sendline(del_dump_cmd)
