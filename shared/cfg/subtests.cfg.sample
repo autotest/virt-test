@@ -1547,6 +1547,7 @@ variants:
         rtc_drift = "slew"
         variants:
             - ntp:
+                no JeOS
                 variants:
                     - with_load:
                         type = timedrift
