@@ -149,7 +149,7 @@ if __name__ == '__main__':
                     index +=1
                     if options.config is None:
                         # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
-                        shortname = params['shortname'].split(".")[6:]
+                        shortname = params['name'].split(".")[12:]
                         shortname = ".".join(shortname)
                     else:
                         shortname = params['shortname']

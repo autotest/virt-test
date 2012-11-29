@@ -30,8 +30,7 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        self.tag = ("%s.%s" %
-                    (params.get("vm_type"), params.get("shortname")))
+        self.tag = ".".join(params['name'].split(".")[12:])
         self.debugdir = None
         self.outputdir = None
         self.resultsdir = None
@@ -418,7 +417,8 @@ def run_tests(parser):
 
     last_index = -1
     for i, d in enumerate(parser.get_dicts()):
-        logging.info("Test %4d:  %s" % (i + 1, d["shortname"]))
+        pretty_name = ".".join(d['name'].split(".")[12:])
+        logging.info("Test %4d:  %s" % (i + 1, pretty_name))
         last_index += 1
 
     if last_index == -1:
