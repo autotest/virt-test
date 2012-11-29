@@ -117,7 +117,8 @@ if __name__ == '__main__':
         test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
         sys.path.append(test_dir)
 
-        from virttest import cartesian_config, standalone_test, utils_misc, data_dir
+        from virttest import cartesian_config, standalone_test, utils_misc
+        from virttest import data_dir
 
         standalone_test.configure_logging()
         standalone_test.configure_console_logging()
@@ -160,17 +161,20 @@ if __name__ == '__main__':
 
 
         if options.qemu:
-            d = os.path.dirname(options.qemu)
-            bd = os.path.dirname(d)
-            if not os.path.exists(os.path.join(bd, 'qemu-img')):
-                bd = "/usr/bin"
-            if not os.path.exists(os.path.join(bd, 'qemu-io')):
-                bd = "/usr/bin"
+            qemu_dirname = os.path.dirname(options.qemu)
+            parent_qemu_dirname = os.path.dirname(qemu_dirname)
+            qemu_img_path = os.path.join(parent_qemu_dirname, 'qemu-img')
+            qemu_io_path = os.path.join(parent_qemu_dirname, 'qemu-io')
+
+            if not os.path.exists(qemu_img_path):
+                qemu_img_path = utils_misc.find_command('qemu-img')
+
+            if not os.path.exists(qemu_io_path):
+                qemu_io_path = utils_misc.find_command('qemu-io')
+
             cartesian_parser.parse_string("qemu_binary = %s" % options.qemu)
-            cartesian_parser.parse_string("qemu_img_binary = %s" %
-                                os.path.join(bd, 'qemu-img'))
-            cartesian_parser.parse_string("qemu_io_binary = %s" %
-                                          os.path.join(bd, 'qemu-io'))
+            cartesian_parser.parse_string("qemu_img_binary = %s" % qemu_img_path)
+            cartesian_parser.parse_string("qemu_io_binary = %s" % qemu_io_path)
 
         if options.type and options.tests:
             tests = options.tests.split(" ")
