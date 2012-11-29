@@ -161,13 +161,16 @@ if __name__ == '__main__':
 
         if options.qemu:
             d = os.path.dirname(options.qemu)
-            if not os.path.exists(os.path.join(d, 'qemu-img')):
-                d = "/usr/bin"
+            bd = os.path.dirname(d)
+            if not os.path.exists(os.path.join(bd, 'qemu-img')):
+                bd = "/usr/bin"
+            if not os.path.exists(os.path.join(bd, 'qemu-io')):
+                bd = "/usr/bin"
             cartesian_parser.parse_string("qemu_binary = %s" % options.qemu)
             cartesian_parser.parse_string("qemu_img_binary = %s" %
-                                os.path.join(d, 'qemu-img'))
+                                os.path.join(bd, 'qemu-img'))
             cartesian_parser.parse_string("qemu_io_binary = %s" %
-                                          os.path.join(d, 'qemu-io'))
+                                          os.path.join(bd, 'qemu-io'))
 
         if options.type and options.tests:
             tests = options.tests.split(" ")
