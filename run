@@ -190,7 +190,7 @@ if __name__ == '__main__':
                                               "unattended_install.import.import, "
                                               "virsh_domname, "
                                               "remove_guest.without_disk")
-        standalone_test.run_tests(cartesian_parser)
+        standalone_test.run_tests(cartesian_parser, options)
 
     except Exception:
         try:
