@@ -6,18 +6,27 @@ Really quick start guide (Fedora)
 ---------------------------------
 
 At the moment, the most convenient distro to run virt-test on is Fedora,
-since we have the autotest libs packaged on this distro [1].
+since we have the autotest libs packaged on this distro [1]. It is
+similarly easy to set things up on a RHEL box, but then you need to
+enable the EPEL repos [2] to install the needed packages.
 
 Install dependencies
 --------------------
 
-Install the p7zip file archiver so you can uncompress the JeOS [2] image.
+Install the p7zip file archiver so you can uncompress the JeOS [3] image.
 
 # yum install p7zip
 
 Install the autotest-framework package, to provide the needed autotest libs.
 
 # yum --enablerepo=updates-testing install autotest-framework
+
+Some tests might need some other dependencies, such as the migrate
+using file descriptors, that requires a working toolchain and python-devel.
+For such cases, it is best that you refer to the more complete documentation:
+
+https://github.com/autotest/virt-test/wiki/InstallPrerequesitePackages
+
 
 Execute the bootstrap script
 ------------------------
@@ -49,7 +58,9 @@ of the autotest code (git://github.com/autotest/autotest.git) and set the
 env variable AUTOTEST_PATH pointing to the path of the clone. We do have
 plans to package the libs to more distributions.
 
-[2] JeOS: Minimal guest OS image (x86_64)
+[2] http://fedoraproject.org/wiki/EPEL/FAQ#How_can_I_install_the_packages_from_the_EPEL_software_repository.3F
+
+[3] JeOS: Minimal guest OS image (x86_64)
 
 Actual documentation website
 ----------------------------
