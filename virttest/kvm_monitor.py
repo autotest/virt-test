@@ -682,12 +682,12 @@ class QMPMonitor(Monitor):
 
     # Private methods
 
-    def _build_cmd(self, cmd, args=None, id=None):
+    def _build_cmd(self, cmd, args=None, q_id=None):
         obj = {"execute": cmd}
         if args is not None:
             obj["arguments"] = args
-        if id is not None:
-            obj["id"] = id
+        if q_id is not None:
+            obj["id"] = q_id
         return obj
 
 
@@ -745,7 +745,7 @@ class QMPMonitor(Monitor):
             raise MonitorSocketError("Could not send data: %r" % data, e)
 
 
-    def _get_response(self, id=None, timeout=RESPONSE_TIMEOUT):
+    def _get_response(self, q_id=None, timeout=RESPONSE_TIMEOUT):
         """
         Read a response from the QMP monitor.
 
@@ -757,7 +757,7 @@ class QMPMonitor(Monitor):
         while self._data_available(end_time - time.time()):
             for obj in self._read_objects():
                 if isinstance(obj, dict):
-                    if id is not None and obj.get("id") != id:
+                    if q_id is not None and obj.get("id") != q_id:
                         continue
                     if "return" in obj or "error" in obj:
                         return obj
@@ -853,8 +853,8 @@ class QMPMonitor(Monitor):
             # Read any data that might be available
             self._read_objects()
             # Send command
-            id = utils_misc.generate_random_string(8)
-            cmdobj = self._build_cmd(cmd, args, id)
+            q_id = utils_misc.generate_random_string(8)
+            cmdobj = self._build_cmd(cmd, args, q_id)
             if fd is not None:
                 if self._passfd is None:
                     self._passfd = passfd_setup.import_passfd()
@@ -863,7 +863,7 @@ class QMPMonitor(Monitor):
             else:
                 self._send(json.dumps(cmdobj) + "\n")
             # Read response
-            r = self._get_response(id, timeout)
+            r = self._get_response(q_id, timeout)
             if r is None:
                 raise MonitorProtocolError("Received no response to QMP "
                                            "command '%s', or received a "
@@ -928,7 +928,7 @@ class QMPMonitor(Monitor):
         return self.cmd_raw(json.dumps(obj) + "\n", timeout)
 
 
-    def cmd_qmp(self, cmd, args=None, id=None, timeout=CMD_TIMEOUT):
+    def cmd_qmp(self, cmd, args=None, q_id=None, timeout=CMD_TIMEOUT):
         """
         Build a QMP command from the passed arguments, send it to the monitor
         and return the response.
@@ -944,7 +944,7 @@ class QMPMonitor(Monitor):
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if no response is received
         """
-        return self.cmd_obj(self._build_cmd(cmd, args, id), timeout)
+        return self.cmd_obj(self._build_cmd(cmd, args, q_id), timeout)
 
 
     def verify_responsive(self):
