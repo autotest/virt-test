@@ -310,6 +310,18 @@ class VMUSBControllerPortFullError(VMUSBControllerError):
         return ("No available USB Controller port left for VM %s." % self.name)
 
 
+class VMScreenInactiveError(VMError):
+    def __init__(self, vm, inactive_time):
+        VMError.__init__(self)
+        self.vm = vm
+        self.inactive_time = inactive_time
+
+    def __str__(self):
+        msg = ("%s screen is inactive for %d s (%d min)" %
+               (self.vm.name, self.inactive_time, self.inactive_time/60))
+        return msg
+
+
 class CpuInfo(object):
     """
     A class for VM's cpu information.
