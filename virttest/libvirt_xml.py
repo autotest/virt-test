@@ -168,10 +168,17 @@ class LibvirtXML(LibvirtXMLBase):
 
 
     def set_os_arch_machine_dict(self, value):
+        """
+        Fail, read-only property.
+        """
+        del value # keep pylint happy
         self.__readonly__('os_arch_machine_dict')
 
 
     def del_os_arch_machine_dict(self):
+        """
+        Fail, read-only property.
+        """
         self.__readonly__('os_arch_machine_dict')
 
 
@@ -180,7 +187,7 @@ class VMXMLBase(LibvirtXMLBase):
     Accessor methods for VMXML class
     """
 
-    __slots__ = LibvirtXMLBase.__slots__ + ('vm_name', 'uuid',)
+    __slots__ = LibvirtXMLBase.__slots__ + ('vm_name', 'uuid', 'vcpu')
 
 
     def get_vm_name(self):
@@ -259,6 +266,33 @@ class VMXMLBase(LibvirtXMLBase):
             xmltreefile.write()
         except AssertionError:
             pass # element not found, nothing to delete
+
+
+    def get_vcpu(self):
+        """
+        Return VM's vcpu setting from XML definition
+        """
+        xmltreefile = self.dict_get('xml')
+        return xmltreefile.find('vcpu').text
+
+
+    def set_vcpu(self, value):
+        """
+        Sets the value of vcpu tag in VM XML definition
+        """
+        xmltreefile = self.dict_get('xml')
+        vcpu = xmltreefile.find('vcpu')
+        vcpu.text = str(value)
+        xmltreefile.write()
+
+
+    def del_vcpu(self):
+        """
+        Remove vcpu tag so libvirt can re-generate
+        """
+        xmltreefile = self.dict_get('xml')
+        xmltreefile.remove_by_xpath('vcpu')
+        xmltreefile.write()
 
 
 class VMXML(VMXMLBase):
