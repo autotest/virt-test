@@ -199,19 +199,19 @@ def run_qmp_basic_rhel6(test, params, env):
         """
         # The "id" key must be echoed back in error responses
         id_key = "kvm-autotest"
-        resp = monitor.cmd_qmp("eject", { "foobar": True }, id=id_key)
+        resp = monitor.cmd_qmp("eject", { "foobar": True }, q_id=id_key)
         check_error_resp(resp)
         check_str_key(resp, "id", id_key)
 
         # The "id" key must be echoed back in success responses
-        resp = monitor.cmd_qmp("query-status", id=id_key)
+        resp = monitor.cmd_qmp("query-status", q_id=id_key)
         check_success_resp(resp)
         check_str_key(resp, "id", id_key)
 
         # The "id" key can be any json-object
         for id_key in [ True, 1234, "string again!", [1, [], {}, True, "foo"],
                     { "key": {} } ]:
-            resp = monitor.cmd_qmp("query-status", id=id_key)
+            resp = monitor.cmd_qmp("query-status", q_id=id_key)
             check_success_resp(resp)
             if resp["id"] != id_key:
                 raise error.TestFail("expected id '%s' but got '%s'" %
