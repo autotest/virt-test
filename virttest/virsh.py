@@ -116,7 +116,7 @@ class VirshSession(aexpect.ShellSession):
     # Check output against list of known error-status strings
     ERROR_REGEX_LIST = ['error:\s*', 'failed']
 
-    def __init__(self, virsh_exec=None, uri=None, id=None,
+    def __init__(self, virsh_exec=None, uri=None, a_id=None,
                  prompt=r"virsh\s*\#\s*"):
         """
         Initialize virsh session server, or client if id set.
@@ -133,7 +133,7 @@ class VirshSession(aexpect.ShellSession):
         if self.uri:
             virsh_exec += " -c '%s'" % self.uri
 
-        aexpect.ShellSession.__init__(self, virsh_exec, id, prompt=prompt,
+        aexpect.ShellSession.__init__(self, virsh_exec, a_id, prompt=prompt,
                                       auto_close=False)
 
 
@@ -257,7 +257,7 @@ class VirshPersistent(Virsh):
         try:
             session_id = self.dict_get('session_id')
             if session_id:
-                existing = VirshSession(id=session_id)
+                existing = VirshSession(a_id=session_id)
                 if existing.is_alive():
                     # try nicely first
                     existing.close()
@@ -280,7 +280,7 @@ class VirshPersistent(Virsh):
         uri = self.dict_get('uri') # Must exist, can be None
         self.close_session()
         # Always create new session
-        new_session = VirshSession(virsh_exec, uri, id=None)
+        new_session = VirshSession(virsh_exec, uri, a_id=None)
         # Keep count
         self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
@@ -324,7 +324,7 @@ def command(cmd, **dargs):
     # Check if this is a VirshPersistent method call
     if session_id:
         # Retrieve existing session
-        session = VirshSession(id=session_id)
+        session = VirshSession(a_id=session_id)
         logging.debug("Reusing session %s" % session_id)
         # Use existing session only if uri is the same
         if session.uri is not uri:
