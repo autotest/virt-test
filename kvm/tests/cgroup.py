@@ -6,9 +6,9 @@ cgroup autotest test (on KVM guest)
 import logging, os, re, time
 from autotest.client.shared import error
 from autotest.client import utils
-from autotest.client.tests.cgroup.cgroup_common import Cgroup
-from autotest.client.tests.cgroup.cgroup_common import CgroupModules
-from autotest.client.tests.cgroup.cgroup_common import get_load_per_cpu
+from virttest.utils_cgroup import Cgroup
+from virttest.utils_cgroup import CgroupModules
+from virttest.utils_cgroup import get_load_per_cpu
 from virttest.env_process import preprocess
 from virttest import kvm_monitor
 from virttest.aexpect import ExpectTimeoutError
