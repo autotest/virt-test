@@ -20,7 +20,7 @@ def daemonize(output_file):
     sys.stdout.flush()
     sys.stderr.flush()
 
-    if file:
+    if output_file:
         output_handle = file(output_file, 'a+', 0)
         # autoflush stdout/stderr
         sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
@@ -42,9 +42,9 @@ def recv_all(sock):
         total_data.append(data)
     return ''.join(total_data)
 
-def run_server(host, port, daemon, file, queue_size, threshold, drift):
+def run_server(host, port, daemon, path, queue_size, threshold, drift):
     if daemon:
-        daemonize(output_file=file)
+        daemonize(output_file=path)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((host, port))
     sock.listen(queue_size)
@@ -67,9 +67,9 @@ def run_server(host, port, daemon, file, queue_size, threshold, drift):
             else:
                 print "%.2f: %s" % (local_timestamp, heartbeat)
 
-def run_client(host, port, daemon, file, interval):
+def run_client(host, port, daemon, path, interval):
     if daemon:
-        daemonize(output_file=file)
+        daemonize(output_file=path)
     seq = 1
     while 1:
         try:
