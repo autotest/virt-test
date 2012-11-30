@@ -109,9 +109,9 @@ if __name__ == "__main__":
             reader_fds.append(os.open(filename, os.O_RDWR))
 
         # Write shell PID to file
-        file = open(shell_pid_filename, "w")
-        file.write(str(shell_pid))
-        file.close()
+        fileobj = open(shell_pid_filename, "w")
+        fileobj.write(str(shell_pid))
+        fileobj.close()
 
         # Print something to stdout so the client can start working
         print "Server %s ready" % a_id
@@ -159,9 +159,9 @@ if __name__ == "__main__":
                 os.write(shell_fd, data)
 
         # Write the exit status to a file
-        file = open(status_filename, "w")
-        file.write(str(status))
-        file.close()
+        fileobj = open(status_filename, "w")
+        fileobj.write(str(status))
+        fileobj.close()
 
         # Wait for the client to finish initializing
         _wait(lock_client_starting_filename)
@@ -529,9 +529,9 @@ class Spawn:
         command.
         """
         try:
-            file = open(self.shell_pid_filename, "r")
-            pid = int(file.read())
-            file.close()
+            fileobj = open(self.shell_pid_filename, "r")
+            pid = int(fileobj.read())
+            fileobj.close()
             return pid
         except Exception:
             return None
@@ -544,9 +544,9 @@ class Spawn:
         """
         _wait(self.lock_server_running_filename)
         try:
-            file = open(self.status_filename, "r")
-            status = int(file.read())
-            file.close()
+            fileobj = open(self.status_filename, "r")
+            status = int(fileobj.read())
+            fileobj.close()
             return status
         except Exception:
             return None
@@ -557,9 +557,9 @@ class Spawn:
         Return the STDOUT and STDERR output of the process so far.
         """
         try:
-            file = open(self.output_filename, "r")
-            output = file.read()
-            file.close()
+            fileobj = open(self.output_filename, "r")
+            output = fileobj.read()
+            fileobj.close()
             return output
         except Exception:
             return ""
