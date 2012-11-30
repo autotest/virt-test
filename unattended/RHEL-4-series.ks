@@ -30,6 +30,8 @@ redhat-lsb
 
 %post
 echo "OS install is completed" > /dev/ttyS0
+grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
+grubby --args="divider=10" --update-kernel=$(grubby --default-kernel)
 cd home
 dhclient
 chkconfig sshd on
