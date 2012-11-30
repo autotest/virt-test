@@ -796,6 +796,7 @@ class BaseVM(object):
             try:
                 return self.login(nic_index, internal_timeout)
             except (remote.LoginError, VMError), e:
+                self.verify_alive()
                 e = str(e)
                 if e not in error_messages:
                     logging.debug(e)
@@ -906,6 +907,7 @@ class BaseVM(object):
             try:
                 return self.serial_login(internal_timeout)
             except remote.LoginError, e:
+                self.verify_alive()
                 e = str(e)
                 if e not in error_messages:
                     logging.debug(e)
@@ -1019,6 +1021,13 @@ class BaseVM(object):
         @param: nic_index_or_name: name or index number for existing NIC
         """
         raise NotImplementedError
+
+
+    def verify_userspace_crash(self):
+        """
+        Verify if the userspace component of the virtualization backend crashed.
+        """
+        pass
 
 
     def clone(self, name, **params):
