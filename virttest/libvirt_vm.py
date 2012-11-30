@@ -1371,6 +1371,23 @@ class VM(virt_vm.BaseVM):
         return dominfo_dict
 
 
+    def vcpuinfo(self):
+        """
+        Return a dict's list include vm's vcpu infomation.
+        """
+        output = virsh.vcpuinfo(self.name, uri=self.connect_uri)
+        # Key: word before ':' | value: content after ':' (stripped)
+        vcpuinfo_list = []
+        vcpuinfo_dict = {}
+        for line in output.splitlines():
+            key = line.split(':')[0].strip()
+            value = line.split(':')[-1].strip()
+            vcpuinfo_dict[key] = value
+            if key == "CPU Affinity":
+                vcpuinfo_list.append(vcpuinfo_dict)
+        return vcpuinfo_list
+
+
     def get_used_mem(self):
         """
         Get vm's current memory(kilobytes).
