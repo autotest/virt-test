@@ -1983,6 +1983,7 @@ variants:
                 image_format_stg = raw
 
     - enospc: install setup image_copy unattended_install.cdrom
+        no JeOS
         virt_test_type = kvm
         type = enospc
         start_vm = no
