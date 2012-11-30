@@ -522,7 +522,7 @@ class TestVirtIface(unittest.TestCase):
         for propertea in self.VirtIface.__slots__:
             props[propertea] = utils_misc.generate_random_string(16)
         more_props = {}
-        for idx in xrange(0,16):
+        for _ in xrange(0,16):
             key = utils_misc.generate_random_string(16)
             value = utils_misc.generate_random_string(16)
             more_props[key] = value
