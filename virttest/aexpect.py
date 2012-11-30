@@ -44,23 +44,23 @@ def _wait(filename):
     _unlock(fd)
 
 
-def _get_filenames(base_dir, id):
-    return [os.path.join(base_dir, s + id) for s in
+def _get_filenames(base_dir, a_id):
+    return [os.path.join(base_dir, s + a_id) for s in
             "shell-pid-", "status-", "output-", "inpipe-",
             "lock-server-running-", "lock-client-starting-"]
 
 
-def _get_reader_filename(base_dir, id, reader):
-    return os.path.join(base_dir, "outpipe-%s-%s" % (reader, id))
+def _get_reader_filename(base_dir, a_id, reader):
+    return os.path.join(base_dir, "outpipe-%s-%s" % (reader, a_id))
 
 
 # The following is the server part of the module.
 
 if __name__ == "__main__":
-    id = sys.stdin.readline().strip()
+    a_id = sys.stdin.readline().strip()
     echo = sys.stdin.readline().strip() == "True"
     readers = sys.stdin.readline().strip().split(",")
-    command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % id
+    command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % a_id
 
     # Define filenames to be used for communication
     (shell_pid_filename,
@@ -68,10 +68,10 @@ if __name__ == "__main__":
      output_filename,
      inpipe_filename,
      lock_server_running_filename,
-     lock_client_starting_filename) = _get_filenames(BASE_DIR, id)
+     lock_client_starting_filename) = _get_filenames(BASE_DIR, a_id)
 
     # Populate the reader filenames list
-    reader_filenames = [_get_reader_filename(BASE_DIR, id, reader)
+    reader_filenames = [_get_reader_filename(BASE_DIR, a_id, reader)
                         for reader in readers]
 
     # Set $TERM = dumb
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         file.close()
 
         # Print something to stdout so the client can start working
-        print "Server %s ready" % id
+        print "Server %s ready" % a_id
         sys.stdout.flush()
 
         # Initialize buffers
@@ -371,14 +371,14 @@ class Spawn:
     resumes _tail() if needed.
     """
 
-    def __init__(self, command=None, id=None, auto_close=False, echo=False,
+    def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
                  linesep="\n"):
         """
         Initialize the class and run command as a child process.
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param id: ID of an already running server, if accessing a running
+        @param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
@@ -388,7 +388,7 @@ class Spawn:
         @param linesep: Line separator to be appended to strings sent to the
                 child process by sendline().
         """
-        self.id = id or utils_misc.generate_random_string(8)
+        self.a_id = a_id or utils_misc.generate_random_string(8)
         self.log_file = None
 
         # Define filenames for communication with server
@@ -402,7 +402,7 @@ class Spawn:
          self.inpipe_filename,
          self.lock_server_running_filename,
          self.lock_client_starting_filename) = _get_filenames(BASE_DIR,
-                                                              self.id)
+                                                              self.a_id)
 
         # Remember some attributes
         self.auto_close = auto_close
@@ -417,7 +417,7 @@ class Spawn:
 
         # Define the reader filenames
         self.reader_filenames = dict(
-            (reader, _get_reader_filename(BASE_DIR, self.id, reader))
+            (reader, _get_reader_filename(BASE_DIR, self.a_id, reader))
             for reader in self.readers)
 
         # Let the server know a client intends to open some pipes;
@@ -433,12 +433,12 @@ class Spawn:
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
             # Send parameters to the server
-            sub.stdin.write("%s\n" % self.id)
+            sub.stdin.write("%s\n" % self.a_id)
             sub.stdin.write("%s\n" % echo)
             sub.stdin.write("%s\n" % ",".join(self.readers))
             sub.stdin.write("%s\n" % command)
             # Wait for the server to complete its initialization
-            while not "Server %s ready" % self.id in sub.stdout.readline():
+            while not "Server %s ready" % self.a_id in sub.stdout.readline():
                 pass
 
         # Open the reading pipes
@@ -468,7 +468,7 @@ class Spawn:
     def __getinitargs__(self):
         # Save some information when pickling -- will be passed to the
         # constructor upon unpickling
-        return (None, self.id, self.auto_close, self.echo, self.linesep)
+        return (None, self.a_id, self.auto_close, self.echo, self.linesep)
 
 
     def __del__(self):
@@ -515,10 +515,10 @@ class Spawn:
 
     def get_id(self):
         """
-        Return the instance's id attribute, which may be used to access the
+        Return the instance's a_id attribute, which may be used to access the
         process in the future.
         """
-        return self.id
+        return self.a_id
 
 
     def get_pid(self):
@@ -594,7 +594,7 @@ class Spawn:
                 pass
         self.reader_fds = {}
         # Remove all used files
-        for filename in (_get_filenames(BASE_DIR, self.id)):
+        for filename in (_get_filenames(BASE_DIR, self.a_id)):
             try:
                 os.unlink(filename)
             except OSError:
@@ -664,7 +664,7 @@ class Tail(Spawn):
     When this class is unpickled, it automatically resumes reporting output.
     """
 
-    def __init__(self, command=None, id=None, auto_close=False, echo=False,
+    def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
                  output_func=None, output_params=(), output_prefix=""):
         """
@@ -672,7 +672,7 @@ class Tail(Spawn):
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param id: ID of an already running server, if accessing a running
+        @param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
@@ -699,7 +699,7 @@ class Tail(Spawn):
         self._add_close_hook(Tail._close_log_file)
 
         # Init the superclass
-        Spawn.__init__(self, command, id, auto_close, echo, linesep)
+        Spawn.__init__(self, command, a_id, auto_close, echo, linesep)
 
         # Remember some attributes
         self.termination_func = termination_func
@@ -852,7 +852,7 @@ class Tail(Spawn):
 
     def _start_thread(self):
         self.tail_thread = threading.Thread(target=self._tail,
-                                            name="tail_thread_%s" % self.id)
+                                            name="tail_thread_%s" % self.a_id)
         self.tail_thread.start()
 
 
@@ -873,7 +873,7 @@ class Expect(Tail):
     It also provides all of Tail's functionality.
     """
 
-    def __init__(self, command=None, id=None, auto_close=True, echo=False,
+    def __init__(self, command=None, a_id=None, auto_close=True, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
                  output_func=None, output_params=(), output_prefix=""):
         """
@@ -881,7 +881,7 @@ class Expect(Tail):
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param id: ID of an already running server, if accessing a running
+        @param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
@@ -906,7 +906,7 @@ class Expect(Tail):
         self._add_reader("expect")
 
         # Init the superclass
-        Tail.__init__(self, command, id, auto_close, echo, linesep,
+        Tail.__init__(self, command, a_id, auto_close, echo, linesep,
                       termination_func, termination_params,
                       output_func, output_params, output_prefix)
 
@@ -1097,7 +1097,7 @@ class ShellSession(Expect):
     process for responsiveness.
     """
 
-    def __init__(self, command=None, id=None, auto_close=True, echo=False,
+    def __init__(self, command=None, a_id=None, auto_close=True, echo=False,
                  linesep="\n", termination_func=None, termination_params=(),
                  output_func=None, output_params=(), output_prefix="",
                  prompt=r"[\#\$]\s*$", status_test_command="echo $?"):
@@ -1106,7 +1106,7 @@ class ShellSession(Expect):
 
         @param command: Command to run, or None if accessing an already running
                 server.
-        @param id: ID of an already running server, if accessing a running
+        @param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
         @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default True).
@@ -1132,7 +1132,7 @@ class ShellSession(Expect):
                 cmd_status_output() and friends).
         """
         # Init the superclass
-        Expect.__init__(self, command, id, auto_close, echo, linesep,
+        Expect.__init__(self, command, a_id, auto_close, echo, linesep,
                         termination_func, termination_params,
                         output_func, output_params, output_prefix)
 
