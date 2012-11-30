@@ -8,9 +8,7 @@ import time, os, logging, fcntl, re, commands, errno
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, kvm_monitor, aexpect
-import kvm_virtio_port
-import remote
-import data_dir
+import kvm_virtio_port, remote, data_dir
 
 
 class VM(virt_vm.BaseVM):
