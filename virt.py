@@ -1,4 +1,4 @@
-import os, sys, logging, imp
+import os, sys, logging, imp, Queue
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, env_process
@@ -24,6 +24,21 @@ class virt(test.test):
         self.virtdir = os.path.join(virtdir, "shared")
         # Place where virt software will be built/linked
         self.builddir = os.path.join(virtdir, params.get("vm_type"))
+        self.background_errors = Queue.Queue()
+
+
+    def verify_background_errors(self):
+        """
+        Verify if there are any errors that happened on background threads.
+
+        @raise Exception: Any exception stored on the background_errors queue.
+        """
+        try:
+            exc = self.background_errors.get(block=False)
+        except Queue.Empty:
+            pass
+        else:
+            raise exc[1], None, exc[2]
 
 
     def run_once(self, params):
@@ -108,6 +123,7 @@ class virt(test.test):
                         run_func = getattr(test_module, "run_%s" % t_type)
                         try:
                             run_func(self, params, env)
+                            self.verify_background_errors()
                         finally:
                             env.save()
                     test_passed = True
