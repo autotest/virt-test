@@ -800,7 +800,7 @@ class Tail(Spawn):
 
         try:
             fd = self._get_fd("tail")
-            buffer = ""
+            bfr = ""
             while True:
                 global _thread_kill_requested
                 if _thread_kill_requested:
@@ -815,24 +815,24 @@ class Tail(Spawn):
                     new_data = os.read(fd, 1024)
                     if not new_data:
                         break
-                    buffer += new_data
+                    bfr += new_data
                     # Send the output to output_func line by line
                     # (except for the last line)
                     if self.output_func:
-                        lines = buffer.split("\n")
+                        lines = bfr.split("\n")
                         for line in lines[:-1]:
                             print_line(line)
                     # Leave only the last line
-                    last_newline_index = buffer.rfind("\n")
-                    buffer = buffer[last_newline_index+1:]
+                    last_newline_index = bfr.rfind("\n")
+                    bfr = bfr[last_newline_index+1:]
                 else:
-                    # No output is available right now; flush the buffer
-                    if buffer:
-                        print_line(buffer)
-                        buffer = ""
+                    # No output is available right now; flush the bfr
+                    if bfr:
+                        print_line(bfr)
+                        bfr = ""
             # The process terminated; print any remaining output
-            if buffer:
-                print_line(buffer)
+            if bfr:
+                print_line(bfr)
             # Get the exit status, print it and send it to termination_func
             status = self.get_status()
             if status is None:
@@ -961,18 +961,18 @@ class Expect(Tail):
                 return i
 
 
-    def read_until_output_matches(self, patterns, filter=lambda x: x,
+    def read_until_output_matches(self, patterns, filter_func=lambda x: x,
                                   timeout=60, internal_timeout=None,
                                   print_func=None):
         """
         Read using read_nonblocking until a match is found using match_patterns,
         or until timeout expires. Before attempting to search for a match, the
-        data is filtered using the filter function provided.
+        data is filtered using the filter_func function provided.
 
         @brief: Read from child using read_nonblocking until a pattern
                 matches.
         @param patterns: List of strings (regular expression patterns)
-        @param filter: Function to apply to the data read from the child before
+        @param filter_func: Function to apply to the data read from the child before
                 attempting to match it against the patterns (should take and
                 return a string)
         @param timeout: The duration (in seconds) to wait until a match is
@@ -1008,7 +1008,7 @@ class Expect(Tail):
                     print_func(line)
             # Look for patterns
             o += data
-            match = self.match_patterns(filter(o), patterns)
+            match = self.match_patterns(filter_func(o), patterns)
             if match is not None:
                 return match, o
 
