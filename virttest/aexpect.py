@@ -607,27 +607,27 @@ class Spawn:
         self.linesep = linesep
 
 
-    def send(self, str=""):
+    def send(self, cont=""):
         """
         Send a string to the child process.
 
-        @param str: String to send to the child process.
+        @param cont: String to send to the child process.
         """
         try:
             fd = os.open(self.inpipe_filename, os.O_RDWR)
-            os.write(fd, str)
+            os.write(fd, cont)
             os.close(fd)
         except Exception:
             pass
 
 
-    def sendline(self, str=""):
+    def sendline(self, cont=""):
         """
         Send a string followed by a line separator to the child process.
 
-        @param str: String to send to the child process.
+        @param cont: String to send to the child process.
         """
-        self.send(str + self.linesep)
+        self.send(cont + self.linesep)
 
 
 _thread_kill_requested = False
@@ -944,11 +944,11 @@ class Expect(Tail):
                 return data
 
 
-    def match_patterns(self, str, patterns):
+    def match_patterns(self, cont, patterns):
         """
-        Match str against a list of patterns.
+        Match cont against a list of patterns.
 
-        Return the index of the first pattern that matches a substring of str.
+        Return the index of the first pattern that matches a substring of cont.
         None and empty strings in patterns are ignored.
         If no match is found, return None.
 
@@ -957,7 +957,7 @@ class Expect(Tail):
         for i in range(len(patterns)):
             if not patterns[i]:
                 continue
-            if re.search(patterns[i], str):
+            if re.search(patterns[i], cont):
                 return i
 
 
@@ -1038,9 +1038,9 @@ class Expect(Tail):
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
-        def get_last_word(str):
-            if str:
-                return str.split()[-1]
+        def get_last_word(cont):
+            if cont:
+                return cont.split()[-1]
             else:
                 return ""
 
@@ -1072,8 +1072,8 @@ class Expect(Tail):
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
-        def get_last_nonempty_line(str):
-            nonempty_lines = [l for l in str.splitlines() if l.strip()]
+        def get_last_nonempty_line(cont):
+            nonempty_lines = [l for l in cont.splitlines() if l.strip()]
             if nonempty_lines:
                 return nonempty_lines[-1]
             else:
@@ -1234,13 +1234,13 @@ class ShellSession(Expect):
                 terminates while waiting for output
         @raise ShellError: Raised if an unknown error occurs
         """
-        def remove_command_echo(str, cmd):
-            if str and str.splitlines()[0] == cmd:
-                str = "".join(str.splitlines(True)[1:])
-            return str
+        def remove_command_echo(cont, cmd):
+            if cont and cont.splitlines()[0] == cmd:
+                cont = "".join(cont.splitlines(True)[1:])
+            return cont
 
-        def remove_last_nonempty_line(str):
-            return "".join(str.rstrip().splitlines(True)[:-1])
+        def remove_last_nonempty_line(cont):
+            return "".join(cont.rstrip().splitlines(True)[:-1])
 
         logging.debug("Sending command: %s" % cmd)
         self.read_nonblocking(0, timeout)
