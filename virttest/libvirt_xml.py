@@ -384,5 +384,23 @@ class VMXML(VMXMLBase):
         return vm
 
 
+    def set_vm_vcpus(self, vm_name, value):
+        """
+        Accessor method for 'vcpu' property
+        """
+        self.set_xml(self.__virsh__.dumpxml(vm_name))
+        if not self.super_get('INITIALIZED'):
+            self.dict_set('vcpu', value) # Assuming value is None
+        else:
+            try:
+                xmltreefile = self.dict_get('xml')
+                xmltreefile.find('vcpu').text = str(value)
+            except AttributeError: # None.text
+                raise LibvirtXMLError("Invalid XML: Contain no <vcpu> element")
+            xmltreefile.write()
+        self.undefine()
+        self.define()
+
+
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)
