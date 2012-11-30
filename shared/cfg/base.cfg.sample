@@ -386,6 +386,12 @@ image_remove_commnad = 'rm -rf %s'
 
 indirect_image_blacklist = "/dev/hda.* /dev/sda.* /dev/sg0 /dev/md0"
 
+# Guest screen max inactive time until taking actions (log or throw errors)
+inactivity_treshold = 1800
+
+# # Default action if inactivity threshold is reached
+inactivity_watcher = log
+
 # Floppy size when unattended installing guests
 # 1.44MB for Linux, but 2.88MB for Windows guest, same as the virtio-win.vfd
 vfd_size = 1440k
