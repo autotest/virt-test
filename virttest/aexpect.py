@@ -1211,9 +1211,9 @@ class ShellSession(Expect):
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
-        m, o = self.read_until_last_line_matches([self.prompt], timeout,
-                                                 internal_timeout, print_func)
-        return o
+        return self.read_until_last_line_matches([self.prompt], timeout,
+                                                 internal_timeout,
+                                                 print_func)[1]
 
 
     def cmd_output(self, cmd, timeout=60, internal_timeout=None,
@@ -1314,9 +1314,8 @@ class ShellSession(Expect):
         @raise ShellStatusError: Raised if the exit status cannot be obtained
         @raise ShellError: Raised if an unknown error occurs
         """
-        s, o = self.cmd_status_output(cmd, timeout, internal_timeout,
-                                      print_func)
-        return s
+        return self.cmd_status_output(cmd, timeout, internal_timeout,
+                                      print_func)[0]
 
 
     def cmd(self, cmd, timeout=60, internal_timeout=None, print_func=None, ok_status=[0,]):
