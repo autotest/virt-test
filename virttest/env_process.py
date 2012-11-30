@@ -1,4 +1,4 @@
-import os, time, commands, re, logging, glob, threading, shutil
+import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
