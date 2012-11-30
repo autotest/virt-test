@@ -187,10 +187,7 @@ if __name__ == "__main__":
 
 import subprocess, time, signal, re, threading, logging
 import utils_misc
-try:
-    import autotest.common as common
-except ImportError:
-    import common
+
 
 class ExpectError(Exception):
     def __init__(self, patterns, output):
