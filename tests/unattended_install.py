@@ -1035,7 +1035,6 @@ def run_unattended_install(test, params, env):
                 logging.error(e)
                 copy_images()
                 raise e
-        vm.verify_kernel_crash()
         test.verify_background_errors()
         finish_signal = vm.serial_console.get_output()
         if (params.get("wait_no_ack", "no") == "no" and
