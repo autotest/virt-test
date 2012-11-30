@@ -406,6 +406,20 @@ def qemu_monitor_command(vm_name, cmd, **dargs):
     return command(cmd_qemu_monitor, **dargs)
 
 
+def setvcpus(vm_name, count, extra="", **dargs):
+    """
+    Change the number of virtual CPUs in the guest domain.
+
+    @oaram vm_name: name of vm to affect
+    @param count: value for vcpu parameter
+    @param options: any extra command options.
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult object from command
+    """
+    cmd = "setvcpus %s %s %s" % (vm_name, count, extra)
+    return command(cmd, **dargs)
+
+
 def vcpupin(vm_name, vcpu, cpu, **dargs):
     """
     Changes the cpu affinity for respective vcpu.
