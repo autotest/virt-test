@@ -6,14 +6,56 @@ from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
 
 def run_ksm_overcommit(test, params, env):
     """
-    Test how KSM (Kernel Shared Memory) act when more than physical memory is
-    used. In second part we also test how KVM handles a situation when the host
-    runs out of memory (it is expected to pause the guest system, wait until
-    some process returns memory and bring the guest back to life)
+    Tests KSM (Kernel Shared Memory) capability by allocating and filling
+    KVM guests memory using various values. KVM sets the memory as
+    MADV_MERGEABLE so all VM's memory can be merged. The workers in
+    guest writes to tmpfs filesystem thus allocations are not limited
+    by process max memory, only by VM's memory. Two test modes are supported -
+    serial and parallel.
+
+    Serial mode - uses multiple VMs, allocates memory per guest and always
+                  verifies the correct number of shared memory.
+                  0) Prints out the setup and initialize guest(s)
+                  1) Fills guest with the same number (S1)
+                  2) Random fill on the first guest
+                  3) Random fill of the remaining VMs one by one until the
+                     memory is completely filled (KVM stops machines which
+                     asks for additional memory until there is available
+                     memory) (S2, shouldn't finish)
+                  4) Destroy all VMs but the last one
+                  5) Checks the last VMs memory for corruption
+    Paralel mode - uses one VM with multiple allocator workers. Executes
+                   scenarios in parallel to put more stress on the KVM.
+                   0) Prints out the setup and initialize guest(s)
+                   1) Fills memory with the same number (S1)
+                   2) Fills memory with random numbers (S2)
+                   3) Verifies all pages
+                   4) Fills memory with the same number (S2)
+                   5) Changes the last 96B (S3)
+
+    Scenarios:
+    S1) Fill all vms with the same value (all pages should be merged into 1)
+    S2) Random fill (all pages should be splitted)
+    S3) Fill last 96B (change only last 96B of each page; some pages will be
+                      merged; there was a bug with data corruption)
+    Every worker has unique random key so we are able to verify the filled
+    values.
 
     @param test: kvm test object.
     @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test wnvironment.
+    @param env: Dictionary with the test environment.
+
+    @param cfg: ksm_swap - use swap?
+    @param cfg: ksm_overcommit_ratio - memory overcommit (serial mode only)
+    @param cfg: ksm_parallel_ratio - number of workers (parallel mode only)
+    @param cfg: ksm_host_reserve - override memory reserve on host in MB
+    @param cfg: ksm_guest_reserve - override memory reserve on guests in MB
+    @param cfg: ksm_mode - test mode {serial, parallel}
+    @param cfg: ksm_perf_ratio - performance ratio, increase it when your
+                                 machine is too slow
+
+    @warning: This test sets custom KSM parameters and relies on it. Don't try
+              to run any auto tweakers (eg. ksm_tuned)
     """
 
     def _start_allocator(vm, session, timeout):
@@ -219,7 +261,7 @@ def run_ksm_overcommit(test, params, env):
 
         logging.info("Phase 3a: PASS")
 
-        logging.info("Phase 3b: Check if memory in max loading guest is right")
+        logging.info("Phase 3b: Verify memory of the max stressed VM")
         for i in range(last_vm + 1, vmsc):
             lsessions[i].close()
             if i == (vmsc - 1):
