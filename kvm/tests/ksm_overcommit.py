@@ -53,9 +53,6 @@ def run_ksm_overcommit(test, params, env):
     @param cfg: ksm_mode - test mode {serial, parallel}
     @param cfg: ksm_perf_ratio - performance ratio, increase it when your
                                  machine is too slow
-
-    @warning: This test sets custom KSM parameters and relies on it. Don't try
-              to run any auto tweakers (eg. ksm_tuned)
     """
     def _start_allocator(vm, session, timeout):
         """
@@ -398,6 +395,9 @@ def run_ksm_overcommit(test, params, env):
 
     # Main test code
     logging.info("Starting phase 0: Initialization")
+    if utils.run("ps -C ksmtuned", ignore_status=True).exit_status == 0:
+        logging.info("Killing ksmtuned...")
+        utils.run("killall ksmtuned")
     new_ksm = False
     if (os.path.exists("/sys/kernel/mm/ksm/run")):
         utils.run("echo 50 > /sys/kernel/mm/ksm/sleep_millisecs")
