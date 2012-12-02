@@ -861,7 +861,6 @@ def run_virtio_console(test, params, env):
             interruption = _s4
             session = vm.wait_for_login()
             ret = session.cmd_status(params.get("check_s4_support_cmd"))
-            print repr(ret)
             if ret:
                 raise error.TestNAError("Suspend to disk S4 not supported.")
             set_s4_cmd = params.get('set_s4_cmd')
@@ -1352,9 +1351,11 @@ def run_virtio_console(test, params, env):
                                     "name=%s"
                                     % (port_type, pci_id, port, port))
         if console == "no":
-            vm.virtio_ports.append(kvm_virtio_port.VirtioSerial(port, port, None))
+            vm.virtio_ports.append(kvm_virtio_port.VirtioSerial(port, port,
+                                                                None))
         else:
-            vm.virtio_ports.append(kvm_virtio_port.VirtioConsole(port, port, None))
+            vm.virtio_ports.append(kvm_virtio_port.VirtioConsole(port, port,
+                                                                 None))
         if ret != "":
             logging.error(ret)
 
