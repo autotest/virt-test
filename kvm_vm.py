@@ -1164,7 +1164,7 @@ class VM(virt_vm.BaseVM):
             # Add virtio_serial_pcis
             for i in range(no_virtio_serial_pcis, bus + 1):
                 qemu_cmd += (" -device virtio-serial-pci,id=virtio_serial_pci"
-                             "%d" % i)
+                             "%d,addr=%s" % (i, get_free_pci_addr(None)))
                 no_virtio_serial_pcis += 1
             if bus is not False:
                 bus = "virtio_serial_pci%d.0" % bus
