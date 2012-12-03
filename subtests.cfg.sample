@@ -4536,11 +4536,9 @@ unattended_install.nfs:
         nfs_server = nfs.englab.nay.redhat.com
         nfs_dir = /pub/rhel/rel-eng/latest-RHEL-7/compose/Server/x86_64/os
     RHEL.6.4.64:
-        nfs_server = tree.englab.nay.redhat.com
-        nfs_dir = /tree/pub/rhel/rel-eng/latest-RHEL-6/6/Server/x86_64/os 
+        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6/Server/x86_64/os
     RHEL.6.4.32:
-        nfs_server = tree.englab.nay.redhat.com
-        nfs_dir = /tree/pub/rhel/rel-eng/latest-RHEL-6/6/Server/i386/os 
+        nfs_dir = /pub/rhel/rel-eng/latest-RHEL-6/6/Server/i386/os
     RHEL.6.3.64:
         nfs_dir += RHEL-6/6.3/Server/x86_64/os
     RHEL.6.3.32:
