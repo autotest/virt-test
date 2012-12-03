@@ -90,6 +90,7 @@ class VM(virt_vm.BaseVM):
         if state:
             self.instance = state['instance']
         self.qemu_command = ''
+        self.start_time = 0.0
 
     def verify_alive(self):
         """
@@ -1871,6 +1872,7 @@ class VM(virt_vm.BaseVM):
             self.qemu_command = qemu_command
             self.process = aexpect.run_bg(qemu_command, None,
                                           logging.info, "[qemu output] ")
+            self.start_time = time.time()
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
