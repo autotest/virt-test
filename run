@@ -143,6 +143,9 @@ if __name__ == '__main__':
             except ValueError:
                 pipe = sys.stdout
             index = 0
+            pipe.write("Tests produced for type %s, config file %s" %
+                       (options.type, cfg))
+            pipe.write("\n\n")
             for params in cartesian_parser.get_dicts():
                 virt_test_type = params.get('virt_test_type', "")
                 supported_virt_backends = virt_test_type.split(" ")
