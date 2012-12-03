@@ -299,13 +299,13 @@ class Parser(object):
             for t in failed_external_filters:
                 if t not in content:
                     return True
-                filename, linenum, filter = t
-                if filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
+                _, _, external_filter = t
+                if external_filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
                                      labels):
                     return True
             for t in failed_internal_filters:
-                filename, linenum, filter = t
-                if filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
+                _, _, internal_filter = t
+                if internal_filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
                                      labels):
                     return True
             return False
@@ -357,7 +357,7 @@ class Parser(object):
         if not node.children:
             self._debug("    reached leaf, returning it")
             d = {"name": name, "dep": dep, "shortname": ".".join(shortname)}
-            for filename, linenum, op in new_content:
+            for _, _, op in new_content:
                 op.apply_to_dict(d)
             yield d
         # If this node did not produce any dicts, remember the failed filters
@@ -366,8 +366,7 @@ class Parser(object):
             new_external_filters = []
             new_internal_filters = []
             for n in node.children:
-                (failed_ctx,
-                 failed_ctx_set,
+                (_, _,
                  failed_external_filters,
                  failed_internal_filters) = n.failed_cases[0]
                 for obj in failed_internal_filters:
