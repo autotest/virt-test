@@ -98,6 +98,7 @@ class VM(virt_vm.BaseVM):
         if state:
             self.instance = state['instance']
         self.qemu_command = ''
+        self.start_time = 0.0
         self.init_pci_addr = int(params.get("init_pci_addr", 4))
 
 
@@ -1857,6 +1858,8 @@ class VM(virt_vm.BaseVM):
             self.process = aexpect.run_bg(qemu_command, None,
                                           logging.info, "[qemu output] ",
                                           auto_close=False)
+            self.start_time = time.time()
+            
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
