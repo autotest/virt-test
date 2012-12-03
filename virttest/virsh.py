@@ -787,7 +787,7 @@ def define(xml_path, **dargs):
     dargs['ignore_status'] = False
     try:
         command("define --file %s" % xml_path, **dargs)
-        logging.debug("defined VM %s", name)
+        logging.debug("Defined VM from %s", xml_path)
         return True
     except error.CmdError:
         logging.error("Define %s failed.", xml_path)
