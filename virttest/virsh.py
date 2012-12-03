@@ -785,13 +785,9 @@ def define(xml_path, **dargs):
     @return: True operation was successful
     """
     dargs['ignore_status'] = False
-    try:
-        command("define --file %s" % xml_path, **dargs)
-        logging.debug("defined VM %s", name)
-        return True
-    except error.CmdError:
-        logging.error("Define %s failed.", xml_path)
-        return False
+    cmd = "define --file %s" % xml_path
+    logging.debug("Define VM from %s", xml_path)
+    return command(cmd, **dargs)
 
 
 def undefine(name, **dargs):
@@ -803,13 +799,9 @@ def undefine(name, **dargs):
     @return: True operation was successful
     """
     dargs['ignore_status'] = False
-    try:
-        command("undefine %s" % (name), **dargs)
-        logging.debug("undefined VM %s", name)
-        return True
-    except error.CmdError, detail:
-        logging.error("undefine VM %s failed:\n%s", name, detail)
-        return False
+    cmd = "undefine %s" % name
+    logging.debug("Undefine VM %s", name)
+    return command(cmd, **dargs)
 
 
 def remove_domain(name, **dargs):
@@ -823,7 +815,11 @@ def remove_domain(name, **dargs):
     if domain_exists(name, **dargs):
         if is_alive(name, **dargs):
             destroy(name, **dargs)
-        undefine(name, **dargs)
+        try:
+            undefine(name, **dargs)
+        except error.CmdError, detail:
+            logging.error("Undefine VM %s failed:\n%s", name, detail)
+            return False
     return True
 
 

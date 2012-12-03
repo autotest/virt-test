@@ -305,7 +305,7 @@ class VMXML(VMXMLBase):
 
     def undefine(self):
         """Undefine this VM with libvirt retaining XML in instance"""
-        # Allow any exceptions to propigate up
+        # Use remove_domain to confirm vm is down before undefine
         self.__virsh__.remove_domain(self.vm_name)
 
 
