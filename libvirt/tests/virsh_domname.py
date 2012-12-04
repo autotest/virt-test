@@ -1,5 +1,5 @@
-import logging, time
-from autotest.client.shared import utils, error
+import logging
+from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
 
 
