@@ -1,6 +1,7 @@
 import os
 import distutils.ccompiler
 import distutils.sysconfig
+import data_dir
 
 PYTHON_HEADERS = distutils.sysconfig.get_python_inc()
 PYTHON_VERSION = distutils.sysconfig.get_python_version()
@@ -10,23 +11,25 @@ ABSPATH = os.path.abspath(__file__)
 OUTPUT_DIR = os.path.dirname(ABSPATH)
 
 SOURCES = [os.path.join(OUTPUT_DIR, f) for f in ['passfd.c']]
-SHARED_OBJECT = os.path.join(OUTPUT_DIR, '_passfd.so')
+SHARED_OBJECT = '_passfd.so'
+
 
 def passfd_setup(output_dir=OUTPUT_DIR):
     '''
-    Compiles the passfd python extension
+    Compiles the passfd python extension.
 
     @param output_dir: where the _passfd.so module will be saved
     @return: None
     '''
-    if output_dir is not None:
-        output_file = os.path.join(output_dir, os.path.basename(SHARED_OBJECT))
-    else:
-        output_file = SHARED_OBJECT
+    if output_dir is None:
+        output_dir = OUTPUT_DIR
+
+    output_file = os.path.join(output_dir, SHARED_OBJECT)
 
     c = distutils.ccompiler.new_compiler()
-    objects = c.compile(SOURCES, output_dir=OUTPUT_DIR,
-                        include_dirs=[PYTHON_HEADERS], extra_postargs=['-fPIC'])
+    objects = c.compile(SOURCES, include_dirs=[PYTHON_HEADERS],
+                        output_dir=data_dir.get_tmp_dir(),
+                        extra_postargs=['-fPIC'])
     c.link_shared_object(objects, output_file, libraries=[PYTHON_LIB])
 
 
@@ -40,7 +43,8 @@ def import_passfd():
         import passfd
     except ImportError:
         passfd_setup()
-    import passfd
+        import passfd
+
     return passfd
 
 
