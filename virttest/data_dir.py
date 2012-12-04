@@ -5,8 +5,8 @@ Library used to provide the appropriate data dir for virt test.
 import os, sys, tempfile
 
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
-_ROOT_PATH = os.path.abspath(_ROOT_PATH)
-DATA_DIR = os.path.join(_ROOT_PATH, 'shared', 'data')
+ROOT_DIR = os.path.abspath(_ROOT_PATH)
+DATA_DIR = os.path.join(ROOT_DIR, 'shared', 'data')
 BACKING_DATA_DIR = None
 
 def get_backing_data_dir():
@@ -58,11 +58,14 @@ def set_backing_data_dir(backing_data_dir):
 BACKING_DATA_DIR = get_backing_data_dir()
 set_backing_data_dir(BACKING_DATA_DIR)
 
+def get_root_dir():
+    return ROOT_DIR
 
 def get_data_dir():
     return DATA_DIR
 
 
 if __name__ == '__main__':
-    print "backing data dir: " + BACKING_DATA_DIR
+    print "root dir:         " + ROOT_DIR
     print "data dir:         " + DATA_DIR
+    print "backing data dir: " + BACKING_DATA_DIR
