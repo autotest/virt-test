@@ -629,12 +629,16 @@ def dumpxml(name, to_file="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: standard output from command
     """
+    dargs['ignore_status'] = True
     if to_file:
         cmd = "dumpxml %s > %s" % (name, to_file)
     else:
         cmd = "dumpxml %s" % name
-
-    return command(cmd, **dargs).stdout.strip()
+    result = command(cmd, **dargs)
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                                 "Virsh dumpxml returned non-zero exit status")
+    return result.stdout.strip()
 
 
 def is_alive(name, **dargs):
