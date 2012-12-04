@@ -658,11 +658,6 @@ def run_virtio_console(test, params, env):
                 logging.error("test_loopback: error occured in threads: %s.",
                               err[:-2])
 
-            # Read-out all remaining data
-            for recv_pt in recv_pts:
-                while select.select([recv_pt.sock], [], [], 0.1)[0]:
-                    recv_pt.sock.recv(1024)
-
             guest_worker.safe_exit_loopback_threads([send_pt], recv_pts)
 
             for thread in threads:
@@ -952,10 +947,6 @@ def run_virtio_console(test, params, env):
             (send_pt, recv_pt) = get_virtio_ports(vm)[1][:2]
         else:
             (send_pt, recv_pt) = get_virtio_ports(vm)[0][:2]
-
-        # Read-out all remaining data
-        while select.select([recv_pt.sock], [], [], 0.1)[0]:
-            recv_pt.sock.recv(1024)
 
         # VM might be recreated se we have to reconnect.
         guest_worker.safe_exit_loopback_threads([send_pt], [recv_pt])
