@@ -1,7 +1,7 @@
 import os, sys, logging, imp, Queue
 from autotest.client import test
 from autotest.client.shared import error
-from virttest import utils_misc, env_process
+from virttest import utils_misc, utils_params, utils_env, env_process
 
 
 class virt(test.test):
@@ -43,7 +43,7 @@ class virt(test.test):
 
     def run_once(self, params):
         # Convert params to a Params object
-        params = utils_misc.Params(params)
+        params = utils_params.Params(params)
 
         # If a dependency test prior to this test has failed, let's fail
         # it right away as TestNA.
@@ -65,7 +65,7 @@ class virt(test.test):
         # Open the environment file
         env_filename = os.path.join(self.bindir, params.get("vm_type"),
                                     params.get("env", "env"))
-        env = utils_misc.Env(env_filename, self.env_version)
+        env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
 
