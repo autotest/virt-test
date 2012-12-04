@@ -1,7 +1,7 @@
 import os, logging, imp, sys, time, traceback, Queue
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, env_process, data_dir, bootstrap
+import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
 
 
 _root_path = os.path.join(sys.modules[__name__].__file__, "..", "..")
@@ -15,7 +15,7 @@ class Test(object):
 
     env_version = 1
     def __init__(self, params, options):
-        self.params = utils_misc.Params(params)
+        self.params = utils_params.Params(params)
         self.bindir = ROOT_PATH
         self.testdir = os.path.join(self.bindir, 'tests')
         self.virtdir = os.path.join(self.bindir, 'shared')
@@ -99,7 +99,7 @@ class Test(object):
         # Open the environment file
         env_filename = os.path.join(self.bindir, params.get("vm_type"),
                                     params.get("env", "env"))
-        env = utils_misc.Env(env_filename, self.env_version)
+        env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
 
@@ -440,7 +440,7 @@ def run_tests(parser, options):
     d = parser.get_dicts().next()
     env_filename = os.path.join(data_dir.get_root_dir(),
                                 options.type, d.get("env", "env"))
-    env = utils_misc.Env(env_filename, Test.env_version)
+    env = utils_env.Env(env_filename, Test.env_version)
     env.destroy()
 
     for i, d in enumerate(parser.get_dicts()):
