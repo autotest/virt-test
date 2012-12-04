@@ -9,7 +9,7 @@ custom logic for each virtualization hypervisor/software.
 import os, logging
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import utils_misc, utils_koji, yumrepo
+import build_helper, utils_misc, utils_koji, yumrepo
 
 class VirtInstallException(Exception):
     '''
@@ -69,7 +69,7 @@ class BaseInstaller(object):
         Test variables values are saved here again because it's not possible to
         pickle the test instance inside BaseInstaller due to limitations
         in the pickle protocol. And, in case this pickle thing needs more
-        explanation, take a loot at the Env class inside utils_misc.
+        explanation, take a loot at the Env class inside build_helper.
 
         Besides that, we also ensure that srcdir exists, by creating it if
         necessary.
@@ -604,7 +604,7 @@ class BaseLocalSourceInstaller(BaseInstaller):
         #
         # There are really no choices for patch helpers
         #
-        self.patch_helper = utils_misc.PatchParamHelper(
+        self.patch_helper = build_helper.PatchParamHelper(
             self.params,
             self.param_key_prefix,
             self.source_destination)
@@ -644,11 +644,11 @@ class BaseLocalSourceInstaller(BaseInstaller):
                                             self.param_key_prefix,
                                             'gnu_autotools')
         if build_helper_name == 'gnu_autotools':
-            self.build_helper = utils_misc.GnuSourceBuildParamHelper(
+            self.build_helper = build_helper.GnuSourceBuildParamHelper(
                 self.params, self.param_key_prefix,
                 self.source_destination, self.install_prefix)
         elif build_helper_name == 'linux_kernel':
-            self.build_helper = utils_misc.LinuxKernelBuildHelper(
+            self.build_helper = build_helper.LinuxKernelBuildHelper(
                 self.params, self.param_key_prefix,
                 self.source_destination)
 
@@ -666,17 +666,17 @@ class BaseLocalSourceInstaller(BaseInstaller):
     def _install_phase_build(self):
         if self.build_helper is not None:
             if (isinstance(self.build_helper,
-                           utils_misc.GnuSourceBuildHelper) or
+                           build_helper.GnuSourceBuildHelper) or
                 isinstance(self.build_helper,
-                           utils_misc.LinuxKernelBuildHelper)):
+                           build_helper.LinuxKernelBuildHelper)):
                 try:
                     self.build_helper.execute()
-                except utils_misc.SourceBuildParallelFailed:
+                except build_helper.SourceBuildParallelFailed:
                     # Flag minor the failure
                     self.minor_failure = True
                     self.minor_failure_reason = "Failed to do parallel build"
 
-                except utils_misc.SourceBuildFailed:
+                except build_helper.SourceBuildFailed:
                     # Failed the current test
                     raise error.TestFail("Failed to build %s" % self.name)
             else:
@@ -695,7 +695,7 @@ class LocalSourceDirInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(LocalSourceDirInstaller, self).set_install_params(test, params)
 
-        self.content_helper = utils_misc.LocalSourceDirParamHelper(
+        self.content_helper = build_helper.LocalSourceDirParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -710,7 +710,7 @@ class LocalSourceTarInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(LocalSourceTarInstaller, self).set_install_params(test, params)
 
-        self.content_helper = utils_misc.LocalTarParamHelper(
+        self.content_helper = build_helper.LocalTarParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -725,7 +725,7 @@ class RemoteSourceTarInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(RemoteSourceTarInstaller, self).set_install_params(test, params)
 
-        self.content_helper = utils_misc.RemoteTarParamHelper(
+        self.content_helper = build_helper.RemoteTarParamHelper(
             params,
             self.name,
             self.source_destination)
@@ -737,7 +737,7 @@ class GitRepoInstaller(BaseLocalSourceInstaller):
     def set_install_params(self, test, params):
         super(GitRepoInstaller, self).set_install_params(test, params)
 
-        self.content_helper = utils_misc.GitRepoParamHelper(
+        self.content_helper = build_helper.GitRepoParamHelper(
             params,
             self.name,
             self.source_destination)

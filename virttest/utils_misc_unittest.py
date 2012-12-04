@@ -4,7 +4,7 @@ import unittest, time, sys, os, shelve, random, logging
 import common
 from autotest.client import utils
 from autotest.client.shared.test_utils import mock
-import utils_misc, cartesian_config
+import utils_misc, cartesian_config, build_helper
 
 class TestUtilsMisc(unittest.TestCase):
     def test_cpu_vendor_intel(self):
@@ -74,7 +74,7 @@ git_repo_foo_commit = bc732ad8b2ed8be52160b893735417b43a1e91a8
         config_parser.parse_string(config)
         params = config_parser.get_dicts().next()
 
-        h = utils_misc.GitRepoParamHelper(params, 'foo', '/tmp/foo')
+        h = build_helper.GitRepoParamHelper(params, 'foo', '/tmp/foo')
         self.assertEqual(h.name, 'foo')
         self.assertEqual(h.branch, 'next')
         self.assertEqual(h.lbranch, 'local')
