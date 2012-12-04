@@ -187,6 +187,12 @@ class test_XMLTreeFile(test_XMLBackup):
 
     class_to_test = xml_utils.XMLTreeFile
 
+    def test_stringify(self):
+        xml = self.class_to_test(self.XMLFILE)
+        # initialize second copy from parsed string output of first
+        testxml = self.class_to_test(str(xml))
+        self.assertTrue(self.is_same_contents(xml.name, testxml.name))
+
     def test_sourcebackupfile_closed_file(self):
         xml = self.class_to_test(self.XMLFILE)
         self.assertRaises(ValueError, xml.sourcebackupfile.write, 'foobar')

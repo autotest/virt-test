@@ -36,7 +36,8 @@
     module for examples.
 """
 
-import os.path, shutil, tempfile, string
+import os.path, shutil, tempfile, string, StringIO
+from xml.parsers import expat
 
 try:
     import autotest.common as common
@@ -101,7 +102,9 @@ class TempXMLFile(file):
         # there was an exception
         if None not in (exc_type, exc_value, traceback):
             os.rename(self.name, self.name + EXSFX)
-        self.unlink() # safe if file was renamed
+        else:
+            self.unlink() # safe if file was renamed
+        super(TempXMLFile, self).__exit__(exc_type, exc_value, traceback)
 
 
     def __del__(self):
@@ -199,8 +202,11 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
             self.sourcebackupfile.close()
         # sourcebackupfile now safe to use for base class initialization
         XMLBackup.__init__(self, self.sourcebackupfile.name)
-        ElementTree.ElementTree.__init__(self, element=None,
-                                         file=self.name)
+        try:
+            ElementTree.ElementTree.__init__(self, element=None,
+                                             file=self.name)
+        except expat.ExpatError:
+            raise IOError("Error parsing XML")
         # Required for TemplateXML class to work
         self.write()
         self.flush() # make sure it's on-disk
@@ -209,7 +215,9 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
     def __str__(self):
         self.write()
         self.flush()
-        return self.sourcebackupfile.read()
+        xmlstr = StringIO.StringIO()
+        self.write(xmlstr)
+        return xmlstr.getvalue()
 
     def backup_copy(self):
         """Return a copy of instance, including copies of files"""
