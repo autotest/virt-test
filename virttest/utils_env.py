@@ -1,5 +1,11 @@
 import cPickle, UserDict, os, logging
 
+ENV_VERSION = 1
+
+
+def get_env_version():
+    return ENV_VERSION
+
 
 class EnvSaveError(Exception):
     pass
