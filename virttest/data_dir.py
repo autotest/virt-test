@@ -7,6 +7,7 @@ import os, sys, tempfile
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
 ROOT_DIR = os.path.abspath(_ROOT_PATH)
 DATA_DIR = os.path.join(ROOT_DIR, 'shared', 'data')
+TMP_DIR = os.path.join(ROOT_DIR, 'tmp')
 BACKING_DATA_DIR = None
 
 def get_backing_data_dir():
@@ -64,8 +65,11 @@ def get_root_dir():
 def get_data_dir():
     return DATA_DIR
 
+def get_tmp_dir():
+    return TMP_DIR
 
 if __name__ == '__main__':
     print "root dir:         " + ROOT_DIR
+    print "tmp dir:          " + TMP_DIR
     print "data dir:         " + DATA_DIR
     print "backing data dir: " + BACKING_DATA_DIR
