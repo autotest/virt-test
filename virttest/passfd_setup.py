@@ -7,8 +7,7 @@ PYTHON_HEADERS = distutils.sysconfig.get_python_inc()
 PYTHON_VERSION = distutils.sysconfig.get_python_version()
 PYTHON_LIB = "python%s" % PYTHON_VERSION
 
-ABSPATH = os.path.abspath(__file__)
-OUTPUT_DIR = os.path.dirname(ABSPATH)
+OUTPUT_DIR = os.path.dirname(__file__)
 
 SOURCES = [os.path.join(OUTPUT_DIR, f) for f in ['passfd.c']]
 SHARED_OBJECT = '_passfd.so'

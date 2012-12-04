@@ -10,7 +10,7 @@ will match the packages you intended to install.
 
 import sys, optparse
 import common
-from virttest import utils_misc, cartesian_config
+from virttest import utils_koji, cartesian_config
 
 
 class OptionParser(optparse.OptionParser):
@@ -100,16 +100,16 @@ class App:
 
     def main(self):
         self.parse_cmdline()
-        self.koji_client = utils_misc.KojiClient()
+        self.koji_client = utils_koji.KojiClient()
         pkgs = []
 
         if self.options.tag:
-            utils_misc.set_default_koji_tag(self.options.tag)
+            utils_koji.set_default_koji_tag(self.options.tag)
 
         if self.options.config:
             tag, pkgs = self.get_koji_qemu_kvm_tag_pkgs(self.options.config)
             if tag is not None:
-                utils_misc.set_default_koji_tag(tag)
+                utils_koji.set_default_koji_tag(tag)
             if pkgs is not None:
                 pkgs = pkgs.split()
         else:
@@ -117,7 +117,7 @@ class App:
 
         if pkgs:
             for p in pkgs:
-                koji_pkg_spec = utils_misc.KojiPkgSpec(p)
+                koji_pkg_spec = utils_koji.KojiPkgSpec(p)
                 self.check_koji_pkg_spec(koji_pkg_spec)
                 self.print_koji_pkg_spec_info(koji_pkg_spec)
 

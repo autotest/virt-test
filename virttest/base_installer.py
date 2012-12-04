@@ -9,7 +9,7 @@ custom logic for each virtualization hypervisor/software.
 import os, logging
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import utils_misc, yumrepo
+import utils_misc, utils_koji, yumrepo
 
 class VirtInstallException(Exception):
     '''
@@ -481,7 +481,7 @@ class KojiInstaller(BaseInstaller):
         self.tag = params.get("%s_tag" % self.param_key_prefix, None)
         self.koji_cmd = params.get("%s_cmd" % self.param_key_prefix, None)
         if self.tag is not None:
-            utils_misc.set_default_koji_tag(self.tag)
+            utils_koji.set_default_koji_tag(self.tag)
         self.koji_pkgs = params.get("%s_pkgs" % self.param_key_prefix,
                                     "").split()
         self.koji_scratch_pkgs = params.get("%s_scratch_pkgs" %
@@ -507,7 +507,7 @@ class KojiInstaller(BaseInstaller):
 
         koji_pkgs_with_debug = []
         for pkg_text in self.koji_pkgs:
-            pkg = utils_misc.KojiPkgSpec(pkg_text)
+            pkg = utils_koji.KojiPkgSpec(pkg_text)
             debuginfo_pkg_name = '%s-debuginfo' % pkg.package
             # if no subpackages are set, then all packages will be installed
             # so there's no need to manually include debuginfo packages
@@ -528,30 +528,30 @@ class KojiInstaller(BaseInstaller):
 
     def _get_rpm_names(self):
         all_rpm_names = []
-        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_koji.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = utils_misc.KojiPkgSpec(pkg_text)
+            pkg = utils_koji.KojiPkgSpec(pkg_text)
             rpm_names = koji_client.get_pkg_rpm_names(pkg)
             all_rpm_names += rpm_names
         for scratch_pkg_text in self.koji_scratch_pkgs:
-            pkg = utils_misc.KojiScratchPkgSpec(scratch_pkg_text)
+            pkg = utils_koji.KojiScratchPkgSpec(scratch_pkg_text)
             rpm_urls = koji_client.get_scratch_pkg_urls(pkg)
             file_names = map(os.path.basename, rpm_urls)
             for f in file_names:
-                r = utils_misc.RPMFileNameInfo(f)
+                r = utils_koji.RPMFileNameInfo(f)
                 all_rpm_names.append(r.get_nvr_info()['name'])
         return all_rpm_names
 
 
     def _get_rpm_file_names(self):
         all_rpm_file_names = []
-        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_koji.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = utils_misc.KojiPkgSpec(pkg_text)
+            pkg = utils_koji.KojiPkgSpec(pkg_text)
             rpm_file_names = koji_client.get_pkg_rpm_file_names(pkg)
             all_rpm_file_names += rpm_file_names
         for scratch_pkg_text in self.koji_scratch_pkgs:
-            pkg = utils_misc.KojiScratchPkgSpec(scratch_pkg_text)
+            pkg = utils_koji.KojiScratchPkgSpec(scratch_pkg_text)
             rpm_urls = koji_client.get_scratch_pkg_urls(pkg)
             file_names = map(os.path.basename, rpm_urls)
             all_rpm_file_names += file_names
@@ -564,16 +564,16 @@ class KojiInstaller(BaseInstaller):
 
 
     def _install_phase_download(self):
-        koji_client = utils_misc.KojiClient(cmd=self.koji_cmd)
+        koji_client = utils_koji.KojiClient(cmd=self.koji_cmd)
         for pkg_text in self.koji_pkgs:
-            pkg = utils_misc.KojiPkgSpec(pkg_text)
+            pkg = utils_koji.KojiPkgSpec(pkg_text)
             if pkg.is_valid():
                 koji_client.get_pkgs(pkg, dst_dir=self.test_srcdir)
             else:
                 logging.error('Package specification (%s) is invalid: %s' %
                               (pkg, pkg.describe_invalid()))
         for pkg_text in self.koji_scratch_pkgs:
-            pkg = utils_misc.KojiScratchPkgSpec(pkg_text)
+            pkg = utils_koji.KojiScratchPkgSpec(pkg_text)
             koji_client.get_scratch_pkgs(pkg, dst_dir=self.test_srcdir)
 
 
