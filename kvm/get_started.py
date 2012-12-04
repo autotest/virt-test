@@ -6,7 +6,7 @@ Program to help setup kvm test environment
 """
 import os, sys, logging
 import common
-from virttest import utils_misc, data_dir
+from virttest import utils_misc, data_dir, bootstrap
 
 test_name = "kvm"
 test_dir = os.path.dirname(sys.modules[__name__].__file__)
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         data_dir.set_backing_data_dir(options.datadir)
 
     try:
-        utils_misc.virt_test_assistant(test_name, test_dir, base_dir,
+        bootstrap.bootstrap(test_name, test_dir, base_dir,
                                        default_userspace_paths, check_modules,
                                        online_docs_url, interactive=interactive,
                                        restore_image=options.restore,

@@ -160,7 +160,7 @@ if __name__ == '__main__':
                     pipe.write("%d %s\n" % (index, shortname))
             sys.exit(0)
         else:
-            standalone_test.bootstrap(options)
+            standalone_test.bootstrap_tests(options)
 
 
         if options.qemu:
