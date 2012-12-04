@@ -9,7 +9,7 @@ class Test(object):
     Mininal test class used to run a virt test.
     """
 
-    env_version = 1
+    env_version = utils_env.get_env_version()
     def __init__(self, params, options):
         self.params = utils_params.Params(params)
         self.bindir = data_dir.get_root_dir()

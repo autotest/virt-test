@@ -12,7 +12,7 @@ class virt(test.test):
     file, all code that can be reused among those virt tests.
     """
     version = 1
-    env_version = 1
+    env_version = utils_env.get_env_version()
 
 
     def initialize(self, params):
