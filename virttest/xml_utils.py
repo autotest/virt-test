@@ -206,7 +206,7 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
             ElementTree.ElementTree.__init__(self, element=None,
                                              file=self.name)
         except expat.ExpatError:
-            raise IOError("Error parsing XML")
+            raise IOError("Error parsing XML: '%s'" % xml)
         # Required for TemplateXML class to work
         self.write()
         self.flush() # make sure it's on-disk
