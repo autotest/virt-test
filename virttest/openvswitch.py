@@ -1,4 +1,4 @@
-import logging, re, os, select, signal
+import logging, re, os, signal
 try:
     import autotest.common as common
 except ImportError:
