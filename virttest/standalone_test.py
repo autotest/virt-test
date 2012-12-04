@@ -1,7 +1,7 @@
 import os, logging, imp, sys, time, traceback, Queue
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, env_process, data_dir
+import utils_misc, env_process, data_dir, bootstrap
 
 
 _root_path = os.path.join(sys.modules[__name__].__file__, "..", "..")
@@ -342,10 +342,10 @@ def create_config_files(options):
         parent_config_dir = os.path.basename(parent_config_dir)
         test_dir = os.path.join(test_dir, parent_config_dir)
 
-    utils_misc.create_config_files(test_dir, shared_dir, interactive=False)
+    bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
 
 
-def bootstrap(options):
+def bootstrap_tests(options):
     """
     Bootstrap process (download the appropriate JeOS file to data dir).
 
@@ -380,7 +380,7 @@ def bootstrap(options):
     failed = False
     wait_message_printed = False
 
-    bg = utils.InterruptedThread(utils_misc.virt_test_assistant, kwargs=kwargs)
+    bg = utils.InterruptedThread(bootstrap.bootstrap, kwargs=kwargs)
     t_begin = time.time()
     bg.start()
 
