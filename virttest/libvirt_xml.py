@@ -58,7 +58,7 @@ class LibvirtXMLBase(utils_misc.PropCanBase):
     __slots__ = ('xml', 'virsh')
 
 
-    def __init__(self, virsh_instance):
+    def __init__(self, virsh_instance=virsh):
         """
         Initialize instance with connection to virsh
 
@@ -71,13 +71,14 @@ class LibvirtXMLBase(utils_misc.PropCanBase):
     def set_virsh(self, value):
         """Accessor method for virsh property, make sure it's right type"""
         value_type = type(value)
-        if (value.__name__ == "virsh" and hasattr(value, "command")
+        if ((value.__name__.count("virsh") and value_type.__name__ == "module")
              or
              issubclass(value_type, virsh.VirshBase) ):
             self.dict_set('virsh', value)
         else:
             raise LibvirtXMLError("virsh parameter must be a module named virsh"
-                                  " or subclass of virsh.VirshBase")
+                                  " or subclass of virsh.VirshBase not: %s" %
+                                  str(value))
 
 
     @staticmethod
@@ -136,16 +137,16 @@ class LibvirtXML(LibvirtXMLBase):
     Handler of libvirt capabilities and nonspecific item operations.
     """
 
-
     #TODO: Add more __slots__ and accessors to get some useful stats
     # e.g. guest_count, arch, uuid, cpu_count, etc.
     __slots__ = LibvirtXMLBase.__slots__ + ('os_arch_machine_map',)
 
-    def __init__(self, virsh_instance):
+    def __init__(self, virsh_instance=virsh):
         super(LibvirtXML, self).__init__(virsh_instance)
         # calls set_xml accessor method
         self['xml'] = self.virsh.capabilities()
-        self['os_arch_machine_map'] = None
+        # INITIALIZED=true after call to super __init__
+        self.dict_set('os_arch_machine_map', None);
 
 
     def get_os_arch_machine_map(self):
@@ -307,7 +308,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod # static method (no self) needed b/c calls VMXML.__new__
-    def new_from_dumpxml(vm_name, virsh_instance):
+    def new_from_dumpxml(vm_name, virsh_instance=virsh):
         """
         Return new VMXML instance from virsh dumpxml command
 
