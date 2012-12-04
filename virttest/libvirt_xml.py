@@ -1,30 +1,39 @@
 """
 Intermediate module for working with XML-related virsh functions/methods.
 
-All classes defined here should inherit from LibvirtXMLBase and utilize
-the utils_misc.PropCanBase property-like interface to manipulate XML
-directly via the XMLTreeFile exposed from the 'xml' property.
-
 The intention of this module is to hide the details of working with XML
-and the virsh module from test code.  All classes defined here should
-inherit from LibvirtXMLBase and utilize the property-like interface
-provided by utils_misc.PropCanBase to manipulate XML from the
-'xml' property.
+from test module code.  Helper methods are all high-level and not
+condusive to direct use in error-testing.  However, access to a virsh
+instance is available.
 
-All properties defined in __slots__ are intended for public manipulation.
-External calling of accessor methods isn't forbidden, but discouraged.
-Internally, accessor methods should always use dict_get() and dict_set()
-to manipulate other properties (otherwise infinite recursion can occur).
+All classes defined here should inherit from LibvirtXMLBase and
+utilize the property-like interface provided by utils_misc.PropCanBase
+to manipulate XML from the 'xml' property. Please refer to the xml_utils
+module documentation for more information on working with XMLTreeFile
+instances.  Please see the virsh and utils_misc modules for information
+on working with Virsh and PropCanBase classes.
+
+All properties defined in __slots__ are intended for test-module
+manipulation.  External calling of accessor methods isn't forbidden,
+but discouraged. Instead, test modules should use normal reference,
+assignment, and delete operations on instance properties as if they
+were attributes.  It's up to the test if it uses the dict-like or
+instance-attribute interface.
+
+Internally, accessor methods (get_*(), set_*(), & del_*()) should always
+use dict_get(), dict_set(), and/or dict_del() to manipulate properties
+(otherwise infinite recursion can occur).  In some cases, where class
+or instance attributes are needed (ousdie of __slots__) they must
+be accessed via the super_set(), super_get(), and/or super_del() methods.
+None of the super_*() or the dict_*() methods are intended for use
+by test-modules.
 
 Errors originating beneath this module (e.g. w/in virsh or libvirt_vm)
 should not be caught (so caller can test for them).  Errors detected
 within this module should raise LibvirtXMLError or a subclass.
-
-Please refer to the xml_utils module documentation for more information
-on working with XMLTreeFile instances.  Please see the virsh and utils_misc
-modules for information on working with Virsh and PropCanBase classes.
 """
-from virttest import virsh, utils_misc, xml_utils
+
+from virttest import utils_misc, xml_utils, virsh
 
 
 class LibvirtXMLError(Exception):
@@ -34,7 +43,7 @@ class LibvirtXMLError(Exception):
 
     def __init__(self, details=''):
         self.details = details
-        super(LibvirtXMLError, self).__init__()
+        Exception.__init__(self)
 
 
     def __str__(self):
@@ -46,28 +55,35 @@ class LibvirtXMLBase(utils_misc.PropCanBase):
     Base class for common attributes/methods applying to all sub-classes
     """
 
-    __slots__ = ('xml',)
+    __slots__ = ('xml', 'virsh')
 
-    # Not intended to be accessed outside this module, only from subclasses.
-    __virsh__ = None
 
-    def __init__(self, persistent=False, virsh_dargs=None):
+    def __init__(self, virsh_instance):
         """
-        Initialize instance's internal virsh interface from virsh_dargs
+        Initialize instance with connection to virsh
 
-        @param: persistent: Use persistent virsh connection for this instance
-        @param: virsh_dargs: virsh module Virsh class dargs API keywords
+        @param: virsh_instance: virsh module or instance to use
         """
-
-        if virsh_dargs is None:
-            virsh_dargs = {} # avoid additional conditionals below
-        if persistent:
-            self.super_set('__virsh__', virsh.VirshPersistent(**virsh_dargs))
-        else:
-            self.super_set('__virsh__', virsh.Virsh(**virsh_dargs))
         # Don't define any initial property values
-        super(LibvirtXMLBase, self).__init__()
+        super(LibvirtXMLBase, self).__init__({'virsh':virsh_instance, 'xml':None})
 
+
+    def set_virsh(self, value):
+        """Accessor method for virsh property, make sure it's right type"""
+        value_type = type(value)
+        if (value.__name__ == "virsh" and hasattr(value, "command")
+             or
+             issubclass(value_type, virsh.VirshBase) ):
+            self.dict_set('virsh', value)
+        else:
+            raise LibvirtXMLError("virsh parameter must be a module named virsh"
+                                  " or subclass of virsh.VirshBase")
+
+
+    @staticmethod
+    def __readonly__(name):
+        raise LibvirtXMLError('Instances property %s is read-only'
+                              % name)
 
     def set_xml(self, value):
         """
@@ -104,17 +120,14 @@ class LibvirtXMLBase(utils_misc.PropCanBase):
         """
         Returns a copy of instance not sharing any references or modifications
         """
-        # help keep line length short, __virsh__ is not a property
-        virsh_instance = self.super_get('__virsh__')
-        virsh_class = type(virsh_instance)
-        # Copy should reuse session_id for VirshPersistant
-        virsh_dargs = virsh_instance.copy()
-        if issubclass(virsh_class, virsh.VirshPersistent):
-            the_copy = self.__class__(True, virsh_dargs)
-        else:
-            the_copy = self.__class__(False, virsh_dargs)
-        # call accessor methods and keep pylint happy
-        the_copy.__setitem__('xml', self.xml)
+        # help keep line length short, virsh is not a property
+        the_copy = self.__class__(self.virsh)
+        try:
+            # file may not be accessable, obtain XML string value
+            xmlstr = str(self.dict_get('xml'))
+            the_copy.dict_set('xml', xml_utils.XMLTreeFile(xmlstr))
+        except LibvirtXMLError: # Allow other exceptions through
+            pass # no XML was loaded yet
         return the_copy
 
 
@@ -128,23 +141,16 @@ class LibvirtXML(LibvirtXMLBase):
     # e.g. guest_count, arch, uuid, cpu_count, etc.
     __slots__ = LibvirtXMLBase.__slots__ + ('os_arch_machine_map',)
 
-    def __init__(self, persistent=False, **virsh_dargs):
-        super(LibvirtXML, self).__init__(persistent=False, **virsh_dargs)
+    def __init__(self, virsh_instance):
+        super(LibvirtXML, self).__init__(virsh_instance)
         # calls set_xml accessor method
-        self.__setitem__('xml', self.__virsh__.capabilities())
-        # Don't call set_os_arch_machine_map()
-        self.dict_set('os_arch_machine_map', None)
-
-
-    @staticmethod
-    def __readonly__(name):
-        raise LibvirtXMLError('LibvirtXML instances property %s is read-only'
-                              % name)
+        self['xml'] = self.virsh.capabilities()
+        self['os_arch_machine_map'] = None
 
 
     def get_os_arch_machine_map(self):
         """
-        Accessor method for os_arch_machine_dict property
+        Accessor method for os_arch_machine_map property
         """
         oamm = {} #Schema {<os_type>:{<arch name>:[<machine>, ...]}}
         xmltreefile = self.dict_get('xml')
@@ -156,29 +162,27 @@ class LibvirtXML(LibvirtXMLBase):
             amm = oamm.get(os_type_name, {})
             for arch in guest.findall('arch'):
                 arch_name = arch.get('name')
-                mm = amm.get(arch_name, [])
+                mmap = amm.get(arch_name, [])
                 for machine in arch.findall('machine'):
                     machine_text = machine.text
                     # Don't add duplicate entries
-                    if not mm.count(machine_text):
-                        mm.append(machine_text)
-                amm[arch_name] = mm
+                    if not mmap.count(machine_text):
+                        mmap.append(machine_text)
+                amm[arch_name] = mmap
             oamm[os_type_name] = amm
         return oamm
 
 
-    def set_os_arch_machine_dict(self, value):
-        """
-        Fail, read-only property.
-        """
-        del value # keep pylint happy
-        self.__readonly__('os_arch_machine_dict')
+    def set_os_arch_machine_map(self, value):
+        """Disallow changing of os_arch_machine_dict property"""
+        if not self.super_get('INITIALIZED'):
+            self.dict_set('os_arch_machine_dict', value)
+        else:
+            self.__readonly__('os_arch_machine_dict')
 
 
-    def del_os_arch_machine_dict(self):
-        """
-        Fail, read-only property.
-        """
+    def del_os_arch_machine_map(self):
+        """Disallow changing of os_arch_machine_dict property"""
         self.__readonly__('os_arch_machine_dict')
 
 
@@ -245,7 +249,6 @@ class VMXMLBase(LibvirtXMLBase):
             if value is None:
                 xmltreefile.remove_by_xpath('uuid')
             else:
-                # uuid module added in python 2.5, no easy way to validate value
                 try:
                     xmltreefile.find('uuid').text = value
                 except AttributeError: # uuid element not found
@@ -303,24 +306,30 @@ class VMXML(VMXMLBase):
     __slots__ = VMXMLBase.__slots__
 
 
+    @staticmethod # static method (no self) needed b/c calls VMXML.__new__
+    def new_from_dumpxml(vm_name, virsh_instance):
+        """
+        Return new VMXML instance from virsh dumpxml command
+
+        @param: vm_name: Name of VM to dumpxml
+        @param: virsh_instance: virsh module or instance to use
+        @return: New initialized VMXML instance
+        """
+        vmxml = VMXML(virsh_instance)
+        vmxml['xml'] = virsh_instance.dumpxml(vm_name)
+        return vmxml
+
+
     def undefine(self):
         """Undefine this VM with libvirt retaining XML in instance"""
         # Allow any exceptions to propigate up
-        self.__virsh__.remove_domain(self.vm_name)
+        self.virsh.remove_domain(self.vm_name)
 
 
     def define(self):
         """Define VM with virsh from this instance"""
         # Allow any exceptions to propigate up
-        self.__virsh__.define(self.xml)
-
-
-    def new_from_dumpxml(self, vm_name):
-        """
-        Load XML info from virsh dumpxml vm_name command
-        """
-        # Calls set_xml accessor method and keeps pylint happy
-        self.__setitem__('xml', self.__virsh__.dumpxml(vm_name))
+        self.virsh.define(self.xml)
 
 
     #TODO: Add function to create from xml_utils.TemplateXML()
