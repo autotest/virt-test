@@ -114,7 +114,7 @@ class VirshSession(aexpect.ShellSession):
 
     # No way to get virsh sub-command "exit" status
     # Check output against list of known error-status strings
-    ERROR_REGEX_LIST = ['error:\s*', 'failed']
+    ERROR_REGEX_LIST = ['error:\s*.+$', '.*failed.*']
 
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
                  prompt=r"virsh\s*\#\s*"):
@@ -133,8 +133,12 @@ class VirshSession(aexpect.ShellSession):
         if self.uri:
             virsh_exec += " -c '%s'" % self.uri
 
+        # aexpect tries to auto close session because no clients connected yet
         aexpect.ShellSession.__init__(self, virsh_exec, a_id, prompt=prompt,
                                       auto_close=False)
+        # fail if libvirtd is not running
+        if self.cmd_status('list', timeout=10) != 0:
+            raise aexpect.ShellStatusError(virsh_exec, 'list')
 
 
     def cmd_status_output(self, cmd, timeout=60, internal_timeout=None,
@@ -156,12 +160,11 @@ class VirshSession(aexpect.ShellSession):
         @raise ShellStatusError: Raised if the exit status cannot be obtained
         @raise ShellError: Raised if an unknown error occurs
         """
-
-        o = self.cmd_output(cmd, timeout, internal_timeout, print_func)
-        for line in o.splitlines():
-            if self.match_patterns(line, self.ERROR_REGEX_LIST):
-                return 1, o
-        return 0, o
+        out = self.cmd_output(cmd, timeout, internal_timeout, print_func)
+        for line in out.splitlines():
+            if self.match_patterns(line, self.ERROR_REGEX_LIST) is not None:
+                return 1, out
+        return 0, out
 
 
     def cmd_result(self, cmd, ignore_status=False):
@@ -242,22 +245,32 @@ class VirshPersistent(Virsh):
 
     def __init__(self, *args, **dargs):
         super(VirshPersistent, self).__init__(*args, **dargs)
-        # set_uri does not call when INITIALIZED = False
-        self.new_session()
+        if self.get('session_id') is None:
+            # set_uri does not call when INITIALIZED = False
+            # and no session_id passed to super __init__
+            self.new_session()
 
 
-    def __del__(self):
+    def __exit__(self, exc_type, exc_value, traceback):
         """
-        Try to close session, prefer users call close_session() method directly
+        Clean up any leftover sessions
         """
         self.close_session()
+        super(VirshPersistent, self).__exit__(exc_type, exc_value, traceback)
 
 
     def close_session(self):
+        """
+        If a persistent session exists, close it down.
+        """
         try:
             session_id = self.dict_get('session_id')
             if session_id:
-                existing = VirshSession(a_id=session_id)
+                try:
+                    existing = VirshSession(a_id=session_id)
+                except aexpect.ShellStatusError:
+                    # session was already closed
+                    return
                 if existing.is_alive():
                     # try nicely first
                     existing.close()
@@ -325,21 +338,20 @@ def command(cmd, **dargs):
     if session_id:
         # Retrieve existing session
         session = VirshSession(a_id=session_id)
-        logging.debug("Reusing session %s" % session_id)
+        logging.debug("Reusing session %s", session_id)
         # Use existing session only if uri is the same
         if session.uri is not uri:
             # Invalidate session for this command
             if debug:
                 logging.debug("VirshPersistent instance not using persistant "
                               " session for command %s with different uri %s "
-                              " (persistant uri is %s)"
-                              % (cmd, uri, session.uri))
+                              " (persistant uri is %s)", cmd, uri, session.uri)
                 session = None
     else:
         session = None
 
     if debug:
-        logging.debug("Running virsh command: %s" % cmd)
+        logging.debug("Running virsh command: %s", cmd)
 
     if session:
         # Utilize persistant virsh session
@@ -362,9 +374,9 @@ def command(cmd, **dargs):
 
     # Always log debug info, if persistant session or not
     if debug:
-        logging.debug("status: %s" % ret.exit_status)
-        logging.debug("stdout: %s" % ret.stdout.strip())
-        logging.debug("stderr: %s" % ret.stderr.strip())
+        logging.debug("status: %s", ret.exit_status)
+        logging.debug("stdout: %s", ret.stdout.strip())
+        logging.debug("stderr: %s", ret.stderr.strip())
 
     # Return CmdResult instance when ignore_status is True
     return ret
@@ -381,24 +393,24 @@ def domname(dom_id_or_uuid, **dargs):
     return command("domname --domain %s" % dom_id_or_uuid, **dargs)
 
 
-def qemu_monitor_command(domname, cmd, **dargs):
+def qemu_monitor_command(vm_name, cmd, **dargs):
     """
     This helps to execute the qemu monitor command through virsh command.
 
-    @param: domname: Name of monitor domain
+    @param: vm_name: Name of monitor domain
     @param: cmd: monitor command to execute
     @param: dargs: standardized virsh function API keywords
     """
 
-    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (domname, cmd)
+    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (vm_name, cmd)
     return command(cmd_qemu_monitor, **dargs)
 
 
-def vcpupin(domname, vcpu, cpu, **dargs):
+def vcpupin(vm_name, vcpu, cpu, **dargs):
     """
     Changes the cpu affinity for respective vcpu.
 
-    @param: domname: name of domain
+    @param: vm_name: name of domain
     @param: vcpu: virtual CPU to modify
     @param: cpu: physical CPU specification (string)
     @param: dargs: standardized virsh function API keywords
@@ -406,37 +418,37 @@ def vcpupin(domname, vcpu, cpu, **dargs):
     """
     dargs['ignore_status'] = False
     try:
-        cmd_vcpupin = "vcpupin %s %s %s" % (domname, vcpu, cpu)
+        cmd_vcpupin = "vcpupin %s %s %s" % (vm_name, vcpu, cpu)
         command(cmd_vcpupin, **dargs)
 
     except error.CmdError, detail:
-        logging.error("Virsh vcpupin VM %s failed:\n%s", domname, detail)
+        logging.error("Virsh vcpupin VM %s failed:\n%s", vm_name, detail)
         return False
 
 
-def vcpuinfo(domname, **dargs):
+def vcpuinfo(vm_name, **dargs):
     """
     Prints the vcpuinfo of a given domain.
 
-    @param: domname: name of domain
+    @param: vm_name: name of domain
     @param: dargs: standardized virsh function API keywords
     @return: standard output from command
     """
 
-    cmd_vcpuinfo = "vcpuinfo %s" % domname
+    cmd_vcpuinfo = "vcpuinfo %s" % vm_name
     return command(cmd_vcpuinfo, **dargs).stdout.strip()
 
 
-def vcpucount_live(domname, **dargs):
+def vcpucount_live(vm_name, **dargs):
     """
     Prints the vcpucount of a given domain.
 
-    @param: domname: name of a domain
+    @param: vm_name: name of a domain
     @param: dargs: standardized virsh function API keywords
     @return: standard output from command
     """
 
-    cmd_vcpucount = "vcpucount --live --active %s" % domname
+    cmd_vcpucount = "vcpucount --live --active %s" % vm_name
     return command(cmd_vcpucount, **dargs).stdout.strip()
 
 
@@ -884,7 +896,7 @@ def attach_device(name, xml_file, extra="", **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError:
-        logging.error("Attaching device to VM %s failed." % name)
+        logging.error("Attaching device to VM %s failed.", name)
         return False
 
 
@@ -904,7 +916,7 @@ def detach_device(name, xml_file, extra="", **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError:
-        logging.error("Detaching device from VM %s failed." % name)
+        logging.error("Detaching device from VM %s failed.", name)
         return False
 
 
@@ -1016,7 +1028,7 @@ def pool_destroy(name, **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError, detail:
-        logging.error("Failed to destroy pool: %s." % detail)
+        logging.error("Failed to destroy pool: %s.", detail)
         return False
 
 
@@ -1038,11 +1050,11 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
     types = [ 'dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical' ]
 
     if pool_type and pool_type not in types:
-        logging.error("Only support pool types: %s." % types)
+        logging.error("Only support pool types: %s.", types)
     elif not pool_type:
         pool_type = types[0]
 
-    logging.info("Create %s type pool %s" % (pool_type, name))
+    logging.info("Create %s type pool %s", pool_type, name)
     cmd = "pool-create-as --name %s --type %s --target %s %s" \
           % (name, pool_type, target, extra)
     dargs['ignore_status'] = False
@@ -1050,7 +1062,7 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
         command(cmd, **dargs)
         return True
     except error.CmdError, detail:
-        logging.error("Failed to create pool: %s." % detail)
+        logging.error("Failed to create pool: %s.", detail)
         return False
 
 
@@ -1092,11 +1104,11 @@ def help_command(options='', cache=False, **dargs):
         cmd = 'help'
         if options:
             cmd += (' ' + options)
-        r = re.compile(r"\s+([a-zA-Z0-9-]+)\s+")
+        regx = re.compile(r"\s+([a-zA-Z0-9-]+)\s+")
         for line in command(cmd, **dargs).stdout.strip().splitlines():
-            mo = r.search(line)
-            if mo:
-                VIRSH_COMMAND_CACHE.append(mo.group(1))
+            mobj = regx.search(line)
+            if mobj:
+                VIRSH_COMMAND_CACHE.append(mobj.group(1))
     # Prevent accidental modification of cache itself
     return list(VIRSH_COMMAND_CACHE)
 
@@ -1107,6 +1119,7 @@ def has_help_command(cmd, options='', **dargs):
 
     @param: cmd: Name of command to look for
     @param: options: Additional options to send to help command
+    @param: dargs: standardized virsh function API keywords
     @return: True/False
     """
     return bool(help_command(options, cache=True, **dargs).count(cmd))
@@ -1131,6 +1144,7 @@ def schedinfo(domain, options="", **dargs):
 
     @param domain: vm's name id or uuid.
     @param options: additional options.
+    @param: dargs: standardized virsh function API keywords
     """
     cmd = "schedinfo %s %s" % (domain, options)
     return command(cmd, **dargs)
@@ -1146,6 +1160,7 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     @param: domain: Option to --domain parameter
     @param: size: Option to --size or --kilobytes parameter
     @param: use_kilobytes: True for --kilobytes, False for --size
+    @param: dargs: standardized virsh function API keywords
     @param: flagstr: string of "--config, --live, --current, etc."
     @returns: CmdResult instance
     @raises: error.CmdError: if libvirtd is not running!!!!!!

@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-import unittest, time
+import unittest, time, logging
 import common
-
+from autotest.client import utils
 
 class ModuleLoad(unittest.TestCase):
 
@@ -143,6 +143,7 @@ class ConstructorsTest(ModuleLoad):
 
 
     def test_VirshPersistent(self):
+        logging.disable(logging.INFO)
         vp = self.virsh.VirshPersistent()
         self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 1)
         vp.close_session() # Make sure session gets cleaned up
@@ -172,7 +173,6 @@ class VirshHasHelpCommandTest(ModuleLoadCheckVirsh):
     def setUp(self):
         # subclasses override self.virsh
         self.VIRSH_COMMAND_CACHE = self.virsh.VIRSH_COMMAND_CACHE
-
 
     def test_false_command(self):
         self.assertFalse(self.virsh.has_help_command('print'))
@@ -213,6 +213,7 @@ class VirshHelpCommandTest(ModuleLoadCheckVirsh):
 class VirshClassHasHelpCommandTest(VirshHasHelpCommandTest):
 
     def setUp(self):
+        logging.disable(logging.INFO)
         super(VirshClassHasHelpCommandTest, self).setUp()
         self.virsh = self.virsh.Virsh(debug=False)
 
@@ -220,17 +221,27 @@ class VirshClassHasHelpCommandTest(VirshHasHelpCommandTest):
 class VirshPersistentClassHasHelpCommandTest(VirshHasHelpCommandTest):
 
     def setUp(self):
+        logging.disable(logging.INFO)
         super(VirshPersistentClassHasHelpCommandTest, self).setUp()
         self.VirshPersistent = self.virsh.VirshPersistent
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
         self.virsh = self.VirshPersistent(debug=False)
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
+        self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
+
+
+    def test_recycle_session(self):
+        # virsh can be used as a dict of it's properties
+        another = self.VirshPersistent(**self.virsh)
+        self.assertEqual(self.virsh.session_id, another.session_id)
 
 
     def tearDown(self):
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
+        self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
         self.virsh.close_session()
         self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
+        self.assertFalse(utils.process_is_alive(self.virsh.virsh_exec))
 
 
 if __name__ == '__main__':
