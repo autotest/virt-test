@@ -15,14 +15,9 @@ def run_virsh_domname(test, params, env):
     vm_name = params.get("main_vm", "vm1")
     vm = env.get_vm(params["main_vm"])
 
-    domid = vm.get_id().strip()
-    domuuid = vm.get_uuid().strip()
+    domid = vm.get_id()
+    domuuid = vm.get_uuid()
     connect_uri = vm.connect_uri
-
-    #Prepare libvirtd status
-    libvirtd = params.get("libvirtd", "on")
-    if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("stop")
 
     #run test case
     options_ref = params.get("options_ref", "id")
@@ -48,6 +43,12 @@ def run_virsh_domname(test, params, env):
         options = (options % options_ref)
     if options_suffix:
         options = options + " " + options_suffix
+
+    #Prepare libvirtd status
+    libvirtd = params.get("libvirtd", "on")
+    if libvirtd == "off":
+        libvirt_vm.service_libvirtd_control("stop")
+
     result = virsh.domname(options, ignore_status=True, debug=True,
                            uri=connect_uri)
 
