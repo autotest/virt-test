@@ -1,4 +1,4 @@
-import re, logging, os
+import re, os
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
 

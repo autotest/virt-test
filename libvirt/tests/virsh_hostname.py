@@ -1,4 +1,3 @@
-import logging
 from autotest.client.shared import utils, error
 from virttest import libvirt_vm, virsh
 

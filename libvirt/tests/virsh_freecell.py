@@ -1,5 +1,5 @@
-import re, logging
-from autotest.client.shared import utils, error
+import re
+from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
 
 def run_virsh_freecell(test, params, env):
