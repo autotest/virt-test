@@ -4,10 +4,6 @@ from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
 
 
-_root_path = os.path.join(sys.modules[__name__].__file__, "..", "..")
-ROOT_PATH = os.path.abspath(_root_path)
-
-
 class Test(object):
     """
     Mininal test class used to run a virt test.
@@ -16,7 +12,7 @@ class Test(object):
     env_version = 1
     def __init__(self, params, options):
         self.params = utils_params.Params(params)
-        self.bindir = ROOT_PATH
+        self.bindir = data_dir.get_root_dir()
         self.testdir = os.path.join(self.bindir, 'tests')
         self.virtdir = os.path.join(self.bindir, 'shared')
         self.builddir = os.path.join(self.bindir, params.get("vm_type"))
@@ -421,7 +417,7 @@ def run_tests(parser, options):
     @param parser: Config parser object.
     @return: True, if all tests ran passed, False if any of them failed.
     """
-    debugdir = os.path.join(ROOT_PATH, 'logs',
+    debugdir = os.path.join(data_dir.get_root_dir(), 'logs',
                             'run-%s' % time.strftime('%Y-%m-%d-%H.%M.%S'))
     if not os.path.isdir(debugdir):
         os.makedirs(debugdir)
