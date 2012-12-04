@@ -631,7 +631,22 @@ def run_virtio_console(test, params, env):
                 thread.start()
                 threads.append(thread)
 
-            time.sleep(test_time)
+            err = ""
+            end_time = time.time() + test_time
+            while end_time > time.time():
+                if not vm.is_alive():
+                    err += "main_thread(vmdead), "
+                for thread in threads:
+                    if not thread.isAlive():
+                        err += "main_thread(th%s died), " % thread
+                if err:
+                    logging.error("Error occured while executing loopback "
+                                  "(%d out of %ds)",
+                                  test_time - int(end_time - time.time()),
+                                  test_time)
+                    break
+                time.sleep(1)
+
             exit_event.set()
             # TEST END
             workaround_unfinished_threads = False
@@ -640,8 +655,9 @@ def run_virtio_console(test, params, env):
             if threads[0].isAlive():
                 workaround_unfinished_threads = True
                 logging.debug("Unable to destroy the thread %s", threads[0])
+            if threads[0].ret_code:
+                err += "%s, " % thread
             tmp = "%d data sent; " % threads[0].idx
-            err = ""
             for thread in threads[1:]:
                 logging.debug('Joining %s', thread)
                 thread.join(5)
@@ -669,6 +685,9 @@ def run_virtio_console(test, params, env):
                 logging.debug("All threads finished at this point.")
             del exit_event
             del threads[:]
+            if not vm.is_alive():
+                raise error.TestFail("VM died, can't continue the test loop. "
+                                     "Please check the log for details.")
 
         cleanup(vm, guest_worker)
         if no_errors:
