@@ -419,6 +419,14 @@ def run_tests(parser, options):
     print_header("DEBUG LOG: %s" % debuglog)
 
     last_index = -1
+
+    # Clean environment file
+    d = parser.get_dicts().next()
+    env_filename = os.path.join(data_dir.get_root_dir(),
+                                options.type, d.get("env", "env"))
+    env = utils_misc.Env(env_filename, Test.env_version)
+    env.destroy()
+
     for i, d in enumerate(parser.get_dicts()):
         if options.config is None:
             shortname = ".".join(d['name'].split(".")[12:])
