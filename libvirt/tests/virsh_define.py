@@ -19,7 +19,7 @@ def run_virsh_define(test, params, env):
             vm.destroy(gracefully=True)
 
         vmxml = libvirt_xml.VMXML(virsh)
-        vmxml.new_from_dumpxml(vm.name, virsh)
+        vmxml = vmxml.new_from_dumpxml(vm.name, virsh)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:
