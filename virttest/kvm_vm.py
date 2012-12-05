@@ -8,7 +8,7 @@ import time, os, logging, fcntl, re, commands, errno
 from autotest.client.shared import error, cartesian_config
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, kvm_monitor, aexpect
-import kvm_virtio_port, remote, utils_test, data_dir
+import kvm_virtio_port, remote, utils_test, data_dir, utils_net
 
 
 class QemuSegFaultError(virt_vm.VMError):
@@ -815,9 +815,9 @@ class VM(virt_vm.BaseVM):
                     else:
                         fail_param.append(param)
             if fail_param:
-                msg = "parameter %s is not support in device pci-assign."\
-                      " It only support following paramter:\n %s" \
-                      % (param, pcidevice_help)
+                msg = ("parameter %s is not support in device pci-assign."
+                       " It only support following paramter:\n %s" %
+                       (param, pcidevice_help))
                 logging.warn(msg)
             return cmd
 
@@ -1867,7 +1867,7 @@ class VM(virt_vm.BaseVM):
                 pa_type = nic_params.get("pci_assignable")
                 if pa_type and pa_type != "no":
                     if self.pci_assignable is None:
-                       self.pci_assignable = test_setup.PciAssignable(
+                        self.pci_assignable = test_setup.PciAssignable(
                            driver=params.get("driver"),
                            driver_option=params.get("driver_option"),
                            host_set_flag = params.get("host_setup_flag"),
@@ -1898,16 +1898,16 @@ class VM(virt_vm.BaseVM):
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
                     if nic.nettype == 'bridge' or nic.nettype == 'network':
                         try:
-                            nic.tapfd = str(utils_misc.open_tap("/dev/net/tun",
+                            nic.tapfd = str(utils_net.open_tap("/dev/net/tun",
                                                                 nic.ifname,
                                                                 vnet_hdr=True))
                             logging.debug("Adding VM %s NIC ifname %s"
                                           " to bridge %s" % (self.name,
                                                 nic.ifname, nic.netdst))
                             if nic.nettype == 'bridge':
-                                utils_misc.add_to_bridge(nic.ifname, nic.netdst)
-                            utils_misc.bring_up_ifname(nic.ifname)
-                        except utils_misc.TAPCreationError, taperror:
+                                utils_net.add_to_bridge(nic.ifname, nic.netdst)
+                            utils_net.bring_up_ifname(nic.ifname)
+                        except utils_net.TAPCreationError, taperror:
                             if taperror.details.errno == errno.EBUSY:
                                 logging.info("VM %s NIC ifname %s was already "
                                              "added to bridge %s, skipping...",
@@ -2514,7 +2514,7 @@ class VM(virt_vm.BaseVM):
         if nic.nettype == 'bridge': # implies tap
             error.context("Opening tap device node for %s " % nic.ifname,
                           logging.debug)
-            nic.set_if_none('tapfd', str(utils_misc.open_tap("/dev/net/tun",
+            nic.set_if_none('tapfd', str(utils_net.open_tap("/dev/net/tun",
                                                              nic.ifname,
                                                              vnet_hdr=False)))
             error.context("Registering tap id %s for FD %d" %
@@ -2523,12 +2523,12 @@ class VM(virt_vm.BaseVM):
             attach_cmd += " type=tap,id=%s,fd=%s" % (nic.device_id, nic.tapfd_id)
             error.context("Raising interface for " + msg_sfx + attach_cmd,
                           logging.debug)
-            utils_misc.bring_up_ifname(nic.ifname)
+            utils_net.bring_up_ifname(nic.ifname)
             error.context("Raising bridge for " + msg_sfx + attach_cmd,
                           logging.debug)
             # assume this will puke if netdst unset
             if not nic.netdst is None:
-                utils_misc.add_to_bridge(nic.ifname, nic.netdst)
+                utils_net.add_to_bridge(nic.ifname, nic.netdst)
         elif nic.nettype == 'user':
             attach_cmd += " user,name=%s" % nic.ifname
         else: # unsupported nettype
@@ -2758,7 +2758,7 @@ class VM(virt_vm.BaseVM):
 
         try:
             if self.params["display"] == "spice":
-                host_ip = utils_misc.get_host_ip_address(self.params)
+                host_ip = utils_net.get_host_ip_address(self.params)
                 dest_port = clone.spice_options['spice_port']
                 if self.params["spice_ssl"] == "yes":
                     dest_tls_port = clone.spice_options["spice_tls_port"]

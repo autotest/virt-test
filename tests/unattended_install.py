@@ -6,7 +6,7 @@ from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
 from virttest import kvm_monitor, syslog_server
-from virttest import http_server, data_dir
+from virttest import http_server, data_dir, utils_net
 
 
 # Whether to print all shell commands called
@@ -197,7 +197,7 @@ class UnattendedInstallConfig(object):
 
         # Content server params
         # lookup host ip address for first nic by interface name
-        auto_ip = utils_misc.get_ip_address_by_interface(vm.virtnet[0].netdst)
+        auto_ip = utils_net.get_ip_address_by_interface(vm.virtnet[0].netdst)
         self.url_auto_content_ip = params.get('url_auto_ip', auto_ip)
         self.url_auto_content_port = None
 

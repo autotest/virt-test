@@ -7,7 +7,7 @@ Requires: binaries remote-viewer, Xorg, netstat
 """
 import logging, os
 from virttest.aexpect import ShellCmdError, ShellStatusError
-from virttest import utils_misc, utils_spice, remote
+from virttest import utils_net, utils_spice, remote
 
 
 class RVConnectError(Exception):
@@ -87,7 +87,7 @@ def launch_rv(client_vm, guest_vm, params):
     @param params
     """
     rv_binary = params.get("rv_binary", "remote-viewer")
-    host_ip = utils_misc.get_host_ip_address(params)
+    host_ip = utils_net.get_host_ip_address(params)
     host_port = None
     full_screen = params.get("full_screen")
     display = params.get("display")
