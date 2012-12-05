@@ -230,8 +230,11 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
 
         param: element: Search only below this element
         """
-        # Comprehension loop over all children in all parents
-        return dict((c, p) for p in self.getiterator(element) for c in p)
+        d = {}
+        for p in self.getiterator(element):
+            for c in p:
+                d[c] = p
+        return d
 
 
     def get_parent(self, element, relative_root=None):
