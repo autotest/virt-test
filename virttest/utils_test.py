@@ -1668,6 +1668,47 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     run_func(test, params, env)
 
 
+def update_mac_ip_address(vm, params, timeout=None):
+    """
+    Get mac and ip address from guest then update the mac pool and
+    address cache
+
+    @param vm: VM object
+    @param params: Dictionary with the test parameters.
+    """
+    network_query = params.get("network_query", "ifconfig")
+    restart_network = params.get("restart_network", "service network restart")
+    mac_ip_filter = params.get("mac_ip_filter")
+    if timeout is None:
+        timeout = int(params.get("login_timeout"))
+    session = vm.wait_for_serial_login(timeout=360)
+    end_time = time.time() + timeout
+    macs_ips = []
+    i = 0
+    while time.time() < end_time:
+        try:
+            if i % 3 == 0:
+                session.cmd(restart_network)
+            s, o = session.cmd_status_output(network_query)
+            macs_ips = re.findall(mac_ip_filter, o)
+            # Get nics number
+        except Exception, e:
+            logging.warn(e)
+        nics =  params.get("nics")
+        nic_minimum = len(re.split("\s+", nics.strip()))
+        if len(macs_ips) == nic_minimum:
+            break
+        i += 1
+        time.sleep(5)
+    if len(macs_ips) < nic_minimum:
+        logging.warn("Not all nics get ip address")
+
+    for (mac, ip) in macs_ips:
+        vlan = macs_ips.index((mac, ip))
+        vm.address_cache[mac.lower()] = ip
+        vm.virtnet.set_mac_address(vlan, mac)
+
+
 def pin_vm_threads(vm, node):
     """
     Pin VM threads to single cpu of a numa node
@@ -1830,3 +1871,28 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
                                 len(result_dict[column_list[i]][j]))
 
     return average_list
+
+
+def find_substring(string, pattern1, pattern2=None):
+    """
+    Return the match of pattern1 in string. Or return the match of pattern2
+    if pattern is not matched.
+
+    @string: string
+    @pattern1: first pattern want to match in string, must set.
+    @pattern2: second pattern, it will be used if pattern1 not match, optional.
+
+    Return: Match substing or None
+    """
+    if not pattern1:
+        logging.debug("pattern1: get empty string.")
+        return None
+    pattern = pattern1
+    if pattern2:
+        pattern += "|%s" % pattern2
+    ret = re.findall(pattern, string)
+    if not ret:
+        logging.debug("Could not find matched string with pattern: %s",
+                     pattern)
+        return None
+    return ret[0]
