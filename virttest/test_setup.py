@@ -872,7 +872,7 @@ class PciAssignable(object):
             utils.system(cmd)
 
         re_probe = False
-        s, o = commands.getstatusoutput('lsmod | grep %s' % self.driver)
+        s = commands.getstatusoutput('lsmod | grep %s' % self.driver)[0]
         if s:
             cmd = "modprobe -r %s" % self.driver
             logging.info("Running host command: %s" % cmd)
@@ -886,7 +886,7 @@ class PciAssignable(object):
             cmd = "modprobe %s" % self.driver
             msg = "Loading the driver '%s' without option" % self.driver
             error.context(msg, logging.info)
-            s, o = commands.getstatusoutput(cmd)
+            s = commands.getstatusoutput(cmd)[0]
             utils.system("/etc/init.d/network restart", ignore_status=True)
             if s:
                 return False
