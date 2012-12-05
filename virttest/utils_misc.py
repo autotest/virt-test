@@ -4033,7 +4033,7 @@ def install_disktest_on_vm(test, vm, src_dir, dst_dir):
     session.close()
 
 
-def qemu_has_option(option, qemu_path):
+def qemu_has_option(option, qemu_path="/usr/bin/qemu-kvm"):
     """
     Helper function for command line option wrappers
 
