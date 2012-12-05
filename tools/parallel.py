@@ -2,10 +2,10 @@ import os, sys
 
 
 class ParallelError(Exception):
-    def __init__(self, str, errors):
-        self.str = str
+    def __init__(self, out, errors):
+        self.out = out
         self.errors = errors
-        Exception.__init__(self, str)
+        Exception.__init__(self, out)
 
 
 class ParallelExecute(object):
@@ -63,7 +63,7 @@ class ParallelExecute(object):
         while len(self.pid_map) > 0 or len(self.ready_to_run) > 0:
             max_allowed = self.max_procs - len(self.pid_map)
             max_able = len(self.ready_to_run)
-            for i in xrange(min(max_allowed, max_able)):
+            for _ in xrange(min(max_allowed, max_able)):
                 self._run(self.ready_to_run.pop())
 
             # Handle one proc that's finished.
