@@ -3,7 +3,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
 import libvirt_vm, video_maker, utils_misc, storage, kvm_storage
-import remote, ovirt, data_dir
+import remote, ovirt, data_dir, utils_test
 
 try:
     import PIL.Image
@@ -108,6 +108,10 @@ def preprocess_vm(test, params, env, name):
             vm.create(name, params, test.bindir,
                       migration_mode=params.get("migration_mode"),
                       migration_fd=params.get("migration_fd"))
+            # Update mac and IP info for assigned device
+            # NeedFix: Can we find another way to get guest ip?
+            if params.get("mac_changeable") == "yes":
+                utils_test.update_mac_ip_address(vm, params)
     else:
         # Don't start the VM, just update its params
         vm.params = params
