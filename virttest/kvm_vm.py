@@ -1358,7 +1358,6 @@ class VM(virt_vm.BaseVM):
                     image_params.get("drive_lun"))
 
         # Networking
->>>>>>> virt.kvm_vm: Fixup relative positioning of blkdebug files
         redirs = []
         for redir_name in params.objects("redirs"):
             redir_params = params.object_params(redir_name)
@@ -1394,7 +1393,7 @@ class VM(virt_vm.BaseVM):
                 else:
                     tftp = None
                 nettype = nic.get("nettype", "bridge")
-                # don't force conversion of add_nic()/add_net() optional parameter
+                # don't force conversion add_nic()/add_net() optional parameter
                 if nic.has_key('tapfd'):
                     tapfd = int(nic.tapfd)
                 else:
@@ -1679,12 +1678,6 @@ class VM(virt_vm.BaseVM):
         if params.get("disable_hpet") == "yes":
             qemu_cmd += add_no_hpet(help_text)
 
-        # If the PCI assignment step went OK, add each one of the PCI assigned
-        # devices to the qemu command line.
-        if vm.pci_assignable:
-            for pci_id in vm.pa_pci_ids:
-                qemu_cmd += add_pcidevice(help_text, pci_id)
-
         qemu_cmd += add_rtc(help_text)
 
         if has_option(help_text, "boot"):
@@ -1874,13 +1867,13 @@ class VM(virt_vm.BaseVM):
                 pa_type = nic_params.get("pci_assignable")
                 if pa_type and pa_type != "no":
                     if self.pci_assignable is None:
-                        self.pci_assignable = test_setup.PciAssignable(
-                            driver=params.get("driver"),
-                            driver_option=params.get("driver_option"),
-                            host_set_flag = params.get("host_setup_flag"),
-                            kvm_params = params.get("kvm_default"),
-                            vf_filter_re = params.get("vf_filter_re"),
-                            pf_filter_re = params.get("pf_filter_re"))
+                       self.pci_assignable = test_setup.PciAssignable(
+                           driver=params.get("driver"),
+                           driver_option=params.get("driver_option"),
+                           host_set_flag = params.get("host_setup_flag"),
+                           kvm_params = params.get("kvm_default"),
+                           vf_filter_re = params.get("vf_filter_re"),
+                           pf_filter_re = params.get("pf_filter_re"))
                     # Virtual Functions (VF) assignable devices
                     if pa_type == "vf":
                         self.pci_assignable.add_device(device_type=pa_type)
@@ -1901,7 +1894,7 @@ class VM(virt_vm.BaseVM):
                         # Will raise exception if source doesn't
                         # have cooresponding nic
                         logging.debug("Copying mac for nic %s from VM %s"
-                                        % (nic.nic_name, mac_source.name))
+                                       % (nic.nic_name, mac_source.name))
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
                     if nic.nettype == 'bridge' or nic.nettype == 'network':
                         try:
