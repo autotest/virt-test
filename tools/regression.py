@@ -50,18 +50,18 @@ def get_test_keyval(jobid, keyname, default=''):
 
 class Sample(object):
     """ Collect test results in same environment to a sample """
-    def __init__(self, type, arg):
+    def __init__(self, sample_type, arg):
         def generate_raw_table(test_dict):
             ret_dict = []
             tmp = []
-            type = category = None
+            sample_type = category = None
             for i in test_dict:
                 line = i.split('|')[1:]
-                if not type:
-                    type = line[0:2]
-                if type != line[0:2]:
-                    ret_dict.append('|'.join(type + tmp))
-                    type = line[0:2]
+                if not sample_type:
+                    sample_type = line[0:2]
+                if sample_type != line[0:2]:
+                    ret_dict.append('|'.join(sample_type + tmp))
+                    sample_type = line[0:2]
                     tmp = []
                 if "e+" in line[-1]:
                     tmp.append("%.0f" % float(line[-1]))
@@ -76,10 +76,10 @@ class Sample(object):
                     category = i.split('|')[0]
                     ret_dict.append("Category:" + category.strip())
                     ret_dict.append(self.categories)
-            ret_dict.append('|'.join(type + tmp))
+            ret_dict.append('|'.join(sample_type + tmp))
             return ret_dict
 
-        if type == 'file':
+        if sample_type == 'filepath':
             files = arg.split()
             self.files_dict = []
             for i in range(len(files)):
@@ -100,7 +100,7 @@ class Sample(object):
                         f.append(l.strip())
                 self.files_dict.append(f)
                 fd.close()
-        elif type == 'database':
+        elif sample_type == 'database':
             jobid = arg
             self.kvmver = get_test_keyval(jobid, "kvm-userspace-ver")
             self.hostkernel = get_test_keyval(jobid, "kvm_version")
@@ -190,9 +190,9 @@ class Sample(object):
                     sample2 = np.array(s2[line][col])
                     warnings.simplefilter("ignore", RuntimeWarning)
                     if (paired):
-                        (t, p) = stats.ttest_rel(sample1, sample2)
+                        (_, p) = stats.ttest_rel(sample1, sample2)
                     else:
-                        (t, p) = stats.ttest_ind(sample1, sample2)
+                        (_, p) = stats.ttest_ind(sample1, sample2)
                     flag = "+"
                     if float(avg1) > float(avg2):
                         flag = "-"
@@ -227,24 +227,24 @@ class Sample(object):
         sumSquareX = x1^2 + ... + xn^2
         SD = sqrt([sumSquareX - (n * (avgX ^ 2))] / (n - 1))
         """
-        sum = sqsum = 0
+        o_sum = sqsum = 0
         n = len(data)
         for i in data:
-            sum += float(i)
+            o_sum += float(i)
             sqsum += float(i) ** 2
-        avg = sum / n
+        avg = o_sum / n
         if avg == 0 or n == 1 or sqsum - (n * avg**2) <= 0:
             return "0.0"
         return "%.3f" % (((sqsum - (n * avg**2)) / (n - 1))**0.5)
 
     def _get_list_avg(self, data):
         """ Compute the average of list entries """
-        sum = 0
+        o_sum = 0
         for i in data:
-            sum += float(i)
+            o_sum += float(i)
         if is_int(str(data[0])):
-            return "%d" % (sum / len(data))
-        return "%.2f" % (sum / len(data))
+            return "%d" % (o_sum / len(data))
+        return "%.2f" % (o_sum / len(data))
 
     def _get_list_self(self, data):
         """ Use this to convert sample dicts """
@@ -293,42 +293,42 @@ class Sample(object):
         return ret_lines
 
 
-def display(lists, rates, allpvalues, f, ignore_col, sum="Augment Rate",
+def display(lists, rates, allpvalues, f, ignore_col, o_sum="Augment Rate",
             prefix0=None, prefix1=None, prefix2=None, prefix3=None):
     """
     Display lists data to standard format
 
     param lists: row data lists
     param rates: augment rates lists
-    param f: result output file
+    param f: result output filepath
     param ignore_col: do not display some columns
-    param sum: compare result summary
+    param o_sum: compare result summary
     param prefix0: output prefix in head lines
     param prefix1: output prefix in Avg/SD lines
     param prefix2: output prefix in Diff Avg/P-value lines
     param prefix3: output prefix in total Sign line
     """
-    def str_ignore(str, split=False):
-        str = str.split("|")
+    def str_ignore(out, split=False):
+        out = out.split("|")
         for i in range(ignore_col):
-            str[i] = " "
+            out[i] = " "
         if split:
-            return "|".join(str[ignore_col:])
-        return "|".join(str)
+            return "|".join(out[ignore_col:])
+        return "|".join(out)
 
-    def tee_line(content, file, n=None):
-        fd = open(file, "a")
+    def tee_line(content, filepath, n=None):
+        fd = open(filepath, "a")
         print content
-        str = ""
-        str += "<TR ALIGN=CENTER>"
+        out = ""
+        out += "<TR ALIGN=CENTER>"
         content = content.split("|")
         for i in range(len(content)):
             if n and i >= 2 and i < ignore_col+2:
-                str += "<TD ROWSPAN=%d WIDTH=1%% >%s</TD>" % (n, content[i])
+                out += "<TD ROWSPAN=%d WIDTH=1%% >%s</TD>" % (n, content[i])
             else:
-                str += "<TD WIDTH=1%% >%s</TD>" % content[i]
-        str += "</TR>"
-        fd.write(str + "\n")
+                out += "<TD WIDTH=1%% >%s</TD>" % content[i]
+        out += "</TR>"
+        fd.write(out + "\n")
         fd.close()
 
     for l in range(len(lists[0])):
@@ -336,7 +336,7 @@ def display(lists, rates, allpvalues, f, ignore_col, sum="Augment Rate",
             break
     tee("<TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1 width=10%><TBODY>",
         f)
-    tee("<h3>== %s " % sum + "==</h3>", f)
+    tee("<h3>== %s " % o_sum + "==</h3>", f)
     category = 0
     for i in range(len(lists[0])):
         for n in range(len(lists)):
@@ -379,7 +379,7 @@ def display(lists, rates, allpvalues, f, ignore_col, sum="Augment Rate",
         tee_line(prefix3 + str_ignore(allpvalues[category-1][0]), f)
     tee("</TBODY></TABLE>", f)
 
-def analyze(test, type, arg1, arg2, configfile):
+def analyze(test, sample_type, arg1, arg2, configfile):
     """ Compute averages/p-vales of two samples, print results nicely """
     config = ConfigParser.ConfigParser()
     config.read(configfile)
@@ -387,22 +387,22 @@ def analyze(test, type, arg1, arg2, configfile):
     avg_update = config.get(test, "avg_update")
     desc = config.get(test, "desc")
 
-    def get_list(dir):
+    def get_list(directory):
         result_file_pattern = config.get(test, "result_file_pattern")
-        cmd = 'find %s|grep "%s.*/%s"' % (dir, test, result_file_pattern)
+        cmd = 'find %s|grep "%s.*/%s"' % (directory, test, result_file_pattern)
         print cmd
         return commands.getoutput(cmd)
 
-    if type == 'file':
+    if sample_type == 'filepath':
         arg1 = get_list(arg1)
         arg2 = get_list(arg2)
 
     commands.getoutput("rm -f %s.*html" % test)
-    s1 = Sample(type, arg1)
+    s1 = Sample(sample_type, arg1)
     avg1 = s1.getAvg(avg_update=avg_update)
     sd1 = s1.getSD()
 
-    s2 = Sample(type, arg2)
+    s2 = Sample(sample_type, arg2)
     avg2 = s2.getAvg(avg_update=avg_update)
     sd2 = s2.getSD()
 
@@ -446,18 +446,18 @@ def analyze(test, type, arg1, arg2, configfile):
     tee("<pre>" + s1.desc + "</pre>", test+".html")
 
     display([avg1, sd1, avg2, sd2], rlist, allpvalues, test+".html",
-            ignore_col, sum="Regression Testing: %s" % test, prefix0="#|Tile|",
+            ignore_col, o_sum="Regression Testing: %s" % test, prefix0="#|Tile|",
             prefix1=["1|Avg|", " |%SD|", "2|Avg|", " |%SD|"],
             prefix2=["-|%Diff between Avg|", "-|Significance|"],
             prefix3="-|Total Significance|")
 
     display(s1.files_dict, [avg1], [], test+".avg.html", ignore_col,
-            sum="Raw data of sample 1", prefix0="#|Tile|",
+            o_sum="Raw data of sample 1", prefix0="#|Tile|",
             prefix1=[" |    |"],
             prefix2=["-|Avg |"], prefix3="")
 
     display(s2.files_dict, [avg2], [], test+".avg.html", ignore_col,
-            sum="Raw data of sample 2", prefix0="#|Tile|",
+            o_sum="Raw data of sample 2", prefix0="#|Tile|",
             prefix1=[" |    |"],
             prefix2=["-|Avg |"], prefix3="")
 
@@ -468,9 +468,9 @@ def is_int(n):
     except ValueError:
         return False
 
-def tee(content, file):
-    """ Write content to standard output and file """
-    fd = open(file, "a")
+def tee(content, filepath):
+    """ Write content to standard output and filepath """
+    fd = open(filepath, "a")
     fd.write(content + "\n")
     fd.close()
     print content
@@ -480,7 +480,7 @@ def tee(content, file):
 if __name__ == "__main__":
     if len(sys.argv) != 5:
         this = os.path.basename(sys.argv[0])
-        print 'Usage: %s <testname> file <dir1> <dir2>' % this
+        print 'Usage: %s <testname> filepath <dir1> <dir2>' % this
         print '    or %s <testname> db <jobid1> <jobid2>' % this
         sys.exit(1)
     analyze(sys.argv[1], sys.argv[2], sys.argv[3] ,sys.argv[4], 'perf.conf')
