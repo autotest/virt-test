@@ -675,8 +675,32 @@ class VM(virt_vm.BaseVM):
         def add_uuid(help_text, uuid):
             return " -uuid '%s'" % uuid
 
-        def add_pcidevice(help_text, host):
-            return " -pcidevice host='%s'" % host
+        def add_pcidevice(help, host, params=None):
+            assign_param = []
+            device_help = utils.system_output("%s -device \\?" % qemu_binary)
+            cmd = "  -pcidevice "
+            if bool(re.search("pci-assign", device_help, re.M)):
+                cmd = " -device pci-assign,"
+            help_cmd = "%s -device pci-assign,\\?" % qemu_binary
+            pcidevice_help = utils.system_output(help_cmd)
+            cmd += "host=%s" % host
+            cmd += ",id=id_%s" % host
+            if params is not None and params.get("pci-assign_params"):
+                assign_param = params.get("pci-assign_params").split()
+            fail_param = []
+            for param in assign_param:
+                value = params.get(param)
+                if value:
+                    if bool(re.search(param, pcidevice_help, re.M)):
+                        cmd += ",%s=%s" % (param, value)
+                    else:
+                        fail_param.append(param)
+            if fail_param:
+                msg = "parameter %s is not support in device pci-assign."\
+                      " It only support following paramter:\n %s" \
+                      % (param, pcidevice_help)
+                logging.warn(msg)
+            return cmd
 
         def add_spice(port_range=(3000, 3199),
              tls_port_range=(3200, 3399)):
@@ -1114,36 +1138,45 @@ class VM(virt_vm.BaseVM):
             host_port = vm.redirs.get(guest_port)
             redirs += [(host_port, guest_port)]
 
+        iov = 0
         for nic in vm.virtnet:
-            # setup nic parameters as needed
-            nic = vm.add_nic(**dict(nic))   # add_netdev if netdev_id not set
-            # gather set values or None if unset
-            vlan = int(nic.get('vlan'))
-            netdev_id = nic.get('netdev_id')
-            device_id = nic.get('device_id')
-            mac = nic.get('mac')
-            nic_model = nic.get("nic_model")
-            nic_extra = nic.get("nic_extra_params")
-            netdev_extra = nic.get("netdev_extra_params")
-            bootp = nic.get("bootp")
-            if nic.get("tftp"):
-                tftp = utils_misc.get_path(root_dir, nic.get("tftp"))
+            nic_params = params.object_params(nic.nic_name)
+            if nic_params.get('pci_assignable') == "no":
+                # setup nic parameters as needed
+                # add_netdev if netdev_id not set
+                nic = vm.add_nic(**dict(nic))
+                # gather set values or None if unset
+                vlan = int(nic.get('vlan'))
+                netdev_id = nic.get('netdev_id')
+                device_id = nic.get('device_id')
+                mac = nic.get('mac')
+                nic_model = nic.get("nic_model")
+                nic_extra = nic.get("nic_extra_params")
+                netdev_extra = nic.get("netdev_extra_params")
+                bootp = nic.get("bootp")
+                if nic.get("tftp"):
+                    tftp = utils_misc.get_path(root_dir, nic.get("tftp"))
+                else:
+                    tftp = None
+                nettype = nic.get("nettype", "bridge")
+                # don't force conversion add_nic()/add_net() optional parameter
+                if nic.has_key('tapfd'):
+                    tapfd = int(nic.tapfd)
+                else:
+                    tapfd = None
+                ifname = nic.get('ifname')
+                # Handle the '-net nic' part
+                qemu_cmd += add_nic(help_text, vlan, nic_model, mac,
+                                    device_id, netdev_id, nic_extra)
+                # Handle the '-net tap' or '-net user' or '-netdev' part
+                qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
+                                    bootp, redirs, netdev_id, netdev_extra,
+                                    tapfd)
             else:
-                tftp = None
-            nettype = nic.get("nettype", "bridge")
-            # don't force conversion of add_nic()/add_net() optional parameter
-            if nic.has_key('tapfd'):
-                tapfd = int(nic.tapfd)
-            else:
-                tapfd = None
-            ifname = nic.get('ifname')
-            # Handle the '-net nic' part
-            qemu_cmd += add_nic(help_text, vlan, nic_model, mac,
-                                device_id, netdev_id, nic_extra)
-            # Handle the '-net tap' or '-net user' or '-netdev' part
-            qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
-                                bootp, redirs, netdev_id, netdev_extra,
-                                tapfd)
+                pci_id = vm.pa_pci_ids[iov]
+                qemu_cmd += add_pcidevice(help, pci_id, params=nic_params)
+                iov += 1
+
 
         mem = params.get("mem")
         if mem:
@@ -1375,12 +1408,6 @@ class VM(virt_vm.BaseVM):
         if params.get("disable_hpet") == "yes":
             qemu_cmd += add_no_hpet(help_text)
 
-        # If the PCI assignment step went OK, add each one of the PCI assigned
-        # devices to the qemu command line.
-        if vm.pci_assignable:
-            for pci_id in vm.pa_pci_ids:
-                qemu_cmd += add_pcidevice(help_text, pci_id)
-
         qemu_cmd += add_rtc(help_text)
 
         if has_option(help_text, "boot"):
@@ -1549,38 +1576,59 @@ class VM(virt_vm.BaseVM):
 
             # Generate basic parameter values for all NICs and create TAP fd
             for nic in self.virtnet:
-                # fill in key values, validate nettype
-                # note: make_create_command() calls vm.add_nic (i.e. on a copy)
-                nic = self.add_nic(**dict(nic)) # implied add_netdev
-                if mac_source:
-                    # Will raise exception if source doesn't
-                    # have cooresponding nic
-                    logging.debug("Copying mac for nic %s from VM %s"
-                                    % (nic.nic_name, mac_source.name))
-                    nic.mac = mac_source.get_mac_address(nic.nic_name)
-                if nic.nettype == 'bridge' or nic.nettype == 'network':
-                    try:
-                        nic.tapfd = str(utils_misc.open_tap("/dev/net/tun",
-                                                            nic.ifname,
-                                                            vnet_hdr=True))
-                        logging.debug("Adding VM %s NIC ifname %s"
-                                      " to bridge %s" % (self.name,
-                                            nic.ifname, nic.netdst))
-                        if nic.nettype == 'bridge':
-                            utils_misc.add_to_bridge(nic.ifname, nic.netdst)
-                        utils_misc.bring_up_ifname(nic.ifname)
-                    except utils_misc.TAPCreationError, taperror:
-                        if taperror.details.errno == errno.EBUSY:
-                            logging.info("VM %s NIC ifname %s was already "
-                                         "added to bridge %s, skipping...",
-                                         self.name, nic.ifname, nic.netdst)
-                        else:
-                            raise taperror
-                elif nic.nettype == 'user':
-                    logging.info("Assuming dependencies met for "
-                                 "user mode nic %s, and ready to go"
-                                 % nic.nic_name)
-                self.virtnet.update_db()
+                nic_params = params.object_params(nic.nic_name)
+                pa_type = nic_params.get("pci_assignable")
+                if pa_type and pa_type != "no":
+                    if self.pci_assignable is None:
+                       self.pci_assignable = test_setup.PciAssignable(
+                           driver=params.get("driver"),
+                           driver_option=params.get("driver_option"),
+                           host_set_flag = params.get("host_setup_flag"),
+                           kvm_params = params.get("kvm_default"),
+                           vf_filter_re = params.get("vf_filter_re"),
+                           pf_filter_re = params.get("pf_filter_re"))
+                    # Virtual Functions (VF) assignable devices
+                    if pa_type == "vf":
+                        self.pci_assignable.add_device(device_type=pa_type)
+                    # Physical NIC (PF) assignable devices
+                    elif pa_type == "pf":
+                        self.pci_assignable.add_device(device_type=pa_type,
+                                            name=nic_params.get("device_name"))
+                    else:
+                        raise virt_vm.VMBadPATypeError(pa_type)
+                else:
+                    # fill in key values, validate nettype
+                    # note: make_create_command() calls vm.add_nic (i.e. on a copy)
+                    nic = self.add_nic(**dict(nic)) # implied add_netdev
+                    if mac_source:
+                        # Will raise exception if source doesn't
+                        # have cooresponding nic
+                        logging.debug("Copying mac for nic %s from VM %s"
+                                       % (nic.nic_name, mac_source.name))
+                        nic.mac = mac_source.get_mac_address(nic.nic_name)
+                    if nic.nettype == 'bridge' or nic.nettype == 'network':
+                        try:
+                            nic.tapfd = str(utils_misc.open_tap("/dev/net/tun",
+                                                                nic.ifname,
+                                                                vnet_hdr=True))
+                            logging.debug("Adding VM %s NIC ifname %s"
+                                          " to bridge %s" % (self.name,
+                                                nic.ifname, nic.netdst))
+                            if nic.nettype == 'bridge':
+                                utils_misc.add_to_bridge(nic.ifname, nic.netdst)
+                            utils_misc.bring_up_ifname(nic.ifname)
+                        except utils_misc.TAPCreationError, taperror:
+                            if taperror.details.errno == errno.EBUSY:
+                                logging.info("VM %s NIC ifname %s was already "
+                                             "added to bridge %s, skipping...",
+                                             self.name, nic.ifname, nic.netdst)
+                            else:
+                                raise taperror
+                    elif nic.nettype == 'user':
+                        logging.info("Assuming dependencies met for "
+                                     "user mode nic %s, and ready to go"
+                                     % nic.nic_name)
+                    self.virtnet.update_db()
 
             # Find available VNC port, if needed
             if params.get("display") == "vnc":
@@ -1592,45 +1640,7 @@ class VM(virt_vm.BaseVM):
                 self.uuid = f.read().strip()
                 f.close()
 
-            # Assign a PCI assignable device
-            self.pci_assignable = None
-            pa_type = params.get("pci_assignable")
-            if pa_type and pa_type != "no":
-                pa_devices_requested = params.get("devices_requested")
-
-                # Virtual Functions (VF) assignable devices
-                if pa_type == "vf":
-                    self.pci_assignable = test_setup.PciAssignable(
-                        dev_type=pa_type,
-                        driver=params.get("driver"),
-                        driver_option=params.get("driver_option"),
-                        devices_requested=pa_devices_requested,
-                        host_set_flag = params.get("host_setup_flag"),
-                        kvm_params = params.get("kvm_default"),
-                        net_restart_cmd = params.get("net_restart_cmd"))
-                # Physical NIC (PF) assignable devices
-                elif pa_type == "pf":
-                    self.pci_assignable = test_setup.PciAssignable(
-                        dev_type=pa_type,
-                        names=params.get("device_names"),
-                        devices_requested=pa_devices_requested,
-                        host_set_flag = params.get("host_setup_flag"),
-                        kvm_params = params.get("kvm_default"),
-                        net_restart_cmd = params.get("net_restart_cmd"))
-                # Working with both VF and PF
-                elif pa_type == "mixed":
-                    self.pci_assignable = test_setup.PciAssignable(
-                        dev_type=pa_type,
-                        driver=params.get("driver"),
-                        driver_option=params.get("driver_option"),
-                        names=params.get("device_names"),
-                        devices_requested=pa_devices_requested,
-                        host_set_flag = params.get("host_setup_flag"),
-                        kvm_params = params.get("kvm_default"),
-                        net_restart_cmd = params.get("net_restart_cmd"))
-                else:
-                    raise virt_vm.VMBadPATypeError(pa_type)
-
+            if self.pci_assignable is not None:
                 self.pa_pci_ids = self.pci_assignable.request_devs()
 
                 if self.pa_pci_ids:
@@ -1927,6 +1937,7 @@ class VM(virt_vm.BaseVM):
             self.monitors = []
             if self.pci_assignable:
                 self.pci_assignable.release_devs()
+                self.pci_assignable = None
             if self.process:
                 self.process.close()
             if self.serial_console:
