@@ -36,20 +36,9 @@
     module for examples.
 """
 
-import os.path, shutil, tempfile, string, StringIO
+import os, shutil, tempfile, string, StringIO, logging
 from xml.parsers import expat
-
-try:
-    import autotest.common as common
-except ImportError:
-    import common
-
-import logging
-
-try:
-    from autotest.client.shared import ElementTree
-except ImportError:
-    from virttest import ElementTree
+import ElementTree
 
 # Also used by unittests
 TMPPFX = 'xml_utils_temp_'
