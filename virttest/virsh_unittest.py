@@ -1,11 +1,10 @@
 #!/usr/bin/python
 
-import unittest, time, logging
+import unittest, logging
 import common
 from autotest.client import utils
 
 class ModuleLoad(unittest.TestCase):
-
     import virsh
 
 class ConstantsTest(ModuleLoad):
@@ -157,7 +156,6 @@ class ConstructorsTest(ModuleLoad):
 
 ##### Ensure the following tests ONLY run if a valid virsh command exists #####
 class ModuleLoadCheckVirsh(unittest.TestCase):
-
     import virsh
 
     def run(self, *args, **dargs):
