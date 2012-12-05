@@ -1769,7 +1769,7 @@ def get_readable_cdroms(params, session):
     raise error.TestFail("Could not find a cdrom device contain media.")
 
 
-def update_mac_ip_address(vm, params, timeout=360):
+def update_mac_ip_address(vm, params, timeout=None):
     """
     Get mac and ip address from guest then update the mac pool and
     address cache
@@ -1788,7 +1788,7 @@ def update_mac_ip_address(vm, params, timeout=360):
     i = 0
     while time.time() < end_time:
         try:
-            if i != 0 and i % 12 == 0:
+            if i % 3 == 0:
                 session.cmd(restart_network)
             s, o = session.cmd_status_output(network_query)
             macs_ips = re.findall(mac_ip_filter, o)
