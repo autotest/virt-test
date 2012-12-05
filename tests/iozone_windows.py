@@ -1,6 +1,6 @@
 import logging, os
 from autotest.client import utils
-from autotest.client.tests.iozone import postprocessing
+from virttest import postprocess_iozone
 
 
 def run_iozone_windows(test, params, env):
@@ -32,9 +32,9 @@ def run_iozone_windows(test, params, env):
 
     # Postprocess the results using the IOzone postprocessing module
     logging.info("Iteration succeed, postprocessing")
-    a = postprocessing.IOzoneAnalyzer(list_files=[results_path],
-                                      output_dir=analysisdir)
+    a = postprocess_iozone.IOzoneAnalyzer(list_files=[results_path],
+                                          output_dir=analysisdir)
     a.analyze()
-    p = postprocessing.IOzonePlotter(results_file=results_path,
-                                     output_dir=analysisdir)
+    p = postprocess_iozone.IOzonePlotter(results_file=results_path,
+                                         output_dir=analysisdir)
     p.plot_all()
