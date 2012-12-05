@@ -1689,7 +1689,7 @@ def update_mac_ip_address(vm, params, timeout=None):
         try:
             if i % 3 == 0:
                 session.cmd(restart_network)
-            s, o = session.cmd_status_output(network_query)
+            o = session.cmd_status_output(network_query)[1]
             macs_ips = re.findall(mac_ip_filter, o)
             # Get nics number
         except Exception, e:
