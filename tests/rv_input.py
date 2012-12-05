@@ -248,9 +248,9 @@ def analyze_results(file_path, test_type):
         correct_keycodes = ['97', '312', '65', '49', '65', '49']
 
     #Read caught keycodes on guest machine
-    file = open(file_path, "r")
-    keycodes = file.read()
-    file.close()
+    fileobj = open(file_path, "r")
+    keycodes = fileobj.read()
+    fileobj.close()
 
     #Compare caught keycodes with expected keycodes
     test_keycodes = keycodes.split(",")
