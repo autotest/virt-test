@@ -26,7 +26,7 @@ for non-existant keys.
 import signal, logging, urlparse, re
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import aexpect, utils_misc
+import aexpect, propcan
 
 # list of symbol names NOT to wrap as Virsh class methods
 # Everything else from globals() will become a method of Virsh class
@@ -50,7 +50,7 @@ except ValueError:
                     "virsh module will not function normally")
     VIRSH_EXEC = '/bin/true'
 
-class VirshBase(utils_misc.PropCanBase):
+class VirshBase(propcan.PropCanBase):
     """
     Base Class storing libvirt Connection & state to a host
     """

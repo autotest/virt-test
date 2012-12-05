@@ -33,7 +33,7 @@ should not be caught (so caller can test for them).  Errors detected
 within this module should raise LibvirtXMLError or a subclass.
 """
 
-from virttest import utils_misc, xml_utils, virsh
+from virttest import xml_utils, virsh, propcan
 
 
 class LibvirtXMLError(Exception):
@@ -50,7 +50,7 @@ class LibvirtXMLError(Exception):
         return str(self.details)
 
 
-class LibvirtXMLBase(utils_misc.PropCanBase):
+class LibvirtXMLBase(propcan.PropCanBase):
     """
     Base class for common attributes/methods applying to all sub-classes
     """
