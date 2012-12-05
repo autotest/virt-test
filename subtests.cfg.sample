@@ -923,6 +923,16 @@ variants:
     - stop_continue:
         type = stop_continue
         kill_vm_on_error = yes
+        variants:
+            - do_nothing:
+
+            - with_file_copy:
+                prepare_op = dd if=/dev/urandom of=/tmp/origin bs=1M count=1024
+                prepare_op_timeout = 240
+                start_bg_process = yes
+                bg_cmd = rm -rf /tmp/new; cp /tmp/origin /tmp/new
+                check_op = i=`md5sum /tmp/origin | awk '{print $1}'`; j=`md5sum /tmp/new | awk '{print $1}'`;echo $j|grep $i
+                clean_op = rm -rf /tmp/origin /tmp/new
 
     - nfs_corrupt:
         only Linux
