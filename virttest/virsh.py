@@ -539,6 +539,17 @@ def dom_list(options="", **dargs):
     return command("list %s" % options, **dargs)
 
 
+def reboot(name, options="", **dargs):
+    """
+    Run a reboot command in the target domain.
+
+    @param: name: Name of domain.
+    @param: options: options: options to pass to reboot command
+    @return: CmdResult object
+    """
+    return command("reboot --domain %s %s" % (name, options), **dargs)
+
+
 def managedsave(name, options="", **dargs):
     """
     Managed save of a domain state.
