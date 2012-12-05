@@ -114,12 +114,18 @@ variants:
         # Intel® 82576 Gigabit Ethernet Controller - igb
         # Neterion® X3100™ - vxge
         driver = igb
+        # vf_filter_re: Regex used to filter vf from lspci.
+        vf_filter_re = "Virtual Function"
+        # pf_filter_re: Regex used to filter pf from lspci. It will be used
+        # when device_name could not filter the pf.
+        pf_filter_re = "82576 Gigabit Network"
         # Driver option to specify the maximum number of virtual functions
         # (on vxge the option is , for example, is max_config_dev)
         # the default below is for the igb driver
         driver_option = "max_vfs=7"
-        # Number of devices that are going to be requested.
-        devices_requested = 7
+        mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
+        mac_changeable = "yes"
+
 
 variants:
     - @smallpages:
