@@ -28,7 +28,7 @@ from autotest.client.shared import error, global_config
 from autotest.client import utils
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
-import aexpect, utils_misc, virt_vm, remote, storage, env_process
+import aexpect, utils_misc, virt_vm, remote, storage, env_process, utils_cgroup
 
 GLOBAL_CONFIG = global_config.global_config
 
@@ -1217,8 +1217,8 @@ def domstat_cgroup_cpuacct_percpu(domain, qemu_path="/libvirt/qemu/"):
                       Please refer OS doc to pass the correct qemu path.
                       $CGRP_MNTPT/cpuacct/<$qemu_path>/<domain>..
     """
-    percpu_act_file = (utils.get_cgroup_mountpoint("cpuacct") + qemu_path +
-                       domain + "/cpuacct.usage_percpu")
+    percpu_act_file = (utils_cgroup.get_cgroup_mountpoint("cpuacct") +
+                       qemu_path + domain + "/cpuacct.usage_percpu")
     try:
         f_percpu_act = open(percpu_act_file, "rU")
         cpuacct_usage_percpu = f_percpu_act.readline().split()
