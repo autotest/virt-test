@@ -529,9 +529,8 @@ class PciAssignable(object):
         If pass through Physical NIC cards, we need to specify which devices
         to be assigned, e.g. 'eth1 eth2'.
 
-        If pass through Virtual Functions, we need to specify how many vfs
-        are going to be assigned, e.g. passthrough_count = 8 and max_vfs in
-        config file.
+        If pass through Virtual Functions, we need to specify max vfs in driver
+        e.g. max_vfs = 7 in config file.
 
         @param type: PCI device type.
         @param driver: Kernel module for the PCI assignable device.
@@ -633,7 +632,6 @@ class PciAssignable(object):
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
                 return False
-
         return True
 
 
@@ -705,10 +703,8 @@ class PciAssignable(object):
         for vf_id in vf_ids:
             if self.get_vf_status(vf_id):
                 vf_d.append(vf_id)
- 
         for vf in vf_d:
             vf_ids.remove(vf)
-
         dev_ids = []
         for i in range(count):
             if type_list:
@@ -781,6 +777,7 @@ class PciAssignable(object):
         kvm_re_probe = False
         o = utils.system_output("cat /var/log/dmesg")
         ecap = re.findall("ecap\s+(.\w+)", o)
+
         if ecap and int(ecap[0], 16) & 8 == 0:
             if self.kvm_params is not None:
                 if self.auai_path and self.kvm_params[self.auai_path] == "N":
@@ -828,7 +825,7 @@ class PciAssignable(object):
                 return False
             return True
 
-    @error.context_aware
+
     def sr_iov_cleanup(self):
         """
         Clean up the sriov setup
@@ -907,10 +904,9 @@ class PciAssignable(object):
         self.pci_ids = self.get_devs(count)
         logging.info("The following pci_ids were found: %s", self.pci_ids)
         requested_pci_ids = []
-        self.dev_drivers = {}
 
         # Setup all devices specified for assignment to guest
-        for pci_id in self.pci_ids:
+        for pci_id in pci_ids:
             full_id = utils_misc.get_full_pci_id(pci_id)
             if not full_id:
                 continue
@@ -944,8 +940,7 @@ class PciAssignable(object):
             else:
                 logging.debug("Device %s already binded to stub", pci_id)
             requested_pci_ids.append(pci_id)
-        self.pci_ids = requested_pci_ids
-        return self.pci_ids
+        return requested_pci_ids
 
     @error.context_aware
     def release_devs(self):
