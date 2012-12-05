@@ -1,14 +1,14 @@
 import logging, os, re, shutil
 from autotest.client.shared import error, utils
-from virttest import utils_misc
+from virttest import utils_net
 
 
 class Machine(object):
     def __init__(self, vm=None, src=None):
         self.vm = vm
         self.session = None
-        self.runner = utils_misc.local_runner
-        self.runner_status = utils_misc.local_runner_status
+        self.runner = utils_net.local_runner
+        self.runner_status = utils_net.local_runner_status
         self.bg_runner = utils.BgJob
         self.src = src
         self.addrs = None
@@ -47,7 +47,7 @@ class Machine(object):
 
 
     def fill_addrs(self):
-        self.addrs = utils_misc.get_net_if_and_addrs(self.runner)
+        self.addrs = utils_net.get_net_if_and_addrs(self.runner)
         if self.vm:
             self.vm.fill_addrs(self.addrs)
 
@@ -61,7 +61,7 @@ class Machine(object):
         """
         if self.is_virtual() and type(ifname) is int:
             ifname = self.vm.virtnet[ifname].g_nic_name
-        return utils_misc.ipv6_from_mac_addr(self.addrs[ifname]['mac'])
+        return utils_net.ipv6_from_mac_addr(self.addrs[ifname]['mac'])
 
 
     def ping(self, dst, iface=None, count=1, vlan=0, ipv=None):
@@ -150,12 +150,12 @@ class Machine(object):
             if vlan_id in vlans[ifname]:
                 return vlans[ifname][vlan_id]
             else:
-                raise utils_misc.VlanError(ifname,
-                                           "Interface %s has no vlan with"
-                                           " id %s" % (ifname, vlan_id))
+                raise utils_net.VlanError(ifname,
+                                          "Interface %s has no vlan with"
+                                          " id %s" % (ifname, vlan_id))
         else:
-            raise utils_misc.VlanError(ifname,
-                                       "Interface %s has no vlans" % (ifname))
+            raise utils_net.VlanError(ifname,
+                                      "Interface %s has no vlans" % (ifname))
 
 
     def prepare_directory(self, path, cleanup=False):

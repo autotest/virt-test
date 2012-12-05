@@ -1,6 +1,6 @@
 import logging, time, glob, re
 from autotest.client.shared import error
-import utils_misc, remote
+import utils_misc, utils_net, remote
 
 
 class VMError(Exception):
@@ -423,9 +423,9 @@ class BaseVM(object):
                                               self.name,
                                               self.instance)
         else: # Create new
-            self.virtnet = utils_misc.VirtNet(self.params,
-                                              self.name,
-                                              self.instance)
+            self.virtnet = utils_net.VirtNet(self.params,
+                                             self.name,
+                                             self.instance)
 
         if not hasattr(self, 'cpuinfo'):
             self.cpuinfo = CpuInfo()
@@ -463,7 +463,7 @@ class BaseVM(object):
         else:
             # Command-line encoded state doesn't include all params
             # TODO: Check more than just networking
-            other_virtnet = utils_misc.VirtNet(params, name, self.instance)
+            other_virtnet = utils_net.VirtNet(params, name, self.instance)
             if self.virtnet != other_virtnet:
                 logging.debug("VM params in env match, but network differs, "
                               "restarting")
@@ -540,7 +540,7 @@ class BaseVM(object):
             # for this guest
             macs = self.virtnet.mac_list()
 
-            if not utils_misc.verify_ip_address_ownership(arp_ip, macs):
+            if not utils_net.verify_ip_address_ownership(arp_ip, macs):
                 raise VMAddressVerificationError(nic.mac, arp_ip)
             logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
                             arp_ip, self.name, str(index)))
