@@ -95,8 +95,6 @@ class TestVirtIface(unittest.TestCase):
     VirtIface = utils_net.VirtIface
 
     def setUp(self):
-        logging.disable(logging.INFO)
-        logging.disable(logging.WARNING)
         utils_net.VirtIface.LASTBYTE = -1 # Restart count at zero
         # These warnings are annoying during testing
         utils_net.VMNet.DISCARD_WARNINGS -1
@@ -168,25 +166,23 @@ class TestVirtIface(unittest.TestCase):
                         "01:02:03::05:06")
 
 
-class TestQemuIface(TestVirtIface):
+class TestKvmIface(TestVirtIface):
 
     def setUp(self):
-        super(TestQemuIface, self).setUp()
-        self.VirtIface = utils_net.QemuIface
+        self.VirtIface = utils_net.KVMIface
+        # These warnings are annoying during testing
+        utils_net.VMNet.DISCARD_WARNINGS -1
 
 
 class TestLibvirtIface(TestVirtIface):
 
     def setUp(self):
-        super(TestLibvirtIface, self).setUp()
         self.VirtIface = utils_net.LibvirtIface
+        # These warnings are annoying during testing
+        utils_net.VMNet.DISCARD_WARNINGS -1
 
 
 class TestVmNetStyle(unittest.TestCase):
-    def setUp(self):
-        logging.disable(logging.INFO)
-        logging.disable(logging.WARNING)
-
 
     def get_style(self, vm_type, driver_type):
         return utils_net.VMNetStyle.get_style(vm_type, driver_type)
@@ -196,7 +192,7 @@ class TestVmNetStyle(unittest.TestCase):
         style = self.get_style(utils_misc.generate_random_string(16),
                                utils_misc.generate_random_string(16))
         self.assertEqual(style['mac_prefix'], '9a')
-        self.assertEqual(style['container_class'], utils_net.QemuIface)
+        self.assertEqual(style['container_class'], utils_net.KVMIface)
         self.assert_(issubclass(style['container_class'], utils_net.VirtIface))
 
 
@@ -210,8 +206,6 @@ class TestVmNetStyle(unittest.TestCase):
 class TestVmNet(unittest.TestCase):
 
     def setUp(self):
-        logging.disable(logging.INFO)
-        logging.disable(logging.WARNING)
         utils_net.VirtIface.LASTBYTE = -1 # Restart count at zero
         # These warnings are annoying during testing
         utils_net.VMNet.DISCARD_WARNINGS -1
@@ -270,8 +264,8 @@ class TestVmNetSubclasses(unittest.TestCase):
                     driver_type = qemu
                 - kvm:
                     driver_type = kvm
-        - qemu:
-            vm_type = qemu
+        - kvm:
+            vm_type = kvm
             variants:
                 - unsetdrivertype:
                 - kvm:
@@ -311,7 +305,7 @@ class TestVmNetSubclasses(unittest.TestCase):
 
     variants:
         -propsundefined:
-        -defaultprops:
+        e-defaultprops:
             mac = 9a
             nic_model = virtio
             nettype = bridge
@@ -352,8 +346,6 @@ class TestVmNetSubclasses(unittest.TestCase):
         """
         Runs before every test
         """
-        logging.disable(logging.INFO)
-        logging.disable(logging.WARNING)
         # MAC generator produces from incrementing byte list
         # at random starting point (class property).
         # make sure it starts counting at zero before every test
@@ -677,7 +669,7 @@ class TestVmNetSubclasses(unittest.TestCase):
     def test_08_ifname(self):
         for fakevm in self.fakevm_generator():
             # only need to test kvm instance
-            if fakevm.vm_type != 'qemu':
+            if fakevm.vm_type != 'kvm':
                 continue
             test_params = fakevm.get_params()
             virtnet = utils_net.VirtNet(test_params,

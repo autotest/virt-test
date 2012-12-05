@@ -1,15 +1,45 @@
-import openvswitch, re, os, socket, fcntl, struct, logging, random
-import ctypes, math, time
+import platform, openvswitch, re, os, socket, fcntl, struct, logging, random
 import shelve, commands
-from autotest.client import utils, os_dep
+from autotest.client import utils
 from autotest.client.shared import error
-import propcan, utils_misc, arch
+import propcan, utils_misc
 
-SYSFS_NET_PATH = "/sys/class/net"
-PROCFS_NET_PATH = "/proc/net/dev"
-#globals
-sock = None
-sockfd =None
+
+ARCH = platform.machine()
+if ARCH == "ppc64":
+    # From include/linux/sockios.h
+    SIOCSIFHWADDR  = 0x8924
+    SIOCGIFHWADDR  = 0x8927
+    SIOCSIFFLAGS   = 0x8914
+    SIOCGIFINDEX   = 0x8933
+    SIOCBRADDIF    = 0x89a2
+    SIOCBRDELIF    = 0x89a3
+    # From linux/include/linux/if_tun.h
+    TUNSETIFF      = 0x800454ca
+    TUNGETIFF      = 0x400454d2
+    TUNGETFEATURES = 0x400454cf
+    IFF_TAP        = 0x2
+    IFF_NO_PI      = 0x1000
+    IFF_VNET_HDR   = 0x4000
+    # From linux/include/linux/if.h
+    IFF_UP = 0x1
+else:
+    # From include/linux/sockios.h
+    SIOCSIFHWADDR = 0x8924
+    SIOCGIFHWADDR = 0x8927
+    SIOCSIFFLAGS  = 0x8914
+    SIOCGIFINDEX  = 0x8933
+    SIOCBRADDIF   = 0x89a2
+    SIOCBRDELIF   = 0x89a3
+    # From linux/include/linux/if_tun.h
+    TUNSETIFF = 0x400454ca
+    TUNGETIFF = 0x800454d2
+    TUNGETFEATURES = 0x800454cf
+    IFF_TAP = 0x0002
+    IFF_NO_PI = 0x1000
+    IFF_VNET_HDR = 0x4000
+    # From linux/include/linux/if.h
+    IFF_UP = 0x1
 
 class NetError(Exception):
     pass
@@ -181,296 +211,6 @@ class DbNoLockError(NetError):
         return "Attempt made to access database with improper locking"
 
 
-def warp_init_del(func):
-    def new_func(*args, **argkw):
-        globals()["sock"] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        globals()["sockfd"] = globals()["sock"].fileno()
-        try:
-            return func(*args, **argkw)
-        finally:
-            globals()["sock"].close()
-            globals()["sock"] = None
-            globals()["sockfd"] = None
-    return  new_func
-
-
-class Interface(object):
-    ''' Class representing a Linux network device. '''
-
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return "<%s %s at 0x%x>" % (self.__class__.__name__,
-                                    self.name, id(self))
-
-    @warp_init_del
-    def up(self):
-        '''
-        Bring up the bridge interface. Equivalent to ifconfig [iface] up.
-        '''
-
-        # Get existing device flags
-        ifreq = struct.pack('16sh', self.name, 0)
-        flags = struct.unpack('16sh',
-                              fcntl.ioctl(sockfd, arch.SIOCGIFFLAGS, ifreq))[1]
-
-        # Set new flags
-        flags = flags | arch.IFF_UP
-        ifreq = struct.pack('16sh', self.name, flags)
-        fcntl.ioctl(sockfd, arch.SIOCSIFFLAGS, ifreq)
-
-    @warp_init_del
-    def down(self):
-        '''
-        Bring up the bridge interface. Equivalent to ifconfig [iface] down.
-        '''
-
-        # Get existing device flags
-        ifreq = struct.pack('16sh', self.name, 0)
-        flags = struct.unpack('16sh',
-                              fcntl.ioctl(sockfd, arch.SIOCGIFFLAGS, ifreq))[1]
-
-        # Set new flags
-        flags = flags & ~arch.IFF_UP
-        ifreq = struct.pack('16sh', self.name, flags)
-        fcntl.ioctl(sockfd, arch.SIOCSIFFLAGS, ifreq)
-
-    @warp_init_del
-    def is_up(self):
-        '''
-        Return True if the interface is up, False otherwise.
-        '''
-        # Get existing device flags
-        ifreq = struct.pack('16sh', self.name, 0)
-        flags = struct.unpack('16sh',
-                              fcntl.ioctl(sockfd, arch.SIOCGIFFLAGS, ifreq))[1]
-
-        # Set new flags
-        if flags & arch.IFF_UP:
-            return True
-        else:
-            return False
-
-    @warp_init_del
-    def get_mac(self):
-        '''
-        Obtain the device's mac address.
-        '''
-        ifreq = struct.pack('16sH14s', self.name, socket.AF_UNIX, '\x00'*14)
-        res = fcntl.ioctl(sockfd, arch.SIOCGIFHWADDR, ifreq)
-        address = struct.unpack('16sH14s', res)[2]
-        mac = struct.unpack('6B8x', address)
-
-        return ":".join(['%02X' % i for i in mac])
-
-    @warp_init_del
-    def set_mac(self, newmac):
-        '''
-        Set the device's mac address. Device must be down for this to
-        succeed.
-        '''
-        macbytes = [int(i, 16) for i in newmac.split(':')]
-        ifreq = struct.pack('16sH6B8x', self.name, socket.AF_UNIX, *macbytes)
-        fcntl.ioctl(sockfd, arch.SIOCSIFHWADDR, ifreq)
-
-    @warp_init_del
-    def get_ip(self):
-        """
-        Get ip address of this interface
-        """
-        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00'*14)
-        try:
-            res = fcntl.ioctl(sockfd, arch.SIOCGIFADDR, ifreq)
-        except IOError:
-            return None
-        ip = struct.unpack('16sH2x4s8x', res)[2]
-
-        return socket.inet_ntoa(ip)
-
-    @warp_init_del
-    def set_ip(self, newip):
-        """
-        Set the ip address of the interface
-        """
-        ipbytes = socket.inet_aton(newip)
-        ifreq = struct.pack('16sH2s4s8s', self.name,
-                            socket.AF_INET, '\x00'*2, ipbytes, '\x00'*8)
-        fcntl.ioctl(sockfd, arch.SIOCSIFADDR, ifreq)
-
-    @warp_init_del
-    def get_netmask(self):
-        """
-        Get ip network netmask
-        """
-        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00'*14)
-        try:
-            res = fcntl.ioctl(sockfd, arch.SIOCGIFNETMASK, ifreq)
-        except IOError:
-            return 0
-        netmask = socket.ntohl(struct.unpack('16sH2xI8x', res)[2])
-
-        return 32 - int(math.log(ctypes.c_uint32(~netmask).value + 1, 2))
-
-    @warp_init_del
-    def set_netmask(self, netmask):
-        """
-        Set netmask
-        """
-        netmask = ctypes.c_uint32(~((2 ** (32 - netmask)) - 1)).value
-        nmbytes = socket.htonl(netmask)
-        ifreq = struct.pack('16sH2si8s', self.name,
-                            socket.AF_INET, '\x00'*2, nmbytes, '\x00'*8)
-        fcntl.ioctl(sockfd, arch.SIOCSIFNETMASK, ifreq)
-
-    @warp_init_del
-    def get_index(self):
-        '''
-        Convert an interface name to an index value.
-        '''
-        ifreq = struct.pack('16si', self.name, 0)
-        res = fcntl.ioctl(sockfd, arch.SIOCGIFINDEX, ifreq)
-        return struct.unpack("16si", res)[1]
-
-    @warp_init_del
-    def get_stats(self):
-        """
-        Get the status information of the Interface
-        """
-        spl_re = re.compile("\s+")
-
-        fp = open(PROCFS_NET_PATH)
-        # Skip headers
-        fp.readline()
-        fp.readline()
-        while True:
-            data = fp.readline()
-            if not data:
-                return None
-
-            name, stats_str = data.split(":")
-            if name.strip() != self.name:
-                continue
-
-            stats = [int(a) for a in spl_re.split(stats_str.strip())]
-            break
-
-        titles = ["rx_bytes", "rx_packets", "rx_errs", "rx_drop", "rx_fifo",
-                  "rx_frame", "rx_compressed", "rx_multicast", "tx_bytes",
-                  "tx_packets", "tx_errs", "tx_drop", "tx_fifo", "tx_colls",
-                  "tx_carrier", "tx_compressed"]
-        return dict(zip(titles, stats))
-
-    def is_brport(self):
-        """
-        Check Whether this Interface is a bridge port_to_br
-        """
-        path = os.path.join(SYSFS_NET_PATH, self.name)
-        if os.path.exists(os.path.join(path, "brport")):
-            return True
-        else:
-            return False
-
-
-class Macvtap(Interface):
-    """
-    class of macvtap, base Interface
-    """
-    def __init__(self, tapname=None):
-        if tapname == None:
-            self.tapname = "macvtap" + utils_misc.generate_random_id()
-        else:
-            self.tapname = tapname
-        Interface.__init__(self, self.tapname)
-
-
-    def get_tapname(self):
-        return self.tapname
-
-
-    def get_device(self):
-        return "/dev/tap%s" %  self.get_index()
-
-
-    def ip_link_ctl(self, params, ignore_status=False):
-        return utils.run(os_dep.command("ip"), timeout=10,
-                         ignore_status=ignore_status, verbose=False,
-                         args=params)
-
-
-    def create(self, device, mode="vepa"):
-        """
-        Create a macvtap device, only when the device does not exist.
-
-        @param device: Macvtap device to be created.
-        @param mode: Creation mode.
-        """
-        path = os.path.join(SYSFS_NET_PATH, self.tapname)
-        if os.path.exists(path):
-            return
-
-        self.ip_link_ctl(["link", "add", "link", device, "name",
-                          self.tapname,"type", "macvtap", "mode", mode])
-
-
-    def delete(self):
-        path = os.path.join(SYSFS_NET_PATH, self.tapname)
-        if os.path.exists(path):
-            self.ip_link_ctl(["link", "delete", self.tapname])
-
-
-    def open(self):
-        device = self.get_device()
-        try:
-            return os.open(device, os.O_RDWR)
-        except OSError, e:
-            raise TAPModuleError(device, "open", e)
-
-
-def add_nic_macvtap(nic, base_interface=None):
-    """
-    Add a macvtap nic, if you not have a macvtap switch in you env, run
-    this type case you need at least two nic on you host
-    If you not assign the base_interface will use the first physical interface
-    which is not a brport and up to create macvtap
-    """
-    tap_base_device = None
-
-    (dev_int, _) = get_sorted_net_if()
-    if not dev_int:
-        raise TAPCreationError("Cannot get a physical interface on the host")
-
-    if base_interface:
-        if not base_interface in dev_int:
-            err_msg = "Macvtap must created base on a physical interface"
-            raise TAPCreationError(err_msg)
-        base_inter = Interface(base_interface)
-        if (not base_inter.is_brport()) and base_inter.is_up():
-            tap_base_device = base_interface
-    else:
-        for interface in dev_int:
-            base_inter = Interface(interface)
-            if base_inter.is_brport():
-                continue
-            if base_inter.is_up():
-                tap_base_device = interface
-                break
-
-    if not tap_base_device:
-        err_msg = ("Could not find a valid physical interface to create "
-                   "macvtap, make sure the interface is up and it does not "
-                   "belong to any bridge.")
-        raise TAPCreationError(nic.ifname, err_msg)
-
-    tap = Macvtap(nic.ifname)
-    tap.create(tap_base_device)
-    tap.set_mac(nic.mac)
-    nic.tapfd = tap.open()
-    time.sleep(3)
-    tap.up()
-
-
-
 class Bridge(object):
     def get_structure(self):
         """
@@ -543,7 +283,7 @@ class Bridge(object):
         @param brname: Name of the bridge
         """
         try:
-            self._br_ioctl(arch.SIOCBRADDIF, brname, ifname)
+            self._br_ioctl(SIOCBRADDIF, brname, ifname)
         except IOError, details:
             raise BRAddIfError(ifname, brname, details)
 
@@ -556,7 +296,7 @@ class Bridge(object):
         @param brname: Name of the bridge
         """
         try:
-            self._br_ioctl(arch.SIOCBRDELIF, brname, ifname)
+            self._br_ioctl(SIOCBRDELIF, brname, ifname)
         except IOError, details:
             raise BRDelIfError(ifname, brname, details)
 
@@ -595,7 +335,7 @@ def if_nametoindex(ifname):
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16si", ifname, 0)
-    r = fcntl.ioctl(ctrl_sock, arch.SIOCGIFINDEX, ifr)
+    r = fcntl.ioctl(ctrl_sock, SIOCGIFINDEX, ifr)
     index = struct.unpack("16si", r)[1]
     ctrl_sock.close()
     return index
@@ -609,12 +349,12 @@ def vnet_hdr_probe(tapfd):
     """
     u = struct.pack("I", 0)
     try:
-        r = fcntl.ioctl(tapfd, arch.TUNGETFEATURES, u)
+        r = fcntl.ioctl(tapfd, TUNGETFEATURES, u)
     except OverflowError:
         logging.debug("Fail to get tun features!")
         return False
     flags = struct.unpack("I", r)[0]
-    if flags & arch.IFF_VNET_HDR:
+    if flags & IFF_VNET_HDR:
         return True
     else:
         return False
@@ -632,13 +372,13 @@ def open_tap(devname, ifname, vnet_hdr=True):
         tapfd = os.open(devname, os.O_RDWR)
     except OSError, e:
         raise TAPModuleError(devname, "open", e)
-    flags = arch.IFF_TAP | arch.IFF_NO_PI
+    flags = IFF_TAP | IFF_NO_PI
     if vnet_hdr and vnet_hdr_probe(tapfd):
-        flags |= arch.IFF_VNET_HDR
+        flags |= IFF_VNET_HDR
 
     ifr = struct.pack("16sh", ifname, flags)
     try:
-        r = fcntl.ioctl(tapfd, arch.TUNSETIFF, ifr)
+        r = fcntl.ioctl(tapfd, TUNSETIFF, ifr)
     except IOError, details:
         raise TAPCreationError(ifname, details)
     ifname = struct.unpack("16sh", r)[0].strip("\x00")
@@ -680,9 +420,7 @@ def local_runner_status(cmd, timeout=None):
 
 def get_net_if(runner=None):
     """
-    @param runner: command runner.
-    @param div_phy_virt: if set true, will return a tuple division real
-                         physical interface and virtual interface
+    @param output: Output form ip link command.
     @return: List of network interfaces.
     """
     if runner is None:
@@ -690,26 +428,6 @@ def get_net_if(runner=None):
     cmd = "ip link"
     result = runner(cmd)
     return re.findall("^\d+: (\S+?)[@:].*$", result, re.MULTILINE)
-
-
-def get_sorted_net_if():
-    """
-    Get all network interfaces, but sort them among physical and virtual if.
-
-    @return: Tuple (physical interfaces, virtual interfaces)
-    """
-    all_interfaces = get_net_if()
-    phy_interfaces = []
-    vir_interfaces = []
-    for d in all_interfaces:
-        path = os.path.join(SYSFS_NET_PATH, d)
-        if not os.path.isdir(path):
-            continue
-        if not os.path.exists(os.path.join(path, "device")):
-            vir_interfaces.append(d)
-        else:
-            phy_interfaces.append(d)
-    return (phy_interfaces, vir_interfaces)
 
 
 def get_net_if_addrs(if_name, runner=None):
@@ -946,9 +664,9 @@ def bring_up_ifname(ifname):
     @param ifname: Name of the interface
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
-    ifr = struct.pack("16sh", ifname, arch.IFF_UP)
+    ifr = struct.pack("16sh", ifname, IFF_UP)
     try:
-        fcntl.ioctl(ctrl_sock, arch.SIOCSIFFLAGS, ifr)
+        fcntl.ioctl(ctrl_sock, SIOCSIFFLAGS, ifr)
     except IOError:
         raise TAPBringUpError(ifname)
     ctrl_sock.close()
@@ -963,7 +681,7 @@ def bring_down_ifname(ifname):
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16sh", ifname, 0)
     try:
-        fcntl.ioctl(ctrl_sock, arch.SIOCSIFFLAGS, ifr)
+        fcntl.ioctl(ctrl_sock, SIOCSIFFLAGS, ifr)
     except IOError:
         raise TAPBringUpError(ifname)
     ctrl_sock.close()
@@ -980,7 +698,7 @@ def if_set_macaddress(ifname, mac):
 
     ifr = struct.pack("256s", ifname)
     try:
-        mac_dev = fcntl.ioctl(ctrl_sock, arch.SIOCGIFHWADDR, ifr)[18:24]
+        mac_dev = fcntl.ioctl(ctrl_sock, SIOCGIFHWADDR, ifr)[18:24]
         mac_dev = ":".join(["%02x" % ord(m) for m in mac_dev])
     except IOError, e:
         raise HwAddrGetError(ifname)
@@ -991,12 +709,11 @@ def if_set_macaddress(ifname, mac):
     ifr = struct.pack("16sH14s", ifname, 1,
                       "".join([chr(int(m, 16)) for m in mac.split(":")]))
     try:
-        fcntl.ioctl(ctrl_sock, arch.SIOCSIFHWADDR, ifr)
+        fcntl.ioctl(ctrl_sock, SIOCSIFHWADDR, ifr)
     except IOError, e:
         logging.info(e)
         raise HwAddrSetError(ifname, mac)
     ctrl_sock.close()
-
 
 class VirtIface(propcan.PropCan):
     """
@@ -1124,9 +841,9 @@ class LibvirtIface(VirtIface):
     __slots__ = VirtIface.__slots__ + []
 
 
-class QemuIface(VirtIface):
+class KVMIface(VirtIface):
     """
-    Networking information specific to Qemu
+    Networking information specific to KVM
     """
     __slots__ = VirtIface.__slots__ + ['vlan', 'device_id', 'ifname', 'tapfd',
                                        'tapfd_id', 'netdev_id', 'tftp',
@@ -1187,12 +904,6 @@ class VMNet(list):
                                            self.container_class(value))
         else:
             raise VMNetError
-
-
-    def __delitem__(self, index_or_name):
-        if isinstance(index_or_name, str):
-            index_or_name = self.nic_name_index(index_or_name)
-        super(VMNet, self).__delitem__(index_or_name)
 
 
     def subclass_pre_init(self, params, vm_name):
@@ -1287,7 +998,7 @@ class VMNet(list):
         return None
 
 
-# TODO: Subclass VMNet into Qemu/Libvirt variants and
+# TODO: Subclass VMNet into KVM/Libvirt variants and
 # pull them, along with ParmasNet and maybe DbNet based on
 # Style definitions.  i.e. libvirt doesn't need DbNet at all,
 # but could use some custom handling at the VMNet layer
@@ -1303,7 +1014,7 @@ class VMNetStyle(dict):
         'default':{
             'default':{
                 'mac_prefix':'9a',
-                'container_class': QemuIface,
+                'container_class': KVMIface,
             }
         },
         'libvirt':{
@@ -1438,6 +1149,8 @@ class DbNet(VMNet):
             database values are python string-formatted lists of dictionaries
     """
 
+    _INITIALIZED = False
+
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
@@ -1446,14 +1159,13 @@ class DbNet(VMNet):
         self.db_key = db_key
         self.db_filename = db_filename
         self.db_lockfile = db_filename + ".lock"
+        self.lock_db()
         # Merge (don't overwrite) existing propertea values if they
         # exist in db
         try:
-            self.lock_db()
             entry = self.db_entry()
         except KeyError:
             entry = []
-        self.unlock_db()
         proplist = list(self.container_class.__slots__)
         # nic_name was already set, remove from __slots__ list copy
         del proplist[proplist.index('nic_name')]
@@ -1465,9 +1177,37 @@ class DbNet(VMNet):
                     # only set properties in db but not in self
                     if db_nic.has_key(propertea):
                         self[nic_name].set_if_none(propertea, db_nic[propertea])
+        self.unlock_db()
         if entry:
             VMNet.__init__(self, self.container_class, entry)
-        # Assume self.update_db() called elsewhere
+
+
+    def __setitem__(self, index, value):
+        super(DbNet, self).__setitem__(index, value)
+        if self._INITIALIZED:
+            self.update_db()
+
+
+    def __getitem__(self, index_or_name):
+        # container class attributes are read-only, hook
+        # update_db here is only alternative
+        if self._INITIALIZED:
+            self.update_db()
+        return super(DbNet, self).__getitem__(index_or_name)
+
+
+    def __delitem__(self, index_or_name):
+        if isinstance(index_or_name, str):
+            index_or_name = self.nic_name_index(index_or_name)
+        super(DbNet, self).__delitem__(index_or_name)
+        if self._INITIALIZED:
+            self.update_db()
+
+
+    def append(self, value):
+        super(DbNet, self).append(value)
+        if self._INITIALIZED:
+            self.update_db()
 
 
     def lock_db(self):
@@ -1581,10 +1321,17 @@ class VirtNet(DbNet, ParamsNet):
         @param: db_key: database key uniquely identifying VM instance
         @param: db_filename: database file to cache previously parsed params
         """
+        # Prevent database updates during initialization
+        self._INITIALIZED = False
         # Params always overrides database content
         DbNet.__init__(self, params, vm_name, db_filename, db_key)
         ParamsNet.__init__(self, params, vm_name)
-        self.update_db()
+        self.lock_db()
+        # keep database updated in case of problems
+        self.save_to_db()
+        self.unlock_db()
+        # signal runtime content handling to methods
+        self._INITIALIZED = True
 
 
     # Delegating get/setstate() details more to ancestor classes
@@ -1593,6 +1340,7 @@ class VirtNet(DbNet, ParamsNet):
     # names for pickling works. The possibility also remains open
     # for extensions via style-class updates.
     def __getstate__(self):
+        self._INITIALIZED = False # prevent database updates
         state = {'container_items':VMNet.__getstate__(self)}
         for attrname in ['params', 'vm_name', 'db_key', 'db_filename',
                          'vm_type', 'driver_type', 'db_lockfile']:
@@ -1603,11 +1351,13 @@ class VirtNet(DbNet, ParamsNet):
 
 
     def __setstate__(self, state):
+        self._INITIALIZED = False # prevent db updates during unpickling
         for key in state.keys():
             if key == 'container_items':
                 continue # handle outside loop
             setattr(self, key, state.pop(key))
         VMNet.__setstate__(self, state.pop('container_items'))
+        self._INITIALIZED = True
 
 
     def __eq__(self, other):
@@ -1647,18 +1397,17 @@ class VirtNet(DbNet, ParamsNet):
             logging.warning("Overwriting mac %s for nic %s with random"
                                 % (nic.mac, str(nic_index_or_name)))
         self.free_mac_address(nic_index_or_name)
+        self.lock_db()
         attempts_remaining = attempts
         while attempts_remaining > 0:
             mac_attempt = nic.complete_mac_address(self.mac_prefix)
-            self.lock_db()
             if mac_attempt not in self.mac_index():
                 nic.mac = mac_attempt.lower()
                 self.unlock_db()
-                self.update_db()
-                return self[nic_index_or_name].mac
+                return self[nic_index_or_name].mac # calls update_db
             else:
                 attempts_remaining -= 1
-                self.unlock_db()
+        self.unlock_db()
         raise NetError("%s/%s MAC generation failed with prefix %s after %d "
                        "attempts for NIC %s on VM %s (%s)" % (
                             self.vm_type,
@@ -1717,30 +1466,7 @@ class VirtNet(DbNet, ParamsNet):
         postfix = utils_misc.generate_random_string(6)
         # Ensure interface name doesn't excede 11 characters
         self[nic_index_or_name].ifname = (prefix + postfix)[-11:]
-        self.update_db()
-        return self[nic_index_or_name].ifname
-
-
-def parse_arp():
-    """
-    Read /proc/net/arp, return a mapping of MAC to IP
-
-    @return: dict mapping MAC to IP
-    """
-    ret = {}
-    arp_cache = file('/proc/net/arp').readlines()
-
-    for line in arp_cache:
-        mac = line.split()[3]
-        ip = line.split()[0]
-
-        # Skip the header
-        if mac.count(":") != 5:
-            continue
-
-        ret[mac] = ip
-
-    return ret
+        return self[nic_index_or_name].ifname # forces update_db
 
 
 def verify_ip_address_ownership(ip, macs, timeout=10.0):
@@ -1752,15 +1478,15 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     @param macs: A list or tuple of MAC addresses.
     @return: True if ip is assigned to a MAC address in macs.
     """
-    ip_map = parse_arp()
-    for mac in macs:
-        if ip_map.get(mac) == ip:
-            return True
-
     # Compile a regex that matches the given IP address and any of the given
     # MAC addresses
     mac_regex = "|".join("(%s)" % mac for mac in macs)
     regex = re.compile(r"\b%s\b.*\b(%s)\b" % (ip, mac_regex), re.IGNORECASE)
+
+    # Check the ARP cache
+    o = commands.getoutput("%s -n" % utils_misc.find_command("arp"))
+    if regex.search(o):
+        return True
 
     # Get the name of the bridge device for arping
     o = commands.getoutput("%s route get %s" % (utils_misc.find_command("ip"), ip))
@@ -1773,7 +1499,6 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     o = commands.getoutput("%s -f -c 3 -I %s %s" %
                            (utils_misc.find_command("arping"), dev, ip))
     return bool(regex.search(o))
-
 
 def generate_mac_address_simple():
     r = random.SystemRandom()
@@ -1796,11 +1521,12 @@ def get_ip_address_by_interface(ifname):
     by using socket.inet_ntoa().
 
     """
+    SIOCGIFADDR = 0x8915 # Get interface address <bits/ioctls.h>
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         return socket.inet_ntoa(fcntl.ioctl(
                     mysocket.fileno(),
-                    arch.SIOCGIFADDR,
+                    SIOCGIFADDR,
                     struct.pack('256s', ifname[:15]) # ifname to binary IFNAMSIZ == 16
                 )[20:24])
     except IOError:

@@ -1,7 +1,6 @@
-import os, logging, time
-from virttest import utils_misc, aexpect
-from autotest.client.shared import openvswitch, error
-from openvswitch import ovs_utils
+import logging, time, os
+from virttest import utils_misc, aexpect, utils_net, openvswitch, ovs_utils
+from autotest.client.shared import error
 
 
 def allow_iperf_firewall(machine):
@@ -29,7 +28,7 @@ class MiniSubtest(object):
 class InfrastructureInit(MiniSubtest):
     def setup(self, test, params, env):
         self.br0_name = "br0-%s" % (utils_misc.generate_random_string(3))
-        while self.br0_name in utils_misc.get_net_if():
+        while self.br0_name in utils_net.get_net_if():
             self.br0_name = "br0-%s" % (utils_misc.generate_random_string(3))
         self.br0_ip = params.get("bridge_ip", "192.168.250.1")
 
@@ -46,15 +45,15 @@ class InfrastructureInit(MiniSubtest):
         self.ovs.check()
         error.context("Add new bridge %s." % (self.br0_name))
         self.ovs.add_br(self.br0_name)
-        utils_misc.set_net_if_ip(self.br0_name, self.br0_ip)
-        utils_misc.bring_up_ifname(self.br0_name)
-        self.dns_pidf = (utils_misc.check_add_dnsmasq_to_br(self.br0_name,
+        utils_net.set_net_if_ip(self.br0_name, self.br0_ip)
+        utils_net.bring_up_ifname(self.br0_name)
+        self.dns_pidf = (utils_net.check_add_dnsmasq_to_br(self.br0_name,
                                                             test.tmpdir))
         error.context("Add new ports from vms %s to bridge %s." %
                         (self.vms, self.br0_name))
 
         for vm in self.vms:
-            utils_misc.change_iface_bridge(vm.virtnet[1],
+            utils_net.change_iface_bridge(vm.virtnet[1],
                                            self.br0_name,
                                            self.ovs)
 

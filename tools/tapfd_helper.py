@@ -3,7 +3,7 @@
 import sys, os, re, logging
 import common
 from autotest.client.shared import logging_manager
-from virttest import utils_misc
+from virttest import utils_net, utils_misc
 
 
 def destroy_tap(tapfd_list):
@@ -44,9 +44,9 @@ if __name__ == "__main__":
     for tap in tap_list:
         try:
             ifname = "tap-%s" % tap
-            tapfd = utils_misc.open_tap("/dev/net/tun", ifname)
-            utils_misc.add_to_bridge(ifname, brname)
-            utils_misc.bring_up_ifname(ifname)
+            tapfd = utils_net.open_tap("/dev/net/tun", ifname)
+            utils_net.add_to_bridge(ifname, brname)
+            utils_net.bring_up_ifname(ifname)
             pattern = tap_replace_re % tap
             cmd_line = re.sub(pattern, "\g<1>%s " % tapfd, cmd_line)
             tapfd_list.append(tapfd)
