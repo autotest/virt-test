@@ -33,7 +33,9 @@ should not be caught (so caller can test for them).  Errors detected
 within this module should raise LibvirtXMLError or a subclass.
 """
 
+import logging
 from virttest import xml_utils, virsh, propcan
+from autotest.client.shared import error
 
 
 class LibvirtXMLError(Exception):
@@ -331,6 +333,55 @@ class VMXML(VMXMLBase):
         """Define VM with virsh from this instance"""
         # Allow any exceptions to propigate up
         self.virsh.define(self.xml)
+
+
+    @staticmethod
+    def vm_rename(vm, new_name, uuid=None):
+        """
+        Rename a vm from its XML.
+
+        @param vm: VM class type instance
+        @param new_name: new name of vm
+        @param uuid: new_vm's uuid
+                     if it is None, libvirt will auto-generate.
+        @return: a new VM instance
+        """
+        if vm.is_alive():
+            vm.destroy(gracefully=True)
+
+        vmxml = VMXML(virsh)
+        vmxml = vmxml.new_from_dumpxml(vm.name)
+        backup = vmxml.copy()
+        # can't do in-place rename, must operate on XML
+        try:
+            vmxml.undefine()
+            # All failures trip a single exception
+        except error.CmdError, detail:
+            del vmxml # clean up temporary files
+            raise LibvirtXMLError("Error reported while undefining VM:\n%s"
+                                   % detail)
+        # Alter the XML
+        vmxml.vm_name = new_name
+        if uuid is None:
+            # invalidate uuid so libvirt will regenerate
+            del vmxml.uuid
+            vm.uuid = None
+        else:
+            vmxml.uuid = uuid
+            vm.uuid = uuid
+        # Re-define XML to libvirt
+        logging.debug("Rename %s to %s.", vm.name, new_name)
+        try:
+            vmxml.define()
+        except error.CmdError, detail:
+            del vmxml # clean up temporary files
+            # Allow exceptions thrown here since state will be undefined
+            backup.define()
+            raise LibvirtXMLError("Error reported while defining VM:\n%s"
+                                   % detail)
+        # Keep names uniform
+        vm.name = new_name
+        return vm
 
 
     #TODO: Add function to create from xml_utils.TemplateXML()
