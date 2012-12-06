@@ -906,6 +906,12 @@ class VMNet(list):
             raise VMNetError
 
 
+    def __delitem__(self, index_or_name):
+        if isinstance(index_or_name, str):
+            index_or_name = self.nic_name_index(index_or_name)
+        super(VMNet, self).__delitem__(index_or_name)
+
+
     def subclass_pre_init(self, params, vm_name):
         """
         Subclasses must establish style before calling VMNet. __init__()
@@ -1149,8 +1155,6 @@ class DbNet(VMNet):
             database values are python string-formatted lists of dictionaries
     """
 
-    _INITIALIZED = False
-
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
@@ -1159,13 +1163,14 @@ class DbNet(VMNet):
         self.db_key = db_key
         self.db_filename = db_filename
         self.db_lockfile = db_filename + ".lock"
-        self.lock_db()
         # Merge (don't overwrite) existing propertea values if they
         # exist in db
         try:
+            self.lock_db()
             entry = self.db_entry()
         except KeyError:
             entry = []
+        self.unlock_db()
         proplist = list(self.container_class.__slots__)
         # nic_name was already set, remove from __slots__ list copy
         del proplist[proplist.index('nic_name')]
@@ -1177,37 +1182,9 @@ class DbNet(VMNet):
                     # only set properties in db but not in self
                     if db_nic.has_key(propertea):
                         self[nic_name].set_if_none(propertea, db_nic[propertea])
-        self.unlock_db()
         if entry:
             VMNet.__init__(self, self.container_class, entry)
-
-
-    def __setitem__(self, index, value):
-        super(DbNet, self).__setitem__(index, value)
-        if self._INITIALIZED:
-            self.update_db()
-
-
-    def __getitem__(self, index_or_name):
-        # container class attributes are read-only, hook
-        # update_db here is only alternative
-        if self._INITIALIZED:
-            self.update_db()
-        return super(DbNet, self).__getitem__(index_or_name)
-
-
-    def __delitem__(self, index_or_name):
-        if isinstance(index_or_name, str):
-            index_or_name = self.nic_name_index(index_or_name)
-        super(DbNet, self).__delitem__(index_or_name)
-        if self._INITIALIZED:
-            self.update_db()
-
-
-    def append(self, value):
-        super(DbNet, self).append(value)
-        if self._INITIALIZED:
-            self.update_db()
+        # Assume self.update_db() called elsewhere
 
 
     def lock_db(self):
@@ -1321,17 +1298,10 @@ class VirtNet(DbNet, ParamsNet):
         @param: db_key: database key uniquely identifying VM instance
         @param: db_filename: database file to cache previously parsed params
         """
-        # Prevent database updates during initialization
-        self._INITIALIZED = False
         # Params always overrides database content
         DbNet.__init__(self, params, vm_name, db_filename, db_key)
         ParamsNet.__init__(self, params, vm_name)
-        self.lock_db()
-        # keep database updated in case of problems
-        self.save_to_db()
-        self.unlock_db()
-        # signal runtime content handling to methods
-        self._INITIALIZED = True
+        self.update_db()
 
 
     # Delegating get/setstate() details more to ancestor classes
@@ -1340,7 +1310,6 @@ class VirtNet(DbNet, ParamsNet):
     # names for pickling works. The possibility also remains open
     # for extensions via style-class updates.
     def __getstate__(self):
-        self._INITIALIZED = False # prevent database updates
         state = {'container_items':VMNet.__getstate__(self)}
         for attrname in ['params', 'vm_name', 'db_key', 'db_filename',
                          'vm_type', 'driver_type', 'db_lockfile']:
@@ -1351,13 +1320,11 @@ class VirtNet(DbNet, ParamsNet):
 
 
     def __setstate__(self, state):
-        self._INITIALIZED = False # prevent db updates during unpickling
         for key in state.keys():
             if key == 'container_items':
                 continue # handle outside loop
             setattr(self, key, state.pop(key))
         VMNet.__setstate__(self, state.pop('container_items'))
-        self._INITIALIZED = True
 
 
     def __eq__(self, other):
@@ -1397,17 +1364,18 @@ class VirtNet(DbNet, ParamsNet):
             logging.warning("Overwriting mac %s for nic %s with random"
                                 % (nic.mac, str(nic_index_or_name)))
         self.free_mac_address(nic_index_or_name)
-        self.lock_db()
         attempts_remaining = attempts
         while attempts_remaining > 0:
             mac_attempt = nic.complete_mac_address(self.mac_prefix)
+            self.lock_db()
             if mac_attempt not in self.mac_index():
                 nic.mac = mac_attempt.lower()
                 self.unlock_db()
-                return self[nic_index_or_name].mac # calls update_db
+                self.update_db()
+                return self[nic_index_or_name].mac
             else:
                 attempts_remaining -= 1
-        self.unlock_db()
+                self.unlock_db()
         raise NetError("%s/%s MAC generation failed with prefix %s after %d "
                        "attempts for NIC %s on VM %s (%s)" % (
                             self.vm_type,
@@ -1466,7 +1434,8 @@ class VirtNet(DbNet, ParamsNet):
         postfix = utils_misc.generate_random_string(6)
         # Ensure interface name doesn't excede 11 characters
         self[nic_index_or_name].ifname = (prefix + postfix)[-11:]
-        return self[nic_index_or_name].ifname # forces update_db
+        self.update_db()
+        return self[nic_index_or_name].ifname
 
 
 def verify_ip_address_ownership(ip, macs, timeout=10.0):
