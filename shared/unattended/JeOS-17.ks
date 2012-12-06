@@ -31,9 +31,7 @@ pciutils
 usbutils
 -yum-utils
 -cryptsetup
--vconfig
 -dump
--acpid
 -mlocate
 -stunnel
 -rng-tools
@@ -101,8 +99,6 @@ usbutils
 -yum-langpacks
 -talk
 -wpa_supplicant
--kbd-misc
--kbd
 -slang
 -authconfig
 -newt
@@ -140,7 +136,6 @@ usbutils
 -psacct
 -parted
 -passwd
--bind-utils
 -tmpwatch
 -bc
 -acl
@@ -176,7 +171,6 @@ usbutils
 %post --interpreter /usr/bin/python
 import os
 os.system('grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)')
-os.system('dracut --nomdadmconf --nolvmconf -H -f /boot/initramfs-3.3.4-5.fc17.x86_64.img 3.3.4-5.fc17.x86_64')
 os.system('echo 0 > /selinux/enforce')
 os.system('systemctl enable sshd.service')
 os.system('systemctl mask fedora-wait-storage.service')
