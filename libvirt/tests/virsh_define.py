@@ -1,57 +1,38 @@
 import logging
 from autotest.client.shared import error
-from virttest import libvirt_xml, virsh
+from virttest.libvirt_xml import VMXML, LibvirtXMLError
+from virttest import virt_vm
+
 
 def run_virsh_define(test, params, env):
     """
     Test defining/undefining domain by dumping xml, changing it, and re-adding.
 
     (1) Get name and uuid of existing vm
-    (2) Extract XML, undefine domain
-    (3) Change name & uuid in XML
-    (4) Define domain
+    (2) Rename domain and verify domain start
+    (3) Get uuid of new vm
+    (4) Change name&uuid back to original
     (5) Verify domain start
-    (6) Change name & uuid back to original
     """
 
-    def do_rename(vm, new_name, uuid=None):
-        if vm.is_alive():
-            vm.destroy(gracefully=True)
+    def do_rename(vm, new_name, uuid=None, fail_info=[]):
+        # Change name in XML
+        logging.info("Rename %s to %s.", vm.name, new_name)
+        try:
+            vm = VMXML.vm_rename(vm, new_name, uuid) # give it a new uuid
+        except LibvirtXMLError, detail:
+            raise error.TestFail("Rename %s to %s failed:\n%s"
+                                    % (vm.name, new_name, detail))
 
-        vmxml = libvirt_xml.VMXML(virsh)
-        vmxml = vmxml.new_from_dumpxml(vm.name, virsh)
-        backup = vmxml.copy()
-        # can't do in-place rename, must operate on XML
-        try:
-            vmxml.undefine()
-            # All failures trip a single exception
-        except libvirt_xml.LibvirtXMLError, detail:
-            del vmxml # clean up temporary files
-            raise error.TestFail("Error reported while undefining VM:" + detail)
-        # Alter the XML
-        vmxml.vm_name = new_name
-        if uuid is None:
-            # invalidate uuid so libvirt will regenerate
-            del vmxml.uuid
-            vm.uuid = None
-        else:
-            vmxml.uuid = uuid
-            vm.uuid = uuid
-        # Re-define XML to libvirt
-        logging.info("Test rename %s to %s.", vm.name, new_name)
-        try:
-            vmxml.define()
-        except libvirt_xml.LibvirtXMLError:
-            del vmxml # clean up temporary files
-            # Allow exceptions thrown here since state will be undefined
-            backup.define()
-        # Keep names uniform
-        vm.name = new_name
         # Exercize the defined XML
-        if vm.start():
-            logging.info("Start new guest %s succeed.", new_name)
+        try:
+            vm.start()
+        except virt_vm.VMStartError, detail:
+            # Do not raise TestFail because vm should be restored
+            fail_info.append("Start guest %s failed:%s" % (vm.name, detail))
         vm.destroy()
-        # vmxml and backup go out of scope, tmp files auto-removed
+        return fail_info
+
 
     # Run test
     vm_name = params.get("main_vm")
@@ -59,10 +40,16 @@ def run_virsh_define(test, params, env):
     new_name = params.get("new_name", "test")
     uuid = vm.get_uuid()
     logging.info("Original uuid: %s", vm.get_uuid())
+
     assert uuid is not None
-    do_rename(vm, new_name) # give it a new uuid
+    # Rename to a new name
+    fail_info = do_rename(vm, new_name)
     logging.info("Generated uuid: %s", vm.get_uuid())
+
     assert vm.uuid != uuid
     # Rename back to original to maintain known-state
-    do_rename(vm, vm_name, uuid) # restore original uuid
+    fail_info = do_rename(vm, vm_name, uuid, fail_info)
     logging.info("Final uuid: %s", vm.get_uuid())
+
+    if len(fail_info):
+        raise error.TestFail(fail_info)
