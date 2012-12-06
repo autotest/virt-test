@@ -328,6 +328,9 @@ class GuestWorker(object):
         @param send_pts: list of possible send sockets we need to work around.
         @param recv_pts: list of possible recv sockets we need to read-out.
         """
+        # No need to clean ports when VM is dead
+        if not self.vm or self.vm.is_dead():
+            return
         # in LOOP_NONE mode it might stuck in read/write
         match, tmp = self._cmd("virt.exit_threads()", 3)
         if match is None:
@@ -383,12 +386,12 @@ class GuestWorker(object):
     def cleanup(self):
         """ Cleanup ports and quit the worker """
         # Verify that guest works
-        if self.session:
+        if self.session and self.vm and self.vm.is_alive():
             self.cleanup_ports()
         if self.vm:
             self.vm.verify_kernel_crash()
         # Quit worker
-        if self.session and self.vm:
+        if self.session and self.vm and self.vm.is_alive():
             self.cmd("guest_exit()", 10)
         self.session = None
         self.vm = None
