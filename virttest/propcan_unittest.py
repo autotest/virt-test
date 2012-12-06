@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import unittest
+import unittest, logging
 import propcan
 
 class TestPropCanBase(unittest.TestCase):
@@ -148,6 +148,10 @@ class TestPropCanBase(unittest.TestCase):
 
 
 class TestPropCan(unittest.TestCase):
+    def setUp(self):
+        logging.disable(logging.INFO)
+
+
     def test_extranious_init(self):
         class FooBar(propcan.PropCan):
             __slots__ = ('foo', )

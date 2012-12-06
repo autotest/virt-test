@@ -95,6 +95,8 @@ class TestVirtIface(unittest.TestCase):
     VirtIface = utils_net.VirtIface
 
     def setUp(self):
+        logging.disable(logging.INFO)
+        logging.disable(logging.WARNING)
         utils_net.VirtIface.LASTBYTE = -1 # Restart count at zero
         # These warnings are annoying during testing
         utils_net.VMNet.DISCARD_WARNINGS -1
@@ -169,20 +171,22 @@ class TestVirtIface(unittest.TestCase):
 class TestKvmIface(TestVirtIface):
 
     def setUp(self):
+        super(TestKvmIface, self).setUp()
         self.VirtIface = utils_net.KVMIface
-        # These warnings are annoying during testing
-        utils_net.VMNet.DISCARD_WARNINGS -1
 
 
 class TestLibvirtIface(TestVirtIface):
 
     def setUp(self):
+        super(TestLibvirtIface, self).setUp()
         self.VirtIface = utils_net.LibvirtIface
-        # These warnings are annoying during testing
-        utils_net.VMNet.DISCARD_WARNINGS -1
 
 
 class TestVmNetStyle(unittest.TestCase):
+    def setUp(self):
+        logging.disable(logging.INFO)
+        logging.disable(logging.WARNING)
+
 
     def get_style(self, vm_type, driver_type):
         return utils_net.VMNetStyle.get_style(vm_type, driver_type)
@@ -240,6 +244,9 @@ class TestVmNet(unittest.TestCase):
         self.assertEqual(True, hasattr(vmnet[2], 'mac'))
         self.assertEqual(test_data[2]['mac'], vmnet[2]['mac'])
 
+    def setUp(self):
+        logging.disable(logging.INFO)
+        logging.disable(logging.WARNING)
 
 class TestVmNetSubclasses(unittest.TestCase):
 
@@ -346,6 +353,8 @@ class TestVmNetSubclasses(unittest.TestCase):
         """
         Runs before every test
         """
+        logging.disable(logging.INFO)
+        logging.disable(logging.WARNING)
         # MAC generator produces from incrementing byte list
         # at random starting point (class property).
         # make sure it starts counting at zero before every test
