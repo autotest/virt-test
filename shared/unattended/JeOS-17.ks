@@ -14,6 +14,7 @@ bootloader --location=mbr --timeout=0 --append="console=tty0 console=ttyS0,11520
 zerombr
 poweroff
 services --enabled network
+repo --name updates
 KVM_TEST_LOGGING
 
 clearpart --all --initlabel
@@ -196,6 +197,7 @@ os.system('systemctl mask sys-devices-virtual-tty-tty9.device')
 os.system('systemctl mask sys-devices-virtual-tty-tty10.device')
 os.system('systemctl mask sys-devices-virtual-tty-tty11.device')
 os.system('systemctl mask sys-devices-virtual-tty-tty12.device')
+os.system('yum clean all')
 os.system('mkdir -p /var/log/journal')
 os.system('echo Post set up finished > /dev/ttyS0')
 os.system('echo Post set up finished > /dev/hvc0')
