@@ -148,7 +148,7 @@ class LibvirtXML(LibvirtXMLBase):
         # calls set_xml accessor method
         self['xml'] = self.virsh.capabilities()
         # INITIALIZED=true after call to super __init__
-        self.dict_set('os_arch_machine_map', None);
+        self.dict_set('os_arch_machine_map', None)
 
 
     def get_os_arch_machine_map(self):
@@ -288,6 +288,7 @@ class VMXMLBase(LibvirtXMLBase):
         """
         xmltreefile = self.dict_get('xml')
         vcpu = xmltreefile.find('vcpu')
+        #FIXME: if vcpu == None, then add new vcpu element & data
         vcpu.text = str(value)
         xmltreefile.write()
 
@@ -384,22 +385,23 @@ class VMXML(VMXMLBase):
         return vm
 
 
-    def set_vm_vcpus(self, vm_name, value):
+    @staticmethod
+    def set_vm_vcpus(vm_name, value):
         """
-        Accessor method for 'vcpu' property
+        Convenience method for updating 'vcpu' property of a defined VM
+
+        @param: vm_name: Name of defined vm to change vcpu elemnet data
+        @param: value: New data value, None to delete.
         """
-        self.set_xml(self.__virsh__.dumpxml(vm_name))
-        if not self.super_get('INITIALIZED'):
-            self.dict_set('vcpu', value) # Assuming value is None
-        else:
-            try:
-                xmltreefile = self.dict_get('xml')
-                xmltreefile.find('vcpu').text = str(value)
-            except AttributeError: # None.text
-                raise LibvirtXMLError("Invalid XML: Contain no <vcpu> element")
-            xmltreefile.write()
-        self.undefine()
-        self.define()
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        if value is not None:
+            vmxml.vcpu = value # call accessor method to change XML
+        else: # value == None
+            del vmxml.vcpu
+        vmxml.undefine()
+        vmxml.define()
+        # Temporary files for vmxml cleaned up automatically
+        # when it goes out of scope here.
 
 
     #TODO: Add function to create from xml_utils.TemplateXML()
