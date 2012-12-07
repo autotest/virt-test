@@ -4024,7 +4024,7 @@ variants:
         image_name_cluster = "cluster_size_check"
         image_size_cluster = 1G
         remove_image_cluster = "yes"
-        cluster_size_parttern = "cluster_size=(\d+)"
+        cluster_size_parttern = "cluster_size: *(\d+)"
         cluster_size_set = "default 4k"
 
     - qemu_io_blkdebug:
