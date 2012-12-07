@@ -210,6 +210,8 @@ class TestVmNetStyle(unittest.TestCase):
 class TestVmNet(unittest.TestCase):
 
     def setUp(self):
+        logging.disable(logging.INFO)
+        logging.disable(logging.WARNING)
         utils_net.VirtIface.LASTBYTE = -1 # Restart count at zero
         # These warnings are annoying during testing
         utils_net.VMNet.DISCARD_WARNINGS -1
@@ -244,9 +246,6 @@ class TestVmNet(unittest.TestCase):
         self.assertEqual(True, hasattr(vmnet[2], 'mac'))
         self.assertEqual(test_data[2]['mac'], vmnet[2]['mac'])
 
-    def setUp(self):
-        logging.disable(logging.INFO)
-        logging.disable(logging.WARNING)
 
 class TestVmNetSubclasses(unittest.TestCase):
 
