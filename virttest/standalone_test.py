@@ -432,13 +432,6 @@ def run_tests(parser, options):
 
     last_index = -1
 
-    # Clean environment file
-    d = parser.get_dicts().next()
-    env_filename = os.path.join(data_dir.get_root_dir(),
-                                options.type, d.get("env", "env"))
-    env = utils_env.Env(env_filename, Test.env_version)
-    env.destroy()
-
     for i, d in enumerate(parser.get_dicts()):
         if options.config is None:
             shortname = ".".join(d['name'].split(".")[12:])
@@ -453,6 +446,13 @@ def run_tests(parser, options):
         print_stdout("Please check the file for errors (bad variable names, "
                      "wrong indentation)")
         sys.exit(-1)
+
+    # Clean environment file
+    d = parser.get_dicts().next()
+    env_filename = os.path.join(data_dir.get_root_dir(),
+                                options.type, d.get("env", "env"))
+    env = utils_env.Env(env_filename, Test.env_version)
+    env.destroy()
 
     n_tests = last_index + 1
     print_header("TESTS: %s" % n_tests)
