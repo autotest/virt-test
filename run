@@ -4,7 +4,7 @@ Run virt tests outside the autotest client harness.
 
 @copyright: Red Hat 2012
 """
-import os, sys, traceback
+import os, sys, traceback, signal
 
 class StreamProxy(object):
     """
@@ -194,6 +194,10 @@ if __name__ == '__main__':
                                               "virsh_domname, "
                                               "remove_guest.without_disk")
         standalone_test.run_tests(cartesian_parser, options)
+
+    except KeyboardInterrupt:
+        pid = os.getpid()
+        os.kill(pid, signal.SIGTERM)
 
     except Exception:
         try:
