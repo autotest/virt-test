@@ -881,6 +881,8 @@ def run_unattended_install(test, params, env):
         shutdown_cleanly_timeout = int(params.get("shutdown_cleanly_timeout",
                                                   120))
         logging.info("Wait for guest to shutdown cleanly")
+        if params.get("medium","cdrom") == "import":
+            vm.shutdown()
         try:
             if utils_misc.wait_for(vm.is_dead, shutdown_cleanly_timeout, 1, 1):
                 logging.info("Guest managed to shutdown cleanly")
