@@ -13,31 +13,12 @@ import common
 from autotest.client.shared import logging_config, logging_manager
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
+import utils_misc
 
 
 _LABELS = ['file_size', 'record_size', 'write', 'rewrite', 'read', 'reread',
            'randread', 'randwrite', 'bkwdread', 'recordrewrite', 'strideread',
            'fwrite', 'frewrite', 'fread', 'freread']
-
-
-def unique(llist):
-    """
-    Return a list of the elements in list, but without duplicates.
-
-    @param list: List with values.
-    @return: List with non duplicate elements.
-    """
-    n = len(llist)
-    if n == 0:
-        return []
-    u = {}
-    try:
-        for x in llist:
-            u[x] = 1
-    except TypeError:
-        return None
-    else:
-        return u.keys()
 
 
 def geometric_mean(values):
@@ -149,7 +130,7 @@ class IOzoneAnalyzer(object):
         performance = []
         if label is not None:
             index = _LABELS.index(label)
-            sizes = unique([line[index] for line in results])
+            sizes = utils_misc.unique([line[index] for line in results])
             sizes.sort()
             for size in sizes:
                 r_results = [line for line in results if line[index] == size]
