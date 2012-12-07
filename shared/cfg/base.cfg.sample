@@ -150,7 +150,7 @@ image_name = image
 # directsync: avoid page cache, report data as written to guest after it's
 #             reported as written by the storage subsystem.
 #
-drive_cache = none
+#drive_cache = none
 
 # Iscsi support related params. Please fill them depends on your environment.
 # For both iscsi and emulated iscsi should have this option:
