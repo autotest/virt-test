@@ -38,7 +38,7 @@ class QemuImg(storage.QemuImg):
         @note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
-               image_cluster_size (optional) -- the cluster size for the image
+               cluster_size (optional) -- the cluster size for the image
                image_size -- the requested size of the image (a string
                    qemu-img can understand, such as '10G')
                create_with_dd -- use dd to create the image (raw format only)
@@ -68,7 +68,7 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " -f %s" % self.image_format
 
-            image_cluster_size = params.get("image_cluster_size", None)
+            cluster_size = params.get("cluster_size", None)
             preallocated = params.get("preallocated", "off")
             encrypted = params.get("encrypted", "off")
 
@@ -79,8 +79,8 @@ class QemuImg(storage.QemuImg):
             if encrypted != "off":
                 qemu_img_cmd += "encrypted=%s," % encrypted
 
-            if image_cluster_size is not None:
-                qemu_img_cmd += "cluster_size=%s," % image_cluster_size
+            if cluster_size is not None:
+                qemu_img_cmd += "cluster_size=%s," % cluster_size
             qemu_img_cmd = qemu_img_cmd.rstrip(" -o")
             qemu_img_cmd = qemu_img_cmd.rstrip(",")
 
@@ -280,6 +280,20 @@ class QemuImg(storage.QemuImg):
             os.unlink(self.image_filename)
         else:
             logging.debug("Image file %s not found", self.image_filename)
+
+    def info(self):
+        """
+        Run qemu-img info command on image file and return its output.
+        """
+        logging.debug("Run qemu-img info comamnd on %s", self.image_filename)
+        cmd = self.image_cmd
+        if os.path.exists(self.image_filename):
+            cmd += " info %s" % self.image_filename
+            output = utils.system_output(cmd)
+        else:
+            logging.debug("Image file %s not found", self.image_filename)
+            output = None
+        return output
 
 
 
