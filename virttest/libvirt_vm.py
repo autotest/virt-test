@@ -93,6 +93,23 @@ def normalize_connect_uri(connect_uri):
         return virsh.canonical_uri(uri=connect_uri)
 
 
+def complete_uri(ip_address):
+    """
+    Return a complete URI with the combination of ip_address and local uri.
+    It is useful when you need to connect remote hypervisor.
+
+    @param ip_address: an ip address or a hostname
+    @return: a complete uri
+    """
+    # Allow to raise CmdError if canonical_uri is failed
+    uri = virsh.canonical_uri(ignore_status=False)
+    driver = uri.split(":")[0]
+    # The libvirtd daemon's mode(system or session on qemu)
+    daemon_mode = uri.split("/")[-1]
+    complete_uri = "%s+ssh://%s/%s" % (driver, ip_address, daemon_mode)
+    return complete_uri
+
+
 class VM(virt_vm.BaseVM):
     """
     This class handles all basic VM operations for libvirt.
