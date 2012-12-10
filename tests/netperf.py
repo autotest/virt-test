@@ -146,7 +146,7 @@ def run_netperf(test, params, env):
     host = params.get("host", "localhost")
     host_ip = host
     if host != "localhost":
-        parmas_host = params.object_params("host")
+        params_host = params.object_params("host")
         host = remote.wait_for_login(params_host.get("shell_client"),
                                      host_ip,
                                      params_host.get("shell_port"),
