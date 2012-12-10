@@ -440,8 +440,8 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
         state_list = ['rx_pkts', nrx, 'tx_pkts', ntx, 'rx_byts', nrxb,
                       'tx_byts', ntxb, 're_pkts', nre]
         try:
-            nrx_intr = count_interrupt("virtio0-input")
-            ntx_intr = count_interrupt("virtio0-output")
+            nrx_intr = count_interrupt("virtio.-input")
+            ntx_intr = count_interrupt("virtio.-output")
             state_list.append('rx_intr')
             state_list.append(nrx_intr)
             state_list.append('tx_intr')
