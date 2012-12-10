@@ -441,8 +441,19 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
                 ntxb = int(re.findall("TX bytes:(\d+)", i)[0])
         nre = int(ssh_cmd(server_ctl, "grep Tcp /proc/net/snmp|tail -1"
                  ).split()[12])
-        nrx_intr = count_interrupt("virtio0-input")
-        ntx_intr = count_interrupt("virtio0-output")
+        state_list = ['rx_pkts', nrx, 'tx_pkts', ntx, 'rx_byts', nrxb,
+                      'tx_byts', ntxb, 're_pkts', nre]
+        try:
+            nrx_intr = count_interrupt("virtio.-input")
+            ntx_intr = count_interrupt("virtio.-output")
+            state_list.append('rx_intr')
+            state_list.append(nrx_intr)
+            state_list.append('tx_intr')
+            state_list.append(ntx_intr)
+        except IndexError:
+            ninit = count_interrupt("virtio0")
+            state_list.append('intr')
+            state_list.append(ninit)
         io_exit = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/io_exits"))
         irq_inj = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
         return [nrx, ntx, nrxb, ntxb, nre, nrx_intr, ntx_intr, io_exit, irq_inj]
