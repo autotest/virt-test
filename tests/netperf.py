@@ -1,4 +1,4 @@
-import logging, os, commands, threading, re, glob
+import logging, os, commands, threading, re, glob, time
 from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client.virt import utils_misc, utils_test, remote
@@ -254,7 +254,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
         return thu
 
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
-    fd = open("%s/netperf-result.RHS" % resultsdir, "w")
+    fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
     fd.write("#ver# %s\n#ver# host kernel: %s\n#ver# guest kernel:%s\n" % (
              commands.getoutput(ver_cmd),
              os.uname()[2], ssh_cmd(server_ctl, guest_ver_cmd)))
