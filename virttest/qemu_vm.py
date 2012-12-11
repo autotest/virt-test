@@ -3376,6 +3376,27 @@ class VM(virt_vm.BaseVM):
         self.verify_status('running') # Throws exception if not
 
 
+    def savevm(self, tag_name):
+        """
+        Override BaseVM savevm method
+        """
+        self.verify_status('paused') # Throws exception if not
+        logging.debug("Saving VM %s to %s" % (self.name, tag_name))
+        self.monitor.send_args_cmd("savevm id=%s" % tag_name)
+        self.monitor.cmd("system_reset")
+        self.verify_status('paused') # Throws exception if not
+
+
+    def loadvm(self, tag_name):
+        """
+        Override BaseVM loadvm method
+        """
+        self.verify_status('paused') # Throws exception if not
+        logging.debug("Loading VM %s from %s" % (self.name, tag_name))
+        self.monitor.send_args_cmd("loadvm id=%s" % tag_name)
+        self.verify_status('paused') # Throws exception if not
+
+
     def pause(self):
         """
         Pause the VM operation.

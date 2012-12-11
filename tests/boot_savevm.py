@@ -1,5 +1,6 @@
 import logging, time, tempfile, os
 from autotest.client.shared import error
+from virttest import qemu_storage, data_dir, utils_misc
 
 
 def run_boot_savevm(test, params, env):
@@ -7,14 +8,31 @@ def run_boot_savevm(test, params, env):
     libvirt boot savevm test:
 
     1) Start guest booting
-    2) Periodically savevm/loadvm while guest booting
+    2) Record origin informations of snapshot list for floppy(optional).
+    3) Periodically savevm/loadvm while guest booting
     4) Stop test when able to login, or fail after timeout seconds.
+    5) Check snapshot list for floppy and compare with the origin
+       one(optional).
 
     @param test: test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
+    if params.get("with_floppy") == "yes":
+        floppy_name = params.get("floppies", "fl")
+        floppy_params = {"image_format": params.get("floppy_format", "qcow2"),
+                         "image_size": params.get("floppy_size", "1.4M"),
+                         "image_name": params.get("%s_name" % floppy_name,
+                                                  "images/test"),
+                         "vm_type": params.get("vm_type"),
+                         "qemu_img_binary": utils_misc.get_qemu_img_binary(params)}
+        floppy = qemu_storage.QemuImg(floppy_params,
+                                     data_dir.get_data_dir(), floppy_name)
+        floppy.create(floppy_params)
+        floppy_orig_info = floppy.snapshot_list()
+        vm.create(params=params)
+
     vm.verify_alive() # This shouldn't require logging in to guest
     savevm_delay = float(params.get("savevm_delay"))
     savevm_login_delay = float(params.get("savevm_login_delay"))
@@ -31,8 +49,12 @@ def run_boot_savevm(test, params, env):
         logging.info("Save/Restore cycle %d", cycles + 1)
         time.sleep(savevm_delay)
         vm.pause()
-        vm.save_to_file(savevm_statefile) # Re-use same filename
-        vm.restore_from_file(savevm_statefile)
+        if params['save_method'] == 'save_to_file':
+            vm.save_to_file(savevm_statefile) # Re-use same filename
+            vm.restore_from_file(savevm_statefile)
+        else:
+            vm.savevm("1")
+            vm.loadvm("1")
         vm.resume() # doesn't matter if already running or not
         vm.verify_kernel_crash() # just in case
         try:
@@ -50,3 +72,12 @@ def run_boot_savevm(test, params, env):
         raise error.TestFail("Can't log on '%s' %s" % (vm.name, info))
     else:
         logging.info("Test ended %s", info)
+
+    if params.get("with_floppy")  == "yes":
+        vm.destroy()
+        floppy_info = floppy.snapshot_list()
+        if floppy_info == floppy_orig_info:
+            raise error.TestFail("savevm didn't create snapshot in floppy."
+                                 "    original snapshot list is: %s"
+                                 "    now snapshot list is: %s"
+                                 % (floppy_orig_info, floppy_info))
