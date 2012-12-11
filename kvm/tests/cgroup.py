@@ -1114,7 +1114,7 @@ def run_cgroup(test, params, env):
             cgroup.set_property('cpuset.mems', all_mems, i)
             if i == 0:
                 assign_vm_into_cgroup(vm, cgroup, 0)
-            else:
+            elif i <= vm_cpus:
                 cgroup.set_cgroup(vcpus[i - 1], i)
 
         timeout = int(params.get("login_timeout", 360))
