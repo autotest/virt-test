@@ -1218,6 +1218,25 @@ class BaseVM(object):
         raise NotImplementedError
 
 
+    def savevm(self, tag_name):
+        """
+        Save the virtual machine as the tag 'tag_name'
+
+        @param: tag_name: tag of the virtual machine that saved
+
+        """
+        raise NotImplementedError
+
+
+    def loadvm(self, tag_name):
+        """
+        Load the virtual machine tagged 'tag_name'.
+
+        @param: tag_name: tag of the virtual machine that saved
+        """
+        raise NotImplementedError
+
+
     def pause(self):
         """
         Stop the VM operation.
