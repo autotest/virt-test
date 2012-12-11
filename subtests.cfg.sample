@@ -671,6 +671,15 @@ variants:
         kill_vm_on_error = yes
         kill_vm_gracefully = yes
         kill_vm = yes
+        variants:
+            - default_savevm:
+
+            - with_floppy:
+                with_floppy = yes
+                floppy_name = images/test.qcow2
+                floppies = fl
+                start_vm = no
+                floppy_format = qcow2
 
     - save_restore: install setup image_copy boot
         type = save_restore
