@@ -271,6 +271,16 @@ class QemuImg(storage.QemuImg):
         utils.system_output(cmd)
 
 
+    def snapshot_list(self):
+        """
+        List all snapshots in the given image
+        """
+        cmd = self.image_cmd
+        cmd += " snapshot -l %s" % self.image_filename
+
+        return utils.system_output(cmd)
+
+
     def remove(self):
         """
         Remove an image file.
