@@ -370,8 +370,8 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
                   port, params, server_cyg):
     """ Launch netperf clients """
 
-    client_path = "/tmp/netperf-2.4.5/src/netperf"
-    server_path = "/tmp/netperf-2.4.5/src/netserver"
+    client_path = "/tmp/netperf-2.6.0/src/netperf"
+    server_path = "/tmp/netperf-2.6.0/src/netserver"
     # Start netserver
     if params.get("os_type") == "windows":
         timeout = float(params.get("timeout", "240"))
