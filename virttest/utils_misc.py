@@ -63,8 +63,8 @@ def find_command(cmd):
 
     for dir_path in path_paths:
         cmd_path = os.path.join(dir_path, cmd)
-        if os.path.exists(cmd_path):
-            return cmd_path
+        if os.path.isfile(cmd_path):
+            return os.path.abspath(cmd_path)
 
     raise ValueError('Missing command: %s' % cmd)
 
