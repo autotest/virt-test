@@ -1,6 +1,6 @@
 import urllib2, logging, os, glob, shutil
 from autotest.client.shared import logging_manager
-from autotest.client import utils, os_dep
+from autotest.client import utils
 import utils_misc, data_dir
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'gcc']
@@ -101,7 +101,7 @@ def verify_recommended_programs(t_type):
         for cmd in cmd_aliases:
             found = None
             try:
-                found = os_dep.command(cmd)
+                found = utils_misc.find_command(cmd)
                 logging.info(found)
                 break
             except ValueError:
@@ -121,7 +121,7 @@ def verify_mandatory_programs(t_type):
     cmds = mandatory_programs[t_type]
     for cmd in cmds:
         try:
-            logging.info(os_dep.command(cmd))
+            logging.info(utils_misc.find_command(cmd))
         except ValueError:
             logging.error("Required command %s is missing. You must "
                           "install it", cmd)
