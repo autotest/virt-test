@@ -1453,7 +1453,9 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     regex = re.compile(r"\b%s\b.*\b(%s)\b" % (ip, mac_regex), re.IGNORECASE)
 
     # Check the ARP cache
-    o = commands.getoutput("%s -n" % utils_misc.find_command("arp"))
+    arp_cache = open('/proc/net/arp', 'r')
+    o = arp_cache.read()
+    arp_cache.close()
     if regex.search(o):
         return True
 
@@ -1468,6 +1470,7 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     o = commands.getoutput("%s -f -c 3 -I %s %s" %
                            (utils_misc.find_command("arping"), dev, ip))
     return bool(regex.search(o))
+
 
 def generate_mac_address_simple():
     r = random.SystemRandom()
