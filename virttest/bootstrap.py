@@ -3,7 +3,7 @@ from autotest.client.shared import logging_manager
 from autotest.client import utils
 import utils_misc, data_dir
 
-basic_program_requirements = ['7za', 'tcpdump', 'nc']
+basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
 recommended_programs = {'kvm': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
                         'libvirt': [('virsh',), ('virt-install',)],
