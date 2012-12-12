@@ -1196,3 +1196,110 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     if len(flagstr) > 0:
         cmd += " %s" % flagstr
     return command(cmd, **dargs)
+
+
+def snapshot_create(name):
+    """
+    Create snapshot of domain.
+
+    @param name: name of domain
+    @return: name of snapshot
+    """
+    cmd = "snapshot-create %s" % name
+    sc_output = command(cmd)
+    if sc_output.exit_status != 0:
+        raise error.CmdError(cmd, sc_output, "Failed to create snapshot")
+    snapshot_number = re.search("\d+", sc_output.stdout.strip()).group(0)
+
+    return snapshot_number
+
+
+def snapshot_current(name):
+    """
+    Create snapshot of domain.
+
+    @param name: name of domain
+    @return: name of snapshot
+    """
+    cmd = "snapshot-current %s --name" % name
+    sc_output = command(cmd)
+    if sc_output.exit_status != 0:
+        raise error.CmdError(cmd, sc_output, "Failed to get current snapshot")
+
+    return sc_output.stdout.strip()
+
+
+def snapshot_list(name):
+    """
+    Get list of snapshots of domain.
+
+    @param name: name of domain
+    @return: list of snapshot names
+    """
+    rv = []
+
+    cmd = "snapshot-list %s" % name
+    sc_output = command(cmd)
+    if sc_output.exit_status != 0:
+        raise error.CmdError(cmd, sc_output, "Failed to get list of snapshots")
+
+    data = re.findall("\w* *\d*-\d*-\d* \d*:\d*:\d* [+-]\d* \w*",
+                      sc_output.stdout)
+    for rec in data:
+        if not rec:
+            continue
+        rv.append(re.match("\w*", rec).group())
+
+    return rv
+
+
+def snapshot_info(name, snapshot):
+    """
+    Check snapshot information.
+
+    @param name: name of domain
+    @param snapshot: name os snapshot to verify
+    @return: snapshot information dictionary
+    """
+    rv = {}
+    values = ["Name", "Domain", "Current", "State", "Parent",
+              "Children","Descendants", "Metadata"]
+
+    cmd = "snapshot-info %s %s" % (name, snapshot)
+    sc_output = command(cmd)
+    if sc_output.exit_status != 0:
+        raise error.CmdError(cmd, sc_output, "Failed to get snapshot info")
+
+    for val in values:
+        data = re.search("(?<=%s:) *\w*" % val, sc_output.stdout)
+        if data is None:
+            continue
+        rv[val] = data.group(0).strip()
+
+    if rv["Parent"] == "-":
+        rv["Parent"] = None
+
+    return rv
+
+
+def snapshot_revert(name, snapshot):
+    """
+    Revert domain state to saved snapshot.
+
+    @param name: name of domain
+    @param snapshot: snapshot to revert to
+    """
+    cmd = "snapshot-revert %s %s" % (name,snapshot)
+    return command(cmd)
+
+
+
+def snapshot_delete(name, snapshot):
+    """
+    Remove domain snapshot
+
+    @param name: name of domain
+    @param snapshot: snapshot to delete
+    """
+    cmd = "snapshot-delete %s %s" % (name,snapshot)
+    return command(cmd)
