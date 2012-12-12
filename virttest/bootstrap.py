@@ -3,6 +3,17 @@ from autotest.client.shared import logging_manager
 from autotest.client import utils, os_dep
 import utils_misc, data_dir
 
+basic_program_requirements = ['7za', 'tcpdump', 'nc', 'gcc']
+
+mandatory_programs = {'kvm': basic_program_requirements + ['gcc'],
+                      'libvirt': basic_program_requirements,
+                      'openvswitch': basic_program_requirements,
+                      'v2v': basic_program_requirements}
+
+mandatory_headers = {'kvm': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
+                     'libvirt': [],
+                     'openvswitch': [],
+                     'v2v': []}
 
 def download_file(url, destination, sha1_url, interactive=False):
     """
@@ -79,6 +90,36 @@ def download_file(url, destination, sha1_url, interactive=False):
     return had_to_download
 
 
+def verify_requirements(t_type):
+    failed_cmds = []
+    cmds = mandatory_programs[t_type]
+    for cmd in cmds:
+        try:
+            logging.info(os_dep.command(cmd))
+        except:
+            logging.error("Required command %s is missing. You must "
+                          "install it", cmd)
+            failed_cmds.append(cmd)
+
+    includes = mandatory_headers[t_type]
+    available_includes = glob.glob('/usr/include/*/*')
+    for include in available_includes:
+        include_basename = os.path.basename(include)
+        if include_basename in includes:
+            logging.info(include)
+            includes.pop(includes.index(include_basename))
+
+    if includes:
+        for include in includes:
+            logging.error("Required include %s is missing. You may have to "
+                          "install it", include)
+
+    failures = failed_cmds + includes
+
+    if failures:
+        raise ValueError('Missing (cmds/includes): %s' % " ".join(failures))
+
+
 def create_config_files(test_dir, shared_dir, interactive, step=None):
     if step is None:
         step = 0
@@ -133,8 +174,8 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
 
 
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
-                        check_modules, online_docs_url, restore_image=False,
-                        interactive=True, verbose=False):
+              check_modules, online_docs_url, restore_image=False,
+              interactive=True, verbose=False):
     """
     Common virt test assistant module.
 
@@ -158,6 +199,25 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                                           verbose=verbose)
     logging.info("%s test config helper", test_name)
     step = 0
+
+    logging.info("")
+    step += 1
+    logging.info("%d - Checking the mandatory programs and headers", step)
+    verify_requirements(test_name)
+
+    if default_userspace_paths:
+        logging.info("")
+        step += 1
+        logging.info("%d - Checking if the recommended userspace programs are "
+                     "installed", step)
+        for path in default_userspace_paths:
+            if not os.path.isfile(path):
+                logging.info("No %s found. If you are not building %s from "
+                             "source, you may want to install it", path,
+                             os.path.basename(path))
+            else:
+                logging.info(path)
+
     shared_dir = os.path.dirname(data_dir.get_data_dir())
     shared_dir = os.path.join(shared_dir, "cfg")
     logging.info("")
@@ -178,13 +238,6 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     logging.info("")
     step += 2
     logging.info("%s - Verifying (and possibly downloading) guest image", step)
-
-    # If this is not present, we better tell the user straight away
-    try:
-        os_dep.command("7za")
-    except ValueError:
-        raise ValueError("Command 7za not installed. Please install p7zip "
-                         "(Red Hat based) or the equivalent for your host")
 
     sha1_file = "SHA1SUM"
     guest_tarball = "jeos-17-64.qcow2.7z"
@@ -213,19 +266,6 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
             os.chdir(destination)
             utils.run("7za -y e %s" % tarball_path)
 
-    if default_userspace_paths:
-        logging.info("")
-        step += 1
-        logging.info("%d - Checking if the appropriate userspace programs are "
-                     "installed", step)
-        for path in default_userspace_paths:
-            logging.info(path)
-            if not os.path.isfile(path):
-                logging.warning("No %s found. You might need to install %s.",
-                                path, os.path.basename(path))
-            else:
-                logging.debug("%s present", path)
-
     if check_modules:
         logging.info("")
         step += 1
@@ -241,7 +281,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     if online_docs_url:
         logging.info("")
         step += 1
-        logging.info("%d - Please verify needed packages to get started", step)
+        logging.info("%d - If you wish, take a look at the online docs for "
+                     "more info", step)
         logging.info("")
-        logging.info("Take a look at the online documentation: %s",
-                     online_docs_url)
+        logging.info(online_docs_url)
