@@ -2,7 +2,8 @@
 
 import unittest, tempfile, os, glob, logging
 import common
-import xml_utils, ElementTree
+import xml_utils
+from virttest import ElementTree
 
 
 class xml_test_data(unittest.TestCase):
