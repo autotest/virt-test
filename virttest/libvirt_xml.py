@@ -55,6 +55,17 @@ class LibvirtXMLError(Exception):
 class LibvirtXMLBase(propcan.PropCanBase):
     """
     Base class for common attributes/methods applying to all sub-classes
+
+    Properties:
+        xml: XMLTreeFile instance
+            get: xml filename string
+            set: create new XMLTreeFile instance from string or filename
+            del: deletes property, closes & unlinks any temp. files
+        virsh: virsh module or Virsh class instance
+            set: validates and sets value
+            get: returns value
+            del: removes value
+
     """
 
     __slots__ = ('xml', 'virsh')
@@ -144,6 +155,10 @@ class LibvirtXMLBase(propcan.PropCanBase):
 class LibvirtXML(LibvirtXMLBase):
     """
     Handler of libvirt capabilities and nonspecific item operations.
+
+    Properties:
+        os_arch_machine_map: strores None, virtual, read-only
+            get: dict map from os type names to dict map from arch names
     """
 
     #TODO: Add more __slots__ and accessors to get some useful stats
@@ -200,6 +215,24 @@ class LibvirtXML(LibvirtXMLBase):
 class VMXMLBase(LibvirtXMLBase):
     """
     Accessor methods for VMXML class
+
+    Properties:
+        hypervisor_type: virtual string, hypervisor type name
+            get: return domain's type attribute value
+            set: change domain type attribute value
+            del: raise LibvirtXMLError
+        vm_name: virtual string, name of the vm
+            get: return text value of name tag
+            set: set text value of name tag
+            del: raise LibvirtXMLError
+        uuid: virtual string, uuid string for vm
+            get: return text value of uuid tag
+            set: set text value for (new) uuid tag (unvalidated)
+            del: remove uuid tag
+        vcpu: virtual integer, number of vcpus
+            get: returns integer of vcpu tag text value
+            set: set integer of (new) vcpu tag text value
+            del: removes vcpu tag
     """
 
     __slots__ = LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name', 'uuid',
