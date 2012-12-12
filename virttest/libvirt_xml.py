@@ -339,6 +339,14 @@ class VMXML(VMXMLBase):
     __slots__ = VMXMLBase.__slots__
 
 
+    def __init__(self, hypervisor_type='kvm', virsh_instance=virsh):
+        """
+        Create new VM XML instance
+        """
+        super(VMXML, self).__init__(virsh_instance)
+        self.xml = u"<domain type='%s'></domain>" % hypervisor_type
+
+
     @staticmethod # static method (no self) needed b/c calls VMXML.__new__
     def new_from_dumpxml(vm_name, virsh_instance=virsh):
         """
