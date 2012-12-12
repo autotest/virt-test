@@ -70,6 +70,13 @@ class LibvirtXMLBase(propcan.PropCanBase):
         super(LibvirtXMLBase, self).__init__({'virsh':virsh_instance, 'xml':None})
 
 
+    def __str__(self):
+        """
+        Returns raw XML as a string
+        """
+        return str(self.dict_get('xml'))
+
+
     def set_virsh(self, value):
         """Accessor method for virsh property, make sure it's right type"""
         value_type = type(value)
@@ -141,6 +148,7 @@ class LibvirtXML(LibvirtXMLBase):
 
     #TODO: Add more __slots__ and accessors to get some useful stats
     # e.g. guest_count, arch, uuid, cpu_count, etc.
+
     __slots__ = LibvirtXMLBase.__slots__ + ('os_arch_machine_map',)
 
     def __init__(self, virsh_instance=virsh):
@@ -210,16 +218,14 @@ class VMXMLBase(LibvirtXMLBase):
         """
         Accessor method for 'name' property
         """
-        # Always check to see if accessor is being called from __init__
-        if not self.super_get('INITIALIZED'):
-            self.dict_set('name', value) # Assuming value is None
-        else:
-            try:
-                xmltreefile = self.dict_get('xml')
-                xmltreefile.find('name').text = value
-            except AttributeError: # None.text
-                raise LibvirtXMLError("Invalid XML: Contain no <name> element")
-            xmltreefile.write()
+        xmltreefile = self.dict_get('xml')
+        name = xmltreefile.find('name')
+        if name is None:
+            # Create new name element and append to root element
+            name = xml_utils.ElementTree.SubElement(xmltreefile.getroot(),
+                                                    'name')
+        name.text = str(value)
+        xmltreefile.write()
 
 
     def del_vm_name(self):
@@ -227,7 +233,7 @@ class VMXMLBase(LibvirtXMLBase):
         Raise LibVirtXMLError because name is a required element
         """
         # Raise different exception if xml wasn't loaded
-        if self.haskey('xml'):
+        if self.has_key('xml'):
             pass
         raise LibvirtXMLError("name can't be deleted, it's a required element")
 
@@ -244,22 +250,18 @@ class VMXMLBase(LibvirtXMLBase):
         """
         Set or create a new uuid element for a VM
         """
-        # Always check to see if accessor is being called from __init__
-        if not self.super_get('INITIALIZED'):
-            self.dict_set('name', value) # Assuming value is None
-        else:
-            xmltreefile = self.dict_get('xml')
-            if value is None:
-                xmltreefile.remove_by_xpath('uuid')
-            else:
-                try:
-                    xmltreefile.find('uuid').text = value
-                except AttributeError: # uuid element not found
-                    # Documented preferred way to insert a new element
-                    newone = xml_utils.ElementTree.SubElement(
-                                        xmltreefile.get_root(), "uuid")
-                    newone.text = value
-            xmltreefile.write()
+        if value is None:
+            del self.uuid
+            return
+
+        xmltreefile = self.dict_get('xml')
+        uuid = xmltreefile.find('uuid')
+        if uuid is None:
+            # Create new name element and append to root element
+            uuid = xml_utils.ElementTree.SubElement(xmltreefile.getroot(),
+                                                    'uuid')
+        uuid.text = value
+        xmltreefile.write()
 
 
     def del_uuid(self):
@@ -276,10 +278,10 @@ class VMXMLBase(LibvirtXMLBase):
 
     def get_vcpu(self):
         """
-        Return VM's vcpu setting from XML definition
+        Return VM's vcpu setting from XML definition, None if not set
         """
         xmltreefile = self.dict_get('xml')
-        return xmltreefile.find('vcpu').text
+        return int(xmltreefile.find('vcpu').text)
 
 
     def set_vcpu(self, value):
@@ -288,8 +290,11 @@ class VMXMLBase(LibvirtXMLBase):
         """
         xmltreefile = self.dict_get('xml')
         vcpu = xmltreefile.find('vcpu')
-        #FIXME: if vcpu == None, then add new vcpu element & data
-        vcpu.text = str(value)
+        if vcpu is None:
+            # Create new vcpu element and append to root element
+            vcpu = xml_utils.ElementTree.SubElement(xmltreefile.getroot(),
+                                                    'vcpu')
+        vcpu.text = str(int(value))
         xmltreefile.write()
 
 
@@ -298,8 +303,11 @@ class VMXMLBase(LibvirtXMLBase):
         Remove vcpu tag so libvirt can re-generate
         """
         xmltreefile = self.dict_get('xml')
-        xmltreefile.remove_by_xpath('vcpu')
-        xmltreefile.write()
+        try:
+            xmltreefile.remove_by_xpath('vcpu')
+            xmltreefile.write()
+        except AttributeError:
+            pass # Element not found, already removed.
 
 
 class VMXML(VMXMLBase):
@@ -395,7 +403,7 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         if value is not None:
-            vmxml.vcpu = value # call accessor method to change XML
+            vmxml['vcpu'] = value # call accessor method to change XML
         else: # value == None
             del vmxml.vcpu
         vmxml.undefine()
