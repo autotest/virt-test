@@ -5,6 +5,11 @@ import utils_misc, data_dir
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'gcc']
 
+recommended_programs = {'kvm': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
+                        'libvirt': [('virsh',), ('virt-install',)],
+                        'openvswitch': [],
+                        'v2v': []}
+
 mandatory_programs = {'kvm': basic_program_requirements + ['gcc'],
                       'libvirt': basic_program_requirements,
                       'openvswitch': basic_program_requirements,
@@ -90,13 +95,34 @@ def download_file(url, destination, sha1_url, interactive=False):
     return had_to_download
 
 
-def verify_requirements(t_type):
+def verify_recommended_programs(t_type):
+    cmds = recommended_programs[t_type]
+    for cmd_aliases in cmds:
+        for cmd in cmd_aliases:
+            found = None
+            try:
+                found = os_dep.command(cmd)
+                logging.info(found)
+                break
+            except ValueError:
+                pass
+        if found is None:
+            if len(cmd_aliases) == 1:
+                logging.info("Recommended command %s missing. You may "
+                             "want to install it if not building from "
+                             "source.", cmd_aliases[0])
+            else:
+                logging.info("Recommended command missing. You may "
+                             "want to install it if not building it from "
+                             "source. Aliases searched: %s", cmd_aliases)
+
+def verify_mandatory_programs(t_type):
     failed_cmds = []
     cmds = mandatory_programs[t_type]
     for cmd in cmds:
         try:
             logging.info(os_dep.command(cmd))
-        except:
+        except ValueError:
             logging.error("Required command %s is missing. You must "
                           "install it", cmd)
             failed_cmds.append(cmd)
@@ -203,26 +229,18 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     logging.info("")
     step += 1
     logging.info("%d - Checking the mandatory programs and headers", step)
-    verify_requirements(test_name)
+    verify_mandatory_programs(test_name)
 
-    if default_userspace_paths:
-        logging.info("")
-        step += 1
-        logging.info("%d - Checking if the recommended userspace programs are "
-                     "installed", step)
-        for path in default_userspace_paths:
-            if not os.path.isfile(path):
-                logging.info("No %s found. If you are not building %s from "
-                             "source, you may want to install it", path,
-                             os.path.basename(path))
-            else:
-                logging.info(path)
+    logging.info("")
+    step += 1
+    logging.info("%d - Checking the recommended programs", step)
+    verify_recommended_programs(test_name)
 
-    shared_dir = os.path.dirname(data_dir.get_data_dir())
-    shared_dir = os.path.join(shared_dir, "cfg")
     logging.info("")
     step += 1
     logging.info("%d - Verifying directories", step)
+    shared_dir = os.path.dirname(data_dir.get_data_dir())
+    shared_dir = os.path.join(shared_dir, "cfg")
     sub_dir_list = ["images", "isos", "steps_data"]
     for sub_dir in sub_dir_list:
         sub_dir_path = os.path.join(base_dir, sub_dir)
@@ -252,7 +270,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     if (interactive and not
         os.path.isfile(os.path.join(destination, guest_tarball))):
         answer = utils.ask("Minimal basic guest image (JeOS) not present. "
-                           "Do you want to download it (~ 120MB)?")
+                           "Do you want to download it (~ 180MB)?")
     else:
         answer = "y"
 
