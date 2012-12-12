@@ -202,7 +202,28 @@ class VMXMLBase(LibvirtXMLBase):
     Accessor methods for VMXML class
     """
 
-    __slots__ = LibvirtXMLBase.__slots__ + ('vm_name', 'uuid', 'vcpu')
+    __slots__ = LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name', 'uuid',
+                                            'vcpu')
+
+
+    def get_hypervisor_type(self):
+        xmltreefile = self.dict_get('xml')
+        root = xmltreefile.getroot()
+        return root.get('type')
+
+
+    def set_hypervisor_type(self, value):
+        xmltreefile = self.dict_get('xml')
+        root = xmltreefile.getroot()
+        root.set('type', '"%s"' % str(value))
+        xmltreefile.write()
+
+
+    def del_hypervisor_type(self):
+        # Raise different exception if xml wasn't loaded
+        if self.has_key('xml'):
+            pass
+        raise LibvirtXMLError("Can't delete required hypervisor hypervisor_type property")
 
 
     def get_vm_name(self):
