@@ -208,6 +208,7 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         self.write(xmlstr)
         return xmlstr.getvalue()
 
+
     def backup_copy(self):
         """Return a copy of instance, including copies of files"""
         return self.__class__(self.name)
