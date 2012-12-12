@@ -631,6 +631,19 @@ variants:
                     - maxinum_option:
                         setvcpus_options = "--maximum --live"
 
+    - virsh_snapshot:
+        virt_test_type = libvirt
+        type = virsh_snapshot
+        # Switching screendumps off as creating can pause guest for long time
+        # and cause error messages
+        take_regular_screendumps = "no"
+        variants:
+           - live:
+               snapshot_shutdown = "no"
+           - offline:
+               snapshot_shutdown = "yes"
+
+
     - virsh_list:
         virt_test_type = libvirt
         type = virsh_list
