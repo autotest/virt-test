@@ -8,7 +8,7 @@ KVM cdrom test
 import logging, re, time, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, aexpect, kvm_monitor
+from virttest import utils_misc, aexpect, kvm_monitor, data_dir
 
 
 @error.context_aware
@@ -43,10 +43,9 @@ def run_cdrom(test, params, env):
     def master_cdroms(params):
         """ Creates 'new' cdrom with one file on it """
         error.context("creating test cdrom")
-        os.chdir(test.tmpdir)
         cdrom_cd1 = params.get("cdrom_cd1")
         if not os.path.isabs(cdrom_cd1):
-            cdrom_cd1 = os.path.join(test.bindir, cdrom_cd1)
+            cdrom_cd1 = os.path.join(data_dir.get_data_dir(), cdrom_cd1)
         cdrom_dir = os.path.dirname(cdrom_cd1)
         utils.run("dd if=/dev/urandom of=orig bs=10M count=1")
         utils.run("dd if=/dev/urandom of=new bs=10M count=1")
@@ -122,12 +121,13 @@ def run_cdrom(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     cdrom_orig = params.get("cdrom_cd1")
     if not os.path.isabs(cdrom_orig):
-        cdrom_orig = os.path.join(test.bindir, cdrom_orig)
+        cdrom_orig = os.path.join(data_dir.get_data_dir(), cdrom_orig)
     cdrom = cdrom_orig
     output = session.get_command_output("ls /dev/cdrom*")
     cdrom_dev_list = re.findall("/dev/cdrom-\w+|/dev/cdrom\d*", output)
     logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
 
+    error.context("Detecting the existence of a cdrom (guest OS side)")
     cdrom_dev = ""
     test_cmd = "dd if=%s of=/dev/null bs=1 count=1"
     for d in cdrom_dev_list:
@@ -140,7 +140,7 @@ def run_cdrom(test, params, env):
     if not cdrom_dev:
         raise error.TestFail("Could not find a valid cdrom device")
 
-    error.context("Detecting the existence of a cdrom")
+    error.context("Detecting the existence of a cdrom (qemu side)")
     cdfile = cdrom
     device = vm.get_block({'file': cdfile})
     if not device:
