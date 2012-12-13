@@ -3671,6 +3671,14 @@ variants:
                 transfer_timeout = 1200
                 transfer_type = remote
                 tmp_dir = /tmp/
+            - base:
+                type = live_snapshot_base
+                backup_image_before_testing = yes
+                restore_image_after_testing = yes
+                dd_cmd = "dd if=/dev/zero of=%s bs=4K count=1024 oflag=dsync"
+                dd_timeout = 600
+                copy_file_timeout = 600
+
 
     - live_snapshot_chain:
         only qcow2
