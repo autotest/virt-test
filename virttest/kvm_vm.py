@@ -2733,10 +2733,7 @@ class VM(virt_vm.BaseVM):
 
         @return: Matched block device name, None when not find any device.
         """
-
         blocks_info = self.monitor.info("block")
-        msg = "Block information get from monitor: %s" % blocks_info
-        logging.debug(msg)
         if isinstance(blocks_info, str):
             for block in blocks_info.splitlines():
                 match = True
