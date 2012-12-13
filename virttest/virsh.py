@@ -268,9 +268,12 @@ class VirshPersistent(Virsh):
             if session_id:
                 try:
                     existing = VirshSession(a_id=session_id)
+                    # except clause exits function
+                    self.dict_del('session_id')
                 except aexpect.ShellStatusError:
                     # session was already closed
-                    return
+                    self.dict_del('session_id')
+                    return # don't check is_alive or update counter
                 if existing.is_alive():
                     # try nicely first
                     existing.close()
@@ -281,7 +284,7 @@ class VirshPersistent(Virsh):
                     self.__class__.SESSION_COUNTER -= 1
         except KeyError:
             # Allow other exceptions to be raised
-            pass
+            pass # session was closed already
 
 
     def new_session(self):
@@ -996,8 +999,7 @@ def net_list(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    cmd = "net-list %s %s" % (options, extra)
-    return command(cmd, **dargs)
+    return command("net-list %s %s" % (options, extra), **dargs)
 
 
 def net_destroy(name, extra="", **dargs):
@@ -1198,15 +1200,18 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     return command(cmd, **dargs)
 
 
-def snapshot_create(name):
+def snapshot_create(name, **dargs):
     """
     Create snapshot of domain.
 
     @param name: name of domain
+    @param: dargs: standardized virsh function API keywords
     @return: name of snapshot
     """
+    # CmdResult is handled here, force ignore_status
+    dargs['ignore_status'] = True
     cmd = "snapshot-create %s" % name
-    sc_output = command(cmd)
+    sc_output = command(cmd, **dargs)
     if sc_output.exit_status != 0:
         raise error.CmdError(cmd, sc_output, "Failed to create snapshot")
     snapshot_number = re.search("\d+", sc_output.stdout.strip()).group(0)
@@ -1214,32 +1219,37 @@ def snapshot_create(name):
     return snapshot_number
 
 
-def snapshot_current(name):
+def snapshot_current(name, **dargs):
     """
     Create snapshot of domain.
 
     @param name: name of domain
+    @param: dargs: standardized virsh function API keywords
     @return: name of snapshot
     """
+    # CmdResult is handled here, force ignore_status
+    dargs['ignore_status'] = True
     cmd = "snapshot-current %s --name" % name
-    sc_output = command(cmd)
+    sc_output = command(cmd, **dargs)
     if sc_output.exit_status != 0:
         raise error.CmdError(cmd, sc_output, "Failed to get current snapshot")
 
     return sc_output.stdout.strip()
 
 
-def snapshot_list(name):
+def snapshot_list(name, **dargs):
     """
     Get list of snapshots of domain.
 
     @param name: name of domain
+    @param: dargs: standardized virsh function API keywords
     @return: list of snapshot names
     """
-    rv = []
-
+    # CmdResult is handled here, force ignore_status
+    dargs['ignore_status'] = True
+    ret = []
     cmd = "snapshot-list %s" % name
-    sc_output = command(cmd)
+    sc_output = command(cmd, **dargs)
     if sc_output.exit_status != 0:
         raise error.CmdError(cmd, sc_output, "Failed to get list of snapshots")
 
@@ -1248,25 +1258,28 @@ def snapshot_list(name):
     for rec in data:
         if not rec:
             continue
-        rv.append(re.match("\w*", rec).group())
+        ret.append(re.match("\w*", rec).group())
 
-    return rv
+    return ret
 
 
-def snapshot_info(name, snapshot):
+def snapshot_info(name, snapshot, **dargs):
     """
     Check snapshot information.
 
     @param name: name of domain
     @param snapshot: name os snapshot to verify
+    @param: dargs: standardized virsh function API keywords
     @return: snapshot information dictionary
     """
-    rv = {}
+    # CmdResult is handled here, force ignore_status
+    dargs['ignore_status'] = True
+    ret = {}
     values = ["Name", "Domain", "Current", "State", "Parent",
               "Children","Descendants", "Metadata"]
 
     cmd = "snapshot-info %s %s" % (name, snapshot)
-    sc_output = command(cmd)
+    sc_output = command(cmd, **dargs)
     if sc_output.exit_status != 0:
         raise error.CmdError(cmd, sc_output, "Failed to get snapshot info")
 
@@ -1274,32 +1287,34 @@ def snapshot_info(name, snapshot):
         data = re.search("(?<=%s:) *\w*" % val, sc_output.stdout)
         if data is None:
             continue
-        rv[val] = data.group(0).strip()
+        ret[val] = data.group(0).strip()
 
-    if rv["Parent"] == "-":
-        rv["Parent"] = None
+    if ret["Parent"] == "-":
+        ret["Parent"] = None
 
-    return rv
+    return ret
 
 
-def snapshot_revert(name, snapshot):
+def snapshot_revert(name, snapshot, **dargs):
     """
     Revert domain state to saved snapshot.
 
     @param name: name of domain
+    @param: dargs: standardized virsh function API keywords
     @param snapshot: snapshot to revert to
+    @return: CmdResult instance
     """
-    cmd = "snapshot-revert %s %s" % (name,snapshot)
-    return command(cmd)
+    return command("snapshot-revert %s %s" % (name, snapshot), **dargs)
 
 
 
-def snapshot_delete(name, snapshot):
+def snapshot_delete(name, snapshot, **dargs):
     """
     Remove domain snapshot
 
     @param name: name of domain
+    @param: dargs: standardized virsh function API keywords
     @param snapshot: snapshot to delete
+    @return: CmdResult instance
     """
-    cmd = "snapshot-delete %s %s" % (name,snapshot)
-    return command(cmd)
+    return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
