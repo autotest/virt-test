@@ -139,7 +139,8 @@ variants:
                     #kernel_params = "ks=floppy nicdelay=60 console=ttyS0,115200 console=tty0"
                 variants:
                     - 8.32:
-                        no setup
+                        no virtio_net, virtio_blk, e1000
+                        no setup, balloon_check
                         vm_arch_name = i686
                         image_name = images/f8-32
                         install:
@@ -160,7 +161,8 @@ variants:
                             md5sum_1m_cd1 = dabae451bb69fbbad0e505b25144b1f9
 
                     - 8.64:
-                        no setup
+                        no virtio_net, virtio_blk, e1000
+                        no setup, balloon_check
                         image_name = images/f8-64
                         install:
                             steps = steps/Fedora-8-64.steps
@@ -180,6 +182,8 @@ variants:
                             md5sum_1m_cd1 = 145f6414e19492649a56c89f0a45e719
 
                     - 9.32:
+                        no virtio_net, virtio_blk, e1000
+                        no balloon_check
                         vm_arch_name = i686
                         image_name = images/f9-32
                         install:
@@ -201,6 +205,8 @@ variants:
 
 
                     - 9.64:
+                        no virtio_net, virtio_blk, e1000
+                        no setup, balloon_check
                         image_name = images/f9-64
                         install:
                             steps = steps/Fedora-9-64.steps
@@ -221,6 +227,8 @@ variants:
 
 
                     - 10.32:
+                        no virtio_net, virtio_blk, e1000
+                        no balloon_check
                         vm_arch_name = i686
                         image_name = images/f10-32
                         unattended_install:
@@ -236,6 +244,8 @@ variants:
                             md5sum_1m_cd1 = bd67c68bdf595e4ba7131ec702159181
 
                     - 10.64:
+                        no virtio_net, virtio_blk, e1000
+                        no balloon_check
                         image_name = images/f10-64
                         unattended_install:
                             unattended_file = unattended/Fedora-10.ks
@@ -515,8 +525,9 @@ variants:
                 variants:
                     - 3.9.i386:
                         vm_arch_name = i686
+                        no virtio_net, virtio_blk, e1000
                         no setup autotest linux_s3 guest_s4 shutdown multi_disk
-                        no usb_multi_disk
+                        no usb_multi_disk, balloon_check
                         image_name = images/rhel39-32
                         mem_chk_cmd = dmidecode | awk -F: '/Maximum Capacity/ {print $2}'
                         install:
@@ -539,8 +550,9 @@ variants:
                             md5sum_1m_cd1 = 5f10c9417c7b8372b3456c1b5f3f9ed0
 
                     - 3.9.x86_64:
+                        no virtio_net, virtio_blk, e1000
                         no setup autotest linux_s3 guest_s4 shutdown multi_disk
-                        no usb_multi_disk
+                        no usb_multi_disk, balloon_check
                         image_name = images/rhel39-64
                         mem_chk_cmd = dmidecode | awk -F: '/Maximum Capacity/ {print $2}'
                         install:
@@ -1725,7 +1737,8 @@ variants:
                 #image_type_raw = yes
             - Win2000:
                 vm_arch_name = i686
-                no reboot whql
+                no virtio_net, virtio_blk, e1000
+                no reboot, whql, balloon_check
                 os_variant = win2k
                 image_name = images/win2000-32
                 kill_vm_gracefully = no
@@ -2191,6 +2204,7 @@ variants:
         kill_vm_timeout = 0
         # Name of KVM/XEN arch. to use, default to 64-bit.
         vm_arch_name = x86_64
+        no virtio_net, virtio_blk, e1000
 
         variants:
             - NetBSD-1.6.2:
@@ -2218,6 +2232,7 @@ variants:
         kill_vm_timeout = 0
         # Name of KVM/XEN arch. to use, default to 64-bit.
         vm_arch_name = x86_64
+        no virtio_net, virtio_blk, e1000
 
         variants:
             - memtest:
