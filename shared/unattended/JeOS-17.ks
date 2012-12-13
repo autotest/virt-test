@@ -87,7 +87,6 @@ usbutils
 -pm-utils
 -bridge-utils
 -zip
--eject
 -numactl
 -mtr
 -sssd
