@@ -1,6 +1,7 @@
 import logging
-from autotest.client.shared import error, utils
-from virttest import base_installer
+from autotest.client.shared import error
+from autotest.client import utils
+from virttest import base_installer, utils_misc
 
 
 def run_module_probe(test, params, env):
@@ -30,17 +31,15 @@ def run_module_probe(test, params, env):
         for _ in range(load_count):
             try:
                 installer_object.load_modules()
+            except base_installer.NoModuleError, e:
+                logging.error(e)
+                break
             except Exception, e:
                 raise error.TestFail("Failed to load modules [%r]: %s" %
                                      (installer_object.module_list, e))
-
-            # unload using rmmod directly because utils.unload_module() (used by
-            # installer) does too much (runs lsmod, checks for dependencies),
-            # and we want to run the loop as fast as possible.
-            for mod in reversed(installer_object.module_list):
-                r = utils.system("rmmod %s" % (mod), ignore_status=True)
-                if r != 0:
-                    raise error.TestFail("Failed to unload module %s. "
-                                         "exit status: %d" % (mod, r))
+            installer_object.unload_modules()
     finally:
-        installer_object.load_modules()
+        try:
+            installer_object.load_modules()
+        except base_installer.NoModuleError:
+            pass

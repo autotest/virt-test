@@ -11,6 +11,14 @@ from autotest.client import utils, os_dep
 from autotest.client.shared import error
 import build_helper, utils_misc, utils_koji, yumrepo
 
+
+class NoModuleError(Exception):
+    '''
+    Error raised when no suitable modules were found to load
+    '''
+    pass
+
+
 class VirtInstallException(Exception):
     '''
     Base virtualization software components installation exception
@@ -152,6 +160,7 @@ class BaseInstaller(object):
         '''
         Called by test to setup parameters from the configuration file
         '''
+        logging.info("calling set install params")
         if test is not None:
             self._set_test_dirs(test)
 
@@ -329,6 +338,9 @@ class BaseInstaller(object):
         if module_list is None:
             module_list = self.module_list
 
+        if not module_list:
+            raise NoModuleError("Module list empty")
+
         logging.info("Loading modules from default locations through "
                      "modprobe")
         for module in module_list:
@@ -344,8 +356,7 @@ class BaseInstaller(object):
         '''
         if module_list is None:
             module_list = self.module_list
-        module_list = reversed(module_list)
-        logging.info("Unloading kernel modules: %s" % ",".join(module_list))
+        logging.info("Unloading kernel modules: %s" % " ".join(module_list))
         for module in module_list:
             utils.unload_module(module)
 
@@ -415,6 +426,21 @@ class NoopInstaller(BaseInstaller):
     '''
     Dummy installer that does nothing, useful when software is pre-installed
     '''
+    def __init__(self, mode, name, test=None, params=None):
+        '''
+        If no previous install test ran, try to figure out modules to load.
+
+        @param mode (str): Install mode (yum, git, etc).
+        @param name (str): Installer name.
+        @param test: Virt test object.
+        @param params: Dict with test params.
+        '''
+        if params['vm_type'] == 'kvm':
+            params['module_list'] = ("kvm kvm-%s" %
+                                     utils_misc.get_cpu_vendor(verbose=False))
+        super(NoopInstaller, self).__init__(mode, name, test, params)
+
+
     def install(self):
         logging.info("Assuming virtualization software to be already "
                      "installed. Doing nothing")
