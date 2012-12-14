@@ -1,6 +1,7 @@
 import logging, time, os
 from autotest.client.shared import error
 from autotest.client import utils
+from virttest import data_dir
 
 
 @error.context_aware
@@ -20,7 +21,9 @@ def run_floppy(test, params, env):
     """
     def master_floppy(params):
         error.context("creating test floppy")
-        floppy = os.path.abspath(params.get("floppy_name"))
+        floppy = params.get("floppy_name")
+        if not os.path.isabs(floppy):
+            floppy = os.path.join(data_dir.get_data_dir(), floppy)
         utils.run("dd if=/dev/zero of=%s bs=512 count=2880" % floppy)
 
 
@@ -36,7 +39,9 @@ def run_floppy(test, params, env):
     # Some Linux distribution does not load floppy at boot and Windows
     # needs time to load and init floppy driver
     if dest_dir:
-        session.cmd("modprobe floppy")
+        lsmod = session.cmd("lsmod")
+        if not 'floppy' in lsmod:
+            session.cmd("modprobe floppy")
     else:
         time.sleep(20)
 
@@ -56,13 +61,37 @@ def run_floppy(test, params, env):
 
     try:
         error.context("Copying file to the floppy")
+        md5_cmd = params.get("md5_cmd")
+        if md5_cmd:
+            md5_source = session.cmd("%s %s" % (params.get("md5_cmd"),
+                                                source_file))
+            try:
+                md5_source = md5_source.split(" ")[0]
+            except IndexError:
+                error.TestError("Failed to get md5 from source file, output: "
+                                "'%s'" % md5_source)
+        else:
+            md5_source = None
+
         session.cmd("%s %s %s" % (params.get("copy_cmd"), source_file,
                     dest_file))
         logging.info("Succeed to copy file '%s' into floppy disk" % source_file)
 
         error.context("Checking if the file is unchanged after copy")
-        session.cmd("%s %s %s" % (params.get("diff_file_cmd"), source_file,
-                    dest_file))
+        if md5_cmd:
+            md5_dest = session.cmd("%s %s" % (params.get("md5_cmd"),
+                                              dest_file))
+            try:
+                md5_dest = md5_dest.split(" ")[0]
+            except IndexError:
+                error.TestError("Failed to get md5 from dest file, output: "
+                                "'%s'" % md5_dest)
+            if md5_source != md5_dest:
+                raise error.TestFail("File changed after copy to floppy")
+        else:
+            md5_dest = None
+            session.cmd("%s %s %s" % (params.get("diff_file_cmd"), source_file,
+                        dest_file))
     finally:
         clean_cmd = "%s %s" % (params.get("clean_cmd"), dest_file)
         session.cmd(clean_cmd)
