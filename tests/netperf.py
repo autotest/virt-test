@@ -309,6 +309,11 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
                     "-t %s -v 0 -P -0 -- -r %s,%s -b %s" % (protocol, i, i, j),
                     netserver_port, params, server_cyg)
                     thu = parse_file("/tmp/netperf.%s" % ret['pid'], 0)
+                elif (protocol == "TCP_MAERTS"):
+                    ret = launch_client(j, server, server_ctl, host, client, l,
+                                     "-C -c -t %s -- -m ,%s" % (protocol, i),
+                                     netserver_port, params, server_cyg)
+                    thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
                 else:
                     ret = launch_client(j, server, server_ctl, host, client, l,
                                      "-C -c -t %s -- -m %s" % (protocol, i),
