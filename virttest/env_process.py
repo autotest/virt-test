@@ -116,6 +116,16 @@ def preprocess_vm(test, params, env, name):
         # Don't start the VM, just update its params
         vm.params = params
 
+    pause_vm = False
+
+    if params.get("paused_after_start_vm") == "yes":
+        pause_vm = True
+        #Check the status of vm
+        if not vm.is_alive():
+            pause_vm = False
+
+    if pause_vm:
+        vm.pause()
 
 def postprocess_image(test, params, image_name):
     """
