@@ -978,8 +978,16 @@ class VM(virt_vm.BaseVM):
                 index += 1
             return index
 
-        def add_machine_type(help, machine_type):
+        def add_machine_type(help, machine_type, invalid_type=False):
             if has_option(help, "machine") or has_option(help, "M"):
+                output = utils.system_output("%s -M ?" % qemu_binary)
+                hlp_m = [str.split()[0] for str in output.splitlines()[1:]]
+                if machine_type not in hlp_m and not invalid_type:
+                    msg = "%s not support," % machine_type
+                    machine_type = hlp_m[1]
+                    msg += " machine type '%s' used." % hlp_m[1]
+                    msg += " Qemu support following machines type:\n%s" % hlp_m
+                    logging.warn(msg)
                 return " -M %s" % machine_type
             else:
                 return ""
@@ -1390,7 +1398,8 @@ class VM(virt_vm.BaseVM):
 
         machine_type = params.get("machine_type")
         if machine_type:
-            qemu_cmd += add_machine_type(help, machine_type)
+            invalid_type = params.get("invalid_machine_type", "no") == "yes"
+            qemu_cmd += add_machine_type(help, machine_type, invalid_type)
 
         for cdrom in params.objects("cdroms"):
             cd_format = params.get("cd_format", "")
