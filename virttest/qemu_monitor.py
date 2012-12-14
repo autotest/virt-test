@@ -775,7 +775,7 @@ class HumanMonitor(Monitor):
         backing_file = None
         block_info = self.query("block")
         try:
-            pattern = "%s:.*backing_file=([\w./]*)" % device
+            pattern = "%s:.*backing_file=([^\s]*)" % device
             backing_file = re.search(pattern, block_info, re.M).group(1)
         except Exception:
             pass
