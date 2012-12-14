@@ -562,7 +562,8 @@ def run_tests(parser, options):
             t = Test(dct, options)
             t.set_debugdir(debugdir)
 
-            print_stdout("%s:" % t.tag, end=False)
+            pretty_index = "(%d/%d)" % (index, n_tests)
+            print_stdout("%s %s:" % (pretty_index, t.tag), end=False)
 
             try:
                 try:
