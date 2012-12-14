@@ -20,11 +20,11 @@ def run_virsh_domname(test, params, env):
     connect_uri = vm.connect_uri
 
     #run test case
-    options_ref = params.get("options_ref", "id")
+    options_ref = params.get("domname_options_ref", "id")
     addition_status_error = params.get("addition_status_error", "no")
     status_error = params.get("status_error", "no")
-    options = params.get("options", "%s")
-    options_suffix = params.get("options_suffix", "")
+    options = params.get("domname_options", "%s")
+    options_suffix = params.get("domname_options_suffix", "")
     if options_ref == "id":
         options_ref = domid
         if options_ref == "-":

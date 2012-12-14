@@ -15,7 +15,7 @@ def run_virsh_uri(test, params, env):
     connect_uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
                                                                "default") )
 
-    option = params.get("options")
+    option = params.get("virsh_uri_options")
     target_uri = params.get("target_uri")
     remote_ref = params.get("uri_remote_ref", "")
     if target_uri:
