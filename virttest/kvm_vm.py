@@ -2219,7 +2219,7 @@ class VM(virt_vm.BaseVM):
             if not nic.netdst is None:
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)
         elif nic.nettype == 'user':
-            attach_cmd += " user,name=%s" % nic.ifname
+            attach_cmd += " user,id=%s" % nic.device_id
         else: # unsupported nettype
             raise virt_vm.VMUnknownNetTypeError(self.name, nic_index_or_name,
                                         nic.nettype)
