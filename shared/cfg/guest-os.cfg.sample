@@ -90,6 +90,7 @@ variants:
             dest_file = /mnt/passwd
             clean_cmd = rm -f
             mount_dir = /mnt/
+            md5_cmd = md5sum
             diff_file_cmd = diff
             copy_cmd = cp
         unattended_install:
