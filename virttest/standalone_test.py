@@ -217,18 +217,28 @@ class Bcolors(object):
     """
 
     def __init__(self):
-        self.HEADER = '\033[94m'
-        self.PASS = '\033[92m'
-        self.SKIP = '\033[93m'
-        self.FAIL = '\033[91m'
-        self.WARN = '\033[93m'
-        self.ENDC = '\033[0m'
+        self.blue = '\033[94m'
+        self.green = '\033[92m'
+        self.yellow = '\033[93m'
+        self.red = '\033[91m'
+        self.end = '\033[0m'
+        self.HEADER = self.blue
+        self.PASS = self.green
+        self.SKIP = self.yellow
+        self.FAIL = self.red
+        self.WARN = self.yellow
+        self.ENDC = self.end
         allowed_terms = ['linux', 'xterm', 'xterm-256color', 'vt100']
         term = os.environ.get("TERM")
         if (not os.isatty(1)) or (not term in allowed_terms):
             self.disable()
 
     def disable(self):
+        self.blue = ''
+        self.green = ''
+        self.yellow = ''
+        self.red = ''
+        self.end = ''
         self.HEADER = ''
         self.PASS = ''
         self.SKIP = ''
@@ -339,6 +349,47 @@ def create_config_files(options):
         test_dir = os.path.join(test_dir, parent_config_dir)
 
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
+
+
+def print_test_list(options, cartesian_parser):
+    """
+    Helper function to pretty print the test list.
+
+    This function uses a paginator, if possible (inspired on git).
+
+    @param options: OptParse object with cmdline options.
+    @param cartesian_parser: Cartesian parser object with test options.
+    """
+    try:
+        less_cmd = utils_misc.find_command('less')
+        pipe = os.popen('%s -FRSX' % less_cmd, 'w')
+    except ValueError:
+        pipe = sys.stdout
+    index = 0
+    pipe.write("Tests produced for type %s, config file %s" %
+               (options.type, cartesian_parser.filename))
+    pipe.write("\n\n")
+    for params in cartesian_parser.get_dicts():
+        virt_test_type = params.get('virt_test_type', "")
+        supported_virt_backends = virt_test_type.split(" ")
+        if options.type in supported_virt_backends:
+            index +=1
+            if options.config is None:
+                # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
+                shortname = params['name'].split(".")[12:]
+                shortname = ".".join(shortname)
+            else:
+                shortname = params['shortname']
+            needs_root = ((params.get('requires_root', 'no') == 'yes')
+                          or (params.get('vm_type') != 'kvm'))
+            basic_out = (bcolors.blue + str(index) + bcolors.end + " " +
+                         shortname)
+            if needs_root:
+                out =  (basic_out + bcolors.yellow + " (requires root)" +
+                        bcolors.end + "\n")
+            else:
+                out = basic_out + "\n"
+            pipe.write(out)
 
 
 def bootstrap_tests(options):

@@ -137,35 +137,10 @@ if __name__ == '__main__':
         cartesian_parser.parse_file(cfg)
 
         if options.list:
-            try:
-                less_cmd = utils_misc.find_command('less')
-                pipe = os.popen('%s -FRSX' % less_cmd, 'w')
-            except ValueError:
-                pipe = sys.stdout
-            index = 0
-            pipe.write("Tests produced for type %s, config file %s" %
-                       (options.type, cfg))
-            pipe.write("\n\n")
-            for params in cartesian_parser.get_dicts():
-                virt_test_type = params.get('virt_test_type', "")
-                supported_virt_backends = virt_test_type.split(" ")
-                if options.type in supported_virt_backends:
-                    index +=1
-                    if options.config is None:
-                        # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
-                        shortname = params['name'].split(".")[12:]
-                        shortname = ".".join(shortname)
-                    else:
-                        shortname = params['shortname']
-                    if params.get('requires_root', 'no') == 'yes':
-                        pipe.write("%d %s (requires root)\n" %
-                                   (index, shortname))
-                    else:
-                        pipe.write("%d %s\n" % (index, shortname))
+            standalone_test.print_test_list(options, cartesian_parser)
             sys.exit(0)
         else:
             standalone_test.bootstrap_tests(options)
-
 
         if options.type == 'kvm':
             qemu_bin_path = None
