@@ -118,9 +118,6 @@ smp = 1
 # Memory for each VM
 mem = 1024
 
-# Networking type (nic, user, tap, socket, vde, dump, none)
-nic_mode = tap
-
 # Host networking restart command line for PCI assign cases
 # net_restart_cmd = /etc/init.d/network restart
 
