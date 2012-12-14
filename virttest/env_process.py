@@ -282,6 +282,12 @@ def preprocess(test, params, env):
     @param env: The environment (a dict-like object).
     """
     error.context("preprocessing")
+    # First, let's verify if this test does require root or not. If it
+    # does and the test suite is running as a regular user, we shall just
+    # throw a TestNAError exception, which will skip the test.
+    if params.get('requires_root', 'no') == 'yes':
+        utils_test.verify_running_as_root()
+
     port = params.get('shell_port')
     prompt = params.get('shell_prompt')
     address = params.get('ovirt_node_address')
