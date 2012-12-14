@@ -157,7 +157,11 @@ if __name__ == '__main__':
                         shortname = ".".join(shortname)
                     else:
                         shortname = params['shortname']
-                    pipe.write("%d %s\n" % (index, shortname))
+                    if params.get('requires_root', 'no') == 'yes':
+                        pipe.write("%d %s (requires root)\n" %
+                                   (index, shortname))
+                    else:
+                        pipe.write("%d %s\n" % (index, shortname))
             sys.exit(0)
         else:
             standalone_test.bootstrap_tests(options)
