@@ -24,7 +24,8 @@ def run_virsh_list(test, params, env):
         @param local_ip:local ip, to create uri in virsh list.
         @return:return status and output of the virsh list command.
         """
-        command_on_remote = "virsh -c qemu+ssh://%s/system list %s" % (local_ip, options_ref)
+        complete_uri = libvirt_vm.complete_uri(local_ip)
+        command_on_remote = "virsh -c %s list %s" % (complete_uri, options_ref)
         session = remote.remote_login("ssh", remote_ip, "22", "root", remote_passwd, "#")
         time.sleep(5)
         status, output = session.cmd_status_output(command_on_remote, internal_timeout=5)
@@ -33,10 +34,10 @@ def run_virsh_list(test, params, env):
         return int(status), output
 
     vm_name = params.get("main_vm", "vm1")
-    vm = env.get_vm(params["main_vm"])
+    vm = env.get_vm(vm_name)
 
-    options_ref = params.get("options_ref", "")
-    list_ref = params.get("list_ref", "")
+    options_ref = params.get("list_options_ref", "")
+    list_ref = params.get("list_type_ref", "")
     vm_ref = params.get("vm_ref", "")
 
     #Some parameters are not supported on old libvirt, skip them.

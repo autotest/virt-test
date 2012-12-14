@@ -226,7 +226,7 @@ variants:
         vms = ''
         variants:
             - no_option:
-                options = ""
+                virsh_uri_options = ""
                 status_error = "no"
                 libvirtd = "on"
                 #premise: connect with none-password
@@ -237,11 +237,11 @@ variants:
                         uri_remote_ref = "remote"
                         target_uri = "qemu://TARGET_HOSTNAME.EXAMPLE.COM/system"
             - unexpect_option:
-                options = "xyz"
+                virsh_uri_options = "xyz"
                 status_error = "yes"
                 libvirtd = "on"
             - with_libvirtd_stop:
-                options = ""
+                virsh_uri_options = ""
                 status_error = "yes"
                 libvirtd = "off"
 
@@ -300,11 +300,11 @@ variants:
                 status_error = "no"
                 libvirtd = "on"
             - unexpect_option:
-                options = " xyz"
+                virsh_hostname_options = " xyz"
                 status_error = "yes"
                 libvirtd = "on"
             - with_libvirtd_stop:
-                options = ""
+                virsh_hostname_options = ""
                 status_error = "yes"
                 libvirtd = "off"
 
@@ -377,34 +377,34 @@ variants:
         type = virsh_domname
         kill_vm = yes
         kill_vm_on_error = yes
-        options = "%s"
-        options_suffix = ""
+        domname_options = "%s"
+        domname_options_suffix = ""
         variants:
             - with_valid_option:
                 status_error = "no"
                 # status_error means the correctness of the options
                 variants:
                     - domid:
-                        options_ref = "id"
+                        domname_options_ref = "id"
                     - uuid:
-                        options_ref = "uuid"
+                        domname_options_ref = "uuid"
             - with_invalid_option:
                 status_error = "yes"
                 variants:
                     - none:
-                        options_ref = ""
+                        domname_options_ref = ""
                     - hex_domid:
-                        options_ref = "id"
-                        options = "%x"
+                        domname_options_ref = "id"
+                        domname_options = "%x"
                     - invalid_domid:
-                        options_ref = "9999"
+                        domname_options_ref = "9999"
                     - invalid_uuid:
-                        options_ref = "99999999-9999-9999-9999-999999999999"
+                        domname_options_ref = "99999999-9999-9999-9999-999999999999"
                     - addition_invalid_param:
-                        options_ref = "id"
-                        options_suffix = "xyz"
+                        domname_options_ref = "id"
+                        domname_options_suffix = "xyz"
                     - vm_name:
-                        options_ref = "name"
+                        domname_options_ref = "name"
         variants:
             - vm_state:
                 variants:
@@ -495,6 +495,7 @@ variants:
 
     - virsh_managedsave:
         type = virsh_managedsave
+        virt_test_type = libvirt
         managedsave_libvirtd = ""
         managedsave_extra_parame = ""
         variants:
@@ -655,31 +656,31 @@ variants:
                 status_error = "no"
                 variants:
                     - inactive:
-                        options_ref = "inactive"
+                        list_options_ref = "inactive"
                     - all:
-                        options_ref = "all"
+                        list_options_ref = "all"
                     - none:
-                        options_ref = ""
+                        list_options_ref = ""
                 variants:
                     - list_table:
-                        list_ref = "--table"
+                        list_type_ref = "--table"
                     - list_name:
-                        list_ref = "--name"
+                        list_type_ref = "--name"
                     - list_uuid:
-                        list_ref = "--uuid"
+                        list_type_ref = "--uuid"
                     - list_none:
-                        list_ref = ""
+                        list_type_ref = ""
             - with_invalid_options:
                 status_error = "yes"
                 variants:
                     - invalid_string:
-                        options_ref = "xyz"
+                        list_options_ref = "xyz"
                     - vm_id:
-                        options_ref = "vm_id"
+                        list_options_ref = "vm_id"
                     - vm_name:
-                        options_ref = "vm_name"
+                        list_options_ref = "vm_name"
                     - vm_uuid:
-                        options_ref = "vm_uuid"
+                        list_options_ref = "vm_uuid"
         variants:
             - normal_test:
                 addition_status_error = "no"
@@ -688,17 +689,17 @@ variants:
                     - list_transient_domains:
                         only with_valid_options
                         addition_status_error = "no"
-                        vm_ref = "transient"
+                        list_vm_ref = "transient"
                     - list_persistent_domains:
                         only with_valid_options
                         addition_status_error = "no"
-                        vm_ref = "persistent"
+                        list_vm_ref = "persistent"
                     - with_managed_save:
                         only with_valid_options.list_table.all
                         #Because managedsave command will shutdown domain
                         #we should list all if we need to check the mark of saved.
                         addition_status_error = "no"
-                        vm_ref = "managed-save"
+                        list_vm_ref = "managed-save"
                     - list_local_domains_on_remote:
                         #You should config ssh autologin between remote and local
                         #when you test list_local_domains_on_remote.
@@ -815,6 +816,7 @@ variants:
 
     - virsh_define: install setup image_copy unattended_install
         type = virsh_define
+        virt_test_type = libvirt
         take_regular_screendumps = no
         encode_video_files = no
         start_vm = "no"
