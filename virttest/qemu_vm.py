@@ -1073,8 +1073,16 @@ class VM(virt_vm.BaseVM):
                 cmd = ""
             return cmd
 
-        def add_machine_type(help_text, machine_type):
+        def add_machine_type(help, machine_type, invalid_type=False):
             if has_option(help_text, "machine") or has_option(help_text, "M"):
+                output = utils.system_output("%s -M ?" % qemu_binary)
+                hlp_m = [str.split()[0] for str in output.splitlines()[1:]]
+                if machine_type not in hlp_m and not invalid_type:
+                    msg = "%s not support," % machine_type
+                    machine_type = hlp_m[1]
+                    msg += " machine type '%s' used." % hlp_m[1]
+                    msg += " Qemu support following machines type:\n%s" % hlp_m
+                    logging.warn(msg)
                 return " -M %s" % machine_type
             else:
                 return ""
@@ -1488,8 +1496,9 @@ class VM(virt_vm.BaseVM):
             for m in support_machine_type.splitlines()[1:]:
                 m_types.append(m.split()[0])
 
-            if machine_type in m_types:
-                qemu_cmd += add_machine_type(help_text, machine_type)
+            invalid_type = params.get("invalid_machine_type", "no") == "yes"
+            if machine_type in m_types or invalid_type:
+                qemu_cmd += add_machine_type(help, machine_type, invalid_type)
             else:
                 raise error.TestNAError("Unsupported machine type %s." %
                                         (machine_type))
