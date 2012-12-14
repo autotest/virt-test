@@ -22,7 +22,7 @@ More specifically:
 """
 
 import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl, socket
-import threading, shelve
+import threading, shelve, getpass
 from Queue import Queue
 from autotest.client.shared import error, global_config
 from autotest.client import utils
@@ -2259,3 +2259,15 @@ class GuestSuspend(object):
     def action_after_suspend(self, **args):
         error.context("Actions after suspend")
         pass
+
+
+def verify_running_as_root():
+    """
+    Verifies whether we're running under UID 0 (root).
+
+    @raise: error.TestNAError
+    """
+    if os.getuid() != 0:
+        raise error.TestNAError("This test requires root privileges "
+                                "(currently running with user %s)" %
+                                getpass.getuser())
