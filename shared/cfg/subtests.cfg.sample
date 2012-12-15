@@ -209,6 +209,7 @@ variants:
     - pxe:
         virt_test_type = kvm libvirt
         type = pxe
+        requires_root = yes
         images = pxe
         image_name_pxe = pxe-test
         image_size_pxe = 1G
@@ -831,6 +832,7 @@ variants:
     - module_probe:
         virt_test_type = kvm
         type = module_probe
+        requires_root = yes
         # You can specify your own module list, though it is not needed usually.
         # mod_list = kvm
         load_count = 100
@@ -1680,6 +1682,7 @@ variants:
         virt_test_type = kvm
         only Linux
         type = nfs_corrupt
+        requires_root = yes
         start_vm = no
         images += " stg"
         image_size_stg = "10G"
@@ -1825,11 +1828,13 @@ variants:
         virt_test_type = kvm
         only Linux
         type = smbios_table
+        requires_root = yes
         start_vm = no
 
     - perf_kvm: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm
         type = perf_kvm
+        requires_root = yes
         kallsyms_cmd = "cat /proc/kallsyms > /tmp/guest_kallsyms"
         modules_cmd = "cat /proc/modules > /tmp/geust_modules"
         transfer_timeout = 100
@@ -2200,6 +2205,7 @@ variants:
     - jumbo: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm
         only Linux
+        requires_root = yes
         type = jumbo
 
     - file_transfer: install setup image_copy unattended_install.cdrom
@@ -2568,6 +2574,7 @@ variants:
     - ksm_overcommit: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm
         only Linux
+        requires_root = yes
         # Don't preprocess any vms as we need to change its params
         vms = ''
         image_snapshot = yes
@@ -2598,6 +2605,7 @@ variants:
         virt_test_type = kvm
         only Linux
         type = cgroup
+        requires_root = yes
         cgroup_test_time = 60
         cgroup_limit = 0.1
         # rmmod scsi_debug instead of writing into /sys/../add_host (safer)
@@ -3201,6 +3209,7 @@ variants:
     - trans_hugepage: install setup image_copy unattended_install.cdrom
         virt_test_type = kvm libvirt
         only Linux
+        requires_root = yes
         thp_test_config = ""
         kill_vm = yes
         login_timeout = 360
