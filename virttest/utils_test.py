@@ -1600,16 +1600,46 @@ def get_linux_ifname(session, mac_address):
 
     @param session: session to the virtual machine
     @mac_address: the macaddress of nic
+
+    @raise error.TestError in case it was not possible to determine the
+            interface name.
     """
+    def ifconfig_method():
+        try:
+            output = session.cmd("ifconfig -a")
+            return re.findall("(\w+)\s+Link.*%s" % mac_address, output,
+                              re.IGNORECASE)[0]
+        except IndexError:
+            return None
 
-    output = session.cmd_output("ifconfig -a")
+    def sys_method():
+        try:
+            interfaces = session.cmd('ls --color=never /sys/class/net')
+            interfaces = interfaces.strip()
+            for interface in interfaces.split(" "):
+                if interface:
+                    mac_address_interface = session.cmd("cat "
+                                        "/sys/class/net/%s/address" % interface)
+                    mac_address_interface = mac_address_interface.strip()
+                    if mac_address_interface == mac_address:
+                        return interface
+        except error.CmdError, e:
+            logging.debug(e)
+            return None
 
-    try:
-        ethname = re.findall("(\w+)\s+Link.*%s" % mac_address, output,
-                             re.IGNORECASE)[0]
-        return ethname
-    except Exception:
-        return None
+    # Try ifconfig first
+    i = ifconfig_method()
+    if i is not None:
+        return i
+
+    # Then, look on /sys
+    i = sys_method()
+    if i is not None:
+        return i
+
+    # If we came empty handed, let's raise an error
+    raise error.TestError("Failed to determine interface name with "
+                          "mac %s" % mac_address)
 
 
 def restart_guest_network(session, nic_name=None):
