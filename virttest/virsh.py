@@ -806,17 +806,9 @@ def shutdown(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    if domstate(name, **dargs) == 'shut off':
-        return True
-    dargs['ignore_status'] = False
-    try:
-        command("shutdown %s" % (name), **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Shutdown VM %s failed:\n%s", name, detail)
-        return False
+    return command("shutdown %s" % (name), **dargs)
 
 
 def destroy(name, **dargs):
