@@ -1301,14 +1301,16 @@ class VM(virt_vm.BaseVM):
         """
         Shuts down this VM.
         """
-        if virsh.shutdown(self.name, uri=self.connect_uri):
+        try:
+            if virsh.domstate(self.name) != 'shut off':
+                virsh.shutdown(self.name, uri=self.connect_uri)
             if self.wait_for_shutdown():
                 logging.debug("VM %s shut down", self.name)
                 return True
             else:
                 logging.error("VM %s failed to shut down", self.name)
                 return False
-        else:
+        except error.CmdError:
             logging.error("VM %s failed to shut down", self.name)
             return False
 
