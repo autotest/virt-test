@@ -659,6 +659,34 @@ def dumpxml(name, to_file="", **dargs):
     return result.stdout.strip()
 
 
+def domxml_from_native(format, file, options=None, **dargs):
+    """
+    Convert native guest configuration format to domain XML format.
+
+    @param format:The command's options. For exmple:qemu-argv.
+    @param file:Native infomation file.
+    @param options:extra param.
+    @param dargs: standardized virsh function API keywords.
+    @return: result from command
+    """
+    cmd = "domxml-from-native %s %s %s" % (format, file, options)
+    return command(cmd, **dargs)
+
+
+def domxml_to_native(format, file, options, **dargs):
+    """
+    Convert domain XML config to a native guest configuration format.
+
+    @param format:The command's options. For exmple:qemu-argv.
+    @param file:XML config file.
+    @param options:extra param.
+    @param dargs: standardized virsh function API keywords
+    @return: result from command
+    """
+    cmd = "domxml-to-native %s %s %s" % (format, file, options)
+    return command(cmd, **dargs)
+
+
 def is_alive(name, **dargs):
     """
     Return True if the domain is started/alive.
