@@ -195,6 +195,8 @@ variants:
                         physical_resources_check:
                             vms= "vm1"
                             catch_serial_cmd =
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                         variants:
                             - 32:
@@ -277,6 +279,8 @@ variants:
                                 kernel_re = .*kernel-hugemem-%s.el.*.i686.*
                             32:
                                 kernel_re = .*kernel-smp-%s.el.*.i686.*
+                        usb_storage.check_options:
+                            check_io_size_option = no
 
                         variants:
                             - 32:
