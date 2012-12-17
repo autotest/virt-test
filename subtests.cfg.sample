@@ -93,6 +93,7 @@ variants:
                 image_name_stg23 = storage23
                 image_name_stg24 = storage24
                 image_name_stg25 = storage25
+                image_size_equal = 1G
             large_image:
                 only unattended_install.cdrom
                 only qcow2
