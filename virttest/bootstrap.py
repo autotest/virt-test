@@ -20,7 +20,7 @@ mandatory_headers = {'kvm': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
                      'openvswitch': [],
                      'v2v': []}
 
-def download_file(url, destination, sha1_url, interactive=False):
+def download_file(url, destination, sha1_url, title="", interactive=False):
     """
     Verifies if file that can be find on url is on destination with right hash.
 
@@ -80,7 +80,7 @@ def download_file(url, destination, sha1_url, interactive=False):
                     answer = 'y'
                 if answer == 'y':
                     logging.info("Updating image to the latest available...")
-                    utils.interactive_download(url, path, "JeOS x86_64 image")
+                    utils.interactive_download(url, path, title)
                     had_to_download = True
                     file_ok = True
             else:
@@ -276,6 +276,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
 
     if answer == "y":
         had_to_download = download_file(url, destination, tarball_sha1_url,
+                                        title="Downloading JeOS x86_64",
                                         interactive=interactive)
         restore_image = (restore_image or had_to_download or not
                          uncompressed_file_exists)
