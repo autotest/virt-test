@@ -645,6 +645,59 @@ variants:
            - offline:
                snapshot_shutdown = "yes"
 
+    - virsh_domxml_from_native:
+        virt_test_type = libvirt
+        type = virsh_domxml_from_native
+        take_regular_screendumps = no
+        dfn_guest_args = "/tmp/guest_args"
+        dfn_invalid_guest_args = ""
+        libvirtd = "on"
+        status_error = "yes"
+        dfn_format = "qemu-argv"
+        variants:
+            - unexpect_option:
+                dfn_invalid_guest_args = "xyz"
+                variants:
+                    - exist_file_guest_args:
+                    - no_file_guest_args:
+                        dfn_guest_args = ""
+                    - invalid_guest_args:
+                        dfn_format = ""
+                        dfn_guest_args = ""
+                    - with_libvirtd_stop:
+                        libvirtd = "off"
+                        dfn_invalid_guest_args = ""
+            - expect_option:
+                status_error = "no"
+            - no_option:
+                dfn_format = ""
+                dfn_guest_args = ""
+
+    - virsh_domxml_to_native:
+        virt_test_type = libvirt
+        type = virsh_domxml_to_native
+        take_regular_screendumps = no
+        dtn_file_xml = "guest.xml"
+        status_error = "yes"
+        libvirtd = "on"
+        dtn_format  = "qemu-argv"
+        dtn_extra_param = ""
+        variants:
+            - no_option:
+                dtn_format = ""
+                dtn_file_xml = ""
+            - expected_option:
+                status_error = "no"
+            - invalid_format_option:
+                dtn_format = "xyz"
+            - extra_option:
+                dtn_extra_param = "xyz"
+                dtn_file_xml = ""
+            - no_file_extra_option:
+                dtn_extra_param = "xyz"
+            - with_libvirtd_stop:
+                libvirtd = "off"
+
 
     - virsh_list:
         virt_test_type = libvirt
