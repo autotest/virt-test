@@ -436,7 +436,11 @@ def bootstrap_tests(options):
         if t_elapsed > tolerance and not wait_message_printed:
             print_stdout("Running setup. Please wait...")
             wait_message_printed = True
+            sys.stdout.switch()
         time.sleep(0.1)
+
+    if wait_message_printed:
+        sys.stdout.switch()
 
     reason = None
     try:
