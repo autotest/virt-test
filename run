@@ -106,6 +106,7 @@ if __name__ == '__main__':
                     pass
                 print("Environment variable $AUTOTEST_PATH not set. "
                       "please set it to a path containing an autotest checkout")
+                print("Or install the autotest-framework package for your distro")
                 sys.exit(1)
             client_dir = os.path.join(autotest_dir, 'client')
             sys.path.insert(0, client_dir)
