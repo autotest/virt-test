@@ -13,8 +13,13 @@ timezone --utc America/New_York
 firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200 elevator=deadline"
 zerombr
+#partitioning
 clearpart --all --initlabel
-autopart
+part /boot --fstype=ext3 --size=500
+part pv.01  --grow --size=1
+volgroup VolGroup --pesize=131072  pv.01
+logvol swap --name=LogVol_swap --vgname=VolGroup --size=4096
+logvol / --fstype=ext4 --name=LogVol_root --vgname=VolGroup --size=1 --grow
 
 %packages
 @base
