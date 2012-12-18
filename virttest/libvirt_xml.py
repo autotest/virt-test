@@ -91,14 +91,13 @@ class LibvirtXMLBase(propcan.PropCanBase):
     def set_virsh(self, value):
         """Accessor method for virsh property, make sure it's right type"""
         value_type = type(value)
-        if ((value.__name__.count("virsh") and value_type.__name__ == "module")
-             or
-             issubclass(value_type, virsh.VirshBase) ):
+        # issubclass can't work for classes using __slots__ (i.e. no __bases__)
+        if hasattr(value, 'VIRSH_EXEC') or hasattr(value, 'virsh_exec'):
             self.dict_set('virsh', value)
         else:
             raise LibvirtXMLError("virsh parameter must be a module named virsh"
-                                  " or subclass of virsh.VirshBase not: %s" %
-                                  str(value))
+                                  " or subclass of virsh.VirshBase not a %s" %
+                                  str(value_type))
 
 
     @staticmethod
