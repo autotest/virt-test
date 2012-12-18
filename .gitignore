@@ -18,3 +18,16 @@
 shared/data
 kvm/env
 logs
+kvm/cfg/base.cfg
+kvm/cfg/cdkeys.cfg
+kvm/cfg/guest-hw.cfg
+kvm/cfg/guest-os.cfg
+kvm/cfg/subtests.cfg
+kvm/cfg/virtio-win.cfg
+libvirt/cfg/base.cfg
+libvirt/cfg/cdkeys.cfg
+libvirt/cfg/guest-hw.cfg
+libvirt/cfg/guest-os.cfg
+libvirt/cfg/subtests.cfg
+libvirt/cfg/virtio-win.cfg
+tmp
