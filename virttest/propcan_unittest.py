@@ -121,6 +121,24 @@ class TestPropCanBase(unittest.TestCase):
         self.assertTrue(testcan.it_works)
 
 
+    def test_subclass_no_mask_attributeerror(self):
+        class FooBar(propcan.PropCanBase):
+            __slots__ = ('foo', )
+            def del_foo(self):
+                raise AttributeError("Del Test")
+            def set_foo(self, value):
+                raise AttributeError("Set Test")
+            def get_foo(self):
+                raise AttributeError("Get Test")
+        testcan = FooBar()
+        self.assertRaises(AttributeError, testcan.__getitem__, 'foo')
+        self.assertRaises(AttributeError, testcan.__setitem__, 'foo', None)
+        self.assertRaises(AttributeError, testcan.__delitem__, 'foo')
+        self.assertRaises(AttributeError, testcan.__getattr__, 'foo')
+        self.assertRaises(AttributeError, testcan.__setattr__, 'foo', None)
+        self.assertRaises(AttributeError, testcan.__delattr__, 'foo')
+
+
     def test_dict_methods_1(self):
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', 'bar')
