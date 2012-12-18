@@ -293,9 +293,9 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
     logging.info("")
     step += 1
     logging.info("%d - Creating config files from samples", step)
-    config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg.sample"))
+    config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg"))
     config_file_list_shared = glob.glob(os.path.join(shared_dir,
-                                                     "*.cfg.sample"))
+                                                     "*.cfg"))
 
     # Handle overrides of cfg files. Let's say a test provides its own
     # subtest.cfg.sample, this file takes precedence over the shared
@@ -314,7 +314,6 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
     for config_file in config_file_list:
         src_file = config_file
         dst_file = os.path.join(test_dir, "cfg", os.path.basename(config_file))
-        dst_file = dst_file.rstrip(".sample")
         if not os.path.isfile(dst_file):
             logging.debug("Creating config file %s from sample", dst_file)
             shutil.copyfile(src_file, dst_file)
