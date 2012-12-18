@@ -38,28 +38,28 @@ class PropCanBase(dict):
         try:
             accessor = super(PropCanBase,
                              self).__getattribute__('get_%s' % key)
-            return accessor()
         except AttributeError:
             return super(PropCanBase, self).__getitem__(key)
+        return accessor()
 
 
     def __setitem__(self, key, value):
         try:
             accessor = super(PropCanBase,
                              self).__getattribute__('set_%s' % key)
-            return accessor(value)
         except AttributeError:
             self.__canhaz__(key, KeyError)
             return super(PropCanBase, self).__setitem__(key, value)
+        return accessor(value)
 
 
     def __delitem__(self, key):
         try:
             accessor = super(PropCanBase,
                              self).__getattribute__('del_%s' % key)
-            return accessor()
         except AttributeError:
             return super(PropCanBase, self).__delitem__(key)
+        return accessor()
 
 
     def __getattr__(self, key):
