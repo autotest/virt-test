@@ -36,4 +36,10 @@ v2v/cfg/guest-hw.cfg
 v2v/cfg/guest-os.cfg
 v2v/cfg/subtests.cfg
 v2v/cfg/virtio-win.cfg
+openvswitch/cfg/base.cfg
+openvswitch/cfg/cdkeys.cfg
+openvswitch/cfg/guest-hw.cfg
+openvswitch/cfg/guest-os.cfg
+openvswitch/cfg/subtests.cfg
+openvswitch/cfg/virtio-win.cfg
 tmp
