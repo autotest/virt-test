@@ -26,7 +26,7 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        if options.config is None:
+        if options.config is None and options.type in ['kvm', 'libvirt']:
             self.tag = ".".join(params['name'].split(".")[12:])
         else:
             self.tag = ".".join(params['shortname'].split("."))
@@ -375,7 +375,7 @@ def print_test_list(options, cartesian_parser):
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
             index +=1
-            if options.config is None:
+            if options.config is None and options.type in ['kvm', 'libvirt']:
                 # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
                 shortname = params['name'].split(".")[12:]
                 shortname = ".".join(shortname)
@@ -489,7 +489,7 @@ def run_tests(parser, options):
     last_index = -1
 
     for i, d in enumerate(parser.get_dicts()):
-        if options.config is None:
+        if options.config is None and options.type in ['kvm', 'libvirt']:
             shortname = ".".join(d['name'].split(".")[12:])
         else:
             shortname = ".".join(d['shortname'].split("."))
@@ -526,7 +526,7 @@ def run_tests(parser, options):
     setup_flag = 1
     cleanup_flag = 2
     for dct in parser.get_dicts():
-        if options.config is None:
+        if options.config is None and options.type in ['kvm', 'libvirt']:
             shortname = ".".join(d['name'].split(".")[12:])
         else:
             shortname = ".".join(d['shortname'].split("."))
@@ -608,7 +608,7 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            if options.config is None:
+            if options.config is None and options.type in ['kvm', 'libvirt']:
                 shortname = ".".join(d['name'].split(".")[12:])
             else:
                 shortname = ".".join(d['shortname'].split("."))
