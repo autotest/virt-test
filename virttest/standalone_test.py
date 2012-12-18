@@ -349,6 +349,7 @@ def create_config_files(options):
         test_dir = os.path.join(test_dir, parent_config_dir)
 
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
+    bootstrap.create_subtests_cfg(options.type)
 
 
 def print_test_list(options, cartesian_parser):
