@@ -1318,7 +1318,14 @@ class VM(virt_vm.BaseVM):
 
 
     def pause(self):
-        return virsh.suspend(self.name, uri=self.connect_uri)
+        try:
+            state = virsh.domstate(self.name)
+            if state not in ('paused',):
+                virsh.suspend(self.name, uri=self.connect_uri, ignore_statues=False)
+            return True
+        except:
+            logging.error("VM %s failed to suspend", self.name)
+            return False
 
 
     def resume(self):
