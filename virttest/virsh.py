@@ -831,17 +831,9 @@ def destroy(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    if domstate(name, **dargs) == 'shut off':
-        return True
-    dargs['ignore_status'] = False
-    try:
-        command("destroy %s" % (name), **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Destroy VM %s failed:\n%s", name, detail)
-        return False
+    return command("destroy %s" % (name), **dargs)
 
 
 def define(xml_path, **dargs):
