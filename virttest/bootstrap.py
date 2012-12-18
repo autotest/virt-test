@@ -146,6 +146,27 @@ def verify_mandatory_programs(t_type):
         raise ValueError('Missing (cmds/includes): %s' % " ".join(failures))
 
 
+def create_subtests_cfg(t_type):
+    root_dir = data_dir.get_root_dir()
+    specific_test_cfg = os.path.join(root_dir, t_type,
+                                   'tests', 'cfg')
+    shared_test_cfg = os.path.join(root_dir, 'tests', 'cfg')
+    shared_file_list = glob.glob(os.path.join(shared_test_cfg, "*.cfg"))
+    shared_file_list.sort()
+    specific_file_list = glob.glob(os.path.join(specific_test_cfg, "*.cfg"))
+    specific_file_list.sort()
+    config_file_list = specific_file_list + shared_file_list
+    subtests_cfg = os.path.join(root_dir, t_type, 'cfg', 'subtests.cfg')
+    subtests_file = open(subtests_cfg, 'w')
+    subtests_file.write("# Do not edit, auto generated file from subtests config\n")
+    subtests_file.write("variants:\n")
+    for config_path in config_file_list:
+        config_file = open(config_path, 'r')
+        for line in config_file.readlines():
+            subtests_file.write("    %s" % line)
+        config_file.close()
+
+
 def create_config_files(test_dir, shared_dir, interactive, step=None):
     if step is None:
         step = 0
@@ -252,6 +273,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                           sub_dir_path)
 
     create_config_files(test_dir, shared_dir, interactive, step)
+    create_subtests_cfg(test_name)
 
     logging.info("")
     step += 2
