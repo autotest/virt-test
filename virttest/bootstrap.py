@@ -258,6 +258,7 @@ def create_subtests_cfg(t_type):
         autogen_cfg_path = os.path.join(tmp_dir,
                                         '%s.cfg' % dropin_test)
         autogen_cfg_file = open(autogen_cfg_path, 'w')
+        autogen_cfg_file.write("# Drop-in test - auto generated snippet\n")
         autogen_cfg_file.write("- %s:\n" % dropin_test)
         autogen_cfg_file.write("    virt_test_type = %s\n" % t_type)
         autogen_cfg_file.write("    type = %s\n" % dropin_test)
