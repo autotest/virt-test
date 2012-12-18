@@ -4418,7 +4418,7 @@ def standard_value(value_str, standard_unit="M", base="1024"):
         for i in unit_list:
             stand_unit = re.findall("[\s\d](%s)" % i, str(unit_value), re.I)
             if stand_unit:
-                return unit_list.index(stand_unit[0])
+                return unit_list.index(stand_unit[0].upper())
         return -1
 
     unit_list = ['B', 'K', 'M', 'G', 'T']
