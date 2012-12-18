@@ -747,19 +747,9 @@ def suspend(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    dargs['ignore_status'] = False
-    try:
-        command("suspend %s" % (name), **dargs)
-        if domstate(name, **dargs) == 'paused':
-            logging.debug("Suspended VM %s", name)
-            return True
-        else:
-            return False
-    except error.CmdError, detail:
-        logging.error("Suspending VM %s failed:\n%s", name, detail)
-        return False
+    return command("suspend %s" % (name), **dargs)
 
 
 def resume(name, **dargs):
