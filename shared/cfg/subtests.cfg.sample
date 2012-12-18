@@ -1472,6 +1472,13 @@ variants:
                         count_of_change = 10
                         not_wait_for_migration = yes
                         type = migration_multi_host_downtime_and_speed
+                    - mig_stop_during:
+                        only after_login_vm
+                        sub_type = stop_during
+                        only mig_online
+                        wait_before_stop = 3
+                        not_wait_for_migration = no
+                        type = migration_multi_host_downtime_and_speed
                     - ping-pong-stress:
                         # amount of memory used for migration stress
                         # amount of memory shouldn't be too high otherwise
