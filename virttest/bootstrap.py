@@ -292,7 +292,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
         step = 0
     logging.info("")
     step += 1
-    logging.info("%d - Creating config files from samples", step)
+    logging.info("%d - Generating config set", step)
     config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg"))
     config_file_list_shared = glob.glob(os.path.join(shared_dir,
                                                      "*.cfg"))
