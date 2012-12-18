@@ -1492,6 +1492,8 @@ variants:
                         mig_protocol = "tcp"
                     -fd:
                         mig_protocol = "fd"
+                    -exec:
+                        mig_protocol = "exec"
 
                 variants:
                     #Time when start migration
@@ -1508,16 +1510,24 @@ variants:
                                 start_migration_timeout = 6
 
                 variants:
+                    -mig_online:
+                        mig_offline = no
+                    -mig_offline:
+                        mig_offline = yes
+
+                variants:
                     # Migration properties
                     - @default:
                         type = migration_multi_host
                     - cancel_with_delay:
                         type = migration_multi_host_cancel
                         only after_login_vm
+                        only mig_online
                         cancel_delay = 10
                     - measure_speed:
                         only Linux
                         only after_login_vm
+                        only mig_online
                         not_wait_for_migration = yes
                         mig_speed = 1G
                         type = migration_multi_host_with_speed_measurement
@@ -1525,6 +1535,7 @@ variants:
                         only Linux
                         only after_login_vm
                         type = migration_multi_host_with_file_transfer
+                        only mig_online
                         comm_port = 13234
                         #path where file is stored on guest.
                         guest_path = "/tmp/file"
@@ -1538,6 +1549,7 @@ variants:
                     - downtime:
                         only after_login_vm
                         sub_type = downtime
+                        only mig_online
                         # downtime in seconds.
                         max_downtime = 10
                         not_wait_for_migration = yes
@@ -1545,6 +1557,7 @@ variants:
                     - speed:
                         only after_login_vm
                         sub_type = speed
+                        only mig_online
                         # speed in Mb
                         min_migration_speed = 10M
                         max_migration_speed = 500M
@@ -1560,6 +1573,7 @@ variants:
                         # amount of memory shouldn't be too high otherwise
                         # migration will never end
                         only after_login_vm
+                        only mig_online
                         type = migration_multi_host_ping_pong
                         # stress_memory should be less than troughput of
                         # migration
@@ -1576,6 +1590,11 @@ variants:
                                 stress_type = disk
                             - all:
                                 stress_type = all
+                    - host_mig_offline:
+                        only exec
+                        only mig_offline
+                        host_mig_offline = yes
+                        type = migration_multi_host
 
             - cpuflags_multi_host:
                 type = cpuflags
