@@ -773,5 +773,26 @@ class NetworkXML(NetworkXMLBase):
             logging.debug("Network XML: %s", debug_line)
 
 
+    def create(self):
+        """
+        Adds non-persistant / transient network to libvirt with net-create
+        """
+        self.virsh.net_create(self.xml)
+
+
+    def orbital_nuclear_strike(self):
+        """It's the only way to really be sure.  Remove all libvirt state"""
+        try:
+            self['active'] = False # deactivate (stop) network if active
+        except LibvirtXMLError, detail:
+            # inconsequential, network will be removed
+            logging.warning(detail)
+        try:
+            self['defined'] = False # undefine (delete) network if persistent
+        except LibvirtXMLError, detail:
+            # network already gone
+            logging.warning(detail)
+
+
     # TODO: Add functions for Network's Operation.
     # TODO: Add new_from_template method
