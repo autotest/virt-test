@@ -4,6 +4,10 @@ from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
 
 
+#: List of test types to strip names by default
+TEST_TYPES_STRIP_NAMES = ['kvm', 'libvirt']
+
+
 class Test(object):
     """
     Mininal test class used to run a virt test.
@@ -26,7 +30,7 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        if options.config is None and options.type in ['kvm', 'libvirt']:
+        if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
             self.tag = ".".join(params['name'].split(".")[12:])
         else:
             self.tag = ".".join(params['shortname'].split("."))
@@ -375,7 +379,7 @@ def print_test_list(options, cartesian_parser):
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
             index +=1
-            if options.config is None and options.type in ['kvm', 'libvirt']:
+            if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
                 # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
                 shortname = params['name'].split(".")[12:]
                 shortname = ".".join(shortname)
@@ -489,7 +493,7 @@ def run_tests(parser, options):
     last_index = -1
 
     for i, d in enumerate(parser.get_dicts()):
-        if options.config is None and options.type in ['kvm', 'libvirt']:
+        if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
             shortname = ".".join(d['name'].split(".")[12:])
         else:
             shortname = ".".join(d['shortname'].split("."))
@@ -526,7 +530,7 @@ def run_tests(parser, options):
     setup_flag = 1
     cleanup_flag = 2
     for dct in parser.get_dicts():
-        if options.config is None and options.type in ['kvm', 'libvirt']:
+        if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
             shortname = ".".join(d['name'].split(".")[12:])
         else:
             shortname = ".".join(d['shortname'].split("."))
@@ -608,7 +612,7 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            if options.config is None and options.type in ['kvm', 'libvirt']:
+            if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
                 shortname = ".".join(d['name'].split(".")[12:])
             else:
                 shortname = ".".join(d['shortname'].split("."))
