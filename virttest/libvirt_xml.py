@@ -78,7 +78,8 @@ class LibvirtXMLBase(propcan.PropCanBase):
         @param: virsh_instance: virsh module or instance to use
         """
         # Don't define any initial property values
-        super(LibvirtXMLBase, self).__init__({'virsh':virsh_instance, 'xml':None})
+        super(LibvirtXMLBase, self).__init__({'virsh':virsh_instance,
+                                              'xml':None})
 
 
     def __str__(self):
@@ -234,17 +235,23 @@ class VMXMLBase(LibvirtXMLBase):
             del: removes vcpu tag
     """
 
-    __slots__ = LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name', 'uuid',
-                                            'vcpu')
+    __slots__ = LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
+                                            'uuid', 'vcpu')
 
 
     def get_hypervisor_type(self):
+        """
+        Accessor method for 'hypervisor_type' property
+        """
         xmltreefile = self.dict_get('xml')
         root = xmltreefile.getroot()
         return root.get('type')
 
 
     def set_hypervisor_type(self, value):
+        """
+        Accessor method for 'hypervisor_type' property
+        """
         xmltreefile = self.dict_get('xml')
         root = xmltreefile.getroot()
         root.set('type', '"%s"' % str(value))
@@ -252,10 +259,14 @@ class VMXMLBase(LibvirtXMLBase):
 
 
     def del_hypervisor_type(self):
+        """
+        Accessor method for 'hypervisor_type' property
+        """
         # Raise different exception if xml wasn't loaded
         if self.has_key('xml'):
             pass
-        raise LibvirtXMLError("Can't delete required hypervisor hypervisor_type property")
+        raise LibvirtXMLError("Can't delete required hypervisor"
+                              " hypervisor_type property")
 
 
     def get_vm_name(self):
@@ -324,9 +335,9 @@ class VMXMLBase(LibvirtXMLBase):
         xmltreefile = self.dict_get('xml')
         try:
             xmltreefile.remove_by_xpath('uuid')
-            xmltreefile.write()
-        except AssertionError:
+        except AttributeError:
             pass # element not found, nothing to delete
+        xmltreefile.write()
 
 
     def get_vcpu(self):
@@ -358,9 +369,9 @@ class VMXMLBase(LibvirtXMLBase):
         xmltreefile = self.dict_get('xml')
         try:
             xmltreefile.remove_by_xpath('vcpu')
-            xmltreefile.write()
         except AttributeError:
             pass # Element not found, already removed.
+        xmltreefile.write()
 
 
 class VMXML(VMXMLBase):
@@ -576,4 +587,14 @@ class NetworkXML(NetworkXMLBase):
         self.set_xml(network_xml_file)
 
 
-    #TODO:Add functions for Network's Operation.
+    def debug_xml(self):
+        """
+        Dump contents of XML file for debugging
+        """
+        xml = str(self) # LibvirtXMLBase.__str__ returns XML content
+        for debug_line in str(xml).splitlines():
+            logging.debug("Network XML: %s", debug_line)
+
+
+    # TODO: Add functions for Network's Operation.
+    # TODO: Add new_from_template method
