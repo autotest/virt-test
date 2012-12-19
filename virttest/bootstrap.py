@@ -20,6 +20,16 @@ mandatory_headers = {'kvm': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
                      'openvswitch': [],
                      'v2v': []}
 
+first_subtest = {'kvm': ['unattended_install'],
+                'libvirt': ['unattended_install'],
+                'openvswitch': ['unattended_install'],
+                'v2v': ['unattended_install']}
+
+last_subtest = {'kvm': ['shutdown'],
+                'libvirt': ['shutdown', 'remove_guest'],
+                'openvswitch': ['shutdown'],
+                'v2v': ['shutdown']}
+
 def download_file(url, destination, sha1_url, title="", interactive=False):
     """
     Verifies if file that can be find on url is on destination with right hash.
@@ -146,15 +156,165 @@ def verify_mandatory_programs(t_type):
         raise ValueError('Missing (cmds/includes): %s' % " ".join(failures))
 
 
+def write_subtests_files(config_file_list, output_file_object, test_type=None):
+    '''
+    Writes a collection of individual subtests config file to one output file
+
+    Optionally, for tests that we know their type, write the 'virt_test_type'
+    configuration automatically.
+    '''
+    for config_path in config_file_list:
+        config_file = open(config_path, 'r')
+
+        write_test_type_line = False
+
+        for line in config_file.readlines():
+            # special virt_test_type line output
+            if test_type is not None:
+                if write_test_type_line:
+                    type_line = "        virt_test_type = %s\n" % test_type
+                    output_file_object.write(type_line)
+                    write_test_type_line = False
+                elif line.startswith('- '):
+                    write_test_type_line = True
+
+            # regular line output
+            output_file_object.write("    %s" % line)
+
+        config_file.close()
+
+
+def create_subtests_cfg(t_type):
+    root_dir = data_dir.get_root_dir()
+
+    specific_test = os.path.join(root_dir, t_type, 'tests')
+    specific_test_list = glob.glob(os.path.join(specific_test, '*.py'))
+    shared_test = os.path.join(root_dir, 'tests')
+    shared_test_list = glob.glob(os.path.join(shared_test, '*.py'))
+    all_specific_test_list = []
+    for test in specific_test_list:
+        basename = os.path.basename(test)
+        if basename != "__init__.py":
+            all_specific_test_list.append(basename.split(".")[0])
+    all_shared_test_list = []
+    for test in shared_test_list:
+        basename = os.path.basename(test)
+        if basename != "__init__.py":
+            all_shared_test_list.append(basename.split(".")[0])
+
+    all_specific_test_list.sort()
+    all_shared_test_list.sort()
+    all_test_list = set(all_specific_test_list + all_shared_test_list)
+
+    specific_test_cfg = os.path.join(root_dir, t_type,
+                                   'tests', 'cfg')
+    shared_test_cfg = os.path.join(root_dir, 'tests', 'cfg')
+
+    shared_file_list = glob.glob(os.path.join(shared_test_cfg, "*.cfg"))
+    first_subtest_file = []
+    last_subtest_file = []
+    non_dropin_tests = []
+    tmp = []
+    for shared_file in shared_file_list:
+        shared_file_obj = open(shared_file, 'r')
+        for line in shared_file_obj.readlines():
+            line = line.strip()
+            if not line.startswith("#"):
+                try:
+                    (key, value) = line.split("=")
+                    if key.strip() == 'type':
+                        value = value.strip()
+                        value = value.split(" ")
+                        for v in value:
+                            if v not in non_dropin_tests:
+                                non_dropin_tests.append(v)
+                except:
+                    pass
+        shared_file_name = os.path.basename(shared_file)
+        shared_file_name = shared_file_name.split(".")[0]
+        if shared_file_name in first_subtest[t_type]:
+            if shared_file_name not in first_subtest_file:
+                first_subtest_file.append(shared_file)
+        elif shared_file_name in last_subtest[t_type]:
+            if shared_file_name not in last_subtest_file:
+                last_subtest_file.append(shared_file)
+        else:
+            if shared_file_name not in tmp:
+                tmp.append(shared_file)
+    shared_file_list = tmp
+    shared_file_list.sort()
+
+    specific_file_list = glob.glob(os.path.join(specific_test_cfg, "*.cfg"))
+    tmp = []
+    for shared_file in specific_file_list:
+        shared_file_obj = open(shared_file, 'r')
+        for line in shared_file_obj.readlines():
+            line = line.strip()
+            if not line.startswith("#"):
+                try:
+                    (key, value) = line.split("=")
+                    if key.strip() == 'type':
+                        value = value.strip()
+                        value = value.split(" ")
+                        for v in value:
+                            if v not in non_dropin_tests:
+                                non_dropin_tests.append(v)
+                except:
+                    pass
+        shared_file_name = os.path.basename(shared_file)
+        shared_file_name = shared_file_name.split(".")[0]
+        if shared_file_name in first_subtest[t_type]:
+            if shared_file_name not in first_subtest_file:
+                first_subtest_file.append(shared_file)
+        elif shared_file_name in last_subtest[t_type]:
+            if shared_file_name not in last_subtest_file:
+                last_subtest_file.append(shared_file)
+        else:
+            if shared_file_name not in tmp:
+                tmp.append(shared_file)
+    specific_file_list = tmp
+    specific_file_list.sort()
+
+    non_dropin_tests.sort()
+    non_dropin_tests = set(non_dropin_tests)
+    dropin_tests = all_test_list - non_dropin_tests
+    dropin_file_list = []
+    tmp_dir = data_dir.get_tmp_dir()
+    if not os.path.isdir(tmp_dir):
+        os.makedirs(tmp_dir)
+    for dropin_test in dropin_tests:
+        autogen_cfg_path = os.path.join(tmp_dir,
+                                        '%s.cfg' % dropin_test)
+        autogen_cfg_file = open(autogen_cfg_path, 'w')
+        autogen_cfg_file.write("# Drop-in test - auto generated snippet\n")
+        autogen_cfg_file.write("- %s:\n" % dropin_test)
+        autogen_cfg_file.write("    virt_test_type = %s\n" % t_type)
+        autogen_cfg_file.write("    type = %s\n" % dropin_test)
+        autogen_cfg_file.close()
+        dropin_file_list.append(autogen_cfg_path)
+
+    subtests_cfg = os.path.join(root_dir, t_type, 'cfg', 'subtests.cfg')
+    subtests_file = open(subtests_cfg, 'w')
+    subtests_file.write("# Do not edit, auto generated file from subtests config\n")
+    subtests_file.write("variants:\n")
+    write_subtests_files(first_subtest_file, subtests_file)
+    write_subtests_files(specific_file_list, subtests_file, t_type)
+    write_subtests_files(shared_file_list, subtests_file)
+    write_subtests_files(dropin_file_list, subtests_file)
+    write_subtests_files(last_subtest_file, subtests_file)
+
+    subtests_file.close()
+
+
 def create_config_files(test_dir, shared_dir, interactive, step=None):
     if step is None:
         step = 0
     logging.info("")
     step += 1
-    logging.info("%d - Creating config files from samples", step)
-    config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg.sample"))
+    logging.info("%d - Generating config set", step)
+    config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg"))
     config_file_list_shared = glob.glob(os.path.join(shared_dir,
-                                                     "*.cfg.sample"))
+                                                     "*.cfg"))
 
     # Handle overrides of cfg files. Let's say a test provides its own
     # subtest.cfg.sample, this file takes precedence over the shared
@@ -173,7 +333,6 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
     for config_file in config_file_list:
         src_file = config_file
         dst_file = os.path.join(test_dir, "cfg", os.path.basename(config_file))
-        dst_file = dst_file.rstrip(".sample")
         if not os.path.isfile(dst_file):
             logging.debug("Creating config file %s from sample", dst_file)
             shutil.copyfile(src_file, dst_file)
@@ -252,6 +411,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
                           sub_dir_path)
 
     create_config_files(test_dir, shared_dir, interactive, step)
+    create_subtests_cfg(test_name)
 
     logging.info("")
     step += 2
