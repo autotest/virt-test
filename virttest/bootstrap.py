@@ -1,4 +1,4 @@
-import urllib2, logging, os, glob, shutil
+import urllib2, logging, os, glob, shutil, ConfigParser
 from autotest.client.shared import logging_manager
 from autotest.client import utils
 import utils_misc, data_dir
@@ -30,23 +30,64 @@ last_subtest = {'kvm': ['shutdown'],
                 'openvswitch': ['shutdown'],
                 'v2v': ['shutdown']}
 
-def download_file(url, destination, sha1_url, title="", interactive=False):
+
+def get_asset_info(asset):
+    asset_path = os.path.join(data_dir.get_download_dir(), '%s.ini' % asset)
+    asset_cfg = ConfigParser.ConfigParser()
+    asset_cfg.read(asset_path)
+
+    url = asset_cfg.get(asset, 'url')
+    sha1_url = asset_cfg.get(asset, 'sha1_url')
+    title = asset_cfg.get(asset, 'title')
+    destination = asset_cfg.get(asset, 'destination')
+    if not os.path.isabs(destination):
+        destination = os.path.join(data_dir.get_data_dir(), destination)
+    asset_exists = os.path.isfile(destination)
+
+    # Optional fields
+    try:
+        destination_uncompressed = asset_cfg.get(asset,
+                                                 'destination_uncompressed')
+        if not os.path.isabs(destination_uncompressed):
+            destination_uncompressed = os.path.join(data_dir.get_data_dir(),
+                                                    destination)
+        uncompress_cmd = asset_cfg.get(asset, 'uncompress_cmd')
+    except:
+        destination_uncompressed = None
+        uncompress_cmd = None
+
+
+    return {'url': url, 'sha1_url': sha1_url, 'destination': destination,
+            'destination_uncompressed': destination_uncompressed,
+            'uncompress_cmd': uncompress_cmd, 'shortname': asset,
+            'title': title,
+            'downloaded': asset_exists}
+
+
+def download_file(asset, interactive=False):
     """
     Verifies if file that can be find on url is on destination with right hash.
 
     This function will verify the SHA1 hash of the file. If the file
     appears to be missing or corrupted, let the user know.
 
-    @param url: URL where the file can be found.
-    @param destination: Directory in local disk where we'd like the file to be.
-    @param sha1_url: URL with a file containing the sha1sum of the file in the
-            form: sha1sum  filename
+    @param asset: String describing an asset file inside the shared/download.d
+            directory. This asset file is a .ini file with information about
+            download and SHA1SUM url data.
+
     @return: True, if file had to be downloaded
              False, if file didn't have to be downloaded
     """
     file_ok = False
     had_to_download = False
     sha1 = None
+
+    asset_info = get_asset_info(asset)
+
+    url = asset_info['url']
+    sha1_url = asset_info['sha1_url']
+    destination = asset_info['destination']
+    title = asset_info['title']
 
     try:
         logging.info("Verifying expected SHA1 sum from %s", sha1_url)
@@ -57,30 +98,30 @@ def download_file(url, destination, sha1_url, title="", interactive=False):
     except Exception, e:
         logging.error("Failed to get SHA1 from file: %s", e)
 
-    if not os.path.isdir(destination):
-        os.makedirs(destination)
+    destination_dir = os.path.dirname(destination)
+    if not os.path.isdir(destination_dir):
+        os.makedirs(destination_dir)
 
-    path = os.path.join(destination, os.path.basename(url))
-    if not os.path.isfile(path):
-        logging.warning("File %s not found", path)
+    if not os.path.isfile(destination):
+        logging.warning("File %s not found", destination)
         if interactive:
             answer = utils.ask("Would you like to download it from %s?" % url)
         else:
             answer = 'y'
         if answer == 'y':
-            utils.interactive_download(url, path, "JeOS x86_64 image")
+            utils.interactive_download(url, destination, "Downloading %s" % title)
             had_to_download = True
         else:
-            logging.warning("Missing file %s", path)
+            logging.warning("Missing file %s", destination)
     else:
-        logging.info("Found %s", path)
+        logging.info("Found %s", destination)
         if sha1 is None:
             answer = 'n'
         else:
             answer = 'y'
 
         if answer == 'y':
-            actual_sha1 = utils.hash_file(path, method='sha1')
+            actual_sha1 = utils.hash_file(destination, method='sha1')
             if actual_sha1 != sha1:
                 logging.error("Actual SHA1 sum: %s", actual_sha1)
                 if interactive:
@@ -90,7 +131,7 @@ def download_file(url, destination, sha1_url, title="", interactive=False):
                     answer = 'y'
                 if answer == 'y':
                     logging.info("Updating image to the latest available...")
-                    utils.interactive_download(url, path, title)
+                    utils.interactive_download(url, destination, title)
                     had_to_download = True
                     file_ok = True
             else:
@@ -98,11 +139,61 @@ def download_file(url, destination, sha1_url, title="", interactive=False):
                 logging.info("SHA1 sum check OK")
         else:
             logging.info("File %s present, but did not verify integrity",
-                         path)
+                         destination)
 
     if file_ok:
-        logging.info("%s present, with proper checksum", path)
+        logging.info("%s present, with proper checksum", destination)
+
     return had_to_download
+
+
+def download_asset(asset, interactive=True, restore_image=False):
+    """
+    Download an asset defined on an asset file.
+
+    Asset files are located under /shared/download.d, are .ini files with the
+    following keys defined:
+        title: Title string to display in the download progress bar.
+        url = URL of the resource
+        sha1_url = URL with SHA1 information for the resource, in the form
+            sha1sum file_basename
+        destination = Location of your file relative to the data directory
+            (TEST_SUITE_ROOT/shared/data)
+        destination = Location of the uncompressed file relative to the data
+            directory (TEST_SUITE_ROOT/shared/data)
+        uncompress_cmd = Command that needs to be executed with the compressed
+            file as a parameter
+
+    @param asset: String describing an asset file.
+    @param interactive: Whether to ask the user before downloading the file.
+    @param restore_image: If the asset is a compressed image, we can uncompress
+                          in order to restore the image.
+    """
+    asset_info = get_asset_info(asset)
+    destination = os.path.join(data_dir.get_data_dir(),
+                               asset_info['destination'])
+
+    if (interactive and not os.path.isfile(destination)):
+        answer = utils.ask("File %s not present. Do you want to download it?" %
+                           asset_info['title'])
+    else:
+        answer = "y"
+
+    if answer == "y":
+        had_to_download = download_file(asset=asset, interactive=interactive)
+
+        requires_uncompress = asset_info['uncompress_cmd'] is not None
+        if requires_uncompress:
+            destination_uncompressed = asset_info['destination_uncompressed']
+            uncompressed_file_exists = os.path.exists(destination_uncompressed)
+
+            restore_image = (restore_image or had_to_download or not
+                             uncompressed_file_exists)
+
+            if os.path.isfile(destination) and restore_image:
+                os.chdir(os.path.dirname(destination))
+                uncompress_cmd = asset_info['uncompress_cmd']
+                utils.run("%s %s" % (uncompress_cmd, destination))
 
 
 def verify_recommended_programs(t_type):
@@ -416,34 +507,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     logging.info("")
     step += 2
     logging.info("%s - Verifying (and possibly downloading) guest image", step)
-
-    sha1_file = "SHA1SUM"
-    guest_tarball = "jeos-17-64.qcow2.7z"
-    base_location = "http://lmr.fedorapeople.org/jeos/"
-    url = os.path.join(base_location, guest_tarball)
-    tarball_sha1_url = os.path.join(base_location, sha1_file)
-    destination = os.path.join(base_dir, 'images')
-    uncompressed_file_path = os.path.join(base_dir, 'images',
-                                          'jeos-17-64.qcow2')
-    uncompressed_file_exists = os.path.isfile(uncompressed_file_path)
-
-    if (interactive and not
-        os.path.isfile(os.path.join(destination, guest_tarball))):
-        answer = utils.ask("Minimal basic guest image (JeOS) not present. "
-                           "Do you want to download it (~ 180MB)?")
-    else:
-        answer = "y"
-
-    if answer == "y":
-        had_to_download = download_file(url, destination, tarball_sha1_url,
-                                        title="Downloading JeOS x86_64",
-                                        interactive=interactive)
-        restore_image = (restore_image or had_to_download or not
-                         uncompressed_file_exists)
-        tarball_path = os.path.join(destination, guest_tarball)
-        if os.path.isfile(tarball_path) and restore_image:
-            os.chdir(destination)
-            utils.run("7za -y e %s" % tarball_path)
+    download_asset('jeos', interactive=interactive, restore_image=restore_image)
 
     if check_modules:
         logging.info("")
