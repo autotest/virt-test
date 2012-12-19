@@ -737,11 +737,31 @@ class NetworkXML(NetworkXMLBase):
     __slots__ = NetworkXMLBase.__slots__
 
 
-    def new_from_file(self, network_xml_file):
+    def __init__(self, network_name, virsh_instance=virsh):
         """
-        Load XML info from an xml file.
+        Initialize new instance with empty XML
         """
-        self.set_xml(network_xml_file)
+        super(NetworkXML, self).__init__(virsh_instance)
+        self.xml = u"<network><name>%s</name></network>" % network_name
+
+
+    @staticmethod # wraps __new__
+    def new_all_networks_dict(virsh_instance=virsh):
+        """
+        Return a dictionary of names to NetworkXML instances for all networks
+
+        @param: virsh: virsh module or instance to use
+        @return: Dictionary of network name to NetworkXML instance
+        """
+        result = {}
+        # Values should all share virsh property
+        new_netxml = NetworkXML("NoName", virsh_instance)
+        networks = new_netxml.virsh.net_state_dict(only_names=True).keys()
+        for net_name in networks:
+            new_copy = new_netxml.copy()
+            new_copy.xml = virsh.net_dumpxml(net_name).stdout.strip()
+            result[net_name] = new_copy
+        return result
 
 
     def debug_xml(self):
