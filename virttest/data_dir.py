@@ -66,6 +66,8 @@ def get_data_dir():
     return DATA_DIR
 
 def get_tmp_dir():
+    if not os.path.isdir(TMP_DIR):
+        os.makedirs(TMP_DIR)
     return TMP_DIR
 
 if __name__ == '__main__':
