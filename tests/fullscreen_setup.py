@@ -29,36 +29,23 @@ def run_fullscreen_setup(test, params, env):
     guest_session = guest_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
 
-    try:
-        guest_session.cmd("startx &", timeout=15)
-    except (aexpect.ShellCmdError, aexpect.ShellStatusError):
-        logging.debug("Ignoring an Exception that Occurs from calling startx")
-    # Sleep while X session starts
-    utils_spice.wait_timeout(15)
-
     logging.debug("Exporting guest display")
     guest_session.cmd("export DISPLAY=:0.0")
+    utils_spice.launch_startx(guest_vm)
 
     # Get the min, current, and max resolution on the guest
     output = guest_session.cmd("xrandr | grep Screen")
     outputlist = output.split()
 
-    MINindex = outputlist.index("minimum")
-    minimum = outputlist[MINindex + 1]
-    minimum += outputlist[MINindex + 2]
-    # Remove trailing comma
-    minimum += outputlist[MINindex + 3].replace(",", "")
+    minimum = "640x480"
 
-    CURRENTindex = outputlist.index("current")
-    current = outputlist[CURRENTindex + 1]
-    current += outputlist[CURRENTindex + 2]
+    current_index = outputlist.index("current")
+    current = outputlist[current_index + 1]
+    current += outputlist[current_index + 2]
     # Remove trailing comma
-    current += outputlist[CURRENTindex + 3].replace(",", "")
+    current += outputlist[current_index + 3].replace(",", "")
 
-    MAXindex = outputlist.index("maximum")
-    maximum = outputlist[MAXindex + 1]
-    maximum += outputlist[MAXindex + 2]
-    maximum += outputlist[MAXindex + 3]
+    maximum = "2560x1600"
 
     logging.info("Minimum: " + minimum + " Current: " + current +
                  " Maximum: " + maximum)
