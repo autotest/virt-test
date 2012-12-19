@@ -156,6 +156,34 @@ def verify_mandatory_programs(t_type):
         raise ValueError('Missing (cmds/includes): %s' % " ".join(failures))
 
 
+def write_subtests_files(config_file_list, output_file_object, test_type=None):
+    '''
+    Writes a collection of individual subtests config file to one output file
+
+    Optionally, for tests that we know their type, write the 'virt_test_type'
+    configuration automatically.
+    '''
+    for config_path in config_file_list:
+        config_file = open(config_path, 'r')
+
+        write_test_type_line = False
+
+        for line in config_file.readlines():
+            # special virt_test_type line output
+            if test_type is not None:
+                if write_test_type_line:
+                    type_line = "        virt_test_type = %s\n" % test_type
+                    output_file_object.write(type_line)
+                    write_test_type_line = False
+                elif line.startswith('- '):
+                    write_test_type_line = True
+
+            # regular line output
+            output_file_object.write("    %s" % line)
+
+        config_file.close()
+
+
 def create_subtests_cfg(t_type):
     root_dir = data_dir.get_root_dir()
 
@@ -265,26 +293,17 @@ def create_subtests_cfg(t_type):
         autogen_cfg_file.close()
         dropin_file_list.append(autogen_cfg_path)
 
-    config_file_list = []
-    for subtest_file in first_subtest_file:
-        config_file_list.append(subtest_file)
-
-    config_file_list += specific_file_list
-    config_file_list += shared_file_list
-    config_file_list += dropin_file_list
-
-    for subtest_file in last_subtest_file:
-        config_file_list.append(subtest_file)
-
     subtests_cfg = os.path.join(root_dir, t_type, 'cfg', 'subtests.cfg')
     subtests_file = open(subtests_cfg, 'w')
     subtests_file.write("# Do not edit, auto generated file from subtests config\n")
     subtests_file.write("variants:\n")
-    for config_path in config_file_list:
-        config_file = open(config_path, 'r')
-        for line in config_file.readlines():
-            subtests_file.write("    %s" % line)
-        config_file.close()
+    write_subtests_files(first_subtest_file, subtests_file)
+    write_subtests_files(specific_file_list, subtests_file, t_type)
+    write_subtests_files(shared_file_list, subtests_file)
+    write_subtests_files(dropin_file_list, subtests_file)
+    write_subtests_files(last_subtest_file, subtests_file)
+
+    subtests_file.close()
 
 
 def create_config_files(test_dir, shared_dir, interactive, step=None):
