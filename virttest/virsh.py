@@ -1023,6 +1023,18 @@ def net_create(xml_file, extra="", **dargs):
     return command("net-create %s %s" % (xml_file, extra), **dargs)
 
 
+def net_define(xml_file, extra="", **dargs):
+    """
+    Define network from a XML file, do not start
+
+    @param: xml_file: xml defining network
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-define %s %s" % (xml_file, extra), **dargs)
+
+
 def net_list(options, extra="", **dargs):
     """
     List networks on host.
@@ -1045,6 +1057,18 @@ def net_destroy(name, extra="", **dargs):
     @return: CmdResult object
     """
     return command("net-destroy %s %s" % (network, extra), **dargs)
+
+
+def net_undefine(network, extra="", **dargs):
+    """
+    Undefine a defined network on host.
+
+    @param: network: name/parameter for network option/argument
+    @param: extra: extra string to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-undefine %s %s" % (network, extra), **dargs)
 
 
 def pool_info(name, **dargs):
