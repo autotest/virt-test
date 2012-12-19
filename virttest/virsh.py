@@ -1047,7 +1047,50 @@ def net_list(options, extra="", **dargs):
     return command("net-list %s %s" % (options, extra), **dargs)
 
 
+def net_state_dict(only_names=False, **dargs):
     """
+    Return network name to state/autostart/persistent mapping
+
+    @param: only_names: When true, return network names as keys and None values
+    @param: dargs: standardized virsh function API keywords
+    @return: dictionary
+    """
+    dargs['ignore_status'] = True # so persistent check can work
+    netlist = net_list("--all", print_info=True).stdout.strip().splitlines()
+    # First two lines contain table header
+    netlist = netlist[2:]
+    result = {}
+    for line in netlist:
+        linesplit = line.split(None, 3)
+        name = linesplit[0]
+        # Several callers in libvirt_xml only requre defined names
+        if only_names:
+            result[name] = None
+            continue
+        # Keep search fast & avoid first-letter capital problems
+        active = not bool(linesplit[1].count("nactive"))
+        autostart = bool(linesplit[2].count("es"))
+        try:
+            # These will throw exception if network is transient
+            if autostart:
+                net_autostart(name, **dargs)
+            else:
+                net_autostart(name, "--disable", **dargs)
+            # no exception raised, must be persistent
+            persistent = True
+        except error.CmdError, cmdstatus:
+            # Keep search fast & avoid first-letter capital problems
+            if not bool(cmdstatus.stdout.count("ransient")):
+                persistent = False
+            else:
+                # Different error occured, re-raise it
+                raise
+        # Warning: These key names are used by libvirt_xml and test modules!
+        result[name] = {'active':active,
+                        'autostart':autostart,
+                        'persistent':persistent}
+    return result
+
 
 def net_start(network, extra="", **dargs):
     """
