@@ -672,6 +672,17 @@ def dumpxml(name, to_file="", **dargs):
     return result.stdout.strip()
 
 
+def domjobinfo(name, **dargs):
+    """
+    Get domain job information.
+
+    @param: name: VM name
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    return command("domjobinfo %s" % name, **dargs)
+
+
 def edit(options, **dargs):
     """
     Edit the XML configuration for a domain.
@@ -771,6 +782,19 @@ def resume(name, **dargs):
     except error.CmdError, detail:
         logging.error("Resume VM %s failed:\n%s", name, detail)
         return False
+
+
+def dump(name, path, option="", **dargs):
+    """
+    Dump the core of a domain to a file for analysis.
+
+    @param: name: VM name
+    @param: path: absolute path to state file
+    @param: option: command's option.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    return command("dump %s %s %s" % (name, path, option), **dargs)
 
 
 def save(option, path, **dargs):
