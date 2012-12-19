@@ -1047,11 +1047,25 @@ def net_list(options, extra="", **dargs):
     return command("net-list %s %s" % (options, extra), **dargs)
 
 
-def net_destroy(name, extra="", **dargs):
     """
-    Destroy actived network on host.
 
-    @param: name: name of guest
+def net_start(network, extra="", **dargs):
+    """
+    Start network on host.
+
+    @param: network: name/parameter for network option/argument
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-start %s %s" % (network, extra), **dargs)
+
+
+def net_destroy(network, extra="", **dargs):
+    """
+    Destroy (stop) an activated network on host.
+
+    @param: network: name/parameter for network option/argument
     @param: extra: extra string to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
@@ -1069,6 +1083,18 @@ def net_undefine(network, extra="", **dargs):
     @return: CmdResult object
     """
     return command("net-undefine %s %s" % (network, extra), **dargs)
+
+
+def net_autostart(network, extra="", **dargs):
+    """
+    Set/unset a network to autostart on host boot
+
+    @param: network: name/parameter for network option/argument
+    @param: extra: extra parameters to pass to command (e.g. --disable)
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-autostart %s %s" % (network, extra), **dargs)
 
 
 def pool_info(name, **dargs):
