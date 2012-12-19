@@ -733,9 +733,11 @@ class VM(virt_vm.BaseVM):
                 elif fallback:
                     spice_opts.append(fallback)
             s_port = str(utils_misc.find_free_port(*port_range))
-            set_value("port=%s", "spice_port", "port=%s" % s_port)
-            if optget("spice_port") == None:
+            if optget("spice_port") == "generate":
                 self.spice_options['spice_port'] = s_port
+                spice_opts.append("port=%s" % s_port)
+            else:
+                set_value("port=%s", "spice_port")
 
             set_value("password=%s", "spice_password", "disable-ticketing")
             set_yes_no_value("disable_copy_paste", yes_value="disable-copy-paste")
@@ -744,10 +746,11 @@ class VM(virt_vm.BaseVM):
             if optget("spice_ssl") == "yes":
                 # SSL only part
                 t_port = str(utils_misc.find_free_port(*tls_port_range))
-                set_value("tls-port=%s", "spice_tls_port",
-                          "tls-port=%s" % t_port)
-                if optget("spice_tls_port") == None:
+                if optget("spice_tls_port") == "generate":
                     self.spice_options['spice_tls_port'] = t_port
+                    spice_opts.append("tls-port=%s" % t_port)
+                else:
+                    set_value("tls-port=%s", "spice_tls_port")
 
                 prefix = optget("spice_x509_prefix")
                 if (not os.path.exists(prefix) and
