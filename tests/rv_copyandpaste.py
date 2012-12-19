@@ -1014,12 +1014,7 @@ def run_rv_copyandpaste(test, params, env):
 
     client_session.cmd("export DISPLAY=:0.0")
 
-    try:
-        guest_session.cmd("startx &", timeout=15)
-    except aexpect.ShellCmdError:
-        logging.debug("Ignoring an Exception that Occurs from calling startx")
-    #Wait for X to start
-    wait_timeout(10)
+    utils_spice.launch_startx(guest_vm)
 
     guest_session.cmd("export DISPLAY=:0.0")
     # Verify that gnome is now running on the guest
