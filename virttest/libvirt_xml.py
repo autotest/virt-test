@@ -495,31 +495,31 @@ class NetworkXMLBase(LibvirtXMLBase):
 
     __slots__ = LibvirtXMLBase.__slots__ + ('network_name', 'uuid',)
 
+    __slots__ = LibvirtXMLBase.__slots__ + ('name', 'uuid', 'bridge', 'defined',
+                                            'active', 'autostart', 'persistent')
 
-    def get_network_name(self):
+    def get_name(self):
         """
         Accessor method for getting 'name' property.
         """
         xmltreefile = self.dict_get('xml')
-        return xmltreefile.find('name').text
+        return xmltreefile.find('/name').text
 
 
-    def set_network_name(self, value):
+    def set_name(self, value):
         """
         Accessor method for setting 'name' property.
         """
-        if not self.super_get('INITIALIZED'):
-            self.dict_set('name', value)
-        else:
-            try:
-                xmltreefile = self.dict_get('xml')
-                xmltreefile.find('name').text = value
-            except AttributeError: # None.text
-                raise LibvirtXMLError("Invalid XML: Contain no<name>  element")
-            xmltreefile.write()
+        xmltreefile = self.dict_get('xml')
+        name = xmltreefile.find('/name')
+        if name is None:
+            name = xml_utils.ElementTree.SubElement(
+                                    xmltreefile.getroot(), "name")
+        name.text = value
+        xmltreefile.write()
 
 
-    def del_network_name(self):
+    def del_name(self):
         """
         Raise LibVirtXMLError because name is a required element
         """
@@ -529,47 +529,40 @@ class NetworkXMLBase(LibvirtXMLBase):
         raise LibvirtXMLError("name can't be deleted, it's a required element")
 
 
-    def get_network_uuid(self):
+    def get_uuid(self):
         """
         Return Network's uuid or None if not set
         """
         xmltreefile = self.dict_get('xml')
-        return xmltreefile.find('uuid').text
+        return xmltreefile.find('/uuid').text
 
 
-    def set_network_uuid(self, value):
+    def set_uuid(self, value):
         """
         Set or create a new uuid element for a Network
         """
-        # Always check to see if accessor is being called from __init__
-        if not self.super_get('INITIALIZED'):
-            self.dict_set('name', value) # Assuming value is None
+        xmltreefile = self.dict_get('xml')
+        if value is None:
+            del self.uuid
         else:
-            xmltreefile = self.dict_get('xml')
-            if value is None:
-                xmltreefile.remove_by_xpath('uuid')
-            else:
-                # uuid module added in python 2.5, no easy way to validate value
-                try:
-                    xmltreefile.find('uuid').text = value
-                except AttributeError: # uuid element not found
-                    # Documented preferred way to insert a new element
-                    newone = xml_utils.ElementTree.SubElement(
-                                        xmltreefile.get_root(), "uuid")
-                    newone.text = value
-            xmltreefile.write()
+            uuid = xmltreefile.find('/uuid')
+            if uuid is None:
+                uuid = xml_utils.ElementTree.SubElement(
+                                    xmltreefile.getroot(), "uuid")
+            uuid.text = value
+        xmltreefile.write()
 
 
-    def del_network_uuid(self):
+    def del_uuid(self):
         """
         Remove the uuid from a Network so libvirt can generate a new one
         """
         xmltreefile = self.dict_get('xml')
         try:
-            xmltreefile.remove_by_xpath('uuid')
-            xmltreefile.write()
-        except AssertionError:
+            xmltreefile.remove_by_xpath('/uuid')
+        except AttributeError:
             pass # element not found, nothing to delete
+        xmltreefile.write()
 
 
 class NetworkXML(NetworkXMLBase):
