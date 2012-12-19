@@ -998,6 +998,19 @@ def detach_interface(name, option="", **dargs):
     return command(cmd, **dargs)
 
 
+def net_dumpxml(net_name="", extra="", **dargs):
+    """
+    Dump XML from network named net_name.
+
+    @param: net_name: Name of a network
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    cmd = "net-dumpxml %s %s" % (net_name, extra)
+    return command(cmd, **dargs)
+
+
 def net_create(xml_file, extra="", **dargs):
     """
     Create _transient_ network from a XML file.
