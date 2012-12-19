@@ -756,6 +756,20 @@ class HumanMonitor(Monitor):
         return self.cmd(cmd)
 
 
+    def block_resize(self, device, size):
+        """
+        Resize the block device size
+
+        @param device: Block device name
+        @param size: Block device size need to set to. To keep the same with
+                     qmp monitor will use bytes as unit for the block size
+        @return: Command output
+        """
+        size = int(size) / 1024 / 1024
+        cmd = "block_resize device=%s,size=%s" % (device, size)
+        return self.send_args_cmd(cmd)
+
+
 class QMPMonitor(Monitor):
     """
     Wraps QMP monitor commands.
@@ -1538,3 +1552,15 @@ class QMPMonitor(Monitor):
         cmd = "system_wakeup"
         self.verify_supported_cmd(cmd)
         return self.cmd(cmd)
+
+
+    def block_resize(self, device, size):
+        """
+        Resize the block device size
+
+        @param device: Block device name
+        @param size: Block device size need to set to. Unit is bytes.
+        @return: Command output
+        """
+        cmd = "block_resize device=%s,size=%s" % (device, size)
+        return self.send_args_cmd(cmd)
