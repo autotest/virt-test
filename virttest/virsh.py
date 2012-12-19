@@ -137,7 +137,8 @@ class VirshSession(aexpect.ShellSession):
         aexpect.ShellSession.__init__(self, virsh_exec, a_id, prompt=prompt,
                                       auto_close=False)
         # fail if libvirtd is not running
-        if self.cmd_status('list', timeout=10) != 0:
+        if self.cmd_status('list', timeout=60) != 0:
+            logging.debug("Persistent virsh session is not responding, libvirtd may be dead.")
             raise aexpect.ShellStatusError(virsh_exec, 'list')
 
 
@@ -282,6 +283,7 @@ class VirshPersistent(Virsh):
                         existing.close(sig=signal.SIGTERM)
                     # Keep count:
                     self.__class__.SESSION_COUNTER -= 1
+                    self.dict_del('session_id')
         except KeyError:
             # Allow other exceptions to be raised
             pass # session was closed already
@@ -998,24 +1000,22 @@ def detach_interface(name, option="", **dargs):
 
 def net_create(xml_file, extra="", **dargs):
     """
-    Create network from a XML file.
+    Create _transient_ network from a XML file.
 
     @param: xml_file: xml defining network
     @param: extra: extra parameters to pass to command
-    @param: options: options to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    cmd = "net-create --file %s %s" % (xml_file, extra)
-    return command(cmd, **dargs)
+    return command("net-create %s %s" % (xml_file, extra), **dargs)
 
 
 def net_list(options, extra="", **dargs):
     """
     List networks on host.
 
-    @param: extra: extra parameters to pass to command
     @param: options: options to pass to command
+    @param: extra: extra parameters to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
@@ -1031,8 +1031,7 @@ def net_destroy(name, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    cmd = "net-destroy --network %s %s" % (name, extra)
-    return command(cmd, **dargs)
+    return command("net-destroy %s %s" % (network, extra), **dargs)
 
 
 def pool_info(name, **dargs):
