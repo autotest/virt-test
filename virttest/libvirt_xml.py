@@ -491,9 +491,31 @@ class VMXML(VMXMLBase):
 class NetworkXMLBase(LibvirtXMLBase):
     """
     Accessor methods for NetworkXML class.
-    """
 
-    __slots__ = LibvirtXMLBase.__slots__ + ('network_name', 'uuid',)
+    Properties:
+        name: virtual, operates on XML name tag
+        uuid: virtual, operates on uuid tag
+        bridge: virtual, operates on bridge attributes
+            get: Return dictionary of attributes & values
+            set: Set attributes from dictionary of values
+            del: Remove bridge element
+        defined: virtual, callout to virsh methods
+            get: True if libvirt knows network name
+            set: True defines network, False undefines to libvirt
+            del: Undefines network to libvirt
+        active: virtual, callout to virsh methods
+            get: True if network is active to libvirt
+            set: True activates network, False deactivates to libvirt
+            del: Deactivates network to libvirt
+        autostart: virtual, callout to virsh methods
+            get: True if libvirt autostarts network with same name
+            set: True to set autostart, False to unset to libvirt
+            del: Unset autostart to libvirt
+        persistent: virtual, callout to virsh methods
+            get: True if network was defined, False if only created.
+            set: Same as defined property
+            del: Same as defined property
+    """
 
     __slots__ = LibvirtXMLBase.__slots__ + ('name', 'uuid', 'bridge', 'defined',
                                             'active', 'autostart', 'persistent')
@@ -563,6 +585,148 @@ class NetworkXMLBase(LibvirtXMLBase):
         except AttributeError:
             pass # element not found, nothing to delete
         xmltreefile.write()
+
+
+    def get_bridge(self):
+        """Accessor method for 'bridge' property"""
+        xmltreefile = self.dict_get('xml')
+        element = xmltreefile.find('/bridge')
+        if element is not None:
+            return dict(element.items())
+        else:
+            raise LibvirtXMLError('No bridge element found')
+
+
+    def set_bridge(self, value):
+        """Accessor method for 'bridge' property"""
+        if not issubclass(value.__class__, dict):
+            raise LibvirtXMLError("Bridge property must be set from dictionary"
+                                  " value")
+        xmltreefile = self.dict_get('xml')
+        # Always make new element, so attributes can be removed
+        self.del_bridge()
+        element = xml_utils.ElementTree.SubElement(
+                                     xmltreefile.getroot(), "bridge")
+        for attr_key, attr_value in value.items():
+            element.set(str(attr_key), str(attr_value))
+        xmltreefile.write()
+
+
+    def del_bridge(self):
+        """Accessor method for 'bridge' property"""
+        xmltreefile = self.dict_get('xml')
+        try:
+            xmltreefile.remove_by_xpath('/bridge')
+        except AttributeError:
+            pass # element not found, nothing to delete
+        xmltreefile.write()
+
+
+    def __check_undefined__(self, errmsg):
+        if not self.defined:
+            raise LibvirtXMLError(errmsg)
+
+
+    def get_defined(self):
+        """
+        Accessor for 'define' property - does this name exist in network list
+        """
+        return self.name in self.virsh.net_state_dict(only_names=True).keys()
+
+
+    def set_defined(self, value):
+        """Accessor method for 'define' property, set True to define."""
+        if not self.super_get('INITIALIZED'):
+            pass # do nothing
+        value = bool(value)
+        if value:
+            self.virsh.net_define(self.xml) # send it the filename
+        else:
+            del self.defined
+
+
+    def del_defined(self):
+        """Accessor method for 'define' property, undefines network"""
+        self.__check_undefined__("Cannot undefine non-existant network")
+        self.virsh.net_undefine(self.name)
+
+
+    def get_active(self):
+        """Accessor method for 'active' property (True/False)"""
+        self.__check_undefined__("Cannot determine activation for undefined "
+                                 "network")
+        state_dict = self.virsh.net_state_dict()
+        return state_dict[self.name]['active']
+
+
+    def set_active(self, value):
+        """Accessor method for 'active' property, sets network active"""
+        if not self.super_get('INITIALIZED'):
+            pass # do nothing
+        self.__check_undefined__("Cannot activate undefined network")
+        value = bool(value)
+        if value:
+            if not self.active:
+                self.virsh.net_start(self.name)
+            else:
+                pass # don't activate twice
+        else:
+            if self.active:
+                del self.active
+            else:
+                pass # don't deactivate twice
+
+
+    def del_active(self):
+        """Accessor method for 'active' property, stops network"""
+        self.__check_undefined__("Cannot deactivate undefined network")
+        if self.active:
+            self.virsh.net_destroy(self.name)
+        else:
+            pass # don't destroy twice
+
+
+    def get_autostart(self):
+        """Accessor method for 'autostart' property, True if set"""
+        self.__check_undefined__("Cannot determine autostart for undefined "
+                                 "network")
+        state_dict = self.virsh.net_state_dict()
+        return state_dict[self.name]['autostart']
+
+
+    def set_autostart(self, value):
+        """Accessor method for 'autostart' property, sets/unsets autostart"""
+        if not self.super_get('INITIALIZED'):
+            pass # do nothing
+        self.__check_undefined__("Cannot set autostart for undefined network")
+        value = bool(value)
+        if value:
+            if not self.autostart:
+                self.virsh.net_autostart(self.name)
+            else:
+                pass # don't set autostart twice
+        else:
+            if self.autostart:
+                del self.autostart
+            else:
+                pass # don't unset autostart twice
+
+
+    def del_autostart(self):
+        """Accessor method for 'autostart' property, unsets autostart"""
+        if not self.defined:
+            raise LibvirtXMLError
+        self.virsh.net_autostart(self.name, "--disable")
+
+
+    def get_persistent(self):
+        """Accessor method for 'persistent' property"""
+        state_dict = self.virsh.net_state_dict()
+        return state_dict[self.name]['persistent']
+
+    # Copy behavior for consistency
+    set_persistent = set_defined
+    del_persistent = del_defined
 
 
 class NetworkXML(NetworkXMLBase):
