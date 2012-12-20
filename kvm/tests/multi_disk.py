@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import kvm_qtree, env_process
+from virttest import kvm_qtree, env_process, data_dir
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -201,7 +201,7 @@ def run_multi_disk(test, params, env):
     (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
     err += tmp1 + tmp2
     err += disks.generate_params()
-    err += disks.check_disk_params(params, vm.root_dir)
+    err += disks.check_disk_params(params, data_dir.get_data_dir())
     (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(
                                     session.cmd_output('cat /proc/scsi/scsi'))
     err += tmp1 + tmp2
