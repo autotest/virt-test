@@ -901,7 +901,7 @@ class VM(virt_vm.BaseVM):
                 return " -usb"
 
             if not has_device(device_help, usb_type):
-                raise virt_vm.VMDeviceNotSupportedError(self.name, usb_type)
+                raise error.TestNAError("usb controller %s not available" % usb_type)
 
             cmd = " -device %s" % usb_type
             cmd += _add_option("id", usb_id)
@@ -925,6 +925,10 @@ class VM(virt_vm.BaseVM):
             """
             This function is used to add usb device except for usb storage.
             """
+
+            if not has_device(device_help, usb_type):
+                raise error.TestNAError("usb device %s not available" % usb_type)
+
             cmd = ""
             if has_option(help_text, "device"):
                 cmd = " -device %s" % usb_type
