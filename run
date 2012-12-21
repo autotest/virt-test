@@ -186,6 +186,8 @@ class VirtTestApp(object):
         @attribute cartesian_parser: specialized test config parser, it's going
                 to be set to something useful later.
         """
+        # set English environment (command output might be localized, need to be safe)
+        os.environ['LANG'] = 'en_US.UTF-8'
         self.option_parser = VirtTestRunParser()
         self.options, self.args = self.option_parser.parse_args()
         self.cartesian_parser = None
