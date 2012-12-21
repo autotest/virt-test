@@ -1397,3 +1397,43 @@ class VM(virt_vm.BaseVM):
         dominfo_dict = self.dominfo()
         memory = dominfo_dict['Used memory'].split(' ')[0] # strip off ' kb'
         return int(memory)
+
+
+    def get_blk_devices(self):
+        """
+        Get vm's block devices.
+        
+        Return a dict include all devices detail info.
+        example:
+        {target: {'type': value, 'device': value, 'source': value}}
+        """
+        domblkdict = {}
+        options = "--details"
+        result = virsh.domblklist(self.name, options, ignore_status=True,
+                                  uri=self.connect_uri)
+        blklist = result.stdout.strip().splitlines()
+        if result.exit_status != 0:
+            logging.info("Get vm devices failed.")
+        else:
+            blklist = blklist[2:]
+            for line in blklist:
+                linesplit = line.split(None, 4)
+                target = linesplit[2]
+                blk_detail = {'type': linesplit[0], 
+                              'device': linesplit[1],
+                              'source': linesplit[3]}
+                domblkdict[target] = blk_detail
+        return domblkdict
+
+
+    def get_disk_devices(self):
+        """
+        Get vm's disk type block devices.
+        """
+        blk_devices = self.get_blk_devices()
+        disk_devices = {}
+        for target in blk_devices:
+            details = blk_devices[target]
+            if details['device'] == "disk":
+                disk_devices[target] = details
+        return disk_devices
