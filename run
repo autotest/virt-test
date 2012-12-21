@@ -4,7 +4,7 @@ Run virt tests outside the autotest client harness.
 
 @copyright: Red Hat 2012
 """
-import os, sys, traceback, signal
+import os, sys, traceback, signal, optparse
 
 class StreamProxy(object):
     """
@@ -43,31 +43,37 @@ class StreamProxy(object):
         else:
             self.stream = self.log
 
+class VirtTestRunParser(optparse.OptionParser):
+    def __init__(self):
+        optparse.OptionParser.__init__(self, usage = 'Usage: %prog [options]')
+
+        general = optparse.OptionGroup(self, 'General Options')
+        general.add_option("-v", "--verbose", action="store_true",
+                           dest="verbose", help="Exhibit debug messages")
+        general.add_option("-t", "--type", action="store", dest="type",
+                           help="Choose test type (kvm, libvirt, v2v)")
+        general.add_option("-c", "--config", action="store", dest="config",
+                           help="Explicitly choose a cartesian config")
+        general.add_option("-r", "--restore-image", action="store_true",
+                           dest="restore",
+                           help="Restore image from pristine image")
+        general.add_option("--tests", action="store", dest="tests",
+                           help=('List of space separated tests to be executed'
+                                ' - example: --tests "boot, reboot, shutdown"'))
+        general.add_option("--list-tests", action="store_true", dest="list",
+                           help="List tests available")
+        general.add_option("--data-dir", action="store", dest="datadir",
+                       help="Path to a data dir (that locates ISOS and images)")
+        self.add_option_group(general)
+
+        qemu = optparse.OptionGroup(self, 'Options specific to the kvm test')
+        qemu.add_option("--qemu-bin", action="store", dest="qemu",
+                        help="Path to a custom qemu binary to be tested")
+        self.add_option_group(qemu)
+
 
 if __name__ == '__main__':
-    import optparse
-    option_parser = optparse.OptionParser()
-    option_parser.add_option("-v", "--verbose",
-                      action="store_true", dest="verbose",
-                      help="Exhibit debug messages")
-    option_parser.add_option("-t", "--type",
-                      action="store", dest="type",
-                      help="Choose test type (kvm, libvirt, v2v)")
-    option_parser.add_option("-c", "--config",
-                      action="store", dest="config",
-                      help="Explicitly choose a cartesian config")
-    option_parser.add_option("-r", "--restore-image",
-                      action="store_true", dest="restore",
-                      help="Restore image from pristine image")
-    option_parser.add_option("--qemu-bin", action="store", dest="qemu",
-                      help="Path to a custom qemu binary to be tested")
-    option_parser.add_option("--tests", action="store", dest="tests",
-                      help=('List of space separated tests to be executed'
-                            ' - example: --tests "boot, reboot, shutdown"'))
-    option_parser.add_option("--list-tests", action="store_true", dest="list",
-                      help="List tests available")
-    option_parser.add_option("--data-dir", action="store", dest="datadir",
-                      help="Path to a data dir (that locates ISOS and images)")
+    option_parser = VirtTestRunParser()
     options, args = option_parser.parse_args()
 
     if (not options.type) and (not options.config):
