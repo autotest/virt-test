@@ -42,10 +42,104 @@ class StreamProxy(object):
         else:
             self.stream = self.log
 
+def _silence_stderr():
+    """
+    Points the stderr FD (2) to /dev/null, silencing it.
+    """
+    out_fd = os.open('/dev/null', os.O_WRONLY | os.O_CREAT)
+    try:
+        os.dup2(out_fd, 2)
+    finally:
+        os.close(out_fd)
+    sys.stderr = os.fdopen(2, 'w')
+
+def _handle_stdout(options):
+    """
+    Replace stdout with a proxy object.
+
+    Depending on self.options.verbose, make proxy print to /dev/null, or
+    original sys.stdout stream.
+    """
+    if not options.verbose:
+        _silence_stderr()
+        # Replace stdout with our proxy pointing to /dev/null
+        sys.stdout = StreamProxy(filename="/dev/null", stream=sys.stdout)
+    else:
+        # Retain full stdout
+        sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
+
+def _import_autotest_modules():
+    """
+    Import the autotest modules.
+
+    Two methods will be attempted:
+    1) Import the libraries system wide. For this to work, the
+       autotest-framework package for the given distro must be installed.
+    2) Import the libraries from an autotest checkout. For this to work,
+       the env variable 'AUTOTEST_PATH' must be set to the path of an
+       autotest checkout.
+    """
+    try:
+        from autotest.client import setup_modules
+    except ImportError:
+        try:
+            autotest_dir = os.environ['AUTOTEST_PATH']
+        except KeyError:
+            try:
+                sys.stdout.switch()
+            except AttributeError:
+                pass
+            print("Environment variable $AUTOTEST_PATH not set. "
+                  "please set it to a path containing an autotest checkout")
+            print("Or install autotest-framework for your distro")
+            sys.exit(1)
+        client_dir = os.path.join(autotest_dir, 'client')
+        sys.path.insert(0, client_dir)
+        import setup_modules
+        sys.path.pop(0)
+        setup_modules.setup(base_path=client_dir,
+                            root_module_name="autotest.client")
+
+def _find_default_qemu_paths(options_qemu=None):
+    qemu_bin_path = None
+    _import_autotest_modules()
+    from virttest import utils_misc
+
+    if options_qemu:
+        if not os.path.isfile(options_qemu):
+            raise RuntimeError("Invalid qemu binary provided (%s)" %
+                               options_qemu)
+        qemu_bin_path = options_qemu
+    else:
+        try:
+            qemu_bin_path = utils_misc.find_command('qemu-kvm')
+        except ValueError:
+            qemu_bin_path = utils_misc.find_command('kvm')
+
+    qemu_dirname = os.path.dirname(qemu_bin_path)
+    parent_qemu_dirname = os.path.dirname(qemu_dirname)
+    qemu_img_path = os.path.join(parent_qemu_dirname, 'qemu-img')
+    qemu_io_path = os.path.join(parent_qemu_dirname, 'qemu-io')
+
+    if not os.path.exists(qemu_img_path):
+        qemu_img_path = utils_misc.find_command('qemu-img')
+
+    if not os.path.exists(qemu_io_path):
+        qemu_io_path = utils_misc.find_command('qemu-io')
+
+    return [qemu_bin_path, qemu_img_path, qemu_io_path]
+
 
 class VirtTestRunParser(optparse.OptionParser):
     def __init__(self):
         optparse.OptionParser.__init__(self, usage = 'Usage: %prog [options]')
+        _import_autotest_modules()
+        from virttest import data_dir
+
+        try:
+            qemu_bin_path = _find_default_qemu_paths()[0]
+        except ValueError:
+            qemu_bin_path = "Could not find one"
 
         general = optparse.OptionGroup(self, 'General Options')
         general.add_option("-v", "--verbose", action="store_true",
@@ -63,12 +157,15 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("--list-tests", action="store_true", dest="list",
                            help="List tests available")
         general.add_option("--data-dir", action="store", dest="datadir",
-                       help="Path to a data dir (that locates ISOS and images)")
+                           help=("Path to a data dir. "
+                                 "Default path: %s" %
+                                 data_dir.get_backing_data_dir()))
         self.add_option_group(general)
 
         qemu = optparse.OptionGroup(self, 'Options specific to the kvm test')
         qemu.add_option("--qemu-bin", action="store", dest="qemu",
-                        help="Path to a custom qemu binary to be tested")
+                        help=("Path to a custom qemu binary to be tested. "
+                              "Default path: %s" % qemu_bin_path))
         self.add_option_group(qemu)
 
 
@@ -93,92 +190,13 @@ class VirtTestApp(object):
         self.options, self.args = self.option_parser.parse_args()
         self.cartesian_parser = None
 
-    def _silence_stderr(self):
-        """
-        Points the stderr FD (2) to /dev/null, silencing it.
-        """
-        out_fd = os.open('/dev/null', os.O_WRONLY | os.O_CREAT)
-        try:
-            os.dup2(out_fd, 2)
-        finally:
-            os.close(out_fd)
-        sys.stderr = os.fdopen(2, 'w')
-
-    def _handle_stdout(self):
-        """
-        Replace stdout with a proxy object.
-
-        Depending on self.options.verbose, make proxy print to /dev/null, or
-        original sys.stdout stream.
-        """
-        if not self.options.verbose:
-            self._silence_stderr()
-            # Replace stdout with our proxy pointing to /dev/null
-            sys.stdout = StreamProxy(filename="/dev/null", stream=sys.stdout)
-        else:
-            # Retain full stdout
-            sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
-
-    def _import_autotest_modules(self):
-        """
-        Import the autotest modules.
-
-        Two methods will be attempted:
-        1) Import the libraries system wide. For this to work, the
-           autotest-framework package for the given distro must be installed.
-        2) Import the libraries from an autotest checkout. For this to work,
-           the env variable 'AUTOTEST_PATH' must be set to the path of an
-           autotest checkout.
-        """
-        try:
-            from autotest.client import setup_modules
-        except ImportError:
-            try:
-                autotest_dir = os.environ['AUTOTEST_PATH']
-            except KeyError:
-                try:
-                    sys.stdout.switch()
-                except AttributeError:
-                    pass
-                print("Environment variable $AUTOTEST_PATH not set. "
-                      "please set it to a path containing an autotest checkout")
-                print("Or install autotest-framework for your distro")
-                sys.exit(1)
-            client_dir = os.path.join(autotest_dir, 'client')
-            sys.path.insert(0, client_dir)
-            import setup_modules
-            sys.path.pop(0)
-            setup_modules.setup(base_path=client_dir,
-                                root_module_name="autotest.client")
 
     def _process_qemu_bin(self):
         """
         Puts the value of the qemu bin option in the cartesian parser command.
         """
-        from virttest import utils_misc
-        qemu_bin_path = None
-        if self.options.qemu:
-            if not os.path.isfile(self.options.qemu):
-                raise RuntimeError("Invalid qemu binary provided (%s)" %
-                                   self.options.qemu)
-            qemu_bin_path = self.options.qemu
-        else:
-            try:
-                qemu_bin_path = utils_misc.find_command('qemu-kvm')
-            except ValueError:
-                qemu_bin_path = utils_misc.find_command('kvm')
-
-        qemu_dirname = os.path.dirname(qemu_bin_path)
-        parent_qemu_dirname = os.path.dirname(qemu_dirname)
-        qemu_img_path = os.path.join(parent_qemu_dirname, 'qemu-img')
-        qemu_io_path = os.path.join(parent_qemu_dirname, 'qemu-io')
-
-        if not os.path.exists(qemu_img_path):
-            qemu_img_path = utils_misc.find_command('qemu-img')
-
-        if not os.path.exists(qemu_io_path):
-            qemu_io_path = utils_misc.find_command('qemu-io')
-
+        (qemu_bin_path, qemu_img_path,
+         qemu_io_path) = _find_default_qemu_paths(self.options.qemu)
         self.cartesian_parser.parse_string("qemu_binary = %s" % qemu_bin_path)
         self.cartesian_parser.parse_string("qemu_img_binary = %s" %
                                            qemu_img_path)
@@ -249,8 +267,8 @@ class VirtTestApp(object):
         3) Sets the console logging for tests.
         4) Runs the tests according to the options given.
         """
-        self._handle_stdout()
-        self._import_autotest_modules()
+        _handle_stdout(self.options)
+        _import_autotest_modules()
         try:
             from virttest import standalone_test
 
