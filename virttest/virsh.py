@@ -784,6 +784,18 @@ def resume(name, **dargs):
         return False
 
 
+def dommemstat(name, extra="", **dargs):
+    """
+    Store state of VM into named file.
+
+    @param: name: VM name
+    @param: extra: extra options to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    return command("dommemstat %s %s" % (name, extra), **dargs)
+
+
 def dump(name, path, option="", **dargs):
     """
     Dump the core of a domain to a file for analysis.
