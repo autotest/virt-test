@@ -62,6 +62,7 @@ def lgf_command(cmd, **dargs):
     """
     ignore_status = dargs.get('ignore_status', True)
     debug = dargs.get('debug', False)
+    uri = dargs.get('uri', None)
     timeout = dargs.get('timeout', 60)
 
     if debug:
@@ -69,7 +70,7 @@ def lgf_command(cmd, **dargs):
 
     # Raise exception if ignore_status == False
     try:
-        ret = utils.run(cmd, ignore_status=ignore_status,
+        ret = utils.run(cmd, ignore_status=ignore_status, 
                         verbose=debug, timeout=timeout)
     except error.CmdError, detail:
         raise LibguestfsCmdError(detail)
@@ -146,7 +147,7 @@ def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
         cmd += " --timeout %s" % timeoutarg
 
     # Allow to raise LibguestfsCmdError if ignore_status is False.
-    return lgf_command(cmd, **dargs)
+    return lgf_command(cmd, **dargs) 
 
 
 def virt_edit_cmd(disk_or_domain, file_path, options=None,
