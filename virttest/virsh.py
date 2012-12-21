@@ -661,6 +661,17 @@ def dumpxml(name, to_file="", **dargs):
     return result.stdout.strip()
 
 
+def edit(options, **dargs):
+    """
+    Edit the XML configuration for a domain.
+
+    @param options: virsh edit options string.
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("edit %s" % options, **dargs)
+
+
 def domxml_from_native(format, file, options=None, **dargs):
     """
     Convert native guest configuration format to domain XML format.
