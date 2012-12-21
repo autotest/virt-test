@@ -8,27 +8,32 @@ basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
                         'libvirt': [('virsh',), ('virt-install',)],
                         'openvswitch': [],
-                        'v2v': []}
+                        'v2v': [],
+                        'libguestfs': [('perl',)]}
 
 mandatory_programs = {'qemu': basic_program_requirements + ['gcc'],
                       'libvirt': basic_program_requirements,
                       'openvswitch': basic_program_requirements,
-                      'v2v': basic_program_requirements}
+                      'v2v': basic_program_requirements,
+                      'libguestfs': basic_program_requirements}
 
 mandatory_headers = {'qemu': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
                      'libvirt': [],
                      'openvswitch': [],
-                     'v2v': []}
+                     'v2v': [],
+                     'libguestfs': []}
 
 first_subtest = {'qemu': ['unattended_install'],
                 'libvirt': ['unattended_install'],
                 'openvswitch': ['unattended_install'],
-                'v2v': ['unattended_install']}
+                'v2v': ['unattended_install'],
+                'libguestfs': ['unattended_install']}
 
 last_subtest = {'qemu': ['shutdown'],
                 'libvirt': ['shutdown', 'remove_guest'],
                 'openvswitch': ['shutdown'],
-                'v2v': ['shutdown']}
+                'v2v': ['shutdown'],
+                'libguestfs': ['shutdown']}
 
 
 def get_asset_info(asset):
