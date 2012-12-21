@@ -1,6 +1,6 @@
-import logging, re
+import logging, time, re
 from autotest.client.shared import utils, error
-from virttest import libvirt_vm
+from virttest import libvirt_vm, aexpect
 import virttest.utils_libguestfs as lgf
 
 
@@ -17,6 +17,7 @@ def login_to_check_foo_line(vm, file_ref, foo_line):
     try:
         session = vm.wait_for_login()
         cat_file = session.cmd_output("cat %s" % file_ref)
+        session.read_nonblocking()
         logging.info("\n%s", cat_file)
         session.cmd("cp -f %s %s" % (file_ref, backup))
         session.cmd("sed -e \'s/%s$//g\' %s > %s" % (foo_line, backup, file_ref))
@@ -43,7 +44,7 @@ def run_virt_edit(test, params, env):
     6) Check result.
     """
 
-    vm_name = params.get("main_vm")
+    vm_name = params.get("main_vm", "vm1")
     vm = env.get_vm(vm_name)
     uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
                                                        "default"))
@@ -85,7 +86,7 @@ def run_virt_edit(test, params, env):
     else:
         expr = ""
 
-    # Stop libvirtd if test need.
+    #Stop libvirtd if test need.
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
         libvirt_vm.libvirtd_stop()
@@ -96,7 +97,7 @@ def run_virt_edit(test, params, env):
                                options_suffix, expr, **virsh_dargs)
     status = result.exit_status
 
-    # Recover libvirtd.
+    #Recover libvirtd.
     if libvirtd == "off":
         libvirt_vm.libvirtd_start()
 
