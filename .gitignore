@@ -42,4 +42,10 @@ openvswitch/cfg/guest-hw.cfg
 openvswitch/cfg/guest-os.cfg
 openvswitch/cfg/subtests.cfg
 openvswitch/cfg/virtio-win.cfg
+libguestfs/cfg/base.cfg
+libguestfs/cfg/cdkeys.cfg
+libguestfs/cfg/guest-hw.cfg
+libguestfs/cfg/guest-os.cfg
+libguestfs/cfg/subtests.cfg
+libguestfs/cfg/virtio-win.cfg
 tmp
