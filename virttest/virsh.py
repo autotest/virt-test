@@ -1465,3 +1465,19 @@ def snapshot_delete(name, snapshot, **dargs):
     @return: CmdResult instance
     """
     return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
+
+
+def domblklist(name, options=None, **dargs):
+    """
+    Get domain devices.
+
+    @param name: name of domain
+    @param options: options of domblklist.
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "domblklist %s" % name
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
