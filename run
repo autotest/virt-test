@@ -153,7 +153,7 @@ class VirtTestRunParser(optparse.OptionParser):
                            help="Restore image from pristine image")
         general.add_option("--tests", action="store", dest="tests",
                            help=('List of space separated tests to be executed'
-                                ' - example: --tests "boot, reboot, shutdown"'))
+                                ' - example: --tests "boot reboot shutdown"'))
         general.add_option("--list-tests", action="store_true", dest="list",
                            help="List tests available")
         general.add_option("--data-dir", action="store", dest="datadir",
