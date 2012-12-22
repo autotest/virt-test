@@ -150,7 +150,7 @@ class VirtTestRunParser(optparse.OptionParser):
                            help="Explicitly choose a cartesian config")
         general.add_option("-r", "--restore-image", action="store_true",
                            dest="restore",
-                           help="Restore image from pristine image")
+                           help="Restore guest image from the pristine image")
         general.add_option("--tests", action="store", dest="tests",
                            help=('List of space separated tests to be executed'
                                 ' - example: --tests "boot reboot shutdown"'))
