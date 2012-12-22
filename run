@@ -166,6 +166,9 @@ class VirtTestRunParser(optparse.OptionParser):
         qemu.add_option("--qemu-bin", action="store", dest="qemu",
                         help=("Path to a custom qemu binary to be tested. "
                               "Default path: %s" % qemu_bin_path))
+        qemu.add_option("--accel", action="store", dest="accel", default="kvm",
+                        help=("Accelerator used to run qemu (kvm or tcg). "
+                              "Default: kvm"))
         self.add_option_group(qemu)
 
 
@@ -204,11 +207,20 @@ class VirtTestApp(object):
                                            qemu_img_path)
         self.cartesian_parser.parse_string("qemu_io_binary = %s" % qemu_io_path)
 
+    def _process_qemu_accel(self):
+        """
+        Puts the value of the qemu bin option in the cartesian parser command.
+        """
+        if self.options.accel == 'tcg':
+            self.cartesian_parser.parse_string("enable_kvm = no")
+            self.cartesian_parser.parse_string("disable_kvm = yes")
+
     def _process_qemu_specific_options(self):
         """
         Calls for processing all options specific to the qemu test.
         """
         self._process_qemu_bin()
+        self._process_qemu_accel()
 
     def _process_options(self):
         """
