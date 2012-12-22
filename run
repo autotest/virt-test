@@ -151,6 +151,10 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("-r", "--restore-image", action="store_true",
                            dest="restore",
                            help="Restore guest image from the pristine image")
+        general.add_option("-j", "--restore-image-between-tests",
+                           action="store_true", default=False,
+                           dest="restore_image_between_tests",
+                           help="Restore from the pristine image on *every test*")
         general.add_option("--tests", action="store", dest="tests",
                            help=('List of space separated tests to be executed'
                                 ' - example: --tests "boot reboot shutdown"'))
@@ -278,6 +282,9 @@ class VirtTestApp(object):
 
         if self.options.restart_vm:
             self.cartesian_parser.parse_string("restart_vm = yes")
+
+        if self.options.restore_image_between_tests:
+            self.cartesian_parser.parse_string("restore_image = yes")
 
 
     def main(self):
