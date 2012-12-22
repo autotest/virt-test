@@ -493,6 +493,34 @@ def run_tests(parser, options):
 
     last_index = -1
 
+    logging.info("Starting test job at %s" % time.strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info("")
+    logging.debug("Options received from the command line:")
+    utils_misc.display_attributes(options)
+    logging.debug("")
+
+    logging.debug("Cleaning up the existing environment file")
+    d = parser.get_dicts().next()
+    env_filename = os.path.join(data_dir.get_root_dir(),
+                                options.type, d.get("env", "env"))
+    env = utils_env.Env(env_filename, Test.env_version)
+    env.destroy()
+    logging.debug("")
+
+    if options.restore_image_between_tests:
+        logging.debug("Creating first backup of guest image")
+        qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
+        qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
+        logging.debug("")
+
+    if options.type == 'kvm':
+        logging.info("We're running the kvm test with:")
+        logging.info("qemu binary: %s" % d.get('qemu_binary'))
+        logging.info("qemu img binary: %s" % d.get('qemu_img_binary'))
+        logging.info("qemu io binary: %s" % d.get('qemu_io_binary'))
+        logging.info("")
+
+    logging.info("Defined test set:")
     for i, d in enumerate(parser.get_dicts()):
         if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
             shortname = ".".join(d['name'].split(".")[12:])
@@ -507,17 +535,7 @@ def run_tests(parser, options):
         print_stdout("Please check the file for errors (bad variable names, "
                      "wrong indentation)")
         sys.exit(-1)
-
-    # Clean environment file
-    d = parser.get_dicts().next()
-    env_filename = os.path.join(data_dir.get_root_dir(),
-                                options.type, d.get("env", "env"))
-    env = utils_env.Env(env_filename, Test.env_version)
-    env.destroy()
-
-    if options.restore_image_between_tests:
-        qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
-        qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
+    logging.info("")
 
     n_tests = last_index + 1
     print_header("TESTS: %s" % n_tests)
