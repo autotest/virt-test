@@ -2,6 +2,7 @@ import os, logging, imp, sys, time, traceback, Queue
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
+import storage
 
 
 #: List of test types to strip names by default
@@ -513,6 +514,10 @@ def run_tests(parser, options):
                                 options.type, d.get("env", "env"))
     env = utils_env.Env(env_filename, Test.env_version)
     env.destroy()
+
+    if options.restore_image_between_tests:
+        qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
+        qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
 
     n_tests = last_index + 1
     print_header("TESTS: %s" % n_tests)
