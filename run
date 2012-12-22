@@ -160,6 +160,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Path to a data dir. "
                                  "Default path: %s" %
                                  data_dir.get_backing_data_dir()))
+        general.add_option("--restart-vm", action="store_true", dest="restart_vm",
+                           default=False,
+                           help=("Whether to reboot the vm between every test. "
+                                 "Default: False"))
         self.add_option_group(general)
 
         qemu = optparse.OptionGroup(self, 'Options specific to the kvm test')
@@ -271,6 +275,10 @@ class VirtTestApp(object):
             elif self.options.type == 'libvirt':
                 self.cartesian_parser.parse_string("only " %
                                                    LIBVIRT_DEFAULT_SET)
+
+        if self.options.restart_vm:
+            self.cartesian_parser.parse_string("restart_vm = yes")
+
 
     def main(self):
         """
