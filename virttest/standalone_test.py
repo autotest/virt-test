@@ -91,6 +91,7 @@ class Test(object):
             raise error.TestNAError("Test dependency failed")
 
         # Report the parameters we've received and write them as keyvals
+        logging.info("Starting test %s", self.tag)
         logging.debug("Test parameters:")
         keys = params.keys()
         keys.sort()
@@ -124,16 +125,23 @@ class Test(object):
                                                     params.get("vm_type"),
                                                     "tests")
                     subtest_dirs.append(specific_testdir)
+                    logging.debug("Searching subtest files in dirs %s",
+                                  subtest_dirs)
                     subtest_dir = None
 
                     # Get the test routine corresponding to the specified
                     # test type
+                    logging.debug("Searching for test modules that match "
+                                  "param 'type = %s' on this cartesian dict",
+                                  params.get("type"))
                     t_types = params.get("type").split()
                     test_modules = {}
                     for t_type in t_types:
                         for d in subtest_dirs:
                             module_path = os.path.join(d, "%s.py" % t_type)
                             if os.path.isfile(module_path):
+                                logging.debug("Found subtest module %s",
+                                              module_path)
                                 subtest_dir = d
                                 break
                         if subtest_dir is None:
@@ -602,21 +610,25 @@ def run_tests(parser, options):
                     t_begin = time.time()
                     t.start_file_logging()
                     current_status = t.run_once()
-                    logging.info("PASS")
+                    logging.info("PASS %s" % t.tag)
+                    logging.info("")
                     t.stop_file_logging()
                 finally:
                     t_end = time.time()
                     t_elapsed = t_end - t_begin
             except error.TestNAError, reason:
-                logging.info("SKIP -> %s: %s", reason.__class__.__name__,
-                             reason)
+                logging.info("SKIP %s -> %s: %s", t.tag,
+                             reason.__class__.__name__, reason)
+                logging.info("")
                 t.stop_file_logging()
                 print_skip()
                 status_dct[dct.get("name")] = False
                 continue
             except error.TestWarn, reason:
-                logging.info("WARN -> %s: %s", reason.__class__.__name__,
+                logging.info("WARN %s -> %s: %s", t.tag,
+                             reason.__class__.__name__,
                              reason)
+                logging.info("")
                 t.stop_file_logging()
                 print_warn(t_elapsed)
                 status_dct[dct.get("name")] = True
@@ -630,8 +642,10 @@ def run_tests(parser, options):
                 for e_line in tb_info.splitlines():
                     logging.error(e_line)
                 logging.error("")
-                logging.error("FAIL -> %s: %s", reason.__class__.__name__,
+                logging.error("FAIL %s -> %s: %s", t.tag,
+                              reason.__class__.__name__,
                               reason)
+                logging.info("")
                 t.stop_file_logging()
                 current_status = False
         else:
