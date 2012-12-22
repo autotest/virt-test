@@ -151,6 +151,8 @@ def postprocess_image(test, params, image_name):
                 elif clone_master == "yes":
                     if image_name in params.get("master_images_clone").split():
                         image.check_image(params, base_dir)
+                if params.get("restore_image", "no") == "yes":
+                    image.backup_image(params, base_dir, "restore", True)
             except Exception, e:
                 if params.get("restore_image_on_check_error", "no") == "yes":
                     image.backup_image(params, base_dir, "restore", True)
