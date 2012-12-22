@@ -4,13 +4,12 @@ Run virt tests outside the autotest client harness.
 
 @copyright: Red Hat 2012
 """
-import os, sys, traceback, signal
+import os, sys, traceback, signal, optparse
 
 class StreamProxy(object):
     """
     Mechanism to supress stdout output, while keeping the original stdout.
     """
-
     def __init__(self, filename='/dev/null', stream=sys.stdout):
         """
         Keep 2 streams to write to, and eventually switch.
@@ -43,161 +42,291 @@ class StreamProxy(object):
         else:
             self.stream = self.log
 
+def _silence_stderr():
+    """
+    Points the stderr FD (2) to /dev/null, silencing it.
+    """
+    out_fd = os.open('/dev/null', os.O_WRONLY | os.O_CREAT)
+    try:
+        os.dup2(out_fd, 2)
+    finally:
+        os.close(out_fd)
+    sys.stderr = os.fdopen(2, 'w')
 
-if __name__ == '__main__':
-    import optparse
-    option_parser = optparse.OptionParser()
-    option_parser.add_option("-v", "--verbose",
-                      action="store_true", dest="verbose",
-                      help="Exhibit debug messages")
-    option_parser.add_option("-t", "--type",
-                      action="store", dest="type",
-                      help="Choose test type (kvm, libvirt, v2v)")
-    option_parser.add_option("-c", "--config",
-                      action="store", dest="config",
-                      help="Explicitly choose a cartesian config")
-    option_parser.add_option("-r", "--restore-image",
-                      action="store_true", dest="restore",
-                      help="Restore image from pristine image")
-    option_parser.add_option("--qemu-bin", action="store", dest="qemu",
-                      help="Path to a custom qemu binary to be tested")
-    option_parser.add_option("--tests", action="store", dest="tests",
-                      help=('List of space separated tests to be executed'
-                            ' - example: --tests "boot, reboot, shutdown"'))
-    option_parser.add_option("--list-tests", action="store_true", dest="list",
-                      help="List tests available")
-    option_parser.add_option("--data-dir", action="store", dest="datadir",
-                      help="Path to a data dir (that locates ISOS and images)")
-    options, args = option_parser.parse_args()
+def _handle_stdout(options):
+    """
+    Replace stdout with a proxy object.
 
-    if (not options.type) and (not options.config):
-        print("No type (-t) or config (-c) options specified, aborting...")
-        option_parser.print_help()
-        sys.exit(1)
-
+    Depending on self.options.verbose, make proxy print to /dev/null, or
+    original sys.stdout stream.
+    """
     if not options.verbose:
-        # Effectively points the stderr FD (2) to /dev/null, silencing
-        # stderr.
-        out_fd = os.open('/dev/null', os.O_WRONLY | os.O_CREAT)
-        try:
-            os.dup2(out_fd, 2)
-        finally:
-            os.close(out_fd)
-        sys.stderr = os.fdopen(2, 'w')
-        # Replace stdout by our StreamProxy object, so we can supress all output
-        # but the one we specifically want.
+        _silence_stderr()
+        # Replace stdout with our proxy pointing to /dev/null
         sys.stdout = StreamProxy(filename="/dev/null", stream=sys.stdout)
     else:
-        # We have full stdout output
+        # Retain full stdout
         sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
-    # From now on, since the stdout might be proxied, let's run this all under
-    # a try/except block, if something goes wrong we tell the user to use
-    # --verbose.
+
+def _import_autotest_modules():
+    """
+    Import the autotest modules.
+
+    Two methods will be attempted:
+    1) Import the libraries system wide. For this to work, the
+       autotest-framework package for the given distro must be installed.
+    2) Import the libraries from an autotest checkout. For this to work,
+       the env variable 'AUTOTEST_PATH' must be set to the path of an
+       autotest checkout.
+    """
     try:
+        from autotest.client import setup_modules
+    except ImportError:
         try:
-            from autotest.client import setup_modules
-        except ImportError:
+            autotest_dir = os.environ['AUTOTEST_PATH']
+        except KeyError:
             try:
-                autotest_dir = os.environ['AUTOTEST_PATH']
-            except KeyError:
-                try:
-                    sys.stdout.switch()
-                except AttributeError:
-                    pass
-                print("Environment variable $AUTOTEST_PATH not set. "
-                      "please set it to a path containing an autotest checkout")
-                print("Or install the autotest-framework package for your distro")
-                sys.exit(1)
-            client_dir = os.path.join(autotest_dir, 'client')
-            sys.path.insert(0, client_dir)
-            import setup_modules
-            sys.path.pop(0)
-            setup_modules.setup(base_path=client_dir,
-                                root_module_name="autotest.client")
+                sys.stdout.switch()
+            except AttributeError:
+                pass
+            print("Environment variable $AUTOTEST_PATH not set. "
+                  "please set it to a path containing an autotest checkout")
+            print("Or install autotest-framework for your distro")
+            sys.exit(1)
+        client_dir = os.path.join(autotest_dir, 'client')
+        sys.path.insert(0, client_dir)
+        import setup_modules
+        sys.path.pop(0)
+        setup_modules.setup(base_path=client_dir,
+                            root_module_name="autotest.client")
 
-        test_dir = os.path.abspath(os.path.dirname(sys.modules[__name__].__file__))
-        sys.path.append(test_dir)
+def _find_default_qemu_paths(options_qemu=None):
+    qemu_bin_path = None
+    _import_autotest_modules()
+    from virttest import utils_misc
 
-        from virttest import cartesian_config, standalone_test, utils_misc
+    if options_qemu:
+        if not os.path.isfile(options_qemu):
+            raise RuntimeError("Invalid qemu binary provided (%s)" %
+                               options_qemu)
+        qemu_bin_path = options_qemu
+    else:
+        try:
+            qemu_bin_path = utils_misc.find_command('qemu-kvm')
+        except ValueError:
+            qemu_bin_path = utils_misc.find_command('kvm')
+
+    qemu_dirname = os.path.dirname(qemu_bin_path)
+    parent_qemu_dirname = os.path.dirname(qemu_dirname)
+    qemu_img_path = os.path.join(parent_qemu_dirname, 'qemu-img')
+    qemu_io_path = os.path.join(parent_qemu_dirname, 'qemu-io')
+
+    if not os.path.exists(qemu_img_path):
+        qemu_img_path = utils_misc.find_command('qemu-img')
+
+    if not os.path.exists(qemu_io_path):
+        qemu_io_path = utils_misc.find_command('qemu-io')
+
+    return [qemu_bin_path, qemu_img_path, qemu_io_path]
+
+
+class VirtTestRunParser(optparse.OptionParser):
+    def __init__(self):
+        optparse.OptionParser.__init__(self, usage = 'Usage: %prog [options]')
+        _import_autotest_modules()
         from virttest import data_dir
 
-        standalone_test.configure_logging()
-        standalone_test.configure_console_logging()
+        try:
+            qemu_bin_path = _find_default_qemu_paths()[0]
+        except ValueError:
+            qemu_bin_path = "Could not find one"
 
-        if options.datadir:
-            data_dir.set_backing_data_dir(options.datadir)
+        general = optparse.OptionGroup(self, 'General Options')
+        general.add_option("-v", "--verbose", action="store_true",
+                           dest="verbose", help="Exhibit debug messages")
+        general.add_option("-t", "--type", action="store", dest="type",
+                           help="Choose test type (kvm, libvirt, v2v)")
+        general.add_option("-c", "--config", action="store", dest="config",
+                           help="Explicitly choose a cartesian config")
+        general.add_option("-r", "--restore-image", action="store_true",
+                           dest="restore",
+                           help="Restore guest image from the pristine image")
+        general.add_option("-j", "--restore-image-between-tests",
+                           action="store_true", default=False,
+                           dest="restore_image_between_tests",
+                           help="Restore from the pristine image on *every test*")
+        general.add_option("--tests", action="store", dest="tests",
+                           help=('List of space separated tests to be executed'
+                                ' - example: --tests "boot reboot shutdown"'))
+        general.add_option("--list-tests", action="store_true", dest="list",
+                           help="List tests available")
+        general.add_option("--data-dir", action="store", dest="datadir",
+                           help=("Path to a data dir. "
+                                 "Default path: %s" %
+                                 data_dir.get_backing_data_dir()))
+        general.add_option("--restart-vm", action="store_true", dest="restart_vm",
+                           default=False,
+                           help=("Whether to reboot the vm between every test. "
+                                 "Default: False"))
+        self.add_option_group(general)
 
-        standalone_test.create_config_files(options)
+        qemu = optparse.OptionGroup(self, 'Options specific to the kvm test')
+        qemu.add_option("--qemu-bin", action="store", dest="qemu",
+                        help=("Path to a custom qemu binary to be tested. "
+                              "Default path: %s" % qemu_bin_path))
+        qemu.add_option("--accel", action="store", dest="accel", default="kvm",
+                        help=("Accelerator used to run qemu (kvm or tcg). "
+                              "Default: kvm"))
+        self.add_option_group(qemu)
 
-        cartesian_parser = cartesian_config.Parser()
-        if options.config is not None:
-            cfg = os.path.abspath(options.config)
-        if options.config is None:
-            cfg = os.path.join(test_dir, options.type, "cfg", "tests.cfg")
 
-        cartesian_parser.parse_file(cfg)
+QEMU_DEFAULT_SET = "migrate"
+LIBVIRT_DEFAULT_SET = ("unattended_install.import.import, virsh_domname, "
+                       "remove_guest.without_disk")
 
-        if options.list:
-            standalone_test.print_test_list(options, cartesian_parser)
+class VirtTestApp(object):
+    """
+    Class representing the execution of the virt test runner.
+    """
+    def __init__(self):
+        """
+        Parses options and initializes attributes.
+
+        @attribute option_parser: option parser instance with app options.
+        @attribute options: options resulted from option parser.
+        @attribute cartesian_parser: specialized test config parser, it's going
+                to be set to something useful later.
+        """
+        # set English environment (command output might be localized, need to be safe)
+        os.environ['LANG'] = 'en_US.UTF-8'
+        self.option_parser = VirtTestRunParser()
+        self.options, self.args = self.option_parser.parse_args()
+        self.cartesian_parser = None
+
+
+    def _process_qemu_bin(self):
+        """
+        Puts the value of the qemu bin option in the cartesian parser command.
+        """
+        (qemu_bin_path, qemu_img_path,
+         qemu_io_path) = _find_default_qemu_paths(self.options.qemu)
+        self.cartesian_parser.parse_string("qemu_binary = %s" % qemu_bin_path)
+        self.cartesian_parser.parse_string("qemu_img_binary = %s" %
+                                           qemu_img_path)
+        self.cartesian_parser.parse_string("qemu_io_binary = %s" % qemu_io_path)
+
+    def _process_qemu_accel(self):
+        """
+        Puts the value of the qemu bin option in the cartesian parser command.
+        """
+        if self.options.accel == 'tcg':
+            self.cartesian_parser.parse_string("enable_kvm = no")
+            self.cartesian_parser.parse_string("disable_kvm = yes")
+
+    def _process_qemu_specific_options(self):
+        """
+        Calls for processing all options specific to the qemu test.
+        """
+        self._process_qemu_bin()
+        self._process_qemu_accel()
+
+    def _process_options(self):
+        """
+        Process the options given in the command line.
+        """
+        from virttest import cartesian_config, standalone_test
+        from virttest import data_dir
+
+        if (not self.options.type) and (not self.options.config):
+            print("No type (-t) or config (-c) options specified, aborting...")
+            self.option_parser.print_help()
+            sys.exit(1)
+
+        if self.options.datadir:
+            data_dir.set_backing_data_dir(self.options.datadir)
+
+        standalone_test.create_config_files(self.options)
+
+        self.cartesian_parser = cartesian_config.Parser()
+
+        if self.options.config is not None:
+            cfg = os.path.abspath(self.options.config)
+        if self.options.config is None:
+            cfg = os.path.join(data_dir.get_root_dir(), self.options.type,
+                               "cfg", "tests.cfg")
+
+        self.cartesian_parser.parse_file(cfg)
+
+        if self.options.list:
+            standalone_test.print_test_list(self.options,
+                                            self.cartesian_parser)
             sys.exit(0)
         else:
-            standalone_test.bootstrap_tests(options)
+            standalone_test.bootstrap_tests(self.options)
 
-        if options.type == 'kvm':
-            qemu_bin_path = None
-            if options.qemu:
-                if not os.path.isfile(options.qemu):
-                    raise RuntimeError("Invalid qemu binary provided (%s)" %
-                                       options.qemu)
-                qemu_bin_path = options.qemu
-            else:
-                try:
-                    qemu_bin_path = utils_misc.find_command('qemu-kvm')
-                except ValueError:
-                    qemu_bin_path = utils_misc.find_command('kvm')
+        if self.options.type == 'kvm':
+            self._process_qemu_specific_options()
 
-            qemu_dirname = os.path.dirname(qemu_bin_path)
-            parent_qemu_dirname = os.path.dirname(qemu_dirname)
-            qemu_img_path = os.path.join(parent_qemu_dirname, 'qemu-img')
-            qemu_io_path = os.path.join(parent_qemu_dirname, 'qemu-io')
+        if self.options.type and self.options.tests:
+            tests = self.options.tests.split(" ")
+            self.cartesian_parser.parse_string("only %s" % ", ".join(tests))
 
-            if not os.path.exists(qemu_img_path):
-                qemu_img_path = utils_misc.find_command('qemu-img')
+        elif (self.options.type and not self.options.tests
+              and not self.options.config):
+            if self.options.type == 'kvm':
+                self.cartesian_parser.parse_string("only %s" %
+                                                   QEMU_DEFAULT_SET)
+            elif self.options.type == 'libvirt':
+                self.cartesian_parser.parse_string("only " %
+                                                   LIBVIRT_DEFAULT_SET)
 
-            if not os.path.exists(qemu_io_path):
-                qemu_io_path = utils_misc.find_command('qemu-io')
+        if self.options.restart_vm:
+            self.cartesian_parser.parse_string("restart_vm = yes")
 
-            cartesian_parser.parse_string("qemu_binary = %s" % qemu_bin_path)
-            cartesian_parser.parse_string("qemu_img_binary = %s" % qemu_img_path)
-            cartesian_parser.parse_string("qemu_io_binary = %s" % qemu_io_path)
+        if self.options.restore_image_between_tests:
+            self.cartesian_parser.parse_string("restore_image = yes")
 
-        if options.type and options.tests:
-            tests = options.tests.split(" ")
-            cartesian_parser.parse_string("only %s" % ", ".join(tests))
-        elif options.type and not options.tests and not options.config:
-            if options.type == 'kvm':
-                cartesian_parser.parse_string("only migrate")
-            elif options.type == 'libvirt':
-                cartesian_parser.parse_string("only "
-                                              "unattended_install.import.import, "
-                                              "virsh_domname, "
-                                              "remove_guest.without_disk")
-        standalone_test.run_tests(cartesian_parser, options)
 
-    except KeyboardInterrupt:
-        pid = os.getpid()
-        os.kill(pid, signal.SIGTERM)
+    def main(self):
+        """
+        Main point of execution of the test runner.
 
-    except Exception:
+        1) Handle stdout/err according to the options given.
+        2) Import the autotest modules.
+        3) Sets the console logging for tests.
+        4) Runs the tests according to the options given.
+        """
+        _handle_stdout(self.options)
+        _import_autotest_modules()
         try:
-            sys.stdout.switch()
-        except AttributeError:
-            pass
-        print("Internal error, traceback follows...")
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        tb_info = traceback.format_exception(exc_type, exc_value,
-                                             exc_traceback.tb_next)
-        tb_info = "".join(tb_info)
-        for e_line in tb_info.splitlines():
-            print(e_line)
-        sys.exit(1)
+            from virttest import standalone_test
+
+            standalone_test.configure_logging()
+            standalone_test.configure_console_logging()
+
+            self._process_options()
+
+            standalone_test.run_tests(self.cartesian_parser, self.options)
+
+        except KeyboardInterrupt:
+            pid = os.getpid()
+            os.kill(pid, signal.SIGTERM)
+
+        except Exception:
+            try:
+                sys.stdout.switch()
+            except AttributeError:
+                pass
+            print("Internal error, traceback follows...")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            tb_info = traceback.format_exception(exc_type, exc_value,
+                                                 exc_traceback.tb_next)
+            tb_info = "".join(tb_info)
+            for e_line in tb_info.splitlines():
+                print(e_line)
+            sys.exit(1)
+
+
+if __name__ == '__main__':
+    app = VirtTestApp()
+    app.main()

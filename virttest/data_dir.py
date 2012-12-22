@@ -7,6 +7,7 @@ import os, sys, tempfile
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
 ROOT_DIR = os.path.abspath(_ROOT_PATH)
 DATA_DIR = os.path.join(ROOT_DIR, 'shared', 'data')
+DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'shared', 'download.d')
 TMP_DIR = os.path.join(ROOT_DIR, 'tmp')
 BACKING_DATA_DIR = None
 
@@ -66,7 +67,12 @@ def get_data_dir():
     return DATA_DIR
 
 def get_tmp_dir():
+    if not os.path.isdir(TMP_DIR):
+        os.makedirs(TMP_DIR)
     return TMP_DIR
+
+def get_download_dir():
+    return DOWNLOAD_DIR
 
 if __name__ == '__main__':
     print "root dir:         " + ROOT_DIR

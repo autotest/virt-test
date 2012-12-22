@@ -116,6 +116,16 @@ def preprocess_vm(test, params, env, name):
         # Don't start the VM, just update its params
         vm.params = params
 
+    pause_vm = False
+
+    if params.get("paused_after_start_vm") == "yes":
+        pause_vm = True
+        #Check the status of vm
+        if not vm.is_alive():
+            pause_vm = False
+
+    if pause_vm:
+        vm.pause()
 
 def postprocess_image(test, params, image_name):
     """
@@ -138,6 +148,8 @@ def postprocess_image(test, params, image_name):
                 elif clone_master == "yes":
                     if image_name in params.get("master_images_clone").split():
                         image.check_image(params, base_dir)
+                if params.get("restore_image", "no") == "yes":
+                    image.backup_image(params, base_dir, "restore", True)
             except Exception, e:
                 if params.get("restore_image_on_check_error", "no") == "yes":
                     image.backup_image(params, base_dir, "restore", True)

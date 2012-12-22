@@ -1,4 +1,4 @@
-import logging, os, commands, threading, re, glob, time
+import logging, os, commands, threading, re, glob, time, shutil
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc, remote
@@ -162,8 +162,9 @@ def run_netperf(test, params, env):
     clients_n = 1
     # Get the sessions that needed when run netperf parallel
     # The default client connect is the first one.
-    if params.get("sessions"):
-        for i in re.split("\s+", params.get('sessions')):
+    if params.get("sessions") or params.get("sessions_rr"):
+        sessions_str = params.get('sessions') + " " + params.get("sessions_rr")
+        for i in sessions_str.split():
             clients_n = max(clients_n, int(i.strip()))
     for i in range(clients_n):
         if client in params.get("vms"):
@@ -220,7 +221,7 @@ def run_netperf(test, params, env):
 
 
 @error.context_aware
-def start_test(server, server_ctl, host, client, resultsdir, l=60,
+def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                sessions_rr="50 100 250 500", sessions="1 2 4",
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
@@ -232,7 +233,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     @param server: netperf server ip for data connection
     @param server_ctl: ip to control netperf server
     @param host: localhost ip
-    @param client: netperf client ip
+    @param clients: netperf clients' ip
     @param resultsdir: directory to restore the results
     @param l: test duration
     @param sessions_rr: sessions number list for RR test
@@ -245,18 +246,6 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
     @param params: Dictionary with the test parameters.
     @param server_cyg: shell session for cygwin in windows guest
     """
-
-    def parse_file(file_prefix, raw=""):
-        """ Parse result files and reture throughput total """
-        thu = 0
-        for filename in glob.glob("%s.*.nf" % file_prefix):
-            o = commands.getoutput("cat %s |tail -n 1" % filename)
-            try:
-                thu += float(o.split()[raw])
-            except Exception:
-                logging.debug(commands.getoutput("cat %s.*" % file_prefix))
-                return -1
-        return thu
 
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
@@ -305,15 +294,19 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
         for i in sizes_test:
             for j in sessions_test:
                 if (protocol == "TCP_RR"):
-                    ret = launch_client(1, server, server_ctl, host, client, l,
-                    "-t %s -v 0 -P -0 -- -r %s,%s -b %s" % (protocol, i, i, j),
+                    ret = launch_client(j, server, server_ctl, host, clients, l,
+                    "-t %s -v 1 -- -r %s,%s" % (protocol, i, i),
                     netserver_port, params, server_cyg)
-                    thu = parse_file("/tmp/netperf.%s" % ret['pid'], 0)
+                elif (protocol == "TCP_MAERTS"):
+                    ret = launch_client(j, server, server_ctl, host, clients, l,
+                                     "-C -c -t %s -- -m ,%s" % (protocol, i),
+                                     netserver_port, params, server_cyg)
                 else:
-                    ret = launch_client(j, server, server_ctl, host, client, l,
+                    ret = launch_client(j, server, server_ctl, host, clients, l,
                                      "-C -c -t %s -- -m %s" % (protocol, i),
                                      netserver_port, params, server_cyg)
-                    thu = parse_file("/tmp/netperf.%s" % ret['pid'], 4)
+
+                thu = float(ret['thu'])
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
                 if ret.get('rx_pkts') and ret.get('irq_inj'):
@@ -347,7 +340,7 @@ def start_test(server, server_ctl, host, client, resultsdir, l=60,
 
                 fd.flush()
                 logging.debug("Remove temporary files")
-                commands.getoutput("rm -f /tmp/netperf.%s.*.nf" % ret['pid'])
+                commands.getoutput("rm -f /tmp/netperf.%s.nf" % ret['pid'])
     fd.close()
 
 
@@ -366,12 +359,12 @@ def ssh_cmd(session, cmd, timeout=120):
 
 
 @error.context_aware
-def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
+def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                   port, params, server_cyg):
     """ Launch netperf clients """
 
-    client_path = "/tmp/netperf-2.4.5/src/netperf"
-    server_path = "/tmp/netperf-2.4.5/src/netserver"
+    client_path = "/tmp/netperf-2.6.0/src/netperf"
+    server_path = "/tmp/netperf-2.6.0/src/netserver"
     # Start netserver
     if params.get("os_type") == "windows":
         timeout = float(params.get("timeout", "240"))
@@ -466,34 +459,81 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
 
     def netperf_thread(i, numa_enable, client_s):
         cmd = ""
+        fname = "/tmp/netperf.%s.nf" % pid
         if numa_enable:
             output = ssh_cmd(client_s, "numactl --hardware")
             n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
-        cmd += "%s -H %s -l %s %s" % (client_path, server, l, nf_args)
+        cmd += "%s -D 1 -H %s -l %s %s" % (client_path, server, int(l)*1.5, nf_args)
+        cmd += " >> %s" % fname
 
-        output = ssh_cmd(client_s, cmd)
-        f = file("/tmp/netperf.%s.%s.nf" % (pid, i), "w")
-        f.write(output)
-        f.close()
+        ssh_cmd(client_s, cmd)
+        output = ssh_cmd(client_s, "cat %s" % fname)
+        if not os.path.exists(fname):
+            f = file(fname, "w")
+            f.write(output)
+            f.close()
 
-    if get_status_flag:
-        start_state = get_state()
+
+    def parse_demo_result(fname, sessions):
+        """
+        Process the demo result, remove the noise from head,
+        and compute the final throughout.
+
+        @param fname: result file name
+        @param sessions: sessions' number
+        """
+        fd = open(fname)
+        lines = fd.readlines()
+        fd.close()
+
+        for i in range(1, len(lines)+1):
+            if "AF_INET" in lines[-i]:
+                break
+        nresult = i - 1
+        if nresult < int(sessions):
+            raise error.TestError("We couldn't expect this parallism,"
+                                  "expect %s get %s" % (sessions, nresult))
+
+        niteration = nresult / sessions
+        result = 0.0
+        for this in lines[-sessions * niteration:]:
+            result += float(re.findall("Interim result: *(\S+)", this)[0])
+        result = result / niteration
+        logging.debug("niteration: %s" % niteration)
+        return result
+
+
     pid = str(os.getpid())
     threads = []
     numa_enable = params.get("netperf_with_numa", "yes") == "yes"
     for i in range(int(sessions)):
         t = threading.Thread(target=netperf_thread,
                              kwargs={"i": i, "numa_enable": numa_enable,
-                                     "client_s":client[i]})
+                                     "client_s":clients[i]})
         threads.append(t)
         t.start()
     ret = {}
     ret['pid'] = pid
-    ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
-    for t in threads:
-        t.join()
+    fname = "/tmp/netperf.%s.nf" % pid
+    while True:
+        try:
+            fd = open(fname)
+            content = "".join(fd.readlines())
+            fd.close()
+        except IOError:
+            content = ""
+        if int(sessions) == len(re.findall("MIGRATE", content)):
+            logging.debug("All netperf clients start to work.")
+            break
 
+    # real & effective test starts
+    if get_status_flag:
+        start_state = get_state()
+    ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
+    shutil.copy(fname, "/tmp/finished_result")
+
+    # real & effective test ends
     if get_status_flag:
         end_state = get_state()
         if len(start_state) != len(end_state):
@@ -505,4 +545,11 @@ def launch_client(sessions, server, server_ctl, host, client, l, nf_args,
             for i in range(len(end_state) / 2):
                 ret[end_state[i * 2]] = (end_state[i * 2 + 1]
                                          - start_state[i * 2 + 1])
+    # wait all the threads stop
+    for t in threads:
+        t.join()
+
+    # recover result file to remove the noise from end
+    shutil.copy("/tmp/finished_result", fname)
+    ret['thu'] = parse_demo_result(fname, int(sessions))
     return ret
