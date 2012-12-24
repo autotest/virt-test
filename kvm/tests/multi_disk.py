@@ -181,7 +181,7 @@ def run_multi_disk(test, params, env):
             env_process.preprocess_image(test, image_params, image_name)
 
     vm = env.get_vm(params["main_vm"])
-    vm.create(timeout=max(10, stg_image_num))
+    vm.create(timeout=max(10, stg_image_num), params=params)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
     images = params.get("images").split()
@@ -201,7 +201,7 @@ def run_multi_disk(test, params, env):
     (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
     err += tmp1 + tmp2
     err += disks.generate_params()
-    err += disks.check_disk_params(params, data_dir.get_data_dir())
+    err += disks.check_disk_params(params)
     (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(
                                     session.cmd_output('cat /proc/scsi/scsi'))
     err += tmp1 + tmp2
