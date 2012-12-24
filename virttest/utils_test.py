@@ -5,14 +5,14 @@ This module is meant to reduce code size by performing common test procedures.
 Generally, code here should look like test code.
 More specifically:
     - Functions in this module should raise exceptions if things go wrong
-      (unlike functions in kvm_utils.py and kvm_vm.py which report failure via
+      (unlike functions in kvm_utils.py and qemu_vm.py which report failure via
       their returned values).
     - Functions in this module may use logging.info(), in addition to
       logging.debug() and logging.error(), to log messages the user may be
-      interested in (unlike kvm_utils.py and kvm_vm.py which use
+      interested in (unlike kvm_utils.py and qemu_vm.py which use
       logging.debug() for anything that isn't an error).
     - Functions in this module typically use functions and classes from
-      lower-level modules (e.g. kvm_utils.py, kvm_vm.py, kvm_subprocess.py).
+      lower-level modules (e.g. kvm_utils.py, qemu_vm.py, kvm_subprocess.py).
     - Functions in this module should not be used by lower-level modules.
     - Functions in this module should be used in the right context.
       For example, a function should not be used where it may display

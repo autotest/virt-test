@@ -1,7 +1,7 @@
 import logging, re, random, os, time, pickle, sys, traceback
 from autotest.client.shared import error, utils
 from autotest.client.shared import test as test_module
-from virttest import kvm_vm
+from virttest import qemu_vm
 from virttest import utils_misc, utils_test, aexpect
 
 
@@ -73,7 +73,7 @@ def run_cpuflags(test, params, env):
             params_b["smp"] = smp
 
         vm_name = "vm1-cpuflags"
-        vm = kvm_vm.VM(vm_name, params_b, test.bindir, env['address_cache'])
+        vm = qemu_vm.VM(vm_name, params_b, test.bindir, env['address_cache'])
         env.register_vm(vm_name, vm)
         if (migration is True):
             vm.create(migration_mode=mig_protocol)

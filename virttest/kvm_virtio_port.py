@@ -58,7 +58,7 @@ class _VirtioPort(object):
         socket is unpickable so we need to remove it and say it's closed.
         Used by autotest env.
         """
-        # TODO: add port cleanup into kvm_vm.py
+        # TODO: add port cleanup into qemu_vm.py
         if self.is_open():
             logging.warn("Force closing virtio_port socket, FIX the code to "
                          " close the socket prior this to avoid possible err.")
