@@ -8,7 +8,7 @@ This exports:
 import logging, os
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, virt_vm, storage, data_dir
+import utils_misc, virt_vm, storage
 
 
 class QemuImg(storage.QemuImg):
@@ -24,20 +24,15 @@ class QemuImg(storage.QemuImg):
         @param tag: Image tag defined in parameter images
         """
         storage.QemuImg.__init__(self, params, root_dir, tag)
-        # qemu img binary can be found in the test dir, not data_dir
-        qemu_img_base_dir = os.path.join(data_dir.get_root_dir(),
-                                         params.get("vm_type"))
-        self.image_cmd = utils_misc.get_path(qemu_img_base_dir,
+        self.image_cmd = utils_misc.get_path(root_dir,
                                  params.get("qemu_img_binary","qemu-img"))
 
-
-    def create(self, params, ignore_errors=False):
+    @error.context_aware
+    def create(self, params):
         """
         Create an image using qemu_img or dd.
 
         @param params: Dictionary containing the test parameters.
-        @param ignore_errors: Whether to ignore errors on the image creation
-                cmd.
 
         @note: params should contain:
                image_name -- the name of the image file, without extension
@@ -53,9 +48,6 @@ class QemuImg(storage.QemuImg):
                values: on and off. Default is "off"
                preallocated(optional) -- if preallocation when create image,
                allowed values: off, metadata. Default is "off"
-
-        @return: tuple (path to the image created, utils.CmdResult object
-                containing the result of the creation command).
         """
         if params.get("create_with_dd") == "yes" and self.image_format == "raw":
             # maps K,M,G,T => (count, bs)
@@ -100,38 +92,34 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
-        image_dirname = os.path.dirname(self.image_filename)
-        if not os.path.isdir(image_dirname):
-            e_msg = ("Parent directory of the image file %s does "
-                     "not exist" % self.image_filename)
-            logging.error(e_msg)
-            logging.error("This usually means a serious setup error.")
-            logging.error("Please verify if your data dir contains the "
-                          "expected directory structure")
-            logging.error("Backing data dir: %s",
-                          data_dir.get_backing_data_dir())
-            logging.error("Directory structure:")
-            for root, _, _ in os.walk(data_dir.get_backing_data_dir()):
-                logging.error(root)
+        check_output = params.get("check_output") == "yes"
+        try:
+            msg = "Create image by command: %s" % qemu_img_cmd
+            error.context(msg, logging.info)
+            result = utils.run(qemu_img_cmd, verbose=False)
+        except error.CmdError, e:
+            logging.error("Could not create image, failed with error message:"
+                            "%s", str(e))
+            if not check_output:
+                result = None
+            else:
+                result = str(e)
+        if not check_output:
+            result = self.image_filename
 
-            logging.warning("We'll try to proceed by creating the dir. "
-                            "Other errors may ensue")
-            os.makedirs(image_dirname)
-
-        cmd_result = utils.run(qemu_img_cmd, verbose=False, ignore_status=True)
-        if cmd_result.exit_status != 0 and not ignore_errors:
-            raise error.TestError("Failed to create image %s" %
-                                  self.image_filename)
-
-        return self.image_filename, cmd_result
+        return result
 
 
-    def convert(self, params, root_dir):
+
+    def convert(self, params, root_dir, cache_mode=None):
         """
         Convert image
 
         @param params: dictionary containing the test parameters
         @param root_dir: dir for save the convert image
+        @param cache_mode: the cache mode used to write the output disk image,
+            the valid options are: 'none', 'writeback' (default),
+            'writethrough', 'directsync' and 'unsafe'.
 
         @note: params should contain:
             convert_image_tag -- the image name of the convert image
@@ -161,6 +149,8 @@ class QemuImg(storage.QemuImg):
         if self.image_format:
             cmd += " -f %s" % self.image_format
         cmd += " -O %s" % convert_format
+        if cache_mode:
+            cmd += " -t %s" % cache_mode
         cmd += " %s %s" % (self.image_filename, convert_image_filename)
 
         logging.info("Convert image %s from %s to %s", self.image_filename,
@@ -171,11 +161,14 @@ class QemuImg(storage.QemuImg):
         return convert_image_tag
 
 
-    def rebase(self, params):
+    def rebase(self, params, cache_mode=None):
         """
         Rebase image
 
         @param params: dictionary containing the test parameters
+        @param cache_mode: the cache mode used to write the output disk image,
+            the valid options are: 'none', 'writeback' (default),
+            'writethrough', 'directsync' and 'unsafe'.
 
         @note: params should contain:
             cmd -- qemu-img cmd
@@ -194,6 +187,8 @@ class QemuImg(storage.QemuImg):
         cmd += " rebase"
         if self.image_format:
             cmd += " -f %s" % self.image_format
+        if cache_mode:
+            cmd += " -t %s" % cache_mode
         if rebase_mode == "unsafe":
             cmd += " -u"
         if self.base_tag:
@@ -211,12 +206,18 @@ class QemuImg(storage.QemuImg):
 
 
 
-    def commit(self):
+    def commit(self, params={}, cache_mode=None):
         """
         Commit image to it's base file
+
+        @param cache_mode: the cache mode used to write the output disk image,
+            the valid options are: 'none', 'writeback' (default),
+            'writethrough', 'directsync' and 'unsafe'.
         """
         cmd = self.image_cmd
         cmd += " commit"
+        if cache_mode:
+            cmd += " -t %s" % cache_mode
         cmd += " -f %s %s" % (self.image_format, self.image_filename)
         logging.info("Commit snapshot %s" % self.image_filename)
         utils.system(cmd)
@@ -269,6 +270,16 @@ class QemuImg(storage.QemuImg):
         utils.system_output(cmd)
 
 
+    def snapshot_list(self):
+        """
+        List all snapshots in the given image
+        """
+        cmd = self.image_cmd
+        cmd += " snapshot -l %s" % self.image_filename
+
+        return utils.system_output(cmd)
+
+
     def remove(self):
         """
         Remove an image file.
@@ -278,7 +289,6 @@ class QemuImg(storage.QemuImg):
             os.unlink(self.image_filename)
         else:
             logging.debug("Image file %s not found", self.image_filename)
-
 
     def info(self):
         """
@@ -293,6 +303,7 @@ class QemuImg(storage.QemuImg):
             logging.debug("Image file %s not found", self.image_filename)
             output = None
         return output
+
 
 
     def check_image(self, params, root_dir):
