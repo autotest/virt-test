@@ -18,7 +18,7 @@ def run_timedrift(test, params, env):
     If the drift after the rest period is higher than a user-specified value,
     fail.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -59,14 +59,14 @@ def run_timedrift(test, params, env):
 
     # Collect test parameters:
     # Command to run to get the current time
-    time_command = params["time_command"]
+    time_command = params.get("time_command")
     # Filter which should match a string to be passed to time.strptime()
-    time_filter_re = params["time_filter_re"]
+    time_filter_re = params.get("time_filter_re")
     # Time format for time.strptime()
-    time_format = params["time_format"]
-    guest_load_command = params["guest_load_command"]
-    guest_load_stop_command = params["guest_load_stop_command"]
-    host_load_command = params["host_load_command"]
+    time_format = params.get("time_format")
+    guest_load_command = params.get("guest_load_command")
+    guest_load_stop_command = params.get("guest_load_stop_command")
+    host_load_command = params.get("host_load_command")
     guest_load_instances = int(params.get("guest_load_instances", "1"))
     host_load_instances = int(params.get("host_load_instances", "0"))
     # CPU affinity mask for taskset
@@ -101,9 +101,9 @@ def run_timedrift(test, params, env):
             # Get time before load
             # (ht stands for host time, gt stands for guest time)
             (ht0, gt0) = utils_test.get_time(session,
-                                             time_command,
-                                             time_filter_re,
-                                             time_format)
+                                                 time_command,
+                                                 time_filter_re,
+                                                 time_format)
 
             # Run some load on the guest
             for load_session in guest_load_sessions:
@@ -112,13 +112,13 @@ def run_timedrift(test, params, env):
             # Run some load on the host
             logging.info("Starting load on host...")
             for i in range(host_load_instances):
-                load_cmd = aexpect.run_bg(host_load_command,
-                                          output_func=logging.debug,
-                                          output_prefix="(host load %d) " % i,
-                                          timeout=0.5)
-                host_load_sessions.append(load_cmd)
+                host_load_sessions.append(
+                    aexpect.run_bg(host_load_command,
+                                   output_func=logging.debug,
+                                   output_prefix="(host load %d) " % i,
+                                   timeout=0.5))
                 # Set the CPU affinity of the load process
-                pid = load_cmd.get_pid()
+                pid = host_load_sessions[-1].get_pid()
                 set_cpu_affinity(pid, cpu_mask)
 
             # Sleep for a while (during load)
@@ -127,9 +127,9 @@ def run_timedrift(test, params, env):
 
             # Get time delta after load
             (ht1, gt1) = utils_test.get_time(session,
-                                             time_command,
-                                             time_filter_re,
-                                             time_format)
+                                                 time_command,
+                                                 time_filter_re,
+                                                 time_format)
 
             # Report results
             host_delta = ht1 - ht0
@@ -158,9 +158,9 @@ def run_timedrift(test, params, env):
 
         # Get time after rest
         (ht2, gt2) = utils_test.get_time(session,
-                                         time_command,
-                                         time_filter_re,
-                                         time_format)
+                                             time_command,
+                                             time_filter_re,
+                                             time_format)
 
     finally:
         session.close()

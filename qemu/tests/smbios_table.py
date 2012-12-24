@@ -10,7 +10,7 @@ def run_smbios_table(test, params, env):
     1) Boot a guest with smbios options
     2) verify if host bios options have been emulated
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -29,8 +29,8 @@ def run_smbios_table(test, params, env):
     extra_params = params.get("extra_params", "")
     params["extra_params"] = extra_params + smbios
 
-    logging.debug("Booting guest %s", params["main_vm"])
-    env_process.preprocess_vm(test, params, env, params["main_vm"])
+    logging.debug("Booting guest %s", params.get("main_vm"))
+    env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
     vm.create()
     login_timeout = float(params.get("login_timeout", 360))

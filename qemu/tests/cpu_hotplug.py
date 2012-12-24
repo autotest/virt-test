@@ -15,7 +15,7 @@ def run_cpu_hotplug(test, params, env):
     4) Try to bring them online by writing 1 to the 'online' file inside that dir
     5) Run the CPU Hotplug test suite shipped with autotest inside guest
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -94,7 +94,7 @@ def run_cpu_hotplug(test, params, env):
     control_path = os.path.join(test.virtdir, "autotest_control",
                                 "cpu_hotplug.control")
 
-    timeout = int(params.get("cpu_hotplug_timeout", 300))
+    timeout = int(params.get("cpu_hotplug_timeout"), 300)
     error.context("running cpu_hotplug autotest after cpu addition")
     utils_test.run_autotest(vm, session, control_path, timeout,
                                  test.outputdir, params)

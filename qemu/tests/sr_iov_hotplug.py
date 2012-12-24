@@ -17,7 +17,7 @@ def run_sr_iov_hotplug(test, params, env):
     7) Check whether the newly added PCI device works fine.
     8) Delete the device, verify whether could remove the sr-iov device.
 
-    @param test:   QEMU test object.
+    @param test:   KVM test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """
@@ -47,7 +47,7 @@ def run_sr_iov_hotplug(test, params, env):
         return  vm.monitor.info("pci")
 
     def check_support_device(dev):
-        if vm.monitor.protocol == 'qmp':
+        if is_qmp_monitor:
             devices_supported = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)
         else:
             devices_supported = vm.monitor.send_args_cmd("%s ?" % cmd_type)
@@ -74,7 +74,7 @@ def run_sr_iov_hotplug(test, params, env):
 
     def device_add(pci_num, pci_add_cmd):
         error.context("Adding pci device with command 'device_add'")
-        if vm.monitor.protocol == 'qmp':
+        if is_qmp_monitor:
             add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         else:
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
@@ -89,8 +89,8 @@ def run_sr_iov_hotplug(test, params, env):
 
     # Hot add a pci device
     def add_device(pci_num):
-        reference_cmd = params["reference_cmd"]
-        find_pci_cmd = params["find_pci_cmd"]
+        reference_cmd = params.get("reference_cmd")
+        find_pci_cmd = params.get("find_pci_cmd")
         info_pci_ref = vm.monitor.info("pci")
         reference = session.cmd_output(reference_cmd)
 
@@ -125,7 +125,7 @@ def run_sr_iov_hotplug(test, params, env):
                 raise error.TestFail("No new PCI device shown after executing "
                                      "monitor command: 'info pci'")
 
-            secs = int(params["wait_secs_for_hook_up"])
+            secs = int(params.get("wait_secs_for_hook_up"))
             if not utils_misc.wait_for(_new_shown, test_timeout, secs, 3):
                 raise error.TestFail("No new device shown in output of command "
                                      "executed inside the guest: %s" %
@@ -137,7 +137,7 @@ def run_sr_iov_hotplug(test, params, env):
 
             # Test the newly added device
             try:
-                session.cmd(params["pci_test_cmd"] % (pci_num+1))
+                session.cmd(params.get("pci_test_cmd") % (pci_num+1))
             except aexpect.ShellError, e:
                 raise error.TestFail("Check for sr-iov device failed after PCI "
                                      "hotplug. Output: %r" % e.output)
@@ -189,8 +189,13 @@ def run_sr_iov_hotplug(test, params, env):
         error.context("modprobe the module %s" %module, logging.info)
         session.cmd("modprobe %s" % module)
 
+    # check monitor type
+    qemu_binary = params.get("qemu_binary", "/usr/bin/qemu-kvm")
+    qemu_binary = utils_misc.get_path(test.bindir, qemu_binary)
+    is_qmp_monitor = (utils_misc.qemu_has_option("qmp", qemu_binary)
+                     and params.get("monitor_type") == "qmp")
     # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if vm.monitor.protocol == 'qmp':
+    if is_qmp_monitor:
         cmd_o = vm.monitor.info("commands")
     else:
         cmd_o = vm.monitor.send_args_cmd("help")

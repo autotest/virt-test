@@ -6,7 +6,7 @@ TEST_CLASS = "Virtualization"
 TEST_TYPE = "Server"
 
 DOC = """
-QEMU tests (multi-host) server control
+KVM tests (multi-host) server control
 
 Runs tests across multiple hosts. It uses the config file
 'multi-host-tests.cfg' in order to yield the appropriate
@@ -20,23 +20,18 @@ from autotest.client.shared import error
 # Specify the directory of autotest before you start this test
 AUTOTEST_DIR = job.clientdir
 
-VIRT_DIR = os.path.join(AUTOTEST_DIR, 'tests', 'virt')
-TEST_DIR = os.path.join(VIRT_DIR, 'qemu')
-SHARED_DIR = os.path.join(VIRT_DIR, 'shared')
-VIRT_TYPE = 'qemu'
+KVM_DIR = os.path.join(AUTOTEST_DIR, 'tests', 'virt')
 
-
-sys.path.insert(0, VIRT_DIR)
-from virttest import utils_misc, cartesian_config, utils_params
-from virttest import bootstrap
+sys.path.insert(0, KVM_DIR)
+from virttest import utils_misc, cartesian_config
 
 CONTROL_MAIN_PART = """
 testname = "virt"
 bindir = os.path.join(job.testdir, testname)
 job.install_pkg(testname, 'test', bindir)
 
-virt_test_dir = os.path.join(os.environ['AUTODIR'],'tests', 'virt')
-sys.path.append(virt_test_dir)
+kvm_test_dir = os.path.join(os.environ['AUTODIR'],'tests', 'virt')
+sys.path.append(kvm_test_dir)
 """
 
 try:
@@ -55,7 +50,7 @@ def generate_mac_address():
 
 
 def run(machines):
-    logging.info("QEMU test running on hosts %s\n", machines)
+    logging.info("KVM test running on hosts %s\n", machines)
     class Machines(object):
         def __init__(self, host):
             self.host = host
@@ -71,7 +66,7 @@ def run(machines):
     for host in _hosts.itervalues():
         host.at = autotest_remote.Autotest(host.host)
 
-    cfg_file = os.path.join(VIRT_DIR, "qemu", "cfg", "multi-host-tests.cfg")
+    cfg_file = os.path.join(KVM_DIR, "kvm", "cfg", "multi-host-tests.cfg")
 
     if not os.path.exists(cfg_file):
         raise error.JobError("Config file %s was not found", cfg_file)
@@ -93,10 +88,11 @@ def run(machines):
 
     test_dicts = parser.get_dicts()
 
-    for params in map(lambda x: utils_params.Params(x), test_dicts):
+    for params in test_dicts:
 
         params['hosts'] = ips
 
+        params['not_preprocess'] = "yes"
         for vm in params.get("vms").split():
             for nic in params.get('nics',"").split():
                 params['mac_%s_%s' % (nic, vm)] = generate_mac_address()
@@ -105,14 +101,13 @@ def run(machines):
         params['kill_vm'] = "yes"
 
         s_host = _hosts[machines[0]]
-        s_host.params = params.object_params("host1")
+        s_host.params = params.copy()
         s_host.params['clone_master'] = "yes"
         s_host.params['hostid'] = machines[0]
 
-        for host_id, machine in enumerate(machines[1:]):
+        for machine in machines[1:]:
             host = _hosts[machine]
-            host.params = params.object_params("host%s" % (host_id + 2))
-            host.params['not_preprocess'] = "yes"
+            host.params = params.copy()
             host.params['clone_master'] = "no"
             host.params['hostid'] = machine
 
@@ -149,9 +144,6 @@ def run(machines):
         except error.AutoservError, e:
             logging.error(e)
 
-bootstrap.create_config_files(TEST_DIR, SHARED_DIR, interactive=False)
-bootstrap.create_subtests_cfg(VIRT_TYPE)
-
 if 'all' in args:
     # Run test with all machines at once.
     run(machines)
@@ -161,7 +153,7 @@ else:
 
     # Log the failures
     for failure in failures:
-        job.record("FAIL", failure[0], "qemu", failure[1])
+        job.record("FAIL", failure[0], "kvm", failure[1])
 
     # Now run through each pair and run
     job.parallel_simple(run, pairs, log=False)

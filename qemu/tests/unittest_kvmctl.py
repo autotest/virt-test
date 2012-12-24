@@ -9,11 +9,11 @@ def run_unittest_kvmctl(test, params, env):
     test case file to test various functions of the kvm kernel module.
     The output of all unit tests can be found in the test result dir.
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    case = params["case"]
+    case = params.get("case")
     srcdir = params.get("srcdir", test.srcdir)
     unit_dir = os.path.join(srcdir, "kvm_userspace", "kvm", "user")
     if not os.path.isdir(unit_dir):

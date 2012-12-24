@@ -1,6 +1,6 @@
 import re, string, logging
 from autotest.client.shared import error
-from virttest import qemu_monitor, storage, data_dir
+from virttest import kvm_monitor, storage, data_dir
 
 
 def run_physical_resources_check(test, params, env):
@@ -13,7 +13,7 @@ def run_physical_resources_check(test, params, env):
        to the VM (qemu command line)
     3) Verify all MAC addresses for guest NICs
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -24,7 +24,7 @@ def run_physical_resources_check(test, params, env):
         o = ""
         try:
             o = vm.monitor.info(info_cmd)
-        except qemu_monitor.MonitorError, e:
+        except kvm_monitor.MonitorError, e:
             fail_log =  e + "\n"
             fail_log += "info/query monitor command failed (%s)" % info_cmd
             f_fail.append(fail_log)
@@ -50,7 +50,7 @@ def run_physical_resources_check(test, params, env):
             o = ""
             try:
                 o = vm.monitor.info(info_cmd)
-            except qemu_monitor.MonitorError, e:
+            except kvm_monitor.MonitorError, e:
                 fail_log = e + "\n"
                 fail_log += "info/query monitor command failed (%s)" % info_cmd
                 f_fail.append(fail_log)
@@ -96,7 +96,7 @@ def run_physical_resources_check(test, params, env):
         @return a list that contains fail report.
         """
         f_fail = []
-        chk_str = params["mem_chk_re_str"]
+        chk_str = params.get("mem_chk_re_str")
         chk_cmd = params.get("cpu_%s_chk_cmd" % chk_type)
         if chk_cmd is None:
             fail_log = "Unknown cpu number checking type: '%s'" % chk_type
@@ -178,7 +178,7 @@ def run_physical_resources_check(test, params, env):
 
     # Check memory size
     logging.info("Memory size check")
-    expected_mem = int(params["mem"])
+    expected_mem = int(params.get("mem"))
     actual_mem = vm.get_memory_size()
     if actual_mem != expected_mem:
         fail_log =  "Memory size mismatch:\n"
@@ -209,7 +209,7 @@ def run_physical_resources_check(test, params, env):
     o = ""
     try:
         o = vm.monitor.info("network")
-    except qemu_monitor.MonitorError, e:
+    except kvm_monitor.MonitorError, e:
         fail_log =  e + "\n"
         fail_log += "info/query monitor command failed (network)"
         n_fail.append(fail_log)

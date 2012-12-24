@@ -21,8 +21,6 @@ def run_migration_multi_host_cancel(test, params, env):
     base_class = utils_test.MultihostMigration
     if mig_protocol == "fd":
         base_class = utils_test.MultihostMigrationFd
-    if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
 
 
     class TestMultihostMigrationCancel(base_class):
@@ -33,7 +31,7 @@ def run_migration_multi_host_cancel(test, params, env):
             self.vm_mem = int(params.get("mem", "512"))
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            self.vms = params["vms"].split()
+            self.vms = params.get("vms").split()
             self.id = {'src': self.srchost,
                        'dst': self.dsthost,
                        "type": "cancel_migration"}
@@ -65,9 +63,9 @@ def run_migration_multi_host_cancel(test, params, env):
                                                        self.install_path,
                                                    extra_flags="-msse3 -msse2")
 
-                cmd = ("%s/cpuflags-test --stressmem %d,%d %%" %
+                cmd = ("%s/cpuflags-test --stressmem %d %%" %
                            (os.path.join(self.install_path, "test_cpu_flags"),
-                            self.vm_mem * 10, self.vm_mem / 2))
+                            self.vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
 

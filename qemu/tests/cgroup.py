@@ -10,7 +10,7 @@ from virttest.utils_cgroup import Cgroup
 from virttest.utils_cgroup import CgroupModules
 from virttest.utils_cgroup import get_load_per_cpu
 from virttest.env_process import preprocess
-from virttest import qemu_monitor
+from virttest import kvm_monitor
 from virttest.aexpect import ExpectTimeoutError
 from virttest.aexpect import ExpectProcessTerminatedError
 from virttest.aexpect import ShellTimeoutError
@@ -121,7 +121,7 @@ def run_cgroup(test, params, env):
         """
         if utils.system("lsmod | grep scsi_debug", ignore_status=True):
             utils.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
-        for name in params['vms'].split(' '):
+        for name in params.get('vms').split(' '):
             disk_name = prefix + name
             utils.system("echo 1 >/sys/bus/pseudo/drivers/scsi_debug/add_host")
             time.sleep(1)   # Wait for device init
@@ -144,7 +144,7 @@ def run_cgroup(test, params, env):
         @param size: Disk size (1M)
         @param prefix: adds prefix to drive name
         """
-        for name in params['vms'].split(' '):
+        for name in params.get('vms').split(' '):
             vm_disks = params.get('images_%s' % name,
                                params.get('images', 'image1'))
             disk_name = prefix + name
@@ -587,7 +587,7 @@ def run_cgroup(test, params, env):
             raise error.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)
-        host_cpus = open('/proc/cpuinfo').read().count('processor')
+        host_cpus = open('/proc/cpuinfo').read().count('model name')
 
         # Create first VM
         params['smp'] = 1
@@ -755,7 +755,7 @@ def run_cgroup(test, params, env):
             raise error.TestError("Incorrect configuration: param "
                         "cgroup_speeds have to be list-like string '[1, 2]'")
 
-        host_cpus = open('/proc/cpuinfo').read().count('processor')
+        host_cpus = open('/proc/cpuinfo').read().count('model name')
         # when smp <= 0 use smp = no_host_cpus
         vm_cpus = int(params.get('smp', 0))     # cpus per VM
         # Use smp = no_host_cpu
@@ -1467,7 +1467,7 @@ def run_cgroup(test, params, env):
         monitor_type = None
         for i_monitor in range(len(vm.monitors)):
             monitor = vm.monitors[i_monitor]
-            if isinstance(monitor, qemu_monitor.QMPMonitor):
+            if isinstance(monitor, kvm_monitor.QMPMonitor):
                 out = monitor.cmd_obj({"execute": "query-commands"})
                 try:
                     if {'name': '__com.redhat_drive_add'} in out['return']:

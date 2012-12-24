@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from virttest import utils_test, virt_vm
+from virttest import utils_test, virt_vm, aexpect
 
 
 def run_nic_hotplug(test, params, env):
@@ -23,11 +23,11 @@ def run_nic_hotplug(test, params, env):
     topology changes (that is, devices get added and removed) may cause random
     failures.
 
-    @param test:   QEMU test object.
+    @param test:   KVM test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """
-    vm = utils_test.get_living_vm(env, params["main_vm"])
+    vm = utils_test.get_living_vm(env, params.get("main_vm"))
     login_timeout = int(params.get("login_timeout", 360))
     pci_model = params.get("pci_model", "rtl8139")
     run_dhclient = params.get("run_dhclient", "no")
@@ -38,7 +38,20 @@ def run_nic_hotplug(test, params, env):
 
     session = utils_test.wait_for_login(vm, timeout=login_timeout)
 
+    udev_rules_path = "/etc/udev/rules.d/70-persistent-net.rules"
+    udev_rules_bkp_path = "/tmp/70-persistent-net.rules"
+
+    def guest_path_isfile(path):
+        try:
+            session.cmd("test -f %s" % path)
+        except aexpect.ShellError:
+            return False
+        return True
+
     if guest_is_not_windows:
+        if guest_path_isfile(udev_rules_path):
+            session.cmd("mv -f %s %s" % (udev_rules_path, udev_rules_bkp_path))
+
         # Modprobe the module if specified in config file
         module = params.get("modprobe_module")
         if module:
@@ -58,8 +71,10 @@ def run_nic_hotplug(test, params, env):
 
     logging.info("Shutting down the primary link(s)")
     for nic in vm.virtnet:
-        if not (nic.nic_name == nic_name):
-            vm.set_link(nic.device_id, up=False)
+        if nic.nic_name == nic_name:
+            continue
+        else:
+            vm.monitor.cmd("set_link %s off" % nic.device_id)
 
     try:
         logging.info("Waiting for new nic's ip address acquisition...")
@@ -81,5 +96,14 @@ def run_nic_hotplug(test, params, env):
     finally:
         logging.info("Re-enabling the primary link(s)")
         for nic in vm.virtnet:
-            if not (nic.nic_name == nic_name):
-                vm.set_link(nic.device_id, up=True)
+            if nic.nic_name == nic_name:
+                continue
+            else:
+                vm.monitor.cmd("set_link %s on" % nic.device_id)
+
+    # Attempt to put back udev network naming rules, even if the command to
+    # disable the rules failed. We may be undoing what was done in a previous
+    # (failed) test that never reached this point.
+    if guest_is_not_windows:
+        if guest_path_isfile(udev_rules_bkp_path):
+            session.cmd("mv -f %s %s" % (udev_rules_bkp_path, udev_rules_path))

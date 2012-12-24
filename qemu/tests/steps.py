@@ -6,7 +6,7 @@ Utilities to perform automatic guest installation using step files.
 
 import os, time, shutil, logging
 from autotest.client.shared import error
-from virttest import utils_misc, ppm_utils, qemu_monitor
+from virttest import utils_misc, ppm_utils, kvm_monitor
 
 try:
     import PIL.Image
@@ -88,16 +88,12 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         # Request screendump
         try:
             vm.monitor.screendump(scrdump_filename, debug=False)
-        except qemu_monitor.MonitorError, e:
+        except kvm_monitor.MonitorError, e:
             logging.warn(e)
             continue
 
         # Read image file
-        try:
-            (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
-        except IOError, e:
-            logging.warn(e)
-            continue
+        (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
 
         # Make sure image is valid
         if not ppm_utils.image_verify_ppm_file(scrdump_filename):
@@ -186,14 +182,16 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
 
 
 def run_steps(test, params, env):
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
+    vm = env.get_vm(params.get("main_vm"))
+    if not vm:
+        raise error.TestError("VM object not found in environment")
+    if not vm.is_alive():
+        e_msg = "VM seems to be dead. Guestwizard requires a living VM"
+        raise error.TestError(e_msg)
 
     steps_filename = params.get("steps")
     if not steps_filename:
-        image_name = os.path.basename(params["image_name"])
-        steps_filename = 'steps/%s.steps' % image_name
-
+        raise error.TestError("Steps filename not specified")
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
     if not os.path.exists(steps_filename):
         raise error.TestError("Steps file not found: %s" % steps_filename)

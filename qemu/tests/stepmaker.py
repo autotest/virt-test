@@ -8,8 +8,9 @@ Step file creator/editor.
 """
 
 import pygtk, gtk, gobject, time, os, commands, logging
+from autotest.client.shared import error
 from virttest import utils_misc, ppm_utils, step_editor
-from virttest import qemu_monitor
+from virttest import kvm_monitor
 pygtk.require('2.0')
 
 
@@ -138,7 +139,7 @@ class StepMaker(step_editor.StepMakerWindow):
 
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
-        except qemu_monitor.MonitorError, e:
+        except kvm_monitor.MonitorError, e:
             logging.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)
@@ -292,7 +293,7 @@ class StepMaker(step_editor.StepMakerWindow):
 
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
-        except qemu_monitor.MonitorError, e:
+        except kvm_monitor.MonitorError, e:
             logging.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)
@@ -336,15 +337,19 @@ class StepMaker(step_editor.StepMakerWindow):
 
 
 def run_stepmaker(test, params, env):
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
+    vm = env.get_vm(params.get("main_vm"))
+    if not vm:
+        raise error.TestError("VM object not found in environment")
+    if not vm.is_alive():
+        raise error.TestError("VM seems to be dead; Step Maker requires a"
+                              " living VM")
 
     steps_filename = params.get("steps")
     if not steps_filename:
-        image_name = os.path.basename(params["image_name"])
-        steps_filename = 'steps/%s.steps' % image_name
-
+        raise error.TestError("Steps filename not specified")
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
+    if os.path.exists(steps_filename):
+        raise error.TestError("Steps file %s already exists" % steps_filename)
 
     StepMaker(vm, steps_filename, test.debugdir, params)
     gtk.main()

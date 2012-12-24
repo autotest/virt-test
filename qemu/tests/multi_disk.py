@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process, data_dir
+from virttest import kvm_qtree, env_process, data_dir
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -95,7 +95,7 @@ def run_multi_disk(test, params, env):
     # Compatibility
     stg_params += _add_param("image_size", params.get("stg_image_size"))
     stg_params += _add_param("image_format", params.get("stg_image_format"))
-    stg_params += _add_param("image_boot", params.get("stg_image_boot", "no"))
+    stg_params += _add_param("image_boot", params.get("stg_image_boot"))
     stg_params += _add_param("drive_format", params.get("stg_drive_format"))
     if params.get("stg_assign_index") != "no":
         # Assume 0 and 1 are already occupied (hd0 and cdrom)
@@ -184,20 +184,20 @@ def run_multi_disk(test, params, env):
     vm.create(timeout=max(10, stg_image_num), params=params)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    images = params["images"].split()
+    images = params.get("images").split()
     n_repeat = int(params.get("n_repeat", "1"))
     image_num = len(images)
-    file_system = params["file_system"].split()
+    file_system = params.get("file_system").split()
     fs_num = len(file_system)
     cmd_timeout = float(params.get("cmd_timeout", 360))
-    re_str = params["re_str"]
-    black_list = params["black_list"].split()
+    re_str = params.get("re_str")
+    black_list = params.get("black_list").split()
 
     error.context("verifying qtree vs. test params")
     err = 0
-    qtree = qemu_qtree.QtreeContainer()
+    qtree = kvm_qtree.QtreeContainer()
     qtree.parse_info_qtree(vm.monitor.info('qtree'))
-    disks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
+    disks = kvm_qtree.QtreeDisksContainer(qtree.get_nodes())
     (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
     err += tmp1 + tmp2
     err += disks.generate_params()
@@ -220,7 +220,7 @@ def run_multi_disk(test, params, env):
             cmd = params.get("pre_cmd")
             error.context("creating partition on test disk")
             session.cmd(cmd, timeout=cmd_timeout)
-        cmd = params["list_volume_command"]
+        cmd = params.get("list_volume_command")
         output = session.cmd_output(cmd, timeout=cmd_timeout)
         disks = re.findall(re_str, output)
         disks = map(string.strip, disks)
@@ -251,7 +251,7 @@ def run_multi_disk(test, params, env):
 
                 # Random select one file system from file_system
                 fs = file_system[index].strip()
-                cmd = params["format_command"] % (fs, disk)
+                cmd = params.get("format_command") % (fs, disk)
                 error.context("formatting test disk")
                 session.cmd(cmd, timeout=cmd_timeout)
                 if params.get("mount_command"):
@@ -262,13 +262,13 @@ def run_multi_disk(test, params, env):
                 disk = disk.strip()
 
                 logging.info("Performing I/O on disk: %s...", disk)
-                cmd_list = params["cmd_list"].split()
+                cmd_list = params.get("cmd_list").split()
                 for cmd_l in cmd_list:
                     if params.get(cmd_l):
                         cmd = params.get(cmd_l) % disk
                         session.cmd(cmd, timeout=cmd_timeout)
 
-                cmd = params["compare_command"]
+                cmd = params.get("compare_command")
                 output = session.cmd_output(cmd)
                 key_word = params.get("check_result_key_word")
                 if key_word and key_word in output:
@@ -287,7 +287,7 @@ def run_multi_disk(test, params, env):
                 disks.sort()
                 for disk in disks:
                     disk = disk.strip()
-                    cmd = params["umount_command"] % (disk, disk)
+                    cmd = params.get("umount_command") % (disk, disk)
                     error.context("unmounting test disk")
                     session.cmd(cmd)
     finally:

@@ -83,9 +83,8 @@ def run_migration_with_speed_measurement(test, params, env):
 
         vm.monitor.migrate_set_speed(mig_speed)
 
-        cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-                (os.path.join(install_path, "test_cpu_flags"),
-                 vm_mem * 4, vm_mem / 2))
+        cmd = ("%s/cpuflags-test --stressmem %d" %
+                (os.path.join(install_path, "test_cpu_flags"), vm_mem / 2))
         logging.debug("Sending command: %s" % (cmd))
         session.sendline(cmd)
 
@@ -108,7 +107,7 @@ def run_migration_with_speed_measurement(test, params, env):
         logging.info("Maximum migration speed: %d MB/s", mig_stat.get_max())
 
         logging.info("Maximum tolerable divergence: %3.1f%%",
-                     mig_speed_accuracy * 100)
+                     mig_speed_accuracy*100)
 
         if real_speed < mig_speed - ack_speed:
             divergence = (1 - float(real_speed)/float(mig_speed)) * 100

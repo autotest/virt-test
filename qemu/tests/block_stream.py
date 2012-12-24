@@ -1,6 +1,6 @@
 import re, os, logging, time
 from autotest.client.shared import utils, error
-from virttest import qemu_monitor, env_process
+from virttest import kvm_monitor, env_process
 from virttest import data_dir
 
 @error.context_aware
@@ -16,12 +16,12 @@ def run_block_stream(test, params, env):
     6) TODO: Check for the size of the image_bak.img should not exceeds the image.img
     7) TODO(extra): Block job completion can be check in QMP
     """
-    image_format = params["image_format"]
+    image_format = params.get("image_format")
     image_name = params.get("image_name", "image")
     image_name = os.path.join(data_dir.get_data_dir(), image_name)
-    drive_format = params["drive_format"]
+    drive_format = params.get("drive_format")
     backing_file_name = "%s_bak" % (image_name)
-    qemu_img = params["qemu_img_binary"]
+    qemu_img = params.get("qemu_img_binary")
     block_stream_cmd = "block-stream"
 
 
@@ -34,7 +34,7 @@ def run_block_stream(test, params, env):
 
         try:
             output = vm.monitor.info("block-jobs")
-        except qemu_monitor.MonitorError, e:
+        except kvm_monitor.MonitorError, e:
             logging.error(e)
             fail += 1
             return None, None
@@ -62,12 +62,13 @@ def run_block_stream(test, params, env):
         logging.info("Infocmd output of basefile: %s" ,results)
 
         # Set the qemu harddisk to the backing file
-        logging.info("Original image_name is: %s", params['image_name'])
+        logging.info("Original image_name is: %s", params.get('image_name'))
         params['image_name'] = backing_file_name
-        logging.info("Param image_name changed to: %s", params['image_name'])
+        logging.info("Param image_name changed to: %s",
+                     params.get('image_name'))
 
         # Start virtual machine, using backing file as its harddisk
-        vm_name = params['main_vm']
+        vm_name = params.get('main_vm')
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.create()
@@ -131,7 +132,7 @@ def run_block_stream(test, params, env):
         logging.info("Checking whether the guest with backup-harddrive boot "
                      "and respond after block stream completion")
         error.context("checking responsiveness of guest")
-        session.cmd(params["alive_test_cmd"])
+        session.cmd(params.get("alive_test_cmd"))
 
         # Finally shutdown the virtual machine
         vm.destroy()

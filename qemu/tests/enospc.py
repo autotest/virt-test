@@ -1,7 +1,7 @@
 import logging, time, re, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import virt_vm, utils_misc, qemu_storage
+from virttest import virt_vm, utils_misc, kvm_storage
 
 
 class EnospcConfig(object):
@@ -15,17 +15,17 @@ class EnospcConfig(object):
         self.__dict__ = self.__shared_state
         root_dir = test.bindir
         self.tmpdir = test.tmpdir
-        self.qemu_img_binary = params['qemu_img_binary']
+        self.qemu_img_binary = params.get('qemu_img_binary')
         if not os.path.isfile(self.qemu_img_binary):
             self.qemu_img_binary = os.path.join(root_dir,
                                                 self.qemu_img_binary)
         self.raw_file_path = os.path.join(self.tmpdir, 'enospc.raw')
         # Here we're trying to choose fairly explanatory names so it's less
         # likely that we run in conflict with other devices in the system
-        self.vgtest_name = params["vgtest_name"]
-        self.lvtest_name = params["lvtest_name"]
+        self.vgtest_name = params.get("vgtest_name")
+        self.lvtest_name = params.get("lvtest_name")
         self.lvtest_device = "/dev/%s/%s" % (self.vgtest_name, self.lvtest_name)
-        image_dir = os.path.dirname(params["image_name"])
+        image_dir = os.path.dirname(params.get("image_name"))
         self.qcow_file_path = os.path.join(image_dir, 'enospc.qcow2')
         try:
             getattr(self, 'loopback')
@@ -69,7 +69,7 @@ class EnospcConfig(object):
     def cleanup(self):
         error.context("performing enospc cleanup")
         if os.path.islink(self.lvtest_device):
-            utils.run("fuser -k %s" % self.lvtest_device, ignore_status=True)
+            utils.run("fuser -k %s" % self.lvtest_device)
             time.sleep(2)
         l_result = utils.run("lvdisplay")
         # Let's remove all volumes inside the volume group created
@@ -107,7 +107,7 @@ def run_enospc(test, params, env):
     5) Continue paused guest
     6) Repeat step 3~5 several times
 
-    @param test: QEMU test object.
+    @param test: KVM test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -118,11 +118,11 @@ def run_enospc(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
 
-    vgtest_name = params["vgtest_name"]
-    lvtest_name = params["lvtest_name"]
+    vgtest_name = params.get("vgtest_name")
+    lvtest_name = params.get("lvtest_name")
     logical_volume = "/dev/%s/%s" % (vgtest_name, lvtest_name)
 
-    drive_format = params["drive_format"]
+    drive_format = params.get("drive_format")
     if drive_format == "virtio":
         devname = "/dev/vdb"
     elif drive_format == "ide":
@@ -130,7 +130,7 @@ def run_enospc(test, params, env):
         devname = "/dev/" + re.findall("([sh]db)\s", output)[0]
     elif drive_format == "scsi":
         devname = "/dev/sdb"
-    cmd = params["background_cmd"]
+    cmd = params.get("background_cmd")
     cmd %= devname
     logging.info("Sending background cmd '%s'", cmd)
     session_serial.sendline(cmd)
@@ -145,7 +145,7 @@ def run_enospc(test, params, env):
             for image_name in vm.params.objects("images"):
                 image_params = vm.params.object_params(image_name)
                 try:
-                    image = qemu_storage.QemuImg(image_params, test.bindir,
+                    image = kvm_storage.QemuImg(image_params, test.bindir,
                                                image_name)
                     image.check_image(image_params, test.bindir)
                 except (virt_vm.VMError, error.TestWarn), e:

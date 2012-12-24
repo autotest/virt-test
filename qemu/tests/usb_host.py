@@ -12,7 +12,10 @@ def run_usb_host(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-    device = params["usb_host_device"]
+    device = params.get("usb_host_device")
+    if device == None:
+        raise error.TestNAError("not configured (use 'usb_host_device = "
+                                "<vendor>:<product>')")
     (vendorid,productid) = device.split(":")
 
     # compose strings

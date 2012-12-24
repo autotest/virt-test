@@ -1,9 +1,8 @@
 import logging, re, random, os, time, pickle, sys, traceback
-from xml.parsers import expat
 from autotest.client.shared import error, utils
-from virttest import qemu_vm, virt_vm
+from autotest.client.shared import test as test_module
+from virttest import kvm_vm
 from virttest import utils_misc, utils_test, aexpect
-from autotest.client.shared.syncdata import SyncData
 
 
 def run_cpuflags(test, params, env):
@@ -18,14 +17,13 @@ def run_cpuflags(test, params, env):
     qemu_binary = utils_misc.get_path('.', params.get("qemu_binary", "qemu"))
 
     cpuflags_src = os.path.join(test.virtdir, "deps", "test_cpu_flags")
-    cpuflags_def = os.path.join(test.virtdir, "deps", "cpu_map.xml")
     smp = int(params.get("smp", 1))
 
     all_host_supported_flags = params.get("all_host_supported_flags", "no")
 
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")
-    mig_speed = params.get("mig_speed", "1G")
+    mig_speed = params.get("mig_speed", "100M")
 
     cpu_model_black_list = params.get("cpu_model_blacklist", "").split(" ")
 
@@ -75,7 +73,7 @@ def run_cpuflags(test, params, env):
             params_b["smp"] = smp
 
         vm_name = "vm1-cpuflags"
-        vm = qemu_vm.VM(vm_name, params_b, test.bindir, env['address_cache'])
+        vm = kvm_vm.VM(vm_name, params_b, test.bindir, env['address_cache'])
         env.register_vm(vm_name, vm)
         if (migration is True):
             vm.create(migration_mode=mig_protocol)
@@ -102,7 +100,7 @@ def run_cpuflags(test, params, env):
         flags = flags_re.search(out).groups()[0].split()
         return set(map(utils_misc.Flag, flags))
 
-    def get_guest_host_cpuflags_legacy(cpumodel):
+    def get_guest_host_cpuflags(cpumodel):
         """
         Get cpu flags correspond with cpumodel parameters.
 
@@ -112,7 +110,7 @@ def run_cpuflags(test, params, env):
         cmd = qemu_binary + " -cpu ?dump"
         output = utils.run(cmd).stdout
         re.escape(cpumodel)
-        pattern = (r".+%s.*\n.*\n +feature_edx .+ \((.*)\)\n +feature_"
+        pattern = (".+%s.*\n.*\n +feature_edx .+ \((.*)\)\n +feature_"
                    "ecx .+ \((.*)\)\n +extfeature_edx .+ \((.*)\)\n +"
                    "extfeature_ecx .+ \((.*)\)\n" % (cpumodel))
         flags = []
@@ -123,157 +121,18 @@ def run_cpuflags(test, params, env):
             flags += flag_group.split()
         return set(map(utils_misc.Flag, flags))
 
-
-    class ParseCpuFlags(object):
-        def __init__(self, encoding=None):
-            self.cpus = {}
-            self.parser = expat.ParserCreate(encoding)
-            self.parser.StartElementHandler = self.start_element
-            self.parser.EndElementHandler = self.end_element
-            self.last_arch = None
-            self.last_model = None
-            self.sub_model = False
-            self.all_flags = []
-
-
-        def start_element(self, name, attrs):
-            if name == "cpus":
-                self.cpus = {}
-            elif name == "arch":
-                self.last_arch = self.cpus[attrs['name']] = {}
-            elif name == "model":
-                if self.last_model is None:
-                    self.last_model = self.last_arch[attrs['name']] = []
-                else:
-                    self.last_model += self.last_arch[attrs['name']]
-                    self.sub_model = True
-            elif name == "feature":
-                if not self.last_model is None:
-                    self.last_model.append(attrs['name'])
-                else:
-                    self.all_flags.append(attrs['name'])
-
-
-        def end_element(self, name):
-            if name == "arch":
-                self.last_arch = None
-            elif name == "model":
-                if self.sub_model == False:
-                    self.last_model = None
-                else:
-                    self.sub_model = False
-
-
-        def parse_file(self, file_path):
-            self.parser.ParseFile(open(file_path, 'r'))
-            return self.cpus
-
-
-    def get_guest_host_cpuflags_1350(cpumodel):
-        """
-        Get cpu flags correspond with cpumodel parameters.
-
-        @param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
-        @return: [corespond flags]
-        """
-        p = ParseCpuFlags()
-        cpus = p.parse_file(cpuflags_def)
-        for arch in cpus.values():
-            if cpumodel in arch.keys():
-                flags = arch[cpumodel]
-        return set(map(utils_misc.Flag, flags))
-
-
-    get_guest_host_cpuflags_BAD = get_guest_host_cpuflags_1350
-
-
-    def get_all_qemu_flags_legacy():
+    def get_all_qemu_flags():
         cmd = qemu_binary + " -cpu ?cpuid"
         output = utils.run(cmd).stdout
 
-        flags_re = re.compile(r".*\n.*f_edx:(.*)\n.*f_ecx:(.*)\n"
-                              ".*extf_edx:(.*)\n.*extf_ecx:(.*)")
+        flags_re = re.compile(r".*\n.*f_edx:(.*)\n.*f_ecx:(.*)\n.*extf_edx:"
+                              "(.*)\n.*extf_ecx:(.*)")
         m = flags_re.search(output)
         flags = []
         for a in m.groups():
             flags += a.split()
 
         return set(map(utils_misc.Flag, flags))
-
-
-    def get_all_qemu_flags_1350():
-        cmd = qemu_binary + " -cpu ?"
-        output = utils.run(cmd).stdout
-
-        flags_re = re.compile(r".*Recognized CPUID flags:\n(.*)", re.DOTALL)
-        m = flags_re.search(output)
-        flags = []
-        for a in m.groups():
-            flags += a.split()
-
-        return set(map(utils_misc.Flag, flags))
-
-
-    def get_all_qemu_flags_BAD():
-        """
-        Get cpu flags correspond with cpumodel parameters.
-
-        @param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
-        @return: [corespond flags]
-        """
-        p = ParseCpuFlags()
-        p.parse_file(cpuflags_def)
-        return set(map(utils_misc.Flag, p.all_flags))
-
-
-    def get_cpu_models_legacy():
-        """
-        Get all cpu models from qemu.
-
-        @return: cpu models.
-        """
-        cmd = qemu_binary + " -cpu ?"
-        output = utils.run(cmd).stdout
-
-        cpu_re = re.compile(r"\w+\s+\[?(\w+)\]?")
-        return cpu_re.findall(output)
-
-
-    def get_cpu_models_1350():
-        """
-        Get all cpu models from qemu.
-
-        @return: cpu models.
-        """
-        cmd = qemu_binary + " -cpu ?"
-        output = utils.run(cmd).stdout
-
-        cpu_re = re.compile(r"x86\s+\[?(\w+)\]?")
-        return cpu_re.findall(output)
-
-    get_cpu_models_BAD = get_cpu_models_1350
-
-
-    def get_qemu_cpu_cmd_version():
-        cmd = qemu_binary + " -cpu ?cpuid"
-        try:
-            utils.run(cmd).stdout
-            return "legacy"
-        except:
-            cmd = qemu_binary + " -cpu ?"
-            output = utils.run(cmd).stdout
-            if "CPUID" in output:
-                return "1350"
-            else:
-                return "BAD"
-
-
-    qcver = get_qemu_cpu_cmd_version()
-
-    get_guest_host_cpuflags = locals()["get_guest_host_cpuflags_%s" % qcver]
-    get_all_qemu_flags = locals()["get_all_qemu_flags_%s" % qcver]
-    get_cpu_models = locals()["get_cpu_models_%s" % qcver]
-
 
     def get_flags_full_name(cpu_flag):
         """
@@ -310,6 +169,18 @@ def run_cpuflags(test, params, env):
                 real_flags -= set([get_flags_full_name(f[1:])])
 
         return real_flags
+
+    def get_cpu_models():
+        """
+        Get all cpu models from qemu.
+
+        @return: cpu models.
+        """
+        cmd = qemu_binary + " -cpu ?"
+        output = utils.run(cmd).stdout
+
+        cpu_re = re.compile("\w+\s+\[?(\w+)\]?")
+        return cpu_re.findall(output)
 
     def check_cpuflags(cpumodel, vm_session):
         """
@@ -357,34 +228,6 @@ def run_cpuflags(test, params, env):
         elif cpu_state == "0":
             vm_session.cmd("echo 1 > %s" % cpu_online)
             logging.debug("Guest cpu %d is enabled.", cpu)
-
-
-    def check_online_cpus(vm_session, smp, disabled_cpu):
-        """
-        Disable cpu in guest system.
-
-        @param smp: Count of cpu core in system.
-        @param disable_cpu: List of disabled cpu.
-
-        @return: List of CPUs that are still enabled after disable procedure.
-        """
-        online = [0]
-        for cpu in range(1, smp):
-            system_cpu_dir = "/sys/devices/system/cpu/"
-            cpu_online = system_cpu_dir + "cpu%d/online" % (cpu)
-            cpu_state = vm_session.cmd_output("cat %s" % cpu_online).strip()
-            if cpu_state == "1":
-                online.append(cpu)
-        cpu_proc = vm_session.cmd_output("cat /proc/cpuinfo")
-        cpu_state_proc = map(lambda x: int(x),
-                              re.findall(r"processor\s+:\s*(\d+)\n", cpu_proc))
-        if set(online) != set(cpu_state_proc):
-            raise error.TestError("Some cpus are disabled but %s are still "
-                                  "visible like online in /proc/cpuinfo." %
-                                   (set(cpu_state_proc) - set(online)))
-
-        return set(online) - set(disabled_cpu)
-
 
     def install_cpuflags_test_on_vm(vm, dst_dir):
         """
@@ -475,10 +318,9 @@ def run_cpuflags(test, params, env):
             extra_flags = set([])
         return (cpu_model, extra_flags)
 
-
-    class MiniSubtest(object):
+    class MiniSubtest(test_module.Subtest):
         def __new__(cls, *args, **kargs):
-            self = super(MiniSubtest, cls).__new__(cls)
+            self = test.Subtest.__new__()
             ret = None
             if args is None:
                 args = []
@@ -499,7 +341,6 @@ def run_cpuflags(test, params, env):
                                               exc_type, exc_value,
                                               exc_traceback.tb_next)))
 
-
     class Test_temp(MiniSubtest):
         def clean(self):
             logging.info("cleanup")
@@ -510,53 +351,44 @@ def run_cpuflags(test, params, env):
     # 1) <qemu-kvm-cmd> -cpu ?model
     class test_qemu_cpu_model(MiniSubtest):
         def test(self):
-            if qcver == "legacy":
-                cpu_models = params.get("cpu_models", "core2duo").split()
-                cmd = qemu_binary + " -cpu ?model"
-                result = utils.run(cmd)
-                missing = []
-                cpu_models = map(separe_cpu_model, cpu_models)
-                for cpu_model in cpu_models:
-                    if not cpu_model in result.stdout:
-                        missing.append(cpu_model)
-                if missing:
-                    raise error.TestFail("CPU models %s are not in output "
-                                         "'%s' of command \n%s" %
-                                         (missing, cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError("New qemu use new -cpu ? cmd.")
+            cpu_models = params.get("cpu_models", "core2duo").split()
+            cmd = qemu_binary + " -cpu ?model"
+            result = utils.run(cmd)
+            missing = []
+            cpu_models = map(separe_cpu_model, cpu_models)
+            for cpu_model in cpu_models:
+                if not cpu_model in result.stdout:
+                    missing.append(cpu_model)
+            if missing:
+                raise error.TestFail("CPU models %s are not in output "
+                                     "'%s' of command \n%s" %
+                                     (missing, cmd, result.stdout))
 
     # 2) <qemu-kvm-cmd> -cpu ?dump
     class test_qemu_dump(MiniSubtest):
         def test(self):
-            if qcver == "legacy":
-                cpu_models = params.get("cpu_models", "core2duo").split()
-                cmd = qemu_binary + " -cpu ?dump"
-                result = utils.run(cmd)
-                cpu_models = map(separe_cpu_model, cpu_models)
-                missing = []
-                for cpu_model in cpu_models:
-                    if not cpu_model in result.stdout:
-                        missing.append(cpu_model)
-                if missing:
-                    raise error.TestFail("CPU models %s are not in output "
-                                         "'%s' of command \n%s" %
-                                         (missing, cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError("New qemu does not support -cpu ?dump.")
+            cpu_models = params.get("cpu_models", "core2duo").split()
+            cmd = qemu_binary + " -cpu ?dump"
+            result = utils.run(cmd)
+            cpu_models = map(separe_cpu_model, cpu_models)
+            missing = []
+            for cpu_model in cpu_models:
+                if not cpu_model in result.stdout:
+                    missing.append(cpu_model)
+            if missing:
+                raise error.TestFail("CPU models %s are not in output "
+                                     "'%s' of command \n%s" %
+                                     (missing, cmd, result.stdout))
 
     # 3) <qemu-kvm-cmd> -cpu ?cpuid
     class test_qemu_cpuid(MiniSubtest):
         def test(self):
-            if qcver == "legacy":
-                cmd = qemu_binary + " -cpu ?cpuid"
-                result = utils.run(cmd)
-                if result.stdout is "":
-                    raise error.TestFail("There aren't any cpu Flag in output"
-                                         " '%s' of command \n%s" %
-                                         (cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError("New qemu use new -cpu ? cmd.")
+            cmd = qemu_binary + " -cpu ?cpuid"
+            result = utils.run(cmd)
+            if result.stdout is "":
+                raise error.TestFail("There aren't any cpu Flag in output"
+                                     " '%s' of command \n%s" %
+                                     (cmd, result.stdout))
 
     # 1) boot with cpu_model
     class test_boot_cpu_model(Test_temp):
@@ -570,7 +402,6 @@ def run_cpuflags(test, params, env):
             if not_enable_flags != set([]):
                 raise error.TestFail("Flags defined on host but not found "
                                      "on guest: %s" % (not_enable_flags))
-
 
     # 2) success boot with supported flags
     class test_boot_cpu_model_and_additional_flags(Test_temp):
@@ -642,9 +473,7 @@ def run_cpuflags(test, params, env):
                 cpuf_model += ",+" + str(fadd)
 
             vnc_port = utils_misc.find_free_port(5900, 6100) - 5900
-            cmd = "%s -cpu %s -vnc :%d -enable-kvm" % (qemu_binary,
-                                                       cpuf_model,
-                                                       vnc_port)
+            cmd = "%s -cpu %s -vnc :%d" % (qemu_binary, cpuf_model, vnc_port)
             out = None
 
             try:
@@ -655,7 +484,7 @@ def run_cpuflags(test, params, env):
                 except error.CmdError, e:
                     out = e.result_obj.stderr
             finally:
-                uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
+                uns_re = re.compile("^warning:.*flag '(.+)'", re.MULTILINE)
                 warn_flags = set(map(utils_misc.Flag, uns_re.findall(out)))
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 if fwarn_flags:
@@ -680,9 +509,7 @@ def run_cpuflags(test, params, env):
                 cpuf_model += ",+" + str(fadd)
 
             vnc_port = utils_misc.find_free_port(5900, 6100) - 5900
-            cmd = "%s -cpu %s -vnc :%d -enable-kvm" % (qemu_binary,
-                                                       cpuf_model,
-                                                       vnc_port)
+            cmd = "%s -cpu %s -vnc :%d" % (qemu_binary, cpuf_model, vnc_port)
             out = None
             try:
                 try:
@@ -690,7 +517,7 @@ def run_cpuflags(test, params, env):
                 except error.CmdError:
                     logging.error("Host boot with unsupported flag")
             finally:
-                uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
+                uns_re = re.compile("^warning:.*flag '(.+)'", re.MULTILINE)
                 warn_flags = set(map(utils_misc.Flag, uns_re.findall(out)))
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 if fwarn_flags:
@@ -810,26 +637,9 @@ def run_cpuflags(test, params, env):
             time.sleep(5)
 
             self.vm.monitor.migrate_set_speed(mig_speed)
-            self.clone = self.vm.migrate(mig_timeout, mig_protocol, offline=False,
-                                      not_wait_for_migration=True)
+            self.vm.migrate(mig_timeout, mig_protocol, offline=False)
 
             time.sleep(5)
-
-            try:
-                self.vm.wait_for_migration(10)
-            except virt_vm.VMMigrateTimeoutError:
-                self.vm.monitor.migrate_set_downtime(1)
-                self.vm.wait_for_migration(mig_timeout)
-
-            # Swap due to test cleaning.
-            temp = self.vm.clone(copy_state=True)
-            self.vm.__dict__ = self.clone.__dict__
-            self.clone = temp
-
-            self.vm.resume()
-            self.clone.destroy(gracefully=False)
-
-            stress_session = self.vm.wait_for_login()
 
             #If cpuflags-test hang up during migration test raise exception
             try:
@@ -966,141 +776,6 @@ def run_cpuflags(test, params, env):
             params_b["cpu_model"] = cpu_model
             mig = testMultihostMigration(test, params_b, env)
             mig.run()
-
-
-    class test_multi_host_migration_onoff_cpu(Test_temp):
-        def test(self):
-            """
-            Test migration between multiple hosts.
-            """
-            cpu_model, extra_flags = parse_cpu_model()
-
-            flags = HgFlags(cpu_model, extra_flags)
-
-            logging.debug("Cpu mode flags %s.",
-                          str(flags.quest_cpu_model_flags))
-            logging.debug("Added flags %s.",
-                          str(flags.cpumodel_unsupport_flags))
-            cpuf_model = cpu_model
-
-            for fadd in extra_flags:
-                cpuf_model += ",+" + str(fadd)
-
-            for fdel in flags.host_unsupported_flags:
-                cpuf_model += ",-" + str(fdel)
-
-            smp = int(params["smp"])
-            disable_cpus = map(lambda cpu: int(cpu),
-                                        params.get("disable_cpus", "").split())
-
-            install_path = "/tmp"
-
-            class testMultihostMigration(utils_test.MultihostMigration):
-                def __init__(self, test, params, env):
-                    utils_test.MultihostMigration.__init__(self, test, params,
-                                                           env)
-                    self.srchost = self.params.get("hosts")[0]
-                    self.dsthost = self.params.get("hosts")[1]
-                    self.id = {'src': self.srchost,
-                               'dst': self.dsthost,
-                               "type": "disable_cpu"}
-                    self.migrate_count = int(self.params.get('migrate_count',
-                                                             '2'))
-
-
-                def ping_pong_migrate(self, sync, worker, check_worker):
-                    for _ in range(self.migrate_count):
-                        logging.info("File transfer not ended, starting"
-                                     " a round of migration...")
-                        sync.sync(True, timeout=mig_timeout)
-                        if self.hostid == self.srchost:
-                            self.migrate_wait(["vm1"],
-                                              self.srchost,
-                                              self.dsthost,
-                                              start_work=worker)
-                        elif self.hostid == self.dsthost:
-                            self.migrate_wait(["vm1"],
-                                              self.srchost,
-                                              self.dsthost,
-                                              check_work=check_worker)
-                        tmp = self.dsthost
-                        self.dsthost = self.srchost
-                        self.srchost = tmp
-
-
-                def migration_scenario(self):
-
-                    sync = SyncData(self.master_id(), self.hostid, self.hosts,
-                            self.id, self.sync_server)
-
-                    def worker(mig_data):
-                        vm = env.get_vm("vm1")
-                        session = vm.wait_for_login(timeout=self.login_timeout)
-
-                        install_cpuflags_test_on_vm(vm, install_path)
-
-                        Flags = check_cpuflags_work(vm, install_path,
-                                            flags.all_possible_guest_flags)
-                        logging.info("Woking CPU flags: %s", str(Flags[0]))
-                        logging.info("Not working CPU flags: %s",
-                                     str(Flags[1]))
-                        logging.warning("Flags works even if not deffined on"
-                                        " guest cpu flags: %s",
-                                        str(Flags[0] - flags.guest_flags))
-                        logging.warning("Not tested CPU flags: %s",
-                                        str(Flags[2]))
-                        for cpu in disable_cpus:
-                            if cpu < smp:
-                                disable_cpu(session, cpu, True)
-                            else:
-                                logging.warning("There is no enouth cpu"
-                                                " in Guest. It is trying to"
-                                                "remove cpu:%s from guest with"
-                                                " smp:%s." % (cpu, smp))
-                        logging.debug("Guest_flags: %s",
-                                      str(flags.guest_flags))
-                        logging.debug("Working_flags: %s", str(Flags[0]))
-
-                    def check_worker(mig_data):
-                        vm = env.get_vm("vm1")
-
-                        vm.verify_illegal_instruction()
-
-                        session = vm.wait_for_login(timeout=self.login_timeout)
-
-                        really_disabled = check_online_cpus(session, smp,
-                                                            disable_cpus)
-
-                        not_disabled = set(really_disabled) & set(disable_cpus)
-                        if not_disabled:
-                            raise error.TestFail("Some of disabled cpus are "
-                                                 "online. This shouldn't "
-                                                 "happen. Cpus disabled on "
-                                                 "srchost:%s, Cpus not "
-                                                 "disabled on dsthost:%s" %
-                                                 (disable_cpus, not_disabled))
-
-                        Flags = check_cpuflags_work(vm, install_path,
-                                                flags.all_possible_guest_flags)
-                        logging.info("Woking CPU flags: %s",
-                                     str(Flags[0]))
-                        logging.info("Not working CPU flags: %s",
-                                     str(Flags[1]))
-                        logging.warning("Flags works even if not deffined on"
-                                        " guest cpu flags: %s",
-                                        str(Flags[0] - flags.guest_flags))
-                        logging.warning("Not tested CPU flags: %s",
-                                        str(Flags[2]))
-
-
-                    self.ping_pong_migrate(sync, worker, check_worker)
-
-
-            params_b = params.copy()
-            params_b["cpu_model"] = cpu_model
-            mig = testMultihostMigration(test, params_b, env)
-            mig.run()
-
 
     test_type = params.get("test_type")
     if (test_type in locals()):

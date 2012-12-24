@@ -1,6 +1,6 @@
 import re, logging, random, time
 from autotest.client.shared import error
-from virttest import qemu_monitor, utils_test
+from virttest import kvm_monitor, utils_test
 
 
 def run_balloon_check(test, params, env):
@@ -25,7 +25,7 @@ def run_balloon_check(test, params, env):
         fail = 0
         try:
             output = vm.monitor.info("balloon")
-        except qemu_monitor.MonitorError, e:
+        except kvm_monitor.MonitorError, e:
             logging.error(e)
             fail += 1
             return 0, fail
@@ -76,7 +76,7 @@ def run_balloon_check(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     # Upper limit that we can raise the memory
-    vm_assigned_mem = int(params["mem"])
+    vm_assigned_mem = int(params.get("mem"))
 
     # Check memory size
     logging.info("Memory check")
@@ -108,7 +108,7 @@ def run_balloon_check(test, params, env):
     new_mem = int(random.uniform(vm_assigned_mem - vm_mem_free, vm_assigned_mem))
     fail += balloon_memory(new_mem, offset)
     # Run option test after evict memory
-    if 'sub_balloon_test_evict' in params:
+    if params.has_key('sub_balloon_test_evict'):
         balloon_test = params['sub_balloon_test_evict']
         utils_test.run_virt_sub_test(test, params, env, sub_type=balloon_test)
         if balloon_test == "shutdown" :
@@ -119,7 +119,7 @@ def run_balloon_check(test, params, env):
     fail += balloon_memory(vm_assigned_mem, offset)
 
     # Run sub test after enlarge memory
-    if 'sub_balloon_test_enlarge' in params:
+    if params.has_key('sub_balloon_test_enlarge'):
         balloon_test = params['sub_balloon_test_enlarge']
         utils_test.run_virt_sub_test(test, params, env, sub_type=balloon_test)
         if balloon_test == "shutdown" :

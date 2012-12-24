@@ -13,7 +13,7 @@ def run_qemu_iotests(test, params, env):
     3) Run test for the file format detected
     4) Report any errors found to autotest
 
-    @param test:   QEMU test object.
+    @param test:   KVM test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """
@@ -37,7 +37,7 @@ def run_qemu_iotests(test, params, env):
                                     params.get("qemu_io_binary", "qemu-io"))
 
     os.chdir(destination_dir)
-    image_format = params["qemu_io_image_format"]
+    image_format = params.get("qemu_io_image_format")
     extra_options = params.get("qemu_io_extra_options", "")
 
     cmd = './check'
