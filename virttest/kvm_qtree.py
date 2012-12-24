@@ -5,7 +5,7 @@ Utility classes and functions to handle KVM Qtree parsing and verification.
 @copyright: 2012 Red Hat Inc.
 """
 import logging, os, re
-import storage, utils_misc
+import storage, utils_misc, data_dir
 
 
 OFFSET_PER_LEVEL = 2
@@ -455,12 +455,10 @@ class QtreeDisksContainer(object):
             missing += 1
         return (additional, missing, qtree_not_scsi, proc_not_scsi)
 
-    def check_disk_params(self, params, root_dir=''):
+    def check_disk_params(self, params):
         """
         Check gathered info from qtree/block with params
         @param params: autotest params
-        @param root_dir: root_dir of images. If all images use absolute path
-                         it's safe to omit this param.
         @return: number of errors
         """
         err = 0
@@ -484,7 +482,8 @@ class QtreeDisksContainer(object):
             current = None
             image_params = params.object_params(name)
             image_name = os.path.realpath(
-                        storage.get_image_filename(image_params, root_dir))
+                        storage.get_image_filename(image_params,
+                                                   data_dir.get_data_dir()))
             for (qname, disk) in disks.iteritems():
                 if disk.get('image_name') == image_name:
                     current = disk
