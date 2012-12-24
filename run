@@ -177,6 +177,15 @@ class VirtTestRunParser(optparse.OptionParser):
         qemu.add_option("--accel", action="store", dest="accel", default="kvm",
                         help=("Accelerator used to run qemu (kvm or tcg). "
                               "Default: kvm"))
+        qemu.add_option("--nettype", action="store", dest="nettype",
+                        default="user",
+                        help=("QEMU network option (bridge or user). "
+                              "Default: %default"))
+        qemu.add_option("--netdst", action="store", dest="netdst",
+                        default="virbr0",
+                        help=("Bridge name to be used "
+                              "(if you chose bridge as nettype). "
+                              "Default: %default"))
         self.add_option_group(qemu)
 
 
@@ -223,12 +232,26 @@ class VirtTestApp(object):
             self.cartesian_parser.parse_string("enable_kvm = no")
             self.cartesian_parser.parse_string("disable_kvm = yes")
 
+    def _process_bridge_mode(self):
+        from virttest import standalone_test
+        if self.options.nettype == 'bridge':
+            if os.getuid() != 0:
+                standalone_test.print_stdout("In order to use bridge, "
+                                             "you need to be root, aborting...")
+                sys.exit(1)
+            self.cartesian_parser.parse_string("nettype = bridge")
+            self.cartesian_parser.parse_string("netdst = %s" %
+                                               self.options.netdst)
+        elif self.options.nettype == 'user':
+            self.cartesian_parser.parse_string("nettype = user")
+
     def _process_qemu_specific_options(self):
         """
         Calls for processing all options specific to the qemu test.
         """
         self._process_qemu_bin()
         self._process_qemu_accel()
+        self._process_bridge_mode()
 
     def _process_options(self):
         """
