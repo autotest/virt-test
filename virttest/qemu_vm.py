@@ -8,7 +8,7 @@ import time, os, logging, fcntl, re, commands, errno
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
-import kvm_virtio_port, remote, data_dir, utils_net
+import qemu_virtio_port, remote, data_dir, utils_net
 
 
 class QemuSegFaultError(virt_vm.VMError):
@@ -1798,11 +1798,11 @@ class VM(virt_vm.BaseVM):
                 if port_params.get('virtio_port_type') in ("console",
                                                            "virtio_console"):
                     self.virtio_ports.append(
-                            kvm_virtio_port.VirtioConsole(port, port_name,
+                            qemu_virtio_port.VirtioConsole(port, port_name,
                                                           filename))
                 else:
                     self.virtio_ports.append(
-                            kvm_virtio_port.VirtioSerial(port, port_name,
+                            qemu_virtio_port.VirtioSerial(port, port_name,
                                                          filename))
                 i += 1
 
