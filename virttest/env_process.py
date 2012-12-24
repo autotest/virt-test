@@ -1,7 +1,7 @@
 import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
-import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
+import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, qemu_vm
 import libvirt_vm, video_maker, utils_misc, storage, kvm_storage
 import remote, ovirt, data_dir, utils_test
 
@@ -62,7 +62,7 @@ def preprocess_vm(test, params, env, name):
     target = params.get('target')
     if not vm:
         if vm_type == 'qemu':
-            vm = kvm_vm.VM(name, params, test.bindir, env.get("address_cache"))
+            vm = qemu_vm.VM(name, params, test.bindir, env.get("address_cache"))
         if vm_type == 'libvirt':
             vm = libvirt_vm.VM(name, params, test.bindir, env.get("address_cache"))
         if vm_type == 'v2v':
