@@ -417,7 +417,7 @@ class BaseInstaller(object):
         '''
         Performs the uninstallations of the virtualization software
 
-        Note: This replaces old kvm_installer._clean_previous_install()
+        Note: This replaces old qemu_installer._clean_previous_install()
         '''
         raise NotImplementedError
 
@@ -451,7 +451,7 @@ class YumInstaller(BaseInstaller):
     Installs virtualization software using YUM
 
     Notice: this class implements a change of behaviour if compared to
-    kvm_installer.YumInstaller.set_install_params(). There's no longer
+    qemu_installer.YumInstaller.set_install_params(). There's no longer
     a default package list, as each virtualization technology will have
     a completely different default. This should now be kept at the
     configuration file only.

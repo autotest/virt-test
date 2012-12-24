@@ -24,8 +24,8 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
     # We'll look for one of these binaries when linking the QEMU binary
     # to the test directory
     #
-    qemu_system = 'qemu-system-' + utils.system_output('uname -i')
-    ACCEPTABLE_QEMU_BIN_NAMES = ['qemu-kvm', qemu_system]
+    ACCEPTABLE_QEMU_BIN_NAMES = ['qemu-kvm',
+                                 'qemu-system-x86_64']
 
     #
     # The default names for the binaries
@@ -120,6 +120,17 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
 
         return result
 
+    def install(self):
+        self.install_unittests()
+        self._clean_previous_installs()
+        self._get_packages()
+        self._install_packages()
+        create_symlinks(test_bindir=self.test_bindir,
+                        bin_list=self.qemu_bin_paths,
+                        unittest=self.unittest_prefix)
+        self.reload_modules_if_needed()
+        if self.save_results:
+            virt_utils.archive_as_tarball(self.srcdir, self.results_dir)
 
     def _qemu_img_bin_exists_at_prefix(self):
         '''
@@ -212,9 +223,60 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
             logging.warning('Qemu fs proxy path %s not found on source dir')
 
 
-    def _install_phase_init(self):
-        '''
-        Initializes the built and installed software
+
+        @param test: kvm test object
+        @param params: Dictionary with test arguments
+        """
+        super(SourceDirInstaller, self).set_install_params(test, params)
+
+        self.mod_install_dir = os.path.join(self.prefix, 'modules')
+        self.installed_kmods = False  # it will be set to True in case we
+                                      # installed our own modules
+
+        srcdir = params.get("srcdir", None)
+        self.path_to_roms = params.get("path_to_rom_images", None)
+
+        if self.install_mode == 'localsrc':
+            if srcdir is None:
+                raise error.TestError("Install from source directory specified"
+                                      "but no source directory provided on the"
+                                      "control file.")
+            else:
+                shutil.copytree(srcdir, self.srcdir)
+
+        elif self.install_mode == 'localtar':
+            tarball = params.get("tarball")
+            if not tarball:
+                raise error.TestError("KVM Tarball install specified but no"
+                                      " tarball provided on control file.")
+            logging.info("Installing KVM from a local tarball")
+            logging.info("Using tarball %s")
+            tarball = utils.unmap_url("/", params.get("tarball"), "/tmp")
+            utils.extract_tarball_to_dir(tarball, self.srcdir)
+
+        if self.install_mode in ['localtar', 'srcdir']:
+            self.repo_type = virt_utils.check_kvm_source_dir(self.srcdir)
+            p = os.path.join(self.srcdir, 'configure')
+            self.configure_options = virt_installer.check_configure_options(p)
+
+
+    def _build(self):
+        make_jobs = utils.count_cpus()
+        os.chdir(self.srcdir)
+        # For testing purposes, it's better to build qemu binaries with
+        # debugging symbols, so we can extract more meaningful stack traces.
+        cfg = "./configure --prefix=%s" % self.prefix
+        if "--disable-strip" in self.configure_options:
+            cfg += " --disable-strip"
+        steps = [cfg, "make clean", "make -j %s" % make_jobs]
+        logging.info("Building KVM")
+        for step in steps:
+            utils.system(step)
+
+
+    def _install_kmods_old_userspace(self, userspace_path):
+        """
+        Run the module install command.
 
         This uses a simple mechanism of looking up the installer name
         for deciding what action to do.
