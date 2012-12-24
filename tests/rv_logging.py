@@ -101,7 +101,7 @@ def run_rv_logging(test, params, env):
         logging.debug("------------ End of script output of the Copying"
                       " Session ------------")
 
-        output = guest_session.cmd("tail -n 3 " + spicevdagent_logfile + 
+        output = guest_session.cmd("tail -n 3 " + spicevdagent_logfile +
                                    " | grep 'clipboard grab'")
 
     else:
