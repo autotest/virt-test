@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import kvm_qtree, env_process, data_dir
+from virttest import qemu_qtree, env_process, data_dir
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -195,9 +195,9 @@ def run_multi_disk(test, params, env):
 
     error.context("verifying qtree vs. test params")
     err = 0
-    qtree = kvm_qtree.QtreeContainer()
+    qtree = qemu_qtree.QtreeContainer()
     qtree.parse_info_qtree(vm.monitor.info('qtree'))
-    disks = kvm_qtree.QtreeDisksContainer(qtree.get_nodes())
+    disks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
     (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
     err += tmp1 + tmp2
     err += disks.generate_params()

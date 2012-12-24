@@ -144,8 +144,7 @@ params = ParamsDict({'images': 'image1 stg4',
                      'image_size_stg4': '1M',
                      'image_snapshot': 'yes',
                      'image_snapshot_stg4': 'no',
-                     'image_readonly_image1': 'yes',
-                     'cdroms': 'cdrom1'})
+                     'image_readonly_image1': 'yes'})
 
 
 class QtreeContainerTest(unittest.TestCase):
@@ -257,7 +256,7 @@ Host: scsi1 Channel: 00 Id: 00 Lun: 00
         self.assertEqual(disks.generate_params(), 1)
         self.assertEqual(disks.check_disk_params(_params), 4)
         self.assertEqual(disks.check_guests_proc_scsi(_guest_proc_scsi),
-                         (0, 1, 1, 0))
+                         (1, 1, 1, 1))
 
 
 class KvmQtreeClassTest(unittest.TestCase):
