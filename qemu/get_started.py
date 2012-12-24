@@ -8,7 +8,7 @@ import os, sys, logging
 import common
 from virttest import utils_misc, data_dir, bootstrap
 
-test_name = "kvm"
+test_name = "qemu"
 test_dir = os.path.dirname(sys.modules[__name__].__file__)
 test_dir = os.path.abspath(test_dir)
 base_dir = data_dir.get_data_dir()

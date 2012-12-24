@@ -6,7 +6,7 @@ import storage
 
 
 #: List of test types to strip names by default
-TEST_TYPES_STRIP_NAMES = ['kvm', 'libvirt']
+TEST_TYPES_STRIP_NAMES = ['qemu', 'libvirt']
 
 
 class Test(object):
@@ -194,7 +194,7 @@ class Test(object):
                 raise
             # Abort on error
             logging.info("Aborting job (%s)", e)
-            if params.get("vm_type") == "kvm":
+            if params.get("vm_type") == "qemu":
                 for vm in env.get_all_vms():
                     if vm.is_dead():
                         continue
@@ -395,7 +395,7 @@ def print_test_list(options, cartesian_parser):
             else:
                 shortname = params['shortname']
             needs_root = ((params.get('requires_root', 'no') == 'yes')
-                          or (params.get('vm_type') != 'kvm'))
+                          or (params.get('vm_type') != 'qemu'))
             basic_out = (bcolors.blue + str(index) + bcolors.end + " " +
                          shortname)
             if needs_root:
@@ -424,7 +424,10 @@ def bootstrap_tests(options):
         test_dir = os.path.dirname(os.path.dirname(options.config))
         test_dir = os.path.abspath(test_dir)
 
-    check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+    if options.type == 'qemu':
+        check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+    else:
+        check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
 
     kwargs = {'test_name': options.type,
@@ -530,8 +533,8 @@ def run_tests(parser, options):
         qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
         logging.debug("")
 
-    if options.type == 'kvm':
-        logging.info("We're running the kvm test with:")
+    if options.type == 'qemu':
+        logging.info("We're running the qemu test with:")
         logging.info("qemu binary: %s" % d.get('qemu_binary'))
         logging.info("qemu img binary: %s" % d.get('qemu_img_binary'))
         logging.info("qemu io binary: %s" % d.get('qemu_io_binary'))

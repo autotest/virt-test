@@ -156,7 +156,7 @@ class virt(test.test):
                 raise
             # Abort on error
             logging.info("Aborting job (%s)", e)
-            if params.get("vm_type") == "kvm":
+            if params.get("vm_type") == "qemu":
                 for vm in env.get_all_vms():
                     if vm.is_dead():
                         continue
