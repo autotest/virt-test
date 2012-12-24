@@ -1481,6 +1481,25 @@ class VM(virt_vm.BaseVM):
         return qemu_cmd
 
 
+    def _nic_tap_add_helper(self, nic):
+        nic.tapfd = str(utils_net.open_tap("/dev/net/tun", nic.ifname,
+                                           vnet_hdr=True))
+        logging.debug("Adding VM %s NIC ifname %s to bridge %s", self.name,
+                      nic.ifname, nic.netdst)
+        if nic.nettype == 'bridge':
+            utils_net.add_to_bridge(nic.ifname, nic.netdst)
+        utils_net.bring_up_ifname(nic.ifname)
+
+
+    def _nic_tap_remove_helper(self, nic):
+        logging.debug("Removing VM %s NIC ifname %s from bridge %s", self.name,
+                      nic.ifname, nic.netdst)
+        try:
+            os.close(int(nic.tapfd))
+        except TypeError:
+            pass
+
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
                timeout=CREATE_TIMEOUT, migration_mode=None,
@@ -1611,23 +1630,7 @@ class VM(virt_vm.BaseVM):
                                        % (nic.nic_name, mac_source.name))
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
                     if nic.nettype == 'bridge' or nic.nettype == 'network':
-                        try:
-                            nic.tapfd = str(utils_net.open_tap("/dev/net/tun",
-                                                                nic.ifname,
-                                                                vnet_hdr=True))
-                            logging.debug("Adding VM %s NIC ifname %s"
-                                          " to bridge %s" % (self.name,
-                                                nic.ifname, nic.netdst))
-                            if nic.nettype == 'bridge':
-                                utils_net.add_to_bridge(nic.ifname, nic.netdst)
-                            utils_net.bring_up_ifname(nic.ifname)
-                        except utils_net.TAPCreationError, taperror:
-                            if taperror.details.errno == errno.EBUSY:
-                                logging.info("VM %s NIC ifname %s was already "
-                                             "added to bridge %s, skipping...",
-                                             self.name, nic.ifname, nic.netdst)
-                            else:
-                                raise taperror
+                        self._nic_tap_add_helper(nic)
                     elif nic.nettype == 'user':
                         logging.info("Assuming dependencies met for "
                                      "user mode nic %s, and ready to go"
@@ -1654,7 +1657,12 @@ class VM(virt_vm.BaseVM):
                     raise virt_vm.VMPAError(pa_type)
 
             # Make qemu command
-            qemu_command = self.make_create_command()
+            try:
+                qemu_command = self.make_create_command()
+            except Exception, create_error:
+                for nic in self.virtnet:
+                    self._nic_tap_remove_helper(nic)
+                raise create_error
 
             # Add migration parameters if required
             if migration_mode == "tcp":
