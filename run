@@ -291,7 +291,7 @@ class VirtTestApp(object):
         else:
             standalone_test.bootstrap_tests(self.options)
 
-        if self.options.type == 'kvm':
+        if self.options.type == 'qemu':
             self._process_qemu_specific_options()
 
         if self.options.type and self.options.tests:
@@ -300,7 +300,7 @@ class VirtTestApp(object):
 
         elif (self.options.type and not self.options.tests
               and not self.options.config):
-            if self.options.type == 'kvm':
+            if self.options.type == 'qemu':
                 self.cartesian_parser.parse_string("only %s" %
                                                    QEMU_DEFAULT_SET)
             elif self.options.type == 'libvirt':

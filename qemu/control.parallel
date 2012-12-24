@@ -6,14 +6,16 @@ dhuff@redhat.com (David Huff)
 aeromenk@redhat.com (Alexey Eromenko)
 mburns@redhat.com (Mike Burns)
 """
-TIME = 'SHORT'
-NAME = 'KVM Test (Parallel)'
+TIME = 'MEDIUM'
+NAME = 'QEMU (KVM) Test (Parallel)'
 TEST_TYPE = 'client'
 TEST_CLASS = 'Virtualization'
 TEST_CATEGORY = 'Functional'
 
 DOC = """
-Executes the KVM test framework on a given host (parallel version).
+Executes the QEMU (KVM) test framework on a given host (parallel version).
+
+Online docs: https://github.com/autotest/virt-test/wiki
 """
 
 
@@ -25,7 +27,7 @@ import sys, os, commands, re
 os.environ['LANG'] = 'en_US.UTF-8'
 
 #---------------------------------------------------------
-# Enable modules import from current directory (tests/kvm)
+# Enable modules import from current directory (tests/virt/qemu)
 #---------------------------------------------------------
 
 virt_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt')
@@ -150,8 +152,8 @@ params = {
 # links to point to the newly built executables.
 
 if not params.get("mode") == "noinstall":
-    if not job.run_test("kvm", params=params, tag=params.get("shortname")):
-        print 'kvm_installation failed ... exiting'
+    if not job.run_test("virt", params=params, tag=params.get("shortname")):
+        print 'QEMU installation failed ... exiting'
         sys.exit(1)
 
 # ----------------------------------------------------------

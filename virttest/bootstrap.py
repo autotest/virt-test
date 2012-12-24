@@ -5,27 +5,27 @@ import utils_misc, data_dir
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
-recommended_programs = {'kvm': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
+recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
                         'libvirt': [('virsh',), ('virt-install',)],
                         'openvswitch': [],
                         'v2v': []}
 
-mandatory_programs = {'kvm': basic_program_requirements + ['gcc'],
+mandatory_programs = {'qemu': basic_program_requirements + ['gcc'],
                       'libvirt': basic_program_requirements,
                       'openvswitch': basic_program_requirements,
                       'v2v': basic_program_requirements}
 
-mandatory_headers = {'kvm': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
+mandatory_headers = {'qemu': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
                      'libvirt': [],
                      'openvswitch': [],
                      'v2v': []}
 
-first_subtest = {'kvm': ['unattended_install'],
+first_subtest = {'qemu': ['unattended_install'],
                 'libvirt': ['unattended_install'],
                 'openvswitch': ['unattended_install'],
                 'v2v': ['unattended_install']}
 
-last_subtest = {'kvm': ['shutdown'],
+last_subtest = {'qemu': ['shutdown'],
                 'libvirt': ['shutdown', 'remove_guest'],
                 'openvswitch': ['shutdown'],
                 'v2v': ['shutdown']}
@@ -455,7 +455,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     """
     Common virt test assistant module.
 
-    @param test_name: Test name, such as "kvm".
+    @param test_name: Test name, such as "qemu".
     @param test_dir: Path with the test directory.
     @param base_dir: Base directory used to hold images and isos.
     @param default_userspace_paths: Important programs for a successful test
