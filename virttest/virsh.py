@@ -672,6 +672,17 @@ def dumpxml(name, to_file="", **dargs):
     return result.stdout.strip()
 
 
+def domifstat(name, interface, **dargs):
+    """
+    Get network interface stats for a running domain.
+
+    @param: name: Name of domain
+    @param: interface: interface device
+    @return: CmdResult object
+    """
+    return command("domifstat %s %s" % (name, interface), **dargs)
+
+
 def domjobinfo(name, **dargs):
     """
     Get domain job information.
