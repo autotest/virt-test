@@ -1,6 +1,6 @@
 import re, string, logging
 from autotest.client.shared import error
-from virttest import kvm_monitor, storage, data_dir
+from virttest import qemu_monitor, storage, data_dir
 
 
 def run_physical_resources_check(test, params, env):
@@ -24,7 +24,7 @@ def run_physical_resources_check(test, params, env):
         o = ""
         try:
             o = vm.monitor.info(info_cmd)
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             fail_log =  e + "\n"
             fail_log += "info/query monitor command failed (%s)" % info_cmd
             f_fail.append(fail_log)
@@ -50,7 +50,7 @@ def run_physical_resources_check(test, params, env):
             o = ""
             try:
                 o = vm.monitor.info(info_cmd)
-            except kvm_monitor.MonitorError, e:
+            except qemu_monitor.MonitorError, e:
                 fail_log = e + "\n"
                 fail_log += "info/query monitor command failed (%s)" % info_cmd
                 f_fail.append(fail_log)
@@ -209,7 +209,7 @@ def run_physical_resources_check(test, params, env):
     o = ""
     try:
         o = vm.monitor.info("network")
-    except kvm_monitor.MonitorError, e:
+    except qemu_monitor.MonitorError, e:
         fail_log =  e + "\n"
         fail_log += "info/query monitor command failed (network)"
         n_fail.append(fail_log)

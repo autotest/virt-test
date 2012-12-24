@@ -6,7 +6,7 @@ Utilities to perform automatic guest installation using step files.
 
 import os, time, shutil, logging
 from autotest.client.shared import error
-from virttest import utils_misc, ppm_utils, kvm_monitor
+from virttest import utils_misc, ppm_utils, qemu_monitor
 
 try:
     import PIL.Image
@@ -88,7 +88,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         # Request screendump
         try:
             vm.monitor.screendump(scrdump_filename, debug=False)
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             logging.warn(e)
             continue
 

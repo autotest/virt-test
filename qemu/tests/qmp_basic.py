@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import kvm_monitor
+from virttest import qemu_monitor
 
 
 def run_qmp_basic(test, params, env):
@@ -385,7 +385,7 @@ def run_qmp_basic(test, params, env):
     # Look for the first qmp monitor available, otherwise, fail the test
     qmp_monitor = None
     for m in vm.monitors:
-        if isinstance(m, kvm_monitor.QMPMonitor):
+        if isinstance(m, qemu_monitor.QMPMonitor):
             qmp_monitor = m
 
     if qmp_monitor is None:
