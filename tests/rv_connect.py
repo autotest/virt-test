@@ -155,15 +155,15 @@ def launch_rv(client_vm, guest_vm, params):
     except ShellStatusError, ShellProcessTerminatedError:
         # Sometimes It fails with Status error, ingore it and continue.
         # It's not that important to have printed versions in the log.
-        logging.debug("Ignoring a Status Exception that occurs from calling " \
-                      + "print versions of remote-viewer or spice-gtk")
+        logging.debug("Ignoring a Status Exception that occurs from calling "
+                      "print versions of remote-viewer or spice-gtk")
 
     logging.info("Launching %s on the client (virtual)", cmd)
     try:
         client_session.cmd(cmd)
     except ShellStatusError:
-        logging.debug("Ignoring a status exception, will check connection of",
-                     "remote-viewer later")
+        logging.debug("Ignoring a status exception, will check connection of"
+                      "remote-viewer later")
 
     # client waits for user entry (authentication) if spice_password is set
     if ticket:
