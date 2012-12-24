@@ -1027,7 +1027,7 @@ def run_unattended_install(test, params, env):
             vm.verify_alive()
         # Due to a race condition, sometimes we might get a MonitorError
         # before the VM gracefully shuts down, so let's capture MonitorErrors.
-        except (virt_vm.VMDeadError, kvm_monitor.MonitorError), e:
+        except (virt_vm.VMDeadError, qemu_monitor.MonitorError), e:
             if params.get("wait_no_ack", "no") == "yes":
                 break
             else:
@@ -1112,6 +1112,6 @@ def run_unattended_install(test, params, env):
         try:
             if utils_misc.wait_for(vm.is_dead, shutdown_cleanly_timeout, 1, 1):
                 logging.info("Guest managed to shutdown cleanly")
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             logging.warning("Guest apparently shut down, but got a "
                             "monitor error: %s", e)

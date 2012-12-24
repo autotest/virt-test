@@ -1,6 +1,6 @@
 import re, os, logging, time
 from autotest.client.shared import utils, error
-from virttest import kvm_monitor, storage, env_process, data_dir, utils_misc
+from virttest import qemu_monitor, storage, env_process, data_dir, utils_misc
 
 
 @error.context_aware
@@ -36,7 +36,7 @@ def run_block_mirror(test, params, env):
 
         try:
             output = vm.monitor.info("block-jobs")
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             logging.error(e)
             fail += 1
             return None, None

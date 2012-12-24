@@ -7,7 +7,7 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 import time, os, logging, fcntl, re, commands, errno
 from autotest.client.shared import error, cartesian_config
 from autotest.client import utils
-import utils_misc, virt_vm, test_setup, storage, kvm_monitor, aexpect
+import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
 import kvm_virtio_port, remote, utils_test, data_dir, utils_net
 
 
@@ -2043,24 +2043,24 @@ class VM(virt_vm.BaseVM):
                             if utils_misc.qemu_has_option("qmp",
                                                           self.qemu_binary):
                                 # Add a QMP monitor
-                                monitor = kvm_monitor.QMPMonitor(
+                                monitor = qemu_monitor.QMPMonitor(
                                     monitor_name,
                                     self.get_monitor_filename(monitor_name))
                             else:
                                 logging.warn("qmp monitor is unsupported, "
                                              "using human monitor instead.")
                                 # Add a "human" monitor
-                                monitor = kvm_monitor.HumanMonitor(
+                                monitor = qemu_monitor.HumanMonitor(
                                     monitor_name,
                                     self.get_monitor_filename(monitor_name))
                         else:
                             # Add a "human" monitor
-                            monitor = kvm_monitor.HumanMonitor(
+                            monitor = qemu_monitor.HumanMonitor(
                                 monitor_name,
                                 self.get_monitor_filename(monitor_name))
                         monitor.verify_responsive()
                         break
-                    except kvm_monitor.MonitorError, e:
+                    except qemu_monitor.MonitorError, e:
                         logging.warn(e)
                         time.sleep(1)
                 else:
@@ -2155,7 +2155,7 @@ class VM(virt_vm.BaseVM):
                 if self.monitor.verify_status("paused"):
                     try:
                         self.monitor.cmd("cont")
-                    except kvm_monitor.QMPCmdError, e:
+                    except qemu_monitor.QMPCmdError, e:
                         if ((e.data['class'] == "MigrationExpected") and
                             (migration_mode is not None)):
                             logging.debug("Migration did not start yet...")
@@ -2224,7 +2224,7 @@ class VM(virt_vm.BaseVM):
                         logging.info("Killing running VM '%s'", self.name)
                 try:
                     self.monitor.quit()
-                except kvm_monitor.MonitorError, e:
+                except qemu_monitor.MonitorError, e:
                     logging.warn(e)
                 else:
                     # Wait for the VM to be really dead
@@ -3015,7 +3015,7 @@ class VM(virt_vm.BaseVM):
         try:
             if self.monitor:
                 self.monitor.screendump(filename=filename, debug=debug)
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             logging.warn(e)
 
 

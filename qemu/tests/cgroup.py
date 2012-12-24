@@ -10,7 +10,7 @@ from virttest.utils_cgroup import Cgroup
 from virttest.utils_cgroup import CgroupModules
 from virttest.utils_cgroup import get_load_per_cpu
 from virttest.env_process import preprocess
-from virttest import kvm_monitor
+from virttest import qemu_monitor
 from virttest.aexpect import ExpectTimeoutError
 from virttest.aexpect import ExpectProcessTerminatedError
 from virttest.aexpect import ShellTimeoutError
@@ -1467,7 +1467,7 @@ def run_cgroup(test, params, env):
         monitor_type = None
         for i_monitor in range(len(vm.monitors)):
             monitor = vm.monitors[i_monitor]
-            if isinstance(monitor, kvm_monitor.QMPMonitor):
+            if isinstance(monitor, qemu_monitor.QMPMonitor):
                 out = monitor.cmd_obj({"execute": "query-commands"})
                 try:
                     if {'name': '__com.redhat_drive_add'} in out['return']:
