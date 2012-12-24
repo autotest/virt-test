@@ -1,4 +1,4 @@
-import os, logging, imp, sys, time, traceback, Queue
+import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
@@ -507,12 +507,21 @@ def run_tests(parser, options):
     utils_misc.display_attributes(options)
     logging.debug("")
 
-    logging.debug("Cleaning up the existing environment file")
+    logging.debug("Cleaning up previous job tmp files")
     d = parser.get_dicts().next()
     env_filename = os.path.join(data_dir.get_root_dir(),
                                 options.type, d.get("env", "env"))
     env = utils_env.Env(env_filename, Test.env_version)
     env.destroy()
+    try:
+        address_pool_files = glob.glob("/tmp/address_pool*")
+        for address_pool_file in address_pool_files:
+            os.remove(address_pool_file)
+        aexpect_tmp = "/tmp/aexpect_spawn/"
+        if os.path.isdir(aexpect_tmp):
+            shutil.rmtree("/tmp/aexpect_spawn/")
+    except (IOError, OSError):
+        pass
     logging.debug("")
 
     if options.restore_image_between_tests:
