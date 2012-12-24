@@ -1,7 +1,7 @@
 import logging, time, re, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import virt_vm, utils_misc, kvm_storage
+from virttest import virt_vm, utils_misc, qemu_storage
 
 
 class EnospcConfig(object):
@@ -145,7 +145,7 @@ def run_enospc(test, params, env):
             for image_name in vm.params.objects("images"):
                 image_params = vm.params.object_params(image_name)
                 try:
-                    image = kvm_storage.QemuImg(image_params, test.bindir,
+                    image = qemu_storage.QemuImg(image_params, test.bindir,
                                                image_name)
                     image.check_image(image_params, test.bindir)
                 except (virt_vm.VMError, error.TestWarn), e:
