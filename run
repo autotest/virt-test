@@ -168,6 +168,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            default=False,
                            help=("Whether to reboot the vm between every test. "
                                  "Default: False"))
+        general.add_option("-m", "--mem", action="store", dest="mem",
+                           default="512",
+                           help=("RAM dedicated to the main VM. Default:"
+                                 "%default"))
         self.add_option_group(general)
 
         qemu = optparse.OptionGroup(self, 'Options specific to the kvm test')
@@ -308,6 +312,8 @@ class VirtTestApp(object):
 
         if self.options.restore_image_between_tests:
             self.cartesian_parser.parse_string("restore_image = yes")
+
+        self.cartesian_parser.parse_string("mem = %s" % self.options.mem)
 
 
     def main(self):
