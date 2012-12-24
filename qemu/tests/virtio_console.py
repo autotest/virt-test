@@ -16,7 +16,7 @@ import time
 from subprocess import Popen
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import kvm_virtio_port, env_process, utils_test, utils_misc
+from virttest import qemu_virtio_port, env_process, utils_test, utils_misc
 
 
 @error.context_aware
@@ -63,7 +63,7 @@ def run_virtio_console(test, params, env):
             _no_serialports = 0
             _no_consoles = 0
             for port in vm.virtio_ports:
-                if isinstance(port, kvm_virtio_port.VirtioSerial):
+                if isinstance(port, qemu_virtio_port.VirtioSerial):
                     _no_serialports += 1
                 else:
                     _no_consoles += 1
@@ -130,7 +130,7 @@ def run_virtio_console(test, params, env):
                         initialized GuestWorker of the vm)
         """
         vm = get_vm_with_ports(no_consoles, no_serialports, spread, quiet)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         return vm, guest_worker
 
     @error.context_aware
@@ -161,7 +161,7 @@ def run_virtio_console(test, params, env):
         consoles = []
         serialports = []
         for port in vm.virtio_ports:
-            if isinstance(port, kvm_virtio_port.VirtioSerial):
+            if isinstance(port, qemu_virtio_port.VirtioSerial):
                 serialports.append(port)
             else:
                 consoles.append(port)
@@ -620,13 +620,13 @@ def run_virtio_console(test, params, env):
             exit_event = threading.Event()
 
             # TEST
-            thread = kvm_virtio_port.ThSendCheck(send_pt, exit_event, queues,
+            thread = qemu_virtio_port.ThSendCheck(send_pt, exit_event, queues,
                                    buf_len[0])
             thread.start()
             threads.append(thread)
 
             for i in range(len(recv_pts)):
-                thread = kvm_virtio_port.ThRecvCheck(recv_pts[i], queues[i],
+                thread = qemu_virtio_port.ThRecvCheck(recv_pts[i], queues[i],
                                                     exit_event, buf_len[i + 1])
                 thread.start()
                 threads.append(thread)
@@ -885,10 +885,10 @@ def run_virtio_console(test, params, env):
             raise error.TestNAError("virtio_console_interruption = '%s' "
                                     "is unknown." % interruption)
 
-        threads.append(kvm_virtio_port.ThSendCheck(send_pt, exit_event, queues,
+        threads.append(qemu_virtio_port.ThSendCheck(send_pt, exit_event, queues,
                                                    buflen, send_resume_ev))
         threads[-1].start()
-        threads.append(kvm_virtio_port.ThRecvCheck(recv_pt, queues[0],
+        threads.append(qemu_virtio_port.ThRecvCheck(recv_pt, queues[0],
                                     exit_event, buflen, acceptable_loss,
                                     recv_resume_ev,
                                     debug=params.get('virtio_console_debug')))
@@ -1057,7 +1057,7 @@ def run_virtio_console(test, params, env):
             # HOST -> GUEST
             guest_worker.cmd('virt.loopback(["%s"], [], %d, virt.LOOP_NONE)'
                              % (port.name, buf_len), 10)
-            thread = kvm_virtio_port.ThSend(port.sock, data, exit_event)
+            thread = qemu_virtio_port.ThSend(port.sock, data, exit_event)
             stats = array.array('f', [])
             loads = utils.SystemLoad([(os.getpid(), 'autotest'),
                                       (vm.get_pid(), 'VM'), 0])
@@ -1100,7 +1100,7 @@ def run_virtio_console(test, params, env):
             stats = array.array('f', [])
             guest_worker.cmd("virt.send_loop_init('%s', %d)"
                              % (port.name, buf_len), 30)
-            thread = kvm_virtio_port.ThRecv(port.sock, exit_event, buf_len)
+            thread = qemu_virtio_port.ThRecv(port.sock, exit_event, buf_len)
             thread.start()
             loads.start()
             guest_worker.cmd("virt.send_loop()", 10)
@@ -1161,7 +1161,7 @@ def run_virtio_console(test, params, env):
         # TODO BUG: sendlen = max allowed data to be lost per one migration
         # TODO BUG: using SMP the data loss is upto 4 buffers
         # 2048 = char.dev. socket size, parms[2] = host->guest send buffer size
-        sendlen = 2 * 2 * max(kvm_virtio_port.SOCKET_SIZE, blocklen)
+        sendlen = 2 * 2 * max(qemu_virtio_port.SOCKET_SIZE, blocklen)
         if not offline:     # TODO BUG: online migration causes more loses
             # TODO: Online migration lose n*buffer. n depends on the console
             # troughput. FIX or analyse it's cause.
@@ -1187,14 +1187,14 @@ def run_virtio_console(test, params, env):
         exit_event = threading.Event()
 
         # TEST
-        thread = kvm_virtio_port.ThSendCheck(ports[0], exit_event, queues,
+        thread = qemu_virtio_port.ThSendCheck(ports[0], exit_event, queues,
                                              blocklen,
                                              migrate_event=threading.Event())
         thread.start()
         threads.append(thread)
 
         for i in range(len(ports[1:])):
-            thread = kvm_virtio_port.ThRecvCheck(ports[1:][i], queues[i],
+            thread = qemu_virtio_port.ThRecvCheck(ports[1:][i], queues[i],
                                             exit_event, blocklen,
                                             sendlen=sendlen,
                                             migrate_event=threading.Event())
@@ -1361,10 +1361,10 @@ def run_virtio_console(test, params, env):
                                     "name=%s"
                                     % (port_type, pci_id, port, port))
         if console == "no":
-            vm.virtio_ports.append(kvm_virtio_port.VirtioSerial(port, port,
+            vm.virtio_ports.append(qemu_virtio_port.VirtioSerial(port, port,
                                                                 None))
         else:
-            vm.virtio_ports.append(kvm_virtio_port.VirtioConsole(port, port,
+            vm.virtio_ports.append(qemu_virtio_port.VirtioConsole(port, port,
                                                                  None))
         if ret != "":
             logging.error(ret)
@@ -1428,7 +1428,7 @@ def run_virtio_console(test, params, env):
                 time.sleep(pause)
         # Test correct initialization of hotplug ports
         time.sleep(10)  # Timeout for port initialization
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
 
         logging.info("Delete ports when ports are used")
         # Delete ports when ports are used.
@@ -1436,9 +1436,9 @@ def run_virtio_console(test, params, env):
                  "virt.LOOP_POLL)" % (consoles[0][0].name,
                                       consoles[1][0].name), 10)
         exit_event = threading.Event()
-        send = kvm_virtio_port.ThSend(consoles[0][0].sock, "Data", exit_event,
+        send = qemu_virtio_port.ThSend(consoles[0][0].sock, "Data", exit_event,
                                       quiet=True)
-        recv = kvm_virtio_port.ThRecv(consoles[1][0].sock, exit_event,
+        recv = qemu_virtio_port.ThRecv(consoles[1][0].sock, exit_event,
                                       quiet=True)
         send.start()
         time.sleep(2)
@@ -1462,7 +1462,7 @@ def run_virtio_console(test, params, env):
         for i in range(30):     # max port 30
             _virtio_dev_add(vm, 0, i, console)
             time.sleep(pause)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         guest_worker.cmd('guest_exit()', 10)
 
         logging.info("Trying delete and add again part of ports")
@@ -1470,14 +1470,14 @@ def run_virtio_console(test, params, env):
         for i in range(25):     # max port 30
             _virtio_dev_del(vm, 0, i)
             time.sleep(pause)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         guest_worker.cmd('guest_exit()', 10)
 
         # Try to add ports
         for i in range(5):      # max port 30
             _virtio_dev_add(vm, 0, i, console)
             time.sleep(pause)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         guest_worker.cmd('guest_exit()', 10)
 
         logging.info("Trying to add and delete one port 100 times")
@@ -1487,7 +1487,7 @@ def run_virtio_console(test, params, env):
             time.sleep(pause)
             _virtio_dev_add(vm, 0, 0, console)
             time.sleep(pause)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         cleanup(guest_worker=guest_worker)
         # VM is broken (params mismatches actual state)
         vm.destroy()
@@ -1561,7 +1561,7 @@ def run_virtio_console(test, params, env):
         logging.info("\n" + loads.get_cpu_status_string()[:-1])
 
         logging.info("Open and then close port %s", port.name)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         # Test of live and open and close port again
         guest_worker.cleanup()
         port.sock.settimeout(20.0)
@@ -1582,7 +1582,7 @@ def run_virtio_console(test, params, env):
                             "second sent %d bytes", sent1, sent2)
 
         port.sock.settimeout(None)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         cleanup(vm, guest_worker)
 
     @error.context_aware
@@ -1601,7 +1601,7 @@ def run_virtio_console(test, params, env):
                                     " not compiled as module. Can't test it.")
         session.cmd("rmmod -f virtio_console")
         session.cmd("modprobe virtio_console")
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         guest_worker.cmd("virt.clean_port('%s'),1024" % port.name, 2)
         cleanup(vm, guest_worker)
 
@@ -1619,7 +1619,7 @@ def run_virtio_console(test, params, env):
         else:
             logging.debug("Count of consoles: %d", port_count)
             vm = get_vm_with_ports(port_count, 0, quiet=True)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         cleanup(vm, guest_worker)
 
     @error.context_aware
@@ -1631,7 +1631,7 @@ def run_virtio_console(test, params, env):
         port_count = 15
         logging.debug("Count of virtports: %d %d", port_count, port_count)
         vm = get_vm_with_ports(port_count, port_count, quiet=True)
-        guest_worker = kvm_virtio_port.GuestWorker(vm)
+        guest_worker = qemu_virtio_port.GuestWorker(vm)
         cleanup(vm, guest_worker)
 
     @error.context_aware

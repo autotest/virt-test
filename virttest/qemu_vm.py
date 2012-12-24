@@ -2093,11 +2093,11 @@ class VM(virt_vm.BaseVM):
                 if port_params.get('virtio_port_type') in ("console",
                                                            "virtio_console"):
                     self.virtio_ports.append(
-                            kvm_virtio_port.VirtioConsole(port, port_name,
+                            qemu_virtio_port.VirtioConsole(port, port_name,
                                                           filename))
                 else:
                     self.virtio_ports.append(
-                            kvm_virtio_port.VirtioSerial(port, port_name,
+                            qemu_virtio_port.VirtioSerial(port, port_name,
                                                          filename))
                 i += 1
 
