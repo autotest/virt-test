@@ -2,7 +2,7 @@ import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm, qemu_vm
-import libvirt_vm, video_maker, utils_misc, storage, kvm_storage
+import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
 import remote, ovirt, data_dir, utils_test
 
 try:
@@ -27,7 +27,7 @@ def preprocess_image(test, params, image_name):
     """
     base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
-        iscsidev = kvm_storage.Iscsidev(params, base_dir, image_name)
+        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         params["image_name"] = iscsidev.setup()
     else:
         image_filename = storage.get_image_filename(params,
@@ -45,7 +45,7 @@ def preprocess_image(test, params, image_name):
             image = kvm_storage.QemuImg(params, test.bindir, image_name)
             image.backup_image(params, test.bindir, "backup", True)
         if create_image:
-            image = kvm_storage.QemuImg(params, base_dir, image_name)
+            image = qemu_storage.QemuImg(params, base_dir, image_name)
             if not image.create(params):
                 raise error.TestError("Could not create image")
 
@@ -140,10 +140,10 @@ def postprocess_image(test, params, image_name):
     clone_master = params.get("clone_master", None)
     base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
-        iscsidev = kvm_storage.Iscsidev(params, base_dir, image_name)
+        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         iscsidev.cleanup()
     else:
-        image = kvm_storage.QemuImg(params, base_dir, image_name)
+        image = qemu_storage.QemuImg(params, base_dir, image_name)
         if params.get("check_image") == "yes":
             try:
                 if clone_master is None:
@@ -441,7 +441,7 @@ def preprocess(test, params, env):
 
             vm_params = params.object_params(vm_name)
             for image in vm_params.get("master_images_clone").split():
-                image_obj = kvm_storage.QemuImg(params, base_dir, image)
+                image_obj = qemu_storage.QemuImg(params, base_dir, image)
                 image_obj.clone_image(params, vm_name, image, base_dir)
 
     # Preprocess all VMs and images
