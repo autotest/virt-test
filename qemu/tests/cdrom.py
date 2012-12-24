@@ -8,7 +8,7 @@ KVM cdrom test
 import logging, re, time, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, aexpect, kvm_monitor, data_dir
+from virttest import utils_misc, aexpect, qemu_monitor, data_dir
 
 
 @error.context_aware
@@ -98,16 +98,16 @@ def run_cdrom(test, params, env):
 
     def eject_cdrom(device, monitor):
         """ Ejects the cdrom using kvm-monitor """
-        if isinstance(monitor, kvm_monitor.HumanMonitor):
+        if isinstance(monitor, qemu_monitor.HumanMonitor):
             monitor.cmd("eject %s" % device)
-        elif isinstance(monitor, kvm_monitor.QMPMonitor):
+        elif isinstance(monitor, qemu_monitor.QMPMonitor):
             monitor.cmd("eject", args={'device': device})
 
     def change_cdrom(device, target, monitor):
         """ Changes the medium using kvm-monitor """
-        if isinstance(monitor, kvm_monitor.HumanMonitor):
+        if isinstance(monitor, qemu_monitor.HumanMonitor):
             monitor.cmd("change %s %s" % (device, target))
-        elif isinstance(monitor, kvm_monitor.QMPMonitor):
+        elif isinstance(monitor, qemu_monitor.QMPMonitor):
             monitor.cmd("change", args={'device': device, 'target': target})
 
     cdrom_new = master_cdroms(params)

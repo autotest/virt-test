@@ -10,7 +10,7 @@ Step file creator/editor.
 import pygtk, gtk, gobject, time, os, commands, logging
 from autotest.client.shared import error
 from virttest import utils_misc, ppm_utils, step_editor
-from virttest import kvm_monitor
+from virttest import qemu_monitor
 pygtk.require('2.0')
 
 
@@ -139,7 +139,7 @@ class StepMaker(step_editor.StepMakerWindow):
 
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             logging.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)
@@ -293,7 +293,7 @@ class StepMaker(step_editor.StepMakerWindow):
 
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             logging.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)

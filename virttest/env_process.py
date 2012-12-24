@@ -1,7 +1,7 @@
 import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
-import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, qemu_vm
+import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm, qemu_vm
 import libvirt_vm, video_maker, utils_misc, storage, kvm_storage
 import remote, ovirt, data_dir, utils_test
 
@@ -590,7 +590,7 @@ def _take_screendumps(test, params, env):
                 continue
             try:
                 vm.screendump(filename=temp_filename, debug=False)
-            except kvm_monitor.MonitorError, e:
+            except qemu_monitor.MonitorError, e:
                 logging.warn(e)
                 continue
             except AttributeError, e:
