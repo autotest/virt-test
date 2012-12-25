@@ -591,9 +591,9 @@ def domstate(name, **dargs):
 
     @param name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
+    @return: CmdResult object
     """
-    return command("domstate %s" % name, **dargs).stdout.strip()
+    return command("domstate %s" % name, **dargs)
 
 
 def domid(name, **dargs):
@@ -754,7 +754,7 @@ def is_dead(name, **dargs):
     """
     dargs['ignore_status'] = False
     try:
-        state = domstate(name, **dargs)
+        state = domstate(name, **dargs).stdout.strip()
     except error.CmdError:
         return True
     if state in ('running', 'idle', 'no state', 'paused'):
