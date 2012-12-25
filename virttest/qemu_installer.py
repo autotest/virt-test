@@ -14,7 +14,7 @@ __all__ = ['GitRepoInstaller', 'LocalSourceDirInstaller',
            'LocalSourceTarInstaller', 'RemoteSourceTarInstaller']
 
 
-class KVMBaseInstaller(base_installer.BaseInstaller):
+class QEMUBaseInstaller(base_installer.BaseInstaller):
     '''
     Base class for KVM installations
     '''
@@ -238,10 +238,10 @@ class KVMBaseInstaller(base_installer.BaseInstaller):
         '''
         self._kill_qemu_processes()
         self._cleanup_links()
-        super(KVMBaseInstaller, self).uninstall()
+        super(QEMUBaseInstaller, self).uninstall()
 
 
-class GitRepoInstaller(KVMBaseInstaller,
+class GitRepoInstaller(QEMUBaseInstaller,
                        base_installer.GitRepoInstaller):
     '''
     Installer that deals with source code on Git repositories
@@ -249,7 +249,7 @@ class GitRepoInstaller(KVMBaseInstaller,
     pass
 
 
-class LocalSourceDirInstaller(KVMBaseInstaller,
+class LocalSourceDirInstaller(QEMUBaseInstaller,
                               base_installer.LocalSourceDirInstaller):
     '''
     Installer that deals with source code on local directories
@@ -257,7 +257,7 @@ class LocalSourceDirInstaller(KVMBaseInstaller,
     pass
 
 
-class LocalSourceTarInstaller(KVMBaseInstaller,
+class LocalSourceTarInstaller(QEMUBaseInstaller,
                               base_installer.LocalSourceTarInstaller):
     '''
     Installer that deals with source code on local tarballs
@@ -265,7 +265,7 @@ class LocalSourceTarInstaller(KVMBaseInstaller,
     pass
 
 
-class RemoteSourceTarInstaller(KVMBaseInstaller,
+class RemoteSourceTarInstaller(QEMUBaseInstaller,
                                base_installer.RemoteSourceTarInstaller):
     '''
     Installer that deals with source code on remote tarballs

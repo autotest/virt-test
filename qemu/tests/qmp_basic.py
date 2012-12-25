@@ -1,9 +1,8 @@
-import logging
 from autotest.client.shared import error
-from virttest import kvm_monitor
+from virttest import qemu_monitor
 
 
-def run_qmp_basic_rhel6(test, params, env):
+def run_qmp_basic(test, params, env):
     """
     QMP Specification test-suite: this checks if the *basic* protocol conforms
     to its specification, which is file QMP/qmp-spec.txt in QEMU's source tree.
@@ -112,16 +111,11 @@ def run_qmp_basic_rhel6(test, params, env):
         @param classname: Expected error class name
         @param datadict: Expected error data dictionary
         """
-        logging.debug("resp %s", str(resp))
         check_key_is_dict(resp, "error")
         check_key_is_str(resp["error"], "class")
         if classname and resp["error"]["class"] != classname:
             raise error.TestFail("got error class '%s' expected '%s'" %
                                  (resp["error"]["class"], classname))
-        check_key_is_dict(resp["error"], "data")
-        if datadict and resp["error"]["data"] != datadict:
-            raise error.TestFail("got data dict '%s' expected '%s'" %
-                                 (resp["error"]["data"], datadict))
 
 
     def test_version(version):
@@ -132,7 +126,9 @@ def run_qmp_basic_rhel6(test, params, env):
         { "qemu": { "major": json-int, "minor": json-int, "micro": json-int }
           "package": json-string }
         """
-        check_key_is_str(version, "qemu")
+        check_key_is_dict(version, "qemu")
+        for key in [ "major", "minor", "micro" ]:
+            check_key_is_int(version["qemu"], key)
         check_key_is_str(version, "package")
 
 
@@ -190,7 +186,7 @@ def run_qmp_basic_rhel6(test, params, env):
 
         for cmd in bad_json:
             resp = monitor.cmd_raw(cmd)
-            check_error_resp(resp, "JSONParsing")
+            check_error_resp(resp, "GenericError")
 
 
     def test_id_key(monitor):
@@ -225,9 +221,8 @@ def run_qmp_basic_rhel6(test, params, env):
         names must be detected.
         """
         resp = monitor.cmd_obj({ "execute": "eject", "foobar": True })
-        expected_error = "MissingParameter"
-        data_dict = {"name": "device"}
-        check_error_resp(resp, expected_error, data_dict)
+        check_error_resp(resp, "GenericError",
+                         { "member": "foobar" })
 
 
     def test_bad_arguments_key_type(monitor):
@@ -240,7 +235,7 @@ def run_qmp_basic_rhel6(test, params, env):
         """
         for item in [ True, [], 1, "foo" ]:
             resp = monitor.cmd_obj({ "execute": "eject", "arguments": item })
-            check_error_resp(resp, "QMPBadInputObjectMember",
+            check_error_resp(resp, "GenericError",
                              { "member": "arguments", "expected": "object" })
 
 
@@ -250,7 +245,7 @@ def run_qmp_basic_rhel6(test, params, env):
         """
         for item in [ False, 1, {}, [] ]:
             resp = monitor.cmd_obj({ "execute": item })
-            check_error_resp(resp, "QMPBadInputObjectMember",
+            check_error_resp(resp, "GenericError",
                              { "member": "execute", "expected": "string" })
 
 
@@ -271,7 +266,7 @@ def run_qmp_basic_rhel6(test, params, env):
         """
         for cmd in [ "foo", [], True, 1 ]:
             resp = monitor.cmd_obj(cmd)
-            check_error_resp(resp, "QMPBadInputObject", { "expected":"object" })
+            check_error_resp(resp, "GenericError", { "expected":"object" })
 
 
     def test_good_input_obj(monitor):
@@ -286,11 +281,11 @@ def run_qmp_basic_rhel6(test, params, env):
         resp = monitor.cmd_obj({ "arguments": {}, "execute": "query-version" })
         check_success_resp(resp)
 
-        id_key = "1234foo"
-        resp = monitor.cmd_obj({ "id": id_key, "execute": "query-version",
+        idd = "1234foo"
+        resp = monitor.cmd_obj({ "id": idd, "execute": "query-version",
                                  "arguments": {} })
         check_success_resp(resp)
-        check_str_key(resp, "id", id_key)
+        check_str_key(resp, "id", idd)
 
         # TODO: would be good to test simple argument usage, but we don't have
         # a read-only command that accepts arguments.
@@ -320,11 +315,18 @@ def run_qmp_basic_rhel6(test, params, env):
         command used doesn't matter much as QMP performs argument checking
         _before_ calling the command.
         """
-        # qmp in RHEL6 is different from 0.13.*:
-        # 1. 'stop' command just return {} evenif stop have arguments.
-        # 2. there is no 'screendump' command.
-        # 3. argument isn't checked in 'device' command.
-        # so skip these tests in RHEL6.
+        # stop doesn't take arguments
+        resp = monitor.cmd_qmp("stop", { "foo": 1 })
+        check_error_resp(resp, "GenericError", { "name": "foo" })
+
+        # required argument omitted
+        resp = monitor.cmd_qmp("screendump")
+        check_error_resp(resp, "GenericError", { "name": "filename" })
+
+        # 'bar' is not a valid argument
+        resp = monitor.cmd_qmp("screendump", { "filename": "outfile",
+                                               "bar": "bar" })
+        check_error_resp(resp, "GenericError", { "name": "bar"})
 
         # test optional argument: 'force' is omitted, but it's optional, so
         # the handler has to be called. Test this happens by checking an
@@ -332,26 +334,38 @@ def run_qmp_basic_rhel6(test, params, env):
         resp = monitor.cmd_qmp("eject", { "device": "foobar" })
         check_error_resp(resp, "DeviceNotFound")
 
+        # filename argument must be a json-string
+        for arg in [ {}, [], 1, True ]:
+            resp = monitor.cmd_qmp("screendump", { "filename": arg })
+            check_error_resp(resp, "GenericError",
+                             { "name": "filename", "expected": "string" })
+
+        # force argument must be a json-bool
+        for arg in [ {}, [], 1, "foo" ]:
+            resp = monitor.cmd_qmp("eject", { "force": arg, "device": "foo" })
+            check_error_resp(resp, "GenericError",
+                             { "name": "force", "expected": "bool" })
+
         # val argument must be a json-int
         for arg in [ {}, [], True, "foo" ]:
             resp = monitor.cmd_qmp("memsave", { "val": arg, "filename": "foo",
                                                 "size": 10 })
-            check_error_resp(resp, "InvalidParameterType",
+            check_error_resp(resp, "GenericError",
                              { "name": "val", "expected": "int" })
 
         # value argument must be a json-number
         for arg in [ {}, [], True, "foo" ]:
             resp = monitor.cmd_qmp("migrate_set_speed", { "value": arg })
-            check_error_resp(resp, "InvalidParameterType",
+            check_error_resp(resp, "GenericError",
                              { "name": "value", "expected": "number" })
 
         # qdev-type commands have their own argument checker, all QMP does
         # is to skip its checking and pass arguments through. Check this
         # works by providing invalid options to device_add and expecting
         # an error message from qdev
-        resp = monitor.cmd_qmp("device_add", {"driver": "e1000",
+        resp = monitor.cmd_qmp("device_add", { "driver": "e1000",
                                               "foo": "bar" })
-        check_error_resp(resp, "PropertyNotFound",
+        check_error_resp(resp, "GenericError",
                                {"device": "e1000", "property": "foo"})
 
 
@@ -371,7 +385,7 @@ def run_qmp_basic_rhel6(test, params, env):
     # Look for the first qmp monitor available, otherwise, fail the test
     qmp_monitor = None
     for m in vm.monitors:
-        if isinstance(m, kvm_monitor.QMPMonitor):
+        if isinstance(m, qemu_monitor.QMPMonitor):
             qmp_monitor = m
 
     if qmp_monitor is None:

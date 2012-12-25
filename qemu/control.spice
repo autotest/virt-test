@@ -6,11 +6,9 @@ TEST_CLASS = 'Virtualization'
 TEST_CATEGORY = 'Functional'
 
 DOC = """
-Executes the KVM test framework on a given host. This module is separated in
-minor functions, that execute different tests for doing Quality Assurance on
-KVM (both kernelspace and userspace) code.
+Executes the QEMU (KVM) based spice tests.
 
-For online docs, please refer to http://www.linux-kvm.org/page/KVM-Autotest
+Online docs: https://github.com/autotest/virt-test/wiki
 """
 
 import sys, os, logging
@@ -29,10 +27,10 @@ str = """
 """
 
 parser = cartesian_config.Parser()
-parser.parse_file(os.path.join(virt_test_dir, "kvm", "cfg", "build.cfg"))
+parser.parse_file(os.path.join(virt_test_dir, "qemu", "cfg", "build.cfg"))
 parser.parse_string(str)
 if not utils_misc.run_tests(parser, job):
-    logging.error("KVM build step failed, exiting.")
+    logging.error("QEMU (KVM) build step failed, exiting.")
     sys.exit(1)
 
 str = """
@@ -43,7 +41,7 @@ str = """
 """
 
 parser = cartesian_config.Parser()
-parser.parse_file(os.path.join(virt_test_dir, "kvm", "cfg", "tests-spice.cfg"))
+parser.parse_file(os.path.join(virt_test_dir, "qemu", "cfg", "tests-spice.cfg"))
 
 if args:
     # We get test parameters from command line

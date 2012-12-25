@@ -1,6 +1,6 @@
 import re, logging, random, time
 from autotest.client.shared import error
-from virttest import kvm_monitor, utils_test
+from virttest import qemu_monitor, utils_test
 
 
 def run_balloon_check(test, params, env):
@@ -25,7 +25,7 @@ def run_balloon_check(test, params, env):
         fail = 0
         try:
             output = vm.monitor.info("balloon")
-        except kvm_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError, e:
             logging.error(e)
             fail += 1
             return 0, fail

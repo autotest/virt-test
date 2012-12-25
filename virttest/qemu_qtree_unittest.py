@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-This is a unittest for kvm_qtree library.
+This is a unittest for qemu_qtree library.
 
 @author: Lukas Doktor <ldoktor@redhat.com>
 @copyright: 2012 Red Hat, Inc.
@@ -10,9 +10,9 @@ __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 import unittest
 import common
 from autotest.client.shared.test_utils import mock
-import kvm_qtree
+import qemu_qtree
 
-OFFSET_PER_LEVEL = kvm_qtree.OFFSET_PER_LEVEL
+OFFSET_PER_LEVEL = qemu_qtree.OFFSET_PER_LEVEL
 
 
 # Dummy classes and functions
@@ -151,12 +151,12 @@ class QtreeContainerTest(unittest.TestCase):
     """ QtreeContainer tests """
     def test_qtree(self):
         """ Correct workflow """
-        reference_nodes = [kvm_qtree.QtreeDisk, kvm_qtree.QtreeBus,
-                           kvm_qtree.QtreeDev, kvm_qtree.QtreeDev,
-                           kvm_qtree.QtreeDev, kvm_qtree.QtreeDisk,
-                           kvm_qtree.QtreeBus, kvm_qtree.QtreeDev,
-                           kvm_qtree.QtreeBus, kvm_qtree.QtreeDev,
-                           kvm_qtree.QtreeDev, kvm_qtree.QtreeBus]
+        reference_nodes = [qemu_qtree.QtreeDisk, qemu_qtree.QtreeBus,
+                           qemu_qtree.QtreeDev, qemu_qtree.QtreeDev,
+                           qemu_qtree.QtreeDev, qemu_qtree.QtreeDisk,
+                           qemu_qtree.QtreeBus, qemu_qtree.QtreeDev,
+                           qemu_qtree.QtreeBus, qemu_qtree.QtreeDev,
+                           qemu_qtree.QtreeDev, qemu_qtree.QtreeBus]
 
         info = qtree_header
         info = combine(info, dev_ide_disk, 1)
@@ -164,7 +164,7 @@ class QtreeContainerTest(unittest.TestCase):
         info = combine(info, dev_dummy_mmio, 1)
         info += "\n"
 
-        qtree = kvm_qtree.QtreeContainer()
+        qtree = qemu_qtree.QtreeContainer()
         qtree.parse_info_qtree(info)
         nodes = qtree.get_nodes()
 
@@ -186,7 +186,7 @@ class QtreeContainerTest(unittest.TestCase):
 
     def test_bad_qtree(self):
         """ Incorrect qtree """
-        qtree = kvm_qtree.QtreeContainer()
+        qtree = qemu_qtree.QtreeContainer()
         info = combine(qtree_header, "Very_bad_line", 1)
         self.assertRaises(ValueError, qtree.parse_info_qtree, info)
 
@@ -198,7 +198,7 @@ class QtreeDiskContainerTest(unittest.TestCase):
         def dumm(*args, **kvargs):
             pass
         self.god = mock.mock_god(ut=self)
-        self.god.stub_with(kvm_qtree.logging, 'error', dumm)
+        self.god.stub_with(qemu_qtree.logging, 'error', dumm)
 
         info = qtree_header
         info = combine(info, dev_ide_disk, 1)
@@ -208,10 +208,10 @@ class QtreeDiskContainerTest(unittest.TestCase):
 
         self.no_disks = 2
 
-        self.qtree = kvm_qtree.QtreeContainer()
+        self.qtree = qemu_qtree.QtreeContainer()
         self.qtree.parse_info_qtree(info)
 
-        self.disks = kvm_qtree.QtreeDisksContainer(self.qtree.get_nodes())
+        self.disks = qemu_qtree.QtreeDisksContainer(self.qtree.get_nodes())
 
     def tearDown(self):
         self.god.unstub_all()
@@ -222,7 +222,7 @@ class QtreeDiskContainerTest(unittest.TestCase):
         self.assertEqual(len(self.disks.disks), self.no_disks)
         self.assertEqual(disks.parse_info_block(info_block), (0, 0))
         self.assertEqual(disks.generate_params(), 0)
-        self.assertEqual(disks.check_disk_params(params, '/tmp'), 0)
+        self.assertEqual(disks.check_disk_params(params), 2)
         self.assertEqual(disks.check_guests_proc_scsi(guest_proc_scsi),
                          (0, 0, 1, 0))
         # Check the full disk output (including params)
@@ -254,28 +254,28 @@ Host: scsi1 Channel: 00 Id: 00 Lun: 00
 
         self.assertEqual(disks.parse_info_block(_info_block), (1, 1))
         self.assertEqual(disks.generate_params(), 1)
-        self.assertEqual(disks.check_disk_params(_params, '/tmp'), 4)
+        self.assertEqual(disks.check_disk_params(_params), 4)
         self.assertEqual(disks.check_guests_proc_scsi(_guest_proc_scsi),
                          (1, 1, 1, 1))
 
 
 class KvmQtreeClassTest(unittest.TestCase):
-    """ Additional tests for kvm_qtree classes """
+    """ Additional tests for qemu_qtree classes """
     def test_qtree_bus_bus(self):
         """ Bus' child can't be Bus() """
-        test = kvm_qtree.QtreeBus()
-        self.assertRaises(kvm_qtree.IncompatibleTypeError,
-                          test.add_child, kvm_qtree.QtreeBus())
+        test = qemu_qtree.QtreeBus()
+        self.assertRaises(qemu_qtree.IncompatibleTypeError,
+                          test.add_child, qemu_qtree.QtreeBus())
 
     def test_qtree_dev_dev(self):
         """ Dev's child can't be Dev() """
-        test = kvm_qtree.QtreeDev()
-        self.assertRaises(kvm_qtree.IncompatibleTypeError,
-                          test.add_child, kvm_qtree.QtreeDev())
+        test = qemu_qtree.QtreeDev()
+        self.assertRaises(qemu_qtree.IncompatibleTypeError,
+                          test.add_child, qemu_qtree.QtreeDev())
 
     def test_qtree_disk_missing_filename(self):
         """ in info_block must contain info about file or backing_file """
-        test = kvm_qtree.QtreeDisk()
+        test = qemu_qtree.QtreeDisk()
         test.set_qtree({'something': 'something'})
         test.set_block_prop('prop', 'value')
         self.assertRaises(ValueError, test.generate_params)
