@@ -2,24 +2,42 @@
 Linux Virtualization Tests (virt-test)
 ======================================
 
-Really quick start guide (Fedora)
----------------------------------
+Really quick start guide
+------------------------
 
-At the moment, the most convenient distro to run virt-test on is Fedora,
-since we have the autotest libs packaged on this distro [1]. It is
-similarly easy to set things up on a RHEL box, but then you need to
-enable the EPEL repos [2] to install the needed packages.
+The most convenient distro to run virt-test on is Fedora,
+since we have autotest libs officially packaged on this distro [1].
+
+It is similarly easy to set things up on a RHEL box, but then
+you need to enable the EPEL repos [2] to install the needed packages.
+
+The most recent addition to this list is Ubuntu/Debian. New repos were
+set with a new autotest package. Learn how to add the proper repos and
+install your packages on [3].
+
 
 Install dependencies
 --------------------
 
-Install the p7zip file archiver so you can uncompress the JeOS [3] image.
+Install the p7zip file archiver so you can uncompress the JeOS [4] image.
+
+Red Hat based:
 
 # yum install p7zip
 
+Debian based:
+
+# apt-get install p7zip-full
+
 Install the autotest-framework package, to provide the needed autotest libs.
 
-# yum --enablerepo=updates-testing install autotest-framework
+Red Hat based:
+
+# yum install autotest-framework
+
+Debian based (needs to enable repo, see [3]):
+
+# apt-get install autotest
 
 Some tests might need some other dependencies, such as the migrate
 using file descriptors, that requires a working toolchain and python-devel.
@@ -27,13 +45,15 @@ For such cases, it is best that you refer to the more complete documentation:
 
 https://github.com/autotest/virt-test/wiki/InstallPrerequesitePackages
 
+https://github.com/autotest/virt-test/wiki/InstallPrerequesitePackagesDebian
+
 
 Execute the bootstrap script
 ------------------------
 
-Let's say you're interested in the kvm tests:
+Let's say you're interested in the qemu tests:
 
-kvm/get_started.py
+qemu/get_started.py
 
 The script can help you to setup a data dir, copy the sample config files
 to actual config files, and download the JeOS image.
@@ -43,9 +63,9 @@ Execute the runner script
 
 You can execute the main runner script, called run. The script offers you
 some options, all explained in the script help. A really really simple execution
-of the script for kvm tests is:
+of the script for qemu tests is:
 
-./run -t kvm
+./run -t qemu
 
 This will execute a subset of the tests available.
 
@@ -60,7 +80,9 @@ plans to package the libs to more distributions.
 
 [2] http://fedoraproject.org/wiki/EPEL/FAQ#How_can_I_install_the_packages_from_the_EPEL_software_repository.3F
 
-[3] JeOS: Minimal guest OS image (x86_64)
+[3] https://github.com/autotest/virt-test/wiki/InstallPrerequesitePackagesDebian
+
+[4] JeOS: Minimal guest OS image (x86_64)
 
 Actual documentation website
 ----------------------------
