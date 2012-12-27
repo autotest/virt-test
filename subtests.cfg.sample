@@ -3252,10 +3252,27 @@ variants:
         format_floppy_timeout = 60
         floppy_readonly = yes
 
-    # Do not define test variants below remove_guest
+    - readonly_disk:
+        only Windows
+        type = readonly_disk
+        images += " data"
+        image_name_data = "data_disk"
+        image_size_data = 1G
+        force_create_image_data = yes
+        create_partition_cmd = "echo select disk 1 > cmd && echo create partition primary  >> cmd && echo select partition 1 >> cmd && echo assign letter=I >> cmd && echo exit >> cmd && diskpart /s cmd"
+        format_cmd = format I: /FS:NTFS /V:local /Q /y
+        copy_cmd = copy %s %s
+        src_file = WIN_UTIL:\README
+        # Please make the disk_letter the same in create_partition_cmd and format_cmd
+        disk_letter = I
 
-whql.support_vm_install, whql.client_install.support_vm:
-    image_name += -supportvm
+    - netperf2:    install setup
+        only Linux
+        no RHEL.3.9
+        type = netperf2
+        image_snapshot = yes
+        vms += " vm2"
+        client_vm = vm2
 
     - ntttcp:
         no Host_RHEL
