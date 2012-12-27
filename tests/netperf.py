@@ -164,7 +164,7 @@ def run_netperf(test, params, env):
         sessions_str = params.get('sessions') + " " + params.get("sessions_rr")
         for i in sessions_str.split():
             clients_n = max(clients_n, int(i.strip()))
-    for i in range(clients_n):
+    for i in range(clients_n + 1):
         if client in params.get("vms"):
             vm_client = utils_test.get_living_vm(env, client)
             tmp = vm_client.wait_for_login(timeout=login_timeout)
@@ -500,13 +500,16 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         niteration = nresult / sessions
         result = 0.0
         for this in lines[-sessions * niteration:]:
-            result += float(re.findall("Interim result: *(\S+)", this)[0])
+            if "Interim" in this:
+                result += float(re.findall("Interim result: *(\S+)", this)[0])
         result = result / niteration
         logging.debug("niteration: %s" % niteration)
         return result
 
 
     pid = str(os.getpid())
+    fname = "/tmp/netperf.%s.nf" % pid
+    ssh_cmd(clients[-1], "rm -f %s" % fname)
     threads = []
     numa_enable = params.get("netperf_with_numa", "yes") == "yes"
     for i in range(int(sessions)):
@@ -517,13 +520,11 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         t.start()
     ret = {}
     ret['pid'] = pid
-    fname = "/tmp/netperf.%s.nf" % pid
+
     while True:
         try:
-            fd = open(fname)
-            content = "".join(fd.readlines())
-            fd.close()
-        except IOError:
+            content = ssh_cmd(clients[-1], "cat %s" % fname)
+        except:
             content = ""
         if int(sessions) == len(re.findall("MIGRATE", content)):
             logging.debug("All netperf clients start to work.")
@@ -533,7 +534,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     if get_status_flag:
         start_state = get_state()
     ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
-    shutil.copy(fname, "/tmp/finished_result")
+    finished_result = ssh_cmd(clients[-1], "cat %s" % fname)
 
     # real & effective test ends
     if get_status_flag:
@@ -552,6 +553,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         t.join()
 
     # recover result file to remove the noise from end
-    shutil.copy("/tmp/finished_result", fname)
+    f = open(fname, "w")
+    f.write(finished_result)
+    f.close()
     ret['thu'] = parse_demo_result(fname, int(sessions))
     return ret
