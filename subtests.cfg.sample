@@ -1184,6 +1184,13 @@ variants:
         #pre_command += "scripts/private_br.sh notftp;"
         #post_command = "scripts/private_br.sh;"
 
+    - win_disk_write:
+        only Windows
+        type = win_disk_write
+        drive_cache = writeback
+        crystal_install_cmd = D:\crystaldisk_install.exe
+        crystal_run_cmd = D:\run_crystalfdisk.exe
+
     - guest_test:
         type = guest_test
         login_timeout = 360
