@@ -1421,7 +1421,7 @@ variants:
         nic_model_nic2 = virtio
         cdroms += " virtio"
         cdrom_virtio = isos/windows/virtio-win.iso
-
+        kill_rundll = no
 
     - guest_s4:
         no RHEL.3

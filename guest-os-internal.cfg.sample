@@ -1030,7 +1030,7 @@ variants:
                             driver_install_cmd_nic = cmd /c WIN_UTILS:\\AutoIt3.exe WIN_UTILS:\\virtio_driver_install.au3 I:\devcon\wlh_x86\devcon.exe ' install WIN_VIRTIO:\\NetKVM\\xp\\x86\\netkvm.inf hwidcmd '
                         live_snapshot_chain.update:
                             post_snapshot_cmd = {shell:cmd /c D:\wua_update.exe && cmd /c net stop wuauserv && cmd /c net start wuauserv && D:\whql\WUInstall.exe /install}
-
+                            kill_rundll = yes
 
             - Win2003:
                 guest_name = Win2003
@@ -1102,6 +1102,7 @@ variants:
                             driver_install_cmd_balloon = cmd /c WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\Balloon\\2k3\\x86 balloon
                             driver_install_cmd_block = cmd /c  WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\viostor\\2k3\\x86 block
                             driver_install_cmd_nic = cmd /c WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\\NetKVM\\2k3\\x86 nic
+                            kill_rundll = yes
                     - 64:
                         guest_name += -64
                         image_name += -64
@@ -1152,6 +1153,8 @@ variants:
                             driver_install_cmd_balloon = cmd /c WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\Balloon\\2k3\\amd64 balloon
                             driver_install_cmd_block = cmd /c  WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\viostor\\2k3\\amd64 block
                             driver_install_cmd_nic = cmd /c WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\\NetKVM\\2k3\\amd64 nic
+                            kill_rundll = yes
+
             - Win2008:
                 image_name = win2008
                 guest_name = Win2008
