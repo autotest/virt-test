@@ -1718,7 +1718,7 @@ class VM(virt_vm.BaseVM):
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
-                if nic.has_key('tapfd_id'): # implies bridge/tap
+                if nic.has_key('tapfd'): # implies bridge/tap
                     try:
                         os.close(int(nic.tapfd))
                         # qemu process retains access via open file
