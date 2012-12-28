@@ -12,7 +12,7 @@ def run_softlockup(test, params, env):
     3) Run for a relatively long time length. ex: 12, 18 or 24 hours.
     4) Output the test result and observe drift.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

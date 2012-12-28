@@ -17,7 +17,7 @@ def run_fullscreen_setup(test, params, env):
 
     The plan is to support remote-viewer at first place
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
