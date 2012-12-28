@@ -47,7 +47,7 @@ def run_sr_iov_hotplug(test, params, env):
         return  vm.monitor.info("pci")
 
     def check_support_device(dev):
-        if is_qmp_monitor:
+        if vm.monitor.protocol == 'qmp':
             devices_supported = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)
         else:
             devices_supported = vm.monitor.send_args_cmd("%s ?" % cmd_type)
@@ -74,7 +74,7 @@ def run_sr_iov_hotplug(test, params, env):
 
     def device_add(pci_num, pci_add_cmd):
         error.context("Adding pci device with command 'device_add'")
-        if is_qmp_monitor:
+        if vm.monitor.protocol == 'qmp':
             add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         else:
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
@@ -189,13 +189,8 @@ def run_sr_iov_hotplug(test, params, env):
         error.context("modprobe the module %s" %module, logging.info)
         session.cmd("modprobe %s" % module)
 
-    # check monitor type
-    qemu_binary = params.get("qemu_binary", "/usr/bin/qemu-kvm")
-    qemu_binary = utils_misc.get_path(test.bindir, qemu_binary)
-    is_qmp_monitor = (utils_misc.qemu_has_option("qmp", qemu_binary)
-                     and params.get("monitor_type") == "qmp")
     # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if is_qmp_monitor:
+    if vm.monitor.protocol == 'qmp':
         cmd_o = vm.monitor.info("commands")
     else:
         cmd_o = vm.monitor.send_args_cmd("help")
