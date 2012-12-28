@@ -18,7 +18,7 @@ def run_timedrift(test, params, env):
     If the drift after the rest period is higher than a user-specified value,
     fail.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

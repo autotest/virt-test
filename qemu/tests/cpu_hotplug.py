@@ -15,7 +15,7 @@ def run_cpu_hotplug(test, params, env):
     4) Try to bring them online by writing 1 to the 'online' file inside that dir
     5) Run the CPU Hotplug test suite shipped with autotest inside guest
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

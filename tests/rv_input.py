@@ -266,7 +266,7 @@ def run_rv_input(test, params, env):
     Test for testing keyboard inputs through spice.
     Test depends on rv_connect test.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

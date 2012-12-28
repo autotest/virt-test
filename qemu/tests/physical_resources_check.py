@@ -13,7 +13,7 @@ def run_physical_resources_check(test, params, env):
        to the VM (qemu command line)
     3) Verify all MAC addresses for guest NICs
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

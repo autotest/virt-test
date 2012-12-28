@@ -13,7 +13,7 @@ def run_nicdriver_unload(test, params, env):
     4) Multi-session TCP transfer on test interface.
     5) Check whether the test interface should still work.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

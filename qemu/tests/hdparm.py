@@ -11,7 +11,7 @@ def run_hdparm(test, params, env):
     3) Set/record parameters value of hard disk to high performance status.
     4) Perform device/cache read timings then compare two results.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

@@ -10,7 +10,7 @@ def run_getfd(test, params, env):
     2) Pass file descriptors via getfd
     3) Check if qemu process has a copy of the file descriptor
 
-    @param test:   KVM test object.
+    @param test:   QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """

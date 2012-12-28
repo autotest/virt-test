@@ -10,7 +10,7 @@ def run_smbios_table(test, params, env):
     1) Boot a guest with smbios options
     2) verify if host bios options have been emulated
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

@@ -10,7 +10,7 @@ def run_trans_hugepage_swapping(test, params, env):
     KVM khugepage user side test:
     1) Verify that the hugepages can be swapped in/out.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

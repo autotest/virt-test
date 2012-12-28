@@ -15,7 +15,7 @@ def run_vlan(test, params, env):
     5) Test maximal plumb/unplumb vlans.
     6) Recover the vlan config.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

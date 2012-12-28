@@ -17,7 +17,7 @@ def run_trans_hugepage_defrag(test, params, env):
     6) Set the khugepaged do defrag
     7) Use libhugetlbfs to allocated huge page compare the value
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

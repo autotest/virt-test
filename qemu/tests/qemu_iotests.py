@@ -13,7 +13,7 @@ def run_qemu_iotests(test, params, env):
     3) Run test for the file format detected
     4) Report any errors found to autotest
 
-    @param test:   KVM test object.
+    @param test:   QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """

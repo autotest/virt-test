@@ -16,7 +16,7 @@ def run_rv_logging(test, params, env):
     """
     Tests the logging of remote-viewer
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
