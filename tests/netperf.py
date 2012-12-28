@@ -75,7 +75,7 @@ def run_netperf(test, params, env):
     2) Prepare the test environment in server/client/host
     3) Execute netperf tests, collect and analyze the results
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

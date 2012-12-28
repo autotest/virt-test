@@ -9,7 +9,7 @@ def run_unittest_kvmctl(test, params, env):
     test case file to test various functions of the kvm kernel module.
     The output of all unit tests can be found in the test result dir.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

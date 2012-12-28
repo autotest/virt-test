@@ -19,7 +19,7 @@ def run_jumbo(test, params, env):
     9) Verify the path MTU.
     10) Recover the MTU.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

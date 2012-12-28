@@ -11,7 +11,7 @@ def run_guest_test(test, params, env):
     3) Wait for script execution to complete.
     4) Pass/fail according to exit status of script.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

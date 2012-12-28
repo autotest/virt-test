@@ -1239,7 +1239,7 @@ def run_file_transfer(test, params, env):
     4) Copy this file from guest to host.
     5) Check if file transfers ended good.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -1739,7 +1739,7 @@ def restart_guest_network(session, nic_name=None):
 def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     Call another test script in one test script.
-    @param test:   KVM test object.
+    @param test:   QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     @param sub_type: Type of called test script.

@@ -23,7 +23,7 @@ def run_nic_hotplug(test, params, env):
     topology changes (that is, devices get added and removed) may cause random
     failures.
 
-    @param test:   KVM test object.
+    @param test:   QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """

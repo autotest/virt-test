@@ -11,7 +11,7 @@ def run_trans_hugepage(test, params, env):
     1) Smoke test
     2) Stress test
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

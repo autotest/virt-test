@@ -113,7 +113,7 @@ class UnattendedInstallConfig(object):
         """
         Sets class atributes from test parameters.
 
-        @param test: KVM test object.
+        @param test: QEMU test object.
         @param params: Dictionary with test parameters.
         """
         root_dir = data_dir.get_data_dir()
@@ -947,7 +947,7 @@ def run_unattended_install(test, params, env):
     1) Starts a VM with an appropriated setup to start an unattended OS install.
     2) Wait until the install reports to the install watcher its end.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

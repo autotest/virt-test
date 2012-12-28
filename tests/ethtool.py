@@ -15,7 +15,7 @@ def run_ethtool(test, params, env):
     5) Check the return value.
     6) Restore original configuration.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
 

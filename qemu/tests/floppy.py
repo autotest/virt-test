@@ -15,7 +15,7 @@ def run_floppy(test, params, env):
     4) Calculate md5sum value of a file and copy it into floppy.
     5) Verify whether the md5sum does match.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

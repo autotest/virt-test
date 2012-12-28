@@ -12,7 +12,7 @@ def run_sr_iov_hotunplug(test, params, env):
     3) Get the device id that want to unplug.
     4) Delete the device, verify whether could remove the PCI device.
 
-    @param test:   KVM test object.
+    @param test:   QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """
