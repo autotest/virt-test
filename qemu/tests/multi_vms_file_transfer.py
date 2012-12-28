@@ -47,9 +47,12 @@ def run_multi_vms_file_transfer(test, params, env):
     session_vm2 = vm2.wait_for_login(timeout=login_timeout)
 
     transfer_timeout = int(params.get("transfer_timeout", 1000))
-    username = params["username"]
-    password = params["password"]
-    port = int(params["file_transfer_port"])
+    username = params.get("username")
+    password = params.get("password")
+    port = int(params.get("file_transfer_port"))
+    if (not port) or (not username) or (not password):
+        raise error.TestError("Please set file_transfer_port, username,"
+                               " password paramters for guest")
     tmp_dir = params.get("tmp_dir", "/tmp/")
     repeat_time = int(params.get("repeat_time", "10"))
     clean_cmd = params.get("clean_cmd", "rm -f")
@@ -135,3 +138,4 @@ def run_multi_vms_file_transfer(test, params, env):
             session_vm1.close()
         if session_vm2:
             session_vm2.close()
+
