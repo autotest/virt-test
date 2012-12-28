@@ -2655,8 +2655,11 @@ class VM(virt_vm.BaseVM):
         """
         error.context("Send fd %d like %s to VM %s" % (fd, fd_name, self.name))
 
-        logging.debug("Send file descriptor %s to source VM." % fd_name)
-        self.monitor.cmd("getfd %s" % (fd_name), fd=fd)
+        logging.debug("Send file descriptor %s to source VM.", fd_name)
+        if self.monitor.protocol == 'human':
+            self.monitor.cmd("getfd %s" % (fd_name), fd=fd)
+        elif self.monitor.protocol == 'qmp':
+            self.monitor.cmd("getfd", args={'fdname': fd_name}, fd=fd)
         error.context()
 
 
