@@ -1178,6 +1178,7 @@ class QMPMonitor(Monitor):
         args = {"uri": uri,
                 "blk": full_copy,
                 "inc": incremental_copy}
+        args['uri'] = re.sub('"', "", args['uri'])
         try:
             return self.cmd("migrate", args)
         except QMPCmdError, e:
