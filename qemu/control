@@ -36,7 +36,7 @@ str = """
 
 parser = cartesian_config.Parser()
 qemu_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt/qemu')
-parser.parse_file(os.path.join(kvm_test_dir, "cfg", "build.cfg"))
+parser.parse_file(os.path.join(qemu_test_dir, "cfg", "build.cfg"))
 parser.parse_string(str)
 if not utils_misc.run_tests(parser, job):
     logging.error("QEMU build step failed, exiting.")
@@ -50,7 +50,7 @@ str = """
 """
 
 parser = cartesian_config.Parser()
-parser.parse_file(os.path.join(kvm_test_dir, "cfg", "tests.cfg"))
+parser.parse_file(os.path.join(qemu_test_dir, "cfg", "tests.cfg"))
 
 if args:
     # We get test parameters from command line
