@@ -1612,8 +1612,8 @@ variants:
                 images += " stg1"
 
     - block_hotplug_check:
-	type = pci_hotplug_check
-	guest_check_cmd = cat /proc/partitions
+        type = pci_hotplug_check
+        guest_check_cmd = cat /proc/partitions
         no RHEL.3.9
         only virtio_net virtio_blk
         pci_model = virtio
@@ -1623,23 +1623,23 @@ variants:
         find_pci_cmd = 'lspci | tail -n1'
         wait_secs_for_hook_up = 3
         kill_vm_on_error = yes
-	mark_cmd = "echo "%s"| dd of=/dev/%s count=1 bs=%s seek=1"
-	confirm_cmd = "dd if=/dev/%s bs=%s count=1 skip=1"
-	offset = 64k
-	repeat_times = 256000
-	pci_num = 26
-	images += " stg0 stg1 stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24 stg25"
-	boot_drive = no
-	boot_drive_image1 = yes
-	image_name_stg0 = storage0
-	image_name_stg1 = storage1
-	image_name_stg2 = storage2
-	image_name_stg3 = storage3
-	image_name_stg4 = storage4
-	image_name_stg5 = storage5
-	image_name_stg6 = storage6
-	image_name_stg7 = storage7
-	image_name_stg8 = storage8
+        mark_cmd = "echo "%s"| dd of=/dev/%s count=1 bs=%s seek=1"
+        confirm_cmd = "dd if=/dev/%s bs=%s count=1 skip=1"
+        offset = 64k
+        repeat_times = 256000
+        pci_num = 26
+        images += " stg0 stg1 stg2 stg3 stg4 stg5 stg6 stg7 stg8 stg9 stg10 stg11 stg12 stg13 stg14 stg15 stg16 stg17 stg18 stg19 stg20 stg21 stg22 stg23 stg24 stg25"
+        boot_drive = no
+        boot_drive_image1 = yes
+        image_name_stg0 = storage0
+        image_name_stg1 = storage1
+        image_name_stg2 = storage2
+        image_name_stg3 = storage3
+        image_name_stg4 = storage4
+        image_name_stg5 = storage5
+        image_name_stg6 = storage6
+        image_name_stg7 = storage7
+        image_name_stg8 = storage8
         image_name_stg9 = storage9
         image_name_stg10 = storage10
         image_name_stg11 = storage11
