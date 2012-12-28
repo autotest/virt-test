@@ -190,6 +190,9 @@ class VirtTestRunParser(optparse.OptionParser):
                         help=("Bridge name to be used "
                               "(if you chose bridge as nettype). "
                               "Default: %default"))
+        qemu.add_option("--monitor", action="store", dest="monitor",
+                        default='human',
+                        help="Monitor type (human or qmp). Default: %default")
         self.add_option_group(qemu)
 
 
@@ -249,6 +252,13 @@ class VirtTestApp(object):
         elif self.options.nettype == 'user':
             self.cartesian_parser.parse_string("nettype = user")
 
+
+    def _process_monitor(self):
+        if self.options.monitor == 'qmp':
+            self.cartesian_parser.parse_string("monitors = qmp1")
+            self.cartesian_parser.parse_string("monitor_type_qmp1 = qmp")
+
+
     def _process_qemu_specific_options(self):
         """
         Calls for processing all options specific to the qemu test.
@@ -256,6 +266,8 @@ class VirtTestApp(object):
         self._process_qemu_bin()
         self._process_qemu_accel()
         self._process_bridge_mode()
+        self._process_monitor()
+
 
     def _process_options(self):
         """
