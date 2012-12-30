@@ -145,7 +145,7 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help="Exhibit debug messages")
         general.add_option("-t", "--type", action="store", dest="type",
-                           help="Choose test type (kvm, libvirt, v2v)")
+                           help="Choose test type (qemu, libvirt, v2v)")
         general.add_option("-c", "--config", action="store", dest="config",
                            help="Explicitly choose a cartesian config")
         general.add_option("-r", "--restore-image", action="store_true",
@@ -174,7 +174,7 @@ class VirtTestRunParser(optparse.OptionParser):
                                  "%default"))
         self.add_option_group(general)
 
-        qemu = optparse.OptionGroup(self, 'Options specific to the kvm test')
+        qemu = optparse.OptionGroup(self, 'Options specific to the qemu test')
         qemu.add_option("--qemu-bin", action="store", dest="qemu",
                         help=("Path to a custom qemu binary to be tested. "
                               "Default path: %s" % qemu_bin_path))
