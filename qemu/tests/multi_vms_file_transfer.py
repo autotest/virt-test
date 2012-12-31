@@ -138,4 +138,3 @@ def run_multi_vms_file_transfer(test, params, env):
             session_vm1.close()
         if session_vm2:
             session_vm2.close()
-
