@@ -15,7 +15,14 @@ def run_migration_multi_host_downtime_and_speed(test, params, env):
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
-    class TestMultihostMigration(utils_test.MultihostMigration):
+    mig_protocol = params.get("mig_protocol", "tcp")
+    base_class = utils_test.MultihostMigration
+    if mig_protocol == "fd":
+        base_class = utils_test.MultihostMigrationFd
+    if mig_protocol == "exec":
+        base_class = utils_test.MultihostMigrationExec
+
+    class TestMultihostMigration(base_class):
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.install_path = params.get("cpuflags_install_path", "/tmp")
@@ -71,8 +78,15 @@ def run_migration_multi_host_downtime_and_speed(test, params, env):
                                                     " to finish")
 
 
-        def post_migration_downtime(self, vm, cancel_delay, dsthost, vm_ports,
-                         not_wait_for_migration, fd):
+        def post_migration_downtime(self, vm, cancel_delay, mig_offline,
+                                    dsthost, vm_ports, not_wait_for_migration,
+                                    fd, mig_data):
+
+            super(TestMultihostMigration, self).post_migration(vm,
+                                    cancel_delay, mig_offline, dsthost,
+                                    vm_ports, not_wait_for_migration,
+                                    fd, mig_data)
+
             downtime = 0
             for downtime in range(1, self.max_downtime):
                 try:
@@ -83,8 +97,15 @@ def run_migration_multi_host_downtime_and_speed(test, params, env):
             logging.debug("Migration pass with downtime %s" % (downtime))
 
 
-        def post_migration_speed(self, vm, cancel_delay, dsthost, vm_ports,
-                         not_wait_for_migration, fd):
+        def post_migration_speed(self, vm, cancel_delay, mig_offline, dsthost,
+                                 vm_ports, not_wait_for_migration,
+                                 fd, mig_data):
+
+            super(TestMultihostMigration, self).post_migration(vm,
+                        cancel_delay, mig_offline, dsthost,
+                        vm_ports, not_wait_for_migration,
+                        fd, mig_data)
+
             self.min_speed
             self.max_speed
             self.ch_speed
@@ -130,9 +151,9 @@ def run_migration_multi_host_downtime_and_speed(test, params, env):
                                                        self.install_path,
                                                    extra_flags="-msse3 -msse2")
 
-                cmd = ("%s/cpuflags-test --stressmem %d %% &" %
+                cmd = ("%s/cpuflags-test --stressmem %d,%d %% &" %
                            (os.path.join(self.install_path, "test_cpu_flags"),
-                            self.vm_mem / 2))
+                            self.vm_mem * 4, self.vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
 

@@ -2668,7 +2668,8 @@ class VM(virt_vm.BaseVM):
                 cancel_delay=None, offline=False, stable_check=False,
                 clean=True, save_path="/tmp", dest_host="localhost",
                 remote_port=None, not_wait_for_migration=False,
-                fd_src=None, fd_dst=None,):
+                fd_src=None, fd_dst=None, migration_exec_cmd_src=None,
+                migration_exec_cmd_dst=None):
         """
         Migrate the VM.
 
@@ -2695,6 +2696,12 @@ class VM(virt_vm.BaseVM):
                      VM write data. Descriptor is closed during the migration.
         @param fd_d: File descriptor for migration from which destination
                      VM read data.
+        @param migration_exec_cmd_src: Command to embed in '-incoming "exec: "'
+                (e.g. 'exec:gzip -c > filename') if migration_mode is 'exec'
+                default to listening on a random TCP port
+        @param migration_exec_cmd_dst: Command to embed in '-incoming "exec: "'
+                (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
+                default to listening on a random TCP port
         """
         if protocol not in self.MIGRATION_PROTOS:
             raise virt_vm.VMMigrateProtoUnsupportedError
@@ -2769,7 +2776,8 @@ class VM(virt_vm.BaseVM):
                 extra_params = clone.params.get("extra_params", "") + " -S"
                 clone.params["extra_params"] = extra_params
             clone.create(migration_mode=protocol, mac_source=self,
-                         migration_fd=fd_dst)
+                         migration_fd=fd_dst,
+                         migration_exec_cmd=migration_exec_cmd_dst)
             if fd_dst:
                 os.close(fd_dst)
             error.context()
@@ -2840,9 +2848,10 @@ class VM(virt_vm.BaseVM):
             elif protocol == "unix":
                 uri = "unix:%s" % clone.migration_file
             elif protocol == "exec":
-                if migration_exec_cmd != "gzip":
+                if local:
                     uri = '"exec:nc localhost %s"' % clone.migration_port
-                else:
+                elif migration_exec_cmd == "gzip":
+
                     # Exec with gzip is a little different from other migrate
                     # methods - first we ask the monitor the migration, then
                     # the vm state is dumped to a compressed file, then we
@@ -2851,10 +2860,12 @@ class VM(virt_vm.BaseVM):
                                 utils_misc.generate_random_string(8)
                     exec_cmd = "gzip -c -d %s" % clone.exec_file
                     uri = '"exec:gzip -c > %s"' % clone.exec_file
-
+                else:
+                    uri = '"exec:%s"' % (migration_exec_cmd_src)
             elif protocol == "fd":
                 uri = "fd:%s" % mig_fd_name
-            if offline:
+
+            if offline == True:
                 self.monitor.cmd("stop")
 
             logging.info("Migrating to %s", uri)
