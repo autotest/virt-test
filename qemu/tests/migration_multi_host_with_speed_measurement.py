@@ -29,6 +29,8 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
     base_class = utils_test.MultihostMigration
     if mig_protocol == "fd":
         base_class = utils_test.MultihostMigrationFd
+    if mig_protocol == "exec":
+        base_class = utils_test.MultihostMigrationExec
 
     install_path = params.get("cpuflags_install_path", "/tmp")
 
@@ -123,8 +125,9 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
                 utils_misc.install_cpuflags_util_on_vm(test, vm, install_path,
                                                     extra_flags="-msse3 -msse2")
 
-                cmd = ("%s/cpuflags-test --stressmem %d" %
-                    (os.path.join(install_path, "test_cpu_flags"), vm_mem / 2))
+                cmd = ("%s/cpuflags-test --stressmem %d,%d" %
+                    (os.path.join(install_path, "test_cpu_flags"),
+                     vm_mem * 4, vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
 

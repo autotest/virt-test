@@ -32,6 +32,8 @@ def run_migration_multi_host_ping_pong(test, params, env):
     base_class = utils_test.MultihostMigration
     if mig_protocol == "fd":
         base_class = utils_test.MultihostMigrationFd
+    if mig_protocol == "exec":
+        base_class = utils_test.MultihostMigrationExec
 
     class TestMultihostMigration(base_class):
         def __init__(self, test, params, env):
@@ -159,7 +161,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
                                                        self.install_path,
                                                    extra_flags="-msse3 -msse2")
 
-                cmd = ("nohup %s/cpuflags-test --stressmem %d 32"
+                cmd = ("nohup %s/cpuflags-test --stressmem %d,32"
                        " > %s &" %
                            (os.path.join(self.install_path, "test_cpu_flags"),
                             self.stress_memory,

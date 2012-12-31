@@ -49,6 +49,8 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
     base_class = utils_test.MultihostMigration
     if mig_protocol == "fd":
         base_class = utils_test.MultihostMigrationFd
+    if mig_protocol == "exec":
+        base_class = utils_test.MultihostMigrationExec
 
     guest_root = params.get("guest_root", "root")
     guest_pass = params.get("password", "123456")

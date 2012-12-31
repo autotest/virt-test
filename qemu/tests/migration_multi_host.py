@@ -19,6 +19,8 @@ def run_migration_multi_host(test, params, env):
     base_class = utils_test.MultihostMigration
     if mig_protocol == "fd":
         base_class = utils_test.MultihostMigrationFd
+    if mig_protocol == "exec":
+        base_class = utils_test.MultihostMigrationExec
 
     class TestMultihostMigration(base_class):
         def __init__(self, test, params, env):
