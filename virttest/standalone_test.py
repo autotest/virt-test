@@ -409,7 +409,7 @@ def print_test_list(options, cartesian_parser):
             pipe.write(out)
 
 
-def print_guest_list():
+def print_guest_list(options):
     """
     Helper function to pretty print the guest list.
 
@@ -418,7 +418,7 @@ def print_guest_list():
     @param options: OptParse object with cmdline options.
     @param cartesian_parser: Cartesian parser object with test options.
     """
-    cfg = os.path.join(data_dir.get_root_dir(), 'shared',
+    cfg = os.path.join(data_dir.get_root_dir(), options.type,
                        "cfg", "guest-os.cfg")
     cartesian_parser = cartesian_config.Parser()
     cartesian_parser.parse_file(cfg)
