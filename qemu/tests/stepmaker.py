@@ -346,7 +346,9 @@ def run_stepmaker(test, params, env):
 
     steps_filename = params.get("steps")
     if not steps_filename:
-        raise error.TestError("Steps filename not specified")
+        image_name = os.path.basename(params.get("image_name"))
+        steps_filename = 'steps/%s.steps' % image_name
+
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
     if os.path.exists(steps_filename):
         raise error.TestError("Steps file %s already exists" % steps_filename)
