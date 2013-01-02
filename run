@@ -160,6 +160,9 @@ class VirtTestRunParser(optparse.OptionParser):
                                 ' - example: --tests "boot reboot shutdown"'))
         general.add_option("--list-tests", action="store_true", dest="list",
                            help="List tests available")
+        general.add_option("--list-guests", action="store_true",
+                           dest="list_guests",
+                           help="List guests available")
         general.add_option("--data-dir", action="store", dest="datadir",
                            help=("Path to a data dir. "
                                  "Default path: %s" %
@@ -299,6 +302,9 @@ class VirtTestApp(object):
         if self.options.list:
             standalone_test.print_test_list(self.options,
                                             self.cartesian_parser)
+            sys.exit(0)
+        if self.options.list_guests:
+            standalone_test.print_guest_list()
             sys.exit(0)
         else:
             standalone_test.bootstrap_tests(self.options)

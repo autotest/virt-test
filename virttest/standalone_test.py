@@ -2,7 +2,7 @@ import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage
+import storage, cartesian_config
 
 
 #: List of test types to strip names by default
@@ -364,6 +364,14 @@ def create_config_files(options):
     bootstrap.create_subtests_cfg(options.type)
 
 
+def get_paginator():
+    try:
+        less_cmd = utils_misc.find_command('less')
+        return os.popen('%s -FRSX' % less_cmd, 'w')
+    except ValueError:
+        return sys.stdout
+
+
 def print_test_list(options, cartesian_parser):
     """
     Helper function to pretty print the test list.
@@ -373,11 +381,7 @@ def print_test_list(options, cartesian_parser):
     @param options: OptParse object with cmdline options.
     @param cartesian_parser: Cartesian parser object with test options.
     """
-    try:
-        less_cmd = utils_misc.find_command('less')
-        pipe = os.popen('%s -FRSX' % less_cmd, 'w')
-    except ValueError:
-        pipe = sys.stdout
+    pipe = get_paginator()
     index = 0
     pipe.write("Tests produced for type %s, config file %s" %
                (options.type, cartesian_parser.filename))
@@ -403,6 +407,30 @@ def print_test_list(options, cartesian_parser):
             else:
                 out = basic_out + "\n"
             pipe.write(out)
+
+
+def print_guest_list():
+    """
+    Helper function to pretty print the guest list.
+
+    This function uses a paginator, if possible (inspired on git).
+
+    @param options: OptParse object with cmdline options.
+    @param cartesian_parser: Cartesian parser object with test options.
+    """
+    cfg = os.path.join(data_dir.get_root_dir(), 'shared',
+                       "cfg", "guest-os.cfg")
+    cartesian_parser = cartesian_config.Parser()
+    cartesian_parser.parse_file(cfg)
+    pipe = get_paginator()
+    index = 0
+    pipe.write("Available guests (not all of them might be downloaded):")
+    pipe.write("\n\n")
+    for params in cartesian_parser.get_dicts():
+        index +=1
+        out = (bcolors.blue + str(index) + bcolors.end + " " +
+               params.get("shortname") + "\n")
+        pipe.write(out)
 
 
 def bootstrap_tests(options):
