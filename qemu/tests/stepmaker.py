@@ -350,8 +350,6 @@ def run_stepmaker(test, params, env):
         steps_filename = 'steps/%s.steps' % image_name
 
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
-    if os.path.exists(steps_filename):
-        raise error.TestError("Steps file %s already exists" % steps_filename)
 
     StepMaker(vm, steps_filename, test.debugdir, params)
     gtk.main()
