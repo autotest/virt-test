@@ -71,10 +71,8 @@ def run_nic_hotplug(test, params, env):
 
     logging.info("Shutting down the primary link(s)")
     for nic in vm.virtnet:
-        if nic.nic_name == nic_name:
-            continue
-        else:
-            vm.monitor.cmd("set_link %s off" % nic.device_id)
+        if not (nic.nic_name == nic_name):
+            vm.set_link(nic.device_id, up=False)
 
     try:
         logging.info("Waiting for new nic's ip address acquisition...")
@@ -96,10 +94,8 @@ def run_nic_hotplug(test, params, env):
     finally:
         logging.info("Re-enabling the primary link(s)")
         for nic in vm.virtnet:
-            if nic.nic_name == nic_name:
-                continue
-            else:
-                vm.monitor.cmd("set_link %s on" % nic.device_id)
+            if not (nic.nic_name == nic_name):
+                vm.set_link(nic.device_id, up=True)
 
     # Attempt to put back udev network naming rules, even if the command to
     # disable the rules failed. We may be undoing what was done in a previous
