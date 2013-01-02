@@ -424,12 +424,21 @@ def print_guest_list():
     cartesian_parser.parse_file(cfg)
     pipe = get_paginator()
     index = 0
-    pipe.write("Available guests (not all of them might be downloaded):")
+    pipe.write("Searched %s for guest images\n" %
+               os.path.join(data_dir.get_data_dir(), 'images'))
+    pipe.write("Available guests:")
     pipe.write("\n\n")
     for params in cartesian_parser.get_dicts():
         index +=1
-        out = (bcolors.blue + str(index) + bcolors.end + " " +
-               params.get("shortname") + "\n")
+        image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+        if os.path.isfile(image_name):
+            out = (bcolors.blue + str(index) + bcolors.end + " " +
+                   params.get("shortname") + "\n")
+        else:
+            out = (bcolors.blue + str(index) + bcolors.end + " " +
+                   params.get("shortname") + " " + bcolors.yellow +
+                   "(missing %s)" % os.path.basename(image_name) +
+                   bcolors.end + "\n")
         pipe.write(out)
 
 
