@@ -108,7 +108,7 @@ def run_migration_with_speed_measurement(test, params, env):
         logging.info("Maximum migration speed: %d MB/s", mig_stat.get_max())
 
         logging.info("Maximum tolerable divergence: %3.1f%%",
-                     mig_speed_accuracy*100)
+                     mig_speed_accuracy * 100)
 
         if real_speed < mig_speed - ack_speed:
             divergence = (1 - float(real_speed)/float(mig_speed)) * 100
