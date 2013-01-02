@@ -312,7 +312,7 @@ class VirtTestApp(object):
                                             self.cartesian_parser)
             sys.exit(0)
         if self.options.list_guests:
-            standalone_test.print_guest_list()
+            standalone_test.print_guest_list(self.options)
             sys.exit(0)
         else:
             standalone_test.bootstrap_tests(self.options)
