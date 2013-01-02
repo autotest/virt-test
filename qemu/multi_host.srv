@@ -6,7 +6,7 @@ TEST_CLASS = "Virtualization"
 TEST_TYPE = "Server"
 
 DOC = """
-KVM tests (multi-host) server control
+QEMU tests (multi-host) server control
 
 Runs tests across multiple hosts. It uses the config file
 'multi-host-tests.cfg' in order to yield the appropriate
@@ -20,9 +20,9 @@ from autotest.client.shared import error
 # Specify the directory of autotest before you start this test
 AUTOTEST_DIR = job.clientdir
 
-KVM_DIR = os.path.join(AUTOTEST_DIR, 'tests', 'virt')
+VIRT_DIR = os.path.join(AUTOTEST_DIR, 'tests', 'virt')
 
-sys.path.insert(0, KVM_DIR)
+sys.path.insert(0, VIRT_DIR)
 from virttest import utils_misc, cartesian_config
 
 CONTROL_MAIN_PART = """
@@ -30,8 +30,8 @@ testname = "virt"
 bindir = os.path.join(job.testdir, testname)
 job.install_pkg(testname, 'test', bindir)
 
-kvm_test_dir = os.path.join(os.environ['AUTODIR'],'tests', 'virt')
-sys.path.append(kvm_test_dir)
+virt_test_dir = os.path.join(os.environ['AUTODIR'],'tests', 'virt')
+sys.path.append(virt_test_dir)
 """
 
 try:
@@ -50,7 +50,7 @@ def generate_mac_address():
 
 
 def run(machines):
-    logging.info("KVM test running on hosts %s\n", machines)
+    logging.info("QEMU test running on hosts %s\n", machines)
     class Machines(object):
         def __init__(self, host):
             self.host = host
@@ -66,7 +66,7 @@ def run(machines):
     for host in _hosts.itervalues():
         host.at = autotest_remote.Autotest(host.host)
 
-    cfg_file = os.path.join(KVM_DIR, "kvm", "cfg", "multi-host-tests.cfg")
+    cfg_file = os.path.join(VIRT_DIR, "qemu", "cfg", "multi-host-tests.cfg")
 
     if not os.path.exists(cfg_file):
         raise error.JobError("Config file %s was not found", cfg_file)
@@ -153,7 +153,7 @@ else:
 
     # Log the failures
     for failure in failures:
-        job.record("FAIL", failure[0], "kvm", failure[1])
+        job.record("FAIL", failure[0], "qemu", failure[1])
 
     # Now run through each pair and run
     job.parallel_simple(run, pairs, log=False)
