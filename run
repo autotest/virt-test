@@ -155,6 +155,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            action="store_true", default=False,
                            dest="restore_image_between_tests",
                            help="Restore from the pristine image on *every test*")
+        general.add_option("-g", "--guest-os", action="store", dest="guest_os",
+                           default="JeOS.17.64",
+                           help=("Select the guest OS to be used. "
+                                 "Default: %default"))
         general.add_option("--tests", action="store", dest="tests",
                            help=('List of space separated tests to be executed'
                                 ' - example: --tests "boot reboot shutdown"'))
@@ -299,6 +303,10 @@ class VirtTestApp(object):
 
         self.cartesian_parser.parse_file(cfg)
 
+        if self.options.guest_os:
+            self.cartesian_parser.parse_string("only %s" %
+                                               self.options.guest_os)
+
         if self.options.list:
             standalone_test.print_test_list(self.options,
                                             self.cartesian_parser)
@@ -308,9 +316,6 @@ class VirtTestApp(object):
             sys.exit(0)
         else:
             standalone_test.bootstrap_tests(self.options)
-
-        if self.options.type == 'qemu':
-            self._process_qemu_specific_options()
 
         if self.options.type and self.options.tests:
             tests = self.options.tests.split(" ")
@@ -332,6 +337,9 @@ class VirtTestApp(object):
             self.cartesian_parser.parse_string("restore_image = yes")
 
         self.cartesian_parser.parse_string("mem = %s" % self.options.mem)
+
+        if self.options.type == 'qemu':
+            self._process_qemu_specific_options()
 
 
     def main(self):
