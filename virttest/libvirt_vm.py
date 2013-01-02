@@ -621,7 +621,7 @@ class VM(virt_vm.BaseVM):
                                                 params.get("cdrom_unattended")
                                              ))
             else:
-                location = params.get("image_dir")
+                location = data_dir.get_data_dir()
                 kernel_dir = os.path.dirname(params.get("kernel"))
                 kernel_parent_dir = os.path.dirname(kernel_dir)
                 pxeboot_link = os.path.join(kernel_parent_dir, "pxeboot")
