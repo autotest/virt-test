@@ -200,6 +200,9 @@ class VirtTestRunParser(optparse.OptionParser):
         qemu.add_option("--monitor", action="store", dest="monitor",
                         default='human',
                         help="Monitor type (human or qmp). Default: %default")
+        qemu.add_option("--smp", action="store", dest="smp",
+                        default='2',
+                        help="Number of virtual cpus to use. Default: %default")
         self.add_option_group(qemu)
 
 
@@ -265,6 +268,21 @@ class VirtTestApp(object):
             self.cartesian_parser.parse_string("monitors = qmp1")
             self.cartesian_parser.parse_string("monitor_type_qmp1 = qmp")
 
+    def _process_smp(self):
+        if self.options.smp == '1':
+            self.cartesian_parser.parse_string("only up")
+        elif self.options.smp == '2':
+            self.cartesian_parser.parse_string("only smp2")
+        else:
+            try:
+                self.cartesian_parser.parse_string("only up")
+                self.cartesian_parser.parse_string("smp = %d" %
+                                                   int(self.options.smp))
+            except ValueError:
+                from virttest import standalone_test
+                standalone_test.print_stdout("Invalid option for smp: %s" %
+                                             self.options.smp)
+                sys.exit(1)
 
     def _process_qemu_specific_options(self):
         """
@@ -274,6 +292,7 @@ class VirtTestApp(object):
         self._process_qemu_accel()
         self._process_bridge_mode()
         self._process_monitor()
+        self._process_smp()
 
 
     def _process_options(self):
