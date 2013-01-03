@@ -183,15 +183,13 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
 
 def run_steps(test, params, env):
     vm = env.get_vm(params.get("main_vm"))
-    if not vm:
-        raise error.TestError("VM object not found in environment")
-    if not vm.is_alive():
-        e_msg = "VM seems to be dead. Guestwizard requires a living VM"
-        raise error.TestError(e_msg)
+    vm.verify_alive()
 
     steps_filename = params.get("steps")
     if not steps_filename:
-        raise error.TestError("Steps filename not specified")
+        image_name = os.path.basename(params.get("image_name"))
+        steps_filename = 'steps/%s.steps' % image_name
+
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
     if not os.path.exists(steps_filename):
         raise error.TestError("Steps file not found: %s" % steps_filename)
