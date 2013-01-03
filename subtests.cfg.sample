@@ -4287,7 +4287,8 @@ variants:
                 type = boot
                 vms = 'vm1 vm2'
                 image_snapshot = yes
-                pci_assignable_nic1 = vf
+                nics = 'nic1 nic2'
+                pci_assignable = vf
             - vf_hotplug:
                 type = sr_iov_hotplug
                 pci_assignable = vf
@@ -4312,6 +4313,19 @@ variants:
                 wait_secs_for_hook_up = 3
                 pci_num = 2
                 repeat_times = 500
+            - system_reset_powerdown:
+                type = boot shutdown
+                reboot_method = system_reset
+                shutdown_method = system_powerdown
+                sleep_before_reset = 20
+                sleep_before_powerdown = 20
+                kill_vm = yes
+                kill_vm_gracefully = no
+                variants:
+                    - vf:
+                        pci_assignable = vf
+                    - pf:
+                        pci_assignable = pf
 
     - qcow2perf:
         only qcow2
