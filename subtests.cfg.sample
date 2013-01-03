@@ -4326,6 +4326,46 @@ variants:
                         pci_assignable = vf
                     - pf:
                         pci_assignable = pf
+            - sr_iov_negative:
+                host_setup_flag = 3
+                variants:
+                    - vf_iommu_off:
+                        start_vm = no
+                        negative_msg = "\'pci-assign\' could not be initialized"
+                        pci-assign_params = iommu
+                        iommu = 0
+                        type = sr_iov_boot_negative
+                    - no-kvm:
+                        pci_assignable = vf
+                        disable_kvm = yes
+                        enable_kvm = no
+                        start_vm = no
+                        type = sr_iov_boot_negative
+                        negative_msg = "requires KVM support"
+                    - hotplug_invaild_addr:
+                        pci_assignable = vf
+                        type = sr_iov_hotplug_negative
+                        modprobe_cmd = modprobe -r igb
+                        pci_addr = abc
+                        negative_msg = "Property 'pci-assign.addr' doesn't take value 'abc'"
+                    - hotplug_iommu_off:
+                        pci_assignable = vf
+                        type = sr_iov_hotplug_negative
+                        negative_msg = "Device 'pci-assign' could not be initialized"
+                        hotplug_params = iommu
+                        iommu = 0
+                    - more_than_max_vfs:
+                        driver_option = "max_vfs=8"
+                        type = boot
+                        pci_assignable = vf
+                        nics = "nic1 nic2 nic3 nic4 nic5 nic6 nic7 nic8"
+                        pci_assignable_nic1 = pf
+                        device_name_nic1 = eth1
+                    - negative_max_vfs:
+                        driver_option = "max_vfs=-1"
+                        type = sr_iov_boot_negative
+                        start_vm = no
+
 
     - qcow2perf:
         only qcow2
