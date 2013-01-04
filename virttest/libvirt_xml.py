@@ -483,6 +483,33 @@ class VMXML(VMXMLBase):
         # when it goes out of scope here.
 
 
+    def get_disk_all(self):
+        """
+        Return VM's disk from XML definition, None if not set
+        """
+        xmltreefile = self.dict_get('xml')
+        disk_nodes = xmltreefile.find('devices').findall('disk')
+        disks = {}
+        for node in disk_nodes:
+            dev = node.find('target').get('dev')
+            disks[dev] = node
+        return disks
+
+
+    @staticmethod
+    def get_disk_blk(vm_name):
+        """
+        Get block device  of a defined VM's disks.
+
+        @param: vm_name: Name of defined vm.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        disks = vmxml.get_disk_all()
+        if disks != None:
+            return disks.keys()
+        return None
+
+
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)
 
