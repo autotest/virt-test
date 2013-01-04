@@ -651,6 +651,19 @@ def screenshot(name, filename, **dargs):
     return filename
 
 
+def domblkstat(name, device, option, **dargs):
+    """
+    Store state of VM into named file.
+
+    @param: name: VM's name.
+    @param: device: VM's device.
+    @param: option: command domblkstat option.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    return command("domblkstat %s %s %s" % (name, device, option), **dargs)
+
+
 def dumpxml(name, to_file="", **dargs):
     """
     Return the domain information as an XML dump.
