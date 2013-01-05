@@ -1434,6 +1434,8 @@ variants:
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
+                # it can be removed while bug 821741 is fixed
+                cpu_model_flags = "+sep"
                 guest_test.autoit.disk_dfrg:
                     dst_rsc_path = "C:\DiskDefragment\difrag_win7.au3"
                 whql.submission:
