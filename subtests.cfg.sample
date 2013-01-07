@@ -3221,10 +3221,6 @@ variants:
         kill_vm = yes
         cmd_timeout = 1200
 
-    - create_image:
-        type = stub
-        force_create_image = yes
-
     - qemu_killer_report:
         type = qemu_killer_report
         qemu_error_re = signal 15 from pid ([0-9]*) 
