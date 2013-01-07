@@ -168,11 +168,11 @@ class TestVirtIface(unittest.TestCase):
                         "01:02:03::05:06")
 
 
-class TestKvmIface(TestVirtIface):
+class TestQemuIface(TestVirtIface):
 
     def setUp(self):
-        super(TestKvmIface, self).setUp()
-        self.VirtIface = utils_net.KVMIface
+        super(TestQemuIface, self).setUp()
+        self.VirtIface = utils_net.QemuIface
 
 
 class TestLibvirtIface(TestVirtIface):
@@ -196,7 +196,7 @@ class TestVmNetStyle(unittest.TestCase):
         style = self.get_style(utils_misc.generate_random_string(16),
                                utils_misc.generate_random_string(16))
         self.assertEqual(style['mac_prefix'], '9a')
-        self.assertEqual(style['container_class'], utils_net.KVMIface)
+        self.assertEqual(style['container_class'], utils_net.QemuIface)
         self.assert_(issubclass(style['container_class'], utils_net.VirtIface))
 
 
@@ -270,8 +270,8 @@ class TestVmNetSubclasses(unittest.TestCase):
                     driver_type = qemu
                 - kvm:
                     driver_type = kvm
-        - kvm:
-            vm_type = kvm
+        - qemu:
+            vm_type = qemu
             variants:
                 - unsetdrivertype:
                 - kvm:
@@ -311,7 +311,7 @@ class TestVmNetSubclasses(unittest.TestCase):
 
     variants:
         -propsundefined:
-        e-defaultprops:
+        -defaultprops:
             mac = 9a
             nic_model = virtio
             nettype = bridge
@@ -677,7 +677,7 @@ class TestVmNetSubclasses(unittest.TestCase):
     def test_08_ifname(self):
         for fakevm in self.fakevm_generator():
             # only need to test kvm instance
-            if fakevm.vm_type != 'kvm':
+            if fakevm.vm_type != 'qemu':
                 continue
             test_params = fakevm.get_params()
             virtnet = utils_net.VirtNet(test_params,
