@@ -1,5 +1,6 @@
 import logging, os
 from autotest.client.shared import error
+from autotest.client import utils
 from virttest import utils_test, utils_misc
 
 
@@ -57,17 +58,15 @@ def run_sr_iov_hotplug_negative(test, params, env):
         #negative test, both guest and host should still work well.
         msg = "Try to remove sr-iov module in host."
         error.context(msg, logging.info)
-        os.system(modprobe_cmd)
+        utils.system(modprobe_cmd)
     if vm.pci_assignable is not None:
         pa_pci_ids = vm.pci_assignable.request_devs(1)
-    # check monitor type
-    is_qmp_monitor = (utils_misc.qemu_has_option("qmp")
-                      and params.get("monitor_type") == "qmp")
     # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if is_qmp_monitor:
+    if vm.monitor.protocol == 'qmp':
         cmd_output = vm.monitor.info("commands")
     else:
         cmd_output = vm.monitor.send_args_cmd("help")
+
     if not cmd_output:
         raise error.TestError("Unknow version of qemu")
 
