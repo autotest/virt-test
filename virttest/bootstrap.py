@@ -397,7 +397,8 @@ def create_subtests_cfg(t_type):
     subtests_file.close()
 
 
-def create_config_files(test_dir, shared_dir, interactive, step=None):
+def create_config_files(test_dir, shared_dir, interactive, step=None,
+                        force_update=False):
     if step is None:
         step = 0
     logging.info("")
@@ -435,7 +436,9 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
                               (diff_result.command, diff_result.stdout))
                 if interactive:
                     answer = utils.ask("Config file  %s differs from %s."
-                                       "Overwrite?" % (dst_file,src_file))
+                                       "Overwrite?" % (dst_file, src_file))
+                elif force_update:
+                    answer = "y"
                 else:
                     answer = "n"
 
