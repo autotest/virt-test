@@ -841,9 +841,9 @@ class LibvirtIface(VirtIface):
     __slots__ = VirtIface.__slots__ + []
 
 
-class KVMIface(VirtIface):
+class QemuIface(VirtIface):
     """
-    Networking information specific to KVM
+    Networking information specific to Qemu
     """
     __slots__ = VirtIface.__slots__ + ['vlan', 'device_id', 'ifname', 'tapfd',
                                        'tapfd_id', 'netdev_id', 'tftp',
@@ -1004,7 +1004,7 @@ class VMNet(list):
         return None
 
 
-# TODO: Subclass VMNet into KVM/Libvirt variants and
+# TODO: Subclass VMNet into Qemu/Libvirt variants and
 # pull them, along with ParmasNet and maybe DbNet based on
 # Style definitions.  i.e. libvirt doesn't need DbNet at all,
 # but could use some custom handling at the VMNet layer
@@ -1020,7 +1020,7 @@ class VMNetStyle(dict):
         'default':{
             'default':{
                 'mac_prefix':'9a',
-                'container_class': KVMIface,
+                'container_class': QemuIface,
             }
         },
         'libvirt':{
