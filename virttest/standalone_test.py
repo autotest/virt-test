@@ -350,7 +350,6 @@ def create_config_files(options):
     """
     shared_dir = os.path.dirname(data_dir.get_data_dir())
     test_dir = os.path.dirname(shared_dir)
-    shared_dir = os.path.join(shared_dir, "cfg")
 
     if (options.type and options.config):
         test_dir = os.path.join(test_dir, options.type)
