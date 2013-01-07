@@ -405,7 +405,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     step += 1
     logging.info("%d - Generating config set", step)
     config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg"))
-    config_file_list_shared = glob.glob(os.path.join(shared_dir,
+    config_file_list_shared = glob.glob(os.path.join(shared_dir, "cfg",
                                                      "*.cfg"))
 
     # Handle overrides of cfg files. Let's say a test provides its own
@@ -493,7 +493,6 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     step += 1
     logging.info("%d - Verifying directories", step)
     shared_dir = os.path.dirname(data_dir.get_data_dir())
-    shared_dir = os.path.join(shared_dir, "cfg")
     sub_dir_list = ["images", "isos", "steps_data"]
     for sub_dir in sub_dir_list:
         sub_dir_path = os.path.join(base_dir, sub_dir)
