@@ -410,7 +410,12 @@ class Parser(object):
             if not line:
                 break
 
-            name, dep = map(str.strip, line.lstrip("- ").split(":", 1))
+            name, dep = None, None
+            try:
+                name, dep = map(str.strip, line.lstrip("- ").split(":", 1))
+            except ValueError:
+                raise ParserError("Illegal characters expected divider ':'",
+                                  line, cr.filename, linenum)
             for char in name:
                 if not (char.isalnum() or char in "@._-"):
                     raise ParserError("Illegal characters in variant name",
