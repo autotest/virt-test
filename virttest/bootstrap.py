@@ -310,14 +310,17 @@ def get_directory_structure(rootdir, guest_file):
         if files:
             files.sort()
             for f in files:
-                bf = f[:len(f) - 4]
-                if bf not in subdirs:
-                    if not variant_printed:
-                        guest_file.write("%svariants:\n" % ((4 * (indent) * " ")))
-                        variant_printed = True
-                    base_file = open(os.path.join(path, f), 'r')
-                    for line in base_file.readlines():
-                        guest_file.write("%s%s" % ((4 * (indent + 1) * " "), line))
+                if f.endswith(".cfg"):
+                    bf = f[:len(f) - 4]
+                    if bf not in subdirs:
+                        if not variant_printed:
+                            guest_file.write("%svariants:\n" %
+                                             ((4 * (indent) * " ")))
+                            variant_printed = True
+                        base_file = open(os.path.join(path, f), 'r')
+                        for line in base_file.readlines():
+                            guest_file.write("%s%s" %
+                                             ((4 * (indent + 1) * " "), line))
         indent -= number_variants
         previous_indent = indent
 
