@@ -197,7 +197,11 @@ class UnattendedInstallConfig(object):
 
         # Content server params
         # lookup host ip address for first nic by interface name
-        auto_ip = utils_net.get_ip_address_by_interface(vm.virtnet[0].netdst)
+        try:
+            auto_ip = utils_net.get_ip_address_by_interface(vm.virtnet[0].netdst)
+        except utils_net.NetError:
+            auto_ip = None
+
         self.url_auto_content_ip = params.get('url_auto_ip', auto_ip)
         self.url_auto_content_port = None
 
