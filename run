@@ -4,7 +4,7 @@ Run virt tests outside the autotest client harness.
 
 @copyright: Red Hat 2012
 """
-import os, sys, traceback, signal, optparse
+import os, sys, traceback, signal, optparse, logging
 
 class StreamProxy(object):
     """
@@ -151,7 +151,9 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("-t", "--type", action="store", dest="type",
                            help="Choose test type (qemu, libvirt, v2v)")
         general.add_option("-c", "--config", action="store", dest="config",
-                           help="Explicitly choose a cartesian config")
+                           help=("Explicitly choose a cartesian config. "
+                                 "When choosing this, some options will be "
+                                 "ignored"))
         general.add_option("-r", "--restore-image", action="store_true",
                            dest="restore",
                            help="Restore guest image from the pristine image")
@@ -162,9 +164,13 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("-g", "--guest-os", action="store", dest="guest_os",
                            default="JeOS.17.64",
                            help=("Select the guest OS to be used. "
+                                 "If -c is provided, thiis will be ignored. "
                                  "Default: %default"))
         general.add_option("--tests", action="store", dest="tests",
-                           help=('List of space separated tests to be executed'
+                           default="",
+                           help=('List of space separated tests to be '
+                                 'executed. '
+                                 'If -c is provided, this will be ignored.'
                                 ' - example: --tests "boot reboot shutdown"'))
         general.add_option("--list-tests", action="store_true", dest="list",
                            help="List tests available")
@@ -187,7 +193,10 @@ class VirtTestRunParser(optparse.OptionParser):
 
         qemu = optparse.OptionGroup(self, 'Options specific to the qemu test')
         qemu.add_option("--qemu-bin", action="store", dest="qemu",
+                        default=None,
                         help=("Path to a custom qemu binary to be tested. "
+                            "If -c is provided and this flag is omitted, "
+                            "no attempt to set the qemu binaries will be made. "
                               "Default path: %s" % qemu_bin_path))
         qemu.add_option("--accel", action="store", dest="accel", default="kvm",
                         help=("Accelerator used to run qemu (kvm or tcg). "
@@ -206,20 +215,26 @@ class VirtTestRunParser(optparse.OptionParser):
                         help="Monitor type (human or qmp). Default: %default")
         qemu.add_option("--smp", action="store", dest="smp",
                         default='2',
-                        help="Number of virtual cpus to use. Default: %default")
+                        help=("Number of virtual cpus to use. "
+                              "If -c is provided, this will be ignored. "
+                              "Default: %default"))
         qemu.add_option("--image-type", action="store", dest="image_type",
                         default="qcow2",
                         help=("Image format type to use "
-                              "(any valid qemu format). Default: %default"))
+                              "(any valid qemu format). "
+                              "If -c is provided, this will be ignored. "
+                              "Default: %default"))
         qemu.add_option("--nic-model", action="store", dest="nic_model",
                         default="virtio_net",
-                        help=("Guest network card model "
+                        help=("Guest network card model. "
+                              "If -c is provided, this will be ignored. "
                               "(any valid qemu format). Default: %default"))
         qemu.add_option("--disk-bus", action="store", dest="disk_bus",
                         default="virtio_blk",
                         help=("Guest main image disk bus. One of " +
                               " ".join(SUPPORTED_DISK_BUSES) +
-                              ". Default: %default"))
+                              ". If -c is provided, this will be ignored. "
+                              "Default: %default"))
         self.add_option_group(qemu)
 
 
@@ -251,12 +266,19 @@ class VirtTestApp(object):
         """
         Puts the value of the qemu bin option in the cartesian parser command.
         """
-        (qemu_bin_path, qemu_img_path,
-         qemu_io_path) = _find_default_qemu_paths(self.options.qemu)
-        self.cartesian_parser.parse_string("qemu_binary = %s" % qemu_bin_path)
-        self.cartesian_parser.parse_string("qemu_img_binary = %s" %
-                                           qemu_img_path)
-        self.cartesian_parser.parse_string("qemu_io_binary = %s" % qemu_io_path)
+        if self.options.config and self.options.qemu is None:
+            logging.info("Config provided and no --qemu-bin set. Not trying "
+                         "to automatically set qemu bin.")
+        else:
+            (qemu_bin_path, qemu_img_path,
+             qemu_io_path) = _find_default_qemu_paths(self.options.qemu)
+            self.cartesian_parser.parse_string("qemu_binary = %s" %
+                                               qemu_bin_path)
+            self.cartesian_parser.parse_string("qemu_img_binary = %s" %
+                                               qemu_img_path)
+            self.cartesian_parser.parse_string("qemu_io_binary = %s" %
+                                               qemu_io_path)
+
 
     def _process_qemu_accel(self):
         """
@@ -265,6 +287,7 @@ class VirtTestApp(object):
         if self.options.accel == 'tcg':
             self.cartesian_parser.parse_string("enable_kvm = no")
             self.cartesian_parser.parse_string("disable_kvm = yes")
+
 
     def _process_bridge_mode(self):
         from virttest import standalone_test
@@ -287,55 +310,69 @@ class VirtTestApp(object):
 
 
     def _process_smp(self):
-        if self.options.smp == '1':
-            self.cartesian_parser.parse_string("only up")
-        elif self.options.smp == '2':
-            self.cartesian_parser.parse_string("only smp2")
-        else:
-            try:
+        if not self.options.config:
+            if self.options.smp == '1':
                 self.cartesian_parser.parse_string("only up")
-                self.cartesian_parser.parse_string("smp = %d" %
-                                                   int(self.options.smp))
-            except ValueError:
-                from virttest import standalone_test
-                standalone_test.print_stdout("Invalid option for smp: %s" %
-                                             self.options.smp)
-                sys.exit(1)
+            elif self.options.smp == '2':
+                self.cartesian_parser.parse_string("only smp2")
+            else:
+                try:
+                    self.cartesian_parser.parse_string("only up")
+                    self.cartesian_parser.parse_string("smp = %d" %
+                                                       int(self.options.smp))
+                except ValueError:
+                    from virttest import standalone_test
+                    standalone_test.print_stdout("Invalid option for smp: %s" %
+                                                 self.options.smp)
+                    sys.exit(1)
+        else:
+            logging.info("Config provided, ignoring --smp option")
 
 
     def _process_image_type(self):
-        if self.options.image_type == "qcow2":
-            self.cartesian_parser.parse_string("only qcow2")
+        if not self.options.config:
+            if self.options.image_type == "qcow2":
+                self.cartesian_parser.parse_string("only qcow2")
+            else:
+                self.cartesian_parser.parse_string("only raw")
+                self.cartesian_parser.parse_string("image_type = %s" %
+                                                   self.options.image_type)
         else:
-            self.cartesian_parser.parse_string("only raw")
-            self.cartesian_parser.parse_string("image_type = %s" %
-                                               self.options.image_type)
+            logging.info("Config provided, ignoring --image-type option")
 
 
     def _process_nic_model(self):
-        if self.options.nic_model in SUPPORTED_NIC_MODELS:
-            self.cartesian_parser.parse_string("only %s" %
-                                               self.options.nic_model)
+        if not self.options.config:
+            if self.options.nic_model in SUPPORTED_NIC_MODELS:
+                self.cartesian_parser.parse_string("only %s" %
+                                                   self.options.nic_model)
+            else:
+                self.cartesian_parser.parse_string("only nic_custom")
+                self.cartesian_parser.parse_string("nic_type = %s" %
+                                                   self.options.nic_model)
         else:
-            self.cartesian_parser.parse_string("only nic_custom")
-            self.cartesian_parser.parse_string("nic_type = %s" %
-                                               self.options.nic_model)
+            logging.info("Config provided, ignoring --nic-model option")
 
 
     def _process_disk_buses(self):
-        if self.options.disk_bus in SUPPORTED_DISK_BUSES:
-            self.cartesian_parser.parse_string("only %s" %
-                                               self.options.disk_bus)
+        if not self.options.config:
+            if self.options.disk_bus in SUPPORTED_DISK_BUSES:
+                self.cartesian_parser.parse_string("only %s" %
+                                                   self.options.disk_bus)
+            else:
+                from virttest import standalone_test
+                standalone_test.print_stdout("Option %s is not in the list %s, "
+                                             "aborting..." % SUPPORTED_DISK_BUSES)
+                sys.exit(1)
         else:
-            from virttest import standalone_test
-            standalone_test.print_stdout("Option %s is not in the list %s, "
-                                         "aborting..." % SUPPORTED_DISK_BUSES)
-            sys.exit(1)
+            logging.info("Config provided, ignoring --disk-bus option")
 
 
     def _process_qemu_specific_options(self):
         """
         Calls for processing all options specific to the qemu test.
+
+        This method modifies the cartesian set by parsing additional lines.
         """
         self._process_qemu_bin()
         self._process_qemu_accel()
@@ -345,6 +382,74 @@ class VirtTestApp(object):
         self._process_image_type()
         self._process_nic_model()
         self._process_disk_buses()
+
+
+    def _process_guest_os(self):
+        if not self.options.config:
+            if self.options.guest_os:
+                self.cartesian_parser.parse_string("only %s" %
+                                                   self.options.guest_os)
+        else:
+            logging.info("Config provided, ignoring --guest-os option")
+
+
+    def _process_list(self):
+        from virttest import standalone_test
+        if self.options.list:
+            standalone_test.print_test_list(self.options,
+                                            self.cartesian_parser)
+            sys.exit(0)
+        if self.options.list_guests:
+            standalone_test.print_guest_list(self.options)
+            sys.exit(0)
+        else:
+            standalone_test.bootstrap_tests(self.options)
+
+
+    def _process_tests(self):
+        if not self.options.config:
+            if self.options.type:
+                if self.options.tests:
+                    tests = self.options.tests.split(" ")
+                    self.cartesian_parser.parse_string("only %s" %
+                                                       ", ".join(tests))
+                else:
+                    if self.options.type == 'qemu':
+                        self.cartesian_parser.parse_string("only %s" %
+                                                           QEMU_DEFAULT_SET)
+                    elif self.options.type == 'libvirt':
+                        self.cartesian_parser.parse_string("only " %
+                                                           LIBVIRT_DEFAULT_SET)
+        else:
+            logging.info("Config provided, ignoring --tests option")
+
+
+    def _process_restart_vm(self):
+        if self.options.restart_vm:
+            self.cartesian_parser.parse_string("restart_vm = yes")
+
+
+    def _process_restore_image_between_tests(self):
+        if self.options.restore_image_between_tests:
+            self.cartesian_parser.parse_string("restore_image = yes")
+
+
+    def _process_mem(self):
+        self.cartesian_parser.parse_string("mem = %s" % self.options.mem)
+
+
+    def _process_general_options(self):
+        """
+        Calls for processing all generic options.
+
+        This method modifies the cartesian set by parsing additional lines.
+        """
+        self._process_guest_os()
+        self._process_list()
+        self._process_tests()
+        self._process_restart_vm()
+        self._process_restore_image_between_tests()
+        self._process_mem()
 
 
     def _process_options(self):
@@ -366,48 +471,16 @@ class VirtTestApp(object):
 
         self.cartesian_parser = cartesian_config.Parser()
 
-        if self.options.config is not None:
+        if self.options.config:
             cfg = os.path.abspath(self.options.config)
-        if self.options.config is None:
+
+        if not self.options.config:
             cfg = os.path.join(data_dir.get_root_dir(), self.options.type,
                                "cfg", "tests.cfg")
 
         self.cartesian_parser.parse_file(cfg)
 
-        if self.options.guest_os:
-            self.cartesian_parser.parse_string("only %s" %
-                                               self.options.guest_os)
-
-        if self.options.list:
-            standalone_test.print_test_list(self.options,
-                                            self.cartesian_parser)
-            sys.exit(0)
-        if self.options.list_guests:
-            standalone_test.print_guest_list(self.options)
-            sys.exit(0)
-        else:
-            standalone_test.bootstrap_tests(self.options)
-
-        if self.options.type and self.options.tests:
-            tests = self.options.tests.split(" ")
-            self.cartesian_parser.parse_string("only %s" % ", ".join(tests))
-
-        elif (self.options.type and not self.options.tests
-              and not self.options.config):
-            if self.options.type == 'qemu':
-                self.cartesian_parser.parse_string("only %s" %
-                                                   QEMU_DEFAULT_SET)
-            elif self.options.type == 'libvirt':
-                self.cartesian_parser.parse_string("only " %
-                                                   LIBVIRT_DEFAULT_SET)
-
-        if self.options.restart_vm:
-            self.cartesian_parser.parse_string("restart_vm = yes")
-
-        if self.options.restore_image_between_tests:
-            self.cartesian_parser.parse_string("restore_image = yes")
-
-        self.cartesian_parser.parse_string("mem = %s" % self.options.mem)
+        self._process_general_options()
 
         if self.options.type == 'qemu':
             self._process_qemu_specific_options()
