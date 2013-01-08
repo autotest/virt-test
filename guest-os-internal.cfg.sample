@@ -1145,6 +1145,8 @@ variants:
                 image_name = win2008
                 guest_name = Win2008
                 image_size = 30G
+                # 801196#c97
+                cpu_model_flags += "hv_relaxed"
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
                 guest_test.autoit.disk_dfrg:
@@ -1254,6 +1256,8 @@ variants:
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
+                # 801196#c97
+                cpu_model_flags += "hv_relaxed"
                 guest_test.autoit.disk_dfrg:
                     dst_rsc_path = "C:\DiskDefragment\difrag2008.au3"
                 format_disk:
@@ -1320,6 +1324,8 @@ variants:
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
+                # 801196#c97
+                cpu_model_flags += "hv_relaxed"
                 guest_test.autoit.disk_dfrg:
                     dst_rsc_path = "C:\DiskDefragment\difrag_win7.au3"
                 whql.submission:
