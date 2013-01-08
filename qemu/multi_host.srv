@@ -21,7 +21,7 @@ from autotest.client.shared import error
 AUTOTEST_DIR = job.clientdir
 
 VIRT_DIR = os.path.join(AUTOTEST_DIR, 'tests', 'virt')
-TEST_DIR = os.path.join(VIRT_DIR, 'tests')
+TEST_DIR = os.path.join(VIRT_DIR, 'qemu')
 SHARED_DIR = os.path.join(VIRT_DIR, 'shared')
 VIRT_TYPE = 'qemu'
 
