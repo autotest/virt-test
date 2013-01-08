@@ -399,7 +399,7 @@ class VMXML(VMXMLBase):
         @param: virsh_instance: virsh module or instance to use
         @return: New initialized VMXML instance
         """
-        vmxml = VMXML(virsh_instance)
+        vmxml = VMXML(virsh_instance=virsh_instance)
         vmxml['xml'] = virsh_instance.dumpxml(vm_name)
         return vmxml
 
