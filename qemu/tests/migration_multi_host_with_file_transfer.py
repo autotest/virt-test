@@ -69,6 +69,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
     transfer_timeout = int(params.get("transfer_timeout", "240"))
     transfer_speed = int(params.get("transfer_speed", "100")) * 1000
     d_transfer_timeout = 2 * transfer_timeout
+    del_file_with_err = params.get("del_file_with_err", "no")
 
     #Count of migration during file transfer.
     migrate_count = int(params.get("migrate_count", "3"))
@@ -195,49 +196,56 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
             address_cache = env.get("address_cache")
 
             if (self.hostid == self.master_id()):
-                utils.run("dd if=/dev/urandom of=%s bs=1M"
-                          " count=%s" % (host_path, file_size))
+                try:
+                    utils.run("dd if=/dev/urandom of=%s bs=1M"
+                              " count=%s" % (host_path, file_size))
 
-                self.vm_addr = self._prepare_vm(self.vm).get_address()
+                    self.vm_addr = self._prepare_vm(self.vm).get_address()
 
-                end_event = threading.Event()
-                bg = utils.InterruptedThread(self._copy_until_end,
-                                             (end_event,))
+                    end_event = threading.Event()
+                    bg = utils.InterruptedThread(self._copy_until_end,
+                                                 (end_event,))
 
-                self._hosts_barrier(self.hosts, self.id, "befor_mig", 120)
-                sync.sync(address_cache, timeout=120)
-                error.context("ping-pong between host and guest while"
-                              " migrating", logging.info)
-                self._run_and_migrate(bg, end_event, sync, migrate_count)
+                    self._hosts_barrier(self.hosts, self.id, "befor_mig", 120)
+                    sync.sync(address_cache, timeout=120)
+                    error.context("ping-pong between host and guest while"
+                                  " migrating", logging.info)
+                    self._run_and_migrate(bg, end_event, sync, migrate_count)
 
-                # Check if guest lives.
-                remote.wait_for_login(shell_client, self.vm_addr,
-                                           shell_port, guest_root,
-                                           guest_pass, shell_prompt)
-                self._hosts_barrier(self.hosts, self.id, "After_check", 120)
+                    # Check if guest lives.
+                    remote.wait_for_login(shell_client, self.vm_addr,
+                                               shell_port, guest_root,
+                                               guest_pass, shell_prompt)
+                    self._hosts_barrier(self.hosts, self.id,
+                                        "After_check", 120)
 
-                error.context("comparing hashes", logging.info)
-                orig_hash = client_utils.hash_file(host_path)
-                returned_hash = client_utils.hash_file(host_path_returned)
+                    error.context("comparing hashes", logging.info)
+                    orig_hash = client_utils.hash_file(host_path)
+                    returned_hash = client_utils.hash_file(host_path_returned)
 
-                #Check all check sum
-                wrong_check_sum = False
-                for i in range(len(self.file_check_sums)):
-                    check_sum = self.file_check_sums[i]
-                    if check_sum != orig_hash:
-                        wrong_check_sum = True
-                        logging.error("Checksum in transfer number"
-                                      " %d if wrong." % (i))
-                if wrong_check_sum:
-                    raise error.TestFail("Returned file hash (%s) differs from"
-                                         " original one (%s)" % (returned_hash,
-                                                                 orig_hash))
-                else:
-                    #clean temp
-                    utils.run("rm -rf %s" % (host_path))
-                    utils.run("rm -rf %s" % (returned_hash))
+                    #Check all check sum
+                    wrong_check_sum = False
+                    for i in range(len(self.file_check_sums)):
+                        check_sum = self.file_check_sums[i]
+                        if check_sum != orig_hash:
+                            wrong_check_sum = True
+                            logging.error("Checksum in transfer number"
+                                          " %d if wrong." % (i))
 
-                error.context()
+                    if wrong_check_sum:
+                        raise error.TestFail("Returned file hash (%s) differs"
+                                             "from original one (%s)" %
+                                                 (returned_hash, orig_hash))
+                    else:
+                        #clean temp
+                        utils.run("rm -rf %s" % (host_path))
+                        utils.run("rm -rf %s" % (host_path_returned))
+
+                    error.context()
+                finally:
+                    if del_file_with_err == "yes":
+                        utils.run("rm -rf %s" % (host_path))
+                        utils.run("rm -rf %s" % (host_path_returned))
             else:
                 self._hosts_barrier(self.hosts, self.id, "befor_mig", 260)
                 address_cache.update(sync.sync(timeout=120)[self.master_id()])
