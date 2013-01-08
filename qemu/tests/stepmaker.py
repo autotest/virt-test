@@ -8,7 +8,6 @@ Step file creator/editor.
 """
 
 import pygtk, gtk, gobject, time, os, commands, logging
-from autotest.client.shared import error
 from virttest import utils_misc, ppm_utils, step_editor
 from virttest import qemu_monitor
 pygtk.require('2.0')
@@ -338,18 +337,14 @@ class StepMaker(step_editor.StepMakerWindow):
 
 def run_stepmaker(test, params, env):
     vm = env.get_vm(params.get("main_vm"))
-    if not vm:
-        raise error.TestError("VM object not found in environment")
-    if not vm.is_alive():
-        raise error.TestError("VM seems to be dead; Step Maker requires a"
-                              " living VM")
+    vm.verify_alive()
 
     steps_filename = params.get("steps")
     if not steps_filename:
-        raise error.TestError("Steps filename not specified")
+        image_name = os.path.basename(params.get("image_name"))
+        steps_filename = 'steps/%s.steps' % image_name
+
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
-    if os.path.exists(steps_filename):
-        raise error.TestError("Steps file %s already exists" % steps_filename)
 
     StepMaker(vm, steps_filename, test.debugdir, params)
     gtk.main()

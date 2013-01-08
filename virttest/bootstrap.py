@@ -275,6 +275,64 @@ def write_subtests_files(config_file_list, output_file_object, test_type=None):
         config_file.close()
 
 
+def get_directory_structure(rootdir, guest_file):
+    rootdir = rootdir.rstrip(os.sep)
+    start = rootdir.rfind(os.sep) + 1
+    previous_indent = 0
+    indent = 0
+    number_variants = 0
+    for path, subdirs, files in os.walk(rootdir):
+        folders = path[start:].split(os.sep)
+        folders = folders[1:]
+        indent = len(folders)
+        if indent > previous_indent:
+            guest_file.write("%svariants:\n" %
+                             (4 * (indent + number_variants - 1) * " "))
+            number_variants += 1
+        elif indent < previous_indent:
+            number_variants -= 1
+        indent += number_variants
+        try:
+            base_folder = folders[-1]
+        except IndexError:
+            base_folder = []
+        base_cfg = "%s.cfg" % base_folder
+        base_cfg_path = os.path.join(os.path.dirname(path), base_cfg)
+        if os.path.isfile(base_cfg_path):
+            base_file = open(base_cfg_path, 'r')
+            for line in base_file.readlines():
+                guest_file.write("%s%s" % ((4 * (indent - 1) * " "), line))
+        else:
+            if base_folder:
+                guest_file.write("%s- %s:\n" %
+                                 ((4 * (indent - 1) * " "), base_folder))
+        variant_printed = False
+        if files:
+            files.sort()
+            for f in files:
+                if f.endswith(".cfg"):
+                    bf = f[:len(f) - 4]
+                    if bf not in subdirs:
+                        if not variant_printed:
+                            guest_file.write("%svariants:\n" %
+                                             ((4 * (indent) * " ")))
+                            variant_printed = True
+                        base_file = open(os.path.join(path, f), 'r')
+                        for line in base_file.readlines():
+                            guest_file.write("%s%s" %
+                                             ((4 * (indent + 1) * " "), line))
+        indent -= number_variants
+        previous_indent = indent
+
+
+def create_guest_os_cfg(t_type):
+    root_dir = data_dir.get_root_dir()
+    guest_os_cfg_dir = os.path.join(root_dir, 'shared', 'cfg', 'guest-os')
+    guest_os_cfg_path = os.path.join(root_dir, t_type, 'cfg', 'guest-os.cfg')
+    guest_os_cfg_file = open(guest_os_cfg_path, 'w')
+    get_directory_structure(guest_os_cfg_dir, guest_os_cfg_file)
+
+
 def create_subtests_cfg(t_type):
     root_dir = data_dir.get_root_dir()
 
@@ -397,14 +455,15 @@ def create_subtests_cfg(t_type):
     subtests_file.close()
 
 
-def create_config_files(test_dir, shared_dir, interactive, step=None):
+def create_config_files(test_dir, shared_dir, interactive, step=None,
+                        force_update=False):
     if step is None:
         step = 0
     logging.info("")
     step += 1
     logging.info("%d - Generating config set", step)
     config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg"))
-    config_file_list_shared = glob.glob(os.path.join(shared_dir,
+    config_file_list_shared = glob.glob(os.path.join(shared_dir, "cfg",
                                                      "*.cfg"))
 
     # Handle overrides of cfg files. Let's say a test provides its own
@@ -435,7 +494,9 @@ def create_config_files(test_dir, shared_dir, interactive, step=None):
                               (diff_result.command, diff_result.stdout))
                 if interactive:
                     answer = utils.ask("Config file  %s differs from %s."
-                                       "Overwrite?" % (dst_file,src_file))
+                                       "Overwrite?" % (dst_file, src_file))
+                elif force_update:
+                    answer = "y"
                 else:
                     answer = "n"
 
@@ -490,7 +551,6 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     step += 1
     logging.info("%d - Verifying directories", step)
     shared_dir = os.path.dirname(data_dir.get_data_dir())
-    shared_dir = os.path.join(shared_dir, "cfg")
     sub_dir_list = ["images", "isos", "steps_data"]
     for sub_dir in sub_dir_list:
         sub_dir_path = os.path.join(base_dir, sub_dir)
@@ -503,6 +563,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
 
     create_config_files(test_dir, shared_dir, interactive, step)
     create_subtests_cfg(test_name)
+    create_guest_os_cfg(test_name)
 
     logging.info("")
     step += 2

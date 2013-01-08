@@ -2,11 +2,20 @@ import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage
+import storage, cartesian_config
 
 
 #: List of test types to strip names by default
 TEST_TYPES_STRIP_NAMES = ['qemu', 'libvirt']
+
+#: Name of guest OS to strip names by default
+DEFAULT_GUEST_OS = 'JeOS.17.64'
+
+
+def strip_names(options):
+    return ((options.config is None) and
+            (options.guest_os == DEFAULT_GUEST_OS) and
+            (options.type in TEST_TYPES_STRIP_NAMES))
 
 
 class Test(object):
@@ -31,7 +40,7 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
+        if strip_names(options):
             self.tag = ".".join(params['name'].split(".")[12:])
         else:
             self.tag = ".".join(params['shortname'].split("."))
@@ -350,7 +359,6 @@ def create_config_files(options):
     """
     shared_dir = os.path.dirname(data_dir.get_data_dir())
     test_dir = os.path.dirname(shared_dir)
-    shared_dir = os.path.join(shared_dir, "cfg")
 
     if (options.type and options.config):
         test_dir = os.path.join(test_dir, options.type)
@@ -363,6 +371,15 @@ def create_config_files(options):
 
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
     bootstrap.create_subtests_cfg(options.type)
+    bootstrap.create_guest_os_cfg(options.type)
+
+
+def get_paginator():
+    try:
+        less_cmd = utils_misc.find_command('less')
+        return os.popen('%s -FRSX' % less_cmd, 'w')
+    except ValueError:
+        return sys.stdout
 
 
 def print_test_list(options, cartesian_parser):
@@ -374,11 +391,7 @@ def print_test_list(options, cartesian_parser):
     @param options: OptParse object with cmdline options.
     @param cartesian_parser: Cartesian parser object with test options.
     """
-    try:
-        less_cmd = utils_misc.find_command('less')
-        pipe = os.popen('%s -FRSX' % less_cmd, 'w')
-    except ValueError:
-        pipe = sys.stdout
+    pipe = get_paginator()
     index = 0
     pipe.write("Tests produced for type %s, config file %s" %
                (options.type, cartesian_parser.filename))
@@ -388,7 +401,7 @@ def print_test_list(options, cartesian_parser):
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
             index +=1
-            if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
+            if strip_names(options):
                 # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
                 shortname = params['name'].split(".")[12:]
                 shortname = ".".join(shortname)
@@ -404,6 +417,39 @@ def print_test_list(options, cartesian_parser):
             else:
                 out = basic_out + "\n"
             pipe.write(out)
+
+
+def print_guest_list(options):
+    """
+    Helper function to pretty print the guest list.
+
+    This function uses a paginator, if possible (inspired on git).
+
+    @param options: OptParse object with cmdline options.
+    @param cartesian_parser: Cartesian parser object with test options.
+    """
+    cfg = os.path.join(data_dir.get_root_dir(), options.type,
+                       "cfg", "guest-os.cfg")
+    cartesian_parser = cartesian_config.Parser()
+    cartesian_parser.parse_file(cfg)
+    pipe = get_paginator()
+    index = 0
+    pipe.write("Searched %s for guest images\n" %
+               os.path.join(data_dir.get_data_dir(), 'images'))
+    pipe.write("Available guests:")
+    pipe.write("\n\n")
+    for params in cartesian_parser.get_dicts():
+        index +=1
+        image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+        if os.path.isfile(image_name):
+            out = (bcolors.blue + str(index) + bcolors.end + " " +
+                   params.get("shortname") + "\n")
+        else:
+            out = (bcolors.blue + str(index) + bcolors.end + " " +
+                   params.get("shortname") + " " + bcolors.yellow +
+                   "(missing %s)" % os.path.basename(image_name) +
+                   bcolors.end + "\n")
+        pipe.write(out)
 
 
 def bootstrap_tests(options):
@@ -542,7 +588,7 @@ def run_tests(parser, options):
 
     logging.info("Defined test set:")
     for i, d in enumerate(parser.get_dicts()):
-        if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
+        if strip_names(options):
             shortname = ".".join(d['name'].split(".")[12:])
         else:
             shortname = ".".join(d['shortname'].split("."))
@@ -573,7 +619,7 @@ def run_tests(parser, options):
     setup_flag = 1
     cleanup_flag = 2
     for dct in parser.get_dicts():
-        if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
+        if strip_names(options):
             shortname = ".".join(d['name'].split(".")[12:])
         else:
             shortname = ".".join(d['shortname'].split("."))
@@ -661,7 +707,7 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            if options.config is None and options.type in TEST_TYPES_STRIP_NAMES:
+            if strip_names(options):
                 shortname = ".".join(d['name'].split(".")[12:])
             else:
                 shortname = ".".join(d['shortname'].split("."))

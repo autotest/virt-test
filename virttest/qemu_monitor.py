@@ -590,7 +590,7 @@ class HumanMonitor(Monitor):
         @param dy: Y amount
         @return: The command's output
         """
-        return self.cmd("mouse_move %d %d" % (dx, dy))
+        return self.cmd("mouse_move %s %s" % (dx, dy))
 
 
     def mouse_button(self, state):
@@ -600,7 +600,7 @@ class HumanMonitor(Monitor):
         @param state: Button state (1=L, 2=M, 4=R)
         @return: The command's output
         """
-        return self.cmd("mouse_button %d" % state)
+        return self.cmd("mouse_button %s" % state)
 
 
     def getfd(self, fd, name):

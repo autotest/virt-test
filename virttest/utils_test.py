@@ -670,7 +670,7 @@ class MultihostMigration(object):
             self.migrate_vms_dest(mig_data)
 
 
-    def check_vms(self, mig_data):
+    def check_vms_dst(self, mig_data):
         """
         Check vms after migrate.
 
@@ -692,6 +692,15 @@ class MultihostMigration(object):
             #there must be added "sleep" in IP renew command.
             session_serial.cmd(self.regain_ip_cmd)
             vm.wait_for_login(timeout=self.login_timeout)
+
+
+    def check_vms_src(self, mig_data):
+        """
+        Check vms after migrate.
+
+        @param mig_data: object with migration data.
+        """
+        pass
 
 
     def postprocess_env(self):
@@ -763,15 +772,17 @@ class MultihostMigration(object):
                                                         "vm is paused.")
 
                     # Starts VM and waits timeout before migration.
-                    if pause == "yes":
+                    if pause == "yes" and mig_data.is_src():
                         for vm in mig_data.vms:
                             vm.resume()
                         wait = self.params.get("start_migration_timeout", 0)
+                        logging.debug("Wait for migraiton %s seconds." %
+                                      (wait))
                         time.sleep(int(wait))
 
                     self.migrate_vms(mig_data)
 
-                    timeout = 30
+                    timeout = 60
                     if cancel_delay is None:
                         if host_offline_migration == "yes":
                             self._hosts_barrier(self.hosts,
@@ -791,7 +802,11 @@ class MultihostMigration(object):
                                             'mig_finished', timeout)
 
                         if mig_data.is_dst():
-                            self.check_vms(mig_data)
+                            self.check_vms_dst(mig_data)
+                            if check_work:
+                                check_work(mig_data)
+                        else:
+                            self.check_vms_src(mig_data)
                             if check_work:
                                 check_work(mig_data)
                 except:
@@ -803,6 +818,9 @@ class MultihostMigration(object):
                                         mig_data.mig_id,
                                         'test_finihed',
                                         self.finish_timeout)
+                elif mig_error:
+                    raise
+
 
         def wait_wrap(vms_name, srchost, dsthost):
             mig_data = MigrationData(self.params, srchost, dsthost, vms_name,
