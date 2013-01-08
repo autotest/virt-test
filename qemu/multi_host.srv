@@ -21,9 +21,14 @@ from autotest.client.shared import error
 AUTOTEST_DIR = job.clientdir
 
 VIRT_DIR = os.path.join(AUTOTEST_DIR, 'tests', 'virt')
+TEST_DIR = os.path.join(VIRT_DIR, 'tests')
+SHARED_DIR = os.path.join(VIRT_DIR, 'shared')
+VIRT_TYPE = 'qemu'
+
 
 sys.path.insert(0, VIRT_DIR)
-from virttest import utils_misc, cartesian_config
+from virttest import utils_misc, cartesian_config, utils_params
+from virttest import bootstrap
 
 CONTROL_MAIN_PART = """
 testname = "virt"
@@ -88,7 +93,7 @@ def run(machines):
 
     test_dicts = parser.get_dicts()
 
-    for params in test_dicts:
+    for params in map(lambda x: utils_params.Params(x), test_dicts):
 
         params['hosts'] = ips
 
@@ -101,13 +106,13 @@ def run(machines):
         params['kill_vm'] = "yes"
 
         s_host = _hosts[machines[0]]
-        s_host.params = params.copy()
+        s_host.params = params.object_params("host1")
         s_host.params['clone_master'] = "yes"
         s_host.params['hostid'] = machines[0]
 
-        for machine in machines[1:]:
+        for host_id, machine in enumerate(machines[1:]):
             host = _hosts[machine]
-            host.params = params.copy()
+            host.params = params.object_params("host%s" % (host_id + 2))
             host.params['clone_master'] = "no"
             host.params['hostid'] = machine
 
@@ -143,6 +148,9 @@ def run(machines):
             parallel(commands)
         except error.AutoservError, e:
             logging.error(e)
+
+bootstrap.create_config_files(TEST_DIR, SHARED_DIR, interactive=False)
+bootstrap.create_subtests_cfg(VIRT_TYPE)
 
 if 'all' in args:
     # Run test with all machines at once.
