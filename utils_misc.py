@@ -1645,19 +1645,24 @@ def run_tests(parser, job):
                 else:
                     pass_list.append(case_mark)
 
+        tmp_dict = {}
         for key in dict:
             if key.endswith("_equal"):
                 t_key = key.split("_equal")[0]
-                dict[t_key] = dict[key]
+                tmp_dict[t_key] = dict[key]
             elif key.endswith("_min"):
                 t_key = key.split("_min")[0]
-                if cartesian_config.compare_string(dict[t_key], dict[key]) < 0:
-                   dict[t_key] = dict[key]
+                if not d.has_key(t_key) or \
+                    cartesian_config.compare_string(dict[t_key], dict[key]) < 0:
+                    tmp_dict[t_key] = dict[key]
             elif key.endswith("_max"):
                 t_key = key.split("_max")[0]
-                if cartesian_config.compare_string(dict[t_key], dict[key]) > 0:
-                    dict[t_key] = dict[key]
- 
+                if not d.has_key(t_key) or \
+                    cartesian_config.compare_string(dict[t_key], dict[key]) > 0:
+                    tmp_dict[t_key] = dict[key]
+        for key in tmp_dict:
+            dict[key] = tmp_dict[key]
+
         if index == 0:
             if dict.get("host_setup_flag", None) is not None:
                 flag = int(dict["host_setup_flag"])
