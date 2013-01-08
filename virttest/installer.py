@@ -27,7 +27,7 @@ class InstallerRegistry(dict):
     If you want to register a virt specific installer class, set the virt
     (third) param:
 
-    >>> INSTALLER_REGISTRY.register('yum', qemu_installer.YumInstaller, 'kvm')
+    >>> INSTALLER_REGISTRY.register('yum', qemu_installer.YumInstaller, 'qemu')
 
     For getting a installer class, use the get_installer() method. This method
     has a fallback option 'get_default_virt' that will return a generic virt
@@ -115,22 +115,22 @@ INSTALLER_REGISTRY.register('remote_tar',
 #
 INSTALLER_REGISTRY.register('yum',
                             base_installer.YumInstaller,
-                            'kvm')
+                            'qemu')
 INSTALLER_REGISTRY.register('koji',
                             base_installer.KojiInstaller,
-                            'kvm')
+                            'qemu')
 INSTALLER_REGISTRY.register('git_repo',
                             qemu_installer.GitRepoInstaller,
-                            'kvm')
+                            'qemu')
 INSTALLER_REGISTRY.register('local_src',
                             qemu_installer.LocalSourceDirInstaller,
-                            'kvm')
+                            'qemu')
 INSTALLER_REGISTRY.register('local_tar',
                             qemu_installer.LocalSourceTarInstaller,
-                            'kvm')
+                            'qemu')
 INSTALLER_REGISTRY.register('remote_tar',
                             qemu_installer.RemoteSourceTarInstaller,
-                            'kvm')
+                            'qemu')
 
 
 

@@ -763,7 +763,7 @@ class UnattendedInstallConfig(object):
             self.preseed_initrd()
 
         if self.params.get("vm_type") == "libvirt":
-            if self.vm.driver_type == 'qemu':
+            if self.vm.driver_type == 'kvm':
                 # Virtinstall command needs files "vmlinuz" and "initrd.img"
                 os.chdir(self.image_path)
                 base_kernel = os.path.basename(self.kernel)
@@ -819,7 +819,7 @@ class UnattendedInstallConfig(object):
         Download the vmlinuz and initrd.img from URL.
         """
         # it's only necessary to download kernel/initrd if running bare qemu
-        if self.vm_type == 'kvm':
+        if self.vm_type == 'qemu':
             error.context("downloading vmlinuz/initrd.img from %s" % self.url)
             if not os.path.exists(self.image_path):
                 os.mkdir(self.image_path)
