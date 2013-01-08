@@ -435,7 +435,7 @@ class NoopInstaller(BaseInstaller):
         @param test: Virt test object.
         @param params: Dict with test params.
         '''
-        if params['vm_type'] == 'kvm':
+        if params['vm_type'] == 'qemu':
             params['module_list'] = ("kvm kvm-%s" %
                                      utils_misc.get_cpu_vendor(verbose=False))
         super(NoopInstaller, self).__init__(mode, name, test, params)
