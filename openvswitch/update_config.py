@@ -17,3 +17,4 @@ if __name__ == "__main__":
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False,
                                   force_update=True)
     bootstrap.create_subtests_cfg(t_type)
+    bootstrap.create_guest_os_cfg(t_type)

@@ -371,6 +371,7 @@ def create_config_files(options):
 
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
     bootstrap.create_subtests_cfg(options.type)
+    bootstrap.create_guest_os_cfg(options.type)
 
 
 def get_paginator():
