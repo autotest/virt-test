@@ -1634,20 +1634,6 @@ def run_tests(parser, job):
     setup_flag = 1
     cleanup_flag = 2
     for dict in parser.get_dicts():
-        if dict.has_key("prepare_case"):
-            prepare_case = d["prepare_case"]
-        if dict.get("case_type") == "prepare":
-            case_mark = ""
-            for case in prepare_case:
-                if case in d["name"]:
-                    img_name = d['image_name'] + '-' + d['image_format']
-                    case_mark = "%s-%s" % (case, img_name)
-            if case_mark:
-                if case_mark in pass_list:
-                    continue
-                else:
-                    pass_list.append(case_mark)
-
         tmp_dict = {}
         for key in dict:
             if key.endswith("_equal"):
