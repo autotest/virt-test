@@ -5,17 +5,20 @@ import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
 import storage, cartesian_config
 
 
-#: List of test types to strip names by default
-TEST_TYPES_STRIP_NAMES = ['qemu', 'libvirt']
+def get_tag_index(options, params):
+    guest_name_list = get_guest_name_list(options)
+    name = params['name']
 
-#: Name of guest OS to strip names by default
-DEFAULT_GUEST_OS = 'JeOS.17.64'
+    for guest_name in guest_name_list:
+        if guest_name in name:
+            idx = name.index(guest_name)
+            return idx + len(guest_name) + 1
 
 
-def strip_names(options):
-    return ((options.config is None) and
-            (options.guest_os == DEFAULT_GUEST_OS) and
-            (options.type in TEST_TYPES_STRIP_NAMES))
+def get_tag(params, index):
+    name = params['name']
+    name = name[index:]
+    return ".".join(name.split("."))
 
 
 class Test(object):
@@ -40,10 +43,8 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        if strip_names(options):
-            self.tag = ".".join(params['name'].split(".")[12:])
-        else:
-            self.tag = ".".join(params['shortname'].split("."))
+        tag_index = get_tag_index(options, params)
+        self.tag = get_tag(params, tag_index)
         self.debugdir = None
         self.outputdir = None
         self.resultsdir = None
@@ -396,17 +397,14 @@ def print_test_list(options, cartesian_parser):
     pipe.write("Tests produced for type %s, config file %s" %
                (options.type, cartesian_parser.filename))
     pipe.write("\n\n")
+    d = cartesian_parser.get_dicts().next()
+    tag_index = get_tag_index(options, d)
     for params in cartesian_parser.get_dicts():
         virt_test_type = params.get('virt_test_type', "")
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
             index +=1
-            if strip_names(options):
-                # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
-                shortname = params['name'].split(".")[12:]
-                shortname = ".".join(shortname)
-            else:
-                shortname = params['shortname']
+            shortname = get_tag(params, tag_index)
             needs_root = ((params.get('requires_root', 'no') == 'yes')
                           or (params.get('vm_type') != 'qemu'))
             basic_out = (bcolors.blue + str(index) + bcolors.end + " " +
@@ -417,6 +415,20 @@ def print_test_list(options, cartesian_parser):
             else:
                 out = basic_out + "\n"
             pipe.write(out)
+
+
+def get_guest_name_list(options):
+    cfg = os.path.join(data_dir.get_root_dir(), options.type,
+                       "cfg", "guest-os.cfg")
+    cartesian_parser = cartesian_config.Parser()
+    cartesian_parser.parse_file(cfg)
+    guest_name_list = []
+    for params in cartesian_parser.get_dicts():
+        shortname = ".".join(params['name'].split(".")[1:])
+        guest_name_list.append(shortname)
+
+    return guest_name_list
+
 
 
 def print_guest_list(options):
@@ -587,12 +599,10 @@ def run_tests(parser, options):
         logging.info("qemu io binary: %s" % d.get('qemu_io_binary'))
         logging.info("")
 
+    tag_index = get_tag_index(options, d)
     logging.info("Defined test set:")
     for i, d in enumerate(parser.get_dicts()):
-        if strip_names(options):
-            shortname = ".".join(d['name'].split(".")[12:])
-        else:
-            shortname = ".".join(d['shortname'].split("."))
+        shortname = get_tag(d, tag_index)
 
         logging.info("Test %4d:  %s" % (i + 1, shortname))
         last_index += 1
@@ -620,10 +630,7 @@ def run_tests(parser, options):
     setup_flag = 1
     cleanup_flag = 2
     for dct in parser.get_dicts():
-        if strip_names(options):
-            shortname = ".".join(d['name'].split(".")[12:])
-        else:
-            shortname = ".".join(d['shortname'].split("."))
+        shortname = get_tag(dct, tag_index)
 
         if index == 0:
             if dct.get("host_setup_flag", None) is not None:
@@ -708,10 +715,7 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            if strip_names(options):
-                shortname = ".".join(d['name'].split(".")[12:])
-            else:
-                shortname = ".".join(d['shortname'].split("."))
+            shortname = get_tag(d, tag_index)
             print_stdout("%s:" % shortname, end=False)
             print_skip()
             status_dct[dct.get("name")] = False
