@@ -402,8 +402,6 @@ class VirtTestApp(object):
         if self.options.list_guests:
             standalone_test.print_guest_list(self.options)
             sys.exit(0)
-        else:
-            standalone_test.bootstrap_tests(self.options)
 
 
     def _process_tests(self):
@@ -445,8 +443,6 @@ class VirtTestApp(object):
         This method modifies the cartesian set by parsing additional lines.
         """
         self._process_guest_os()
-        self._process_list()
-        self._process_tests()
         self._process_restart_vm()
         self._process_restore_image_between_tests()
         self._process_mem()
@@ -485,6 +481,10 @@ class VirtTestApp(object):
         if self.options.type == 'qemu':
             self._process_qemu_specific_options()
 
+        # List and tests have to be the last things to be processed
+        self._process_list()
+        self._process_tests()
+
 
     def main(self):
         """
@@ -502,9 +502,8 @@ class VirtTestApp(object):
 
             standalone_test.configure_logging()
             standalone_test.configure_console_logging()
-
             self._process_options()
-
+            standalone_test.bootstrap_tests(self.options)
             standalone_test.run_tests(self.cartesian_parser, self.options)
 
         except KeyboardInterrupt:
