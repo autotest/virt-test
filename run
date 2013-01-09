@@ -386,6 +386,15 @@ class VirtTestApp(object):
 
     def _process_guest_os(self):
         if not self.options.config:
+            from virttest import standalone_test
+            if (self.options.guest_os not in
+                standalone_test.get_guest_name_list(self.options)):
+                standalone_test.print_stdout("Guest name %s is not on the "
+                                             "known guest os list "
+                                             "(see --list-guests), "
+                                             "aborting..." %
+                                             self.options.guest_os)
+                sys.exit(1)
             if self.options.guest_os:
                 self.cartesian_parser.parse_string("only %s" %
                                                    self.options.guest_os)

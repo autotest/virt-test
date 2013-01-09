@@ -4,15 +4,26 @@ from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
 import storage, cartesian_config
 
+global GUEST_NAME_LIST
+GUEST_NAME_LIST = None
+global TAG_INDEX
+TAG_INDEX = None
+
 
 def get_tag_index(options, params):
-    guest_name_list = get_guest_name_list(options)
-    name = params['name']
+    global TAG_INDEX
+    if TAG_INDEX is None:
+        guest_name_list = get_guest_name_list(options)
 
-    for guest_name in guest_name_list:
-        if guest_name in name:
-            idx = name.index(guest_name)
-            return idx + len(guest_name) + 1
+        name = params['name']
+
+        for guest_name in guest_name_list:
+            if guest_name in name:
+                idx = name.index(guest_name)
+                TAG_INDEX = idx + len(guest_name) + 1
+                break
+
+    return TAG_INDEX
 
 
 def get_tag(params, index):
@@ -418,16 +429,20 @@ def print_test_list(options, cartesian_parser):
 
 
 def get_guest_name_list(options):
-    cfg = os.path.join(data_dir.get_root_dir(), options.type,
-                       "cfg", "guest-os.cfg")
-    cartesian_parser = cartesian_config.Parser()
-    cartesian_parser.parse_file(cfg)
-    guest_name_list = []
-    for params in cartesian_parser.get_dicts():
-        shortname = ".".join(params['name'].split(".")[1:])
-        guest_name_list.append(shortname)
+    global GUEST_NAME_LIST
+    if GUEST_NAME_LIST is None:
+        cfg = os.path.join(data_dir.get_root_dir(), options.type,
+                           "cfg", "guest-os.cfg")
+        cartesian_parser = cartesian_config.Parser()
+        cartesian_parser.parse_file(cfg)
+        guest_name_list = []
+        for params in cartesian_parser.get_dicts():
+            shortname = ".".join(params['name'].split(".")[1:])
+            guest_name_list.append(shortname)
 
-    return guest_name_list
+        GUEST_NAME_LIST = guest_name_list
+
+    return GUEST_NAME_LIST
 
 
 
