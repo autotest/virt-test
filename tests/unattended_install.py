@@ -455,8 +455,8 @@ class UnattendedInstallConfig(object):
             dest_fname = 'winnt.sif'
             setup_file = 'winnt.bat'
             boot_disk = utils_disk.FloppyDisk(self.floppy,
-                                                   self.qemu_img_binary,
-                                                   self.tmpdir, self.vfd_size)
+                                              self.qemu_img_binary,
+                                              self.tmpdir, self.vfd_size)
             answer_path = boot_disk.get_answer_file_path(dest_fname)
             self.answer_windows_ini(answer_path)
             setup_file_path = os.path.join(self.unattended_dir, setup_file)
@@ -535,8 +535,8 @@ class UnattendedInstallConfig(object):
                                                       self.tmpdir)
             elif self.params.get('unattended_delivery_method') == 'floppy':
                 boot_disk = utils_disk.FloppyDisk(self.floppy,
-                                                       self.qemu_img_binary,
-                                                       self.tmpdir, self.vfd_size)
+                                                  self.qemu_img_binary,
+                                                  self.tmpdir, self.vfd_size)
             else:
                 raise ValueError("Neither cdrom_unattended nor floppy set "
                                  "on the config file, please verify")
@@ -552,8 +552,9 @@ class UnattendedInstallConfig(object):
                                                           self.tmpdir)
                 elif self.floppy:
                     boot_disk = utils_disk.FloppyDisk(self.floppy,
-                                                           self.qemu_img_binary,
-                                                           self.tmpdir, self.vfd_size)
+                                                      self.qemu_img_binary,
+                                                      self.tmpdir,
+                                                      self.vfd_size)
                 else:
                     raise ValueError("Neither cdrom_unattended nor floppy set "
                                      "on the config file, please verify")
@@ -564,8 +565,8 @@ class UnattendedInstallConfig(object):
                 # Windows unattended install
                 dest_fname = "autounattend.xml"
                 boot_disk = utils_disk.FloppyDisk(self.floppy,
-                                                       self.qemu_img_binary,
-                                                       self.tmpdir, self.vfd_size)
+                                                  self.qemu_img_binary,
+                                                  self.tmpdir, self.vfd_size)
                 answer_path = boot_disk.get_answer_file_path(dest_fname)
                 self.answer_windows_xml(answer_path)
 
