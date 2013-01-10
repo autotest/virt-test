@@ -20,6 +20,15 @@ class QemuSegFaultError(virt_vm.VMError):
         return ("Qemu crashed: %s" % self.crash_message)
 
 
+class ImageUnbootableError(virt_vm.VMError):
+    def __init__(self, name):
+        virt_vm.VMError.__init__(self, name)
+        self.name = name
+
+    def __str__(self):
+        return ("VM '%s' can't bootup from image" % self.name)
+
+
 class VM(virt_vm.BaseVM):
     """
     This class handles all basic VM operations.
@@ -100,6 +109,7 @@ class VM(virt_vm.BaseVM):
         @raise VMDeadError: If the VM is dead
         @raise: Various monitor exceptions if the monitor is unresponsive
         """
+        self.verify_disk_image_bootable()
         self.verify_userspace_crash()
         self.verify_kernel_crash()
         self.verify_illegal_instruction()
@@ -146,6 +156,21 @@ class VM(virt_vm.BaseVM):
         for line in self.process.get_output().splitlines():
             if "(core dumped)" in line:
                 raise QemuSegFaultError(line)
+
+
+    def verify_disk_image_bootable(self):
+        if self.params.get("image_verify_bootable") == "yes":
+            pattern = self.params.get("image_unbootable_pattern")
+            if not pattern:
+                raise virt_vm.VMConfigMissingError(self.name,
+                                              "image_unbootable_pattern")
+            seabios_log = self.logsessions['seabios'].get_output()
+            if re.search(pattern, seabios_log, re.S):
+                logging.error("Can't boot guest from image.")
+                # Set 'shutdown_command' to None to force autotest
+                # shuts down guest with monitor.
+                self.params["shutdown_command"] = None
+                raise ImageUnbootableError(self.name)
 
 
     def clone(self, name=None, params=None, root_dir=None, address_cache=None,
