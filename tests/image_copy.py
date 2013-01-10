@@ -43,6 +43,7 @@ def run_image_copy(test, params, env):
     pwd = os.path.join(test.bindir, "images")
     dst_path = os.path.join(test.bindir, dst_path)
     if params.get("rename_error_image", "no") == "yes":
+        error.context("Backup original image for analysis", logging.info)
         error_image = os.path.basename(image_name) + "-error"
         error_image += '.' + params['image_format']
         error_dst_path = os.path.join(pwd, error_image)
@@ -60,13 +61,13 @@ def run_image_copy(test, params, env):
         if not os.path.exists(src_path):
             raise error.TestError('Could not find %s in NFS share' % src_path)
 
-        error.context("Copy image '%s' from NFS" % image, logging.debug)
+        error.context("Copy image '%s' from NFS" % image, logging.info)
         utils.system(cmd)
     finally:
-        if params.get("sub_type"):
+        sub_type = params.get("sub_type")
+        if sub_type:
+            error.context("Run sub test '%s'" % sub_type, logging.info)
             params['image_name'] += "-error"
             params['boot_once'] = "c"
             vm.create(params=params)
-            utils_test.run_virt_sub_test(test, params, env,
-                                         params.get("sub_type"))
-
+            utils_test.run_virt_sub_test(test, params, env, sub_type)
