@@ -1,5 +1,6 @@
 import logging
 from autotest.client.shared import error
+from virttest import utils_test
 
 
 def run_stop_continue(test, params, env):
@@ -20,8 +21,21 @@ def run_stop_continue(test, params, env):
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
+    session_bg = None
 
     try:
+        if params.get("prepare_op"):
+            op_timeout = float(params.get("prepare_op_timeout", 60))
+            session.cmd(params.get("prepare_op"), timeout=op_timeout)
+
+        if params.get("start_bg_process"):
+            session_bg = vm.wait_for_login(timeout=login_timeout)
+            bg_cmd_timeout = float(params.get("bg_cmd_timeout", 240))
+
+            args = (bg_cmd, bg_cmd_timeout)
+            bg = utils_test.BackgroundTest(session_bg.cmd, args)
+            bg.start()
+
         logging.info("Stop the VM")
         vm.pause()
         logging.info("Verifying the status of VM is 'paused'")
@@ -39,5 +53,22 @@ def run_stop_continue(test, params, env):
         logging.info("Try to re-log into guest")
         session = vm.wait_for_login(timeout=timeout)
 
+        if params.get("start_bg_process"):
+            if bg:
+                bg.join()
+
+        if params.get("check_op"):
+            op_timeout = float(params.get("check_op_timeout", 60))
+            s, o = session.cmd_status_output(params.get("check_op"),
+                                             timeout=op_timeout)
+            if s != 0:
+                raise error.TestFail("Something wrong after stop continue, "
+                                     "check command report: %s" % o)
     finally:
+        if params.get("clean_op"):
+            op_timeout = float(params.get("clean_op_timeout", 60))
+            session.cmd(params.get("clean_op"),  timeout=op_timeout)
         session.close()
+        if params.get("start_bg_process"):
+            if session_bg:
+                session_bg.close()
