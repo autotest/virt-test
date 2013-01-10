@@ -142,10 +142,11 @@ class LibvirtXMLBase(propcan.PropCanBase):
         Returns a copy of instance not sharing any references or modifications
         """
         # help keep line length short, virsh is not a property
-        the_copy = self.__class__(self.virsh)
+        the_copy = self.__class__(virsh_instance=self.virsh)
         try:
             # file may not be accessable, obtain XML string value
             xmlstr = str(self.dict_get('xml'))
+            # Create fresh/new XMLTreeFile along with tmp files from XML content
             the_copy.dict_set('xml', xml_utils.XMLTreeFile(xmlstr))
         except LibvirtXMLError: # Allow other exceptions through
             pass # no XML was loaded yet
@@ -417,7 +418,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def vm_rename(vm, new_name, uuid=None):
+    def vm_rename(vm, new_name, uuid=None, virsh_instance=virsh):
         """
         Rename a vm from its XML.
 
@@ -430,7 +431,7 @@ class VMXML(VMXMLBase):
         if vm.is_alive():
             vm.destroy(gracefully=True)
 
-        vmxml = VMXML.new_from_dumpxml(vm.name)
+        vmxml = VMXML.new_from_dumpxml(vm.name, virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:
