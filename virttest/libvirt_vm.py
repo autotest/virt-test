@@ -1386,7 +1386,8 @@ class VM(virt_vm.BaseVM):
         """
         Return a dict's list include vm's vcpu infomation.
         """
-        output = virsh.vcpuinfo(self.name, uri=self.connect_uri)
+        output = virsh.vcpuinfo(self.name,
+                                uri=self.connect_uri).stdout.strip()
         # Key: word before ':' | value: content after ':' (stripped)
         vcpuinfo_list = []
         vcpuinfo_dict = {}
