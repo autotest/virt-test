@@ -83,26 +83,42 @@ class FloppyDisk(Disk):
     @error.context_aware
     def __init__(self, path, qemu_img_binary, tmpdir, vfd_size):
         error.context("Creating unattended install floppy image %s" % path)
-        self.tmpdir = tmpdir
-        self.mount = tempfile.mkdtemp(prefix='floppy_', dir=self.tmpdir)
-        self.virtio_mount = None
+        self.mount = tempfile.mkdtemp(prefix='floppy_virttest_', dir=tmpdir)
         self.path = path
         self.vfd_size = vfd_size
         clean_old_image(path)
-        if not os.path.isdir(os.path.dirname(path)):
-            os.makedirs(os.path.dirname(path))
-
         try:
-            c_cmd = '%s create -f raw %s %s' % (qemu_img_binary, path, self.vfd_size)
+            c_cmd = '%s create -f raw %s %s' % (qemu_img_binary, path,
+                                                self.vfd_size)
             utils.run(c_cmd, verbose=DEBUG)
             f_cmd = 'mkfs.msdos -s 1 %s' % path
             utils.run(f_cmd, verbose=DEBUG)
-            m_cmd = 'mount -o loop,rw %s %s' % (path, self.mount)
-            utils.run(m_cmd, verbose=DEBUG)
         except error.CmdError, e:
             logging.error("Error during floppy initialization: %s" % e)
             cleanup(self.mount)
             raise
+
+
+    def close(self):
+        """
+        Copy everything that is in the mountpoint to the floppy.
+        """
+        pwd = os.getcwd()
+        try:
+            os.chdir(self.mount)
+            path_list = glob.glob('*')
+            for path in path_list:
+                self.copy_to(path)
+        finally:
+            os.chdir(pwd)
+
+        cleanup(self.mount)
+
+
+    def copy_to(self, src):
+        logging.debug("Copying %s to floppy image", src)
+        mcopy_cmd = "mcopy -s -o -n -i %s %s ::/" % (self.path, src)
+        utils.run(mcopy_cmd, verbose=DEBUG)
 
 
     def _copy_virtio_drivers(self, virtio_floppy):
@@ -112,20 +128,12 @@ class FloppyDisk(Disk):
         1) Mount the floppy containing the viostor drivers
         2) Copy its contents to the root of the install floppy
         """
-        virtio_mount = tempfile.mkdtemp(prefix='virtio_floppy_',
-                                        dir=self.tmpdir)
-
         pwd = os.getcwd()
         try:
-            m_cmd = 'mount -o loop,ro %s %s' % (virtio_floppy, virtio_mount)
+            m_cmd = 'mcopy -s -o -n -i %s ::/* %s' % (virtio_floppy, self.mount)
             utils.run(m_cmd, verbose=DEBUG)
-            os.chdir(virtio_mount)
-            path_list = glob.glob('*')
-            for path in path_list:
-                self.copy_to(path)
         finally:
             os.chdir(pwd)
-            cleanup(virtio_mount)
 
 
     def setup_virtio_win2003(self, virtio_floppy, virtio_oemsetup_id):
@@ -144,15 +152,19 @@ class FloppyDisk(Disk):
         """
         self._copy_virtio_drivers(virtio_floppy)
         txtsetup_oem = os.path.join(self.mount, 'txtsetup.oem')
+
         if not os.path.isfile(txtsetup_oem):
             raise IOError('File txtsetup.oem not found on the install '
                           'floppy. Please verify if your floppy virtio '
                           'driver image has this file')
+
         parser = ConfigParser.ConfigParser()
         parser.read(txtsetup_oem)
+
         if not parser.has_section('Defaults'):
             raise ValueError('File txtsetup.oem does not have the session '
                              '"Defaults". Please check txtsetup.oem')
+
         default_driver = parser.get('Defaults', 'SCSI')
         if default_driver != virtio_oemsetup_id:
             parser.set('Defaults', 'SCSI', virtio_oemsetup_id)
@@ -185,7 +197,7 @@ class CdromDisk(Disk):
     Represents a CDROM disk that we can master according to our needs.
     """
     def __init__(self, path, tmpdir):
-        self.mount = tempfile.mkdtemp(prefix='cdrom_unattended_', dir=tmpdir)
+        self.mount = tempfile.mkdtemp(prefix='cdrom_virttest_', dir=tmpdir)
         self.path = path
         clean_old_image(path)
         if not os.path.isdir(os.path.dirname(path)):
