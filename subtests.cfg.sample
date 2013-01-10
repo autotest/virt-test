@@ -4600,10 +4600,14 @@ variants:
                 only usb_boot, usb_reboot, usb_hotplug
                 usb_type_testdev = usb-hub
                 info_usb_name = "QEMU USB Hub"
-                vendor_id = "(0000|0409)"
-                product_id = "(0000|55aa)"
+                vendor_id = "0409"
+                product_id = "55AA"
                 vendor = ""
                 product = "QEMU USB Hub"
+                Host_RHEL.6.3:
+                    vendor_id = "0000"
+                    product_id = "0000"
+
 
         # usb tests
         variants:
