@@ -62,7 +62,7 @@ def check_usb_device(test, params, env):
     error.context("Verify USB device in guest.")
     o = session.cmd_output(params.get("chk_usb_info_cmd"))
     for item in chk_list:
-        if not re.findall(item, o):
+        if not re.findall(item, o, re.I):
             raise error.TestFail("Could not find item '%s' in guest, "
                                  "Output:\n %s" % (item, o))
 
