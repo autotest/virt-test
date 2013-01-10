@@ -330,80 +330,6 @@ variants:
         image_name_stg23 = storage23
         image_name_stg24 = storage24
 
-    - boot_with_usb:
-        no Host_RHEL.5
-        no Host_RHEL.6.1
-        type = boot
-        restart_vm = yes
-        kill_vm_on_error = yes
-        login_timeout = 240
-        deviceid_str = "%s:%s"
-        chk_usb_info_cmd = "lsusb -v"
-        variants:
-            - ehci:
-                # Disable other usb devices
-                usb_devices = ""
-                usbs = usb1
-                usb_type_usb1 = usb-ehci
-                usb_max_port_usb1 = 6
-                check_func = "check_usb_device"
-                info_usb_name = ""
-                vendor_id = "(0000|1d6b)"
-                vendor = "Linux Foundation"
-                product_id = "(0000|0002)"
-                product = "EHCI Host Controller"
-            - keyboard:
-                usb_devices = kbd1
-                usb_type_kbd1 = usb-kbd
-                usb_controller_kbd1 = uhci
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB Keyboard"
-                vendor_id = "0627"
-                vendor = "Adomax Technology Co., Ltd"
-                product_id = "0001"
-                product = "QEMU USB Keyboard"
-            - mouse:
-                usb_devices = mouse1
-                usb_type_mouse1 = usb-mouse
-                usb_controller_mouse1 = uhci
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB Mouse"
-                vendor_id = "0627"
-                vendor = "Adomax Technology Co., Ltd"
-                product_id = "0001"
-                product = "QEMU USB Mouse"
-            - hub:
-                usb_devices = hub1
-                usb_type_hub1 = usb-hub
-                usb_controller_hub1 = uhci
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB Hub"
-                vendor_id = "(0000|0409)"
-                vendor = ""
-                product_id = "(0000|55aa)"
-                product = "QEMU USB Hub"
-            - storage:
-                # Disable other usb devices
-                usb_devices = ""
-                usbs = usb1
-                usb_type_usb1 = usb-ehci
-                usb_max_port_usb1 = 6
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB MSD"
-                vendor_id = "(0000|46f4)"
-                vendor = ""
-                product_id = "(0000|0001)"
-                product = "QEMU USB HARDDRIVE"
-                images += " stg"
-                image_boot_image1 = yes
-                image_name_stg = "usbdevice"
-                image_format_stg = "qcow2"
-                image_boot_stg = no
-                drive_format_stg = "usb2"
-                drive_index_stg = 1
-                create_image_stg = yes
-                image_size_stg = 10M
-
     - reboot:
         type = boot
         reboot_method = shell
@@ -414,80 +340,6 @@ variants:
         # this script is used to setup test env for (linux)guest/host
         # before performance testing
         # rh_perf_envsetup_script = scripts/rh_perf_envsetup.sh
-
-    - reboot_with_usb:
-        no Host_RHEL.5
-        no Host_RHEL.6.1
-        type = boot
-        reboot_method = shell
-        kill_vm_on_error = yes
-        login_timeout = 240
-        deviceid_str = "%s:%s"
-        chk_usb_info_cmd = "lsusb -v"
-        variants:
-            - ehci:
-                check_func = "check_usb_device"
-                # info_usb_name = ""
-                vendor_id = "(0000|1d6b)"
-                vendor = "Linux Foundation"
-                product_id = "(0000|0002)"
-                product = "EHCI Host Controller"
-                # Disable other usb devices
-                usb_devices = ""
-                usbs = usb1
-                usb_type_usb1 = usb-ehci
-                usb_max_port_usb1 = 6
-            - keyboard:
-                usb_devices = kbd1
-                usb_type_kbd1 = usb-kbd
-                usb_controller_kbd1 = uhci
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB Keyboard"
-                vendor_id = "0627"
-                vendor = "Adomax Technology Co., Ltd"
-                product_id = "0001"
-                product = "QEMU USB Keyboard"
-            - mouse:
-                usb_devices = mouse1
-                usb_type_mouse1 = usb-mouse
-                usb_controller_mouse1 = uhci
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB Mouse"
-                vendor_id = "0627"
-                vendor = "Adomax Technology Co., Ltd"
-                product_id = "0001"
-                product = "QEMU USB Mouse"
-            - hub:
-                usb_devices = hub1
-                usb_type_hub1 = usb-hub
-                usb_controller_hub1 = uhci
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB Hub"
-                vendor_id = "(0000|0409)"
-                # vendor = ""
-                product_id = "(0000|55aa)"
-                product = "QEMU USB Hub"
-            - storage:
-                check_func = "check_usb_device"
-                info_usb_name = "QEMU USB MSD"
-                vendor_id = "(0000|46f4)"
-                # vendor = ""
-                product_id = "(0000|0001)"
-                product = "QEMU USB HARDDRIVE"
-                # Disable other usb devices
-                usb_devices = ""
-                usbs = usb1
-                usb_type_usb1 = usb-ehci
-                usb_max_port_usb1 = 6
-                images += " stg"
-                image_boot_image1 = yes
-                image_name_stg = "usbdevice"
-                image_format_stg = "qcow2"
-                image_boot_stg = no
-                drive_format_stg = "usb2"
-                drive_index_stg = 1
-                create_image_stg = yes
-                image_size_stg = 10M
 
     - dd_test: install setup image_copy unattended_install.cdrom
         only Linux
@@ -2554,25 +2406,34 @@ variants:
         # Disable other usb devices
         usb_devices = ""
         usbs = usb1
-        usb_type_usb1 = usb-ehci
-        usb_max_port_usb1 = 6
         images += " stg"
         image_name_stg = "usbdevice"
         image_format_stg = "qcow2"
         image_boot_image1 = yes
         image_boot_stg = no
-        drive_format_stg = "usb2"
         drive_index_stg = 1
         create_image_stg = yes
         image_size_stg = 10M
         fdisk_string = "10 MB, 10485760 bytes"
         variants:
-            - @default:
-            - check_options:
-                check_serial_option = yes
-                check_removable_option = yes
-                check_io_size_option = yes
-                check_freq_option = yes
+            - uhci:
+                usb_type_usb1 = piix3-usb-uhci
+                usb_max_port_usb1 = 2
+                drive_format_stg = "usb1"
+            - ehci:
+                usb_type_usb1 = ich9-usb-ehci1
+                usb_max_port_usb1 = 6
+                drive_format_stg = "usb2"
+                variants:
+                    - @default:
+                    - check_options:
+                        check_serial_option = yes
+                        check_removable_option = yes
+                        check_io_size_option = yes
+            - xhci:
+                usb_type_usb1 = nec-usb-xhci
+                usb_max_port_usb1 = 4
+                drive_format_stg = "usb3"
 
     - usb_multi_disk: install setup image_copy unattended_install.cdrom
         no RHEL.3.9
@@ -4657,9 +4518,138 @@ variants:
                         md5 = "dceb57331948a1599e4f5b2b915ab1b8"
                         start_cmd = "heavload.exe /CPU /MEMORY /START"
 
- # Internal case configuration end. Don't add any case below this line.
- # (THIS LINE IS RESERVED FOR MERGE)
- # (THIS LINE IS RESERVED FOR MERGE)
+    - usb_basic_test:
+        no Host_RHEL.5
+        no Host_RHEL.6.1
+        virt_test_type = kvm
+        restart_vm = yes
+        kill_vm_on_error = yes
+        usbs += " usbtest"
+        deviceid_str = "%s:%s"
+        chk_usb_info_cmd = "lsusb -v"
+
+        # usb controllers
+        variants:
+            - uhci:
+                usb_type_usbtest = piix3-usb-uhci
+                usb_controller_testdev = uhci
+                usb_max_port_usbtest = 2
+                drive_format_stg = "usb1"
+            - ehci:
+                usb_type_usbtest = ich9-usb-ehci1
+                usb_controller_testdev = ehci
+                usb_max_port_usbtest = 6
+                drive_format_stg = "usb2"
+            - xhci:
+                # xhci (usb3.0) is supported from RHEL7
+                no Host_RHEL.6
+                usb_type_usbtest = nec-usb-xhci
+                usb_controller_testdev = xhci
+                usb_max_port_usbtest = 4
+                drive_format_stg = "usb3"
+
+        # usb devices (boot+reboot tests)
+        variants:
+            - @usb_nodev:
+                # Not used in internal repo, just keep here for
+                # sync with upstream.
+                no Host_RHEL
+                only usb_storage, usb_host
+            - usb_kbd:
+                only usb_boot, usb_reboot, usb_hotplug
+                usb_type_testdev = "usb-kbd"
+                info_usb_name = "QEMU USB Keyboard"
+                vendor_id = "0627"
+                product_id = "0001"
+                vendor = "Adomax Technology Co., Ltd"
+                product = "QEMU USB Keyboard"
+            - usb_mouse:
+                only usb_boot, usb_reboot, usb_hotplug
+                usb_type_testdev = "usb-mouse"
+                info_usb_name = "QEMU USB Mouse"
+                vendor_id = "0627"
+                product_id = "0001"
+                vendor = "Adomax Technology Co., Ltd"
+                product = "QEMU USB Mouse"
+            - usb_tablet:
+                only usb_boot, usb_reboot, usb_hotplug
+                usb_type_testdev = "usb-tablet"
+                info_usb_name = "QEMU USB Tablet"
+                vendor_id = "0627"
+                product_id = "0001"
+                vendor = "Adomax Technology Co., Ltd"
+                product = "QEMU USB Tablet"
+            - usb_ccid:
+                only usb_boot, usb_reboot, usb_hotplug
+                usb_type_testdev = "usb-ccid"
+                info_usb_name = "QEMU USB CCID"
+                vendor_id = "08E6"
+                product_id = "4433"
+                vendor = "Gemplus"
+                product = "QEMU USB CCID"
+            - usb_audio:
+                no Host_RHEL.6
+                only usb_boot, usb_reboot, usb_hotplug
+                usb_type_testdev = usb-audio
+                info_usb_name = "QEMU USB Audio"
+                vendor_id = "46F4"
+                product_id = "0002"
+                vendor = ""
+                product = "QEMU USB Audio"
+            - usb_hub:
+                only usb_boot, usb_reboot, usb_hotplug
+                usb_type_testdev = usb-hub
+                info_usb_name = "QEMU USB Hub"
+                vendor_id = "(0000|0409)"
+                product_id = "(0000|55aa)"
+                vendor = ""
+                product = "QEMU USB Hub"
+
+        # usb tests
+        variants:
+            - usb_boot:
+                type = boot
+                usb_devices += " testdev"
+                check_func = "check_usb_device"
+            - usb_reboot:
+                type = boot
+                reboot_method = shell
+                usb_devices += " testdev"
+                check_func = "check_usb_device"
+            - usb_hotplug:
+                #XXX: usb_hotplug uses some linux-only cmds.
+                # And the pattern to verify device is pluged in guest only
+                # works on RHEL6 guest, thus limit this test to RHEL6 guest.
+                only RHEL.6
+                type = usb_hotplug
+                #XXX: Now usb_hotplug doesn't support QMP monitor.
+                # Limit it to human monitor only.
+                monitor_type = human
+                monitors = humanmonitor1
+                main_monitor = humanmonitor1
+            - usb_storage:
+                type = usb
+                images += " stg"
+                image_boot_image1 = yes
+                image_name_stg = "usbdevice"
+                image_format_stg = "qcow2"
+                image_boot_stg = no
+                drive_index_stg = 1
+                create_image_stg = yes
+                image_size_stg = 10M
+                fdisk_string = "10 MB, 10485760 bytes"
+                format_timeout = 400
+                check_serial_option = yes
+                check_removable_option = yes
+                check_io_size_option = yes
+            - usb_host:
+                # Not used in internal repo, just keep here for
+                # sync with upstream.
+                no Host_RHEL
+                # must configure which device should be used
+                #usb_host_device = "<vendorid>:<productid>"
+                type = usb_host
+
 # Internal case configuration end. Don't add any case below this line.
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
