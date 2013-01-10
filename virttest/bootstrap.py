@@ -37,7 +37,10 @@ def get_asset_info(asset):
     asset_cfg.read(asset_path)
 
     url = asset_cfg.get(asset, 'url')
-    sha1_url = asset_cfg.get(asset, 'sha1_url')
+    try:
+        sha1_url = asset_cfg.get(asset, 'sha1_url')
+    except ConfigParser.NoOptionError:
+        sha1_url = None
     title = asset_cfg.get(asset, 'title')
     destination = asset_cfg.get(asset, 'destination')
     if not os.path.isabs(destination):
@@ -89,14 +92,17 @@ def download_file(asset, interactive=False):
     destination = asset_info['destination']
     title = asset_info['title']
 
-    try:
-        logging.info("Verifying expected SHA1 sum from %s", sha1_url)
-        sha1_file = urllib2.urlopen(sha1_url)
-        sha1_contents = sha1_file.read()
-        sha1 = sha1_contents.split(" ")[0]
-        logging.info("Expected SHA1 sum: %s", sha1)
-    except Exception, e:
-        logging.error("Failed to get SHA1 from file: %s", e)
+    if sha1_url is not None:
+        try:
+            logging.info("Verifying expected SHA1 sum from %s", sha1_url)
+            sha1_file = urllib2.urlopen(sha1_url)
+            sha1_contents = sha1_file.read()
+            sha1 = sha1_contents.split(" ")[0]
+            logging.info("Expected SHA1 sum: %s", sha1)
+        except Exception, e:
+            logging.error("Failed to get SHA1 from file: %s", e)
+    else:
+        sha1 = None
 
     destination_dir = os.path.dirname(destination)
     if not os.path.isdir(destination_dir):
