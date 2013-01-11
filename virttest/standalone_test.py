@@ -378,7 +378,8 @@ def create_config_files(options):
         test_dir = os.path.join(test_dir, options.type)
     elif options.config:
         parent_config_dir = os.path.dirname(options.config)
-        parent_config_dir = os.path.basename(parent_config_dir)
+        parent_config_dir = os.path.dirname(parent_config_dir)
+        options.type = parent_config_dir
         test_dir = os.path.join(test_dir, parent_config_dir)
 
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
@@ -495,8 +496,10 @@ def bootstrap_tests(options):
         test_dir = os.path.abspath(os.path.join(os.path.dirname(test_dir),
                                                 options.type))
     elif options.config:
-        test_dir = os.path.dirname(os.path.dirname(options.config))
-        test_dir = os.path.abspath(test_dir)
+        parent_config_dir = os.path.dirname(os.path.dirname(options.config))
+        parent_config_dir = os.path.dirname(parent_config_dir)
+        options.type = parent_config_dir
+        test_dir = os.path.abspath(parent_config_dir)
 
     if options.type == 'qemu':
         check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
