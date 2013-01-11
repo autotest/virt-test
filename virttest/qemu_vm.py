@@ -2352,6 +2352,51 @@ class VM(virt_vm.BaseVM):
         error.context()
 
 
+    def mig_finished(self):
+        ret = True
+        if (self.params["display"] == "spice" and
+            self.get_spice_var("spice_seamless_migration") == "on"):
+            s = self.monitor.info("spice")
+            if isinstance(s, str):
+                ret = "migrated: true" in s
+            else:
+                ret = s.get("migrated") == "true"
+        o = self.monitor.info("migrate")
+        if isinstance(o, str):
+            return ret and (not "status: active" in o)
+        else:
+            return ret and (o.get("status") != "active")
+
+    def mig_succeeded(self):
+        o = self.monitor.info("migrate")
+        if isinstance(o, str):
+            return "status: completed" in o
+        else:
+            return o.get("status") == "completed"
+
+    def mig_failed(self):
+        o = self.monitor.info("migrate")
+        if isinstance(o, str):
+            return "status: failed" in o
+        else:
+            return o.get("status") == "failed"
+
+    def mig_cancelled(self):
+        o = self.monitor.info("migrate")
+        if isinstance(o, str):
+            return ("Migration status: cancelled" in o or
+                    "Migration status: canceled" in o)
+        else:
+            return (o.get("status") == "cancelled" or
+                    o.get("status") == "canceled")
+
+    def wait_for_migration(self, timeout):
+        if not utils_misc.wait_for(self.mig_finished, timeout, 2, 2,
+                                  "Waiting for migration to complete"):
+            raise virt_vm.VMMigrateTimeoutError("Timeout expired while waiting"
+                                        " for migration to finish")
+
+
     @error.context_aware
     def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
                 cancel_delay=None, offline=False, stable_check=False,
@@ -2397,49 +2442,7 @@ class VM(virt_vm.BaseVM):
 
         error.base_context("migrating '%s'" % self.name)
 
-        def mig_finished():
-            ret = True
-            if (self.params["display"] == "spice" and
-                self.get_spice_var("spice_seamless_migration") == "on"):
-                s = self.monitor.info("spice")
-                if isinstance(s, str):
-                    ret = "migrated: true" in s
-                else:
-                    ret = s.get("migrated") == "true"
-            o = self.monitor.info("migrate")
-            if isinstance(o, str):
-                return ret and (not "status: active" in o)
-            else:
-                return ret and (o.get("status") != "active")
 
-        def mig_succeeded():
-            o = self.monitor.info("migrate")
-            if isinstance(o, str):
-                return "status: completed" in o
-            else:
-                return o.get("status") == "completed"
-
-        def mig_failed():
-            o = self.monitor.info("migrate")
-            if isinstance(o, str):
-                return "status: failed" in o
-            else:
-                return o.get("status") == "failed"
-
-        def mig_cancelled():
-            o = self.monitor.info("migrate")
-            if isinstance(o, str):
-                return ("Migration status: cancelled" in o or
-                        "Migration status: canceled" in o)
-            else:
-                return (o.get("status") == "cancelled" or
-                        o.get("status") == "canceled")
-
-        def wait_for_migration():
-            if not utils_misc.wait_for(mig_finished, timeout, 2, 2,
-                                      "Waiting for migration to complete"):
-                raise virt_vm.VMMigrateTimeoutError("Timeout expired while waiting "
-                                            "for migration to finish")
 
         local = dest_host == "localhost"
         mig_fd_name = None
@@ -2551,20 +2554,20 @@ class VM(virt_vm.BaseVM):
             if cancel_delay:
                 time.sleep(cancel_delay)
                 self.monitor.cmd("migrate_cancel")
-                if not utils_misc.wait_for(mig_cancelled, 60, 2, 2,
+                if not utils_misc.wait_for(self.mig_cancelled, 60, 2, 2,
                                           "Waiting for migration "
                                           "cancellation"):
                     raise virt_vm.VMMigrateCancelError("Cannot cancel migration")
                 return
 
-            wait_for_migration()
+            self.wait_for_migration(timeout)
 
             self.verify_alive()
 
             # Report migration status
-            if mig_succeeded():
+            if self.mig_succeeded():
                 logging.info("Migration completed successfully")
-            elif mig_failed():
+            elif self.mig_failed():
                 raise virt_vm.VMMigrateFailedError("Migration failed")
             else:
                 raise virt_vm.VMMigrateFailedError("Migration ended with "
