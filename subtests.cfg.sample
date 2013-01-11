@@ -1575,10 +1575,6 @@ variants:
                 no Host_RHEL.5
                 type = migration_after_nichotplug
                 kill_vm = yes
-                monitor_type = human
-                monitors = humanmonitor1
-                main_monitor = humanmonitor1
-                nic_model = virtio
 
     - block_hotplug:
         no RHEL.3.9
