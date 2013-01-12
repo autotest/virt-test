@@ -83,7 +83,7 @@ def get_pylint_opts():
         else:
             opts = disable_old
 
-    opts += ['--reports=no', '--include-ids=y']
+    opts += ['--reports=no', '--include-ids=y', '--good-names=i,j,k,Run,_,vm']
     return opts
 
 
