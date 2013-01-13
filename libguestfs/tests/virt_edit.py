@@ -1,6 +1,6 @@
-import logging, time, re
+import logging, re
 from autotest.client.shared import utils, error
-from virttest import libvirt_vm, aexpect
+from virttest import libvirt_vm
 import virttest.utils_libguestfs as lgf
 
 
@@ -86,7 +86,7 @@ def run_virt_edit(test, params, env):
     else:
         expr = ""
 
-    #Stop libvirtd if test need.
+    # Stop libvirtd if test need.
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
         libvirt_vm.libvirtd_stop()
@@ -97,7 +97,7 @@ def run_virt_edit(test, params, env):
                                options_suffix, expr, **virsh_dargs)
     status = result.exit_status
 
-    #Recover libvirtd.
+    # Recover libvirtd.
     if libvirtd == "off":
         libvirt_vm.libvirtd_start()
 
