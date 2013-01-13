@@ -1402,7 +1402,7 @@ class VM(virt_vm.BaseVM):
     def get_blk_devices(self):
         """
         Get vm's block devices.
-        
+
         Return a dict include all devices detail info.
         example:
         {target: {'type': value, 'device': value, 'source': value}}
@@ -1419,7 +1419,7 @@ class VM(virt_vm.BaseVM):
             for line in blklist:
                 linesplit = line.split(None, 4)
                 target = linesplit[2]
-                blk_detail = {'type': linesplit[0], 
+                blk_detail = {'type': linesplit[0],
                               'device': linesplit[1],
                               'source': linesplit[3]}
                 domblkdict[target] = blk_detail
