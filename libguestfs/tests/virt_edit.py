@@ -17,7 +17,6 @@ def login_to_check_foo_line(vm, file_ref, foo_line):
     try:
         session = vm.wait_for_login()
         cat_file = session.cmd_output("cat %s" % file_ref)
-        session.read_nonblocking()
         logging.info("\n%s", cat_file)
         session.cmd("cp -f %s %s" % (file_ref, backup))
         session.cmd("sed -e \'s/%s$//g\' %s > %s" % (foo_line, backup, file_ref))
