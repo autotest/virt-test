@@ -62,7 +62,6 @@ def lgf_command(cmd, **dargs):
     """
     ignore_status = dargs.get('ignore_status', True)
     debug = dargs.get('debug', False)
-    uri = dargs.get('uri', None)
     timeout = dargs.get('timeout', 60)
 
     if debug:
