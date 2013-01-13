@@ -1,0 +1,27 @@
+AUTHOR = """
+yumingfei@cn.fujitsu.com (Yu Mingfei)
+"""
+TIME = 'MEDIUM'
+NAME = 'libguestfs tools test'
+TEST_TYPE = 'client'
+TEST_CLASS = 'Virtualization'
+TEST_CATEGORY = 'Functional'
+
+DOC = """
+Test the libguestfs tools on a given host.
+"""
+
+import sys, os, logging
+virt_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt')
+sys.path.insert(0, virt_test_dir)
+from virttest import utils_misc, cartesian_config
+
+libguestfs_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt/libguestfs')
+
+# set English environment (command output might be localized, need to be safe)
+os.environ['LANG'] = 'en_US.UTF-8'
+
+parser = cartesian_config.Parser()
+parser.parse_file(os.path.join(libguestfs_test_dir, "cfg", "tests.cfg"))
+
+utils_misc.run_tests(parser, job)
