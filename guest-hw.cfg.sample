@@ -124,6 +124,8 @@ variants:
         no ioquit
         image_format = qed
 
+# We don't test vmdk image now, disable it directly.
+no vmdk
 
 # Platform
 32:
