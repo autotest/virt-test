@@ -109,6 +109,18 @@ variants:
         no ioquit
         image_format = qed
 
+# We don't test vmdk image now, disable it directly.
+no vmdk
+
+# Platform
+32:
+    platform = 32
+64:
+    platform = 64
+PAE:
+    platform = PAE
+
+# Devices
 variants:
     - @no_pci_assignable:
         pci_assignable = no
