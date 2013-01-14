@@ -27,7 +27,7 @@ def run_virsh_undefine(test, params, env):
     remote_password = params.get("remote_password", "password")
     remote_prompt = params.get("remote_prompt", "#")
 
-    vm_name = params.get("main_vm")
+    vm_name = params.get("main_vm", "vm1")
     vm = env.get_vm(vm_name)
     vm_id = vm.get_id()
     vm_uuid = vm.get_uuid()
@@ -60,18 +60,18 @@ def run_virsh_undefine(test, params, env):
         uri = None
     if vm_ref != "remote":
         vm_ref = "%s %s"% (vm_ref, extra)
-        cmdresult = virsh.undefine(vm_ref, uri=uri,
-                                   ignore_status=True, debug=True)
+        cmdresult = virsh.undefine(vm_ref, uri=uri,\
+                                ignore_status=True, debug=True)
         status = cmdresult.exit_status
         if status:
             logging.debug("Error status, command output: %s", cmdresult.stdout)
         if undefine_twice == "yes":
-            status2 = virsh.undefine(vm_ref, uri=uri,
+            status2 = virsh.undefine(vm_ref, uri=uri,\
                                      ignore_status=True).exit_status
     else:
         if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
-            raise error.TestNAError("remote_ip and/or local_ip parameters not"
-                                    " changed from default values")
+            raise error.TestNAError("remote_ip and/or local_ip parameters not\
+                                     changed from default values")
         session = remote.remote_login("ssh", remote_ip, "22", remote_user,
                                       remote_password, remote_prompt)
         cmd_undefine = "virsh -c %s undefine %s" % (uri, vm_name)
@@ -95,8 +95,8 @@ def run_virsh_undefine(test, params, env):
 
     # Check if xml file exists.
     xml_exist = False
-    if (os.path.exists("/etc/libvirt/qemu/%s.xml" % vm_name) or
-        os.path.exists("/etc/xen/%s" % vm_name)):
+    if os.path.exists("/etc/libvirt/qemu/%s.xml" % vm_name) or\
+       os.path.exists("/etc/xen/%s" % vm_name):
         xml_exist = True
 
     # Recover main VM.
