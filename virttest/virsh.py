@@ -860,9 +860,8 @@ def define(xml_path, **dargs):
 
     @param: xml_path: XML file path
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    dargs['ignore_status'] = False
     cmd = "define --file %s" % xml_path
     logging.debug("Define VM from %s", xml_path)
     return command(cmd, **dargs)
@@ -874,9 +873,8 @@ def undefine(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    dargs['ignore_status'] = False
     cmd = "undefine %s" % name
     logging.debug("Undefine VM %s", name)
     return command(cmd, **dargs)
@@ -894,6 +892,7 @@ def remove_domain(name, **dargs):
         if is_alive(name, **dargs):
             destroy(name, **dargs)
         try:
+            dargs['ignore_status'] = False
             undefine(name, **dargs)
         except error.CmdError, detail:
             logging.error("Undefine VM %s failed:\n%s", name, detail)
