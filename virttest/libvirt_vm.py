@@ -203,7 +203,7 @@ class VM(virt_vm.BaseVM):
         Undefine the VM.
         """
         try:
-            virsh.undefine(self.name, uri=self.connect_uri,\
+            virsh.undefine(self.name, uri=self.connect_uri,
                            ignore_status=False)
         except error.CmdError, detail:
             logging.error("Undefined VM %s failed:\n%s", self.name, detail)
@@ -219,7 +219,7 @@ class VM(virt_vm.BaseVM):
             logging.error("File %s not found." % xml_file)
             return False
         try:
-            virsh.define(xml_file, uri=self.connect_uri,\
+            virsh.define(xml_file, uri=self.connect_uri,
                          ignore_status=False)
         except error.CmdError, detail:
             logging.error("Defined VM from %s failed:\n%s", xml_file, detail)
