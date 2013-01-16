@@ -20,39 +20,42 @@ def run_virsh_destroy(test, params, env):
     vm_ref = params.get("destroy_vm_ref")
     status_error = params.get("status_error", "no")
     libvirtd = params.get("libvirtd", "on")
+    remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
+    remote_pwd = params.get("remote_pwd", None)
+    local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
+    if vm_ref == "remote" and (remote_ip.count("EXAMPLE.COM")
+                 or local_ip.count("EXAMPLE.COM")):
+        raise error.TestNAError("Remote test parameters unchanged from default")
 
     if vm_ref == "id":
-       vm_ref = domid
+        vm_ref = domid
     elif vm_ref == "hex_id":
-       vm_ref = hex(int(domid))
+        vm_ref = hex(int(domid))
     elif vm_ref.find("invalid") != -1:
-       vm_ref = params.get(vm_ref)
+        vm_ref = params.get(vm_ref)
     elif  vm_ref == "name":
-       vm_ref = "%s %s" % (vm_name, params.get("destroy_extra"))
+        vm_ref = "%s %s" % (vm_name, params.get("destroy_extra"))
     elif  vm_ref == "uuid":
-       vm_ref = domuuid
+        vm_ref = domuuid
 
     if libvirtd == "off":
         libvirt_vm.libvirtd_stop()
 
     if vm_ref != "remote":
-       status = virsh.destroy(vm_ref, ignore_status=True).exit_status
+        status = virsh.destroy(vm_ref, ignore_status=True).exit_status
     else:
-       remote_ip = params.get("remote_ip", None)
-       remote_pwd = params.get("remote_pwd", None)
-       local_ip = params.get("local_ip", None)
-       status = 0
-       try:
-           remote_uri = libvirt_vm.complete_uri(local_ip)
-           session = remote.remote_login("ssh", remote_ip, "22", "root",\
-                                         remote_pwd, "#")
-           session.cmd_output('LANG=C')
-           command = "virsh -c %s destroy %s" % (remote_uri, vm_name)
-           status, output = session.cmd_status_output(command,\
-                                                      internal_timeout=5)
-           session.close()
-       except error.CmdError:
-           status = 1
+        status = 0
+        try:
+            remote_uri = libvirt_vm.complete_uri(local_ip)
+            session = remote.remote_login("ssh", remote_ip, "22", "root",
+                                          remote_pwd, "#")
+            session.cmd_output('LANG=C')
+            command = "virsh -c %s destroy %s" % (remote_uri, vm_name)
+            status, output = session.cmd_status_output(command,
+                                                       internal_timeout=5)
+            session.close()
+        except error.CmdError:
+            status = 1
 
     if libvirtd == "off":
         libvirt_vm.libvirtd_start()
@@ -60,7 +63,9 @@ def run_virsh_destroy(test, params, env):
     #check status_error
     if status_error == "yes":
         if status == 0:
-            raise error.TestFail("Run successfully with wrong command!")
+            raise error.TestFail("Run successfully with wrong command! "
+                                 "Output:\n%s" % output)
     elif status_error == "no":
         if status != 0:
-            raise error.TestFail("Run failed with right command")
+            raise error.TestFail("Run failed with right command! Output:\n%s"
+                                  % output)
