@@ -2515,8 +2515,12 @@ variants:
         # test whether cdrom is unlocked <300s after boot
         cdrom_test_autounlock = yes
         cdrom_test_tray_status = yes
+        cdrom_test_locked = yes
+        tray_check_src = tray_open.py
         # wait before eject $cdrom (let OS initialize cdrom ...)
         workaround_eject_time = 0
+        Host_RHEL.5:
+            cdrom_test_locked = no
 
     - floppy_test:
         type = floppy
