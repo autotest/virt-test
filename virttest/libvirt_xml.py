@@ -382,7 +382,7 @@ class VMXML(VMXMLBase):
     __slots__ = VMXMLBase.__slots__
 
 
-    def __init__(self, hypervisor_type='kvm', virsh_instance=virsh):
+    def __init__(self, virsh_instance=virsh, hypervisor_type='kvm'):
         """
         Create new VM XML instance
         """
@@ -430,8 +430,7 @@ class VMXML(VMXMLBase):
         if vm.is_alive():
             vm.destroy(gracefully=True)
 
-        vmxml = VMXML(virsh)
-        vmxml = vmxml.new_from_dumpxml(vm.name)
+        vmxml = VMXML.new_from_dumpxml(vm.name)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:
