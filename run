@@ -129,6 +129,8 @@ def _find_default_qemu_paths(options_qemu=None):
 
     return [qemu_bin_path, qemu_img_path, qemu_io_path]
 
+SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
+
 SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi',
                         'ahci', 'usb2', 'xenblk']
 
@@ -331,8 +333,9 @@ class VirtTestApp(object):
 
     def _process_image_type(self):
         if not self.options.config:
-            if self.options.image_type == "qcow2":
-                self.cartesian_parser.parse_string("only qcow2")
+            if self.options.image_type in SUPPORTED_IMAGE_TYPES:
+                self.cartesian_parser.parse_string("only %s" %
+                                                   self.options.image_type)
             else:
                 self.cartesian_parser.parse_string("only raw")
                 self.cartesian_parser.parse_string("image_type = %s" %
