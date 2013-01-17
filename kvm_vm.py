@@ -435,7 +435,8 @@ class VM(virt_vm.BaseVM):
 
         def add_smp(help):
             smp_str = " -smp %d" % self.cpuinfo.smp
-            if has_option(help, "maxcpus=cpus"):
+            smp_pattern = "smp n\[,maxcpus=cpus\].*"
+            if has_option(help, smp_pattern):
                 smp_str += ",maxcpus=%d" % self.cpuinfo.maxcpus
             smp_str += ",cores=%d" % self.cpuinfo.cores
             smp_str += ",threads=%d" % self.cpuinfo.threads
@@ -1551,7 +1552,7 @@ class VM(virt_vm.BaseVM):
                     "spice_agent_mouse", "spice_playback_compression",
                     "spice_ipv4", "spice_ipv6", "spice_x509_cert_file",
                 )
- 
+
                 for skey in spice_keys:
                     value = params.get(skey, None)
                     if value:
