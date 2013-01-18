@@ -753,6 +753,17 @@ def domxml_to_native(format, file, options, **dargs):
     return command(cmd, **dargs)
 
 
+def vncdisplay(vm_name,  **dargs):
+    """
+    Output the IP address and port number for the VNC display.
+
+    @param vm_name: VM's name or id,uuid.
+    @param dargs: standardized virsh function API keywords.
+    @return: result from command
+    """
+    return command("vncdisplay %s" % vm_name, **dargs)
+
+
 def is_alive(name, **dargs):
     """
     Return True if the domain is started/alive.
