@@ -26,7 +26,7 @@ for non-existant keys.
 import signal, logging, urlparse, re
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import aexpect, propcan
+from virttest import aexpect, propcan, remote
 
 # list of symbol names NOT to wrap as Virsh class methods
 # Everything else from globals() will become a method of Virsh class
@@ -117,7 +117,8 @@ class VirshSession(aexpect.ShellSession):
     ERROR_REGEX_LIST = ['error:\s*.+$', '.*failed.*']
 
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
-                 prompt=r"virsh\s*\#\s*"):
+                 prompt=r"virsh\s*\#\s*", remote_ip=None,
+                 remote_user=None, remote_pwd=None):
         """
         Initialize virsh session server, or client if id set.
 
@@ -125,20 +126,48 @@ class VirshSession(aexpect.ShellSession):
         @param: uri: uri of libvirt instance to connect to
         @param: id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param prompt: Regular expression describing the shell's prompt line.
+        @param: prompt: Regular expression describing the shell's prompt line.
+        @param: remote_ip: Hostname/IP of remote system to ssh into (if any)
+        @param: remote_user: Username to ssh in as (if any)
+        @param: remote_pwd: Password to use, or None for host/pubkey
         """
 
         self.uri = uri
+        self.remote_ip = remote_ip
+        self.remote_user = remote_user
+        self.remote_pwd = remote_pwd
 
-        if self.uri:
-            virsh_exec += " -c '%s'" % self.uri
+        # Special handling if setting up a remote session
+        if a_id is None and remote_ip is not None and uri is not None:
+            if remote_pwd:
+                pref_auth = "-o PreferredAuthentications=password"
+            else:
+                pref_auth = "-o PreferredAuthentications=hostbased,publickey"
+            # ssh_cmd != None flags this as remote session
+            ssh_cmd = ("ssh -o UserKnownHostsFile=/dev/null %s -p %s %s@%s"
+                       % (pref_auth, 22, self.remote_user, self.remote_ip))
+            self.virsh_exec = ( "%s \"%s -c '%s'\""
+                                % (ssh_cmd, virsh_exec, self.uri) )
+        else: # setting up a local session or re-using a session
+            if self.uri:
+                self.virsh_exec += " -c '%s'" % self.uri
+            else:
+                self.virsh_exec = virsh_exec
+            ssh_cmd = None # flags not-remote session
 
         # aexpect tries to auto close session because no clients connected yet
-        aexpect.ShellSession.__init__(self, virsh_exec, a_id, prompt=prompt,
-                                      auto_close=False)
+        aexpect.ShellSession.__init__(self, self.virsh_exec, a_id,
+                                      prompt=prompt, auto_close=False)
+
+        if ssh_cmd is not None: # this is a remote session
+            # Handle ssh / password prompts
+            remote.handle_prompts(self, self.remote_user, self.remote_pwd,
+                                  prompt, debug=True)
+
         # fail if libvirtd is not running
         if self.cmd_status('list', timeout=60) != 0:
-            logging.debug("Persistent virsh session is not responding, libvirtd may be dead.")
+            logging.debug("Persistent virsh session is not responding, "
+                          "libvirtd may be dead.")
             raise aexpect.ShellStatusError(virsh_exec, 'list')
 
 
@@ -324,6 +353,68 @@ class VirshPersistent(Virsh):
                 self.dict_set('uri', uri)
                 self.new_session()
             # otherwise do nothing
+
+
+class VirshConnectBack(VirshPersistent):
+    """
+    Persistent virsh session connected back from a remote host
+    """
+
+    __slots__ = Virsh.__slots__ + ('remote_ip', 'remote_pwd', 'remote_user')
+
+    def new_session(self):
+        """
+        Open new remote session, closing any existing
+        """
+
+        # Accessors may call this method, avoid recursion
+        virsh_exec = self.dict_get('virsh_exec') # Must exist, can't be None
+        uri = self.dict_get('uri') # Must exist, can be None
+        remote_ip = self.dict_get('remote_ip')
+        try:
+            remote_user = self.dict_get('remote_user')
+        except KeyError:
+            remote_user = 'root'
+        try:
+            remote_pwd = self.dict_get('remote_pwd')
+        except KeyError:
+            remote_pwd = None
+        super(VirshConnectBack, self).close_session()
+        new_session = VirshSession(virsh_exec, uri, a_id=None,
+                                   remote_ip=remote_ip,
+                                   remote_user=remote_user,
+                                   remote_pwd=remote_pwd)
+        # Keep count
+        self.__class__.SESSION_COUNTER += 1
+        session_id = new_session.get_id()
+        self.dict_set('session_id', session_id)
+
+
+    @staticmethod
+    def kosher_args(remote_ip, uri):
+        """
+        Convenience static method to help validate argument sanity before use
+
+        @param: remote_ip: ip/hostname of remote libvirt helper-system
+        @param: uri: fully qualified libvirt uri of local system, from remote.
+        @returns: True/False if checks pass or not
+        """
+        if remote_ip is None or uri is None:
+            return False
+        all_false = [
+            # remote_ip checks
+            bool(remote_ip.count("EXAMPLE.COM")),
+            bool(remote_ip.count("localhost")),
+            bool(remote_ip.count("127.")),
+            # uri checks
+            uri is None,
+            uri is "",
+            bool(uri.count("default")),
+            bool(uri.count(':///')),
+            bool(uri.count("localhost")),
+            bool(uri.count("127."))
+        ]
+        return True not in all_false
 
 
 ##### virsh module functions follow (See module docstring for API) #####
