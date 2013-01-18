@@ -728,6 +728,15 @@ class MultihostMigration(object):
         pass
 
 
+    def before_migration(self, mig_data):
+        """
+        Do something right before migration.
+
+        @param mig_data: object with migration data.
+        """
+        pass
+
+
     def migrate(self, vms_name, srchost, dsthost, start_work=None,
                 check_work=None, mig_mode="tcp", params_append=None):
         """
@@ -797,6 +806,8 @@ class MultihostMigration(object):
                         logging.debug("Wait for migraiton %s seconds." %
                                       (wait))
                         time.sleep(int(wait))
+
+                    self.before_migration(mig_data)
 
                     self.migrate_vms(mig_data)
 
