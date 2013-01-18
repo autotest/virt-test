@@ -1084,7 +1084,7 @@ variants:
                         sub_balloon_test_enlarge = "migration"
                         sub_balloon_test_evict = "migration"
                     - balloon-guest-s3:
-                        extra_params = " -global PIIX4_PM.disable_s3=0"
+                        extra_params += " -global PIIX4_PM.disable_s3=0"
                         sub_balloon_test_enlarge = "guest_s3"
                         sub_balloon_test_evict = "guest_s3"
                     - balloon-reboot:
@@ -1094,7 +1094,7 @@ variants:
                         kill_vm_on_error = yes
                         reboot = yes
                     - balloon-guest-s4:
-                        extra_params = " -global PIIX4_PM.disable_s4=0"
+                        extra_params += " -global PIIX4_PM.disable_s4=0"
                         sub_balloon_test_enlarge = "guest_s4"
                         sub_balloon_test_evict = "guest_s4"
                     - balloon-shutdown_enlarge:
