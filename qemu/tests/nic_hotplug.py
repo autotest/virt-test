@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from virttest import utils_test, virt_vm, aexpect
+from virttest import utils_test, virt_vm
 
 
 def run_nic_hotplug(test, params, env):
@@ -38,20 +38,7 @@ def run_nic_hotplug(test, params, env):
 
     session = utils_test.wait_for_login(vm, timeout=login_timeout)
 
-    udev_rules_path = "/etc/udev/rules.d/70-persistent-net.rules"
-    udev_rules_bkp_path = "/tmp/70-persistent-net.rules"
-
-    def guest_path_isfile(path):
-        try:
-            session.cmd("test -f %s" % path)
-        except aexpect.ShellError:
-            return False
-        return True
-
     if guest_is_not_windows:
-        if guest_path_isfile(udev_rules_path):
-            session.cmd("mv -f %s %s" % (udev_rules_path, udev_rules_bkp_path))
-
         # Modprobe the module if specified in config file
         module = params.get("modprobe_module")
         if module:
@@ -96,10 +83,3 @@ def run_nic_hotplug(test, params, env):
         for nic in vm.virtnet:
             if not (nic.nic_name == nic_name):
                 vm.set_link(nic.device_id, up=True)
-
-    # Attempt to put back udev network naming rules, even if the command to
-    # disable the rules failed. We may be undoing what was done in a previous
-    # (failed) test that never reached this point.
-    if guest_is_not_windows:
-        if guest_path_isfile(udev_rules_bkp_path):
-            session.cmd("mv -f %s %s" % (udev_rules_bkp_path, udev_rules_path))
