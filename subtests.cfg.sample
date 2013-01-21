@@ -3233,46 +3233,41 @@ variants:
         chk_phy_blk_cmd = "cat /sys/block/%s/queue/physical_block_size"
         chk_log_blk_cmd = "cat /sys/block/%s/queue/logical_block_size"
         variants:
-            ## Example for other installation methods
-            #- koji:
-            #    install_type = koji
-            #    kernel_dep_pkgs = "linux-firmware module-init-tools"
-            #    kernel_koji_tag = f17-updates
-            #- rpm:
-            #    install_type = rpm
-                 # These 2 parameters can be url.
-            #    kernel_rpm_path = "kernel-3.4.4-3.fc17.x86_64.rpm"
-            #    kernel_deps_rpms = "linux-firmware-20120510-0.3.git375e954.fc17.noarch.rpm"
-            #    file_checklist = kernel_rpm_path kernel_deps_rpms
-            #- git:
-            #    install_type = git
-            #    kernel_git_repo = ""
-            #    kernel_git_repo_base = ""
-            #    kernel_git_branch = ""
-            #    kernel_git_commit = ""
-            #    kernel_patch_list = ""
-            #    kernel_config = ""
-            #    kerne_config_list = ""
-            - @tar:
-                install_type = tar
-                kernel_src_pkg = "http://www.kernel.org/pub/linux/kernel/v3.0/linux-3.4.tar.bz2"
-                # Remember to update this config file to your own.
-                kernel_config = "/boot/config--3.4.4-3.fc17.x86_64"
-                kernel_patch_list = "http://www.kernel.org/pub/linux/kernel/v3.0/patch-3.4.4.bz2"
-                file_checklist = kerne_src_pkg kernel_config kernel_patch_list
-                kernel_tag = "3.4.4"
-                # The fedora default kernel config would take very long time to compile.
-                test_timeout_install = 3600
+            4096_4096:
+                need_install = no
+                images += " stg"
+                physical_block_size_stg = 4096
+                logical_block_size_stg = 4096
+            4096_512:
+                need_install = yes
+                start_vm = no
+                images = "stg"
+                boot_drive_stg = yes
+                medium = cdrom
+                installation = cdrom
+                kernel = vmlinuz
+                initrd = initrd.img
+                nic_mode = tap
+                physical_block_size_stg = 4096
+                logical_block_size_stg = 512
+            512_512:
+                need_install = yes
+                start_vm = no
+                images = "stg"
+                boot_drive_stg = yes
+                medium = cdrom
+                installation = cdrom
+                kernel = vmlinuz
+                initrd = initrd.img
+                nic_mode = tap
+                physical_block_size_stg = 512
+                logical_block_size_stg = 512
 
-    - rv_disconnect: rv_connect
-        type = rv_disconnect
-        vms = vm1 vm2
-        guest_vm = vm1
-        client_vm = vm2
-        image_name_vm2 = client_vm
-        display_vm2 = vnc
-        vga_vm2 = cirrus
-
+    - qemu_iotests:
+        no Host_RHEL.5
+        type = qemu_iotests
+        vms = ''
+        qemu_io_uri = "git://qe-git.englab.nay.redhat.com/s2/qemu-iotests"
         variants:
             - RHEL:
                 variants:
