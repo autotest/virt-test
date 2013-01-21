@@ -969,6 +969,13 @@ variants:
             cdrom_cd2 = isos/windows/winutils.iso
         balloon_check:
             free_mem_cmd = wmic os get FreePhysicalMemory 
+        stop_continue.with_file_copy:
+            prepare_op = fsutil file createnew C:\1.txt 314572800
+            prepare_op_timeout = 240
+            start_bg_process = yes
+            bg_cmd = copy C:\1.txt C:\2.txt /y
+            check_op = echo cd C:\ > C:\tmp.bat&& echo for /F "tokens=1,*" %%i in ('D:\coreutils\md5sum.exe C:\1.txt') do D:\coreutils\md5sum.exe C:\2.txt ^| find "%%i" >> C:\tmp.bat && C:\tmp.bat
+            clean_op = dir C:\ && del C:\1.txt C:\2.txt C:\tmp.bat && dir C:\
 
         variants:
             - WinXP:
