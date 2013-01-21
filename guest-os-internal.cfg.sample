@@ -1157,7 +1157,7 @@ variants:
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
                 guest_test.autoit.disk_dfrg:
-                    dst_rsc_path = "C:\DiskDefragment\difrag2008.au3"
+                    dst_rsc_path = "C:\autoit\DiskDefragment\difrag2008.au3" 
                 netperf_win.netperf_exe.best_registry_setting:
                     shell_port = 23
                     shell_client = telnet
@@ -1266,7 +1266,7 @@ variants:
                 # 801196#c97
                 cpu_model_flags += "hv_relaxed"
                 guest_test.autoit.disk_dfrg:
-                    dst_rsc_path = "C:\DiskDefragment\difrag2008.au3"
+                    dst_rsc_path = "C:\autoit\DiskDefragment\difrag2008.au3"
                 format_disk:
                     create_partition_cmd = "echo select disk 1 > cmd && echo create partition primary >> cmd && echo select partition 1 >> cmd && echo format fs=ntfs quick >> cmd && echo assign letter=I >> cmd && echo exit >> cmd && diskpart /s cmd"
                     format_cmd = format I: /FS:NTFS /V:local /y
@@ -1334,7 +1334,7 @@ variants:
                 # 801196#c97
                 cpu_model_flags += "hv_relaxed"
                 guest_test.autoit.disk_dfrg:
-                    dst_rsc_path = "C:\DiskDefragment\difrag_win7.au3"
+                    dst_rsc_path = "C:\autoit\DiskDefragment\difrag_win7.au3"
                 whql.submission:
                     desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows 7 Client\Logo
                     desc_path_desc2 = $\WDK\Logo Type\Device Logo\Windows 7 Client
@@ -1450,7 +1450,7 @@ variants:
                 # it can be removed while bug 821741 is fixed
                 cpu_model_flags = "+sep"
                 guest_test.autoit.disk_dfrg:
-                    dst_rsc_path = "C:\DiskDefragment\difrag_win7.au3"
+                    dst_rsc_path = "C:\autoit\DiskDefragment\difrag_win7.au3"
                 whql.submission:
                     desc_path_desc1 = $\WDK\Logo Type\Device Logo\Windows 7 Client\Logo
                     desc_path_desc2 = $\WDK\Logo Type\Device Logo\Windows 7 Client
@@ -1564,7 +1564,7 @@ variants:
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
                 guest_test.autoit.disk_dfrg:
-                    dst_rsc_path = "C:\DiskDefragment\difrag2008.au3"
+                    dst_rsc_path = "C:\autoit\DiskDefragment\difrag2008.au3"
                 format_disk:
                     create_partition_cmd = "echo select disk 1 > cmd && echo create partition primary >> cmd && echo select partition 1 >> cmd && echo format fs=ntfs quick >> cmd && echo assign letter=I >> cmd && echo exit >> cmd && diskpart /s cmd"
                     format_cmd = format I: /FS:NTFS /V:local /y
