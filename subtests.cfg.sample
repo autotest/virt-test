@@ -2989,8 +2989,7 @@ variants:
         no Host_RHEL.5
         type = qemu_iotests
         vms = ''
-        download_cmd = "git clone"
-        rsc_server = "git://qe-git.englab.nay.redhat.com/s2/qemu-iotests-rhel6"
+        qemu_io_uri = "git://qe-git.englab.nay.redhat.com/s2/qemu-iotests"
         variants:
             - qcow2_image:
                 image_type = "qcow2"
