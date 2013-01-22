@@ -163,14 +163,17 @@ class VM(virt_vm.BaseVM):
             pattern = self.params.get("image_unbootable_pattern")
             if not pattern:
                 raise virt_vm.VMConfigMissingError(self.name,
-                                              "image_unbootable_pattern")
-            seabios_log = self.logsessions['seabios'].get_output()
-            if re.search(pattern, seabios_log, re.S):
-                logging.error("Can't boot guest from image.")
-                # Set 'shutdown_command' to None to force autotest
-                # shuts down guest with monitor.
-                self.params["shutdown_command"] = None
-                raise ImageUnbootableError(self.name)
+                                                   "image_unbootable_pattern")
+            try:
+                seabios_log = self.logsessions['seabios'].get_output()
+                if re.search(pattern, seabios_log, re.S):
+                    logging.error("Can't boot guest from image.")
+                    # Set 'shutdown_command' to None to force autotest
+                    # shuts down guest with monitor.
+                    self.params["shutdown_command"] = None
+                    raise ImageUnbootableError(self.name)
+            except KeyError:
+                pass
 
 
     def clone(self, name=None, params=None, root_dir=None, address_cache=None,
