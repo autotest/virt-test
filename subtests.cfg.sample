@@ -4173,12 +4173,14 @@ variants:
                 err_command = "write -b 0 1G"
             - l2_load:
                 image_size_blk = 20G
+                test_timeout = 5400
                 err_event = "l2_load"
                 pre_err_commands = "write 0 1G"
                 err_command = "write 0 1G"
                 session_reload = 'yes'
             - l2_alloc_cow_read:
                 image_size_blk = 20G
+                test_timeout = 5400
                 err_event = "l2_alloc.cow_read"
                 pre_snapshot = "yes"
                 image_chain = "blk sn1"
