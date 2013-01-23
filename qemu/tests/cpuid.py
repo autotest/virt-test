@@ -101,6 +101,60 @@ def run_cpuid(test, params, env):
                                      "of command %s\n%s" %
                                      (added, cmd, result.stdout))
 
+    def get_guest_cpuid(self, cpu_model, feature=None):
+        test_kernel_dir = os.path.join(test.virtdir, "deps", "cpuid_test_kernel")
+        os.chdir(test_kernel_dir)
+        utils.make("cpuid_dump_kernel.bin")
+
+        vm_name = params.get('main_vm')
+        params_b = params.copy()
+        params_b["kernel"] = os.path.join(test_kernel_dir, "cpuid_dump_kernel.bin")
+        params_b["cpu_model"] = cpu_model
+        params_b["cpu_model_flags"] = feature
+        del params_b["images"]
+        del params_b["nics"]
+        env_process.preprocess_vm(self, params_b, env, vm_name)
+        vm = env.get_vm(vm_name)
+        vm.create()
+        self.vm = vm
+        vm.resume()
+
+        timeout = float(params.get("login_timeout", 240))
+        f = lambda: re.search("==END TEST==", vm.serial_console.get_output())
+        if not utils_misc.wait_for(f, timeout, 1):
+            raise error.TestFail("Could not get test complete message.")
+
+        test_sig = re.compile("==START TEST==\n((?:.*\n)*)\n*==END TEST==")
+        test_output = test_sig.search(vm.serial_console.get_output())
+        if test_output == None:
+           raise error.TestFail("Test output signature not found in "
+                                 "output:\n %s", vm.serial_console.get_output())
+        self.clean()
+        return test_output.group(1)
+
+    def cpuid_regs_to_dic(level_count, cpuid_dump):
+        """
+            @param level_count: is CPUID level and count string in format
+                                'LEVEL COUNT', where:
+                                      LEVEL - CPUID level in hex format
+                                            8 chracters width
+                                      COUNT - input ECX value of cpuid in
+                                            hex format 2 charaters width
+                                example: '0x00000001 0x00'
+            @cpuid_dump: string: output of 'cpuid' utility or provided with
+                                 this test simple kernel that dumps cpuid
+                                 in a similar format.
+            @return: dictionary of register values indexed by register name
+        """
+        grp = '\w*=(\w*)\s*'
+        regs = re.search('\s+%s:.*%s%s%s%s' % (level_count, grp, grp, grp, grp),
+                         cpuid_dump)
+        if regs == None:
+            raise error.TestFail("Could not find %s in cpuid output:\n%s",
+                                 level_count, cpuid_dump)
+        return {'eax': int(regs.group(1), 16), 'ebx': int(regs.group(2), 16),
+                'ecx': int(regs.group(3), 16), 'edx': int(regs.group(4), 16) }
+
 
     # subtests runner
     test_type = params.get("test_type")
