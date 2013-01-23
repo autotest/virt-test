@@ -266,6 +266,41 @@ def run_cpuid(test, params, env):
             if (has_error is False) and (xfail is True):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
+    def cpuid_to_family(cpuid_dump):
+        # Intel Processor Identification and the CPUID Instruction
+        # http://www.intel.com/Assets/PDF/appnote/241618.pdf
+        # 5.1.2 Feature Information (Function 01h)
+        eax = cpuid_regs_to_dic('0x00000001 0x00', cpuid_dump)['eax']
+        family = (eax >> 8) & 0xf
+        if family  == 0xf:
+            # extract extendend family
+            return family + ((eax >> 20) & 0xff)
+        return family
+
+    class custom_family(MiniSubtest):
+        """
+        Boot qemu with specified family
+        """
+        def test(self):
+            has_error = False
+            if params.get("family") is None:
+                raise error.TestNAError("'family' must be specified in config"
+                                        " for this test")
+            try:
+                out = get_guest_cpuid(self, cpu_model, "family=" +
+                                      params.get("family"))
+                guest_family = str(cpuid_to_family(out))
+                if guest_family != params.get("family"):
+                    raise error.TestFail("Guest's family [%s], doesn't match "
+                                         "required family [%s]" %
+                                         (guest_family, params.get("family")))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
 
     # subtests runner
     test_type = params.get("test_type")
