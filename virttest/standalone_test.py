@@ -139,7 +139,7 @@ class Test(object):
                             raise error.TestError("Directory %s does not "
                                                   "exist" % (subtestdir))
                         subtest_dirs += data_dir.SubdirList(subtestdir,
-                                                            bootstrap.test_filter)
+                                                         bootstrap.test_filter)
 
                     # Verify if we have the correspondent source file for it
                     subtest_dirs += data_dir.SubdirList(self.testdir,
@@ -418,7 +418,7 @@ def print_test_list(options, cartesian_parser):
         virt_test_type = params.get('virt_test_type', "")
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
-            index +=1
+            index += 1
             shortname = get_tag(params, tag_index)
             needs_root = ((params.get('requires_root', 'no') == 'yes')
                           or (params.get('vm_type') != 'qemu'))
@@ -470,7 +470,7 @@ def print_guest_list(options):
     pipe.write("Available guests:")
     pipe.write("\n\n")
     for params in cartesian_parser.get_dicts():
-        index +=1
+        index += 1
         image_name = storage.get_image_filename(params, data_dir.get_data_dir())
         shortname = ".".join(params['name'].split(".")[1:])
         if os.path.isfile(image_name):
@@ -505,7 +505,8 @@ def bootstrap_tests(options):
         test_dir = os.path.abspath(parent_config_dir)
 
     if options.type == 'qemu':
-        check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+        check_modules = ["kvm",
+                         "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
     else:
         check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
@@ -584,7 +585,7 @@ def run_tests(parser, options):
 
     last_index = -1
 
-    logging.info("Starting test job at %s" % time.strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info("Starting test job at %s", time.strftime('%Y-%m-%d %H:%M:%S'))
     logging.info("")
     logging.debug("Options received from the command line:")
     utils_misc.display_attributes(options)
@@ -615,9 +616,9 @@ def run_tests(parser, options):
 
     if options.type == 'qemu':
         logging.info("We're running the qemu test with:")
-        logging.info("qemu binary: %s" % d.get('qemu_binary'))
-        logging.info("qemu img binary: %s" % d.get('qemu_img_binary'))
-        logging.info("qemu io binary: %s" % d.get('qemu_io_binary'))
+        logging.info("qemu binary: %s", d.get('qemu_binary'))
+        logging.info("qemu img binary: %s", d.get('qemu_img_binary'))
+        logging.info("qemu io binary: %s", d.get('qemu_io_binary'))
         logging.info("")
 
     tag_index = get_tag_index(options, d)
@@ -625,7 +626,7 @@ def run_tests(parser, options):
     for i, d in enumerate(parser.get_dicts()):
         shortname = get_tag(d, tag_index)
 
-        logging.info("Test %4d:  %s" % (i + 1, shortname))
+        logging.info("Test %4d:  %s", (i + 1, shortname))
         last_index += 1
 
     if last_index == -1:
@@ -697,7 +698,7 @@ def run_tests(parser, options):
                     t_begin = time.time()
                     t.start_file_logging()
                     current_status = t.run_once()
-                    logging.info("PASS %s" % t.tag)
+                    logging.info("PASS %s", t.tag)
                     logging.info("")
                     t.stop_file_logging()
                 finally:
