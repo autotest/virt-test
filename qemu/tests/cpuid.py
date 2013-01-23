@@ -102,7 +102,8 @@ def run_cpuid(test, params, env):
                                      (added, cmd, result.stdout))
 
     def get_guest_cpuid(self, cpu_model, feature=None):
-        test_kernel_dir = os.path.join(test.virtdir, "deps", "cpuid_test_kernel")
+        test_kernel_dir = os.path.join(test.virtdir, "deps",
+                                       "cpuid_test_kernel")
         os.chdir(test_kernel_dir)
         utils.make("cpuid_dump_kernel.bin")
 
@@ -127,7 +128,7 @@ def run_cpuid(test, params, env):
         test_sig = re.compile("==START TEST==\n((?:.*\n)*)\n*==END TEST==")
         test_output = test_sig.search(vm.serial_console.get_output())
         if test_output == None:
-           raise error.TestFail("Test output signature not found in "
+            raise error.TestFail("Test output signature not found in "
                                  "output:\n %s", vm.serial_console.get_output())
         self.clean()
         return test_output.group(1)
@@ -154,6 +155,44 @@ def run_cpuid(test, params, env):
                                  level_count, cpuid_dump)
         return {'eax': int(regs.group(1), 16), 'ebx': int(regs.group(2), 16),
                 'ecx': int(regs.group(3), 16), 'edx': int(regs.group(4), 16) }
+
+    def cpuid_to_vendor(cpuid_dump, idx):
+        r = cpuid_regs_to_dic(idx + ' 0x00', cpuid_dump)
+        dst =  []
+        map(lambda i: dst.append((chr(r['ebx'] >> (8 * i) & 0xff))), range(0,4))
+        map(lambda i: dst.append((chr(r['edx'] >> (8 * i) & 0xff))), range(0,4))
+        map(lambda i: dst.append((chr(r['ecx'] >> (8 * i) & 0xff))), range(0,4))
+        return ''.join(dst)
+
+    class default_vendor(MiniSubtest):
+        """
+        Boot qemu with specified cpu models and
+        verify that CPU vendor matches requested
+        """
+        def test(self):
+            if params.get("cpu_models") is None:
+                cmd = qemu_binary + " -cpu ?"
+                result = utils.run(cmd)
+                cpu_models = set(extract_qemu_cpu_models(result.stdout))
+            else:
+                cpu_models = set(params.get("cpu_models").split(' '))
+
+            cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
+            cmd_result = utils.run(cmd, ignore_status=True)
+            vendor = cmd_result.stdout.strip()
+            vendor = params.get("vendor", vendor)
+
+            ignore_cpus = set(params.get("ignore_cpu_models","").split(' '))
+            cpu_models = cpu_models - ignore_cpus
+
+            for cpu_model in cpu_models:
+                out = get_guest_cpuid(self, cpu_model)
+                guest_vendor = cpuid_to_vendor(out, '0x00000000')
+                logging.debug("Guest's vendor: " + guest_vendor)
+                if guest_vendor != vendor:
+                    raise error.TestFail("Guest vendor [%s], doesn't match "
+                                         "required vendor [%s] for CPU [%s]" %
+                                         (guest_vendor, vendor, cpu_model))
 
 
     # subtests runner
