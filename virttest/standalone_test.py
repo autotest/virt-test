@@ -138,14 +138,17 @@ class Test(object):
                         if not os.path.isdir(subtestdir):
                             raise error.TestError("Directory %s does not "
                                                   "exist" % (subtestdir))
-                        subtest_dirs.append(subtestdir)
+                        subtest_dirs += data_dir.SubdirList(subtestdir,
+                                                            bootstrap.test_filter)
 
                     # Verify if we have the correspondent source file for it
-                    subtest_dirs.append(self.testdir)
+                    subtest_dirs += data_dir.SubdirList(self.testdir,
+                                                        bootstrap.test_filter)
                     specific_testdir = os.path.join(self.bindir,
                                                     params.get("vm_type"),
                                                     "tests")
-                    subtest_dirs.append(specific_testdir)
+                    subtest_dirs += data_dir.SubdirList(specific_testdir,
+                                                        bootstrap.test_filter)
                     logging.debug("Searching subtest files in dirs %s",
                                   subtest_dirs)
                     subtest_dir = None
