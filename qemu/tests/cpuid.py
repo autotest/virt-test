@@ -335,6 +335,39 @@ def run_cpuid(test, params, env):
             if (has_error is False) and (xfail is True):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
+    def cpuid_to_stepping(cpuid_dump):
+        # Intel Processor Identification and the CPUID Instruction
+        # http://www.intel.com/Assets/PDF/appnote/241618.pdf
+        # 5.1.2 Feature Information (Function 01h)
+        eax = cpuid_regs_to_dic('0x00000001 0x00', cpuid_dump)['eax']
+        stepping = eax & 0xf
+        return stepping
+
+    class custom_stepping(MiniSubtest):
+        """
+        Boot qemu with specified stepping
+        """
+        def test(self):
+            has_error = False
+            if params.get("stepping") is None:
+                raise error.TestNAError("'stepping' must be specified in config"
+                                        " for this test")
+            try:
+                out = get_guest_cpuid(self, cpu_model, "stepping=" +
+                                      params.get("stepping"))
+                guest_stepping = str(cpuid_to_stepping(out))
+                if guest_stepping != params.get("stepping"):
+                    raise error.TestFail("Guest's stepping [%s], doesn't match "
+                                         "required stepping [%s]" %
+                                         (guest_stepping,
+                                          params.get("stepping")))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
 
     # subtests runner
     test_type = params.get("test_type")
