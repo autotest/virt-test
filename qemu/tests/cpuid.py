@@ -238,6 +238,34 @@ def run_cpuid(test, params, env):
             if (has_error is False) and (xfail is True):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
+    def cpuid_to_level(cpuid_dump):
+        r = cpuid_regs_to_dic('0x00000000 0x00', cpuid_dump)
+        return r['eax']
+
+    class custom_level(MiniSubtest):
+        """
+        Boot qemu with specified level
+        """
+        def test(self):
+            has_error = False
+            if params.get("level") is None:
+                raise error.TestNAError("'level' must be specified in config"
+                                        " for this test")
+            try:
+                out = get_guest_cpuid(self, cpu_model, "level=" +
+                                      params.get("level"))
+                guest_level = str(cpuid_to_level(out))
+                if guest_level != params.get("level"):
+                    raise error.TestFail("Guest's level [%s], doesn't match "
+                                         "required level [%s]" %
+                                         (guest_level, params.get("level")))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
 
     # subtests runner
     test_type = params.get("test_type")
