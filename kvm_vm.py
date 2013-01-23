@@ -489,7 +489,8 @@ class VM(virt_vm.BaseVM):
                       logical_block_size=None, readonly=None, scsiid=None,
                       lun=None, imgfmt="raw", aio=None, media="disk",
                       ide_bus=None, ide_unit=None, vdisk=None, scsi_disk=None,
-                      pci_addr=None, scsi=None):
+                      pci_addr=None, scsi=None, x_data_plane=None,
+                      blk_extra_params=None):
 
             dev_format = {"virtio" : "virtio-blk-pci",
                           "ide" : "ide-drive",
@@ -578,6 +579,7 @@ class VM(virt_vm.BaseVM):
                     dev += _add_option("scsi", scsi, bool)
                 dev += _add_option("drive", blkdev_id)
                 dev += _add_option("id", id)
+                dev += _add_option("x-data-plane", x_data_plane, bool)
                 format = "none"
             if format == "floppy":
                 drivelist = ['driveA','driveB']
@@ -586,6 +588,8 @@ class VM(virt_vm.BaseVM):
                 dev += " -global"
                 dev += _add_option("isa-fdc.%s" % drivelist[index], blkdev_id,
                                    first=True)
+            if blk_extra_params:
+                dev += ",%s" % blk_extra_params
 
             # -drive part
             if blkdebug is not None:
@@ -1267,7 +1271,9 @@ class VM(virt_vm.BaseVM):
                   image_params.get("image_aio", "native"),
                   "disk", ide_bus, ide_unit, vdisk, scsi_disk,
                   image_params.get("drive_pci_addr"),
-                  scsi=image_params.get("virtio-blk-pci_scsi"))
+                  scsi=image_params.get("virtio-blk-pci_scsi"),
+                  x_data_plane=image_params.get("x-data-plane"),
+                  blk_extra_params=image_params.get("blk_extra_params"))
 
             # increase the bus and unit no for ide device
             format = params.get("drive_format")
