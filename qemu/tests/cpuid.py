@@ -17,6 +17,12 @@ def run_cpuid(test, params, env):
     """
     qemu_binary = utils_misc.get_path('.', params.get("qemu_binary", "qemu"))
 
+    cpu_model = params.get("cpu_model", "qemu64")
+
+    xfail = False
+    if (params.get("xfail") is not None) and (params.get("xfail") == "yes"):
+        xfail = True
+
     class MiniSubtest(test_module.Subtest):
         """
         subtest base class for actual tests
@@ -159,9 +165,12 @@ def run_cpuid(test, params, env):
     def cpuid_to_vendor(cpuid_dump, idx):
         r = cpuid_regs_to_dic(idx + ' 0x00', cpuid_dump)
         dst =  []
-        map(lambda i: dst.append((chr(r['ebx'] >> (8 * i) & 0xff))), range(0,4))
-        map(lambda i: dst.append((chr(r['edx'] >> (8 * i) & 0xff))), range(0,4))
-        map(lambda i: dst.append((chr(r['ecx'] >> (8 * i) & 0xff))), range(0,4))
+        map(lambda i:
+            dst.append((chr(r['ebx'] >> (8 * i) & 0xff))), range(0, 4))
+        map(lambda i:
+            dst.append((chr(r['edx'] >> (8 * i) & 0xff))), range(0, 4))
+        map(lambda i:
+            dst.append((chr(r['ecx'] >> (8 * i) & 0xff))), range(0, 4))
         return ''.join(dst)
 
     class default_vendor(MiniSubtest):
@@ -193,6 +202,41 @@ def run_cpuid(test, params, env):
                     raise error.TestFail("Guest vendor [%s], doesn't match "
                                          "required vendor [%s] for CPU [%s]" %
                                          (guest_vendor, vendor, cpu_model))
+
+    class custom_vendor(MiniSubtest):
+        """
+        Boot qemu with specified vendor
+        """
+        def test(self):
+            has_error = False
+            if params.get("vendor") is None:
+                raise error.TestNAError("'vendor' must be specified in config"
+                                        " for this test")
+            vendor = params.get("vendor")
+
+            try:
+                out = get_guest_cpuid(self, cpu_model, "vendor=" + vendor)
+                guest_vendor0 = cpuid_to_vendor(out, '0x00000000')
+                guest_vendor80000000 = cpuid_to_vendor(out, '0x80000000')
+                logging.debug("Guest's vendor[0]: " + guest_vendor0)
+                logging.debug("Guest's vendor[0x80000000]: " +
+                              guest_vendor80000000)
+                if guest_vendor0 != params.get("vendor"):
+                    raise error.TestFail("Guest vendor[0] [%s], doesn't match "
+                                         "required vendor [%s] for CPU [%s]" %
+                                         (guest_vendor0, vendor, cpu_model))
+                if guest_vendor80000000 != params.get("vendor"):
+                    raise error.TestFail("Guest vendor[0x80000000] [%s], "
+                                         "doesn't match required vendor "
+                                         "[%s] for CPU [%s]" %
+                                         (guest_vendor80000000, vendor,
+                                          cpu_model))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
 
 
     # subtests runner
