@@ -35,6 +35,8 @@ last_subtest = {'qemu': ['shutdown'],
                 'v2v': ['shutdown'],
                 'libguestfs': ['shutdown']}
 
+test_filter = ['__init__', 'cfg']
+config_filter = ['__init__',]
 
 def get_asset_info(asset):
     asset_path = os.path.join(data_dir.get_download_dir(), '%s.ini' % asset)
@@ -348,9 +350,13 @@ def create_subtests_cfg(t_type):
     root_dir = data_dir.get_root_dir()
 
     specific_test = os.path.join(root_dir, t_type, 'tests')
-    specific_test_list = glob.glob(os.path.join(specific_test, '*.py'))
+    specific_test_list = data_dir.SubdirGlobList(specific_test,
+                                                 '*.py',
+                                                 test_filter)
     shared_test = os.path.join(root_dir, 'tests')
-    shared_test_list = glob.glob(os.path.join(shared_test, '*.py'))
+    shared_test_list = data_dir.SubdirGlobList(shared_test,
+                                               '*.py',
+                                               test_filter)
     all_specific_test_list = []
     for test in specific_test_list:
         basename = os.path.basename(test)
@@ -370,7 +376,9 @@ def create_subtests_cfg(t_type):
                                    'tests', 'cfg')
     shared_test_cfg = os.path.join(root_dir, 'tests', 'cfg')
 
-    shared_file_list = glob.glob(os.path.join(shared_test_cfg, "*.cfg"))
+    shared_file_list = data_dir.SubdirGlobList(shared_test_cfg,
+                                               "*.cfg",
+                                               config_filter)
     first_subtest_file = []
     last_subtest_file = []
     non_dropin_tests = []
@@ -404,7 +412,9 @@ def create_subtests_cfg(t_type):
     shared_file_list = tmp
     shared_file_list.sort()
 
-    specific_file_list = glob.glob(os.path.join(specific_test_cfg, "*.cfg"))
+    specific_file_list = data_dir.SubdirGlobList(specific_test_cfg,
+                                                 "*.cfg",
+                                                 config_filter)
     tmp = []
     for shared_file in specific_file_list:
         shared_file_obj = open(shared_file, 'r')
@@ -473,7 +483,9 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     logging.info("")
     step += 1
     logging.info("%d - Generating config set", step)
-    config_file_list = glob.glob(os.path.join(test_dir, "cfg", "*.cfg"))
+    config_file_list = data_dir.SubdirGlobList(os.path.join(test_dir, "cfg"),
+                                               "*.cfg",
+                                               config_filter)
     config_file_list_shared = glob.glob(os.path.join(shared_dir, "cfg",
                                                      "*.cfg"))
 
