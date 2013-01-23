@@ -301,6 +301,40 @@ def run_cpuid(test, params, env):
             if (has_error is False) and (xfail is True):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
+    def cpuid_to_model(cpuid_dump):
+        # Intel Processor Identification and the CPUID Instruction
+        # http://www.intel.com/Assets/PDF/appnote/241618.pdf
+        # 5.1.2 Feature Information (Function 01h)
+        eax = cpuid_regs_to_dic('0x00000001 0x00', cpuid_dump)['eax']
+        model = (eax >> 4) & 0xf
+        # extended model
+        model |= (eax >> 12) & 0xf0
+        return model
+
+    class custom_model(MiniSubtest):
+        """
+        Boot qemu with specified model
+        """
+        def test(self):
+            has_error = False
+            if params.get("model") is None:
+                raise error.TestNAError("'model' must be specified in config"
+                                        " for this test")
+            try:
+                out = get_guest_cpuid(self, cpu_model, "model=" +
+                                      params.get("model"))
+                guest_model = str(cpuid_to_model(out))
+                if guest_model != params.get("model"):
+                    raise error.TestFail("Guest's model [%s], doesn't match "
+                                         "required model [%s]" %
+                                         (guest_model, params.get("model")))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
 
     # subtests runner
     test_type = params.get("test_type")
