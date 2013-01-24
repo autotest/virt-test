@@ -921,9 +921,7 @@ class BaseVM(object):
         """
         Get the cpu count of the VM.
         """
-        session = self.login()
-        if not session:
-            return None
+        session = self.wait_for_login()
         try:
             return int(session.cmd(self.params.get("cpu_chk_cmd")))
         finally:
