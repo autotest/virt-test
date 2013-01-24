@@ -6,15 +6,10 @@ Requires: binaries remote-viewer, Xorg, netstat
 
 """
 import logging, os
-from virttest.aexpect import ShellCmdError, ShellStatusError
-from virttest.aexpect import ShellTimeoutError, ShellProcessTerminatedError
+from virttest.aexpect import ShellStatusError
+from virttest.aexpect import ShellProcessTerminatedError
 from virttest import utils_net, utils_spice, remote
-
-
-class RVConnectError(Exception):
-    """Exception raised in case that remote-viewer fails to connect"""
-    pass
-
+from autotest.client.shared import error
 
 def send_ticket(client_vm, ticket):
     """
@@ -27,35 +22,6 @@ def send_ticket(client_vm, ticket):
         client_vm.send_key(character)
 
     client_vm.send_key("kp_enter")  # send enter
-
-
-def verify_established(client_vm, host, port, rv_binary):
-    """
-    Parses netstat output for established connection on host:port
-    @param client_session - vm.wait_for_login()
-    @param host - host ip addr
-    @param port - port for client to connect
-    @param rv_binary - remote-viewer binary
-    """
-    rv_binary = rv_binary.split(os.path.sep)[-1]
-
-    client_session = client_vm.wait_for_login(timeout=60)
-
-    # !!! -n means do not resolve port names
-    cmd = '(netstat -pn 2>&1| grep "^tcp.*:.*%s:%s.*ESTABLISHED.*%s.*") \
-        > /dev/null' % (host, str(port), rv_binary)
-    try:
-        netstat_out = client_session.cmd(cmd)
-        logging.info("netstat output: %s", netstat_out)
-
-    except ShellCmdError:
-        logging.error("Failed to get established connection from netstat")
-        raise RVConnectError()
-
-    else:
-        logging.info("%s connection to %s:%s successful.",
-               rv_binary, host, port)
-    client_session.close()
 
 
 def print_rv_version(client_session, rv_binary):
@@ -92,11 +58,20 @@ def launch_rv(client_vm, guest_vm, params):
     """
     rv_binary = params.get("rv_binary", "remote-viewer")
     host_ip = utils_net.get_host_ip_address(params)
+    test_type = params.get("test_type")
     host_port = None
     full_screen = params.get("full_screen")
     display = params.get("display")
     cmd = rv_binary + " --display=:0.0"
     ticket = None
+    ticket_send = params.get("spice_password_send")
+    qemu_ticket = params.get("qemu_password")
+
+    #If qemu_ticket is set, set the password of the VM using the qemu-monitor
+    if qemu_ticket:
+        guest_vm.monitor.cmd("set_password spice %s" % qemu_ticket)
+        logging.info("Sending to qemu monitor: set_password spice %s" 
+                     % qemu_ticket)
 
     client_session = client_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
@@ -105,7 +80,8 @@ def launch_rv(client_vm, guest_vm, params):
         ticket = guest_vm.get_spice_var("spice_password")
 
         if guest_vm.get_spice_var("spice_ssl") == "yes":
-            host_port = guest_vm.get_spice_var("spice_tls_port")
+            host_tls_port = guest_vm.get_spice_var("spice_tls_port")
+            host_port = guest_vm.get_spice_var("spice_port")
             cacert = "%s/%s" % (guest_vm.get_spice_var("spice_x509_prefix"),
                                guest_vm.get_spice_var("spice_x509_cacert_file"))
             #cacert subj is in format for create certificate(with '/' delimiter)
@@ -114,7 +90,8 @@ def launch_rv(client_vm, guest_vm, params):
             host_subj = guest_vm.get_spice_var("spice_x509_server_subj")
             host_subj = host_subj.replace('/', ',')[1:]
 
-            cmd += " spice://%s?tls-port=%s" % (host_ip, host_port)
+            cmd += " spice://%s?tls-port=%s\&port=%s" % (host_ip, host_tls_port,
+                                                         host_port)
             cmd += " --spice-ca-file=%s" % cacert
 
             if params.get("spice_client_host_subject") == "yes":
@@ -148,8 +125,6 @@ def launch_rv(client_vm, guest_vm, params):
     cmd = "nohup " + cmd + " &> /dev/null &" # Launch it on background
 
     # Launching the actual set of commands
-    utils_spice.launch_startx(client_vm)
-
     try:
         print_rv_version(client_session, rv_binary)
     except ShellStatusError, ShellProcessTerminatedError:
@@ -166,12 +141,25 @@ def launch_rv(client_vm, guest_vm, params):
                       "remote-viewer later")
 
     # client waits for user entry (authentication) if spice_password is set
-    if ticket:
+    # use qemu monitor password if set, else check if the normal password is set
+    if qemu_ticket:
+        # Wait for remote-viewer to launch
+        utils_spice.wait_timeout(5)
+        send_ticket(client_vm, qemu_ticket)
+    elif ticket:
+        if ticket_send:
+            ticket = ticket_send
+
         utils_spice.wait_timeout(5)  # Wait for remote-viewer to launch
         send_ticket(client_vm, ticket)
-
     utils_spice.wait_timeout(5)  # Wait for conncetion to establish
-    verify_established(client_vm, host_ip, host_port, rv_binary)
+    try:
+        utils_spice.verify_established(client_vm, host_ip, host_port, rv_binary)
+    except utils_spice.RVConnectError:
+        if test_type == "negative":
+            logging.info("remote-viewer connection failed as expected")
+        else:
+            raise error.TestFail("remote-viewer connection failed") 
 
     #prevent from kill remote-viewer after test finish
     cmd = "disown -ar"
@@ -199,6 +187,8 @@ def run_rv_connect(test, params, env):
     client_vm.verify_alive()
     client_session = client_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
+
+    utils_spice.wait_timeout(15)
 
     launch_rv(client_vm, guest_vm, params)
 
