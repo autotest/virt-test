@@ -216,6 +216,19 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         return self.__class__(self.name)
 
 
+    def reroot(self, xpath):
+        """
+        Return a copy of instance, re-rooted onto xpath
+        """
+        rerooted = self.backup_copy()
+        element = rerooted.find(xpath)
+        if element is None:
+            del rerooted # cleanup files
+            raise KeyError("No element found at %s" % xpath)
+        rerooted._setroot(element)
+        return rerooted
+
+
     def get_parent_map(self, element=None):
         """
         Return a child to parent mapping dictionary
