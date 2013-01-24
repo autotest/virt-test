@@ -402,6 +402,48 @@ def run_cpuid(test, params, env):
             if (has_error is False) and (xfail is True):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
+    def cpuid_to_model_id(cpuid_dump):
+        # Intel Processor Identification and the CPUID Instruction
+        # http://www.intel.com/Assets/PDF/appnote/241618.pdf
+        # 5.2.3 Processor Brand String (Functions 80000002h, 80000003h,
+        # 80000004h)
+        m_id = ""
+        for idx in ('0x80000002', '0x80000003', '0x80000004'):
+            regs = cpuid_regs_to_dic('%s 0x00' % idx, cpuid_dump)
+            for name in ('eax', 'ebx', 'ecx', 'edx'):
+                for shift in range(4):
+                    c = ((regs[name] >> (shift * 8)) & 0xff)
+                    if c == 0: # drop trailing \0-s
+                        break
+                    m_id += chr(c)
+        return m_id
+
+    class custom_model_id(MiniSubtest):
+        """
+        Boot qemu with specified model_id
+        """
+        def test(self):
+            has_error = False
+            if params.get("model_id") is None:
+                raise error.TestNAError("'model_id' must be specified in config"
+                                        " for this test")
+            model_id = params.get("model_id")
+
+            try:
+                out = get_guest_cpuid(self, cpu_model, "model_id='%s'" %
+                                      model_id)
+                guest_model_id = cpuid_to_model_id(out)
+                if guest_model_id != model_id:
+                    raise error.TestFail("Guest's model_id [%s], doesn't match "
+                                         "required model_id [%s]" %
+                                         (guest_model_id, model_id))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
 
     # subtests runner
     test_type = params.get("test_type")
