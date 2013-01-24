@@ -368,6 +368,40 @@ def run_cpuid(test, params, env):
             if (has_error is False) and (xfail is True):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
+    def cpuid_to_xlevel(cpuid_dump):
+        # Intel Processor Identification and the CPUID Instruction
+        # http://www.intel.com/Assets/PDF/appnote/241618.pdf
+        # 5.2.1 Largest Extendend Function # (Function 80000000h)
+        return cpuid_regs_to_dic('0x80000000 0x00', cpuid_dump)['eax']
+
+    class custom_xlevel(MiniSubtest):
+        """
+        Boot qemu with specified xlevel
+        """
+        def test(self):
+            has_error = False
+            if params.get("xlevel") is None:
+                raise error.TestNAError("'xlevel' must be specified in config"
+                                        " for this test")
+            xlevel = params.get("xlevel")
+            if params.get("expect_xlevel") is not None:
+                xlevel = params.get("expect_xlevel")
+
+            try:
+                out = get_guest_cpuid(self, cpu_model, "xlevel=" +
+                                      params.get("xlevel"))
+                guest_xlevel = str(cpuid_to_xlevel(out))
+                if guest_xlevel != xlevel:
+                    raise error.TestFail("Guest's xlevel [%s], doesn't match "
+                                         "required xlevel [%s]" %
+                                         (guest_xlevel, xlevel))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
 
     # subtests runner
     test_type = params.get("test_type")
