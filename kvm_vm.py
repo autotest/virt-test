@@ -1298,6 +1298,8 @@ class VM(virt_vm.BaseVM):
                     hba = params.get("scsi_hba", "virtio-scsi-pci");
                     qemu_cmd += " -device %s,id=virtio_scsi_pci%d" % (hba, i)
                     qemu_cmd += ",addr=%s" % get_free_pci_addr(None)
+                    if params.get("scsi_extra_params_hda"):
+                        qemu_cmd += ",%s" % params.get("scsi_extra_params_hda")
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
             qemu_cmd += add_drive(help,
