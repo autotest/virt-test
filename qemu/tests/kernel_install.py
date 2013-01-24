@@ -159,8 +159,8 @@ def run_kernel_install(test, params, env):
     params["test_control_file_install"] = test_control_file
 
     error.context("Launch kernel installation test in guest")
-    utils_test.run_virt_sub_test(test, params, env, sub_type="autotest",
-                                      tag="install")
+    utils_test.run_virt_sub_test(test, params, env,
+                                 sub_type="autotest_control", tag="install")
 
     if params.get("need_reboot", "yes") == "yes":
         error.context("Reboot guest after kernel is installed")
