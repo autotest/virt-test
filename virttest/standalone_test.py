@@ -394,6 +394,42 @@ def get_paginator():
     except ValueError:
         return sys.stdout
 
+def get_cartesian_parser_details(cartesian_parser):
+    """
+    Print detailed information about filters applied to the cartesian cfg.
+
+    @param cartesian_parser: Cartesian parser object.
+    """
+    details = ""
+    details += ("Tests produced by config file %s\n\n" %
+                cartesian_parser.filename)
+
+    details += "The full test list was modified by the following:\n\n"
+
+    if cartesian_parser.only_filters:
+        details += "Filters applied:\n"
+        for flt in cartesian_parser.only_filters:
+            details += "    %s\n" % flt
+
+    if cartesian_parser.no_filters:
+        for flt in cartesian_parser.no_filters:
+            details += "    %s\n" % flt
+
+    details += "\n"
+    details += "Different guest OS have different test lists\n"
+    details += "\n"
+
+    if cartesian_parser.assignments:
+        details += "Assignments applied:\n"
+        for flt in cartesian_parser.assignments:
+            details += "    %s\n" % flt
+
+    details += "\n"
+    details += "Assignments override values previously set in the config file\n"
+    details += "\n"
+
+    return details
+
 
 def print_test_list(options, cartesian_parser):
     """
@@ -406,28 +442,9 @@ def print_test_list(options, cartesian_parser):
     """
     pipe = get_paginator()
     index = 0
-    pipe.write("Tests produced by config file %s\n\n" %
-               cartesian_parser.filename)
 
-    pipe.write("All filters and assignments come from the cmdline options\n\n")
+    pipe.write(get_cartesian_parser_details(cartesian_parser))
 
-    if cartesian_parser.only_filters:
-        pipe.write("Filters applied:\n")
-        for flt in cartesian_parser.only_filters:
-            pipe.write("%s\n" % flt)
-
-    if cartesian_parser.no_filters:
-        for flt in cartesian_parser.no_filters:
-            pipe.write("%s\n" % flt)
-
-    pipe.write("\n")
-
-    if cartesian_parser.assignments:
-        pipe.write("Assignments applied:\n")
-        for flt in cartesian_parser.assignments:
-            pipe.write("%s\n" % flt)
-
-    pipe.write("\n")
     d = cartesian_parser.get_dicts().next()
     tag_index = get_tag_index(options, d)
     for params in cartesian_parser.get_dicts():
@@ -602,9 +619,6 @@ def run_tests(parser, options):
 
     logging.info("Starting test job at %s" % time.strftime('%Y-%m-%d %H:%M:%S'))
     logging.info("")
-    logging.debug("Options received from the command line:")
-    utils_misc.display_attributes(options)
-    logging.debug("")
 
     logging.debug("Cleaning up previous job tmp files")
     d = parser.get_dicts().next()
@@ -629,14 +643,11 @@ def run_tests(parser, options):
         qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
         logging.debug("")
 
-    if options.type == 'qemu':
-        logging.info("We're running the qemu test with:")
-        logging.info("qemu binary: %s" % d.get('qemu_binary'))
-        logging.info("qemu img binary: %s" % d.get('qemu_img_binary'))
-        logging.info("qemu io binary: %s" % d.get('qemu_io_binary'))
-        logging.info("")
-
     tag_index = get_tag_index(options, d)
+
+    for line in get_cartesian_parser_details(parser).splitlines():
+        logging.info(line)
+
     logging.info("Defined test set:")
     for i, d in enumerate(parser.get_dicts()):
         shortname = get_tag(d, tag_index)
