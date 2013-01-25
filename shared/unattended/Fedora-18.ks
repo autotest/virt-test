@@ -31,6 +31,8 @@ os.system('grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-
 os.system('dhclient')
 os.system('chkconfig sshd on')
 os.system('iptables -F')
+os.system('systemctl mask tmp.mount')
+
 os.system('echo 0 > /selinux/enforce')
 os.system('echo Post set up finished > /dev/ttyS0')
 os.system('echo Post set up finished > /dev/hvc0')
