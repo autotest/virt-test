@@ -129,6 +129,8 @@ def _find_default_qemu_paths(options_qemu=None):
 
     return [qemu_bin_path, qemu_img_path, qemu_io_path]
 
+SUPPORTED_TEST_TYPES = ['qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v']
+
 SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
 
 SUPPORTED_DISK_BUSES = ['ide', 'scsi', 'virtio_blk', 'virtio_scsi', 'lsi_scsi',
@@ -471,6 +473,14 @@ class VirtTestApp(object):
             print("No type (-t) or config (-c) options specified, aborting...")
             self.option_parser.print_help()
             sys.exit(1)
+
+        if self.options.type:
+            if self.options.type not in SUPPORTED_TEST_TYPES:
+                standalone_test.print_stdout("Invalid test type %s. "
+                                             "Valid test types: %s. "
+                                             "Aborting..." % (self.options.type,
+                                                " ".join(SUPPORTED_TEST_TYPES)))
+                sys.exit(1)
 
         if self.options.datadir:
             data_dir.set_backing_data_dir(self.options.datadir)
