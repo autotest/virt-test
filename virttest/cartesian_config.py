@@ -218,6 +218,9 @@ class Parser(object):
         if filename:
             self.parse_file(filename)
         self.filename = filename
+        self.only_filters = []
+        self.no_filters = []
+        self.assignments = []
 
 
     def parse_file(self, filename):
@@ -237,6 +240,45 @@ class Parser(object):
         @param s: String to parse.
         """
         self.node = self._parse(StrReader(s), self.node)
+
+
+    def only_filter(self, variant):
+        """
+        Apply a only filter programatically and keep track of it.
+
+        Equivalent to parse a "only variant" line.
+
+        @param variant: String with the variant name.
+        """
+        string = "only %s" % variant
+        self.only_filters.append(string)
+        self.parse_string(string)
+
+
+    def no_filter(self, variant):
+        """
+        Apply a only filter programatically and keep track of it.
+
+        Equivalent to parse a "no variant" line.
+
+        @param variant: String with the variant name.
+        """
+        string = "no %s" % variant
+        self.only_filters.append(string)
+        self.parse_string(string)
+
+
+    def assign(self, key, value):
+        """
+        Apply a only filter programatically and keep track of it.
+
+        Equivalent to parse a "key = value" line.
+
+        @param variant: String with the variant name.
+        """
+        string = "%s = %s" % (key, value)
+        self.assignments.append(string)
+        self.parse_string(string)
 
 
     def get_dicts(self, node=None, ctx=[], content=[], shortname=[], dep=[]):
