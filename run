@@ -532,6 +532,22 @@ class VirtTestApp(object):
             pid = os.getpid()
             os.kill(pid, signal.SIGTERM)
 
+        except StopIteration:
+            standalone_test.print_stdout("Empty config set generated ")
+            if self.options.type:
+                standalone_test.print_stdout("Tests chosen: '%s'" %
+                                             self.options.tests)
+                standalone_test.print_stdout("Check that you typed the tests "
+                                             "names correctly, and double "
+                                             "check that tests show "
+                                             "in --list-tests for guest '%s'" %
+                                             (self.options.guest_os))
+                sys.exit(1)
+            if self.options.config:
+                standalone_test.print_stdout("Please check your custom config "
+                                             "file %s" % self.options.config)
+                sys.exit(1)
+
         except Exception:
             try:
                 sys.stdout.switch()
