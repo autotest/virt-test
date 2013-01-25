@@ -309,6 +309,20 @@ class QemuImg(storage.QemuImg):
         return output
 
 
+    def info(self):
+        """
+        Run qemu-img info command on image file and return its output.
+        """
+        logging.debug("Run qemu-img info comamnd on %s", self.image_filename)
+        cmd = self.image_cmd
+        if os.path.exists(self.image_filename):
+            cmd += " info %s" % self.image_filename
+            output = utils.system_output(cmd)
+        else:
+            logging.debug("Image file %s not found", self.image_filename)
+            output = None
+        return output
+
 
     def check_image(self, params, root_dir):
         """
