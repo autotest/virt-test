@@ -746,7 +746,7 @@ def install_host_kernel(job, params):
 
         rpm_url = params.get('host_kernel_rpm_url')
         k_basename = os.path.basename(rpm_url)
-        dst = os.path.join("/tmp", k_basename)
+        dst = os.path.join("/var/tmp", k_basename)
         k = utils.get_file(rpm_url, dst)
         host_kernel = job.kernel(k)
         host_kernel.install(install_vmlinux=False)
