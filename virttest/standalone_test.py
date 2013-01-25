@@ -1,4 +1,4 @@
-import os, logging, imp, sys, time, traceback, Queue, glob, shutil
+import os, logging, imp, sys, time, traceback, Queue, glob, shutil, inspect
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
@@ -406,9 +406,16 @@ def print_test_list(options, cartesian_parser):
     """
     pipe = get_paginator()
     index = 0
-    pipe.write("Tests produced for type %s, config file %s" %
-               (options.type, cartesian_parser.filename))
-    pipe.write("\n\n")
+    pipe.write("Tests produced by config file %s\n\n" %
+               cartesian_parser.filename)
+    pipe.write("Filters applied according to options:\n")
+    for member in inspect.getmembers(options):
+        name, value = member
+        attribute = getattr(options, name)
+        if not (name.startswith("__") or callable(attribute) or not value):
+            pipe.write("    %s: %s\n" % (name, value))
+
+    pipe.write("\n")
     d = cartesian_parser.get_dicts().next()
     tag_index = get_tag_index(options, d)
     for params in cartesian_parser.get_dicts():
