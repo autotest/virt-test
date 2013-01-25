@@ -408,12 +408,24 @@ def print_test_list(options, cartesian_parser):
     index = 0
     pipe.write("Tests produced by config file %s\n\n" %
                cartesian_parser.filename)
-    pipe.write("Filters applied according to options:\n")
-    for member in inspect.getmembers(options):
-        name, value = member
-        attribute = getattr(options, name)
-        if not (name.startswith("__") or callable(attribute) or not value):
-            pipe.write("    %s: %s\n" % (name, value))
+
+    pipe.write("All filters and assignments come from the cmdline options\n\n")
+
+    if cartesian_parser.only_filters:
+        pipe.write("Filters applied:\n")
+        for flt in cartesian_parser.only_filters:
+            pipe.write("%s\n" % flt)
+
+    if cartesian_parser.no_filters:
+        for flt in cartesian_parser.no_filters:
+            pipe.write("%s\n" % flt)
+
+    pipe.write("\n")
+
+    if cartesian_parser.assignments:
+        pipe.write("Assignments applied:\n")
+        for flt in cartesian_parser.assignments:
+            pipe.write("%s\n" % flt)
 
     pipe.write("\n")
     d = cartesian_parser.get_dicts().next()
