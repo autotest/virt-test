@@ -417,7 +417,7 @@ class BaseInstaller(object):
         '''
         Performs the uninstallations of the virtualization software
 
-        Note: This replaces old kvm_installer._clean_previous_install()
+        Note: This replaces old qemu_installer._clean_previous_install()
         '''
         raise NotImplementedError
 
@@ -435,7 +435,7 @@ class NoopInstaller(BaseInstaller):
         @param test: Virt test object.
         @param params: Dict with test params.
         '''
-        if params['vm_type'] == 'kvm':
+        if params['vm_type'] == 'qemu':
             params['module_list'] = ("kvm kvm-%s" %
                                      utils_misc.get_cpu_vendor(verbose=False))
         super(NoopInstaller, self).__init__(mode, name, test, params)
@@ -451,7 +451,7 @@ class YumInstaller(BaseInstaller):
     Installs virtualization software using YUM
 
     Notice: this class implements a change of behaviour if compared to
-    kvm_installer.YumInstaller.set_install_params(). There's no longer
+    qemu_installer.YumInstaller.set_install_params(). There's no longer
     a default package list, as each virtualization technology will have
     a completely different default. This should now be kept at the
     configuration file only.

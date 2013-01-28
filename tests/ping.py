@@ -17,7 +17,7 @@ def run_ping(test, params, env):
     1) Flood ping the guest.
     2) Check if the network is still usable.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

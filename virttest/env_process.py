@@ -1,8 +1,8 @@
 import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
-import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
-import libvirt_vm, video_maker, utils_misc, storage, kvm_storage
+import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm, qemu_vm
+import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
 import remote, ovirt, data_dir, utils_test
 
 try:
@@ -27,7 +27,7 @@ def preprocess_image(test, params, image_name):
     """
     base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
-        iscsidev = kvm_storage.Iscsidev(params, base_dir, image_name)
+        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         params["image_name"] = iscsidev.setup()
     else:
         image_filename = storage.get_image_filename(params,
@@ -42,7 +42,7 @@ def preprocess_image(test, params, image_name):
             create_image = True
 
         if create_image:
-            image = kvm_storage.QemuImg(params, base_dir, image_name)
+            image = qemu_storage.QemuImg(params, base_dir, image_name)
             if not image.create(params):
                 raise error.TestError("Could not create image")
 
@@ -61,8 +61,8 @@ def preprocess_vm(test, params, env, name):
     vm_type = params.get('vm_type')
     target = params.get('target')
     if not vm:
-        if vm_type == 'kvm':
-            vm = kvm_vm.VM(name, params, test.bindir, env.get("address_cache"))
+        if vm_type == 'qemu':
+            vm = qemu_vm.VM(name, params, test.bindir, env.get("address_cache"))
         if vm_type == 'libvirt':
             vm = libvirt_vm.VM(name, params, test.bindir, env.get("address_cache"))
         if vm_type == 'v2v':
@@ -107,7 +107,8 @@ def preprocess_vm(test, params, env, name):
             # Start the VM (or restart it if it's already up)
             vm.create(name, params, test.bindir,
                       migration_mode=params.get("migration_mode"),
-                      migration_fd=params.get("migration_fd"))
+                      migration_fd=params.get("migration_fd"),
+                      migration_exec_cmd=params.get("migration_exec_cmd_dst"))
             # Update mac and IP info for assigned device
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
@@ -116,6 +117,16 @@ def preprocess_vm(test, params, env, name):
         # Don't start the VM, just update its params
         vm.params = params
 
+    pause_vm = False
+
+    if params.get("paused_after_start_vm") == "yes":
+        pause_vm = True
+        #Check the status of vm
+        if not vm.is_alive():
+            pause_vm = False
+
+    if pause_vm:
+        vm.pause()
 
 def postprocess_image(test, params, image_name):
     """
@@ -127,10 +138,10 @@ def postprocess_image(test, params, image_name):
     clone_master = params.get("clone_master", None)
     base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
-        iscsidev = kvm_storage.Iscsidev(params, base_dir, image_name)
+        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         iscsidev.cleanup()
     else:
-        image = kvm_storage.QemuImg(params, base_dir, image_name)
+        image = qemu_storage.QemuImg(params, base_dir, image_name)
         if params.get("check_image") == "yes":
             try:
                 if clone_master is None:
@@ -138,6 +149,8 @@ def postprocess_image(test, params, image_name):
                 elif clone_master == "yes":
                     if image_name in params.get("master_images_clone").split():
                         image.check_image(params, base_dir)
+                if params.get("restore_image", "no") == "yes":
+                    image.backup_image(params, base_dir, "restore", True)
             except Exception, e:
                 if params.get("restore_image_on_check_error", "no") == "yes":
                     image.backup_image(params, base_dir, "restore", True)
@@ -412,7 +425,7 @@ def preprocess(test, params, env):
 
             vm_params = params.object_params(vm_name)
             for image in vm_params.get("master_images_clone").split():
-                image_obj = kvm_storage.QemuImg(params, base_dir, image)
+                image_obj = qemu_storage.QemuImg(params, base_dir, image)
                 image_obj.clone_image(params, vm_name, image, base_dir)
 
     # Preprocess all VMs and images
@@ -578,7 +591,7 @@ def _take_screendumps(test, params, env):
                 continue
             try:
                 vm.screendump(filename=temp_filename, debug=False)
-            except kvm_monitor.MonitorError, e:
+            except qemu_monitor.MonitorError, e:
                 logging.warn(e)
                 continue
             except AttributeError, e:

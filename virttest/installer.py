@@ -7,7 +7,7 @@ The most common use case is to simply call make_installer() inside your tests.
 '''
 
 from autotest.client.shared import error
-import base_installer, kvm_installer
+import base_installer, qemu_installer
 
 __all__ = ['InstallerRegistry', 'INSTALLER_REGISTRY', 'make_installer',
            'run_installers']
@@ -27,7 +27,7 @@ class InstallerRegistry(dict):
     If you want to register a virt specific installer class, set the virt
     (third) param:
 
-    >>> INSTALLER_REGISTRY.register('yum', kvm_installer.YumInstaller, 'kvm')
+    >>> INSTALLER_REGISTRY.register('yum', qemu_installer.YumInstaller, 'qemu')
 
     For getting a installer class, use the get_installer() method. This method
     has a fallback option 'get_default_virt' that will return a generic virt
@@ -115,22 +115,22 @@ INSTALLER_REGISTRY.register('remote_tar',
 #
 INSTALLER_REGISTRY.register('yum',
                             base_installer.YumInstaller,
-                            'kvm')
+                            'qemu')
 INSTALLER_REGISTRY.register('koji',
                             base_installer.KojiInstaller,
-                            'kvm')
+                            'qemu')
 INSTALLER_REGISTRY.register('git_repo',
-                            kvm_installer.GitRepoInstaller,
-                            'kvm')
+                            qemu_installer.GitRepoInstaller,
+                            'qemu')
 INSTALLER_REGISTRY.register('local_src',
-                            kvm_installer.LocalSourceDirInstaller,
-                            'kvm')
+                            qemu_installer.LocalSourceDirInstaller,
+                            'qemu')
 INSTALLER_REGISTRY.register('local_tar',
-                            kvm_installer.LocalSourceTarInstaller,
-                            'kvm')
+                            qemu_installer.LocalSourceTarInstaller,
+                            'qemu')
 INSTALLER_REGISTRY.register('remote_tar',
-                            kvm_installer.RemoteSourceTarInstaller,
-                            'kvm')
+                            qemu_installer.RemoteSourceTarInstaller,
+                            'qemu')
 
 
 

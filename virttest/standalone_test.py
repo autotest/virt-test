@@ -1,7 +1,35 @@
-import os, logging, imp, sys, time, traceback, Queue
+import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
+import storage, cartesian_config
+
+global GUEST_NAME_LIST
+GUEST_NAME_LIST = None
+global TAG_INDEX
+TAG_INDEX = None
+
+
+def get_tag_index(options, params):
+    global TAG_INDEX
+    if TAG_INDEX is None:
+        guest_name_list = get_guest_name_list(options)
+
+        name = params['name']
+
+        for guest_name in guest_name_list:
+            if guest_name in name:
+                idx = name.index(guest_name)
+                TAG_INDEX = idx + len(guest_name) + 1
+                break
+
+    return TAG_INDEX
+
+
+def get_tag(params, index):
+    name = params['name']
+    name = name[index:]
+    return ".".join(name.split("."))
 
 
 class Test(object):
@@ -26,10 +54,8 @@ class Test(object):
             os.makedirs(self.tmpdir)
 
         self.iteration = 0
-        if options.config is None:
-            self.tag = ".".join(params['name'].split(".")[12:])
-        else:
-            self.tag = ".".join(params['shortname'].split("."))
+        tag_index = get_tag_index(options, params)
+        self.tag = get_tag(params, tag_index)
         self.debugdir = None
         self.outputdir = None
         self.resultsdir = None
@@ -86,6 +112,7 @@ class Test(object):
             raise error.TestNAError("Test dependency failed")
 
         # Report the parameters we've received and write them as keyvals
+        logging.info("Starting test %s", self.tag)
         logging.debug("Test parameters:")
         keys = params.keys()
         keys.sort()
@@ -119,16 +146,23 @@ class Test(object):
                                                     params.get("vm_type"),
                                                     "tests")
                     subtest_dirs.append(specific_testdir)
+                    logging.debug("Searching subtest files in dirs %s",
+                                  subtest_dirs)
                     subtest_dir = None
 
                     # Get the test routine corresponding to the specified
                     # test type
+                    logging.debug("Searching for test modules that match "
+                                  "param 'type = %s' on this cartesian dict",
+                                  params.get("type"))
                     t_types = params.get("type").split()
                     test_modules = {}
                     for t_type in t_types:
                         for d in subtest_dirs:
                             module_path = os.path.join(d, "%s.py" % t_type)
                             if os.path.isfile(module_path):
+                                logging.debug("Found subtest module %s",
+                                              module_path)
                                 subtest_dir = d
                                 break
                         if subtest_dir is None:
@@ -181,7 +215,7 @@ class Test(object):
                 raise
             # Abort on error
             logging.info("Aborting job (%s)", e)
-            if params.get("vm_type") == "kvm":
+            if params.get("vm_type") == "qemu":
                 for vm in env.get_all_vms():
                     if vm.is_dead():
                         continue
@@ -337,7 +371,6 @@ def create_config_files(options):
     """
     shared_dir = os.path.dirname(data_dir.get_data_dir())
     test_dir = os.path.dirname(shared_dir)
-    shared_dir = os.path.join(shared_dir, "cfg")
 
     if (options.type and options.config):
         test_dir = os.path.join(test_dir, options.type)
@@ -349,6 +382,16 @@ def create_config_files(options):
         test_dir = os.path.join(test_dir, parent_config_dir)
 
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
+    bootstrap.create_subtests_cfg(options.type)
+    bootstrap.create_guest_os_cfg(options.type)
+
+
+def get_paginator():
+    try:
+        less_cmd = utils_misc.find_command('less')
+        return os.popen('%s -FRSX' % less_cmd, 'w')
+    except ValueError:
+        return sys.stdout
 
 
 def print_test_list(options, cartesian_parser):
@@ -360,28 +403,21 @@ def print_test_list(options, cartesian_parser):
     @param options: OptParse object with cmdline options.
     @param cartesian_parser: Cartesian parser object with test options.
     """
-    try:
-        less_cmd = utils_misc.find_command('less')
-        pipe = os.popen('%s -FRSX' % less_cmd, 'w')
-    except ValueError:
-        pipe = sys.stdout
+    pipe = get_paginator()
     index = 0
     pipe.write("Tests produced for type %s, config file %s" %
                (options.type, cartesian_parser.filename))
     pipe.write("\n\n")
+    d = cartesian_parser.get_dicts().next()
+    tag_index = get_tag_index(options, d)
     for params in cartesian_parser.get_dicts():
         virt_test_type = params.get('virt_test_type', "")
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
             index +=1
-            if options.config is None:
-                # strip "virtio_blk.smp2.virtio_net.JeOS.17.64"
-                shortname = params['name'].split(".")[12:]
-                shortname = ".".join(shortname)
-            else:
-                shortname = params['shortname']
+            shortname = get_tag(params, tag_index)
             needs_root = ((params.get('requires_root', 'no') == 'yes')
-                          or (params.get('vm_type') != 'kvm'))
+                          or (params.get('vm_type') != 'qemu'))
             basic_out = (bcolors.blue + str(index) + bcolors.end + " " +
                          shortname)
             if needs_root:
@@ -390,6 +426,58 @@ def print_test_list(options, cartesian_parser):
             else:
                 out = basic_out + "\n"
             pipe.write(out)
+
+
+def get_guest_name_list(options):
+    global GUEST_NAME_LIST
+    if GUEST_NAME_LIST is None:
+        cfg = os.path.join(data_dir.get_root_dir(), options.type,
+                           "cfg", "guest-os.cfg")
+        cartesian_parser = cartesian_config.Parser()
+        cartesian_parser.parse_file(cfg)
+        guest_name_list = []
+        for params in cartesian_parser.get_dicts():
+            shortname = ".".join(params['name'].split(".")[1:])
+            guest_name_list.append(shortname)
+
+        GUEST_NAME_LIST = guest_name_list
+
+    return GUEST_NAME_LIST
+
+
+
+def print_guest_list(options):
+    """
+    Helper function to pretty print the guest list.
+
+    This function uses a paginator, if possible (inspired on git).
+
+    @param options: OptParse object with cmdline options.
+    @param cartesian_parser: Cartesian parser object with test options.
+    """
+    cfg = os.path.join(data_dir.get_root_dir(), options.type,
+                       "cfg", "guest-os.cfg")
+    cartesian_parser = cartesian_config.Parser()
+    cartesian_parser.parse_file(cfg)
+    pipe = get_paginator()
+    index = 0
+    pipe.write("Searched %s for guest images\n" %
+               os.path.join(data_dir.get_data_dir(), 'images'))
+    pipe.write("Available guests:")
+    pipe.write("\n\n")
+    for params in cartesian_parser.get_dicts():
+        index +=1
+        image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+        shortname = ".".join(params['name'].split(".")[1:])
+        if os.path.isfile(image_name):
+            out = (bcolors.blue + str(index) + bcolors.end + " " +
+                   shortname + "\n")
+        else:
+            out = (bcolors.blue + str(index) + bcolors.end + " " +
+                   shortname + " " + bcolors.yellow +
+                   "(missing %s)" % os.path.basename(image_name) +
+                   bcolors.end + "\n")
+        pipe.write(out)
 
 
 def bootstrap_tests(options):
@@ -410,7 +498,10 @@ def bootstrap_tests(options):
         test_dir = os.path.dirname(os.path.dirname(options.config))
         test_dir = os.path.abspath(test_dir)
 
-    check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+    if options.type == 'qemu':
+        check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+    else:
+        check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
 
     kwargs = {'test_name': options.type,
@@ -487,11 +578,46 @@ def run_tests(parser, options):
 
     last_index = -1
 
+    logging.info("Starting test job at %s" % time.strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info("")
+    logging.debug("Options received from the command line:")
+    utils_misc.display_attributes(options)
+    logging.debug("")
+
+    logging.debug("Cleaning up previous job tmp files")
+    d = parser.get_dicts().next()
+    env_filename = os.path.join(data_dir.get_root_dir(),
+                                options.type, d.get("env", "env"))
+    env = utils_env.Env(env_filename, Test.env_version)
+    env.destroy()
+    try:
+        address_pool_files = glob.glob("/tmp/address_pool*")
+        for address_pool_file in address_pool_files:
+            os.remove(address_pool_file)
+        aexpect_tmp = "/tmp/aexpect_spawn/"
+        if os.path.isdir(aexpect_tmp):
+            shutil.rmtree("/tmp/aexpect_spawn/")
+    except (IOError, OSError):
+        pass
+    logging.debug("")
+
+    if options.restore_image_between_tests:
+        logging.debug("Creating first backup of guest image")
+        qemu_img = storage.QemuImg(d, data_dir.get_data_dir(), "image")
+        qemu_img.backup_image(d, data_dir.get_data_dir(), 'backup', True)
+        logging.debug("")
+
+    if options.type == 'qemu':
+        logging.info("We're running the qemu test with:")
+        logging.info("qemu binary: %s" % d.get('qemu_binary'))
+        logging.info("qemu img binary: %s" % d.get('qemu_img_binary'))
+        logging.info("qemu io binary: %s" % d.get('qemu_io_binary'))
+        logging.info("")
+
+    tag_index = get_tag_index(options, d)
+    logging.info("Defined test set:")
     for i, d in enumerate(parser.get_dicts()):
-        if options.config is None:
-            shortname = ".".join(d['name'].split(".")[12:])
-        else:
-            shortname = ".".join(d['shortname'].split("."))
+        shortname = get_tag(d, tag_index)
 
         logging.info("Test %4d:  %s" % (i + 1, shortname))
         last_index += 1
@@ -501,13 +627,7 @@ def run_tests(parser, options):
         print_stdout("Please check the file for errors (bad variable names, "
                      "wrong indentation)")
         sys.exit(-1)
-
-    # Clean environment file
-    d = parser.get_dicts().next()
-    env_filename = os.path.join(data_dir.get_root_dir(),
-                                options.type, d.get("env", "env"))
-    env = utils_env.Env(env_filename, Test.env_version)
-    env.destroy()
+    logging.info("")
 
     n_tests = last_index + 1
     print_header("TESTS: %s" % n_tests)
@@ -525,10 +645,7 @@ def run_tests(parser, options):
     setup_flag = 1
     cleanup_flag = 2
     for dct in parser.get_dicts():
-        if options.config is None:
-            shortname = ".".join(d['name'].split(".")[12:])
-        else:
-            shortname = ".".join(d['shortname'].split("."))
+        shortname = get_tag(dct, tag_index)
 
         if index == 0:
             if dct.get("host_setup_flag", None) is not None:
@@ -574,21 +691,25 @@ def run_tests(parser, options):
                     t_begin = time.time()
                     t.start_file_logging()
                     current_status = t.run_once()
-                    logging.info("PASS")
+                    logging.info("PASS %s" % t.tag)
+                    logging.info("")
                     t.stop_file_logging()
                 finally:
                     t_end = time.time()
                     t_elapsed = t_end - t_begin
             except error.TestNAError, reason:
-                logging.info("SKIP -> %s: %s", reason.__class__.__name__,
-                             reason)
+                logging.info("SKIP %s -> %s: %s", t.tag,
+                             reason.__class__.__name__, reason)
+                logging.info("")
                 t.stop_file_logging()
                 print_skip()
                 status_dct[dct.get("name")] = False
                 continue
             except error.TestWarn, reason:
-                logging.info("WARN -> %s: %s", reason.__class__.__name__,
+                logging.info("WARN %s -> %s: %s", t.tag,
+                             reason.__class__.__name__,
                              reason)
+                logging.info("")
                 t.stop_file_logging()
                 print_warn(t_elapsed)
                 status_dct[dct.get("name")] = True
@@ -602,15 +723,14 @@ def run_tests(parser, options):
                 for e_line in tb_info.splitlines():
                     logging.error(e_line)
                 logging.error("")
-                logging.error("FAIL -> %s: %s", reason.__class__.__name__,
+                logging.error("FAIL %s -> %s: %s", t.tag,
+                              reason.__class__.__name__,
                               reason)
+                logging.info("")
                 t.stop_file_logging()
                 current_status = False
         else:
-            if options.config is None:
-                shortname = ".".join(d['name'].split(".")[12:])
-            else:
-                shortname = ".".join(d['shortname'].split("."))
+            shortname = get_tag(d, tag_index)
             print_stdout("%s:" % shortname, end=False)
             print_skip()
             status_dct[dct.get("name")] = False

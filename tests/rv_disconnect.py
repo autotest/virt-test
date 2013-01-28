@@ -10,7 +10,7 @@ def run_rv_disconnect(test, params, env):
     """
     Tests disconnection of remote-viewer.
 
-    @param test: KVM test object.  @param params: Dictionary with the test parameters.
+    @param test: QEMU test object.  @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
 

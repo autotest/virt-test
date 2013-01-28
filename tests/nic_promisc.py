@@ -10,7 +10,7 @@ def run_nic_promisc(test, params, env):
     2) Repeatedly enable/disable promiscuous mode in guest.
     3) Transfer file from host to guest, and from guest to host in the same time
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

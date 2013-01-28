@@ -137,7 +137,8 @@ class VirshSession(aexpect.ShellSession):
         aexpect.ShellSession.__init__(self, virsh_exec, a_id, prompt=prompt,
                                       auto_close=False)
         # fail if libvirtd is not running
-        if self.cmd_status('list', timeout=10) != 0:
+        if self.cmd_status('list', timeout=60) != 0:
+            logging.debug("Persistent virsh session is not responding, libvirtd may be dead.")
             raise aexpect.ShellStatusError(virsh_exec, 'list')
 
 
@@ -282,6 +283,7 @@ class VirshPersistent(Virsh):
                         existing.close(sig=signal.SIGTERM)
                     # Keep count:
                     self.__class__.SESSION_COUNTER -= 1
+                    self.dict_del('session_id')
         except KeyError:
             # Allow other exceptions to be raised
             pass # session was closed already
@@ -537,6 +539,17 @@ def dom_list(options="", **dargs):
     return command("list %s" % options, **dargs)
 
 
+def reboot(name, options="", **dargs):
+    """
+    Run a reboot command in the target domain.
+
+    @param: name: Name of domain.
+    @param: options: options: options to pass to reboot command
+    @return: CmdResult object
+    """
+    return command("reboot --domain %s %s" % (name, options), **dargs)
+
+
 def managedsave(name, options="", **dargs):
     """
     Managed save of a domain state.
@@ -657,6 +670,17 @@ def dumpxml(name, to_file="", **dargs):
         raise error.CmdError(cmd, result,
                                  "Virsh dumpxml returned non-zero exit status")
     return result.stdout.strip()
+
+
+def edit(options, **dargs):
+    """
+    Edit the XML configuration for a domain.
+
+    @param options: virsh edit options string.
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("edit %s" % options, **dargs)
 
 
 def domxml_from_native(format, file, options=None, **dargs):
@@ -836,9 +860,8 @@ def define(xml_path, **dargs):
 
     @param: xml_path: XML file path
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    dargs['ignore_status'] = False
     cmd = "define --file %s" % xml_path
     logging.debug("Define VM from %s", xml_path)
     return command(cmd, **dargs)
@@ -850,9 +873,8 @@ def undefine(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    dargs['ignore_status'] = False
     cmd = "undefine %s" % name
     logging.debug("Undefine VM %s", name)
     return command(cmd, **dargs)
@@ -870,6 +892,7 @@ def remove_domain(name, **dargs):
         if is_alive(name, **dargs):
             destroy(name, **dargs)
         try:
+            dargs['ignore_status'] = False
             undefine(name, **dargs)
         except error.CmdError, detail:
             logging.error("Undefine VM %s failed:\n%s", name, detail)
@@ -996,43 +1019,146 @@ def detach_interface(name, option="", **dargs):
     return command(cmd, **dargs)
 
 
-def net_create(xml_file, extra="", **dargs):
+def net_dumpxml(net_name="", extra="", **dargs):
     """
-    Create network from a XML file.
+    Dump XML from network named net_name.
 
-    @param: xml_file: xml defining network
+    @param: net_name: Name of a network
     @param: extra: extra parameters to pass to command
-    @param: options: options to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    cmd = "net-create --file %s %s" % (xml_file, extra)
+    cmd = "net-dumpxml %s %s" % (net_name, extra)
     return command(cmd, **dargs)
+
+
+def net_create(xml_file, extra="", **dargs):
+    """
+    Create _transient_ network from a XML file.
+
+    @param: xml_file: xml defining network
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-create %s %s" % (xml_file, extra), **dargs)
+
+
+def net_define(xml_file, extra="", **dargs):
+    """
+    Define network from a XML file, do not start
+
+    @param: xml_file: xml defining network
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-define %s %s" % (xml_file, extra), **dargs)
 
 
 def net_list(options, extra="", **dargs):
     """
     List networks on host.
 
-    @param: extra: extra parameters to pass to command
     @param: options: options to pass to command
+    @param: extra: extra parameters to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
     return command("net-list %s %s" % (options, extra), **dargs)
 
 
-def net_destroy(name, extra="", **dargs):
+def net_state_dict(only_names=False, **dargs):
     """
-    Destroy actived network on host.
+    Return network name to state/autostart/persistent mapping
 
-    @param: name: name of guest
+    @param: only_names: When true, return network names as keys and None values
+    @param: dargs: standardized virsh function API keywords
+    @return: dictionary
+    """
+    dargs['ignore_status'] = True # so persistent check can work
+    netlist = net_list("--all", print_info=True).stdout.strip().splitlines()
+    # First two lines contain table header
+    netlist = netlist[2:]
+    result = {}
+    for line in netlist:
+        linesplit = line.split(None, 3)
+        name = linesplit[0]
+        # Several callers in libvirt_xml only requre defined names
+        if only_names:
+            result[name] = None
+            continue
+        # Keep search fast & avoid first-letter capital problems
+        active = not bool(linesplit[1].count("nactive"))
+        autostart = bool(linesplit[2].count("es"))
+        try:
+            # These will throw exception if network is transient
+            if autostart:
+                net_autostart(name, **dargs)
+            else:
+                net_autostart(name, "--disable", **dargs)
+            # no exception raised, must be persistent
+            persistent = True
+        except error.CmdError, cmdstatus:
+            # Keep search fast & avoid first-letter capital problems
+            if not bool(cmdstatus.stdout.count("ransient")):
+                persistent = False
+            else:
+                # Different error occured, re-raise it
+                raise
+        # Warning: These key names are used by libvirt_xml and test modules!
+        result[name] = {'active':active,
+                        'autostart':autostart,
+                        'persistent':persistent}
+    return result
+
+
+def net_start(network, extra="", **dargs):
+    """
+    Start network on host.
+
+    @param: network: name/parameter for network option/argument
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-start %s %s" % (network, extra), **dargs)
+
+
+def net_destroy(network, extra="", **dargs):
+    """
+    Destroy (stop) an activated network on host.
+
+    @param: network: name/parameter for network option/argument
     @param: extra: extra string to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    cmd = "net-destroy --network %s %s" % (name, extra)
-    return command(cmd, **dargs)
+    return command("net-destroy %s %s" % (network, extra), **dargs)
+
+
+def net_undefine(network, extra="", **dargs):
+    """
+    Undefine a defined network on host.
+
+    @param: network: name/parameter for network option/argument
+    @param: extra: extra string to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-undefine %s %s" % (network, extra), **dargs)
+
+
+def net_autostart(network, extra="", **dargs):
+    """
+    Set/unset a network to autostart on host boot
+
+    @param: network: name/parameter for network option/argument
+    @param: extra: extra parameters to pass to command (e.g. --disable)
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-autostart %s %s" % (network, extra), **dargs)
 
 
 def pool_info(name, **dargs):
@@ -1338,3 +1464,19 @@ def snapshot_delete(name, snapshot, **dargs):
     @return: CmdResult instance
     """
     return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
+
+
+def domblklist(name, options=None, **dargs):
+    """
+    Get domain devices.
+
+    @param name: name of domain
+    @param options: options of domblklist.
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "domblklist %s" % name
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)

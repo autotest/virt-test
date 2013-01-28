@@ -8,7 +8,7 @@ Requires: Two VMs - client and guest and remote-viewer session
 
 import logging, os
 from autotest.client.shared import error
-from virttest.aexpect import ShellCmdError, ShellStatusError
+from virttest.aexpect import ShellCmdError, ShellStatusError, ShellTimeoutError
 from virttest import utils_misc, utils_spice
 
 def deploy_epel_repo(guest_session, params):
@@ -22,7 +22,7 @@ def deploy_epel_repo(guest_session, params):
     #Check existance of epel repository
     cmd = ("if [ ! -f /etc/yum.repos.d/epel.repo ]; then echo"
           " \"NeedsInstall\"; fi")
-    output = guest_session.cmd(cmd, print_func=logging.info, timeout=10)
+    output = guest_session.cmd(cmd, timeout=10)
     #Install epel repository If needed
     if "NeedsInstall" in output:
         if "release 5" in guest_session.cmd("cat /etc/redhat-release"):
@@ -33,7 +33,7 @@ def deploy_epel_repo(guest_session, params):
             guest_session.cmd(cmd, print_func=logging.info, timeout=60)
         elif "release 6" in guest_session.cmd("cat /etc/redhat-release"):
             cmd = ("rpm -ivh http://download.fedoraproject.org/pub/epel/6/"
-                  "`arch`/epel-release-6-7.noarch.rpm 2>&1")
+                  "`arch`/epel-release-6-8.noarch.rpm 2>&1")
             logging.info("Installing epel repository to %s",
                         params.get("guest_vm"))
             guest_session.cmd(cmd, print_func=logging.info, timeout=60)
@@ -53,7 +53,7 @@ def install_wxpython(guest_session, params):
     try:
         guest_session.cmd(cmd)
     except ShellCmdError:
-        cmd = "yum -y install wxPython"
+        cmd = "yum -y install wxPython > /dev/null"
         logging.info("Installing wxPython package to %s",
                     params.get("guest_vm"))
         guest_session.cmd(cmd, timeout=60)
@@ -266,7 +266,7 @@ def run_rv_input(test, params, env):
     Test for testing keyboard inputs through spice.
     Test depends on rv_connect test.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -279,16 +279,12 @@ def run_rv_input(test, params, env):
 
     guest_session = guest_vm.wait_for_login(
               timeout=int(params.get("login_timeout", 360)))
-    if guest_session.cmd("test -e /etc/redhat-release"):
+    try:
+        guest_session.cmd("! test -e /etc/redhat-release")
+    except ShellCmdError:
         deploy_epel_repo(guest_session, params)
 
-    try:
-        guest_session.cmd("startx &", timeout=15)
-    except (ShellCmdError, ShellStatusError):
-        logging.debug("Ignoring an Exception that Occurs from calling startx")
-
-    #Give some time to X
-    utils_spice.wait_timeout(15)
+    utils_spice.launch_startx(guest_vm)
 
     guest_session.cmd("export DISPLAY=:0.0")
     utils_spice.wait_timeout(3)

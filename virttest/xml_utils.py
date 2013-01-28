@@ -93,7 +93,8 @@ class TempXMLFile(file):
             os.rename(self.name, self.name + EXSFX)
         else:
             self.unlink() # safe if file was renamed
-        super(TempXMLFile, self).__exit__(exc_type, exc_value, traceback)
+        if hasattr(super(TempXMLFile, self), '__exit__'):
+            super(TempXMLFile, self).__exit__(exc_type, exc_value, traceback)
 
 
     def __del__(self):

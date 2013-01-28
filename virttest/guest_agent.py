@@ -6,7 +6,7 @@ Interfaces to the virt agent.
 
 import socket, time, logging, random
 from autotest.client.shared import error
-from kvm_monitor import Monitor, MonitorError
+from qemu_monitor import Monitor, MonitorError
 
 try:
     import json

@@ -10,7 +10,7 @@ def run_pxe(test, params, env):
     2) Wait for some seconds.
     3) Check whether we could capture TFTP packets.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

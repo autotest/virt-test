@@ -5,14 +5,14 @@ This module is meant to reduce code size by performing common test procedures.
 Generally, code here should look like test code.
 More specifically:
     - Functions in this module should raise exceptions if things go wrong
-      (unlike functions in kvm_utils.py and kvm_vm.py which report failure via
+      (unlike functions in kvm_utils.py and qemu_vm.py which report failure via
       their returned values).
     - Functions in this module may use logging.info(), in addition to
       logging.debug() and logging.error(), to log messages the user may be
-      interested in (unlike kvm_utils.py and kvm_vm.py which use
+      interested in (unlike kvm_utils.py and qemu_vm.py which use
       logging.debug() for anything that isn't an error).
     - Functions in this module typically use functions and classes from
-      lower-level modules (e.g. kvm_utils.py, kvm_vm.py, kvm_subprocess.py).
+      lower-level modules (e.g. kvm_utils.py, qemu_vm.py, kvm_subprocess.py).
     - Functions in this module should not be used by lower-level modules.
     - Functions in this module should be used in the right context.
       For example, a function should not be used where it may display
@@ -501,8 +501,8 @@ class MultihostMigration(object):
         raise NotImplementedError
 
 
-    def post_migration(self, vm, cancel_delay, dsthost, vm_ports,
-                             not_wait_for_migration, fd):
+    def post_migration(self, vm, cancel_delay, mig_offline, dsthost, vm_ports,
+                             not_wait_for_migration, fd, mig_data):
         pass
 
 
@@ -516,13 +516,14 @@ class MultihostMigration(object):
         re implement this method.
         """
         def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
-                        not_wait_for_migration):
-            vm.migrate(cancel_delay=cancel_delay, dest_host=dsthost,
-                       remote_port=vm_ports[vm.name],
+                        not_wait_for_migration, mig_offline, mig_data):
+            vm.migrate(cancel_delay=cancel_delay, offline=mig_offline,
+                       dest_host=dsthost, remote_port=vm_ports[vm.name],
                        not_wait_for_migration=not_wait_for_migration)
 
-            self.post_migration(vm, cancel_delay, dsthost, vm_ports,
-                                not_wait_for_migration, None)
+            self.post_migration(vm, cancel_delay, mig_offline, dsthost,
+                                vm_ports, not_wait_for_migration, None,
+                                mig_data)
 
         logging.info("Start migrating now...")
         cancel_delay = mig_data.params.get("cancel_delay")
@@ -531,11 +532,18 @@ class MultihostMigration(object):
         not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
         if not_wait_for_migration == "yes":
             not_wait_for_migration = True
+        mig_offline = mig_data.params.get("mig_offline")
+        if mig_offline == "yes":
+            mig_offline = True
+        else:
+            mig_offline = False
+
         multi_mig = []
         for vm in mig_data.vms:
-            multi_mig.append((mig_wrapper, (vm, cancel_delay,
-                                            mig_data.dst, mig_data.vm_ports,
-                                            not_wait_for_migration)))
+            multi_mig.append((mig_wrapper, (vm, cancel_delay, mig_data.dst,
+                                            mig_data.vm_ports,
+                                            not_wait_for_migration,
+                                            mig_offline, mig_data)))
         utils_misc.parallel(multi_mig)
 
 
@@ -579,11 +587,12 @@ class MultihostMigration(object):
             for vm in mig_data.vms:
                 vm.wait_for_login(timeout=self.login_timeout)
 
-        sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
-                        mig_data.mig_id, self.sync_server)
-        mig_data.vm_ports = sync.sync(timeout=120)[mig_data.dst]
-        logging.info("Received from destination the migration port %s",
-                     str(mig_data.vm_ports))
+        if mig_data.params.get("host_mig_offline") != "yes":
+            sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
+                            mig_data.mig_id, self.sync_server)
+            mig_data.vm_ports = sync.sync(timeout=120)[mig_data.dst]
+            logging.info("Received from destination the migration port %s",
+                         str(mig_data.vm_ports))
 
 
     def _check_vms_dest(self, mig_data):
@@ -593,9 +602,10 @@ class MultihostMigration(object):
                          vm.migration_port)
             mig_data.vm_ports[vm.name] = vm.migration_port
 
-        SyncData(self.master_id(), self.hostid,
-                 mig_data.hosts, mig_data.mig_id,
-                 self.sync_server).sync(mig_data.vm_ports, timeout=120)
+        if mig_data.params.get("host_mig_offline") != "yes":
+            SyncData(self.master_id(), self.hostid,
+                     mig_data.hosts, mig_data.mig_id,
+                     self.sync_server).sync(mig_data.vm_ports, timeout=120)
 
 
     def _prepare_params(self, mig_data):
@@ -660,7 +670,7 @@ class MultihostMigration(object):
             self.migrate_vms_dest(mig_data)
 
 
-    def check_vms(self, mig_data):
+    def check_vms_dst(self, mig_data):
         """
         Check vms after migrate.
 
@@ -682,6 +692,15 @@ class MultihostMigration(object):
             #there must be added "sleep" in IP renew command.
             session_serial.cmd(self.regain_ip_cmd)
             vm.wait_for_login(timeout=self.login_timeout)
+
+
+    def check_vms_src(self, mig_data):
+        """
+        Check vms after migrate.
+
+        @param mig_data: object with migration data.
+        """
+        pass
 
 
     def postprocess_env(self):
@@ -732,12 +751,15 @@ class MultihostMigration(object):
             mig_data = MigrationData(self.params, srchost, dsthost,
                                      vms_name, params_append)
             cancel_delay = self.params.get("cancel_delay", None)
+            host_offline_migration = self.params.get("host_mig_offline")
+
             try:
                 try:
                     if mig_data.is_src():
                         self.prepare_for_migration(mig_data, None)
                     elif self.hostid == dsthost:
-                        self.prepare_for_migration(mig_data, mig_mode)
+                        if host_offline_migration != "yes":
+                            self.prepare_for_migration(mig_data, mig_mode)
                     else:
                         return
 
@@ -750,23 +772,41 @@ class MultihostMigration(object):
                                                         "vm is paused.")
 
                     # Starts VM and waits timeout before migration.
-                    if self.params.get("paused_after_start_vm") == "yes":
+                    if pause == "yes" and mig_data.is_src():
                         for vm in mig_data.vms:
                             vm.resume()
                         wait = self.params.get("start_migration_timeout", 0)
+                        logging.debug("Wait for migraiton %s seconds." %
+                                      (wait))
                         time.sleep(int(wait))
 
                     self.migrate_vms(mig_data)
 
-                    timeout = 30
+                    timeout = 60
                     if cancel_delay is None:
+                        if host_offline_migration == "yes":
+                            self._hosts_barrier(self.hosts,
+                                                mig_data.mig_id,
+                                                'wait_for_offline_mig',
+                                                self.finish_timeout)
+                            if mig_data.is_dst():
+                                self.prepare_for_migration(mig_data, mig_mode)
+                            self._hosts_barrier(self.hosts,
+                                                mig_data.mig_id,
+                                                'wait2_for_offline_mig',
+                                                self.finish_timeout)
+
                         if (not mig_data.is_src()):
                             timeout = self.mig_timeout
                         self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
                                             'mig_finished', timeout)
 
                         if mig_data.is_dst():
-                            self.check_vms(mig_data)
+                            self.check_vms_dst(mig_data)
+                            if check_work:
+                                check_work(mig_data)
+                        else:
+                            self.check_vms_src(mig_data)
                             if check_work:
                                 check_work(mig_data)
                 except:
@@ -778,6 +818,9 @@ class MultihostMigration(object):
                                         mig_data.mig_id,
                                         'test_finihed',
                                         self.finish_timeout)
+                elif mig_error:
+                    raise
+
 
         def wait_wrap(vms_name, srchost, dsthost):
             mig_data = MigrationData(self.params, srchost, dsthost, vms_name,
@@ -858,15 +901,16 @@ class MultihostMigrationFd(MultihostMigration):
         For change way how machine migrates is necessary
         re implement this method.
         """
-        def mig_wrapper(vm, cancel_delay, dsthost, vm_ports,
+        def mig_wrapper(vm, cancel_delay, mig_offline, dsthost, vm_ports,
                         not_wait_for_migration, fd):
-            vm.migrate(cancel_delay=cancel_delay, dest_host=dsthost,
+            vm.migrate(cancel_delay=cancel_delay, offline=mig_offline,
+                       dest_host=dsthost,
                        not_wait_for_migration=not_wait_for_migration,
                        protocol="fd",
                        fd_src=fd)
 
-            self.post_migration(vm, cancel_delay, dsthost, vm_ports,
-                                not_wait_for_migration, fd)
+            self.post_migration(vm, cancel_delay, mig_offline, dsthost,
+                                vm_ports, not_wait_for_migration, fd, mig_data)
 
         logging.info("Start migrating now...")
         cancel_delay = mig_data.params.get("cancel_delay")
@@ -875,11 +919,16 @@ class MultihostMigrationFd(MultihostMigration):
         not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
         if not_wait_for_migration == "yes":
             not_wait_for_migration = True
+        mig_offline = mig_data.params.get("mig_offline")
+        if mig_offline == "yes":
+            mig_offline = True
+        else:
+            mig_offline = False
 
         multi_mig = []
         for vm in mig_data.vms:
             fd = vm.params.get("migration_fd")
-            multi_mig.append((mig_wrapper, (vm, cancel_delay,
+            multi_mig.append((mig_wrapper, (vm, cancel_delay, mig_offline,
                                             mig_data.dst, mig_data.vm_ports,
                                             not_wait_for_migration,
                                             fd)))
@@ -997,6 +1046,157 @@ class MultihostMigrationFd(MultihostMigration):
             finally:
                 for s in sockets:
                     s.close()
+
+
+class MultihostMigrationExec(MultihostMigration):
+    def __init__(self, test, params, env):
+        super(MultihostMigrationExec, self).__init__(test, params, env)
+
+
+    def post_migration(self, vm, cancel_delay, mig_offline, dsthost,
+                             mig_exec_cmd, not_wait_for_migration, fd,
+                             mig_data):
+        if mig_data.params.get("host_mig_offline") == "yes":
+            src_tmp = vm.params.get("migration_sfiles_path")
+            dst_tmp = vm.params.get("migration_dfiles_path")
+            username = vm.params.get("username")
+            password = vm.params.get("password")
+            remote.scp_to_remote(dsthost, "22", username, password,
+                                 src_tmp, dst_tmp)
+
+
+    def migrate_vms_src(self, mig_data):
+        """
+        Migrate vms source.
+
+        @param mig_Data: Data for migration.
+
+        For change way how machine migrates is necessary
+        re implement this method.
+        """
+        def mig_wrapper(vm, cancel_delay, mig_offline, dsthost, mig_exec_cmd,
+                        not_wait_for_migration, mig_data):
+            vm.migrate(cancel_delay=cancel_delay,
+                       offline=mig_offline,
+                       dest_host=dsthost,
+                       not_wait_for_migration=not_wait_for_migration,
+                       protocol="exec",
+                       migration_exec_cmd_src=mig_exec_cmd)
+
+            self.post_migration(vm, cancel_delay, mig_offline,
+                                dsthost, mig_exec_cmd,
+                                not_wait_for_migration, None, mig_data)
+
+        logging.info("Start migrating now...")
+        cancel_delay = mig_data.params.get("cancel_delay")
+        if cancel_delay is not None:
+            cancel_delay = int(cancel_delay)
+        not_wait_for_migration = mig_data.params.get("not_wait_for_migration")
+        if not_wait_for_migration == "yes":
+            not_wait_for_migration = True
+        mig_offline = mig_data.params.get("mig_offline")
+        if mig_offline == "yes":
+            mig_offline = True
+        else:
+            mig_offline = False
+
+        multi_mig = []
+        for vm in mig_data.vms:
+            mig_exec_cmd = vm.params.get("migration_exec_cmd_src")
+            multi_mig.append((mig_wrapper, (vm, cancel_delay,
+                                            mig_offline,
+                                            mig_data.dst,
+                                            mig_exec_cmd,
+                                            not_wait_for_migration,
+                                            mig_data)))
+        utils_misc.parallel(multi_mig)
+
+
+    def _check_vms_source(self, mig_data):
+        start_mig_tout = mig_data.params.get("start_migration_timeout", None)
+        if start_mig_tout is None:
+            for vm in mig_data.vms:
+                vm.wait_for_login(timeout=self.login_timeout)
+
+        if mig_data.params.get("host_mig_offline") != "yes":
+            self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
+                                'prepare_VMS', 60)
+
+
+    def _check_vms_dest(self, mig_data):
+        if mig_data.params.get("host_mig_offline") != "yes":
+            self._hosts_barrier(mig_data.hosts, mig_data.mig_id,
+                                'prepare_VMS', 120)
+
+
+    def migrate_wait(self, vms_name, srchost, dsthost, start_work=None,
+                      check_work=None, mig_mode="exec", params_append=None):
+        vms_count = len(vms_name)
+        mig_ports = []
+
+        host_offline_migration = self.params.get("host_mig_offline")
+
+        sync = SyncData(self.master_id(), self.hostid,
+                         self.params.get("hosts"),
+                         {'src': srchost, 'dst': dsthost,
+                          'port': "ports"}, self.sync_server)
+
+        mig_params = {}
+
+        if host_offline_migration != "yes":
+            if self.params.get("hostid") == dsthost:
+                last_port = 5199
+                for _ in range(vms_count):
+                    last_port = utils_misc.find_free_port(last_port + 1, 6000)
+                    mig_ports.append(last_port)
+
+            mig_ports = sync.sync(mig_ports, timeout=120)
+            mig_ports = mig_ports[dsthost]
+            logging.debug("Migration port %s" % (mig_ports))
+            mig_cmds = {}
+            for mig_port, vm_name in zip(mig_ports, vms_name):
+                mig_dst_cmd = "nc -l %s %s" % (dsthost, mig_port)
+                mig_src_cmd = "nc %s %s" % (dsthost, mig_port)
+                mig_params["migration_exec_cmd_src_%s" % (vm_name)] = mig_src_cmd
+                mig_params["migration_exec_cmd_dst_%s" % (vm_name)] = mig_dst_cmd
+        else:
+            # Generate filenames for migration.
+            mig_fnam = {}
+            for vm_name in vms_name:
+                while True:
+                    fnam = ("mig_" + utils.generate_random_string(6) +
+                            "." + vm_name)
+                    fpath = os.path.join(self.test.tmpdir, fnam)
+                    if (not fnam in mig_fnam.values() and
+                        not os.path.exists(fnam)):
+                        mig_fnam[vm_name] = fpath
+                        break
+            mig_fs = sync.sync(mig_fnam, timeout=120)
+            mig_cmds = {}
+            # Prepare cmd and files.
+            if self.params.get("hostid") == srchost:
+                mig_src_cmd = "gzip -c > %s"
+                for vm_name in vms_name:
+                    mig_params["migration_sfiles_path_%s" % (vm_name)] = (
+                        mig_fs[srchost][vm_name])
+                    mig_params["migration_dfiles_path_%s" % (vm_name)] = (
+                        mig_fs[dsthost][vm_name])
+
+                    mig_params["migration_exec_cmd_src_%s" % (vm_name)] = (
+                        mig_src_cmd % mig_fs[srchost][vm_name])
+
+            if self.params.get("hostid") == dsthost:
+                mig_dst_cmd = "gzip -c -d %s"
+                for vm_name in vms_name:
+                    mig_params["migration_exec_cmd_dst_%s" % (vm_name)] = (
+                         mig_dst_cmd % mig_fs[dsthost][vm_name])
+
+        logging.debug("Exec commands %s", mig_cmds)
+
+        super_cls = super(MultihostMigrationExec, self)
+        super_cls.migrate_wait(vms_name, srchost, dsthost,
+                               start_work=start_work, mig_mode=mig_mode,
+                               params_append=mig_params)
 
 
 def stop_windows_service(session, service, timeout=120):
@@ -1165,7 +1365,7 @@ def run_file_transfer(test, params, env):
     4) Copy this file from guest to host.
     5) Check if file transfers ended good.
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -1665,7 +1865,7 @@ def restart_guest_network(session, nic_name=None):
 def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     Call another test script in one test script.
-    @param test:   KVM test object.
+    @param test:   QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     @param sub_type: Type of called test script.
