@@ -455,7 +455,8 @@ class VM(virt_vm.BaseVM):
 
         def add_smp(help_text):
             smp_str = " -smp %d" % self.cpuinfo.smp
-            if has_option(help_text, "maxcpus=cpus"):
+            smp_pattern = "smp n\[,maxcpus=cpus\].*"
+            if has_option(help, smp_pattern):
                 smp_str += ",maxcpus=%d" % self.cpuinfo.maxcpus
             smp_str += ",cores=%d" % self.cpuinfo.cores
             smp_str += ",threads=%d" % self.cpuinfo.threads
