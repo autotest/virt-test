@@ -104,7 +104,7 @@ variants:
             setting_cluster_size:
                 # qemu-kvm bug 812705
                 no Host_RHEL.5
-                image_cluster_size = 4096
+                cluster_size = 4096
                 only qcow2
         variants:
             # Install guest from cdrom
