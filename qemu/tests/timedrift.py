@@ -101,9 +101,9 @@ def run_timedrift(test, params, env):
             # Get time before load
             # (ht stands for host time, gt stands for guest time)
             (ht0, gt0) = utils_test.get_time(session,
-                                                 time_command,
-                                                 time_filter_re,
-                                                 time_format)
+                                             time_command,
+                                             time_filter_re,
+                                             time_format)
 
             # Run some load on the guest
             for load_session in guest_load_sessions:
@@ -112,13 +112,13 @@ def run_timedrift(test, params, env):
             # Run some load on the host
             logging.info("Starting load on host...")
             for i in range(host_load_instances):
-                host_load_sessions.append(
-                    aexpect.run_bg(host_load_command,
-                                   output_func=logging.debug,
-                                   output_prefix="(host load %d) " % i,
-                                   timeout=0.5))
+                load_cmd = aexpect.run_bg(host_load_command,
+                                          output_func=logging.debug,
+                                          output_prefix="(host load %d) " % i,
+                                          timeout=0.5)
+                host_load_sessions.append(load_cmd)
                 # Set the CPU affinity of the load process
-                pid = host_load_sessions[-1].get_pid()
+                pid = load_cmd.get_pid()
                 set_cpu_affinity(pid, cpu_mask)
 
             # Sleep for a while (during load)
@@ -127,9 +127,9 @@ def run_timedrift(test, params, env):
 
             # Get time delta after load
             (ht1, gt1) = utils_test.get_time(session,
-                                                 time_command,
-                                                 time_filter_re,
-                                                 time_format)
+                                             time_command,
+                                             time_filter_re,
+                                             time_format)
 
             # Report results
             host_delta = ht1 - ht0
@@ -158,9 +158,9 @@ def run_timedrift(test, params, env):
 
         # Get time after rest
         (ht2, gt2) = utils_test.get_time(session,
-                                             time_command,
-                                             time_filter_re,
-                                             time_format)
+                                         time_command,
+                                         time_filter_re,
+                                         time_format)
 
     finally:
         session.close()
