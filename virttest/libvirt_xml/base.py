@@ -88,10 +88,11 @@ class LibvirtXMLBase(propcan.PropCanBase):
         Returns a copy of instance not sharing any references or modifications
         """
         # help keep line length short, virsh is not a property
-        the_copy = self.__class__(self.virsh)
+        the_copy = self.__class__(virsh_instance=self.virsh)
         try:
             # file may not be accessable, obtain XML string value
             xmlstr = str(self.dict_get('xml'))
+            # Create fresh/new XMLTreeFile along with tmp files from XML content
             the_copy.dict_set('xml', xml_utils.XMLTreeFile(xmlstr))
         except xcepts.LibvirtXMLError: # Allow other exceptions through
             pass # no XML was loaded yet

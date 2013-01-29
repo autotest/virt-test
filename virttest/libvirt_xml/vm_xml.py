@@ -106,7 +106,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def vm_rename(vm, new_name, uuid=None):
+    def vm_rename(vm, new_name, uuid=None, virsh_instance=virsh):
         """
         Rename a vm from its XML.
 
@@ -118,7 +118,7 @@ class VMXML(VMXMLBase):
         if vm.is_alive():
             vm.destroy(gracefully=True)
 
-        vmxml = VMXML.new_from_dumpxml(vm.name)
+        vmxml = VMXML.new_from_dumpxml(vm.name, virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:
