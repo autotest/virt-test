@@ -1974,7 +1974,7 @@ class VM(virt_vm.BaseVM):
                     session.sendline(self.params.get("shutdown_command"))
                     logging.debug("Shutdown command sent; waiting for VM "
                                   "to go down")
-                    if self.wait_for_shutdown(timeout)
+                    if self.wait_for_shutdown(timeout):
                         logging.debug("VM is down")
                         return True
                 finally:
