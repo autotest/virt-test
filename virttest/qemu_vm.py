@@ -1949,12 +1949,12 @@ class VM(virt_vm.BaseVM):
                 # Unconditionally pause the vm before trying to quit using
                 # the monitor.
                 self.pause()
-                vm_died_ok = utils_misc.wait_for(
+                vm_paused_ok = utils_misc.wait_for(
                                            self.monitor.verify_status("paused"),
                                            kill_timeout,
                                            1, 1)
 
-                if vm_died_ok is None:
+                if vm_paused_ok is None:
                     logging.warning("VM did not pause as requested after %s s"
                                     "killing it anyway...",
                                     kill_timeout)
