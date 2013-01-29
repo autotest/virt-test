@@ -1502,8 +1502,9 @@ class VM(virt_vm.BaseVM):
             params.get("disable_kvm", "no") == "yes"):
             qemu_cmd += " -no-kvm "
 
-        if (has_option(help_text, "no-shutdown") and
-            params.get("disable_shutdown", "no") == "yes"):
+        self.no_shutdown = (has_option(help_text, "no-shutdown") and
+                            params.get("disable_shutdown", "no") == "yes")
+        if self.no_shutdown:
             qemu_cmd += " -no-shutdown "
 
         if params.get("enable_sga") == "yes":
@@ -1940,14 +1941,25 @@ class VM(virt_vm.BaseVM):
         Helps until the VM is shut down by the guest.
 
         Returns True in case the VM was shut down, None otherwise.
+
+        Note that the VM is not necessarily dead when this function returns
+        True. If QEMU is running in -no-shutdown mode, the QEMU process
+        may be still alive.
         """
-        return self.wait_until_dead(timeout, 1, 1)
+        if self.no_shutdown:
+            return self.wait_until_paused(timeout)
+        else:
+            return self.wait_until_dead(timeout, 1, 1)
 
     def graceful_shutdown(self, timeout=60):
         """
         Try to gracefully shut down the VM
 
         Returns True if VM was successfully shut down, None otherwise.
+
+        Note that the VM is not necessarily dead when this function returns
+        True. If QEMU is running in -no-shutdown mode, the QEMU process
+        may be still alive.
         """
         if self.params.get("shutdown_command"):
             # Try to destroy with shell command
@@ -1991,7 +2003,8 @@ class VM(virt_vm.BaseVM):
 
             kill_timeout = int(self.params.get("kill_timeout", "60"))
             if gracefully:
-                if self.graceful_shutdown(kill_timeout):
+                self.graceful_shutdown(kill_timeout)
+                if self.is_dead():
                     return
 
 
