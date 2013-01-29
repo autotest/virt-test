@@ -2192,6 +2192,16 @@ class VM(virt_vm.BaseVM):
         return utils_misc.wait_for(lambda: self.monitor.verify_status(status),
                                    timeout, first, step, text)
 
+    def wait_until_paused(self, timeout):
+        """Wait until the VM is paused
+
+        Returns True in case the VM is paused before timeout, otherwise
+        return None.
+
+        @param timeout: Timeout in seconds
+        """
+        return self.wait_for_status("paused", timeout)
+
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
         Destroy the VM.
@@ -2240,7 +2250,7 @@ class VM(virt_vm.BaseVM):
                 logging.debug("Trying to kill VM with monitor command")
                 if self.params.get("kill_vm_only_when_paused") == "yes":
                     try:
-                        if self.wait_for_status("paused", kill_timeout):
+                        if self.wait_until_paused(kill_timeout):
                             logging.debug("Killing already paused VM '%s'",
                                           self.name)
                     except:
