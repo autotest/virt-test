@@ -1950,7 +1950,7 @@ class VM(virt_vm.BaseVM):
                     try:
                         if utils_misc.wait_for(
                                  lambda: self.monitor.verify_status("paused"),
-                                               kill_timeout, 1, 1):
+                                               kill_timeout)
                             logging.debug("Killing already paused VM '%s'",
                                           self.name)
                     except:
