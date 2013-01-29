@@ -1934,6 +1934,15 @@ class VM(virt_vm.BaseVM):
         """
         return utils_misc.wait_for(self.is_dead, timeout, first, step)
 
+    def wait_for_shutdown(self, timeout=60):
+        """Wait until guest shuts down
+
+        Helps until the VM is shut down by the guest.
+
+        Returns True in case the VM was shut down, None otherwise.
+        """
+        return self.wait_until_dead(timeout, 1, 1)
+
     def graceful_shutdown(self, timeout=60):
         """
         Try to gracefully shut down the VM
@@ -1953,9 +1962,9 @@ class VM(virt_vm.BaseVM):
                     session.sendline(self.params.get("shutdown_command"))
                     logging.debug("Shutdown command sent; waiting for VM "
                                   "to go down")
-                    if self.wait_until_dead(timeout, 1, 1):
+                    if self.wait_for_shutdown(timeout)
                         logging.debug("VM is down")
-                        return
+                        return True
                 finally:
                     session.close()
 
