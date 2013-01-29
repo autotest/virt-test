@@ -4,7 +4,7 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, fcntl, re, commands, errno
+import time, os, logging, fcntl, re, commands
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
@@ -1972,7 +1972,7 @@ class VM(virt_vm.BaseVM):
         """
         if self.params.get("shutdown_command"):
             # Try to destroy with shell command
-            logging.debug("Trying to shutdown VM with shell command")
+            logging.debug("Shutting down VM %s (shell)", self.name)
             try:
                 session = self.login()
             except (remote.LoginError, virt_vm.VMError), e:
@@ -1981,13 +1981,50 @@ class VM(virt_vm.BaseVM):
                 try:
                     # Send the shutdown command
                     session.sendline(self.params.get("shutdown_command"))
-                    logging.debug("Shutdown command sent; waiting for VM "
-                                  "to go down")
                     if self.wait_for_shutdown(timeout):
-                        logging.debug("VM is down")
                         return True
                 finally:
                     session.close()
+
+
+    def _cleanup(self, free_mac_addresses):
+        """
+        Removes VM monitor files.
+
+        @param free_mac_addresses: Whether to release the VM's NICs back
+                to the address pool.
+        """
+        self.monitors = []
+        if self.pci_assignable:
+            self.pci_assignable.release_devs()
+            self.pci_assignable = None
+        if self.process:
+            self.process.close()
+        if self.serial_console:
+            self.serial_console.close()
+
+        # Generate the tmp file which should be deleted.
+        file_list = [self.get_testlog_filename()]
+        file_list += self.get_monitor_filenames()
+        file_list += self.get_virtio_port_filenames()
+        file_list += self.get_serial_console_filenames()
+        file_list += self.logs.values()
+
+        for f in file_list:
+            try:
+                os.unlink(f)
+            except OSError:
+                pass
+
+        if hasattr(self, "migration_file"):
+            try:
+                os.unlink(self.migration_file)
+            except OSError:
+                pass
+
+        if free_mac_addresses:
+            for nic_index in xrange(0,len(self.virtnet)):
+                self.free_mac_address(nic_index)
 
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
@@ -2009,17 +2046,22 @@ class VM(virt_vm.BaseVM):
             if self.is_dead():
                 return
 
-            logging.debug("Destroying VM with PID %s", self.get_pid())
+            logging.debug("Destroying VM %s (PID %s)", self.name,
+                          self.get_pid())
 
             kill_timeout = int(self.params.get("kill_timeout", "60"))
+
             if gracefully:
                 self.graceful_shutdown(kill_timeout)
                 if self.is_dead():
+                    logging.debug("VM %s down (shell)", self.name)
                     return
+                else:
+                    logging.debug("VM %s failed to go down (shell)", self.name)
 
             if self.monitor:
-                # Try to destroy with a monitor command
-                logging.debug("Trying to kill VM with monitor command")
+                # Try to finish process with a monitor command
+                logging.debug("Ending VM %s process (monitor)", self.name)
                 try:
                     self.monitor.quit()
                 except qemu_monitor.MonitorError, e:
@@ -2027,49 +2069,29 @@ class VM(virt_vm.BaseVM):
                 else:
                     # Wait for the VM to be really dead
                     if self.wait_until_dead(5, 0.5, 0.5):
-                        logging.debug("VM is down")
+                        logging.debug("VM %s down (monitor)", self.name)
                         return
+                    else:
+                        logging.debug("VM %s failed to go down (monitor)",
+                                      self.name)
 
             # If the VM isn't dead yet...
-            logging.debug("Cannot quit normally, sending a kill to close the "
-                          "deal")
-            utils_misc.kill_process_tree(self.process.get_pid(), 9)
+            pid = self.process.get_pid()
+            logging.debug("Ending VM %s process (killing PID %s)",
+                          self.name, pid)
+            utils_misc.kill_process_tree(pid, 9)
+
             # Wait for the VM to be really dead
             if utils_misc.wait_for(self.is_dead, 5, 0.5, 0.5):
-                logging.debug("VM is down")
+                logging.debug("VM %s down (process killed)", self.name)
                 return
 
-            logging.error("Process %s is a zombie!", self.process.get_pid())
+            # If all else fails, we've got a zombie...
+            logging.error("VM %s (PID %s) is a zombie!", self.name,
+                          self.process.get_pid())
 
         finally:
-            self.monitors = []
-            if self.pci_assignable:
-                self.pci_assignable.release_devs()
-                self.pci_assignable = None
-            if self.process:
-                self.process.close()
-            if self.serial_console:
-                self.serial_console.close()
-
-            # Generate the tmp file which should be deleted.
-            file_list = [self.get_testlog_filename()]
-            file_list += self.get_monitor_filenames()
-            file_list += self.get_virtio_port_filenames()
-            file_list += self.get_serial_console_filenames()
-
-            for f in file_list:
-                try:
-                    os.unlink(f)
-                except OSError:
-                    pass
-            if hasattr(self, "migration_file"):
-                try:
-                    os.unlink(self.migration_file)
-                except OSError:
-                    pass
-            if free_mac_addresses:
-                for nic_index in xrange(0,len(self.virtnet)):
-                    self.free_mac_address(nic_index)
+            self._cleanup(free_mac_addresses)
 
 
     @property
@@ -2534,8 +2556,6 @@ class VM(virt_vm.BaseVM):
             raise virt_vm.VMMigrateProtoUnsupportedError
 
         error.base_context("migrating '%s'" % self.name)
-
-
 
         local = dest_host == "localhost"
         mig_fd_name = None
