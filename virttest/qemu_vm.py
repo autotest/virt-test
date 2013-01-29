@@ -1934,6 +1934,31 @@ class VM(virt_vm.BaseVM):
         """
         return utils_misc.wait_for(self.is_dead, timeout, first, step)
 
+    def graceful_shutdown(self, timeout=60):
+        """
+        Try to gracefully shut down the VM
+
+        Returns True if VM was successfully shut down, None otherwise.
+        """
+        if self.params.get("shutdown_command"):
+            # Try to destroy with shell command
+            logging.debug("Trying to shutdown VM with shell command")
+            try:
+                session = self.login()
+            except (remote.LoginError, virt_vm.VMError), e:
+                logging.debug(e)
+            else:
+                try:
+                    # Send the shutdown command
+                    session.sendline(self.params.get("shutdown_command"))
+                    logging.debug("Shutdown command sent; waiting for VM "
+                                  "to go down")
+                    if self.wait_until_dead(timeout, 1, 1):
+                        logging.debug("VM is down")
+                        return
+                finally:
+                    session.close()
+
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
         Destroy the VM.
@@ -1956,25 +1981,10 @@ class VM(virt_vm.BaseVM):
             logging.debug("Destroying VM with PID %s", self.get_pid())
 
             kill_timeout = int(self.params.get("kill_timeout", "60"))
+            if gracefully:
+                if self.graceful_shutdown(kill_timeout):
+                    return
 
-            if gracefully and self.params.get("shutdown_command"):
-                # Try to destroy with shell command
-                logging.debug("Trying to shutdown VM with shell command")
-                try:
-                    session = self.login()
-                except (remote.LoginError, virt_vm.VMError), e:
-                    logging.debug(e)
-                else:
-                    try:
-                        # Send the shutdown command
-                        session.sendline(self.params.get("shutdown_command"))
-                        logging.debug("Shutdown command sent; waiting for VM "
-                                      "to go down")
-                        if self.wait_until_dead(kill_timeout, 1, 1):
-                            logging.debug("VM is down")
-                            return
-                    finally:
-                        session.close()
 
             if self.monitor:
                 # Try to destroy with a monitor command
