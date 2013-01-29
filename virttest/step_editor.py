@@ -1278,7 +1278,7 @@ class StepEditor(StepMakerWindow):
         header = ""
 
         fileobj = open(filename, "r")
-        for line in file.readlines():
+        for line in fileobj.readlines():
             words = line.split()
             if not words:
                 continue
