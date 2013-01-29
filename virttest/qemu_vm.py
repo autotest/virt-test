@@ -2178,6 +2178,19 @@ class VM(virt_vm.BaseVM):
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
 
+    def wait_for_status(self, status, timeout, first=0.0, step=1.0, text=None):
+        """Wait until the VM status changes to specified status
+
+        Returns True in case the status has changed before timeout, otherwise
+        return None.
+
+        @param timeout: Timeout in seconds
+        @param first: Time to sleep before first attempt
+        @param steps: Time to sleep between attempts in seconds
+        @param text: Text to print while waiting, for debug purposes
+        """
+        return utils_misc.wait_for(lambda: self.monitor.verify_status(status),
+                                   timeout, first, step, text)
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
@@ -2227,9 +2240,7 @@ class VM(virt_vm.BaseVM):
                 logging.debug("Trying to kill VM with monitor command")
                 if self.params.get("kill_vm_only_when_paused") == "yes":
                     try:
-                        if utils_misc.wait_for(
-                                 lambda: self.monitor.verify_status("paused"),
-                                               kill_timeout)
+                        if self.wait_for_status("paused", kill_timeout):
                             logging.debug("Killing already paused VM '%s'",
                                           self.name)
                     except:
