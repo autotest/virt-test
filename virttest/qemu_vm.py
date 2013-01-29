@@ -2179,10 +2179,12 @@ class VM(virt_vm.BaseVM):
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
 
-    def wait_for_status(self, status, timeout, first=0.0, step=1.0, text=None):
-        """Wait until the VM status changes to specified status
 
-        Returns True in case the status has changed before timeout, otherwise
+    def wait_for_status(self, status, timeout, first=0.0, step=1.0, text=None):
+        """
+        Wait until the VM status changes to specified status
+
+        @return: True in case the status has changed before timeout, otherwise
         return None.
 
         @param timeout: Timeout in seconds
@@ -2193,20 +2195,24 @@ class VM(virt_vm.BaseVM):
         return utils_misc.wait_for(lambda: self.monitor.verify_status(status),
                                    timeout, first, step, text)
 
-    def wait_until_paused(self, timeout):
-        """Wait until the VM is paused
 
-        Returns True in case the VM is paused before timeout, otherwise
+    def wait_until_paused(self, timeout):
+        """
+        Wait until the VM is paused.
+
+        @return: True in case the VM is paused before timeout, otherwise
         return None.
 
         @param timeout: Timeout in seconds
         """
         return self.wait_for_status("paused", timeout)
 
-    def wait_until_dead(self, timeout, first=0.0, step=1.0):
-        """Wait until VM is dead
 
-        Returns True if VM is dead before timeout, otherwise returns None.
+    def wait_until_dead(self, timeout, first=0.0, step=1.0):
+        """
+        Wait until VM is dead.
+
+        @return: True if VM is dead before timeout, otherwise returns None.
 
         @param timeout: Timeout in seconds
         @param first: Time to sleep before first attempt
@@ -2214,12 +2220,14 @@ class VM(virt_vm.BaseVM):
         """
         return utils_misc.wait_for(self.is_dead, timeout, first, step)
 
+
     def wait_for_shutdown(self, timeout=60):
-        """Wait until guest shuts down
+        """
+        Wait until guest shuts down.
 
         Helps until the VM is shut down by the guest.
 
-        Returns True in case the VM was shut down, None otherwise.
+        @return: True in case the VM was shut down, None otherwise.
 
         Note that the VM is not necessarily dead when this function returns
         True. If QEMU is running in -no-shutdown mode, the QEMU process
@@ -2230,11 +2238,12 @@ class VM(virt_vm.BaseVM):
         else:
             return self.wait_until_dead(timeout, 1, 1)
 
+
     def graceful_shutdown(self, timeout=60):
         """
-        Try to gracefully shut down the VM
+        Try to gracefully shut down the VM.
 
-        Returns True if VM was successfully shut down, None otherwise.
+        @return: True if VM was successfully shut down, None otherwise.
 
         Note that the VM is not necessarily dead when this function returns
         True. If QEMU is running in -no-shutdown mode, the QEMU process
@@ -2258,6 +2267,7 @@ class VM(virt_vm.BaseVM):
                         return True
                 finally:
                     session.close()
+
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
@@ -2285,7 +2295,6 @@ class VM(virt_vm.BaseVM):
                 self.graceful_shutdown(kill_timeout)
                 if self.is_dead():
                     return
-
 
             if self.monitor:
                 # Try to destroy with a monitor command
