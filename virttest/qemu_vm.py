@@ -4,7 +4,7 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, fcntl, re, commands, errno
+import time, os, logging, fcntl, re, commands
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
@@ -1946,15 +1946,19 @@ class VM(virt_vm.BaseVM):
             if self.monitor:
                 # Try to destroy with a monitor command
                 logging.debug("Trying to kill VM with monitor command")
-                if self.params.get("kill_vm_only_when_paused") == "yes":
-                    try:
-                        if utils_misc.wait_for(
-                                 lambda: self.monitor.verify_status("paused"),
-                                               kill_timeout, 1, 1):
-                            logging.debug("Killing already paused VM '%s'",
-                                          self.name)
-                    except:
-                        logging.info("Killing running VM '%s'", self.name)
+                # Unconditionally pause the vm before trying to quit using
+                # the monitor.
+                self.pause()
+                vm_paused_ok = utils_misc.wait_for(
+                                           self.monitor.verify_status("paused"),
+                                           kill_timeout,
+                                           1, 1)
+
+                if vm_paused_ok is None:
+                    logging.warning("VM did not pause as requested after %s s"
+                                    "killing it anyway...",
+                                    kill_timeout)
+
                 try:
                     self.monitor.quit()
                 except qemu_monitor.MonitorError, e:
