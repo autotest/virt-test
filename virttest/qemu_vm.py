@@ -2011,13 +2011,6 @@ class VM(virt_vm.BaseVM):
             if self.monitor:
                 # Try to destroy with a monitor command
                 logging.debug("Trying to kill VM with monitor command")
-                if self.params.get("kill_vm_only_when_paused") == "yes":
-                    try:
-                        if self.wait_until_paused(kill_timeout):
-                            logging.debug("Killing already paused VM '%s'",
-                                          self.name)
-                    except:
-                        logging.info("Killing running VM '%s'", self.name)
                 try:
                     self.monitor.quit()
                 except qemu_monitor.MonitorError, e:
