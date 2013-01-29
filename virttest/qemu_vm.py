@@ -2202,6 +2202,17 @@ class VM(virt_vm.BaseVM):
         """
         return self.wait_for_status("paused", timeout)
 
+    def wait_until_dead(self, timeout, first=0.0, step=1.0):
+        """Wait until VM is dead
+
+        Returns True if VM is dead before timeout, otherwise returns None.
+
+        @param timeout: Timeout in seconds
+        @param first: Time to sleep before first attempt
+        @param steps: Time to sleep between attempts in seconds
+        """
+        return utils_misc.wait_for(self.is_dead, timeout, first, step)
+
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
         Destroy the VM.
@@ -2238,8 +2249,7 @@ class VM(virt_vm.BaseVM):
                         session.sendline(self.params.get("shutdown_command"))
                         logging.debug("Shutdown command sent; waiting for VM "
                                       "to go down")
-                        if utils_misc.wait_for(self.is_dead, kill_timeout,
-                                               1, 1):
+                        if self.wait_until_dead(kill_timeout, 1, 1):
                             logging.debug("VM is down")
                             return
                     finally:
@@ -2261,7 +2271,7 @@ class VM(virt_vm.BaseVM):
                     logging.warn(e)
                 else:
                     # Wait for the VM to be really dead
-                    if utils_misc.wait_for(self.is_dead, 5, 0.5, 0.5):
+                    if self.wait_until_dead(5, 0.5, 0.5):
                         logging.debug("VM is down")
                         return
 
