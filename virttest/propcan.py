@@ -1,5 +1,79 @@
-# Can't reliably combine use of properties and __slots__ (both set descriptors)
-class PropCanBase(dict):
+"""
+Class which allows property and dict-like access to a fixed set of instance
+attributes.  Attributes are locked by __slots__, however accessor methods
+may be created/removed on instances, or defined by the subclass.  An
+INITIALIZED attribute is provided to signel completion of __init__()
+for use by accessor methods (i.e. so they know when __init__ may be
+setting values).
+
+Subclasses must define a __slots__ class attribute containing the list
+of attribute names to reserve.  All additional subclass descendents
+must explicitly copy __slots__ from the parent in their definition.
+
+Users of subclass instances are expected to get/set/del attributes
+only via the standard object or dict-like interface.  i.e.
+
+instance.attribute = whatever
+or
+instance['attribute'] = whatever
+
+Internally, methods are free to call the accessor methods.  Only
+accessor methods should use the special dict_*() and super_*() methods.
+These are there to allow convenient access to the internal dictionary
+values and subclass-defined attributes (such as __slots__).
+"""
+
+class PropCanInternal(object):
+    """
+    Semi-private methods for use only by PropCanBase subclasses (NOT instances)
+    """
+
+    # The following methods are intended for use by accessor-methods
+    # where they may need to bypass the special attribute/key handling
+
+    def dict_get(self, key):
+        """
+        Get a key unconditionally, w/o checking for accessor method or __slots__
+        """
+        return dict.__getitem__(self, key)
+
+
+    def dict_set(self, key, value):
+        """
+        Set a key unconditionally, w/o checking for accessor method or __slots__
+        """
+        dict.__setitem__(self, key, value)
+
+
+    def dict_del(self, key):
+        """
+        Del key unconditionally, w/o checking for accessor method or __slots__
+        """
+        return dict.__delitem__(self, key)
+
+
+    def super_get(self, key):
+        """
+        Get attribute unconditionally, w/o checking accessor method or __slots__
+        """
+        return object.__getattribute__(self, key)
+
+
+    def super_set(self, key, value):
+        """
+        Set attribute unconditionally, w/o checking accessor method or __slots__
+        """
+        object.__setattr__(self, key, value)
+
+
+    def super_del(self, key):
+        """
+        Del attribute unconditionally, w/o checking accessor method or __slots__
+        """
+        object.__delattr__(self, key)
+
+
+class PropCanBase(dict, PropCanInternal):
     """
     Objects with optional accessor methods and dict-like access to fixed set of keys
     """
@@ -44,11 +118,11 @@ class PropCanBase(dict):
 
 
     def __setitem__(self, key, value):
+        self.__canhaz__(key, KeyError)
         try:
             accessor = super(PropCanBase,
                              self).__getattribute__('set_%s' % key)
         except AttributeError:
-            self.__canhaz__(key, KeyError)
             return super(PropCanBase, self).__setitem__(key, value)
         return accessor(value)
 
@@ -91,6 +165,9 @@ class PropCanBase(dict):
 
 
     def __canhaz__(self, key, excpt=AttributeError):
+        """
+        Quickly determine if an accessor or instance attribute name is defined.
+        """
         slots = tuple(super(PropCanBase, self).__getattribute__('__slots__'))
         keys = slots + ('get_%s' % key, 'set_%s' % key, 'del_%s' % key)
         if key not in keys:
@@ -99,58 +176,15 @@ class PropCanBase(dict):
 
 
     def copy(self):
+        """
+        Copy properties by value, not by reference.
+        """
         return self.__class__(dict(self))
-
-
-    # The following methods are intended for use by accessor-methods
-    # where they may need to bypass the special attribute/key handling
-    # that's setup above.
-
-    def dict_get(self, key):
-        """
-        Get a key unconditionally, w/o checking for accessor method or __slots__
-        """
-        return dict.__getitem__(self, key)
-
-
-    def dict_set(self, key, value):
-        """
-        Set a key unconditionally, w/o checking for accessor method or __slots__
-        """
-        dict.__setitem__(self, key, value)
-
-
-    def dict_del(self, key):
-        """
-        Del key unconditionally, w/o checking for accessor method or __slots__
-        """
-        return dict.__delitem__(self, key)
-
-
-    def super_get(self, key):
-        """
-        Get attribute unconditionally, w/o checking accessor method or __slots__
-        """
-        return object.__getattribute__(self, key)
-
-
-    def super_set(self, key, value):
-        """
-        Set attribute unconditionally, w/o checking accessor method or __slots__
-        """
-        object.__setattr__(self, key, value)
-
-
-    def super_del(self, key):
-        """
-        Del attribute unconditionally, w/o checking accessor method or __slots__
-        """
-        object.__delattr__(self, key)
 
 
 class PropCan(PropCanBase):
     """
-    Special value handling on retrieval of None/False values
+    Special value handling on retrieval of None values
     """
 
     def __len__(self):
