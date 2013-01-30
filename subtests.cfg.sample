@@ -2447,73 +2447,49 @@ variants:
         black_list = C: D:
         start_vm = no
         variants:
-            - signal_repeat:
+            - one_disk_repeat:
                 images += " stg"
                 image_format_stg = qcow2
                 image_name_stg = storage
                 image_size_stg = 1G
+                drive_index_stg = 1
+                image_boot_stg = no
+                force_create_image_stg = yes
+                remove_image_stg = yes
                 n_repeat = 10
             - max_disk:
-                no ide
-                usbs = ""
-                usb_devices = ""
-                drive_pci_addr_image1 = 4
-                drive_format = virtio
-                stg_image_num = 24
-                stg_image_size = 5G
-                stg_image_boot = no
-                # other variants.
-                # stg_image_format = qcow2
-                # stg_drive_format = virtio
-            - all_drive_format_types:
-                stg_image_size = 1M
-                stg_params = "drive_format:ide,scsi,virtio,scsi-hd,usb2"
-                usbs += " default-ehci"
-                usb_type_default-ehci = usb-ehci
-            - virtio_scsi_variants:
-                # Decrease length of the command
-                stg_image_name = '/tmp/%s'
-                stg_image_size = 1M
-                stg_params = "drive_format:scsi-disk "
-                variants:
-                    - @passthrough:
-                        # We need to unload scsi_debug modules used by VM
-                        kill_vm = yes
-                        force_create_image = no
-                        pre_command = "modprobe scsi_debug && echo 9 > /sys/bus/pseudo/drivers/scsi_debug/add_host"
-                        post_command = "rmmod scsi_debug"
-                        stg_params += "image_raw_device:yes "
-                        stg_params += "image_format:raw "
-                        stg_params += "indirect_image_select:range(-9,0) "
-                        variants:
-                            - block:
-                                stg_params += "image_name:/dev/sd* "
-                            - generic:
-                                stg_params += "drive_format:scsi-generic "
-                                stg_params += "image_name:/dev/sg* "
-                    - multi_lun:
-                        stg_params += "drive_lun:range(0,16383,63) "
-                    - multi_scsiid_lun:
-                        stg_params += "drive_scsiid:range(0,255,1,3) "
-                        stg_params += "drive_lun:range(0,16383,8191) "
-                    - multi_bus_scsiid_lun:
-                        stg_params += "drive_bus:range(0,15,1,9) "
-                        stg_params += "drive_scsiid:range(0,255,127,3) "
-                        stg_params += "drive_lun:range(0,16383,8191) "
-            - debug_params:
-                # Remove this to execute this test-params-devel test
-                no multi_disk
-                # Dont run the actual test, only show the disk setup
-                multi_disk_params_only = yes
-                stg_image_name = '/tmp/%s'
-                stg_image_size = 1M
-                stg_params += "list_params:item1,item2,item3 "
-                stg_params += "simplerange:range(55) "
-                stg_params += "fullrange:range(first,last,step,multiple_items) "
-                stg_params += "range_0-all_disk:range(n) "
+                ide:
+                    images += " stg stg2 stg3"
+                    image_format_stg = qcow2
+                    image_name_stg = storage
+                    image_size_stg = 1G
+                    image_format_stg2 = qcow2
+                    image_name_stg2 = storage2
+                    image_size_stg2 = 10G
+                    image_format_stg3 = raw
+                    image_name_stg3 = storage3
+                    image_size_stg3 = 5G
+                virtio_blk:
+                    usbs = ""
+                    usb_devices = ""
+                    drive_pci_addr_image1 = 4
+                    drive_format = virtio
+                    stg_image_num = 24
+                    stg_image_size = 5G
+                    stg_image_boot = no
+                    # other variants.
+                    # stg_image_format = qcow2
+                    # stg_drive_format = virtio
+                    # stg_assign_index = yes
+                    Linux:
+                        image_size_image1 = 20G
+                    Windows:
+                        image_size_image1 = 30G
 
-    - clock_getres: install setup image_copy unattended_install.cdrom
-        only Linux
+    - clock_getres:
+        no Windows
+        no RHEL.3
+        no RHEL.4
         type = clock_getres
 
     - yum_update: install setup image_copy unattended_install.cdrom
@@ -2616,9 +2592,9 @@ variants:
         usb_type = usb-ehci
         usb_max_port_usb1 = 6
         usb_max_port = 6
-        usb_devices = ""
+        start_vm = no
         variants:
-            - signal_repeat:
+            - one_disk_repeat:
                 images += " stg"
                 image_format_stg = qcow2
                 image_name_stg = storage
