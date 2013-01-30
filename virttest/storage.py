@@ -107,7 +107,12 @@ def get_image_filename(params, root_dir):
                                         (re_name, matching_images,
                                          indirect_image_select))
         for protected in params.get('indirect_image_blacklist', '').split(' '):
-            if re.match(protected, image_name):
+            match_image = re.match(protected, image_name)
+            if match_image and match_image.group(0) == image_name:
+                """
+                We just need raise an error if it is totally match, such as
+                sda sda1 and so on, but sdaa should not raise an error.
+                """
                 raise virt_vm.VMDeviceError("Matching disk is in blacklist. "
                                             "name = '%s', matching = '%s' and "
                                             "selector = '%s'" %
