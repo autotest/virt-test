@@ -842,7 +842,7 @@ variants:
             post_cmd = del c:\cmd.exe
             file_system = "ntfs fat32"
             cmd_list = "copy_to_command copy_from_command"
-            list_volume_command = wmic volume get driveletter
+            list_volume_command = 'wmic volume get DriveLetter,FileSystem | more +1 | find /V "CDFS"'
             re_str = "([A-Z]:)"
             format_command = format /fs:%s %s /q /y
             copy_to_command = copy C:\WINDOWS\system32\cmd.exe %s /y
