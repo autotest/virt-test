@@ -49,6 +49,7 @@ variants:
         kernel = vmlinuz
         initrd = initrd.img
         nic_mode = tap
+        image_verify_bootable = no
         PAE:
             type = image_copy
             vms = ''
@@ -267,6 +268,7 @@ variants:
         nettype = bridge
         restart_vm = yes
         pxe_timeout = 60
+        image_verify_bootable = no
         variants:
             - etherboot:
                 pre_command = "alternatives --display qemu-pxe-roms |grep -q etherboot && alternatives --set 'qemu-pxe-roms' /usr/share/etherboot || true"
@@ -2751,6 +2753,7 @@ variants:
         reboot_method = system_reset
         sleep_before_reset = 20
         kill_vm_on_error = yes
+        image_verify_bootable = no
 
     - system_reset_bootable:
         type = system_reset_bootable
@@ -2758,6 +2761,7 @@ variants:
         reset_times = 20
         wait_time_for_reset = 120
         kill_vm_on_error = yes
+        image_verify_bootable = no
 
     - system_reset_during_boot:
         type = system_reset_bootable
@@ -2766,6 +2770,7 @@ variants:
         get_boot_time = yes
         reset_during_boot = yes
         fixed_interval = no
+        image_verify_bootable = no
 
     - 9p: install setup image_copy unattended_install.cdrom
         only Linux
@@ -2788,6 +2793,7 @@ variants:
         kill_vm = yes
         boot_menu = on
         enable_sga = yes
+        image_verify_bootable = no
         boot_menu_key = "f12"
         restart_key = "ctrl-alt-delete"
         boot_menu_hint = "Press F12 for boot menu"

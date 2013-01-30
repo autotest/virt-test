@@ -139,6 +139,10 @@ image_size = 10G
 image_raw_device = no
 # Name of image, or path to device node if using image_raw_device
 image_name = image
+# Verify whether guest boot from Hard disk.
+image_verify_bootable = yes
+# Pattern for verifying whether boot up from Hard disk.
+image_unbootable_pattern = "Hard Disk.*not a bootable disk"
 
 # Host-side caching to use. This option is passed directly to qemu(-kvm) so
 # any valid qemu cache option is valid here. A quick reference for the
