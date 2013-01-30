@@ -228,8 +228,8 @@ class HumanMonitor(Monitor):
     Wraps "human monitor" commands.
     """
 
-    PROMPT_TIMEOUT = 20
-    CMD_TIMEOUT = 20
+    PROMPT_TIMEOUT = 60
+    CMD_TIMEOUT = 60
 
     def __init__(self, name, filename, suppress_exceptions=False):
         """
@@ -620,9 +620,9 @@ class QMPMonitor(Monitor):
     """
 
     READ_OBJECTS_TIMEOUT = 5
-    CMD_TIMEOUT = 20
-    RESPONSE_TIMEOUT = 20
-    PROMPT_TIMEOUT = 20
+    CMD_TIMEOUT = 60
+    RESPONSE_TIMEOUT = 60
+    PROMPT_TIMEOUT = 60
 
     def __init__(self, name, filename, suppress_exceptions=False):
         """
