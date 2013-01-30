@@ -242,6 +242,31 @@ class Env(UserDict.IterableUserDict):
         return [o for o in self.values() if is_vm(o)]
 
 
+    def clean_objects(self):
+        """
+        Destroy all objects registered in this Env object.
+        """
+        for key in self.data:
+            try:
+                if key.startswith("vm__"):
+                    self.data[key].destroy()
+                elif key == "tcpdump":
+                    self.data[key].close()
+            except Exception:
+                pass
+        self.data = {}
+
+
+    def destroy(self):
+        """
+        Destroy all objects stored in Env and remove the backing file.
+        """
+        self.clean_objects()
+        if self._filename is not None:
+            if os.path.isfile(self._filename):
+                os.unlink(self._filename)
+
+
     def get_vm(self, name):
         """
         Return a VM object by its name.
