@@ -1,4 +1,4 @@
-import os, time, commands, re, logging, glob, threading, shutil
+import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
@@ -595,14 +595,19 @@ def _take_screendumps(test, params, env):
                                  utils_misc.generate_random_string(6))
     delay = float(params.get("screendump_delay", 5))
     quality = int(params.get("screendump_quality", 30))
+    inactivity_treshold = float(params.get("inactivity_treshold", 1800))
+    inactivity_watcher = params.get("inactivity_watcher", "log")
 
     cache = {}
     counter = {}
+    inactivity = {}
 
     while True:
         for vm in env.get_all_vms():
             if vm not in counter.keys():
                 counter[vm] = 0
+            if vm not in inactivity.keys():
+                inactivity[vm] = time.time()
             if not vm.is_alive():
                 continue
             try:
@@ -629,19 +634,35 @@ def _take_screendumps(test, params, env):
             counter[vm] += 1
             screendump_filename = os.path.join(screendump_dir, "%04d.jpg" %
                                                counter[vm])
-            hash = utils.hash_file(temp_filename)
-            if hash in cache:
+            image_hash = utils.hash_file(temp_filename)
+            if image_hash in cache:
+                time_inactive = time.time() - inactivity[vm]
+                if time_inactive > inactivity_treshold:
+                    msg = ("%s screen is inactive for more than %d s (%d min)" %
+                           (vm.name, time_inactive, time_inactive/60))
+                    if inactivity_watcher == "error":
+                        try:
+                            raise virt_vm.VMScreenInactiveError(vm,
+                                                                time_inactive)
+                        except virt_vm.VMScreenInactiveError:
+                            logging.error(msg)
+                            # Let's reset the counter
+                            inactivity[vm] = time.time()
+                            test.background_errors.put(sys.exc_info())
+                    elif inactivity_watcher == 'log':
+                        logging.debug(msg)
                 try:
-                    os.link(cache[hash], screendump_filename)
+                    os.link(cache[image_hash], screendump_filename)
                 except OSError:
                     pass
             else:
+                inactivity[vm] = time.time()
                 try:
                     try:
                         image = PIL.Image.open(temp_filename)
                         image.save(screendump_filename, format="JPEG",
                                    quality=quality)
-                        cache[hash] = screendump_filename
+                        cache[image_hash] = screendump_filename
                     except IOError, error_detail:
                         logging.warning("VM '%s' failed to produce a "
                                         "screendump: %s", vm.name, error_detail)
