@@ -67,13 +67,35 @@ def get_image_filename(params, root_dir):
            image_format -- the format of the image (qcow2, raw etc)
     @raise VMDeviceError: When no matching disk found (in indirect method).
     """
+    def sort_cmp(x, y):
+        """
+        This function used for sort to suit for this test, first sort by len
+        then by value.
+        """
+        has_digit_x = re.findall('[vhs]d[a-z]*[\d]+', x)
+        has_digit_y = re.findall('[vhs]d[a-z]*[\d]+', y)
+
+        if not has_digit_x and  not has_digit_y:
+            if len(x) > len(y):
+                return 1
+            elif len(x) < len(y):
+                return -1
+        if len(x) == len(y):
+            if has_digit_x and has_digit_y:
+                return cmp(x, y)
+            elif has_digit_x:
+                return -1
+            elif has_digit_y:
+                return 1
+        return cmp(x, y)
+
     image_name = params.get("image_name", "image")
     indirect_image_select = params.get("indirect_image_select")
     if indirect_image_select:
         re_name = image_name
         indirect_image_select = int(indirect_image_select)
         matching_images = utils.system_output("ls -1d %s" % re_name)
-        matching_images = sorted(matching_images.split('\n'))
+        matching_images = sorted(matching_images.split('\n'), cmp = sort_cmp)
         if matching_images[-1] == '':
             matching_images = matching_images[:-1]
         try:
