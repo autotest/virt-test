@@ -2325,35 +2325,44 @@ variants:
         black_list = C: D:
         start_vm = no
         variants:
-            - default:
-                no virtio_blk
-                images += " stg stg2 stg3"
+            - one_disk_repeat:
+                images += " stg"
                 image_format_stg = qcow2
                 image_name_stg = storage
                 image_size_stg = 1G
-                image_format_stg2 = qcow2
-                image_name_stg2 = storage2
-                image_size_stg2 = 10G
-                image_format_stg3 = raw
-                image_name_stg3 = storage3
-                image_size_stg3 = 5G
+                drive_index_stg = 1
+                image_boot_stg = no
+                force_create_image_stg = yes
+                remove_image_stg = yes
+                n_repeat = 10
             - max_disk:
-                no ide
-                usbs = ""
-                usb_devices = ""
-                drive_pci_addr_image1 = 4
-                drive_format = virtio
-                stg_image_num = 24
-                stg_image_size = 5G
-                stg_image_boot = no
-                # other variants.
-                # stg_image_format = qcow2
-                # stg_drive_format = virtio
-                # stg_assign_index = yes
-                Linux:
-                    image_size_image1 = 20G
-                Windows:
-                    image_size_image1 = 30G
+                ide:
+                    images += " stg stg2 stg3"
+                    image_format_stg = qcow2
+                    image_name_stg = storage
+                    image_size_stg = 1G
+                    image_format_stg2 = qcow2
+                    image_name_stg2 = storage2
+                    image_size_stg2 = 10G
+                    image_format_stg3 = raw
+                    image_name_stg3 = storage3
+                    image_size_stg3 = 5G
+                virtio_blk:
+                    usbs = ""
+                    usb_devices = ""
+                    drive_pci_addr_image1 = 4
+                    drive_format = virtio
+                    stg_image_num = 24
+                    stg_image_size = 5G
+                    stg_image_boot = no
+                    # other variants.
+                    # stg_image_format = qcow2
+                    # stg_drive_format = virtio
+                    # stg_assign_index = yes
+                    Linux:
+                        image_size_image1 = 20G
+                    Windows:
+                        image_size_image1 = 30G
 
     - clock_getres:
         no Windows
@@ -2480,8 +2489,9 @@ variants:
         usb_type = usb-ehci
         usb_max_port_usb1 = 6
         usb_max_port = 6
+        start_vm = no
         variants:
-            - signal_repeat:
+            - one_disk_repeat:
                 images += " stg"
                 image_format_stg = qcow2
                 image_name_stg = storage
