@@ -571,7 +571,7 @@ class VM(virt_vm.BaseVM):
                 blkdev_id ="virtio-disk%s" % vdisk
                 id = "virtio-disk%s" % vdisk
             elif format == "usb2":
-                id = "usb2.%s" % index
+                id = "usb2.%s" % (index or utils_misc.generate_random_id())
             elif media == "cdrom":
                 readonly = True
             if not has_option(help, "device"):
@@ -589,21 +589,15 @@ class VM(virt_vm.BaseVM):
                     bootindex = "1"
                 boot = "unused"
             if format == "ahci":
-                blkdev_id = "ahci%s" % index
+                tmp = "ahci%s" % (index or utils_misc.generate_random_id())
+                blkdev_id = tmp
                 dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
                 dev += _add_option("bootindex", bootindex)
                 format = "none"
                 index = None
-            if format == "virtio":
-                if has_option(help, "device"):
-                    name = "virtio%s" % index
-                    dev += " -device virtio-blk-pci"
-                    dev += _add_option("drive", name)
-                    format = "none"
-                    dev += _add_option("bootindex", bootindex)
-                index = None
-            if format in ['usb1', 'usb2', 'usb3']:
-                name = "%s.%s" % (format, index)
+            elif format == "usb2":
+                tmp = "usb2.%s" % (index or utils_misc.generate_random_id())
+                blkdev_id = tmp
                 dev += " -device usb-storage"
                 dev += _add_option("bus", bus)
                 dev += _add_option("port", port)
@@ -619,10 +613,7 @@ class VM(virt_vm.BaseVM):
                 index = None
             elif format and format.startswith("scsi-"):
                 # handles scsi-{hd, cd, disk, block, generic} targets
-                blkdev_id = "virtio-scsi"
-                if index:
-                    blkdev_id += "%s" % index
-                blkdev_id += "-id%s" % scsi_disk
+                blkdev_id = "virtio-scsi%s-id%s" % ((index or ""), scsi_disk)
                 dev += " -device %s" % format
                 dev += _add_option("logical_block_size", logical_block_size)
                 dev += _add_option("physical_block_size", physical_block_size)
@@ -1338,7 +1329,7 @@ class VM(virt_vm.BaseVM):
                   blk_extra_params=image_params.get("blk_extra_params"))
 
             # increase the bus and unit no for ide device
-            format = params.get("drive_format")
+            format = image_params.get("drive_format")
             if format == "ide":
                 if ide_unit == 1:
                     ide_bus += 1
