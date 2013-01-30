@@ -1275,12 +1275,12 @@ variants:
                         ide:
                             pre_cmd = del diskpart.script && (for %i in (1 2 3) do echo select disk %i >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
                         virtio_blk:
-                            pre_cmd = del diskpart.script && for /L %i in (1 1 24) do (echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
+                            pre_cmd = del diskpart.script && (for /L %i in (1 1 24) do echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
                 usb_multi_disk:
                     one_disk_repeat:
                         pre_cmd = del diskpart.script && echo select disk 1 >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
                     max_disk:
-                        pre_cmd = del diskpart.script && for /L %i in (1 1 24) do (echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
+                        pre_cmd = del diskpart.script && (for /L %i in (1 1 24) do echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
 
                 iozone_windows:
                     iozone_cmd = "E:\iozone\iozone -azR -r 64k -n 1G -g 4G -M -b iozone.xls -f c:\testfile"
@@ -1581,12 +1581,12 @@ variants:
                         ide:
                             pre_cmd = del diskpart.script && (for %i in (1 2 3) do echo select disk %i >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
                         virtio_blk:
-                            pre_cmd = del diskpart.script && for /L %i in (1 1 24) do (echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
+                            pre_cmd = del diskpart.script && (for /L %i in (1 1 24) do echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
                 usb_multi_disk:
                     one_disk_repeat:
                         pre_cmd = del diskpart.script && echo select disk 1 >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
                     max_disk:
-                        pre_cmd = del diskpart.script && for /L %i in (1 1 24) do (echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
+                        pre_cmd = del diskpart.script && (for /L %i in (1 1 24) do echo select disk %i >> diskpart.script && echo online disk >> diskpart.script && echo attributes disk clear readonly >> diskpart.script && echo create partition primary >> diskpart.script && echo assign >> diskpart.script) && echo select disk 0 >> diskpart.script && echo exit >> diskpart.script && diskpart /s diskpart.script
 
                 iozone_windows:
                     iozone_cmd = "E:\iozone\iozone -azR -r 64k -n 1G -g 4G -M -b iozone.xls -f c:\testfile"
