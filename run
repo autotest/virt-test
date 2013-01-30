@@ -68,6 +68,16 @@ def _handle_stdout(options):
         # Retain full stdout
         sys.stdout = StreamProxy(filename=None, stream=sys.stdout)
 
+def _restore_stdout():
+    """
+    Restore stdout. Used to re-enable stdout on error paths.
+    """
+    try:
+        sys.stdout.switch()
+    except AttributeError:
+        pass
+
+
 def _import_autotest_modules():
     """
     Import the autotest modules.
@@ -85,10 +95,7 @@ def _import_autotest_modules():
         try:
             autotest_dir = os.environ['AUTOTEST_PATH']
         except KeyError:
-            try:
-                sys.stdout.switch()
-            except AttributeError:
-                pass
+            _restore_stdout()
             print("Environment variable $AUTOTEST_PATH not set. "
                   "please set it to a path containing an autotest checkout")
             print("Or install autotest-framework for your distro")
@@ -457,16 +464,16 @@ class VirtTestApp(object):
         from virttest import data_dir
 
         if (not self.options.type) and (not self.options.config):
+            _restore_stdout()
             print("No type (-t) or config (-c) options specified, aborting...")
-            self.option_parser.print_help()
             sys.exit(1)
 
         if self.options.type:
             if self.options.type not in SUPPORTED_TEST_TYPES:
-                standalone_test.print_stdout("Invalid test type %s. "
-                                             "Valid test types: %s. "
-                                             "Aborting..." % (self.options.type,
-                                                " ".join(SUPPORTED_TEST_TYPES)))
+                _restore_stdout()
+                print("Invalid test type %s. Valid test types: %s. "
+                      "Aborting..." % (self.options.type,
+                                       " ".join(SUPPORTED_TEST_TYPES)))
                 sys.exit(1)
 
         if self.options.datadir:
@@ -520,26 +527,24 @@ class VirtTestApp(object):
             os.kill(pid, signal.SIGTERM)
 
         except StopIteration:
-            standalone_test.print_stdout("Empty config set generated ")
+            _restore_stdout()
+            print("Empty config set generated ")
             if self.options.type:
-                standalone_test.print_stdout("Tests chosen: '%s'" %
-                                             self.options.tests)
-                standalone_test.print_stdout("Check that you typed the tests "
-                                             "names correctly, and double "
-                                             "check that tests show "
-                                             "in --list-tests for guest '%s'" %
-                                             (self.options.guest_os))
+                print("Tests chosen: '%s'" % self.options.tests)
+                print("Check that you typed the tests "
+                      "names correctly, and double "
+                      "check that tests show "
+                      "in --list-tests for guest '%s'" %
+                      (self.options.guest_os))
                 sys.exit(1)
+
             if self.options.config:
-                standalone_test.print_stdout("Please check your custom config "
-                                             "file %s" % self.options.config)
+                print("Please check your custom config file %s" %
+                      self.options.config)
                 sys.exit(1)
 
         except Exception:
-            try:
-                sys.stdout.switch()
-            except AttributeError:
-                pass
+            _restore_stdout()
             print("Internal error, traceback follows...")
             exc_type, exc_value, exc_traceback = sys.exc_info()
             tb_info = traceback.format_exception(exc_type, exc_value,
