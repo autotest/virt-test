@@ -878,9 +878,21 @@ class VM(virt_vm.BaseVM):
         def add_kernel_cmdline(help_text, cmdline):
             return " -append '%s'" % cmdline
 
-        def add_testdev(help_text, filename):
-            return (" -chardev file,id=testlog,path=%s"
-                    " -device testdev,chardev=testlog" % filename)
+        def add_testdev(help_text, filename=None):
+            if has_device(device_help, "testdev"):
+                return (" -chardev file,id=testlog,path=%s"
+                        " -device testdev,chardev=testlog" % filename)
+            elif has_device(device_help, "pc-testdev"):
+                return " -device pc-testdev"
+            else:
+                return ""
+
+        def add_isa_debug_exit(help_text, iobase=0xf4, iosize=0x04):
+            if has_device(device_help, "isa-debug-exit"):
+                return (" -device isa-debug-exit,iobase=%s,iosize=%s" %
+                        (iobase, iosize))
+            else:
+                return ""
 
         def add_no_hpet(help_text):
             if has_option(help_text, "no-hpet"):
@@ -1442,6 +1454,11 @@ class VM(virt_vm.BaseVM):
 
         if params.get("testdev") == "yes":
             qemu_cmd += add_testdev(help_text, vm.get_testlog_filename())
+
+        if params.get("isa_debugexit") == "yes":
+            iobase = params.get("isa_debugexit_iobase")
+            iosize = params.get("isa_debugexit_iosize")
+            qemu_cmd += add_isa_debug_exit(help_text, iobase, iosize)
 
         if params.get("disable_hpet") == "yes":
             qemu_cmd += add_no_hpet(help_text)
