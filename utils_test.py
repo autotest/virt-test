@@ -1593,7 +1593,7 @@ def update_mac_ip_address(vm, params, timeout=360):
     for (mac, ip) in macs_ips:
         vlan = macs_ips.index((mac, ip))
         vm.address_cache[mac.lower()] = ip
-        utils_misc.set_mac_address(vm.instance, vlan, mac)
+        vm.virtnet.set_mac_address(vlan, mac)
 
 
 def pin_vm_threads(vm, node):
