@@ -785,11 +785,11 @@ class VM(virt_vm.BaseVM):
 
         def add_pcidevice(help, host, params=None):
             assign_param = []
-            device_help = utils.system_output("%s -device \\?" % qemu_binary)
+            device_help = utils.system_output("%s -device \\? 2>&1" % qemu_binary)
             cmd = "  -pcidevice "
             if bool(re.search("pci-assign", device_help, re.M)):
                 cmd = " -device pci-assign,"
-            help_cmd = "%s -device pci-assign,\\?" % qemu_binary
+            help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             cmd += "host=%s" % host
             cmd += ",id=id_%s" % host
