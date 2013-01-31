@@ -5,6 +5,7 @@ import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm, qemu_vm
 import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
 import remote, ovirt, data_dir, utils_test
 
+
 try:
     import PIL.Image
 except ImportError:
@@ -130,6 +131,7 @@ def preprocess_vm(test, params, env, name):
 
     if pause_vm:
         vm.pause()
+
 
 def postprocess_image(test, params, image_name):
     """
@@ -331,7 +333,7 @@ def preprocess(test, params, env):
         env["tcpdump"].close()
         del env["tcpdump"]
     if "tcpdump" not in env and params.get("run_tcpdump", "yes") == "yes":
-        cmd = "%s -npvi any 'dst port 68'" % utils_misc.find_command("tcpdump")
+        cmd = "%s -npvi any 'port 68'" % utils_misc.find_command("tcpdump")
         if params.get("remote_preprocess") == "yes":
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o \
                          PreferredAuthentications=password -p %s %s@%s" %
@@ -588,16 +590,39 @@ def _update_address_cache(address_cache, line):
         matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
         if matches:
             address_cache["last_seen"] = matches[0]
+
     if re.search("Client.Ethernet.Address", line, re.IGNORECASE):
         matches = re.findall(r"\w*:\w*:\w*:\w*:\w*:\w*", line)
         if matches and address_cache.get("last_seen"):
             mac_address = matches[0].lower()
-            if time.time() - address_cache.get("time_%s" % mac_address, 0) > 5:
+            last_time = address_cache.get("time_%s" % mac_address, 0)
+            last_ip = address_cache.get("last_seen")
+            cached_ip = address_cache.get(mac_address)
+
+            if (time.time() - last_time > 5 or cached_ip != last_ip):
                 logging.debug("(address cache) DHCP lease OK: %s --> %s",
                               mac_address, address_cache.get("last_seen"))
+
             address_cache[mac_address] = address_cache.get("last_seen")
             address_cache["time_%s" % mac_address] = time.time()
             del address_cache["last_seen"]
+        elif matches:
+            address_cache["last_seen_mac"] = matches[0]
+
+    if re.search("Requested.IP", line, re.IGNORECASE):
+        matches = matches = re.findall(r"\d*\.\d*\.\d*\.\d*", line)
+        if matches and address_cache.get("last_seen_mac"):
+            ip_address = matches[0]
+            mac_address = address_cache.get("last_seen_mac")
+            last_time = address_cache.get("time_%s" % mac_address, 0)
+
+            if time.time() - last_time > 10:
+                logging.debug("(address cache) DHCP lease OK: %s --> %s",
+                              mac_address, ip_address)
+
+            address_cache[mac_address] = ip_address
+            address_cache["time_%s" % mac_address] = time.time()
+            del address_cache["last_seen_mac"]
 
 
 def _tcpdump_handler(address_cache, filename, line):
