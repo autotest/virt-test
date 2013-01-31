@@ -4366,6 +4366,25 @@ variants:
                         type = sr_iov_boot_negative
                         start_vm = no
 
+    - sr_iov_file_transfer:
+        type = multi_vms_file_transfer
+        filesize = 4000
+        transfer_timeout = 1000
+        vms += " vm2"
+        image_snapshot = yes
+        pci_assignable = vf
+        tmp_dir = /tmp/
+        repeat_time = 20
+        variants:
+            - vf:
+                pci_assignable = vf
+            - pf:
+                pci_assignable = pf
+                device_name = eth1
+            - vf_pf_mixed:
+                pci_assignable_vm1 = pf
+                pci_assignable_vm2 = vf
+                device_name_vm1 = eth1
 
     - qcow2perf:
         only qcow2
