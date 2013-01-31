@@ -293,7 +293,6 @@ class VirtTestApp(object):
         Puts the value of the qemu bin option in the cartesian parser command.
         """
         if self.options.accel == 'tcg':
-            self.cartesian_parser.assign("enable_kvm", "no")
             self.cartesian_parser.assign("disable_kvm", "yes")
 
 
