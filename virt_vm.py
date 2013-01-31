@@ -454,8 +454,12 @@ class BaseVM(object):
         Verifies whether the current virt_install commandline matches the
         requested one, based on the test parameters.
         """
-        if (self.make_create_command() !=
-                self.make_create_command(name, params, basedir)):
+        try:
+            need_restart = (self.make_create_command() !=
+                           self.make_create_command(name, params, basedir))
+        except Exception, e:
+           need_restart = True
+        if need_restart:
             logging.debug("VM params in env don't match requested, restarting.")
             return True
         else:
