@@ -2,10 +2,13 @@
 Common spice test utility functions.
 
 """
-import logging, time
+import os, logging, time
 from autotest.client.shared import error
 from aexpect import ShellCmdError, ShellStatusError, ShellTimeoutError
 
+class RVConnectError(Exception):
+    """Exception raised in case that remote-viewer fails to connect"""
+    pass
 
 def wait_timeout(timeout=10):
     """
@@ -15,6 +18,34 @@ def wait_timeout(timeout=10):
     """
     logging.debug("Waiting (timeout=%ss)", timeout)
     time.sleep(timeout)
+
+def verify_established(client_vm, host, port, rv_binary):
+    """
+    Parses netstat output for established connection on host:port
+    @param client_session - vm.wait_for_login()
+    @param host - host ip addr
+    @param port - port for client to connect
+    @param rv_binary - remote-viewer binary
+    """
+    rv_binary = rv_binary.split(os.path.sep)[-1]
+
+    client_session = client_vm.wait_for_login(timeout=60)
+
+    # !!! -n means do not resolve port names
+    cmd = '(netstat -pn 2>&1| grep "^tcp.*:.*%s:%s.*ESTABLISHED.*%s.*") \
+        > /dev/null' % (host, str(port), rv_binary)
+    try:
+        netstat_out = client_session.cmd(cmd)
+        logging.info("netstat output: %s", netstat_out)
+
+    except ShellCmdError:
+        logging.error("Failed to get established connection from netstat")
+        raise RVConnectError()
+
+    else:
+        logging.info("%s connection to %s:%s successful.",
+               rv_binary, host, port)
+    client_session.close()
 
 
 def start_vdagent(guest_session, test_timeout):
@@ -116,20 +147,3 @@ def verify_virtio(guest_session, test_timeout):
         logging.debug("------------ End of guest check of the Virtio-Serial"
                      " Driver------------")
     wait_timeout(3)
-
-def launch_startx(vm):
-    """
-    Run startx on the VM
-
-    @param guest_session: ssh session of the VM
-    """
-    vm_session = vm.wait_for_login(timeout=60)
-
-    try:
-        logging.info("Starting X server on the VM");
-        vm_session.cmd("startx &", timeout=15)
-    except (ShellCmdError, ShellStatusError, ShellTimeoutError):
-        logging.debug("Ignoring an Exception that Occurs from calling startx")
-
-    wait_timeout(15)
-    vm_session.close()
