@@ -95,7 +95,7 @@ def run_multi_disk(test, params, env):
     # Compatibility
     stg_params += _add_param("image_size", params.get("stg_image_size"))
     stg_params += _add_param("image_format", params.get("stg_image_format"))
-    stg_params += _add_param("image_boot", params.get("stg_image_boot"))
+    stg_params += _add_param("image_boot", params.get("stg_image_boot", "no"))
     stg_params += _add_param("drive_format", params.get("stg_drive_format"))
     if params.get("stg_assign_index") != "no":
         # Assume 0 and 1 are already occupied (hd0 and cdrom)
