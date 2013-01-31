@@ -1,4 +1,4 @@
-import time, sys, re
+import time, sys, re, logging
 from autotest.client.shared import error
 from autotest.client.virt import utils_test
 
@@ -28,7 +28,7 @@ def check_usb_device_monitor(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error.context("Verify USB device in monitor.")
+    error.context("Verify USB device in monitor.", logging.info)
     o = vm.monitor.info("usb")
     if isinstance(o, dict):
         o = o.get("return")
@@ -90,7 +90,7 @@ def run_boot(test, params, env):
         func(test, params, env)
 
 
-    error.context("Try to log into guest.")
+    error.context("Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
@@ -98,14 +98,14 @@ def run_boot(test, params, env):
 
     check_func = params.get("check_func")
     if check_func:
-        error.context("Verify device(s) before rebooting.")
+        error.context("Verify device(s) before rebooting.", logging.info)
         _check_device(check_func)
 
     if params.get("rh_perf_envsetup_script"):
         utils_test.service_setup(vm, session, test.virtdir)
 
     if params.get("reboot_method"):
-        error.context("Reboot guest.")
+        error.context("Reboot guest.", logging.info)
         if params["reboot_method"] == "system_reset":
             time.sleep(int(params.get("sleep_before_reset", 10)))
         try:
@@ -118,5 +118,5 @@ def run_boot(test, params, env):
 
 
         if check_func:
-            error.context("Verify device(s) after rebooting.")
+            error.context("Verify device(s) after rebooting." logging.info)
             _check_device(check_func)
