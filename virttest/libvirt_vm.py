@@ -943,7 +943,8 @@ class VM(virt_vm.BaseVM):
             utils_misc.wait_for(func=self.is_alive, timeout=60,
                                 text=("waiting for domain %s to start" %
                                       self.name))
-            self.uuid = virsh.domuuid(self.name, uri=self.connect_uri)
+            self.uuid = virsh.domuuid(self.name,
+                                      uri=self.connect_uri).stdout.strip()
 
             # Establish a session with the serial console
             if self.only_pty == True:
@@ -1099,7 +1100,7 @@ class VM(virt_vm.BaseVM):
         """
         Return VM's UUID.
         """
-        uuid = virsh.domuuid(self.name, uri=self.connect_uri)
+        uuid = virsh.domuuid(self.name, uri=self.connect_uri).stdout.strip()
         # only overwrite it if it's not set
         if self.uuid is None:
             self.uuid = uuid
@@ -1245,7 +1246,8 @@ class VM(virt_vm.BaseVM):
         """
         Starts this VM.
         """
-        self.uuid = virsh.domuuid(self.name, uri=self.connect_uri)
+        self.uuid = virsh.domuuid(self.name,
+                                  uri=self.connect_uri).stdout.strip()
         # Pull in mac addresses from libvirt guest definition
         for index, nic in enumerate(self.virtnet):
             try:
@@ -1270,7 +1272,8 @@ class VM(virt_vm.BaseVM):
             if has_started is None:
                 raise virt_vm.VMStartError(self.name, "libvirt domain not "
                                                       "active after start")
-            self.uuid = virsh.domuuid(self.name, uri=self.connect_uri)
+            self.uuid = virsh.domuuid(self.name,
+                                      uri=self.connect_uri).stdout.strip()
         else:
             raise virt_vm.VMStartError(self.name, "libvirt domain failed "
                                                   "to start")
