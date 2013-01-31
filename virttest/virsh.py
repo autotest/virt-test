@@ -631,9 +631,9 @@ def domuuid(name, **dargs):
 
     @param name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
+    @return: CmdResult instance
     """
-    return command("domuuid %s" % name, **dargs).stdout.strip()
+    return command("domuuid %s" % name, **dargs)
 
 
 def screenshot(name, filename, **dargs):
