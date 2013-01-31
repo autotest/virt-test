@@ -522,8 +522,8 @@ class PciAssignable(object):
     Request PCI assignable devices on host. It will check whether to request
     PF (physical Functions) or VF (Virtual Functions).
     """
-    def __init__(self,  driver=None, driver_option=None,
-                 host_set_flag=None, kvm_params=None):
+    def __init__(self,  driver=None, driver_option=None, host_set_flag=None,
+                 kvm_params=None, vf_filter_re=None, pf_filter_re=None):
         """
         Initialize parameter 'type' which could be:
         vf: Virtual Functions
@@ -549,6 +549,8 @@ class PciAssignable(object):
                2: do cleanup env
                3: setup and cleanup env
         @param kvm_params: a dict for kvm module parameters default value
+        @param vf_filter_re: Regex used to filter vf from lspci.
+        @param pf_filter_re: Regex used to filter pf from lspci.
         """
         self.type_list = []
         self.driver = driver
@@ -556,9 +558,12 @@ class PciAssignable(object):
         self.name_list = []
         self.devices_requested = 0
         self.dev_unbind_drivers = {}
+        self.dev_drivers = {}
+        self.vf_filter_re = vf_filter_re
+        self.pf_filter_re = pf_filter_re
         if host_set_flag is not None:
-            self.setup = host_set_flag & 1 == 1
-            self.cleanup = host_set_flag & 2 == 2
+            self.setup = int(host_set_flag) & 1 == 1
+            self.cleanup = int(host_set_flag) & 2 == 2
         else:
             self.setup = False
             self.cleanup = False
@@ -663,7 +668,8 @@ class PciAssignable(object):
         if self.setup:
             if not self.sr_iov_setup():
                 return []
-        cmd = "lspci | awk '/Virtual Function/ {print $1}'"
+        self.setup = None
+        cmd = "lspci | awk '/%s/ {print $1}'" % self.vf_filter_re
         return utils.system_output(cmd, verbose=False).split()
 
 
@@ -675,7 +681,7 @@ class PciAssignable(object):
         """
         pf_ids = []
         for name in self.name_list:
-            pf_id = self._get_pf_pci_id(name, "Ethernet")
+            pf_id = self._get_pf_pci_id(name, "%s" % self.pf_filter_re)
             if not pf_id:
                 continue
             pf_ids.append(pf_id)
@@ -718,12 +724,12 @@ class PciAssignable(object):
                 vf_id = vf_ids.pop(0)
                 dev_ids.append(vf_id)
                 self.dev_unbind_drivers[vf_id] = os.path.join(base_dir,
-                                                              "drivers/igbvf")
+                                                 "drivers/%svf" % self.driver)
             elif d_type == "pf":
                 pf_id = pf_ids.pop(0)
                 dev_ids.append(pf_id)
                 self.dev_unbind_drivers[pf_id] = os.path.join(base_dir,
-                                                              "drivers/igb")
+                                                 "drivers/%s" % self.driver)
         if len(dev_ids) != count:
             logging.error("Did not get enough PCI Device")
         return dev_ids
@@ -736,7 +742,7 @@ class PciAssignable(object):
         # FIXME: Need to think out a method of identify which
         # 'virtual function' belongs to which physical card considering
         # that if the host has more than one 82576 card. PCI_ID?
-        cmd = "lspci | grep 'Virtual Function' | wc -l"
+        cmd = "lspci | grep '%s' | wc -l" % self.vf_filter_re
         return int(utils.system_output(cmd, verbose=False))
 
 

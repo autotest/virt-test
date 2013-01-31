@@ -1831,7 +1831,9 @@ class VM(virt_vm.BaseVM):
                            driver=params.get("driver"),
                            driver_option=params.get("driver_option"),
                            host_set_flag = params.get("host_setup_flag"),
-                            kvm_params = params.get("kvm_default"))
+                           kvm_params = params.get("kvm_default"),
+                           vf_filter_re = params.get("vf_filter_re"),
+                           pf_filter_re = params.get("pf_filter_re"))
                     # Virtual Functions (VF) assignable devices
                     if pa_type == "vf":
                         self.pci_assignable.add_device(device_type=pa_type)
