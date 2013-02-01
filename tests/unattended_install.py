@@ -435,6 +435,8 @@ class UnattendedInstallConfig(object):
         # component PnpCustomizationsWinPE Element Node
         if self.install_virtio == 'yes':
             paths = doc.getElementsByTagName("Path")
+            if self.virtio_scsi_cdrom == 'yes':
+                self.virtio_network_path = self.virtio_storage_path
             values = [self.virtio_storage_path, self.virtio_network_path]
             for path, value in zip(paths, values):
                 path_text = path.childNodes[0]
