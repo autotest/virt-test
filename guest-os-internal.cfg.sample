@@ -1071,7 +1071,10 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_oemsetup_id = WNET32
+                            virtio_blk,virtio_net:
+                                virtio_oemsetup_id = WNET32
+                            virtio_scsi:
+                                virtio_oemsetup_id = WNET32_SCSI
                             virtio_network_path = 'F:\NetKVM\2k3\x86'
                             #virtio_network_installer_path = 'F:\RHEV-Network.msi'
                             virtio_network_installer_path = E:\devcon\wlh_x86\devcon.exe install F:\\NetKVM\\2k3\\x86\\netkvm.inf hwidcmd
@@ -1118,7 +1121,10 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_oemsetup_id = WNET64
+                            virtio_blk,virtio_net:
+                                virtio_oemsetup_id = WNET64
+                            virtio_scsi:
+                                virtio_oemsetup_id = WNET64_SCSI
                             virtio_network_path = 'F:\NetKVM\2k3\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
                             virtio_network_installer_path = 'E:\devcon\wlh_amd64\devcon.exe install F:\\NetKVM\\2k3\\amd64\\netkvm.inf hwidcmd'
@@ -1181,15 +1187,17 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\2k8\x86'
+                            virtio_storage_path = 'A:\i386\Win2008'
                             virtio_network_path = 'F:\NetKVM\2k8\x86'
                             #virtio_network_installer_path = 'F:\RHEV-Network.msi'
                             #virtio_qxl_installer_path = E:\\autoit3.exe E:\\qxl_install.au3 pnptuil " -i -a A:\\amd64\\Win7\\qxl.inf"
                             #virtio_balloon_installer_path = pnputil -i -a F:\\Balloon\\2k8\\x86\\balloon.inf
                             virtio_qxl_installer_path = E:\\autoit3.exe E:\\virtio_driver_install.au3 E:\devcon\wnet_x86\devcon.exe " install A:\\i386\\Win7\\qxl.inf hwid"
                             virtio_balloon_installer_path = E:\\autoit3.exe E:\\virtio_driver_install.au3 E:\devcon\wnet_x86\devcon.exe " install F:\\Balloon\\2k8\\x86\\balloon.inf hwidcmd"
-                            virtio_blk,virtio_net:
+                            virtio_blk, virtio_net, virtio_scsi:
                                 unattended_file = unattended/win2008-32-virtio-autounattend.xml
+                            virtio_scsi:
+                                virtio_scsi_cdrom = yes
                         sysprep:
                             unattended_file = win2008-32-autounattend.xml
                         whql_env_setup:
@@ -1229,15 +1237,17 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\2k8\amd64'
+                            virtio_storage_path = 'A:\amd64\Win2008'
                             virtio_network_path = 'F:\NetKVM\2k8\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
                             # virtio_qxl_installer_path = E:\\autoit3.exe E:\\qxl_install.au3 E:\devcon\wnet_amd64\devcon.exe "install A:\\amd64\\Win7\\qxl.inf hwid"
                             virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
                             virtio_balloon_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
                             # virtio_balloon_installer_path = E:\devcon\wnet_amd64\devcon.exe install F:\\Balloon\\2k8\\amd64\\balloon.inf hwidcmd
-                            virtio_blk, virtio_net:
+                            virtio_blk, virtio_net, virtio_scsi:
                                 unattended_file = unattended/win2008-64-virtio-autounattend.xml
+                            virtio_scsi:
+                                virtio_scsi_cdrom = yes
                         sysprep:
                             unattended_file = win2008-64-autounattend.xml
                         whql_env_setup:
@@ -1305,13 +1315,13 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\2k8\amd64'
+                            virtio_storage_path = 'A:\amd64\Win2008'
                             virtio_network_path = 'F:\NetKVM\2k8\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
                             virtio_qxl_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
                             virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
                             unattended_file = unattended/win2008-r2-autounattend.xml
-                            virtio_blk, virtio_net:
+                            virtio_blk, virtio_net, virtio_scsi:
                                 unattended_file = unattended/win2008-r2-virtio-autounattend.xml
                         sysprep:
                             unattended_file = win2008-r2-autounattend.xml
@@ -1362,7 +1372,7 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\w7\x86'
+                            virtio_storage_path = 'A:\i386\Win7'
                             virtio_network_path = 'F:\NetKVM\w7\x86'
                             #virtio_network_installer_path = 'F:\RHEV-Network32.msi'
                             virtio_qxl_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\i386\\Win7\\qxl.inf"
@@ -1415,7 +1425,7 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\w7\amd64'
+                            virtio_storage_path = 'A:\amd64\Win7'
                             virtio_network_path = 'F:\NetKVM\w7\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
                             virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
@@ -1478,11 +1488,11 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\w7\x86'
-                            virtio_network_path = 'F:\NetKVM\w7\x86'
+                            virtio_storage_path = 'A:\i386\Win8'
+                            virtio_network_path = 'F:\NetKVM\w8\x86'
                             #virtio_network_installer_path = 'F:\RHEV-Network32.msi'
                             virtio_qxl_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\i386\\Win7\\qxl.inf"
-                            virtio_balloon_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\w7\\x86\\balloon.inf"
+                            virtio_balloon_installer_path = E:\\AutoIt3.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\w8\\x86\\balloon.inf"
                         whql.submission:
                             dd_data_logoarch = X86
                             dd_data_logoos = Windows 7
@@ -1506,9 +1516,9 @@ variants:
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
                         win_virtio_update:
-                            driver_install_cmd_balloon = cmd /c WIN_UTILS:\\AutoIt3.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\Balloon\\w7\\x86\\Balloon.inf"
-                            driver_install_cmd_block = cmd /c WIN_UTILS:\\AutoIt3.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\viostor\\w7\\x86\\viostor.inf"
-                            driver_install_cmd_nic = cmd /c WIN_UTILS:\\AutoIt3.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\w7\\x86\\netkvm.inf"
+                            driver_install_cmd_balloon = cmd /c WIN_UTILS:\\AutoIt3.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\Balloon\\w8\\x86\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c WIN_UTILS:\\AutoIt3.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\viostor\\w8\\x86\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c WIN_UTILS:\\AutoIt3.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\w8\\x86\\netkvm.inf"
 
                     - 64:
                         guest_name += -64
@@ -1531,11 +1541,11 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\w7\amd64'
-                            virtio_network_path = 'F:\NetKVM\w7\amd64'
+                            virtio_storage_path = 'A:\amd64\Win8'
+                            virtio_network_path = 'F:\NetKVM\w8\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
                             virtio_qxl_installer_path = E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
-                            virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\w7\\amd64\\balloon.inf"
+                            virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\w8\\amd64\\balloon.inf"
                         whql.submission:
                             dd_data_logoarch = AMD64
                             dd_data_logoos = Windows 7
@@ -1559,9 +1569,9 @@ variants:
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
                         win_virtio_update:
-                            driver_install_cmd_balloon = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\Balloon\\w7\\amd64\\Balloon.inf"
-                            driver_install_cmd_block = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\viostor\\w7\\amd64\\viostor.inf"
-                            driver_install_cmd_nic = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\w7\\amd64\\netkvm.inf"
+                            driver_install_cmd_balloon = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\Balloon\\w8\\amd64\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\viostor\\w8\\amd64\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\w8\\amd64\\netkvm.inf"
 
             - Win2012:
                 image_name = win2012
@@ -1611,11 +1621,11 @@ variants:
                             # Uncomment virtio_network_installer_path line if
                             # you have an msi installer, also make sure the
                             # paths are properly set in your virtio driver iso.
-                            virtio_storage_path = 'F:\viostor\2k8\amd64'
-                            virtio_network_path = 'F:\NetKVM\2k8\amd64'
+                            virtio_storage_path = 'A:\amd64\Win2012'
+                            virtio_network_path = 'F:\NetKVM\2k12\amd64'
                             #virtio_network_installer_path = 'F:\RHEV-Network64.msi'
                             virtio_qxl_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a A:\\amd64\\Win7\\qxl.inf"
-                            virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\2k8\\amd64\\balloon.inf"
+                            virtio_balloon_installer_path =E:\\AutoIt3_x64.exe E:\\virtio_driver_install.au3 pnputil " -i -a F:\\Balloon\\2k12\\amd64\\balloon.inf"
                             unattended_file = unattended/win2012-autounattend.xml
                             virtio_blk, virtio_net:
                                 unattended_file = unattended/win2012-virtio-autounattend.xml
@@ -1633,9 +1643,9 @@ variants:
                         whql_env_setup.nic_device:
                             nic_model_nic1 = e1000
                         win_virtio_update:
-                            driver_install_cmd_balloon = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\Balloon\\2k8\\amd64\\Balloon.inf"
-                            driver_install_cmd_block = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\viostor\\2k8\\amd64\\viostor.inf"
-                            driver_install_cmd_nic = cmd /c EWIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\2k8\\amd64\\netkvm.inf"
+                            driver_install_cmd_balloon = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\Balloon\\2k12\\amd64\\Balloon.inf"
+                            driver_install_cmd_block = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\viostor\\2k12\\amd64\\viostor.inf"
+                            driver_install_cmd_nic = cmd /c EWIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\2k12\\amd64\\netkvm.inf"
 
 
     # Live CD section
