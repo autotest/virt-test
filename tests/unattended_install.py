@@ -373,9 +373,15 @@ class UnattendedInstallConfig(object):
         if self.install_virtio == 'yes':
             v_attributes = ['virtio_floppy', 'virtio_storage_path',
                             'virtio_network_path', 'virtio_oemsetup_id',
-                            'virtio_network_installer']
-            for va in v_attributes:
-                setattr(self, va, params.get(va, ''))
+                            'virtio_network_installer_path',
+                            'virtio_balloon_installer_path',
+                            'virtio_qxl_installer_path',
+                            'virtio_scsi_cdrom']
+        else:
+            v_attributes = ['virtio_balloon_installer_path',
+                            'virtio_qxl_installer_path']
+        for va in v_attributes:
+            setattr(self, va, params.get(va, ''))
 
         self.tmpdir = test.tmpdir
 
@@ -546,6 +552,8 @@ class UnattendedInstallConfig(object):
         # component PnpCustomizationsWinPE Element Node
         if self.install_virtio == 'yes':
             paths = doc.getElementsByTagName("Path")
+            if self.virtio_scsi_cdrom == 'yes':
+                self.virtio_network_path = self.virtio_storage_path
             values = [self.virtio_storage_path, self.virtio_network_path]
             for path, value in zip(paths, values):
                 path_text = path.childNodes[0]
