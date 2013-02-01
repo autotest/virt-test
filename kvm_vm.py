@@ -123,7 +123,7 @@ class VM(virt_vm.BaseVM):
         self.verify_illegal_instruction()
         try:
             virt_vm.BaseVM.verify_alive(self)
-            if self.monitors:
+            if self.monitor:
                 self.monitor.verify_responsive()
         except virt_vm.VMDeadError:
             raise virt_vm.VMDeadError(self.process.get_status(),
@@ -134,7 +134,7 @@ class VM(virt_vm.BaseVM):
         """
         Return True if the VM is alive and its monitor is responsive.
         """
-        return not self.is_dead() and (not self.monitors or
+        return not self.is_dead() and (not self.monitor or
                                        self.monitor.is_responsive())
 
 
@@ -2213,6 +2213,9 @@ class VM(virt_vm.BaseVM):
                 return m
         if self.monitors and not self.params.get("main_monitor"):
             return self.monitors[0]
+        return None
+
+
 
     @property
     def qmp_monitor(self):
