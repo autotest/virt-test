@@ -614,14 +614,15 @@ def domid(name, **dargs):
     return command("domid %s" % (name), **dargs).stdout.strip()
 
 
-def dominfo(name, **dargs):
+def dominfo(vm_name, **dargs):
     """
     Return the VM information.
 
+    @param: vm_name: VM's name or id,uuid.
     @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
+    @return: CmdResult instance
     """
-    return command("dominfo %s" % (name), **dargs).stdout.strip()
+    return command("dominfo %s" % (vm_name), **dargs)
 
 
 def domuuid(name, **dargs):
