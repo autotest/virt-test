@@ -26,7 +26,11 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
+    # Images can be found in the data dir
     base_dir = data_dir.get_data_dir()
+    # qemu-img can be found on the test dir
+    qemu_img_base_dir = os.path.join(data_dir.get_root_dir(),
+                                     params.get("vm_type"))
     if params.get("storage_type") == "iscsi":
         iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         params["image_name"] = iscsidev.setup()
@@ -43,7 +47,7 @@ def preprocess_image(test, params, image_name):
             create_image = True
 
         if create_image:
-            image = qemu_storage.QemuImg(params, base_dir, image_name)
+            image = qemu_storage.QemuImg(params, qemu_img_base_dir, image_name)
             if not image.create(params):
                 raise error.TestError("Could not create image")
 
@@ -138,12 +142,17 @@ def postprocess_image(test, params, image_name):
     @param params: A dict containing image postprocessing parameters.
     """
     clone_master = params.get("clone_master", None)
+    # Images can be found in the data dir
     base_dir = data_dir.get_data_dir()
+    # qemu-img can be found on the test dir
+    qemu_img_base_dir = os.path.join(data_dir.get_root_dir(),
+                                     params.get("vm_type"))
+
     if params.get("storage_type") == "iscsi":
         iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         iscsidev.cleanup()
     else:
-        image = qemu_storage.QemuImg(params, base_dir, image_name)
+        image = qemu_storage.QemuImg(params, qemu_img_base_dir, image_name)
         if params.get("check_image") == "yes":
             try:
                 if clone_master is None:
