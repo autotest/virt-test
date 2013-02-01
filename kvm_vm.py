@@ -1108,6 +1108,16 @@ class VM(virt_vm.BaseVM):
             return " -device sga"
 
 
+        def add_watchdog(help, device_type=None, action="reset"):
+            watchdog_cmd = ""
+            if has_option(help,  "watchdog"):
+                if device_type:
+                    watchdog_cmd += " -watchdog %s" % device_type
+                watchdog_cmd += " -watchdog-action %s" % action
+
+            return watchdog_cmd
+
+
         # End of command line option wrappers
 
         if name is None:
@@ -1700,6 +1710,12 @@ class VM(virt_vm.BaseVM):
 
         if params.get("enable_sga") == "yes":
             qemu_cmd += add_sga(help)
+
+        if params.get("enable_watchdog", "no") == "yes":
+            WD_type = params.get("watchdog_device_type",  None)
+            WD_action = params.get("watchdog_action", "reset")
+            qemu_cmd += add_watchdog(help, WD_type, WD_action)
+
 
         return qemu_cmd
 
