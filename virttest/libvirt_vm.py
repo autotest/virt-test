@@ -193,7 +193,7 @@ class VM(virt_vm.BaseVM):
         """
         try:
             return bool(re.search(r"^Persistent:\s+[Yy]es",
-                        virsh.dominfo(self.name, uri=self.connect_uri),
+                virsh.dominfo(self.name, uri=self.connect_uri).stdout.strip(),
                         re.MULTILINE))
         except error.CmdError:
             return False
@@ -1372,7 +1372,7 @@ class VM(virt_vm.BaseVM):
         """
         Return a dict include vm's infomation.
         """
-        output = virsh.dominfo(self.name, uri=self.connect_uri)
+        output = virsh.dominfo(self.name, uri=self.connect_uri).stdout.strip()
         # Key: word before ':' | value: content after ':' (stripped)
         dominfo_dict = {}
         for line in output.splitlines():
