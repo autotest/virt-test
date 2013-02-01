@@ -11,6 +11,15 @@ import utils_misc, virt_vm, test_setup, storage, kvm_monitor, aexpect
 import kvm_virtio_port, remote, utils_test
 
 
+class QemuSegFaultError(virt_vm.VMError):
+    def __init__(self, crash_message):
+        virt_vm.VMError.__init__(self, crash_message)
+        self.crash_message = crash_message
+
+    def __str__(self):
+        return ("Qemu crashed: %s" % self.crash_message)
+
+
 class VM(virt_vm.BaseVM):
     """
     This class handles all basic VM operations.
@@ -87,6 +96,7 @@ class VM(virt_vm.BaseVM):
         self.qemu_command = ''
         self.start_time = 0.0
 
+
     def verify_alive(self):
         """
         Make sure the VM is alive and that the main monitor is responsive.
@@ -94,6 +104,9 @@ class VM(virt_vm.BaseVM):
         @raise VMDeadError: If the VM is dead
         @raise: Various monitor exceptions if the monitor is unresponsive
         """
+        self.verify_userspace_crash()
+        self.verify_kernel_crash()
+        self.verify_illegal_instruction()
         try:
             virt_vm.BaseVM.verify_alive(self)
             if self.monitors:
@@ -128,6 +141,15 @@ class VM(virt_vm.BaseVM):
         if not self.monitor.verify_status(status):
             raise virt_vm.VMStatusError('Unexpected VM status: "%s"' %
                                         self.monitor.get_status())
+
+
+    def verify_userspace_crash(self):
+        """
+        Verify if the userspace component (qemu) crashed.
+        """
+        for line in self.process.get_output().splitlines():
+            if "(core dumped)" in line:
+                raise QemuSegFaultError(line)
 
 
     def clone(self, name=None, params=None, root_dir=None, address_cache=None,
@@ -2788,7 +2810,12 @@ class VM(virt_vm.BaseVM):
 
             wait_for_migration()
 
-            self.verify_kernel_crash()
+            if protocol == "exec" and migration_exec_cmd == "gzip":
+                error.context("creating destination VM")
+                clone.create(migration_mode=protocol,
+                             migration_exec_cmd=exec_cmd, mac_source=self)
+                error.context()
+
             self.verify_alive()
 
             # Report migration status
