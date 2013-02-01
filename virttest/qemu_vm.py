@@ -1266,14 +1266,17 @@ class VM(virt_vm.BaseVM):
         cpu_model = params.get("cpu_model")
         use_default_cpu_model = True
         if cpu_model:
+            use_default_cpu_model = False
             for model in re.split(",", cpu_model):
+                model = model.strip()
                 if not model in support_cpu_model:
-                    logging.error("Non existing CPU model %s will be passed "
-                                  "to qemu (wrong config or negative test)",
-                                  model)
-                use_default_cpu_model = False
+                    continue
                 cpu_model = model
                 break
+            else:
+                cpu_model = model
+                logging.error("Non existing CPU model %s will be passed "
+                              "to qemu (wrong config or negative test)", model)
 
         if use_default_cpu_model:
             cpu_model = params.get("default_cpu_model")
