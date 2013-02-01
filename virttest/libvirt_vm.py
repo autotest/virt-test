@@ -238,7 +238,7 @@ class VM(virt_vm.BaseVM):
         """
         Return VM's ID.
         """
-        return virsh.domid(self.name, uri=self.connect_uri)
+        return virsh.domid(self.name, uri=self.connect_uri).stdout.strip()
 
 
     def get_xml(self):
