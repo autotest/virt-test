@@ -1028,8 +1028,8 @@ def run_unattended_install(test, params, env):
                 logging.error(e)
                 copy_images()
                 raise e
-        vm.verify_kernel_crash()
 
+        test.verify_background_errors()
         # To ignore the try:except:finally problem in old version of python
         try:
             try:
