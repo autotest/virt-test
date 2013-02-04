@@ -75,7 +75,14 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         Accessor method for 'xml' property returns xmlTreeFile backup filename
         """
-        return self.xmltreefile.name # The filename
+        try:
+            # don't call get_xml() recursivly
+            xml = self.dict_get('xml')
+            if xml == None:
+                raise KeyError
+        except (KeyError, AttributeError):
+            raise xcepts.LibvirtXMLError("No xml data has been loaded")
+        return xml.name # The filename
 
 
     def get_xmltreefile(self):
@@ -89,19 +96,17 @@ class LibvirtXMLBase(propcan.PropCanBase):
                 raise KeyError
         except (KeyError, AttributeError):
             raise xcepts.LibvirtXMLError("No xml data has been loaded")
-        return xml # XMLTreeFile loaded by set_xml() method
+        return xml
 
 
+    # Can't use accessors module here, would make circular dep.
     def set_xmltreefile(self, value):
-        if not issubclass(type(value), xml_utils.XMLTreeFile):
-            raise xcepts.LibvirtXMLError("xmltreefile value must be XMLTreefile"
-                                         " type or subclass, not a %s"
-                                         % type(value))
-        self.dict_set('xml', value)
+        raise xcepts.LibvirtXMLForbiddenError("xmltreefile is read-only")
 
 
-    def del_xmltreefile(self):
-        self.dict_del('xml')
+    # Can't use accessors module here, would make circular dep.
+    def set_xmltreefile(self, value):
+        raise xcepts.LibvirtXMLForbiddenError("xmltreefile is read-only")
 
 
     def copy(self):
@@ -109,11 +114,10 @@ class LibvirtXMLBase(propcan.PropCanBase):
         Returns a copy of instance not sharing any references or modifications
         """
         # help keep line length short, virsh is not a property
-        the_copy = self.__class__(virsh_instance=self.virsh)
+        the_copy = self.__class__(self.virsh)
         try:
             # file may not be accessable, obtain XML string value
             xmlstr = str(self.dict_get('xml'))
-            # Create fresh/new XMLTreeFile along with tmp files from XML content
             the_copy.dict_set('xml', xml_utils.XMLTreeFile(xmlstr))
         except xcepts.LibvirtXMLError: # Allow other exceptions through
             pass # no XML was loaded yet
