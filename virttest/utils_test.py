@@ -21,16 +21,26 @@ More specifically:
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl, socket
-import threading, shelve, getpass
+import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl
+import threading, shelve, getpass, socket
 from Queue import Queue
-from autotest.client.shared import error, global_config
+from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
 import aexpect, utils_misc, virt_vm, remote, storage, env_process, utils_cgroup
 
-GLOBAL_CONFIG = global_config.global_config
+# Handle transition from autotest global_config (0.14.x series) to
+# settings (0.15.x onwards)
+try:
+    from autotest.client.shared import global_config
+    section_values = global_config.global_config.get_section_values
+    settings_value = global_config.global_config.get_config_value
+except ImportError:
+    from autotest.client.shared.settings import settings
+    section_values = settings.get_section_values
+    settings_value = settings.get_value
+
 
 def get_living_vm(env, vm_name):
     """
@@ -1643,8 +1653,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         mig_protocol = params.get("migration_protocol", "tcp")
 
     compressed_autotest_path = "/tmp/autotest.tar.bz2"
-    destination_autotest_path = GLOBAL_CONFIG.get_config_value('COMMON',
-                                                            'autotest_top_path')
+    destination_autotest_path = settings_value('COMMON', 'autotest_top_path')
 
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
@@ -1679,7 +1688,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
 
     g_fd, g_path = tempfile.mkstemp(dir='/tmp/')
     aux_file = os.fdopen(g_fd, 'w')
-    config = GLOBAL_CONFIG.get_section_values(('CLIENT', 'COMMON'))
+    config = section_values(('CLIENT', 'COMMON'))
     config.write(aux_file)
     aux_file.close()
     global_config_guest = os.path.join(destination_autotest_path,
