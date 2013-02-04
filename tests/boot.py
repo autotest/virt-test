@@ -118,5 +118,5 @@ def run_boot(test, params, env):
 
 
         if check_func:
-            error.context("Verify device(s) after rebooting." logging.info)
+            error.context("Verify device(s) after rebooting.", logging.info)
             _check_device(check_func)
