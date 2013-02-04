@@ -330,8 +330,8 @@ def preprocess(test, params, env):
         else:
             env["tcpdump"] = aexpect.Tail(
                 command=cmd,
-                output_func=_update_address_cache,
-                output_params=(env["address_cache"],))
+                output_func=_tcpdump_handler,
+                output_params=(env["address_cache"], "tcpdump.log",))
 
         if utils_misc.wait_for(lambda: not env["tcpdump"].is_alive(),
                               0.1, 0.1, 1.0):
@@ -583,6 +583,22 @@ def _update_address_cache(address_cache, line):
             address_cache[mac_address] = ip_address
             address_cache["time_%s" % mac_address] = time.time()
             del address_cache["last_seen_mac"]
+
+
+def _tcpdump_handler(address_cache, filename, line):
+    """
+    Helper for handler tcpdump output.
+
+    @params address_cache: address cache path.
+    @params filename: Log file name for tcpdump message.
+    @params line: Tcpdump output message.
+    """
+    try:
+        utils_misc.log_line(filename, line)
+    except Exception, reason:
+        logging.warn("Can't log tcpdump output, '%s'", reason)
+
+    _update_address_cache(address_cache, line)
 
 
 def _take_screendumps(test, params, env):
