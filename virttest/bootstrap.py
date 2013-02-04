@@ -513,7 +513,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
             diff_result = utils.run("diff -Naur %s %s" % (dst_file, src_file),
                                     ignore_status=True, verbose=False)
             if diff_result.exit_status != 0:
-                logging.info("%s result:\n %s" %
+                logging.info("%s result:\n %s",
                               (diff_result.command, diff_result.stdout))
                 if interactive:
                     answer = utils.ask("Config file  %s differs from %s."
@@ -524,13 +524,13 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
                     answer = "n"
 
                 if answer == "y":
-                    logging.debug("Restoring config file %s from sample" %
+                    logging.debug("Restoring config file %s from sample",
                                   dst_file)
                     shutil.copyfile(src_file, dst_file)
                 else:
-                    logging.debug("Preserving existing %s file" % dst_file)
+                    logging.debug("Preserving existing %s file", dst_file)
             else:
-                logging.debug("Config file %s exists, not touching" % dst_file)
+                logging.debug("Config file %s exists, not touching", dst_file)
 
 
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
@@ -581,7 +581,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
             logging.debug("Creating %s", sub_dir_path)
             os.makedirs(sub_dir_path)
         else:
-            logging.debug("Dir %s exists, not creating" %
+            logging.debug("Dir %s exists, not creating",
                           sub_dir_path)
 
     create_config_files(test_dir, shared_dir, interactive, step)
