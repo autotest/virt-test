@@ -263,6 +263,7 @@ class Bcolors(object):
         self.PASS = self.green
         self.SKIP = self.yellow
         self.FAIL = self.red
+        self.ERROR = self.red
         self.WARN = self.yellow
         self.ENDC = self.end
         allowed_terms = ['linux', 'xterm', 'xterm-256color', 'vt100']
@@ -280,6 +281,7 @@ class Bcolors(object):
         self.PASS = ''
         self.SKIP = ''
         self.FAIL = ''
+        self.ERROR = ''
         self.ENDC = ''
 
 # Instantiate bcolors to be used in the functions below.
@@ -298,6 +300,13 @@ def print_skip():
     Print SKIP to stdout with SKIP (yellow) color.
     """
     print_stdout(bcolors.SKIP + "SKIP" + bcolors.ENDC)
+
+
+def print_error(t_elapsed):
+    """
+    Print ERROR to stdout with ERROR (red) color.
+    """
+    print_stdout(bcolors.ERROR + "ERROR" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
 
 
 def print_pass(t_elapsed):
@@ -734,6 +743,14 @@ def run_tests(parser, options):
                 finally:
                     t_end = time.time()
                     t_elapsed = t_end - t_begin
+            except error.TestError, reason:
+                logging.info("ERROR %s -> %s: %s", t.tag,
+                             reason.__class__.__name__, reason)
+                logging.info("")
+                t.stop_file_logging()
+                print_error(t_elapsed)
+                status_dct[dct.get("name")] = False
+                continue
             except error.TestNAError, reason:
                 logging.info("SKIP %s -> %s: %s", t.tag,
                              reason.__class__.__name__, reason)
