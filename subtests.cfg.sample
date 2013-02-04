@@ -1707,6 +1707,7 @@ variants:
         variants:
             - default:
             - multi_nics:
+                no windows
                 nics += ' nic2'
             - ext_host:
                 ping_ext_host = "yes"
