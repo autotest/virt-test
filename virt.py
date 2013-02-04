@@ -2,6 +2,7 @@ import os, sys, logging, imp, Queue
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, utils_params, utils_env, env_process
+from virttest import data_dir, bootstrap
 
 
 class virt(test.test):
@@ -83,13 +84,17 @@ class virt(test.test):
                         if not os.path.isdir(subtestdir):
                             raise error.TestError("Directory %s not"
                                                   " exist." % (subtestdir))
-                        subtest_dirs.append(subtestdir)
+                        subtest_dirs += data_dir.SubdirList(subtestdir,
+                                                          bootstrap.test_filter)
                     # Verify if we have the correspondent source file for it
-                    virt_dir = os.path.dirname(self.virtdir)
-                    subtest_dirs.append(os.path.join(virt_dir, "tests"))
-                    subtest_dirs.append(os.path.join(self.bindir,
-                                                     params.get("vm_type"),
-                                                     "tests"))
+                    shared_test_dir = os.path.dirname(self.virtdir)
+                    shared_test_dir = os.path.join(shared_test_dir, "tests")
+                    subtest_dirs += data_dir.SubdirList(shared_test_dir,
+                                                        bootstrap.test_filter)
+                    virt_test_dir = os.path.join(self.bindir,
+                                                 params.get("vm_type"), "tests")
+                    subtest_dirs += data_dir.SubdirList(virt_test_dir,
+                                                        bootstrap.test_filter)
                     subtest_dir = None
 
                     # Get the test routine corresponding to the specified
