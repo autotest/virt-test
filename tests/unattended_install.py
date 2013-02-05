@@ -150,7 +150,9 @@ class UnattendedInstallConfig(object):
 
         if getattr(self, 'qemu_img_binary'):
             if not os.path.isfile(getattr(self, 'qemu_img_binary')):
-                self.qemu_img_binary = os.path.join(root_dir,
+                qemu_img_base_dir = os.path.join(data_dir.get_root_dir(),
+                                                 self.params.get("vm_type"))
+                self.qemu_img_binary = os.path.join(qemu_img_base_dir,
                                                     self.qemu_img_binary)
 
         if getattr(self, 'cdrom_cd1'):
