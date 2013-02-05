@@ -1541,3 +1541,19 @@ def domblklist(name, options=None, **dargs):
         cmd += " %s" % options
 
     return command(cmd, **dargs)
+
+
+def cpu_stats(name, options, **dargs):
+    """
+    Display per-CPU and total statistics about domain's CPUs
+
+    @param name: name of domain
+    @param options: options of cpu_stats
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "cpu-stats %s" % name
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
