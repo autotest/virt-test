@@ -3,9 +3,9 @@ from autotest.client.shared import error
 
 
 @error.context_aware
-def run_usb(test, params, env):
+def run_usb_storage(test, params, env):
     """
-    Test usb device of guest
+    Test usb storage devices in the guest.
 
     1) Create a image file by qemu-img
     2) Boot up a guest add this image as a usb device
@@ -15,7 +15,7 @@ def run_usb(test, params, env):
     6) Check usb removable option (optional)
     7) Check usb min_io_size/opt_io_size option (optional)
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
