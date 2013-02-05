@@ -155,6 +155,18 @@ class BaseInstaller(object):
         if install_debug_info == 'no':
             self.install_debug_info = False
 
+    def _set_param_cleanup(self):
+        '''
+        Sets whether to enable debug information on installed software
+
+        Configuration file parameter: installer_cleanup
+        Class attribute set: cleanup
+        '''
+        self.cleanup = True
+        cleanup = self.params.get('installer_cleanup', 'yes')
+        if cleanup == 'no':
+            logging.debug("Setting installer cleanup attribute to False")
+            self.cleanup = False
 
     def set_install_params(self, test=None, params=None):
         '''
@@ -170,6 +182,7 @@ class BaseInstaller(object):
             self._set_param_module_list()
             self._set_param_save_results()
             self._set_param_install_debug_info()
+            self._set_param_cleanup()
 
 
     def _install_phase_cleanup(self):
@@ -383,7 +396,7 @@ class BaseInstaller(object):
         be reimplemented completely, or simply implement one or many of the
         install  phases.
         '''
-        if cleanup:
+        if (cleanup and self.cleanup):
             self._install_phase_cleanup()
             self._install_phase_cleanup_verify()
 
