@@ -72,7 +72,7 @@ def run_cpuid(test, params, env):
         """
         Get all cpu models from qemu -cpu help text.
 
-        @param qemu_cpu_help_text: text produced by <qemu> -cpu ?
+        @param qemu_cpu_help_text: text produced by <qemu> -cpu '?'
         @return: list of cpu models
         """
 
@@ -81,7 +81,7 @@ def run_cpuid(test, params, env):
 
     class test_qemu_cpu_models_list(MiniSubtest):
         """
-        check CPU models returned by <qemu> -cpu ? are what is expected
+        check CPU models returned by <qemu> -cpu '?' are what is expected
         """
         def test(self):
             """
@@ -91,7 +91,7 @@ def run_cpuid(test, params, env):
                 raise error.TestNAError("define cpu_models parameter to check "
                                         "supported CPU models list")
 
-            cmd = qemu_binary + " -cpu ?"
+            cmd = qemu_binary + " -cpu '?'"
             result = utils.run(cmd)
             qemu_models = extract_qemu_cpu_models(result.stdout)
             cpu_models = params.get("cpu_models").split()
@@ -177,7 +177,7 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             if params.get("cpu_models") is None:
-                cmd = qemu_binary + " -cpu ?"
+                cmd = qemu_binary + " -cpu '?'"
                 result = utils.run(cmd)
                 cpu_models = set(extract_qemu_cpu_models(result.stdout))
             else:
