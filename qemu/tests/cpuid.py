@@ -68,16 +68,6 @@ def run_cpuid(test, params, env):
                                               exc_type, exc_value,
                                               exc_traceback.tb_next)))
 
-    def extract_qemu_cpu_models(qemu_cpu_help_text):
-        """
-        Get all cpu models from qemu -cpu help text.
-
-        @param qemu_cpu_help_text: text produced by <qemu> -cpu '?'
-        @return: list of cpu models
-        """
-
-        cpu_re = re.compile("x86\s+\[?([a-zA-Z0-9_-]+)\]?.*\n")
-        return cpu_re.findall(qemu_cpu_help_text)
 
     class test_qemu_cpu_models_list(MiniSubtest):
         """
@@ -93,7 +83,7 @@ def run_cpuid(test, params, env):
 
             cmd = qemu_binary + " -cpu '?'"
             result = utils.run(cmd)
-            qemu_models = extract_qemu_cpu_models(result.stdout)
+            qemu_models = utils_misc.extract_qemu_cpu_models(result.stdout)
             cpu_models = params.get("cpu_models").split()
             missing = set(cpu_models) - set(qemu_models)
             if missing:
@@ -179,7 +169,8 @@ def run_cpuid(test, params, env):
             if params.get("cpu_models") is None:
                 cmd = qemu_binary + " -cpu '?'"
                 result = utils.run(cmd)
-                cpu_models = set(extract_qemu_cpu_models(result.stdout))
+                cpu_models = set(
+                              utils_misc.extract_qemu_cpu_models(result.stdout))
             else:
                 cpu_models = set(params.get("cpu_models").split(' '))
 
