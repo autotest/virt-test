@@ -665,7 +665,7 @@ def run_tests(parser, options):
     for i, d in enumerate(parser.get_dicts()):
         shortname = get_tag(d, tag_index)
 
-        logging.info("Test %4d:  %s", (i + 1, shortname))
+        logging.info("Test %4d:  %s", i + 1, shortname)
         last_index += 1
 
     if last_index == -1:
