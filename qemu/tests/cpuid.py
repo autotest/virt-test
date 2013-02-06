@@ -93,7 +93,6 @@ def run_cpuid(test, params, env):
 
             cmd = qemu_binary + " -cpu ?"
             result = utils.run(cmd)
-
             qemu_models = extract_qemu_cpu_models(result.stdout)
             cpu_models = params.get("cpu_models").split()
             missing = set(cpu_models) - set(qemu_models)
@@ -103,9 +102,7 @@ def run_cpuid(test, params, env):
                                      (missing, cmd, result.stdout))
             added = set(qemu_models) - set(cpu_models)
             if added:
-                raise error.TestFail("Unexpected CPU models %s are in output "
-                                     "of command %s\n%s" %
-                                     (added, cmd, result.stdout))
+                logging.info("Extra CPU models in QEMU CPU listing: %s", added)
 
     def get_guest_cpuid(self, cpu_model, feature=None):
         test_kernel_dir = os.path.join(test.virtdir, "deps",
