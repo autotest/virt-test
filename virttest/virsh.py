@@ -260,6 +260,12 @@ class VirshPersistent(Virsh):
         super(VirshPersistent, self).__exit__(exc_type, exc_value, traceback)
 
 
+    def __del__(self):
+        """
+        Clean up any leftover sessions
+        """
+        self.__exit__(None, None, None)
+
     def close_session(self):
         """
         If a persistent session exists, close it down.
@@ -344,14 +350,6 @@ def command(cmd, **dargs):
         # Retrieve existing session
         session = VirshSession(a_id=session_id)
         logging.debug("Reusing session %s", session_id)
-        # Use existing session only if uri is the same
-        if session.uri is not uri:
-            # Invalidate session for this command
-            if debug:
-                logging.debug("VirshPersistent instance not using persistant "
-                              " session for command %s with different uri %s "
-                              " (persistant uri is %s)", cmd, uri, session.uri)
-                session = None
     else:
         session = None
 
