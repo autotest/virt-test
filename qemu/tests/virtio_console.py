@@ -481,7 +481,18 @@ def run_virtio_console(test, params, env):
             raise error.TestFail("Unexpected fail\nMatch: %s\nData:\n%s" %
                                  (match, tmp))
         port.sock.sendall("1234567890")
-        guest_worker.cmd("virt.recv('%s', 10, 1024, False)" % port.name, 10)
+        time.sleep(0.01)
+        try:
+            guest_worker.cmd("virt.recv('%s', 10, 1024, False)"
+                             % port.name, 10)
+        except qemu_virtio_port.VirtioPortException, details:
+            if '[Errno 11] Resource temporarily unavailable' in details:
+                # Give the VM second chance
+                time.sleep(0.01)
+                guest_worker.cmd("virt.recv('%s', 10, 1024, False)"
+                                 % port.name, 10)
+            else:
+                raise details
         cleanup(vm, guest_worker)
 
     @error.context_aware
