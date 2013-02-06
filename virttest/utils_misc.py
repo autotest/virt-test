@@ -9,7 +9,7 @@ import fcntl, sys, inspect, tarfile, shutil
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
-import utils_koji
+import utils_koji, data_dir
 
 
 def lock_file(filename, mode=fcntl.LOCK_EX):
@@ -1105,7 +1105,7 @@ class NumaNode(object):
             logging.info("    %s: %s" % (i, self.dict[i]))
 
 
-def get_cpu_model():
+def get_host_cpu_models():
     """
     Get cpu model from host cpuinfo
     """
@@ -1155,7 +1155,7 @@ def get_cpu_model():
     vendor = re.findall(vendor_re, cpu_info)[0]
     cpu_flags = re.findall(cpu_flags_re, cpu_info)
 
-    cpu_model = ""
+    cpu_support_model = []
     if cpu_flags:
         cpu_flags = _cpu_flags_sort(cpu_flags[0])
         for cpu_type in cpu_types.get(vendor):
@@ -1169,11 +1169,56 @@ def get_cpu_model():
     if cpu_model:
         cpu_type_list = cpu_types.get(vendor)
         cpu_support_model = cpu_type_list[cpu_type_list.index(cpu_model):]
-        cpu_model = ",".join(cpu_support_model)
 
-    return cpu_model
+    return cpu_support_model
 
 
+def extract_qemu_cpu_models(qemu_cpu_help_text):
+    """
+    Get all cpu models from qemu -cpu help text.
+
+    @param qemu_cpu_help_text: text produced by <qemu> -cpu '?'
+    @return: list of cpu models
+    """
+    cpu_re = re.compile("x86\s+\[?([a-zA-Z0-9_-]+)\]?.*\n")
+    return cpu_re.findall(qemu_cpu_help_text)
+
+
+def get_qemu_cpu_models(qemu_binary):
+    """Get listing of CPU models supported by QEMU
+
+    Get list of CPU models by parsing the output of <qemu> -cpu '?'
+    """
+    cmd = qemu_binary + " -cpu '?'"
+    result = utils.run(cmd)
+    return extract_qemu_cpu_models(result.stdout)
+
+
+def get_qemu_best_cpu_model(params):
+    """
+    Try to find out the best CPU model available for qemu.
+
+    This function can't be in qemu_vm, because it is used in env_process,
+    where there's no vm object available yet, and env content is synchronized
+    in multi host testing.
+
+    1) Get host CPU model
+    2) Verify if host CPU model is in the list of supported qemu cpu models
+    3) If so, return host CPU model
+    4) If not, return the default cpu model set in params, if none defined,
+        return 'qemu64'.
+    """
+    host_cpu_models = get_host_cpu_models()
+    root_dir = data_dir.get_root_dir()
+    qemu_binary = get_path(os.path.join(root_dir, params.get("vm_type")),
+                                        params.get("qemu_binary", "qemu"))
+    qemu_cpu_models = get_qemu_cpu_models(qemu_binary)
+    # Let's try to find a suitable model on the qemu list
+    for host_cpu_model in host_cpu_models:
+        if host_cpu_model in qemu_cpu_models:
+            return host_cpu_model
+    # If no host cpu model can be found on qemu_cpu_models, choose the default
+    return params.get("default_cpu_model", "qemu64")
 
 
 class ForAll(list):

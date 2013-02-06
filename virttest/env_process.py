@@ -350,10 +350,9 @@ def preprocess(test, params, env):
             vm.destroy()
             del env[key]
 
-    # Get Host cpu type
     if params.get("auto_cpu_model") == "yes":
         if not env.get("cpu_model"):
-            env["cpu_model"] = utils_misc.get_cpu_model()
+            env["cpu_model"] = utils_misc.get_qemu_best_cpu_model(params)
         params["cpu_model"] = env.get("cpu_model")
 
     kvm_ver_cmd = params.get("kvm_ver_cmd", "")
