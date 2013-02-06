@@ -1518,19 +1518,23 @@ class VM(virt_vm.BaseVM):
         if bios_path:
             qemu_cmd += " -bios %s" % bios_path
 
-        override_enable_kvm = False
-        if (has_option(help_text, "no-kvm") and
-            params.get("disable_kvm", "no") == "yes"):
-            qemu_cmd += " -no-kvm "
-            override_enable_kvm = True
+        disable_kvm_option = ""
+        if (has_option(help_text, "no-kvm")):
+            disable_kvm_option = " -no-kvm "
 
-        if (has_option(help_text, "enable-kvm")
-            and params.get("enable_kvm", "yes") == "yes"):
-            if override_enable_kvm:
-                logging.debug("Parameter disable_kvm set to 'yes', "
-                              "not adding -enable-kvm...")
-            else:
-                qemu_cmd += " -enable-kvm"
+        enable_kvm_option = ""
+        if (has_option(help_text, "enable-kvm")):
+            enable_kvm_option = " -enable-kvm"
+
+        if (params.get("disable_kvm", "no") == "yes"):
+            params["enable_kvm"] = "no"
+
+        if (params.get("enable_kvm", "yes") == "no"):
+            qemu_cmd += disable_kvm_option
+            logging.debug("qemu will run in TCG mode")
+        else:
+            qemu_cmd += enable_kvm_option
+            logging.debug("qemu will run in KVM mode")
 
         self.no_shutdown = (has_option(help_text, "no-shutdown") and
                             params.get("disable_shutdown", "no") == "yes")
