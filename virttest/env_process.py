@@ -322,7 +322,7 @@ def preprocess(test, params, env):
                 login_cmd,
                 output_func=_update_address_cache,
                 output_params=(env["address_cache"],))
-            remote._remote_login(env["tcpdump"], username, password, prompt)
+            remote.handle_prompts(env["tcpdump"], username, password, prompt)
             env["tcpdump"].sendline(cmd)
         else:
             env["tcpdump"] = aexpect.Tail(

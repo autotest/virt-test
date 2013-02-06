@@ -78,7 +78,7 @@ class SCPTransferFailedError(SCPError):
                 (self.status, self.output))
 
 
-def _remote_login(session, username, password, prompt, timeout=10, debug=False):
+def handle_prompts(session, username, password, prompt, timeout=10, debug=False):
     """
     Log into a remote host (guest) using SSH or Telnet.  Wait for questions
     and provide answers.  If timeout expires while waiting for output from the
@@ -177,7 +177,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
             each step of the login procedure (i.e. the "Are you sure" prompt
             or the password prompt)
     @raise LoginBadClientError: If an unknown client is requested
-    @raise: Whatever _remote_login() raises
+    @raise: Whatever handle_prompts() raises
     @return: A ShellSession object.
     """
     if client == "ssh":
@@ -194,7 +194,7 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     logging.debug("Login command: '%s'", cmd)
     session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
     try:
-        _remote_login(session, username, password, prompt, timeout)
+        handle_prompts(session, username, password, prompt, timeout)
     except Exception:
         session.close()
         raise
