@@ -187,10 +187,11 @@ def run_cpuid(test, params, env):
         def test(self):
             cpu_models = cpu_models_to_test()
 
-            cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
-            cmd_result = utils.run(cmd, ignore_status=True)
-            vendor = cmd_result.stdout.strip()
-            vendor = params.get("vendor", vendor)
+            vendor = params.get("vendor")
+            if vendor is None or vendor == "host":
+                cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
+                cmd_result = utils.run(cmd, ignore_status=True)
+                vendor = cmd_result.stdout.strip()
 
             ignore_cpus = set(params.get("ignore_cpu_models","").split(' '))
             cpu_models = cpu_models - ignore_cpus
