@@ -729,6 +729,32 @@ class FileReader(StrReader):
         self.filename = filename
 
 
+def print_dicts_default(options, dicts):
+    """Print dictionaries in the default mode"""
+    for i, d in enumerate(dicts):
+        if options.fullname:
+            print "dict %4d:  %s" % (i + 1, d["name"])
+        else:
+            print "dict %4d:  %s" % (i + 1, d["shortname"])
+        if options.contents:
+            keys = d.keys()
+            keys.sort()
+            for key in keys:
+                print "    %s = %s" % (key, d[key])
+
+def print_dicts_repr(options, dicts):
+    import pprint
+    print "["
+    for d in dicts:
+        print "%s," % (pprint.pformat(d))
+    print "]"
+
+def print_dicts(options, dicts):
+    if options.repr_mode:
+        print_dicts_repr(options, dicts)
+    else:
+        print_dicts_default(options, dicts)
+
 if __name__ == "__main__":
     parser = optparse.OptionParser('usage: %prog [options] filename '
                                    '[extra code] ...\n\nExample:\n\n    '
@@ -739,6 +765,8 @@ if __name__ == "__main__":
                       help="show full dict names instead of short names")
     parser.add_option("-c", "--contents", dest="contents", action="store_true",
                       help="show dict contents")
+    parser.add_option("-r", "--repr", dest="repr_mode", action="store_true",
+                      help="Output parsing results Python format")
 
     options, args = parser.parse_args()
     if not args:
@@ -748,13 +776,5 @@ if __name__ == "__main__":
     for s in args[1:]:
         c.parse_string(s)
 
-    for i, d in enumerate(c.get_dicts()):
-        if options.fullname:
-            print "dict %4d:  %s" % (i + 1, d["name"])
-        else:
-            print "dict %4d:  %s" % (i + 1, d["shortname"])
-        if options.contents:
-            keys = d.keys()
-            keys.sort()
-            for key in keys:
-                print "    %s = %s" % (key, d[key])
+    dicts = c.get_dicts()
+    print_dicts(options, dicts)
