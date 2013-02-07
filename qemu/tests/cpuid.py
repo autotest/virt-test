@@ -104,12 +104,8 @@ def run_cpuid(test, params, env):
             """
             test method
             """
-            if params.get("cpu_models") is None:
-                raise error.TestNAError("define cpu_models parameter to check "
-                                        "supported CPU models list")
-
+            cpu_models = cpu_models_to_test()
             qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
-            cpu_models = params.get("cpu_models").split()
             missing = set(cpu_models) - set(qemu_models)
             if missing:
                 raise error.TestFail("Some CPU models not in QEMU CPU model list: %s")
