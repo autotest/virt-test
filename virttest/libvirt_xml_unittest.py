@@ -2,7 +2,10 @@
 
 import unittest
 import common
-import libvirt_xml, xml_utils, virsh
+try:
+    import libvirt_xml, xml_utils, virsh
+except ImportError:
+    from virttest import libvirt_xml, xml_utils, virsh
 
 
 class LibvirtXMLTestBase(unittest.TestCase):
