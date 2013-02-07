@@ -89,6 +89,7 @@ def download_file(asset, interactive=False):
              False, if file didn't have to be downloaded
     """
     file_ok = False
+    problems_ignored = False
     had_to_download = False
     sha1 = None
 
@@ -136,26 +137,49 @@ def download_file(asset, interactive=False):
         if answer == 'y':
             actual_sha1 = utils.hash_file(destination, method='sha1')
             if actual_sha1 != sha1:
-                logging.error("Actual SHA1 sum: %s", actual_sha1)
+                logging.info("Actual SHA1 sum: %s", actual_sha1)
                 if interactive:
                     answer = utils.ask("The file seems corrupted or outdated. "
                                        "Would you like to download it?")
                 else:
+                    logging.info("The file seems corrupted or outdated")
                     answer = 'y'
                 if answer == 'y':
                     logging.info("Updating image to the latest available...")
-                    utils.interactive_download(url, destination, title)
-                    had_to_download = True
-                    file_ok = True
+                    while not file_ok:
+                        utils.interactive_download(url, destination, title)
+                        sha1_post_download = utils.hash_file(destination,
+                                                             method='sha1')
+                        had_to_download = True
+                        if sha1_post_download != sha1:
+                            logging.error("Actual SHA1 sum: %s", actual_sha1)
+                            if interactive:
+                                answer = utils.ask("The file downloaded %s is "
+                                                   "corrupted. Would you like "
+                                                   "to try again?" %
+                                                   destination)
+                            else:
+                                answer = 'n'
+                            if answer == 'n':
+                                problems_ignored = True
+                                logging.error("File %s is corrupted" %
+                                              destination)
+                                file_ok = True
+                            else:
+                                file_ok = False
+                        else:
+                            file_ok = True
             else:
                 file_ok = True
                 logging.info("SHA1 sum check OK")
         else:
+            problems_ignored = True
             logging.info("File %s present, but did not verify integrity",
                          destination)
 
     if file_ok:
-        logging.info("%s present, with proper checksum", destination)
+        if not problems_ignored:
+            logging.info("%s present, with proper checksum", destination)
 
     return had_to_download
 
