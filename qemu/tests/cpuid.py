@@ -68,6 +68,33 @@ def run_cpuid(test, params, env):
                                               exc_type, exc_value,
                                               exc_traceback.tb_next)))
 
+    def cpu_models_to_test():
+        """Return the list of CPU models to be tested, based on the
+        cpu_models and cpu_model config options.
+
+        Config option "cpu_model" may be used to ask a single CPU model
+        to be tested. Config option "cpu_models" may be used to ask
+        multiple CPU models to be tested.
+
+        If cpu_models is "*", all CPU models reported by QEMU will be tested.
+        """
+        models_opt = params.get("cpu_models")
+        model_opt = params.get("cpu_model")
+
+        if (models_opt is None and model_opt is None):
+            raise error.TestError("No cpu_models or cpu_model option is set")
+
+        cpu_models = set()
+
+        if models_opt == '*':
+            cpu_models.update(utils_misc.get_qemu_cpu_models(qemu_binary))
+        elif models_opt:
+            cpu_models.update(models_opt.split())
+
+        if model_opt:
+            cpu_models.add(model_opt)
+
+        return cpu_models
 
     class test_qemu_cpu_models_list(MiniSubtest):
         """
@@ -162,10 +189,7 @@ def run_cpuid(test, params, env):
         verify that CPU vendor matches requested
         """
         def test(self):
-            if params.get("cpu_models") is None:
-                cpu_models = set(utils_misc.get_qemu_cpu_models(qemu_binary))
-            else:
-                cpu_models = set(params.get("cpu_models").split(' '))
+            cpu_models = cpu_models_to_test()
 
             cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
             cmd_result = utils.run(cmd, ignore_status=True)
