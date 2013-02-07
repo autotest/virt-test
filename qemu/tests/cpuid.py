@@ -81,15 +81,11 @@ def run_cpuid(test, params, env):
                 raise error.TestNAError("define cpu_models parameter to check "
                                         "supported CPU models list")
 
-            cmd = qemu_binary + " -cpu '?'"
-            result = utils.run(cmd)
-            qemu_models = utils_misc.extract_qemu_cpu_models(result.stdout)
+            qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
             cpu_models = params.get("cpu_models").split()
             missing = set(cpu_models) - set(qemu_models)
             if missing:
-                raise error.TestFail("CPU models %s are not in output "
-                                     "of command %s\n%s" %
-                                     (missing, cmd, result.stdout))
+                raise error.TestFail("Some CPU models not in QEMU CPU model list: %s")
             added = set(qemu_models) - set(cpu_models)
             if added:
                 logging.info("Extra CPU models in QEMU CPU listing: %s", added)
@@ -167,10 +163,7 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             if params.get("cpu_models") is None:
-                cmd = qemu_binary + " -cpu '?'"
-                result = utils.run(cmd)
-                cpu_models = set(
-                              utils_misc.extract_qemu_cpu_models(result.stdout))
+                cpu_models = set(utils_misc.get_qemu_cpu_models(qemu_binary))
             else:
                 cpu_models = set(params.get("cpu_models").split(' '))
 
