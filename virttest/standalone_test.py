@@ -266,7 +266,8 @@ class Bcolors(object):
         self.ERROR = self.red
         self.WARN = self.yellow
         self.ENDC = self.end
-        allowed_terms = ['linux', 'xterm', 'xterm-256color', 'vt100']
+        allowed_terms = ['linux', 'xterm', 'xterm-256color', 'vt100',
+                         'screen', 'screen-256color']
         term = os.environ.get("TERM")
         if (not os.isatty(1)) or (not term in allowed_terms):
             self.disable()
