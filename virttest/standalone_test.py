@@ -235,7 +235,7 @@ class Test(object):
 
 def print_stdout(sr, end=True):
     try:
-        sys.stdout.switch()
+        sys.stdout.restore()
     except AttributeError:
         pass
     if end:
@@ -243,7 +243,7 @@ def print_stdout(sr, end=True):
     else:
         print(sr),
     try:
-        sys.stdout.switch()
+        sys.stdout.redirect()
     except AttributeError:
         pass
 
@@ -581,11 +581,13 @@ def bootstrap_tests(options):
         if t_elapsed > tolerance and not wait_message_printed:
             print_stdout("Running setup. Please wait...")
             wait_message_printed = True
-            sys.stdout.switch()
+            # if bootstrap takes too long, we temporarily make stdout verbose
+            # again, so the user can see what's taking so long
+            sys.stdout.restore()
         time.sleep(0.1)
 
-    if wait_message_printed:
-        sys.stdout.switch()
+    # in case stdout was restored above, redirect it again
+    sys.stdout.redirect()
 
     reason = None
     try:
