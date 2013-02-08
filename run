@@ -515,7 +515,7 @@ class VirtTestApp(object):
         try:
             from virttest import standalone_test
 
-            standalone_test.configure_logging()
+            standalone_test.reset_logging()
             standalone_test.configure_console_logging()
             self._process_options()
             standalone_test.bootstrap_tests(self.options)
