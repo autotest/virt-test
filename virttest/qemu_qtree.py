@@ -5,7 +5,7 @@ Utility classes and functions to handle KVM Qtree parsing and verification.
 @copyright: 2012 Red Hat Inc.
 """
 import logging, os, re
-import storage, utils_misc, data_dir
+import storage, data_dir, utils_misc
 
 
 OFFSET_PER_LEVEL = 2
