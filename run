@@ -8,7 +8,8 @@ import os, sys, traceback, signal, optparse, logging
 
 class StreamProxy(object):
     """
-    Mechanism to supress stdout output, while keeping the original stdout.
+    Mechanism to redirect a stream to a file, allowing the original stream to
+    be restored later.
     """
     def __init__(self, filename='/dev/null', stream=sys.stdout):
         """
@@ -19,7 +20,7 @@ class StreamProxy(object):
             self.log = stream
         else:
             self.log = open(filename, "a")
-        self.stream = self.log
+        self.redirect()
 
     def write(self, message):
         """
@@ -33,14 +34,13 @@ class StreamProxy(object):
         """
         self.stream.flush()
 
-    def switch(self):
-        """
-        Switch between the 2 currently available streams.
-        """
-        if self.stream == self.log:
-            self.stream = self.terminal
-        else:
-            self.stream = self.log
+    def restore(self):
+        """Restore original stream"""
+        self.stream = self.terminal
+
+    def redirect(self):
+        """Redirect stream to log file"""
+        self.stream = self.log
 
 def _silence_stderr():
     """
@@ -73,7 +73,7 @@ def _restore_stdout():
     Restore stdout. Used to re-enable stdout on error paths.
     """
     try:
-        sys.stdout.switch()
+        sys.stdout.restore()
     except AttributeError:
         pass
 
