@@ -331,13 +331,14 @@ def print_warn(t_elapsed):
     print_stdout(bcolors.WARN + "WARN" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
 
 
-def configure_logging():
+def reset_logging():
     """
-    Remove all the handlers on the root logger
+    Remove all the handlers and unset the log level on the root logger.
     """
     logger = logging.getLogger()
     for hdlr in logger.handlers:
         logger.removeHandler(hdlr)
+    logger.setLevel(logging.NOTSET)
 
 
 def configure_console_logging():
