@@ -160,7 +160,8 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("-v", "--verbose", action="store_true",
                            dest="verbose", help="Exhibit debug messages")
         general.add_option("-t", "--type", action="store", dest="type",
-                           help="Choose test type (qemu, libvirt, v2v)")
+                           help="Choose test type (%s)" %
+                           ", ".join(SUPPORTED_TEST_TYPES))
         general.add_option("-c", "--config", action="store", dest="config",
                            help=("Explicitly choose a cartesian config. "
                                  "When choosing this, some options will be "
