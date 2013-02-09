@@ -92,18 +92,18 @@ def _import_autotest_modules():
     try:
         from autotest.client import setup_modules
     except ImportError:
-        try:
-            autotest_dir = os.environ['AUTOTEST_PATH']
-        except KeyError:
+        autotest_dir = os.environ.get('AUTOTEST_PATH')
+        if autotest_dir is None:
             _restore_stdout()
             print("Environment variable $AUTOTEST_PATH not set. "
                   "please set it to a path containing an autotest checkout")
             print("Or install autotest-framework for your distro")
             sys.exit(1)
         client_dir = os.path.join(autotest_dir, 'client')
-        sys.path.insert(0, client_dir)
-        import setup_modules
-        sys.path.pop(0)
+        setup_modules_path = os.path.join(client_dir, 'setup_modules.py')
+        import imp
+        setup_modules = imp.load_source('autotest_setup_modules',
+                                        setup_modules_path)
         setup_modules.setup(base_path=client_dir,
                             root_module_name="autotest.client")
 
