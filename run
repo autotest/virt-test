@@ -264,6 +264,18 @@ class VirtTestApp(object):
     """
     Class representing the execution of the virt test runner.
     """
+    @staticmethod
+    def system_setup():
+        """Set up things that affect the whole process
+
+        Initialize things that will affect the whole process, such as
+        environment variables, setting up Python module paths, or redirecting
+        stdout and/or stderr.
+        """
+        # set English environment
+        # (command output might be localized, need to be safe)
+        os.environ['LANG'] = 'en_US.UTF-8'
+
     def __init__(self):
         """
         Parses options and initializes attributes.
@@ -273,8 +285,8 @@ class VirtTestApp(object):
         @attribute cartesian_parser: specialized test config parser, it's going
                 to be set to something useful later.
         """
-        # set English environment (command output might be localized, need to be safe)
-        os.environ['LANG'] = 'en_US.UTF-8'
+        self.system_setup()
+
         self.option_parser = VirtTestRunParser()
         self.options, self.args = self.option_parser.parse_args()
         self.cartesian_parser = None
