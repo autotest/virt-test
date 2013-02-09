@@ -538,7 +538,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
                                     ignore_status=True, verbose=False)
             if diff_result.exit_status != 0:
                 logging.info("%s result:\n %s",
-                              (diff_result.command, diff_result.stdout))
+                              diff_result.command, diff_result.stdout)
                 if interactive:
                     answer = utils.ask("Config file  %s differs from %s."
                                        "Overwrite?" % (dst_file, src_file))
