@@ -83,22 +83,13 @@ def _import_autotest_modules():
     Import the autotest modules.
 
     Two methods will be attempted:
-    1) Import the libraries system wide. For this to work, the
+    1) If $AUTOTEST_PATH is set, import the libraries from an autotest checkout
+       at $AUTOTEST_PATH.
+    2) Import the libraries system wide. For this to work, the
        autotest-framework package for the given distro must be installed.
-    2) Import the libraries from an autotest checkout. For this to work,
-       the env variable 'AUTOTEST_PATH' must be set to the path of an
-       autotest checkout.
     """
-    try:
-        from autotest.client import setup_modules
-    except ImportError:
-        autotest_dir = os.environ.get('AUTOTEST_PATH')
-        if autotest_dir is None:
-            _restore_stdout()
-            print("Environment variable $AUTOTEST_PATH not set. "
-                  "please set it to a path containing an autotest checkout")
-            print("Or install autotest-framework for your distro")
-            sys.exit(1)
+    autotest_dir = os.environ.get('AUTOTEST_PATH')
+    if autotest_dir is not None:
         client_dir = os.path.join(autotest_dir, 'client')
         setup_modules_path = os.path.join(client_dir, 'setup_modules.py')
         import imp
@@ -112,6 +103,17 @@ def _import_autotest_modules():
             sys.exit(1)
         setup_modules.setup(base_path=client_dir,
                             root_module_name="autotest.client")
+
+    try:
+        from autotest.client import setup_modules
+    except ImportError:
+        _restore_stdout()
+        print "Couldn't import autotest.client module"
+        if autotest_dir is None:
+            print("Environment variable $AUTOTEST_PATH not set. "
+                  "please set it to a path containing an autotest checkout")
+            print("Or install autotest-framework for your distro")
+        sys.exit(1)
 
 def _find_default_qemu_paths(options_qemu=None):
     qemu_bin_path = None
