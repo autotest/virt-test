@@ -102,8 +102,14 @@ def _import_autotest_modules():
         client_dir = os.path.join(autotest_dir, 'client')
         setup_modules_path = os.path.join(client_dir, 'setup_modules.py')
         import imp
-        setup_modules = imp.load_source('autotest_setup_modules',
-                                        setup_modules_path)
+        try:
+            setup_modules = imp.load_source('autotest_setup_modules',
+                                            setup_modules_path)
+        except:
+            _restore_stdout()
+            print "Failed to import autotest modules from $AUTOTEST_PATH"
+            print "Could not load Python module %s" % (setup_modules_path)
+            sys.exit(1)
         setup_modules.setup(base_path=client_dir,
                             root_module_name="autotest.client")
 
