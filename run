@@ -97,7 +97,6 @@ def _import_autotest_modules():
             setup_modules = imp.load_source('autotest_setup_modules',
                                             setup_modules_path)
         except:
-            _restore_stdout()
             print "Failed to import autotest modules from $AUTOTEST_PATH"
             print "Could not load Python module %s" % (setup_modules_path)
             sys.exit(1)
@@ -107,7 +106,6 @@ def _import_autotest_modules():
     try:
         from autotest.client import setup_modules
     except ImportError:
-        _restore_stdout()
         print "Couldn't import autotest.client module"
         if autotest_dir is None:
             print("Environment variable $AUTOTEST_PATH not set. "
@@ -117,7 +115,6 @@ def _import_autotest_modules():
 
 def _find_default_qemu_paths(options_qemu=None):
     qemu_bin_path = None
-    _import_autotest_modules()
     from virttest import utils_misc
 
     if options_qemu:
@@ -156,7 +153,6 @@ SUPPORTED_NIC_MODELS = ["virtio_net", "e1000", "rtl8139", "spapr-vlan"]
 class VirtTestRunParser(optparse.OptionParser):
     def __init__(self):
         optparse.OptionParser.__init__(self, usage = 'Usage: %prog [options]')
-        _import_autotest_modules()
         from virttest import data_dir
 
         try:
@@ -274,6 +270,12 @@ class VirtTestApp(object):
         environment variables, setting up Python module paths, or redirecting
         stdout and/or stderr.
         """
+        # workaround for a but in some Autotest versions, that call
+        # logging.basicConfig() with DEBUG loglevel as soon as the modules
+        # are imported
+        logging.basicConfig(loglevel=logging.ERROR)
+        _import_autotest_modules()
+
         # set English environment
         # (command output might be localized, need to be safe)
         os.environ['LANG'] = 'en_US.UTF-8'
@@ -532,7 +534,6 @@ class VirtTestApp(object):
         4) Runs the tests according to the options given.
         """
         _handle_stdout(self.options)
-        _import_autotest_modules()
         try:
             from virttest import standalone_test
 
