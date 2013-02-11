@@ -1,4 +1,4 @@
-import logging, time, glob, re
+import logging, time, glob, os, re
 from autotest.client.shared import error
 import utils_misc, utils_net, remote, utils_test
 
@@ -532,22 +532,31 @@ class BaseVM(object):
         # else TODO: Look up mac from existing qemu-kvm process
         if not nic.has_key('mac'):
             raise VMMACAddressMissingError(index)
-        else:
-            # Get the IP address from arp cache, try upper and lower case
-            arp_ip = self.address_cache.get(nic.mac.upper())
-            if not arp_ip:
-                arp_ip = self.address_cache.get(nic.mac.lower())
-            if not arp_ip:
-                raise VMIPAddressMissingError(nic.mac)
-            # Make sure the IP address is assigned to one or more macs
-            # for this guest
-            macs = self.virtnet.mac_list()
 
-            if not utils_net.verify_ip_address_ownership(arp_ip, macs):
-                raise VMAddressVerificationError(nic.mac, arp_ip)
-            logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
-                            arp_ip, self.name, str(index)))
-            return arp_ip
+        # Get the IP address from arp cache, try upper and lower case
+        arp_ip = self.address_cache.get(nic.mac.upper())
+        if not arp_ip:
+            arp_ip = self.address_cache.get(nic.mac.lower())
+
+        if not arp_ip and os.geteuid() != 0:
+            # For non-root, tcpdump won't work for finding IP address, try arp
+            ip_map = utils_net.parse_arp()
+            arp_ip = ip_map.get(nic.mac.lower())
+            if arp_ip:
+                self.address_cache[nic.mac.lower()] = arp_ip
+
+        if not arp_ip:
+            raise VMIPAddressMissingError(nic.mac)
+
+        # Make sure the IP address is assigned to one or more macs
+        # for this guest
+        macs = self.virtnet.mac_list()
+
+        if not utils_net.verify_ip_address_ownership(arp_ip, macs):
+            raise VMAddressVerificationError(nic.mac, arp_ip)
+        logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
+                        arp_ip, self.name, str(index)))
+        return arp_ip
 
 
     def fill_addrs(self, addrs):
