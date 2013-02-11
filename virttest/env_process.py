@@ -259,6 +259,9 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
             vm_func(test, vm_params, env, vm_name)
 
     def _call_image_func():
+        if params.get("skip_image_processing") == "yes":
+            return
+
         if params.objects("vms"):
             for vm_name in params.objects("vms"):
                 vm_params = params.object_params(vm_name)
