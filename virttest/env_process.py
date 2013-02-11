@@ -524,7 +524,7 @@ def postprocess(test, params, env):
             if vm.is_dead() or vm.is_paused():
                 continue
             try:
-                session = vm.login()
+                session = vm.wait_for_login(timeout=10)
                 session.close()
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.warn(e)
