@@ -196,7 +196,7 @@ def postprocess_vm(test, params, env, name):
         except Exception:
             pass
 
-    # Encode an HTML 5 compatible video from the screenshots produced?
+    # Encode an HTML 5 compatible video from the screenshots produced
     screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
     if (params.get("encode_video_files", "yes") == "yes" and
         glob.glob("%s/*" % screendump_dir)):
@@ -208,6 +208,7 @@ def postprocess_vm(test, params, env, name):
             else:
                 video_file = os.path.join(test.debugdir, "%s-%s.ogg" %
                                           (vm.name, test.iteration))
+            logging.debug("Encoding video file %s", video_file)
             video.start(screendump_dir, video_file)
 
         except Exception, detail:

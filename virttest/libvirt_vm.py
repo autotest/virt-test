@@ -1264,6 +1264,8 @@ class VM(virt_vm.BaseVM):
             except virt_vm.VMMACAddressMissingError:
                 logging.warning("Nic %d requested by test but not defined for"
                                 " vm %s" % (index, self.name))
+
+        logging.debug("Starting vm '%s'", self.name)
         if virsh.start(self.name, uri=self.connect_uri):
             # Wait for the domain to be created
             has_started = utils_misc.wait_for(func=self.is_alive, timeout=60,
