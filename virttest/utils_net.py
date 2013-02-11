@@ -1438,6 +1438,28 @@ class VirtNet(DbNet, ParamsNet):
         return self[nic_index_or_name].ifname
 
 
+def parse_arp():
+    """
+    Read /proc/net/arp, return a mapping of MAC to IP
+
+    @return: dict mapping MAC to IP
+    """
+    ret = {}
+    arp_cache = file('/proc/net/arp').readlines()
+
+    for line in arp_cache:
+        mac = line.split()[3]
+        ip = line.split()[0]
+
+        # Skip the header
+        if mac.count(":") != 5:
+            continue
+
+        ret[mac] = ip
+
+    return ret
+
+
 def verify_ip_address_ownership(ip, macs, timeout=10.0):
     """
     Use arping and the ARP cache to make sure a given IP address belongs to one
@@ -1447,17 +1469,15 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     @param macs: A list or tuple of MAC addresses.
     @return: True if ip is assigned to a MAC address in macs.
     """
+    ip_map = parse_arp()
+    for mac in macs:
+        if ip_map.get(mac) == ip:
+            return True
+
     # Compile a regex that matches the given IP address and any of the given
     # MAC addresses
     mac_regex = "|".join("(%s)" % mac for mac in macs)
     regex = re.compile(r"\b%s\b.*\b(%s)\b" % (ip, mac_regex), re.IGNORECASE)
-
-    # Check the ARP cache
-    arp_cache = open('/proc/net/arp', 'r')
-    o = arp_cache.read()
-    arp_cache.close()
-    if regex.search(o):
-        return True
 
     # Get the name of the bridge device for arping
     o = commands.getoutput("%s route get %s" % (utils_misc.find_command("ip"), ip))
