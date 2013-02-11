@@ -187,6 +187,13 @@ class VM(virt_vm.BaseVM):
         return virsh.is_dead(self.name, uri=self.connect_uri)
 
 
+    def is_paused(self):
+        """
+        Return True if VM is paused.
+        """
+        return (self.state() == "paused")
+
+
     def is_persistent(self):
         """
         Return True if VM is persistent.

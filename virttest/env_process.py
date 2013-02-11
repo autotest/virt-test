@@ -518,13 +518,14 @@ def postprocess(test, params, env):
     # Kill all unresponsive VMs
     if params.get("kill_unresponsive_vms") == "yes":
         for vm in env.get_all_vms():
-            if vm.is_alive():
-                try:
-                    session = vm.login()
-                    session.close()
-                except (remote.LoginError, virt_vm.VMError), e:
-                    logging.warn(e)
-                    vm.destroy(gracefully=False)
+            if vm.is_dead() or vm.is_paused():
+                continue
+            try:
+                session = vm.login()
+                session.close()
+            except (remote.LoginError, virt_vm.VMError), e:
+                logging.warn(e)
+                vm.destroy(gracefully=False)
 
     # Kill VMs with deleted disks
     for vm in env.get_all_vms():
