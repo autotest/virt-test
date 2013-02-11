@@ -320,11 +320,11 @@ class VirtTestApp(object):
 
 
     def _process_bridge_mode(self):
-        from virttest import standalone_test
         if self.options.nettype == 'bridge':
             if os.getuid() != 0:
-                standalone_test.print_stdout("In order to use bridge, "
-                                             "you need to be root, aborting...")
+                _restore_stdout()
+                print("In order to use bridge, you need to be root, "
+                      "aborting...")
                 sys.exit(1)
             self.cartesian_parser.assign("nettype", "bridge")
             self.cartesian_parser.assign("netdst", self.options.netdst)
@@ -349,9 +349,9 @@ class VirtTestApp(object):
                     self.cartesian_parser.only_filter("up")
                     self.cartesian_parser.assign("smp", int(self.options.smp))
                 except ValueError:
-                    from virttest import standalone_test
-                    standalone_test.print_stdout("Invalid option for smp: %s" %
-                                                 self.options.smp)
+                    _restore_stdout()
+                    print("Invalid option for smp: %s, aborting..." %
+                          self.options.smp)
                     sys.exit(1)
         else:
             logging.info("Config provided, ignoring --smp option")
@@ -385,9 +385,9 @@ class VirtTestApp(object):
             if self.options.disk_bus in SUPPORTED_DISK_BUSES:
                 self.cartesian_parser.only_filter(self.options.disk_bus)
             else:
-                from virttest import standalone_test
-                standalone_test.print_stdout("Option %s is not in the list %s, "
-                                             "aborting..." % SUPPORTED_DISK_BUSES)
+                _restore_stdout()
+                print("Option %s is not in the list %s, aborting..." %
+                      SUPPORTED_DISK_BUSES)
                 sys.exit(1)
         else:
             logging.info("Config provided, ignoring --disk-bus option")
@@ -414,11 +414,10 @@ class VirtTestApp(object):
             from virttest import standalone_test
             if (self.options.guest_os not in
                 standalone_test.get_guest_name_list(self.options)):
-                standalone_test.print_stdout("Guest name %s is not on the "
-                                             "known guest os list "
-                                             "(see --list-guests), "
-                                             "aborting..." %
-                                             self.options.guest_os)
+                _restore_stdout()
+                print("Guest name %s is not on the known guest os list "
+                      "(see --list-guests), aborting..." %
+                      self.options.guest_os)
                 sys.exit(1)
             if self.options.guest_os:
                 self.cartesian_parser.only_filter(self.options.guest_os)
