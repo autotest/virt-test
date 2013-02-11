@@ -1016,7 +1016,14 @@ class BaseVM(object):
 
     def is_dead(self):
         """
-        Return True if the the VM is dead.
+        Return True if the VM is dead.
+        """
+        raise NotImplementedError
+
+
+    def is_paused(self):
+        """
+        Return True if the VM is paused
         """
         raise NotImplementedError
 

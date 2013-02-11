@@ -137,6 +137,15 @@ class VM(virt_vm.BaseVM):
         return not self.process or not self.process.is_alive()
 
 
+    def is_paused(self):
+        """
+        Return True if the qemu process is paused ('stop'ed)
+        """
+        if self.is_dead():
+            return False
+        return self.verify_status("paused")
+
+
     def verify_status(self, status):
         """
         Check VM status
