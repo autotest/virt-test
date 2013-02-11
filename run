@@ -180,7 +180,7 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("-g", "--guest-os", action="store", dest="guest_os",
                            default="JeOS.17.64",
                            help=("Select the guest OS to be used. "
-                                 "If -c is provided, thiis will be ignored. "
+                                 "If -c is provided, this will be ignored. "
                                  "Default: %default"))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
