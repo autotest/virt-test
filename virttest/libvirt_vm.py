@@ -169,8 +169,7 @@ class VM(virt_vm.BaseVM):
         """
         if not self.is_alive():
             raise virt_vm.VMDeadError("Domain %s is inactive" % self.name,
-                                      virsh.domstate(self.name,
-                                      uri=self.connect_uri).stdout.strip())
+                                      self.state())
 
 
     def is_alive(self):
@@ -1316,7 +1315,7 @@ class VM(virt_vm.BaseVM):
         Shuts down this VM.
         """
         try:
-            if virsh.domstate(self.name).stdout.strip() != 'shut off':
+            if self.state() != 'shut off':
                 virsh.shutdown(self.name, uri=self.connect_uri)
             if self.wait_for_shutdown():
                 logging.debug("VM %s shut down", self.name)
@@ -1331,8 +1330,8 @@ class VM(virt_vm.BaseVM):
 
     def pause(self):
         try:
-            state = virsh.domstate(self.name)
-            if state not in ('paused',):
+            state = self.state()
+            if state != 'paused':
                 virsh.suspend(self.name, uri=self.connect_uri, ignore_statues=False)
             return True
         except:
@@ -1348,12 +1347,12 @@ class VM(virt_vm.BaseVM):
         """
         Override BaseVM save_to_file method
         """
-        state = virsh.domstate(self.name).stdout.strip()
+        state = self.state()
         if state not in ('paused',):
             raise virt_vm.VMStatusError("Cannot save a VM that is %s" % state)
         logging.debug("Saving VM %s to %s" %(self.name, path))
         virsh.save(self.name, path, uri=self.connect_uri)
-        state = virsh.domstate(self.name).stdout.strip()
+        state = self.state()
         if state not in ('shut off',):
             raise virt_vm.VMStatusError("VM not shut off after save")
 
@@ -1362,12 +1361,12 @@ class VM(virt_vm.BaseVM):
         """
         Override BaseVM restore_from_file method
         """
-        state = virsh.domstate(self.name).stdout.strip()
+        state = self.state()
         if state not in ('shut off',):
             raise virt_vm.VMStatusError("Can not restore VM that is %s" % state)
         logging.debug("Restoring VM from %s" % path)
         virsh.restore(path, uri=self.connect_uri)
-        state = virsh.domstate(self.name)
+        state = self.state()
         if state not in ('paused','running'):
             raise virt_vm.VMStatusError("VM not paused after restore, it is %s." %
                    state)
