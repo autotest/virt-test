@@ -181,6 +181,10 @@ class VMManager(virt_vm.BaseVM):
             return False
 
 
+    def is_paused(self):
+        return False
+
+
     def start(self):
         """
         Start a VM.
