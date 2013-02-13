@@ -15,6 +15,10 @@ def run_virsh_cpu_stats(test, params, env):
     3. Call virsh cpu-stats [domain] with invalide options
     """
 
+    if not virsh.has_help_command('cpu-stats'):
+        raise error.TestNAError("This version of libvirt does not support "
+                                "the cpu-stats test")
+
     vm_name = params.get("main_vm", "vm1")
     vm_ref = params.get("cpu_stats_vm_ref")
     status_error = params.get("status_error", "no")
