@@ -756,6 +756,14 @@ def run_virtio_console(test, params, env):
             """ hepler for executing replug of random port """
             _port_replug('virtconsole', random.choice((0, 1)))
 
+        def _s3():
+            """
+            Suspend to mem (S3) and resume the VM.
+            """
+            session.sendline(set_s3_cmd)
+            time.sleep(intr_time)
+            vm.monitor.cmd('system_wakeup')
+
         def _s4():
             """
             Hibernate (S4) and resume the VM.
@@ -884,12 +892,20 @@ def run_virtio_console(test, params, env):
             acceptable_loss = buflen * 10
             if buflen < 50:
                 acceptable_loss = 500
+        elif interruption == 's3':
+            interruption = _s3
+            acceptable_loss = 2000
+            session = vm.wait_for_login()
+            ret = session.cmd_status(params.get("check_s3_support_cmd"))
+            if ret:
+                raise error.TestNAError("Suspend to mem (S3) not supported.")
+            set_s3_cmd = params.get('set_s3_cmd')
         elif interruption == 's4':
             interruption = _s4
             session = vm.wait_for_login()
             ret = session.cmd_status(params.get("check_s4_support_cmd"))
             if ret:
-                raise error.TestNAError("Suspend to disk S4 not supported.")
+                raise error.TestNAError("Suspend to disk (S4) not supported.")
             set_s4_cmd = params.get('set_s4_cmd')
             acceptable_loss = 99999999      # loss is set in S4 rutine
             send_resume_ev = threading.Event()
