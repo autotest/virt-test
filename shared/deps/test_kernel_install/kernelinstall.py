@@ -71,8 +71,8 @@ class kernelinstall(test.test):
         self._kernel_install_rpm(rpm_file, deps_rpms, need_reboot)
 
 
-    def _kernel_install_src(self, base_tree, config, config_list=None,
-                           patch_list=None, need_reboot=True):
+    def _kernel_install_src(self, base_tree, config=None, config_list=None,
+                            patch_list=None, need_reboot=True):
         if not utils.is_url(base_tree):
             base_tree = os.path.join(self.bindir, base_tree)
         if not utils.is_url(config):
@@ -88,7 +88,12 @@ class kernelinstall(test.test):
                 local_patch = utils.get_file(p, dst)
                 patches.append(local_patch)
             kernel.patch(*patches)
-        kernel.config(config, config_list)
+        if not os.path.isfile(config):
+            config = None
+        if not config and not config_list:
+            kernel.config()
+        else:
+            kernel.config(config, config_list)
         kernel.build()
         kernel.install()
 
