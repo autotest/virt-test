@@ -33,48 +33,46 @@ class kernelinstall(test.test):
             kernel.add_to_bootloader()
 
 
-    def _kernel_install_koji(self, kernel_koji_spec, kernel_deps_koji_spec,
+    def _kernel_install_koji(self, koji_tag, package="kernel", dep_pkgs=None,
                              need_reboot=True):
-        # Using hardcoded package names (the names are not expected to change)
-        # we avoid lookup errors due to SSL problems, so let's go with that.
-        for koji_package in ['koji', 'brewkoji']:
-            if not self.sm.check_installed(koji_package):
-                logging.debug("%s missing - trying to install", koji_package)
-                self.sm.install(koji_package)
+        for utility in ['/usr/bin/koji', '/usr/bin/brew']:
+            if not os.access(utility, os.X_OK):
+                logging.debug("%s missing - trying to install", utility)
+                pkg = self.sm.provides(utility)
+                if pkg is not None:
+                    self.sm.install(pkg)
+                else:
+                    logging.error("No %s available on software sources" %
+                                  utility)
 
         sys.path.append(self.bindir)
         import utils_koji
         # First, download packages via koji/brew
         c = utils_koji.KojiClient()
+        deps_rpms = ""
+        if dep_pkgs:
+            for p in dep_pkgs.split():
+                logging.info('Fetching kernel dependencies: %s', p)
+                k_dep = utils_koji.KojiPkgSpec(tag=koji_tag, package=p,
+                                                subpackages=[p])
+                c.get_pkgs(k_dep, self.bindir)
+                deps_rpms += " "
+                deps_rpms += os.path.join(self.bindir,
+                                         c.get_pkg_rpm_file_names(k_dep)[0])
 
-        deps_rpms = []
-        k_dep = utils_koji.KojiPkgSpec(text=kernel_deps_koji_spec)
-        logging.info('Fetching kernel dependencies: %s', kernel_deps_koji_spec)
-        c.get_pkgs(k_dep, self.bindir)
-        rpm_file_name_list = c.get_pkg_rpm_file_names(k_dep)
-        if len(rpm_file_name_list) == 0:
-            raise error.TestError("No packages on brew/koji match spec %s" %
-                                  kernel_deps_koji_spec)
-        dep_rpm_basename = rpm_file_name_list[0]
-        deps_rpms.append(os.path.join(self.bindir, dep_rpm_basename))
+        k = utils_koji.KojiPkgSpec(tag=koji_tag, package=package,
+                                   subpackages=[package])
 
-        k = utils_koji.KojiPkgSpec(text=kernel_koji_spec)
-        logging.info('Fetching kernel: %s', kernel_koji_spec)
         c.get_pkgs(k, self.bindir)
-        rpm_file_name_list = c.get_pkg_rpm_file_names(k)
-        if len(rpm_file_name_list) == 0:
-            raise error.TestError("No packages on brew/koji match spec %s" %
-                                  kernel_koji_spec)
 
-        kernel_rpm_basename = rpm_file_name_list[0]
-        kernel_rpm_path = os.path.join(self.bindir, kernel_rpm_basename)
+        rpm_file = os.path.join(self.bindir, c.get_pkg_rpm_file_names(k)[0])
 
         # Then install kernel rpm packages.
-        self._kernel_install_rpm(kernel_rpm_path, deps_rpms, need_reboot)
+        self._kernel_install_rpm(rpm_file, deps_rpms, need_reboot)
 
 
-    def _kernel_install_src(self, base_tree, config=None, config_list=None,
-                            patch_list=None, need_reboot=True):
+    def _kernel_install_src(self, base_tree, config, config_list=None,
+                           patch_list=None, need_reboot=True):
         if not utils.is_url(base_tree):
             base_tree = os.path.join(self.bindir, base_tree)
         if not utils.is_url(config):
@@ -90,12 +88,7 @@ class kernelinstall(test.test):
                 local_patch = utils.get_file(p, dst)
                 patches.append(local_patch)
             kernel.patch(*patches)
-        if not os.path.isfile(config):
-            config = None
-        if not config and not config_list:
-            kernel.config()
-        else:
-            kernel.config(config, config_list)
+        kernel.config(config, config_list)
         kernel.build()
         kernel.install()
 
@@ -129,12 +122,18 @@ class kernelinstall(test.test):
             self._kernel_install_rpm(rpm_url, kernel_deps_rpms, need_reboot)
         elif install_type in ["koji", "brew"]:
 
-            kernel_koji_spec = params.get("kernel_koji_spec")
-            kernel_deps_koji_spec = params.get("kernel_deps_koji_spec")
+            koji_tag = params.get("kernel_koji_tag")
+            if not koji_tag:
+                # Try to get brew tag if not set "kernel_koji_tag" parameter
+                koji_tag = params.get("brew_tag")
 
-            self._kernel_install_koji(kernel_koji_spec, kernel_deps_koji_spec,
+            if not koji_tag:
+                raise error.TestError("Could not find Koji/brew tag.")
+
+            dep_pkgs = params.get("kernel_dep_pkgs", None)
+
+            self._kernel_install_koji(koji_tag, "kernel", dep_pkgs,
                                       need_reboot)
-
         elif install_type == "git":
             repo = params.get('kernel_git_repo')
             repo_base = params.get('kernel_git_repo_base', None)
