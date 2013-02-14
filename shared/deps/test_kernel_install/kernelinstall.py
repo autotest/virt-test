@@ -38,12 +38,7 @@ class kernelinstall(test.test):
         for utility in ['/usr/bin/koji', '/usr/bin/brew']:
             if not os.access(utility, os.X_OK):
                 logging.debug("%s missing - trying to install", utility)
-                pkg = self.sm.provides(utility)
-                if pkg is not None:
-                    self.sm.install(pkg)
-                else:
-                    logging.error("No %s available on software sources" %
-                                  utility)
+                self.sm.install_what_provides(utility)
 
         sys.path.append(self.bindir)
         import utils_koji
