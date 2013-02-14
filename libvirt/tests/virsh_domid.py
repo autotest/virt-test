@@ -40,8 +40,8 @@ def run_virsh_domid(test, params, env):
         err = ""
         try:
             if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
-                error.TestNAError("remote_ip and/or local_ip parameters not"
-                                  " changed from default values.")
+                raise error.TestNAError("remote_ip and/or local_ip parameters "
+                                  "not changed from default values.")
             uri = libvirt_vm.complete_uri(local_ip)
             session = remote.remote_login("ssh", remote_ip, "22", "root",
                                           remote_pwd, "#")
