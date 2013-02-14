@@ -111,7 +111,7 @@ def run_kernel_install(test, params, env):
         koji_tag = "brew_tag"
 
     sub_test_params.update(_build_params(koji_tag))
-    sub_test_params.update(_build_params("kernel_dep_pkgs"))
+    sub_test_params.update(_build_params('kernel_dep_pkgs'))
 
     # git
     sub_test_params.update(_build_params('kernel_git_repo'))
@@ -120,14 +120,14 @@ def run_kernel_install(test, params, env):
     sub_test_params.update(_build_params('kernel_git_commit'))
     sub_test_params.update(_build_params('kernel_patch_list'))
     sub_test_params.update(_build_params('kernel_config'))
-    sub_test_params.update(_build_params("kernel_config_list"))
+    sub_test_params.update(_build_params('kernel_config_list'))
 
     # src
-    sub_test_params.update(_build_params("kernel_src_pkg"))
-    sub_test_params.update(_build_params("kernel_config", "tests_rsc/config"))
-    sub_test_params.update(_build_params("kernel_patch_list"))
+    sub_test_params.update(_build_params('kernel_src_pkg'))
+    sub_test_params.update(_build_params('kernel_config'))
+    sub_test_params.update(_build_params('kernel_patch_list'))
 
-    tag = params.get("kernel_tag")
+    tag = params.get('kernel_tag')
 
     error.context("Generate control file for kernel install test")
     #Generate control file from parameters
