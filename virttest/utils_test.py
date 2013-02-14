@@ -25,7 +25,7 @@ import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl
 import threading, shelve, getpass, socket
 from Queue import Queue
 from autotest.client.shared import error
-from autotest.client import utils
+from autotest.client import utils, os_dep
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
 import aexpect, utils_misc, virt_vm, remote, storage, env_process, utils_cgroup
@@ -1521,7 +1521,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
         output = session.cmd(e_cmd, timeout=120)
         autotest_dirname = ""
-        for line in output.splitlines():
+        for line in output.splitlines()[1:]:
             autotest_dirname = line.split("/")[0]
             break
         if autotest_dirname != os.path.basename(dest_dir):
@@ -1530,7 +1530,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                         (autotest_dirname, os.path.basename(dest_dir)))
 
 
-    def get_results(guest_autotest_path):
+    def get_results(base_results_dir):
         """
         Copy autotest results present on the guest back to the host.
         """
@@ -1538,7 +1538,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
         if not os.path.exists(guest_results_dir):
             os.mkdir(guest_results_dir)
-        vm.copy_files_from("%s/results/default/*" % guest_autotest_path,
+        vm.copy_files_from("%s/results/default/*" % base_results_dir,
                            guest_results_dir)
 
 
@@ -1579,15 +1579,20 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         mig_protocol = params.get("migration_protocol", "tcp")
 
     compressed_autotest_path = "/tmp/autotest.tar.bz2"
-    destination_autotest_path = settings_value('COMMON', 'autotest_top_path')
+    destination_autotest_path = "/usr/local/autotest"
 
     # To avoid problems, let's make the test use the current AUTODIR
     # (autotest client path) location
-    try:
-        autotest_path = os.environ['AUTODIR']
-    except KeyError:
-        autotest_path = os.environ['AUTOTEST_PATH']
-        autotest_path = os.path.join(autotest_path, 'client')
+    from autotest.client import common
+    autotest_path = os.path.dirname(common.__file__)
+    autotest_local_path = os.path.join(autotest_path, 'autotest-local')
+    single_dir_install = os.path.isfile(autotest_local_path)
+    if not single_dir_install:
+        autotest_local_path = os_dep.command('autotest-local')
+    kernel_install_path = os.path.join(autotest_path, 'tests',
+                                       'kernelinstall')
+    kernel_install_present = os.path.isdir(kernel_install_path)
+
     autotest_basename = os.path.basename(autotest_path)
     autotest_parentdir = os.path.dirname(autotest_path)
 
@@ -1615,6 +1620,13 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     g_fd, g_path = tempfile.mkstemp(dir='/tmp/')
     aux_file = os.fdopen(g_fd, 'w')
     config = section_values(('CLIENT', 'COMMON'))
+    config.set('CLIENT', 'output_dir', destination_autotest_path)
+    config.set('COMMON', 'autotest_top_path', destination_autotest_path)
+    destination_test_dir = os.path.join(destination_autotest_path, 'tests')
+    config.set('COMMON', 'test_dir', destination_test_dir)
+    destination_test_output_dir = os.path.join(destination_autotest_path,
+                                               'results')
+    config.set('COMMON', 'test_output_dir', destination_test_output_dir)
     config.write(aux_file)
     aux_file.close()
     global_config_guest = os.path.join(destination_autotest_path,
@@ -1624,6 +1636,29 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
 
     vm.copy_files_to(control_path,
                      os.path.join(destination_autotest_path, 'control'))
+
+    if not single_dir_install:
+        vm.copy_files_to(autotest_local_path,
+                         os.path.join(destination_autotest_path,
+                                      'autotest-local'))
+    if not kernel_install_present:
+        import virttest
+        kernel_install_dir = os.path.join(virttest.data_dir.get_root_dir(),
+                                          "shared", "deps",
+                                          "test_kernel_install")
+        kernel_install_dest = os.path.join(destination_autotest_path, 'tests',
+                                           'kernelinstall')
+        vm.copy_files_to(kernel_install_dir, kernel_install_dest)
+        module_dir = os.path.dirname(virttest.__file__)
+        module_dir = os.path.join(module_dir, 'utils_koji.py')
+        vm.copy_files_to(module_dir, kernel_install_dest)
+
+    # Copy a non crippled boottool and make it executable
+    boottool_path = os.path.join(virttest.data_dir.get_root_dir(),
+                                 "shared", "deps", "boottool.py")
+    boottool_dest = '/usr/local/autotest/tools/boottool.py'
+    vm.copy_files_to(boottool_path, boottool_dest)
+    session.cmd("chmod +x %s" % boottool_dest)
 
     # Run the test
     logging.info("Running autotest control file %s on guest, timeout %ss",
@@ -1655,7 +1690,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                                  "migration")
                     vm.migrate(timeout=mig_timeout, protocol=mig_protocol)
             else:
-                session.cmd_output("./autotest control", timeout=timeout,
+                session.cmd_output("./autotest-local --verbose control",
+                                   timeout=timeout,
                                    print_func=logging.info)
         finally:
             logging.info("------------- End of test output ------------")
