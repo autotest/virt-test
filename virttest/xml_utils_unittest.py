@@ -13,6 +13,7 @@ class xml_test_data(unittest.TestCase):
         return glob.glob(path_string)
 
     def setUp(self):
+        xml_utils.TMPPFX = 'xml_utils_unittest_temp_'
         # Previous testing may have failed / left behind extra files
         for filename in self.get_tmp_files(xml_utils.TMPPFX, xml_utils.TMPSFX):
             os.unlink(filename)
