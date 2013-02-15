@@ -339,7 +339,9 @@ class GuestWorker(object):
         if not self.vm or self.vm.is_dead():
             return
         # in LOOP_NONE mode it might stuck in read/write
-        match, tmp = self._cmd("virt.exit_threads()", 3)
+        # This command can't fail, can only freze so wait for the correct msg
+        match, tmp = self._cmd("virt.exit_threads()", 3, ("^PASS: All threads"
+                               " finished",))
         if match is None:
             logging.warn("Workaround the stuck thread on guest")
             # Thread is stuck in read/write
@@ -356,7 +358,21 @@ class GuestWorker(object):
                 recv_pt.sock.recv(1024)
 
         # This will cause fail in case anything went wrong.
-        self.cmd("print 'PASS: nothing'", 10)
+        match, tmp = self._cmd("print 'PASS: nothing'", 10, ('^PASS: nothing',
+                                                             '^FAIL:'))
+        if match is not 0:
+            try:
+                self.session.close()
+                self.session = utils_test.wait_for_login(self.vm)
+                self.cmd("killall -9 python "
+                         "&& echo -n PASS: python killed"
+                         "|| echo -n PASS: python was already dead", 10)
+                self._execute_worker()
+                self._init_guest()
+            except Exception, inst:
+                logging.error(inst)
+                raise VirtioPortFatalException("virtio-console driver is "
+                            "irreparably blocked, further tests might FAIL.")
 
     def cleanup_ports(self):
         """
@@ -367,19 +383,21 @@ class GuestWorker(object):
         """
         # Check if python is still alive
         match, tmp = self._cmd("is_alive()", 10)
-        if (match is None) or (match != 0):
+        if match is not 0:
             logging.error("Python died/is stuck/have remaining threads")
             logging.debug(tmp)
             try:
                 self.vm.verify_kernel_crash()
 
-                match, tmp = self._cmd("guest_exit()", 10)
-                if (match is None) or (match == 0):
+                match, tmp = self._cmd("guest_exit()", 10, ('^FAIL:',
+                                            '^PASS: virtio_guest finished'))
+                if match is not 0:
+                    logging.debug(tmp)
                     self.session.close()
                     self.session = utils_test.wait_for_login(self.vm)
-                self.cmd("killall -9 python "
-                         "&& echo -n PASS: python killed"
-                         "|| echo -n PASS: python was already dead", 10)
+                    self.cmd("killall -9 python "
+                             "&& echo -n PASS: python killed"
+                             "|| echo -n PASS: python was already dead", 10)
 
                 self._execute_worker()
                 self._init_guest()
@@ -399,7 +417,16 @@ class GuestWorker(object):
             self.vm.verify_kernel_crash()
         # Quit worker
         if self.session and self.vm and self.vm.is_alive():
-            self.cmd("guest_exit()", 10)
+            match, tmp = self._cmd("guest_exit()", 10)
+            if match is not 0:
+                logging.warn('guest_worker stuck during cleanup,'
+                             ' killing python...')
+                self.session.close()
+                self.session = utils_test.wait_for_login(self.vm)
+                self.cmd("killall -9 python "
+                         "&& echo -n PASS: python killed"
+                         "|| echo -n PASS: python was already dead", 10)
+            self.session.close()
         self.session = None
         self.vm = None
 
