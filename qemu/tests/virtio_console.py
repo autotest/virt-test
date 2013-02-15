@@ -723,6 +723,28 @@ def run_virtio_console(test, params, env):
             time.sleep(intr_time)
             vm.resume()
 
+        def _disconnect():
+            """ Disconnect and reconnect the port """
+            _guest = random.choice((tuple(), (0,), (1,), (0, 1)))
+            _host = random.choice((tuple(), (0,), (1,), (0, 1)))
+            if not _guest and not _host:    # Close at least one port
+                _guest = (0,)
+            logging.debug('closing ports %s on host, %s on guest', _host,
+                          _guest)
+            for i in _host:
+                threads[i].migrate_event.clear()
+                logging.debug('Closing port %s on host', i)
+                ports[i].close()
+            for i in _guest:
+                guest_worker.cmd("virt.close('%s')" % (ports[i].name), 10)
+            time.sleep(intr_time)
+            for i in _host:
+                logging.debug('Opening port %s on host', i)
+                ports[i].open()
+                threads[i].migrate_event.set()
+            for i in _guest:
+                guest_worker.cmd("virt.open('%s')" % (ports[i].name), 10)
+
         def _port_replug(device, port_idx):
             """ Unplug and replug port with the same name """
             # FIXME: In Linux vport*p* are used. Those numbers are changing
@@ -764,6 +786,10 @@ def run_virtio_console(test, params, env):
             """
             session.sendline(set_s3_cmd)
             time.sleep(intr_time)
+            if not vm.monitor.verify_status('suspended'):
+                logging.debug('VM not yet suspended, periodic check started.')
+                while not vm.monitor.verify_status('suspended'):
+                    pass
             vm.monitor.cmd('system_wakeup')
 
         def _s4():
@@ -872,6 +898,11 @@ def run_virtio_console(test, params, env):
         acceptable_loss = 0
         if interruption == 'stop':
             interruption = _stop_cont
+        elif interruption == 'disconnect':
+            interruption = _disconnect
+            acceptable_loss = 100000
+            send_resume_ev = threading.Event()
+            recv_resume_ev = threading.Event()
         elif interruption == 'replug_send':
             if is_serialport:
                 interruption = _serialport_send_replug
