@@ -143,7 +143,11 @@ class VM(virt_vm.BaseVM):
         """
         if self.is_dead():
             return False
-        return self.verify_status("paused")
+        try:
+            self.verify_status("paused")
+            return True
+        except virt_vm.VMStatusError:
+            return False
 
 
     def verify_status(self, status):
