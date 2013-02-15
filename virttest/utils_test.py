@@ -1788,11 +1788,12 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     get_results(destination_autotest_path)
     results = get_results_summary()
 
-    # Make a list of FAIL/ERROR/ABORT results (make sure FAIL results appear
-    # before ERROR results, and ERROR results appear before ABORT results)
-    bad_results = [r[0] for r in results if r[1] == "FAIL"]
-    bad_results += [r[0] for r in results if r[1] == "ERROR"]
-    bad_results += [r[0] for r in results if r[1] == "ABORT"]
+    if results is not None:
+        # Make a list of FAIL/ERROR/ABORT results (make sure FAIL results appear
+        # before ERROR results, and ERROR results appear before ABORT results)
+        bad_results = [r[0] for r in results if r[1] == "FAIL"]
+        bad_results += [r[0] for r in results if r[1] == "ERROR"]
+        bad_results += [r[0] for r in results if r[1] == "ABORT"]
 
     # Fail the test if necessary
     if not results:
