@@ -832,7 +832,7 @@ class Tail(Spawn):
                             print_line(line)
                     # Leave only the last line
                     last_newline_index = bfr.rfind("\n")
-                    bfr = bfr[last_newline_index+1:]
+                    bfr = bfr[last_newline_index + 1:]
                 else:
                     # No output is available right now; flush the bfr
                     if bfr:
@@ -960,6 +960,7 @@ class Expect(Tail):
         None and empty strings in patterns are ignored.
         If no match is found, return None.
 
+        @param cont: input string
         @param patterns: List of strings (regular expression patterns).
         """
         for i in range(len(patterns)):
@@ -969,9 +970,29 @@ class Expect(Tail):
                 return i
 
 
+    def match_patterns_multiline(self, cont, patterns):
+        """
+        Match list of lines against a list of patterns.
+
+        Return the index of the first pattern that matches a substring of cont.
+        None and empty strings in patterns are ignored.
+        If no match is found, return None.
+
+        @param cont: List of strings (input strings)
+        @param patterns: List of strings (regular expression patterns). The
+                         pattern priority is from the last to first.
+        """
+        for i in range(-len(patterns), 0):
+            if not patterns[i]:
+                continue
+            for line in cont:
+                if re.search(patterns[i], line):
+                    return i
+
+
     def read_until_output_matches(self, patterns, filter_func=lambda x: x,
                                   timeout=60, internal_timeout=None,
-                                  print_func=None):
+                                  print_func=None, match_func=None):
         """
         Read using read_nonblocking until a match is found using match_patterns,
         or until timeout expires. Before attempting to search for a match, the
@@ -988,12 +1009,15 @@ class Expect(Tail):
         @param internal_timeout: The timeout to pass to read_nonblocking
         @param print_func: A function to be used to print the data being read
                 (should take a string parameter)
+        @param match_func: Function to compare the output and patterns.
         @return: Tuple containing the match index and the data read so far
         @raise ExpectTimeoutError: Raised if timeout expires
         @raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
         @raise ExpectError: Raised if an unknown error occurs
         """
+        if not match_func:
+            match_func = self.match_patterns
         fd = self._get_fd("expect")
         o = ""
         end_time = time.time() + timeout
@@ -1016,7 +1040,7 @@ class Expect(Tail):
                     print_func(line)
             # Look for patterns
             o += data
-            match = self.match_patterns(filter_func(o), patterns)
+            match = match_func(filter_func(o), patterns)
             if match is not None:
                 return match, o
 
@@ -1091,6 +1115,34 @@ class Expect(Tail):
                                               timeout, internal_timeout,
                                               print_func)
 
+
+    def read_until_any_line_matches(self, patterns, timeout=60,
+                                    internal_timeout=None, print_func=None):
+        """
+        Read using read_nonblocking until any line of the output matches
+        one of the patterns (using match_patterns_multiline), or until timeout
+        expires. Return a tuple containing the match index (or None if no match
+        was found) and the data read so far.
+
+        @brief: Read using read_nonblocking until any line matches a pattern.
+
+        @param patterns: A list of strings (regular expression patterns)
+                         Consider using '^' in the beginning.
+        @param timeout: The duration (in seconds) to wait until a match is
+                found
+        @param internal_timeout: The timeout to pass to read_nonblocking
+        @param print_func: A function to be used to print the data being read
+                (should take a string parameter)
+        @return: A tuple containing the match index and the data read so far
+        @raise ExpectTimeoutError: Raised if timeout expires
+        @raise ExpectProcessTerminatedError: Raised if the child process
+                terminates while waiting for output
+        @raise ExpectError: Raised if an unknown error occurs
+        """
+        return self.read_until_output_matches(patterns,
+                                        lambda x: x.splitlines(), timeout,
+                                        internal_timeout, print_func,
+                                        self.match_patterns_multiline)
 
 class ShellSession(Expect):
     """
@@ -1191,7 +1243,7 @@ class ShellSession(Expect):
         end_time = time.time() + timeout
         while time.time() < end_time:
             time.sleep(0.5)
-            if self.read_nonblocking(0, end_time-time.time()).strip():
+            if self.read_nonblocking(0, end_time - time.time()).strip():
                 return True
         # No output -- report unresponsive
         return False
@@ -1326,7 +1378,8 @@ class ShellSession(Expect):
                                       print_func)[0]
 
 
-    def cmd(self, cmd, timeout=60, internal_timeout=None, print_func=None, ok_status=[0,]):
+    def cmd(self, cmd, timeout=60, internal_timeout=None, print_func=None,
+            ok_status=[0, ]):
         """
         Send a command and return its output. If the command's exit status is
         nonzero, raise an exception.
