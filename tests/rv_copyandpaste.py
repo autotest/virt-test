@@ -456,8 +456,6 @@ def copy_and_paste_pos(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is
     # installed and the daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # Start vdagent daemon
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
@@ -492,8 +490,6 @@ def restart_cppaste(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is
     # installed and the daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # start vdagent daemon
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
@@ -545,8 +541,6 @@ def copy_and_paste_cpdisabled_neg(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is installed and the
     # daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # Start vdagent for this negative test
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
@@ -584,8 +578,6 @@ def copy_and_paste_largetext(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is
     # installed and the daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # Start vdagent
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
 
@@ -627,8 +619,6 @@ def restart_cppaste_lrgtext(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is
     # installed and the daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # Start vdagent
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
 
@@ -691,8 +681,6 @@ def copy_and_paste_image_pos(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is
     # installed and the daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # Start vdagent for this negative test
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
 
@@ -760,8 +748,6 @@ def restart_cppaste_image(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is
     # installed and the daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # Start vdagent
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
 
@@ -909,8 +895,6 @@ def copyandpasteimg_cpdisabled_neg(session_to_copy_from, session_to_paste_to,
     # Before doing the copy and paste, verify vdagent is
     # installed and the daemon is running on the guest
     utils_spice.verify_vdagent(guest_session, test_timeout)
-    # Start vdagent for this negative test
-    utils_spice.start_vdagent(guest_session, test_timeout)
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
@@ -961,6 +945,9 @@ def run_rv_copyandpaste(test, params, env):
     guest_vm = env.get_vm(params["guest_vm"])
     guest_session = guest_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
+    guest_root_session = guest_vm.wait_for_login(
+            timeout=int(params.get("login_timeout", 360)),
+            username="root", password="123456")
     logging.info("Get PID of remote-viewer")
     client_session.cmd("pgrep remote-viewer")
 
@@ -1014,11 +1001,14 @@ def run_rv_copyandpaste(test, params, env):
 
     client_session.cmd("export DISPLAY=:0.0")
 
-    utils_spice.launch_startx(guest_vm)
+    # Verify that gnome is now running on the guest
+    try:
+        guest_session.cmd("ps aux | grep -v grep | grep gnome-session")
+    except aexpect.ShellCmdError:
+        raise error.TestWarn("gnome-session was probably not correctly started")
 
     guest_session.cmd("export DISPLAY=:0.0")
-    # Verify that gnome is now running on the guest
-    guest_session.cmd("ps aux | grep -v grep | grep gnome-session")
+
 
     # Make sure the clipboards are clear before starting the test
     clear_cb(guest_session, params)
@@ -1034,23 +1024,23 @@ def run_rv_copyandpaste(test, params, env):
                 logging.info("Negative Test Case: Copy/Paste Disabled, Copying"
                             "Image from the Client to Guest Should Not Work\n")
                 copyandpasteimg_cpdisabled_neg(client_session, guest_session,
-                                                 guest_session, params)
+                                                 guest_root_session, params)
             else:
                 logging.info("Negative Test Case: Copy/Paste Disabled, Copying"
                              " from the Client to Guest Should Not Work\n")
                 copy_and_paste_cpdisabled_neg(client_session, guest_session,
-                                          guest_session, params)
+                                          guest_root_session, params)
         if "guest_to_client" in test_type:
             if "image" in test_type:
                 logging.info("Negative Test Case: Copy/Paste Disabled, Copying"
                             "Image from the Guest to Client Should Not Work\n")
                 copyandpasteimg_cpdisabled_neg(guest_session, client_session,
-                                                 guest_session, params)
+                                                 guest_root_session, params)
             else:
                 logging.info("Negative Test Case: Copy/Paste Disabled, Copying"
                              " from the Guest to Client Should Not Work\n")
                 copy_and_paste_cpdisabled_neg(guest_session, client_session,
-                                              guest_session, params)
+                                              guest_root_session, params)
 
     elif "positive" in test_type:
         # These are positive tests, where the clipboards are synced because
@@ -1060,61 +1050,61 @@ def run_rv_copyandpaste(test, params, env):
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Cp Img Client to Guest")
                     restart_cppaste_image(client_session, guest_session,
-                                          guest_session, params)
+                                          guest_root_session, params)
                 else:
                     logging.info("Copying an Image from the Client to Guest")
                     copy_and_paste_image_pos(client_session, guest_session,
-                                             guest_session, params)
+                                             guest_root_session, params)
             elif testing_text.isdigit():
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copying a String of size "
                                  + testing_text + " from the Client to Guest")
                     restart_cppaste_lrgtext(client_session, guest_session,
-                                            guest_session, params)
+                                            guest_root_session, params)
                 else:
                     logging.info("Copying a String of size " + testing_text +
                              " from the Client to Guest")
                     copy_and_paste_largetext(client_session, guest_session,
-                               guest_session, params)
+                               guest_root_session, params)
             else:
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copying from Client to Guest\n")
                     restart_cppaste(client_session, guest_session,
-                                    guest_session, params)
+                                    guest_root_session, params)
                 else:
                     logging.info("Copying from the Client to Guest\n")
                     copy_and_paste_pos(client_session, guest_session,
-                                       guest_session, params)
+                                       guest_root_session, params)
         if "guest_to_client" in test_type:
             if "image" in test_type:
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copy Img Guest to Client")
                     restart_cppaste_image(guest_session, client_session,
-                                          guest_session, params)
+                                          guest_root_session, params)
                 else:
                     logging.info("Copying an Image from the Guest to Client")
                     copy_and_paste_image_pos(guest_session, client_session,
-                                             guest_session, params)
+                                             guest_root_session, params)
             elif testing_text.isdigit():
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copying a String of size "
                                  + testing_text + " from the Guest to Client")
                     restart_cppaste_lrgtext(guest_session, client_session,
-                                            guest_session, params)
+                                            guest_root_session, params)
                 else:
                     logging.info("Copying a String of size " + testing_text +
                                  " from the Guest to Client")
                     copy_and_paste_largetext(guest_session, client_session,
-                               guest_session, params)
+                               guest_root_session, params)
             else:
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copying: Client to Guest\n")
                     restart_cppaste(guest_session, client_session,
-                                    guest_session, params)
+                                    guest_root_session, params)
                 else:
                     logging.info("Copying from the Guest to Client\n")
                     copy_and_paste_pos(guest_session, client_session,
-                                       guest_session, params)
+                                       guest_root_session, params)
     elif "negative" in test_type:
         # These are negative tests, where the clipboards are not synced because
         # the spice-vdagent service will not be running on the guest.
@@ -1123,23 +1113,23 @@ def run_rv_copyandpaste(test, params, env):
                 logging.info("Negative Test Case: Copying an Image from the "
                              "Client to Guest")
                 copy_and_paste_image_neg(client_session, guest_session,
-                                         guest_session, params)
+                                         guest_root_session, params)
             else:
                 logging.info("Negative Test Case: Copying from the Client to"
                             "Guest Should Not Work\n")
                 copy_and_paste_neg(client_session, guest_session,
-                                   guest_session, params)
+                                   guest_root_session, params)
         if "guest_to_client" in test_type:
             if "image" in test_type:
                 logging.info("Negative Test Case: Copying an Image from the "
                              "Guest to Client")
                 copy_and_paste_image_neg(guest_session, client_session,
-                                         guest_session, params)
+                                         guest_root_session, params)
             else:
                 logging.info("Negative Test Case: Copying from the Guest to"
                              " Client Should Not Work\n")
                 copy_and_paste_neg(guest_session, client_session,
-                               guest_session, params)
+                               guest_root_session, params)
     else:
         # The test is not supported, verify what is a supported test.
         raise error.TestFail("Couldn't Find the Correct Test To Run")
