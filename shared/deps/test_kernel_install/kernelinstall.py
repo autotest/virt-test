@@ -35,10 +35,12 @@ class kernelinstall(test.test):
 
     def _kernel_install_koji(self, koji_tag, package="kernel", dep_pkgs=None,
                              need_reboot=True):
-        for utility in ['/usr/bin/koji', '/usr/bin/brew']:
-            if not os.access(utility, os.X_OK):
-                logging.debug("%s missing - trying to install", utility)
-                self.sm.install_what_provides(utility)
+        # Using hardcoded package names (the names are not expected to change)
+        # we avoid lookup errors due to SSL problems, so let's go with that.
+        for package in ['koji', 'brewkoji']:
+            if not self.sm.check_installed(package):
+                logging.debug("%s missing - trying to install", package)
+                self.sm.install(package)
 
         sys.path.append(self.bindir)
         import utils_koji
