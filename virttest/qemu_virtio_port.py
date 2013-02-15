@@ -500,6 +500,12 @@ class ThSendCheck(Thread):
 
     def run(self):
         logging.debug("ThSendCheck %s: run", self.getName())
+        _err_msg_exception = ('ThSendCheck ' + str(self.getName()) + ': Got '
+                              'exception %s, continuing')
+        _err_msg_disconnect = ('ThSendCheck ' + str(self.getName()) + ': Port '
+                               'disconnected, waiting for new port.')
+        _err_msg_reconnect = ('ThSendCheck ' + str(self.getName()) + ': Port '
+                              'reconnected, continuing.')
         too_much_data = False
         if self.reduced_set:
             rand_a = 65
@@ -514,7 +520,22 @@ class ThSendCheck(Thread):
                 while not self.exitevent.isSet() and len(queue) > 1048576:
                     too_much_data = True
                     time.sleep(0.1)
-            ret = select.select([], [self.port.sock], [], 1.0)
+            try:
+                ret = select.select([], [self.port.sock], [], 1.0)
+            except Exception, inst:
+                # self.port is not yet set while reconnecting
+                if self.migrate_event is None:
+                    raise error.TestFail("ThSendCheck %s: Broken pipe. If this"
+                                   " is expected behavior set migrate_event "
+                                   "to support reconnection." % self.getName())
+                if self.port.sock is None:
+                    logging.debug(_err_msg_disconnect)
+                    while self.port.sock is None:
+                        time.sleep(0.1)
+                    logging.debug(_err_msg_reconnect)
+                else:
+                    logging.debug(_err_msg_exception, inst)
+                continue
             if ret[1]:
                 # Generate blocklen of random data add them to the FIFO
                 # and send them over virtio_console
@@ -530,7 +551,7 @@ class ThSendCheck(Thread):
                         idx = self.port.sock.send(buf)
                     except Exception, inst:
                         # Broken pipe
-                        if inst.errno != 32:
+                        if not hasattr(inst, 'errno') or inst.errno != 32:
                             continue
                         if self.migrate_event is None:
                             self.exitevent.set()
@@ -660,12 +681,43 @@ class ThRecvCheck(Thread):
         other thread.
         """
         logging.debug("ThRecvCheck %s: run", self.getName())
+        _err_msg_missing_migrate_ev = ("ThRecvCheck %s: Broken pipe. If "
+                        "this is expected behavior set migrate_event to "
+                        "support reconnection." % self.getName())
+        _err_msg_exception = ('ThRecvCheck ' + str(self.getName()) + ': Got '
+                              'exception %s, continuing')
+        _err_msg_disconnect = ('ThRecvCheck ' + str(self.getName()) + ': Port '
+                               'disconnected, waiting for new port.')
+        _err_msg_reconnect = ('ThRecvCheck ' + str(self.getName()) + ': Port '
+                              'reconnected, continuing.')
         attempt = 10
         minsendidx = self.sendlen
         while not self.exitevent.isSet():
-            ret = select.select([self.port.sock], [], [], 1.0)
+            try:
+                ret = select.select([self.port.sock], [], [], 1.0)
+            except Exception, inst:
+                # self.port is not yet set while reconnecting
+                if self.port.sock is None:
+                    logging.debug(_err_msg_disconnect)
+                    while self.port.sock is None:
+                        time.sleep(0.1)
+                    logging.debug(_err_msg_reconnect)
+                else:
+                    logging.debug(_err_msg_exception, inst)
+                continue
             if ret[0] and (not self.exitevent.isSet()):
-                buf = self.port.sock.recv(self.blocklen)
+                try:
+                    buf = self.port.sock.recv(self.blocklen)
+                except Exception, inst:
+                    # self.port is not yet set while reconnecting
+                    if self.port.sock is None:
+                        logging.debug(_err_msg_disconnect)
+                        while self.port.sock is None:
+                            time.sleep(0.1)
+                        logging.debug(_err_msg_reconnect)
+                    else:
+                        logging.debug(_err_msg_exception, inst)
+                    continue
                 if buf:
                     # Compare the received data with the control data
                     for char in buf:
@@ -715,10 +767,7 @@ class ThRecvCheck(Thread):
                         attempt -= 1
                         if self.migrate_event is None:
                             self.exitevent.set()
-                            raise error.TestFail("ThRecvCheck %s: Broken pipe."
-                                    " If this is expected behavior set migrate"
-                                    "_event to support reconnection." %
-                                    self.getName())
+                            raise error.TestFail(_err_msg_missing_migrate_ev)
                         logging.debug("ThRecvCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
                         # TODO BUG: data from the socket on host can be lost
