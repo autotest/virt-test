@@ -257,7 +257,7 @@ class GuestWorker(object):
         self.session = utils_test.wait_for_login(self.vm)
         self._execute_worker(timeout)
 
-    def cmd(self, cmd, timeout=10):
+    def cmd(self, cmd, timeout=10, patterns=None):
         """
         Wrapper around the self.cmd command which executes the command on
         guest. Unlike self._cmd command when the command fails it raises the
@@ -266,7 +266,7 @@ class GuestWorker(object):
         @param timeout: Timeout used to verify expected output.
         @return: Tuple (match index, data)
         """
-        match, data = self._cmd(cmd, timeout)
+        match, data = self._cmd(cmd, timeout, patterns)
         if match == 1 or match is None:
             raise VirtioPortException("Failed to execute '%s' on"
                                       " virtio_console_guest.py, "
@@ -274,23 +274,33 @@ class GuestWorker(object):
                                       (cmd, self.vm.name, data))
         return (match, data)
 
-    def _cmd(self, cmd, timeout=10):
+    def _cmd(self, cmd, timeout=10, patterns=None):
         """
         Execute given command inside the script's main loop.
         @param command: Command that will be executed.
         @param timeout: Timeout used to verify expected output.
+        @param patterns: Expected patterns; have to startwith ^PASS: or ^FAIL:
         @return: Tuple (match index, data)
         """
+        if not patterns:
+            patterns = ("^PASS:", "^FAIL:")
         logging.debug("Executing '%s' on virtio_console_guest.py,"
                       " vm: %s, timeout: %s", cmd, self.vm.name, timeout)
         self.session.sendline(cmd)
         try:
-            (match, data) = self.session.read_until_last_line_matches(
-                                                ["PASS:", "FAIL:"], timeout)
-
+            (match, data) = self.session.read_until_any_line_matches(patterns,
+                                        timeout=timeout)
+            if patterns[match].startswith('^PASS:'):
+                match = 0
+            elif patterns[match].startswith('^FAIL:'):
+                match = 1
+            else:
+                data = ("Incorrect pattern %s. Data in console:\n%s"
+                        % (patterns[match], data))
+                match = None
         except aexpect.ExpectError, inst:
             match = None
-            data = "Cmd process timeout. Data in console: " + inst.output
+            data = "Cmd process timeout. Data in console:\n" + inst.output
 
         self.vm.verify_kernel_crash()
 
