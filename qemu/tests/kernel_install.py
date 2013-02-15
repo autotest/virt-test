@@ -86,6 +86,9 @@ def run_kernel_install(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
+    logging.info("Guest kernel before install: %s",
+                 session.cmd('uname -a').strip())
+
     error.context("Save current default kernel information")
     default_kernel = _save_bootloader_config(session)
 
