@@ -666,8 +666,10 @@ def run_virtio_console(test, params, env):
             logging.debug('Joining %s', threads[0])
             threads[0].join(5)
             if threads[0].isAlive():
-                workaround_unfinished_threads = True
-                logging.debug("Unable to destroy the thread %s", threads[0])
+                logging.error('Send thread stuck, destroing the VM and '
+                        'stopping loopback test to prevent autotest freeze.')
+                vm.destroy()
+                break
             if threads[0].ret_code:
                 err += "%s, " % thread
             tmp = "%d data sent; " % threads[0].idx
