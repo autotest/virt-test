@@ -102,19 +102,14 @@ def run_kernel_install(test, params, env):
     # Env preparation for test.
     install_type = params.get("install_type", "brew")
     sub_test_params = {}
+
     # rpm
-    sub_test_params.update(_build_params("kernel_rpm_path"))
-    sub_test_params.update(_build_params("kernel_deps_rpms"))
+    sub_test_params.update(_build_params('kernel_rpm_path'))
+    sub_test_params.update(_build_params('kernel_deps_rpms'))
 
     # koji
-    if params.get("kernel_koji_tag"):
-        koji_tag = "kernel_koji_tag"
-    else:
-        # Try to get brew tag if not set "kernel_koji_tag" parameter
-        koji_tag = "brew_tag"
-
-    sub_test_params.update(_build_params(koji_tag))
-    sub_test_params.update(_build_params('kernel_dep_pkgs'))
+    sub_test_params.update(_build_params('kernel_deps_koji_spec'))
+    sub_test_params.update(_build_params('kernel_koji_spec'))
 
     # git
     sub_test_params.update(_build_params('kernel_git_repo'))
