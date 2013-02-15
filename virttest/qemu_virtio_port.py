@@ -383,7 +383,7 @@ class GuestWorker(object):
         """
         # Check if python is still alive
         match, tmp = self._cmd("is_alive()", 10)
-        if (match is None) or (match != 0):
+        if match is not 0:
             logging.error("Python died/is stuck/have remaining threads")
             logging.debug(tmp)
             try:
