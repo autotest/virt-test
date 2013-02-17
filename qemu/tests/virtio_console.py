@@ -890,6 +890,7 @@ def run_virtio_console(test, params, env):
 
         # Start loopback
         error.context("Starting loopback", logging.info)
+        err = False
         # TODO: Use normal LOOP_NONE when bz796048 is resolved.
         guest_worker.cmd("virt.loopback(['%s'], ['%s'], %s, virt.LOOP_"
                          "RECONNECT_NONE)"
@@ -970,43 +971,49 @@ def run_virtio_console(test, params, env):
             raise error.TestFail("Sender thread died before interruption.")
         if not threads[0].isAlive():
             raise error.TestFail("Receiver thread died before interruption.")
-        for i in xrange(no_repeats):
-            error.context("Interruption nr. %s" % i)
-            threads[1].sendidx = acceptable_loss
-            interruption()
-            count = threads[1].idx
-            logging.debug('Transfered data: %s', count)
-            # Be friendly to very short test_time values
-            for _ in xrange(3):
-                time.sleep(test_time)
-                logging.debug('Transfered data2: %s', threads[1].idx)
-                if count == threads[1].idx and threads[1].isAlive():
-                    logging.warn('No data received after %ds, extending '
-                                 'test_time', test_time)
-                else:
-                    break
-            if count == threads[1].idx or not threads[1].isAlive():
-                if not threads[1].isAlive():
-                    logging.error('RecvCheck thread stopped unexpectedly.')
-                if count == threads[1].idx:
-                    logging.error('No data transfered after interruption!')
-                logging.info('Output from GuestWorker:\n%s',
-                             guest_worker.read_nonblocking())
-                try:
-                    session = vm.login()
-                    data = session.cmd_output('dmesg')
-                    if 'WARNING:' in data:
-                        logging.warning('There are warnings in dmesg:\n%s',
-                                        data)
-                except Exception, inst:
-                    logging.warn("Can't verify dmesg: %s", inst)
-                try:
-                    vm.monitor.info('qtree')
-                except Exception, inst:
-                    logging.warn("Failed to get info from qtree: %s", inst)
-                exit_event.set()
-                vm.verify_kernel_crash()
-                raise error.TestFail('No data transfered after interruption.')
+        try:
+            for i in xrange(no_repeats):
+                error.context("Interruption nr. %s" % i)
+                threads[1].sendidx = acceptable_loss
+                interruption()
+                count = threads[1].idx
+                logging.debug('Transfered data: %s', count)
+                # Be friendly to very short test_time values
+                for _ in xrange(3):
+                    time.sleep(test_time)
+                    logging.debug('Transfered data2: %s', threads[1].idx)
+                    if count == threads[1].idx and threads[1].isAlive():
+                        logging.warn('No data received after %ds, extending '
+                                     'test_time', test_time)
+                    else:
+                        break
+                if count == threads[1].idx or not threads[1].isAlive():
+                    if not threads[1].isAlive():
+                        logging.error('RecvCheck thread stopped unexpectedly.')
+                    if count == threads[1].idx:
+                        logging.error('No data transfered after interruption!')
+                    logging.info('Output from GuestWorker:\n%s',
+                                 guest_worker.read_nonblocking())
+                    try:
+                        session = vm.login()
+                        data = session.cmd_output('dmesg')
+                        if 'WARNING:' in data:
+                            logging.warning('There are warnings in dmesg:\n%s',
+                                            data)
+                    except Exception, inst:
+                        logging.warn("Can't verify dmesg: %s", inst)
+                    try:
+                        vm.monitor.info('qtree')
+                    except Exception, inst:
+                        logging.warn("Failed to get info from qtree: %s", inst)
+                    exit_event.set()
+                    vm.verify_kernel_crash()
+                    raise error.TestFail('No data transfered after'
+                                         'interruption.')
+        except Exception, inst:
+            err = True
+            logging.error('interrupted_loopback failed with exception: %s',
+                          inst)
 
         error.context("Stopping loopback", logging.info)
         exit_event.set()
@@ -1017,9 +1024,10 @@ def run_virtio_console(test, params, env):
             if thread.isAlive():
                 workaround_unfinished_threads = True
                 logging.debug("Unable to destroy the thread %s", thread)
-        logging.info('%d data sent; %d data received and verified; %d '
-                     'interruptions %ds each.', threads[0].idx, threads[1].idx,
-                     no_repeats, test_time)
+        if not err:     # Show only on success
+            logging.info('%d data sent; %d data received and verified; %d '
+                         'interruptions %ds each.', threads[0].idx,
+                         threads[1].idx, no_repeats, test_time)
         err = ""
         if threads[0].ret_code:
             err += "sender, "
@@ -1128,72 +1136,94 @@ def run_virtio_console(test, params, env):
             stats = array.array('f', [])
             loads = utils.SystemLoad([(os.getpid(), 'autotest'),
                                       (vm.get_pid(), 'VM'), 0])
-            loads.start()
-            _time = time.time()
-            thread.start()
-            for _ in range(100):
-                stats.append(thread.idx)
-                time.sleep(time_slice)
-            _time = time.time() - _time - duration
-            logging.info("\n" + loads.get_cpu_status_string()[:-1])
-            logging.info("\n" + loads.get_mem_status_string()[:-1])
-            exit_event.set()
-            thread.join()
-            if thread.ret_code:
-                no_errors += 1
-                logging.error("test_perf: error occured in thread %s", thread)
+            try:
+                loads.start()
+                _time = time.time()
+                thread.start()
+                for _ in range(100):
+                    stats.append(thread.idx)
+                    time.sleep(time_slice)
+                _time = time.time() - _time - duration
+                logging.info("\n" + loads.get_cpu_status_string()[:-1])
+                logging.info("\n" + loads.get_mem_status_string()[:-1])
+                exit_event.set()
+                thread.join()
+                if thread.ret_code:
+                    no_errors += 1
+                    logging.error("test_perf: error occured in thread %s",
+                                  thread)
 
-            # Let the guest read-out all the remaining data
-            while not guest_worker._cmd("virt.poll('%s', %s)"
+                # Let the guest read-out all the remaining data
+                while not guest_worker._cmd("virt.poll('%s', %s)"
                                         % (port.name, select.POLLIN), 10)[0]:
-                time.sleep(1)
+                    time.sleep(1)
 
-            guest_worker.safe_exit_loopback_threads([port], [])
+                guest_worker.safe_exit_loopback_threads([port], [])
 
-            if (_time > time_slice):
-                logging.error("Test ran %fs longer which is more than one "
-                              "time slice", _time)
-            else:
-                logging.debug("Test ran %fs longer", _time)
-            stats = _process_stats(stats[1:], time_slice * 1048576)
-            logging.debug("Stats = %s", stats)
-            logging.info("Host -> Guest [MB/s] (min/med/max) = %.3f/%.3f/%.3f",
-                         stats[0], stats[len(stats) / 2], stats[-1])
+                if (_time > time_slice):
+                    logging.error("Test ran %fs longer which is more than one "
+                                  "time slice", _time)
+                else:
+                    logging.debug("Test ran %fs longer", _time)
+                stats = _process_stats(stats[1:], time_slice * 1048576)
+                logging.debug("Stats = %s", stats)
+                logging.info("Host -> Guest [MB/s] (min/med/max) = %.3f/%.3f/"
+                            "%.3f", stats[0], stats[len(stats) / 2], stats[-1])
 
-            del thread
+                del thread
 
-            # GUEST -> HOST
-            exit_event.clear()
-            stats = array.array('f', [])
-            guest_worker.cmd("virt.send_loop_init('%s', %d)"
-                             % (port.name, buf_len), 30)
-            thread = qemu_virtio_port.ThRecv(port.sock, exit_event, buf_len)
-            thread.start()
-            loads.start()
-            guest_worker.cmd("virt.send_loop()", 10)
-            _time = time.time()
-            for _ in range(100):
-                stats.append(thread.idx)
-                time.sleep(time_slice)
-            _time = time.time() - _time - duration
-            logging.info("\n" + loads.get_cpu_status_string()[:-1])
-            logging.info("\n" + loads.get_mem_status_string()[:-1])
-            guest_worker.cmd("virt.exit_threads()", 10)
-            exit_event.set()
-            thread.join()
-            if thread.ret_code:
-                no_errors += 1
-                logging.error("test_perf: error occured in thread %s", thread)
-            if (_time > time_slice):    # Deviation is higher than 1 time_slice
-                logging.error(
-                "Test ran %fs longer which is more than one time slice", _time)
-            else:
-                logging.debug("Test ran %fs longer", _time)
-            stats = _process_stats(stats[1:], time_slice * 1048576)
-            logging.debug("Stats = %s", stats)
-            logging.info("Guest -> Host [MB/s] (min/med/max) = %.3f/%.3f/%.3f",
-                         stats[0], stats[len(stats) / 2], stats[-1])
-
+                # GUEST -> HOST
+                exit_event.clear()
+                stats = array.array('f', [])
+                guest_worker.cmd("virt.send_loop_init('%s', %d)"
+                                 % (port.name, buf_len), 30)
+                thread = qemu_virtio_port.ThRecv(port.sock, exit_event,
+                                                 buf_len)
+                thread.start()
+                loads.start()
+                guest_worker.cmd("virt.send_loop()", 10)
+                _time = time.time()
+                for _ in range(100):
+                    stats.append(thread.idx)
+                    time.sleep(time_slice)
+                _time = time.time() - _time - duration
+                logging.info("\n" + loads.get_cpu_status_string()[:-1])
+                logging.info("\n" + loads.get_mem_status_string()[:-1])
+                guest_worker.cmd("virt.exit_threads()", 10)
+                exit_event.set()
+                thread.join()
+                if thread.ret_code:
+                    no_errors += 1
+                    logging.error("test_perf: error occured in thread %s",
+                                  thread)
+                # Deviation is higher than single time_slice
+                if (_time > time_slice):
+                    logging.error(
+                    "Test ran %fs longer which is more than one time slice",
+                    _time)
+                else:
+                    logging.debug("Test ran %fs longer", _time)
+                stats = _process_stats(stats[1:], time_slice * 1048576)
+                logging.debug("Stats = %s", stats)
+                logging.info("Guest -> Host [MB/s] (min/med/max) = %.3f/%.3f/"
+                            "%.3f", stats[0], stats[len(stats) / 2], stats[-1])
+            except Exception, inst:
+                logging.error("test_perf: Failed with %s, starting cleanup",
+                              inst)
+                loads.stop()
+                try:
+                    guest_worker.cmd("virt.exit_threads()", 10)
+                    exit_event.set()
+                    thread.join()
+                    raise inst
+                except Exception, inst:
+                    logging.error("test_perf: Critical failure, killing VM %s",
+                                  inst)
+                    exit_event.set()
+                    vm.destroy()
+                    del thread
+                    del exit_event
+                    raise inst
             del thread
             del exit_event
         cleanup(vm, guest_worker)
@@ -1614,36 +1644,45 @@ def run_virtio_console(test, params, env):
         port.sock.settimeout(20.0)
 
         loads = utils.SystemLoad([(os.getpid(), 'autotest'),
-                                  (vm.get_pid(), 'VM'), 0])
-        loads.start()
-
+                                      (vm.get_pid(), 'VM'), 0])
         try:
-            sent1 = 0
-            for _ in range(1000000):
-                sent1 += port.sock.send("a")
-        except socket.timeout:
-            logging.info("Data sending to closed port timed out.")
+            loads.start()
 
-        logging.info("Bytes sent to client: %d", sent1)
-        logging.info("\n" + loads.get_cpu_status_string()[:-1])
+            try:
+                sent1 = 0
+                for _ in range(1000000):
+                    sent1 += port.sock.send("a")
+            except socket.timeout:
+                logging.info("Data sending to closed port timed out.")
 
-        logging.info("Open and then close port %s", port.name)
-        guest_worker = qemu_virtio_port.GuestWorker(vm)
-        # Test of live and open and close port again
-        guest_worker.cleanup()
-        port.sock.settimeout(20.0)
+            logging.info("Bytes sent to client: %d", sent1)
+            logging.info("\n" + loads.get_cpu_status_string()[:-1])
 
-        loads.start()
-        try:
-            sent2 = 0
-            for _ in range(40000):
-                sent2 = port.sock.send("a")
-        except socket.timeout:
-            logging.info("Data sending to closed port timed out.")
+            logging.info("Open and then close port %s", port.name)
+            guest_worker = qemu_virtio_port.GuestWorker(vm)
+            # Test of live and open and close port again
+            guest_worker.cleanup()
+            port.sock.settimeout(20.0)
 
-        logging.info("Bytes sent to client: %d", sent2)
-        logging.info("\n" + loads.get_cpu_status_string()[:-1])
-        loads.stop()
+            loads.start()
+            try:
+                sent2 = 0
+                for _ in range(40000):
+                    sent2 = port.sock.send("a")
+            except socket.timeout:
+                logging.info("Data sending to closed port timed out.")
+
+            logging.info("Bytes sent to client: %d", sent2)
+            logging.info("\n" + loads.get_cpu_status_string()[:-1])
+            loads.stop()
+        except Exception, inst:
+            logging.error('test_rw_notconnect_guest failed: %s', inst)
+            if loads:
+                loads.stop()
+            port.sock.settimeout(None)
+            guest_worker = qemu_virtio_port.GuestWorker(vm)
+            cleanup(vm, guest_worker)
+            raise inst
         if (sent1 != sent2):
             logging.warning("Inconsistent behavior: First sent %d bytes and "
                             "second sent %d bytes", sent1, sent2)
