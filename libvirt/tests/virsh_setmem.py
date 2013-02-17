@@ -125,7 +125,7 @@ def run_virsh_setmem(test, params, env):
     libvirt = params.get("libvirt", "on")
     delta_percentage = float(params.get("setmem_delta_per", "10"))
     start_vm = params.get("start_vm", "yes")
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
 
     # Gather environment parameters
     vm = env.get_vm(params["main_vm"])

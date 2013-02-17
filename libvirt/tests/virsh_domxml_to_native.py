@@ -15,7 +15,7 @@ def run_virsh_domxml_to_native(test, params, env):
     4.Recover test environment.
     5.Confirm the test result.
     """
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 

@@ -15,7 +15,7 @@ def run_virsh_edit(test, params, env):
     5.Confirm the test result.
     """
 
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
 
     domid = vm.get_id()

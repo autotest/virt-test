@@ -12,7 +12,7 @@ def run_virsh_managedsave(test, params, env):
     from the same state at a later time.
     """
 
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(params["main_vm"])
 
     #define function
