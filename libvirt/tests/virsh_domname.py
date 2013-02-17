@@ -12,7 +12,7 @@ def run_virsh_domname(test, params, env):
     3) Recover libvirtd service and test environment.
     4) Check result.
     """
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(params["main_vm"])
 
     domid = vm.get_id()
