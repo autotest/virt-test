@@ -16,7 +16,7 @@ def run_virsh_domxml_from_native(test, params, env):
       the libvirtd service.)
     5.Confirm the test result.
     """
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     vm.verify_alive()
 

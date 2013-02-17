@@ -15,7 +15,7 @@ def run_virsh_setvcpus(test, params, env):
     5.Confirm the test result.
     """
 
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     xml_file = params.get("setvcpus_xml_file", "vm.xml")
     virsh.dumpxml(vm_name, xml_file)
