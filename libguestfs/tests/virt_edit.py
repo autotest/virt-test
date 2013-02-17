@@ -43,7 +43,7 @@ def run_virt_edit(test, params, env):
     6) Check result.
     """
 
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
                                                        "default"))

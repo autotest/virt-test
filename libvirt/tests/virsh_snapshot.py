@@ -58,7 +58,7 @@ def run_virsh_snapshot(test, params, env):
             error.TestFail("%s (%s != %s)" % (errorstr, i1,i2))
 
 
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     offline = (params.get("snapshot_shutdown","no") == "yes")
     vm = env.get_vm(vm_name)
 

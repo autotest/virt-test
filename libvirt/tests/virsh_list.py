@@ -33,7 +33,7 @@ def run_virsh_list(test, params, env):
         session.close()
         return int(status), output
 
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
 
     options_ref = params.get("list_options_ref", "")

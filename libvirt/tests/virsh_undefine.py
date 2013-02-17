@@ -27,7 +27,7 @@ def run_virsh_undefine(test, params, env):
     remote_password = params.get("remote_password", "password")
     remote_prompt = params.get("remote_prompt", "#")
 
-    vm_name = params.get("main_vm", "vm1")
+    vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     vm_id = vm.get_id()
     vm_uuid = vm.get_uuid()
