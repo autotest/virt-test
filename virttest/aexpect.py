@@ -54,6 +54,19 @@ def _get_reader_filename(base_dir, a_id, reader):
     return os.path.join(base_dir, "outpipe-%s-%s" % (reader, a_id))
 
 
+def cleanup_files(filelist):
+    for filename in filelist:
+        try:
+            os.unlink(filename)
+        except OSError:
+            pass
+    # Try to cleanup BASE_DIR also
+    try:
+        os.rmdir(BASE_DIR)
+    except OSError:
+        pass
+    return
+
 # The following is the server part of the module.
 
 if __name__ == "__main__":
@@ -82,11 +95,22 @@ if __name__ == "__main__":
     os.putenv("TERM", "dumb")
 
     (shell_pid, shell_fd) = pty.fork()
-    if shell_pid == 0:
-        # Child process: run the command in a subshell
+    if shell_pid == 0: # Child process: run the command in a subshell
         os.execv("/bin/sh", ["/bin/sh", "-c", command])
-    else:
-        # Parent process
+        sys.exit(0) # just in case
+    else: # Parent process
+
+        # Cleanup handler (dependant on cleanup_list)
+        cleanup_list = _get_filenames(BASE_DIR, a_id) + reader_filenames
+        def cleanup(signum, frame):
+            # don't care about parameters, but keep pylint happy
+            del signum
+            del frame
+            cleanup_files(cleanup_list)
+        # register handlers for triggering clanup
+        for signum in [signal.SIGTERM]:
+            signal.signal(signum, cleanup)
+
         lock_server_running = _lock(lock_server_running_filename)
 
         # Set terminal echo on/off and disable pre- and post-processing
@@ -156,26 +180,16 @@ if __name__ == "__main__":
                 pid, status = os.waitpid(shell_pid, os.WNOHANG)
                 if pid:
                     status = os.WEXITSTATUS(status)
-                    break
+                    break # Child exited
             # If there's data to read from the client --
             if inpipe_fd in r:
                 data = os.read(inpipe_fd, 1024)
                 os.write(shell_fd, data)
 
+        # loop exited
+
         # Write the exit status to a file
-        fileobj = open(status_filename, "w")
-        fileobj.write(str(status))
-        fileobj.close()
-
-        # Wait for the client to finish initializing
-        _wait(lock_client_starting_filename)
-
-        # Delete FIFOs
-        for filename in [inpipe_filename]:
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
+        open(status_filename, "w").write(str(status))
 
         # Close all files and pipes
         output_file.close()
@@ -183,8 +197,15 @@ if __name__ == "__main__":
         for fd in reader_fds:
             os.close(fd)
 
+        # Close server streams
+        sys.stdin.close()
+        sys.stdout.close()
+        sys.stderr.close()
+
+        # Wait for the client to finish initializing
+        _wait(lock_client_starting_filename)
+
         _unlock(lock_server_running)
-        sys.exit(0)
 
         # Wait until process killed
         while True:
@@ -480,6 +501,7 @@ class Spawn:
         _unlock(lock_client_starting)
 
         if server_timedout:
+            self.close() # help cleanup
             raise ServerTimeoutError(self.a_id)
 
     # The following two functions are defined to make sure the state is set
@@ -614,19 +636,20 @@ class Spawn:
         # Call all cleanup routines
         for hook in self.close_hooks:
             hook(self)
+        # Build a list of files to delete
+        cleanup_list = _get_filenames(BASE_DIR, self.a_id)
         # Close reader file descriptors
-        for fd in self.reader_fds.values():
+        for filename, fd in self.reader_fds.items():
             try:
                 os.close(fd)
+                cleanup_list.append(filename)
             except Exception:
                 pass
+        if self.log_file:
+            cleanup_list.append(self.log_file)
+        cleanup_files(cleanup_list)
         self.reader_fds = {}
-        # Remove all used files
-        for filename in (_get_filenames(BASE_DIR, self.a_id)):
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
+        self.log_file = None
 
 
     def set_linesep(self, linesep):
