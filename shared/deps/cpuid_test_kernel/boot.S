@@ -24,8 +24,7 @@
 #endif
 
        .text
-start:  .global _start /* global entry point into kernel */
-
+_start: .global _start /* global entry point into kernel */
        /* make sure that the multiboot magic values in the beginning */
        jmp     multiboot_entry
 
