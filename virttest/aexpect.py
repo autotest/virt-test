@@ -61,6 +61,10 @@ if __name__ == "__main__":
     echo = sys.stdin.readline().strip() == "True"
     readers = sys.stdin.readline().strip().split(",")
     command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % a_id
+    # Let client optionally change BASE_DIR
+    bd = sys.stdin.readline().strip()
+    if bd:
+        BASE_DIR = bd
 
     # Define filenames to be used for communication
     (shell_pid_filename,
@@ -434,6 +438,8 @@ class Spawn:
             sub.stdin.write("%s\n" % echo)
             sub.stdin.write("%s\n" % ",".join(self.readers))
             sub.stdin.write("%s\n" % command)
+            sub.stdin.write("%s\n" % BASE_DIR)
+
             # Wait for the server to complete its initialization
             while not "Server %s ready" % self.a_id in sub.stdout.readline():
                 pass
