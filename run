@@ -363,7 +363,8 @@ class VirtTestApp(object):
                 self.cartesian_parser.only_filter(self.options.image_type)
             else:
                 self.cartesian_parser.only_filter("raw")
-                self.cartesian_parser.assign("image_type",
+                # The actual param name is image_format.
+                self.cartesian_parser.assign("image_format",
                                              self.options.image_type)
         else:
             logging.info("Config provided, ignoring --image-type option")
