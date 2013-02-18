@@ -376,7 +376,7 @@ class VirtTestApp(object):
                 self.cartesian_parser.only_filter(self.options.nic_model)
             else:
                 self.cartesian_parser.only_filter("nic_custom")
-                self.cartesian_parser.assign("nic_type", self.options.nic_model)
+                self.cartesian_parser.assign("nic_model", self.options.nic_model)
         else:
             logging.info("Config provided, ignoring --nic-model option")
 
