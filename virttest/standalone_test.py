@@ -611,6 +611,49 @@ def bootstrap_tests(options):
     return True
 
 
+def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
+    """
+    Print to stdout and run log stats of our test job.
+
+    @param job_elapsed_time: Time it took for the tests to execute.
+    @param n_tests: Total Number of tests executed.
+    @param n_tests_skipped: Total Number of tests skipped.
+    @param n_tests_passed: Number of tests that passed.
+    """
+    minutes, seconds = divmod(job_elapsed_time, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    pretty_time = ""
+    if hours:
+        pretty_time += "%02d:" % hours
+    if hours or minutes:
+        pretty_time += "%02d:" % minutes
+    pretty_time += "%02d" % seconds
+
+    total_time_str = "TOTAL TIME: %.2f s" % job_elapsed_time
+    if hours or minutes:
+        total_time_str += " (%s)" % pretty_time
+
+    print_header(total_time_str)
+    logging.info("Job total elapsed time: %.2f s", job_elapsed_time)
+
+    n_tests_passed = n_tests - n_tests_skipped - n_tests_failed
+    success_rate = ((float(n_tests_passed) /
+                     float(n_tests - n_tests_skipped)) * 100)
+
+    print_header("TESTS PASSED: %d" % n_tests_passed)
+    print_header("TESTS FAILED: %d" % n_tests_failed)
+    if n_tests_skipped:
+        print_header("TESTS SKIPPED: %d" % n_tests_skipped)
+    print_header("SUCCESS RATE: %.2f %%" % success_rate)
+
+    logging.info("Tests passed: %d", n_tests_passed)
+    logging.info("Tests failed: %d", n_tests_failed)
+    if n_tests_skipped:
+        print_header("Tests skipped: %d", n_tests_skipped)
+    logging.info("Success rate: %.2f %%", success_rate)
+
+
 def run_tests(parser, options):
     """
     Runs the sequence of KVM tests based on the list of dctionaries
@@ -680,6 +723,8 @@ def run_tests(parser, options):
     logging.info("")
 
     n_tests = last_index + 1
+    n_tests_failed = 0
+    n_tests_skipped = 0
     print_header("TESTS: %s" % n_tests)
 
     status_dct = {}
@@ -694,6 +739,7 @@ def run_tests(parser, options):
     index = 0
     setup_flag = 1
     cleanup_flag = 2
+    job_start_time = time.time()
     for dct in parser.get_dicts():
         shortname = get_tag(dct, tag_index)
 
@@ -748,6 +794,7 @@ def run_tests(parser, options):
                     t_end = time.time()
                     t_elapsed = t_end - t_begin
             except error.TestError, reason:
+                n_tests_failed += 1
                 logging.info("ERROR %s -> %s: %s", t.tag,
                              reason.__class__.__name__, reason)
                 logging.info("")
@@ -756,6 +803,7 @@ def run_tests(parser, options):
                 status_dct[dct.get("name")] = False
                 continue
             except error.TestNAError, reason:
+                n_tests_skipped += 1
                 logging.info("SKIP %s -> %s: %s", t.tag,
                              reason.__class__.__name__, reason)
                 logging.info("")
@@ -773,6 +821,7 @@ def run_tests(parser, options):
                 status_dct[dct.get("name")] = True
                 continue
             except Exception, reason:
+                n_tests_failed += 1
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 logging.error("")
                 tb_info = traceback.format_exception(exc_type, exc_value,
@@ -802,5 +851,9 @@ def run_tests(parser, options):
             print_pass(t_elapsed)
 
         status_dct[dct.get("name")] = current_status
+
+    job_end_time = time.time()
+    job_elapsed_time = job_end_time - job_start_time
+    _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed)
 
     return not failed
