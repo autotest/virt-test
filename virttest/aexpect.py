@@ -5,7 +5,7 @@ A class and functions used for running and controlling child processes.
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import os, sys, pty, select, termios, fcntl
+import os, sys, pty, select, termios, fcntl, time, signal
 
 BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
 
@@ -186,12 +186,24 @@ if __name__ == "__main__":
         _unlock(lock_server_running)
         sys.exit(0)
 
+        # Wait until process killed
+        while True:
+            time.sleep(1) # don't busy-wait
+
+        cleanup(None, None)
+        sys.exit(0)
 
 # The following is the client part of the module.
 
 import subprocess, time, signal, re, threading, logging
 import utils_misc
 
+class ServerTimeoutError(Exception):
+    def __init__(self, a_id):
+        self._a_id = a_id
+    def __str__(self):
+        return ("Aexpect server process for %s did not start within timeout"
+                % self._a_id)
 
 class ExpectError(Exception):
     def __init__(self, patterns, output):
@@ -372,6 +384,9 @@ class Spawn:
     resumes _tail() if needed.
     """
 
+    # Don't wait forever for the server to start
+    server_start_timeout = 3
+
     def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
                  linesep="\n"):
         """
@@ -426,6 +441,7 @@ class Spawn:
         # the client to release the lock before exiting
         lock_client_starting = _lock(self.lock_client_starting_filename)
 
+        server_timedout = False
         # Start the server (which runs the command)
         if command:
             sub = subprocess.Popen("%s %s" % (sys.executable, __file__),
@@ -441,8 +457,15 @@ class Spawn:
             sub.stdin.write("%s\n" % BASE_DIR)
 
             # Wait for the server to complete its initialization
-            while not "Server %s ready" % self.a_id in sub.stdout.readline():
-                pass
+            server_start_time = time.time()
+            server_timeout_time = server_start_time + self.server_start_timeout
+            while True:
+                if time.time() > server_timeout_time:
+                    server_timedout = True
+                    break
+                line = sub.stdout.readline()
+                if line.count("Server %s ready" % self.a_id):
+                    break
 
         # Open the reading pipes
         self.reader_fds = {}
@@ -453,9 +476,11 @@ class Spawn:
         except Exception:
             pass
 
-        # Allow the server to continue
+        # Allow the server to continue (for fast exiting commands)
         _unlock(lock_client_starting)
 
+        if server_timedout:
+            raise ServerTimeoutError(self.a_id)
 
     # The following two functions are defined to make sure the state is set
     # exclusively by the constructor call as specified in __getinitargs__().
