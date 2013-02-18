@@ -251,6 +251,9 @@ class VirtTestRunParser(optparse.OptionParser):
                               " ".join(SUPPORTED_DISK_BUSES) +
                               ". If -c is provided, this will be ignored. "
                               "Default: %default"))
+        qemu.add_option("--no", action="store", dest="no_filter", default="",
+                        help=("Additional no_filter to be passed to config"
+                              "parser"))
         self.add_option_group(qemu)
 
 
@@ -465,6 +468,13 @@ class VirtTestApp(object):
         self.cartesian_parser.assign("mem", self.options.mem)
 
 
+    def _process_no_filter(self):
+        if not self.options.config:
+            if self.options.no_filter:
+                self.cartesian_parser.no_filter(
+                        ", ".join(self.options.no_filter.split(' ')))
+
+
     def _process_general_options(self):
         """
         Calls for processing all generic options.
@@ -475,6 +485,7 @@ class VirtTestApp(object):
         self._process_restart_vm()
         self._process_restore_image_between_tests()
         self._process_mem()
+        self._process_no_filter()
 
 
     def _process_options(self):
