@@ -76,7 +76,11 @@ def cleanup_files(filelist):
 if __name__ == "__main__":
     a_id = sys.stdin.readline().strip()
     echo = sys.stdin.readline().strip() == "True"
-    readers = sys.stdin.readline().strip().split(",")
+    readers = sys.stdin.readline().strip()
+    if readers:
+        readers = readers.split(",")
+    else:
+        readers = []
     command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % a_id
     # Let client optionally change BASE_DIR
     bd = sys.stdin.readline().strip()
