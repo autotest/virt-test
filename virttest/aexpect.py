@@ -46,8 +46,8 @@ def _wait(filename):
 
 def _get_filenames(base_dir, a_id):
     return [os.path.join(base_dir, s + a_id) for s in
-            "shell-pid-", "status-", "output-", "inpipe-",
-            "lock-server-running-", "lock-client-starting-"]
+            "server-pid-", "shell-pid-", "status-", "output-",
+            "inpipe-", "lock-server-running-", "lock-client-starting-"]
 
 
 def _get_reader_filename(base_dir, a_id, reader):
@@ -80,7 +80,8 @@ if __name__ == "__main__":
         BASE_DIR = bd
 
     # Define filenames to be used for communication
-    (shell_pid_filename,
+    (server_pid_filename,
+     shell_pid_filename,
      status_filename,
      output_filename,
      inpipe_filename,
@@ -113,6 +114,9 @@ if __name__ == "__main__":
 
         lock_server_running = _lock(lock_server_running_filename)
 
+        # Write server pid to a file (then close it)
+        open(server_pid_filename, "w").write(str(os.getpid()))
+
         # Set terminal echo on/off and disable pre- and post-processing
         attr = termios.tcgetattr(shell_fd)
         attr[0] &= ~termios.INLCR
@@ -136,10 +140,9 @@ if __name__ == "__main__":
             os.mkfifo(filename)
             reader_fds.append(os.open(filename, os.O_RDWR))
 
-        # Write shell PID to file
-        fileobj = open(shell_pid_filename, "w")
-        fileobj.write(str(shell_pid))
-        fileobj.close()
+        # Write shell PID to file (then close it)
+        open(shell_pid_filename, "w").write(str(shell_pid))
+        log("Pid written to %s (closed)\n" % shell_pid_filename)
 
         # Print something to stdout so the client can start working
         print "Server %s ready" % a_id
@@ -433,7 +436,8 @@ class Spawn:
             os.makedirs(BASE_DIR)
         except Exception:
             pass
-        (self.shell_pid_filename,
+        (self.server_pid_filename,
+         self.shell_pid_filename,
          self.status_filename,
          self.output_filename,
          self.inpipe_filename,
@@ -583,6 +587,16 @@ class Spawn:
             pid = int(fileobj.read())
             fileobj.close()
             return pid
+        except Exception:
+            return None
+
+
+    def get_server_pid(self):
+        """
+        Return the PID of the server controlling the shell
+        """
+        try:
+            return int(open(self.server_pid_filename, "r").read())
         except Exception:
             return None
 
