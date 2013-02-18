@@ -1,5 +1,5 @@
 CFLAGS  := -m32 -fno-stack-protector -fno-builtin -nostdinc -O -g -Wall -I.
-LDFLAGS := -nostdlib -Wl,-N -Wl,-Ttext -Wl,100000
+LDFLAGS := -nostdlib -Wl,-N -Wl,-T -Wl,kernel.lds
 
 all: cpuid_dump_kernel.bin
 
