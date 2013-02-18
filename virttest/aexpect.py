@@ -50,6 +50,10 @@ def _get_filenames(base_dir, a_id):
             "inpipe-", "lock-server-running-", "lock-client-starting-"]
 
 
+def _get_log_filename(base_dir, a_id):
+    return os.path.join(base_dir, "server-%s-log" % a_id)
+
+
 def _get_reader_filename(base_dir, a_id, reader):
     return os.path.join(base_dir, "outpipe-%s-%s" % (reader, a_id))
 
@@ -88,12 +92,28 @@ if __name__ == "__main__":
      lock_server_running_filename,
      lock_client_starting_filename) = _get_filenames(BASE_DIR, a_id)
 
+    def log(msg):
+        open(_get_log_filename(BASE_DIR, a_id), "a").write(msg)
+
+    log("Server starting\n")
+    log("\techo: '%s'\n" % echo)
+    log("\treaders: %s\n" % readers)
+    log("\tcommand: '%s'\n" % command)
+    log("\tBASE_DIR: '%s'\n" % BASE_DIR)
+
+    for filename in _get_filenames(BASE_DIR, a_id):
+        log("Pipe: %s\n" %filename)
+
     # Populate the reader filenames list
     reader_filenames = [_get_reader_filename(BASE_DIR, a_id, reader)
                         for reader in readers]
 
+    log("Readers: %s\n" % reader_filenames)
+
     # Set $TERM = dumb
     os.putenv("TERM", "dumb")
+
+    log("Forking shell for command...\n")
 
     (shell_pid, shell_fd) = pty.fork()
     if shell_pid == 0: # Child process: run the command in a subshell
@@ -111,9 +131,12 @@ if __name__ == "__main__":
         # register handlers for triggering clanup
         for signum in [signal.SIGTERM]:
             signal.signal(signum, cleanup)
+        log("Cleanup will remove: %s\n" % cleanup_list)
 
+        log("Forked off pid %s with fd %s\n" % (shell_pid, shell_fd))
         lock_server_running = _lock(lock_server_running_filename)
 
+        log("Server pid: %s\n" % os.getpid())
         # Write server pid to a file (then close it)
         open(server_pid_filename, "w").write(str(os.getpid()))
 
@@ -129,24 +152,30 @@ if __name__ == "__main__":
             attr[3] &= ~termios.ECHO
         termios.tcsetattr(shell_fd, termios.TCSANOW, attr)
 
+        log("Setup termios: %s\n" % attr)
+
         # Open output file
         output_file = open(output_filename, "w")
+        log("Output file opened: %s\n" % output_filename)
+
         # Open input pipe
         os.mkfifo(inpipe_filename)
         inpipe_fd = os.open(inpipe_filename, os.O_RDWR)
+        log("Input Pipe opened: %s\n" % inpipe_filename)
+
         # Open output pipes (readers)
         reader_fds = []
         for filename in reader_filenames:
             os.mkfifo(filename)
             reader_fds.append(os.open(filename, os.O_RDWR))
+            log("Reader opened: %s\n" % filename)
 
         # Write shell PID to file (then close it)
         open(shell_pid_filename, "w").write(str(shell_pid))
         log("Pid written to %s (closed)\n" % shell_pid_filename)
 
-        # Print something to stdout so the client can start working
-        print "Server %s ready" % a_id
-        sys.stdout.flush()
+        # Signal to client, server setup is complete
+        sys.stdout.write("Server %s ready\n" % a_id)
 
         # Initialize buffers
         buffers = ["" for reader in readers]
@@ -491,6 +520,9 @@ class Spawn:
                 line = sub.stdout.readline()
                 if line.count("Server %s ready" % self.a_id):
                     break
+                else: # Share any other output
+                    if line.strip():
+                        logging.debug("%s: %s" % (self.a_id, line.rstrip()))
 
         # Open the reading pipes
         self.reader_fds = {}
@@ -663,6 +695,8 @@ class Spawn:
                 pass
         if self.log_file:
             cleanup_list.append(self.log_file)
+        # remove server log
+        cleanup_list.append(_get_log_filename(BASE_DIR, self.a_id))
         cleanup_files(cleanup_list)
         self.reader_fds = {}
         self.log_file = None
