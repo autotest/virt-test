@@ -1,4 +1,4 @@
-import os, logging, imp, sys, time, traceback, Queue, glob, shutil, inspect
+import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
