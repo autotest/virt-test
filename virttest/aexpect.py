@@ -633,7 +633,8 @@ class Spawn:
         """
         Return True if the process is running.
         """
-        return _locked(self.lock_server_running_filename)
+        server_pid = bool(self.get_server_pid() is not None)
+        return server_pid & _locked(self.lock_server_running_filename)
 
 
     def close(self, sig=signal.SIGKILL):
@@ -645,8 +646,9 @@ class Spawn:
         # Kill it if it's alive
         if self.is_alive():
             utils_misc.kill_process_tree(self.get_pid(), sig)
-        # Wait for the server to exit
-        _wait(self.lock_server_running_filename)
+            utils_misc.kill_process_tree(self.get_server_pid(), signal.SIGTERM)
+            time.sleep(0.1) # Give server small chance to self-clean
+            utils_misc.kill_process_tree(self.get_server_pid(), signal.SIGKILL)
         # Call all cleanup routines
         for hook in self.close_hooks:
             hook(self)
