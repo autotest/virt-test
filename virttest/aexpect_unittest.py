@@ -82,6 +82,8 @@ class TestAexpectSpawn(AexpectTestBase):
 
     def test_fast_fail(self):
         spawn = self.aexpect.Spawn("/bin/false")
+        self.assertFalse(spawn.is_alive())
+        self.assertEqual(spawn.get_status(), 1)
         spawn.close()
 
 if __name__ == "__main__":
