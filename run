@@ -183,10 +183,16 @@ class VirtTestRunParser(optparse.OptionParser):
                                  "If -c is provided, this will be ignored. "
                                  "Default: %s" % DEFAULT_GUEST_OS))
         general.add_option("--arch", action="store", dest="arch",
-                           default="x86_64",
+                           default=None,
                            help=("Architecture under test. "
                                  "If -c is provided, this will be ignored. "
-                                 "Default: %default"))
+                                 "Default: any that supports the given machine type"))
+        general.add_option("--machine-type", action="store", dest="machine_type",
+                           default=None,
+                           help=("Machine type under test. "
+                                 "If -c is provided, this will be ignored. "
+                                 "Default: all for the chosen guests, %s if "
+                                 "--guest-os not given." % DEFAULT_MACHINE_TYPE))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
                            help=('List of space separated tests to be '
@@ -259,6 +265,7 @@ class VirtTestRunParser(optparse.OptionParser):
         self.add_option_group(qemu)
 
 
+DEFAULT_MACHINE_TYPE = "i440fx"
 DEFAULT_GUEST_OS = "JeOS"
 QEMU_DEFAULT_SET = "migrate"
 LIBVIRT_DEFAULT_SET = ("unattended_install.import.import, virsh_domname, "
@@ -364,10 +371,24 @@ class VirtTestApp(object):
 
 
     def _process_arch(self):
-        if not self.options.config:
+        if self.options.arch is None:
+            pass
+        elif not self.options.config:
             self.cartesian_parser.only_filter(self.options.arch)
         else:
             logging.info("Config provided, ignoring --arch option")
+
+
+    def _process_machine_type(self):
+        if self.options.machine_type is None:
+            # TODO: this is x86-specific, instead we can get the default arch
+            # from qemu binary and run on all supported machine types
+            if self.options.arch is None and self.options.guest_os is None:
+                self.cartesian_parser.only_filter(DEFAULT_MACHINE_TYPE)
+        elif not self.options.config:
+            self.cartesian_parser.only_filter(self.options.machine_type)
+        else:
+            logging.info("Config provided, ignoring --machine-type option")
 
 
     def _process_image_type(self):
@@ -413,6 +434,7 @@ class VirtTestApp(object):
 
         This method modifies the cartesian set by parsing additional lines.
         """
+
         self._process_qemu_bin()
         self._process_qemu_accel()
         self._process_bridge_mode()
@@ -501,6 +523,7 @@ class VirtTestApp(object):
         """
         self._process_guest_os()
         self._process_arch()
+        self._process_machine_type()
         self._process_restart_vm()
         self._process_restore_image_between_tests()
         self._process_mem()
