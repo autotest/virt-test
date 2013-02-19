@@ -100,6 +100,15 @@ class VM(virt_vm.BaseVM):
         if state:
             self.instance = state['instance']
         self.qemu_command = ''
+        # Note: Th "supported_devices_list" list's elements are a series of
+        # tuple, each tuple has 2 members:
+        # - The first one is device name.
+        # - The latter one is this device's parent bus.
+        # Example:
+        # [('VGA', 'PCI'), ('usb-storage', 'usb-bus'), ('scsi-hd', 'SCSI'),
+        #  ('i82559a', 'PCI'), ('i82559b', 'PCI'), ('i82559c', 'PCI'),
+        #  ('esp', 'System'), ('virtio-blk-pci', 'PCI')]
+        self.supported_devices_list = []
 
 
     def verify_alive(self):
@@ -219,6 +228,16 @@ class VM(virt_vm.BaseVM):
         return VM(name, params, root_dir, address_cache, state)
 
 
+    def is_supported_device(self, device):
+        """
+        Helper for checking if qemu-kvm support 'device'.
+
+        @param device: The device name which will be find in supported
+                       devices list.
+        """
+        return bool(device in [d for d, v in self.supported_devices_list])
+
+
     def make_create_command(self, name=None, params=None, root_dir=None):
         """
         Generate a qemu command line. All parameters are optional. If a
@@ -258,13 +277,6 @@ class VM(virt_vm.BaseVM):
         # Helper function for command line option wrappers
         def has_option(help_text, option):
             return bool(re.search(r"^-%s(\s|$)" % option, help_text, re.MULTILINE))
-
-
-        def has_device(device_help, device):
-            """
-            Helper for checking if qemu-kvm support 'device'.
-            """
-            return bool(re.search(r'name "%s"' % device, device_help, re.M))
 
 
         def _add_option(option, value, option_type=None, first=False):
@@ -428,8 +440,8 @@ class VM(virt_vm.BaseVM):
             return cmd
 
 
-        def add_log_seabios(device_help):
-            if not has_device(device_help, "isa-debugcon"):
+        def add_log_seabios():
+            if not self.is_supported_device("isa-debugcon"):
                 return ""
 
             default_id = "seabioslog_id_%s" % self.instance
@@ -719,9 +731,8 @@ class VM(virt_vm.BaseVM):
 
         def add_pcidevice(help_text, host, params=None):
             assign_param = []
-            device_help = utils.system_output("%s -device \\? 2>&1" % qemu_binary)
             cmd = "  -pcidevice "
-            if bool(re.search("pci-assign", device_help, re.M)):
+            if self.is_supported_device("pci-assign"):
                 cmd = " -device pci-assign,"
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
@@ -893,16 +904,16 @@ class VM(virt_vm.BaseVM):
             return " -append '%s'" % cmdline
 
         def add_testdev(help_text, filename=None):
-            if has_device(device_help, "testdev"):
+            if self.is_supported_device("testdev"):
                 return (" -chardev file,id=testlog,path=%s"
                         " -device testdev,chardev=testlog" % filename)
-            elif has_device(device_help, "pc-testdev"):
+            elif self.is_supported_device("pc-testdev"):
                 return " -device pc-testdev"
             else:
                 return ""
 
         def add_isa_debug_exit(help_text, iobase=0xf4, iosize=0x04):
-            if has_device(device_help, "isa-debug-exit"):
+            if self.is_supported_device("isa-debug-exit"):
                 return (" -device isa-debug-exit,iobase=%s,iosize=%s" %
                         (iobase, iosize))
             else:
@@ -957,7 +968,7 @@ class VM(virt_vm.BaseVM):
                 self.usb_dev_dict["OLDVERSION_usb0"] = []
                 return " -usb"
 
-            if not has_device(device_help, usb_type):
+            if not self.is_supported_device(usb_type):
                 raise error.TestNAError("usb controller %s not available" % usb_type)
 
             cmd = " -device %s" % usb_type
@@ -983,7 +994,7 @@ class VM(virt_vm.BaseVM):
             This function is used to add usb device except for usb storage.
             """
 
-            if not has_device(device_help, usb_type):
+            if not self.is_supported_device(usb_type):
                 raise error.TestNAError("usb device %s not available" % usb_type)
 
             cmd = ""
@@ -1036,6 +1047,8 @@ class VM(virt_vm.BaseVM):
         device_help = ""
         if has_option(help_text, "device"):
             device_help = commands.getoutput("%s -device \\?" % qemu_binary)
+            li = re.findall('name "(.*?)", bus (.*?)[,\s]', device_help)
+            self.supported_devices_list = li
 
         # Start constructing the qemu command
         qemu_cmd = ""
@@ -1129,7 +1142,7 @@ class VM(virt_vm.BaseVM):
             no_virtio_ports += 1
 
         # Add logging
-        qemu_cmd += add_log_seabios(device_help)
+        qemu_cmd += add_log_seabios()
         if params.get("anaconda_log", "no") == "yes":
             qemu_cmd += add_log_anaconda(help_text)
 
