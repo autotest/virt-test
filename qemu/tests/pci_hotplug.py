@@ -1,6 +1,6 @@
 import re, logging
 from autotest.client.shared import error
-from virttest import utils_misc, aexpect, storage, utils_test, data_dir
+from virttest import utils_misc, aexpect, storage, data_dir
 
 
 @error.context_aware
@@ -65,9 +65,11 @@ def run_pci_hotplug(test, params, env):
         if pci_model == "virtio":
             pci_model = "virtio-net-pci"
         verify_supported_device(pci_model)
-        pci_add_cmd = "device_add id=%s,driver=%s" % (pci_info[pci_num][1],
-                                                      pci_model)
-        return device_add(pci_num, pci_add_cmd)
+        error.context("Adding pci device with command 'device_add'")
+        args = {"id": pci_info[pci_num][1],
+                "driver": pci_model}
+        add_output = vm.device_add(args)
+        return _verify_device_add(pci_num, add_output)
 
 
     def device_add_block(pci_num):
@@ -89,50 +91,43 @@ def run_pci_hotplug(test, params, env):
             controller_model = "lsi53c895a"
             verify_supported_device(controller_model)
             controller_id = "controller-" + device_id
-            controller_add_cmd = ("device_add %s,id=%s" %
-                                  (controller_model, controller_id))
             error.context("Adding SCSI controller.")
-            vm.monitor.send_args_cmd(controller_add_cmd)
+            args = {"id": controller_id,
+                    "driver": controller_model}
+            vm.device_add(args)
 
         verify_supported_device(pci_model)
-        if drive_cmd_type == "drive_add":
-            driver_add_cmd = ("%s auto file=%s,if=none,format=%s,id=%s" %
-                              (drive_cmd_type, image_filename, image_format,
-                               pci_info[pci_num][0]))
-        elif drive_cmd_type == "__com.redhat_drive_add":
-            driver_add_cmd = ("%s file=%s,format=%s,id=%s" %
-                             (drive_cmd_type, image_filename, image_format,
-                              pci_info[pci_num][0]))
         # add driver.
         error.context("Adding driver.")
-        vm.monitor.send_args_cmd(driver_add_cmd, convert=False)
+        args = {"file": image_filename,
+                "if": "none",
+                "format": image_format,
+                "id": pci_info[pci_num][0]}
+        vm.drive_add(args)
 
-        pci_add_cmd = ("device_add id=%s,driver=%s,drive=%s" %
-                       (pci_info[pci_num][1], pci_model, pci_info[pci_num][0]))
-        return device_add(pci_num, pci_add_cmd)
+        args = {"id": pci_info[pci_num][1],
+                "driver": pci_model,
+                "drive": pci_info[pci_num][0]}
+        add_output = vm.device_add(args)
+        return _verify_device_add(pci_num, add_output)
 
 
-    def device_add(pci_num, pci_add_cmd):
-        error.context("Adding pci device with command 'device_add'")
-        if vm.monitor.protocol == 'qmp':
-            add_output = vm.monitor.send_args_cmd(pci_add_cmd)
-        else:
-            add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
+    def _verify_device_add(pci_num, add_output):
         pci_info[pci_num].append(add_output)
         pci_info[pci_num].append(pci_model)
 
-        after_add = vm.monitor.info("pci")
+        after_add = str(vm.monitor.info("pci"))
         if pci_info[pci_num][1] not in after_add:
             logging.error("Could not find matched id in monitor:"
                           " %s" % pci_info[pci_num][1])
-            raise error.TestFail("Add device failed. Monitor command is: %s"
-                                 ". Output: %r" % (pci_add_cmd, add_output))
+            raise error.TestFail("Add device failed. Monitor"
+                                 " Outputs: %r" % add_output)
         return after_add
 
 
     # Hot add a pci device
     def add_device(pci_num):
-        info_pci_ref = vm.monitor.info("pci")
+        info_pci_ref = str(vm.monitor.info("pci"))
         reference = session.cmd_output(params.get("reference_cmd"))
 
         try:
@@ -192,17 +187,16 @@ def run_pci_hotplug(test, params, env):
     # Hot delete a pci device
     def pci_del(pci_num, ignore_failure=False):
         def _device_removed():
-            after_del = vm.monitor.info("pci")
+            after_del = str(vm.monitor.info("pci"))
             return after_del != before_del
 
-        before_del = vm.monitor.info("pci")
+        before_del = str(vm.monitor.info("pci"))
         if cmd_type == "pci_add":
             slot_id = int(pci_info[pci_num][2].split(",")[2].split()[1])
             cmd = "pci_del pci_addr=%s" % hex(slot_id)
             vm.monitor.send_args_cmd(cmd, convert=False)
         elif cmd_type == "device_add":
-            cmd = "device_del id=%s" % pci_info[pci_num][1]
-            vm.monitor.send_args_cmd(cmd)
+            vm.device_del(pci_info[pci_num][1])
 
         if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1)
             and not ignore_failure):
@@ -226,26 +220,14 @@ def run_pci_hotplug(test, params, env):
     if module:
         session.cmd("modprobe %s" % module)
 
-    # check monitor type
-    qemu_binary = params.get("qemu_binary", "/usr/libexec/qemu-kvm")
-    qemu_binary = utils_misc.get_path(test.bindir, qemu_binary)
-    # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if vm.monitor.protocol == 'qmp':
-        cmd_output = vm.monitor.info("commands")
+    #FIXME: monitor command choosing code should be put in qemu_vm module.
+    # The following code calls a 'protected' member in vm.monitor class,
+    # It isn't a good habit.
+    if "device_add" in vm.monitor._supported_cmds:
+        cmd_type = "device_add"
+    elif "pci_add" in vm.monitor._supported_cmds:
+        cmd_type = "pci_add"
     else:
-        cmd_output = vm.monitor.send_args_cmd("help")
-
-    cmd_type = utils_test.find_substring(str(cmd_output), "device_add",
-                                         "pci_add")
-    if not cmd_output:
-        raise error.TestError("Unknow version of qemu")
-
-    # Determine syntax of drive hotplug
-    # __com.redhat_drive_add == qemu-kvm-0.12 on RHEL 6
-    # drive_add == qemu-kvm-0.13 onwards
-    drive_cmd_type = utils_test.find_substring(str(cmd_output),
-                                    "__com.redhat_drive_add", "drive_add")
-    if not drive_cmd_type:
         raise error.TestError("Unknow version of qemu")
 
     local_functions = locals()
