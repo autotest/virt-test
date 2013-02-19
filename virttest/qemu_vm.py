@@ -2327,6 +2327,9 @@ class VM(virt_vm.BaseVM):
             self.process.close()
         if self.serial_console:
             self.serial_console.close()
+        if self.logsessions:
+            for key in self.logsessions:
+                self.logsessions[key].close()
 
         # Generate the tmp file which should be deleted.
         file_list = [self.get_testlog_filename()]
