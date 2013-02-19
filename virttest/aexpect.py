@@ -51,7 +51,7 @@ def _get_filenames(base_dir, a_id):
 
 
 def _get_log_filename(base_dir, a_id):
-    return os.path.join(base_dir, "server-%s-log" % a_id)
+    return os.path.join(base_dir, "server-log-%s" % a_id)
 
 
 def _get_reader_filename(base_dir, a_id, reader):
