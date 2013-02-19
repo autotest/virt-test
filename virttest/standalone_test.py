@@ -483,6 +483,8 @@ def get_guest_name_parser(options):
     cartesian_parser = cartesian_config.Parser()
     cfgdir = os.path.join(data_dir.get_root_dir(), options.type, "cfg")
     cartesian_parser.parse_file(os.path.join(cfgdir, "guest-os.cfg"))
+    if options.arch:
+        cartesian_parser.only_filter(options.arch)
     if options.guest_os:
         cartesian_parser.only_filter(options.guest_os)
     return cartesian_parser
