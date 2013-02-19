@@ -182,6 +182,11 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Select the guest OS to be used. "
                                  "If -c is provided, this will be ignored. "
                                  "Default: %s" % DEFAULT_GUEST_OS))
+        general.add_option("--arch", action="store", dest="arch",
+                           default="x86_64",
+                           help=("Architecture under test. "
+                                 "If -c is provided, this will be ignored. "
+                                 "Default: %default"))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
                            help=('List of space separated tests to be '
@@ -258,7 +263,7 @@ class VirtTestRunParser(optparse.OptionParser):
         self.add_option_group(qemu)
 
 
-DEFAULT_GUEST_OS = "JeOS.17.64"
+DEFAULT_GUEST_OS = "JeOS"
 QEMU_DEFAULT_SET = "migrate"
 LIBVIRT_DEFAULT_SET = ("unattended_install.import.import, virsh_domname, "
                        "remove_guest.without_disk")
@@ -360,6 +365,13 @@ class VirtTestApp(object):
                     sys.exit(1)
         else:
             logging.info("Config provided, ignoring --smp option")
+
+
+    def _process_arch(self):
+        if not self.options.config:
+            self.cartesian_parser.only_filter(self.options.arch)
+        else:
+            logging.info("Config provided, ignoring --arch option")
 
 
     def _process_image_type(self):
@@ -499,6 +511,7 @@ class VirtTestApp(object):
         This method modifies the cartesian set by parsing additional lines.
         """
         self._process_guest_os()
+        self._process_arch()
         self._process_restart_vm()
         self._process_restore_image_between_tests()
         self._process_mem()
