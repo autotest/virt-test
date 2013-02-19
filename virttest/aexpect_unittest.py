@@ -80,6 +80,9 @@ class TestAexpectSpawn(AexpectTestBase):
         spawn.close()
         # tearDown will handle failure
 
+    def test_fast_fail(self):
+        spawn = self.aexpect.Spawn("/bin/false")
+        spawn.close()
 
 if __name__ == "__main__":
     unittest.main()
