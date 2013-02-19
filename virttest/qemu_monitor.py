@@ -201,6 +201,35 @@ class Monitor:
             pass
 
 
+    def _convert_args(self, arg_dict):
+        """
+        Convert monitor command arguments dict into humanmonitor string.
+
+        @param arg_dict: The dict of monitor command arguments.
+        @return: A string in humanmonitor's 'key=value' format, or a empty
+                 '' when the dict is empty.
+        """
+        li = ["%s=%s" % (k, v) for k, v in arg_dict.items() if (k and v)]
+        return ",".join(li)
+
+
+    def _get_pci_addr(self, domain=None, bus=None, slot=None):
+        """
+        Calculate pci address with domain/bus/slot arguments.
+
+        @param domain: Parameter for PCI bridge.
+        @param bus: Parameter for PCI bridge.
+        @param slot: Parameter for PCI bridge.
+
+        @return: PCI Address string.
+        """
+        if slot:
+            pci_addr = [hex(l) for l in [domain, bus, slot] if l is not None]
+        else:
+            pci_addr = ["auto"]
+        return ":".join(pci_addr)
+
+
     def is_responsive(self):
         """
         Return True iff the monitor is responsive.
@@ -689,6 +718,134 @@ class HumanMonitor(Monitor):
         @return: The command's output
         """
         return self.cmd("getfd %s" % name, fd=fd)
+
+
+    def pci_add(self, device, domain=None, bus=None, slot=None, dargs={}):
+        """
+        Hotplug a device in HMP Monitor, for some old qemu version.
+
+        @param domain: Parameter for PCI bridge.
+        @param bus: Parameter for PCI bridge.
+        @param slot: Parameter for PCI bridge.
+        @param dargs: Argument dict of devices.
+        """
+        cmd = "pci_add"
+        self.verify_supported_cmd(cmd)
+
+        pci_addr = self._get_pci_addr(domain, bus, slot)
+        args = self._convert_args(dargs)
+        return self.cmd("%s pci_addr=%s %s %s" % (cmd, pci_addr, device, args))
+
+
+    def pci_del(self, pci_addr):
+        """
+        Hot unplug a device in HMP Monitor, for some old qemu version.
+
+        @param pci_addr: PCI address of the device which will be removed.
+        """
+        cmd = "pci_del"
+        self.verify_supported_cmd(cmd)
+
+        return self.cmd("%s pci_addr=%s" % (cmd, pci_addr))
+
+
+    def device_add(self, dargs={}):
+        """
+        Hotplug a device in HMP Monitor.
+        Support arguments:
+         - driver: device type.
+         - bus: the device's parent bus.
+         - id: the device's id, must be unique.
+         - device's own properties.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param dargs: Argument dict of devices.
+        """
+        cmd = "device_add"
+        self.verify_supported_cmd(cmd)
+
+        args = self._convert_args(dargs)
+        return self.cmd("%s %s" % (cmd, args))
+
+
+    def device_del(self, device_id):
+        """
+        Hot unplug a device in HMP Monitor.
+
+        @param device_id: id of the device which will be removed.
+        """
+        cmd = "device_del"
+        self.verify_supported_cmd(cmd)
+
+        return self.cmd("%s %s" % (cmd, device_id))
+
+
+    def drive_add(self, domain=None, bus=None, slot=None, dargs={}):
+        """
+        Add drive to PCI storage controller in HMP Monitor.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param domain: Parameter for PCI bridge.
+        @param bus: Parameter for PCI bridge.
+        @param slot: Parameter for PCI bridge.
+        @param dargs: Arguments for drive device.
+        """
+        cmd = "drive_add"
+        self.verify_supported_cmd(cmd)
+
+        pci_addr = self._get_pci_addr(domain, bus, slot)
+        args = self._convert_args(dargs)
+        return self.cmd("%s %s %s" % (cmd, pci_addr, args))
+
+
+    def drive_del(self, drive_id):
+        """
+        Hotunplug drive in HMP Monitor.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param drive_id: drive id which will be deleted.
+        """
+        cmd = "drive_del"
+        self.verify_supported_cmd(cmd)
+
+        return self.cmd("%s %s" % (cmd, drive_id))
+
+
+    def com_redhat_drive_add(self, dargs={}):
+        """
+        Add drive in HMP Monitor with RHEL specific command.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param dargs: Arguments for drive device.
+        """
+        cmd = "__com.redhat_drive_add"
+        self.verify_supported_cmd(cmd)
+
+        args = self._convert_args(dargs)
+        return self.cmd("%s %s" % (cmd, args))
+
+
+    def com_redhat_drive_del(self, drive_id):
+        """
+        Hotunplug drive in HMP Monitor with RHEL specific command.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param drive_id: drive id which will be deleted.
+        """
+        cmd = "__com.redhat_drive_del"
+        self.verify_supported_cmd(cmd)
+
+        return self.cmd("%s %s" % (cmd, drive_id))
 
 
 class QMPMonitor(Monitor):
@@ -1329,3 +1486,133 @@ class QMPMonitor(Monitor):
         """
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
+
+
+    def pci_add(self, device, dargs={}):
+        # pci_add/del cmds are only existed in some very old qemu,
+        # such as qemu-0.12 for RHEL5, and this version qemu doesn't
+        # provide QMP monitor, so there is no "pci_add" command in
+        # qmp monitor anymore.
+        # Just raise an exception here to keep sync with human
+        # monitor.
+        raise MonitorNotSupportedCmdError(self, "pci_add")
+
+
+    def pci_del(self, pci_addr):
+        # pci_add/del cmds are only existed in some very old qemu,
+        # such as qemu-0.12 for RHEL5, and this version qemu doesn't
+        # provide QMP monitor, so there is no "pci_del" command in
+        # qmp monitor anymore.
+        # Just raise an exception here to keep sync with human
+        # monitor.
+        raise MonitorNotSupportedCmdError(self, "pci_del")
+
+
+    def device_add(self, dargs={}):
+        """
+        Hotplug a device in QMP Monitor.
+        Support arguments:
+         - driver: device type.
+         - bus: the device's parent bus.
+         - id: the device's id, must be unique.
+         - device's own properties.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param dargs: Argument dict of devices.
+        """
+        cmd = "device_add"
+        if not self._has_command(cmd):
+            args = self._convert_args(dargs)
+            return self.human_monitor_cmd("%s %s" % (cmd, args))
+
+        return self.cmd(cmd, dargs)
+
+
+    def device_del(self, device_id):
+        """
+        Hot unplug a device in QMP Monitor.
+
+        @param device_id: id of the device which will be removed.
+        """
+        cmd = "device_del"
+        if not self._has_command(cmd):
+            return self.human_monitor_cmd("%s %s" % (cmd, device_id))
+
+        args = {"id": device_id}
+        return self.cmd(cmd, args)
+
+
+    def drive_add(self, domain=None, bus=None, slot=None, dargs={}):
+        """
+        Add drive to PCI storage controller in QMP Monitor.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param domain: Parameter for PCI bridge.
+        @param bus: Parameter for PCI bridge.
+        @param slot: Parameter for PCI bridge.
+        @param dargs: Arguments for drive device.
+        """
+        cmd = "drive_add"
+
+        if not self._has_command(cmd):
+            pci_addr = self._get_pci_addr(domain, bus, slot)
+            args = self._convert_args(dargs)
+            return self.human_monitor_cmd("%s %s %s" % (cmd, pci_addr, args))
+
+        return self.cmd(cmd, dargs)
+
+
+    def drive_del(self, drive_id):
+        """
+        Hotunplug drive in QMP Monitor.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param drive_id: drive id which will be deleted.
+        """
+        cmd = "drive_del"
+        if not self._has_command(cmd):
+            return self.human_monitor_cmd("%s %s" % (cmd, drive_id))
+
+        args = {"id": drive_id}
+        return self.cmd(cmd, args)
+
+
+    def com_redhat_drive_add(self, dargs={}):
+        """
+        Add drive in QMP Monitor with RHEL specific command.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param dargs: Arguments for drive device.
+        """
+        cmd = "__com.redhat_drive_add"
+
+        if not self._has_command(cmd):
+            args = self._convert_args(dargs)
+            return self.human_monitor_cmd("%s %s" % (cmd, args))
+
+        return self.cmd(cmd, dargs)
+
+
+    def com_redhat_drive_del(self, drive_id):
+        """
+        Hotunplug drive in QMP Monitor with RHEL specific command.
+
+        Note: This function won't validate these arguments, you
+              should do it by yourself.
+
+        @param drive_id: drive id which will be deleted.
+        """
+        cmd = "__com.redhat_drive_del"
+        if not self._has_command(cmd):
+            return self.human_monitor_cmd("%s %s" % (cmd, drive_id))
+
+        args = {"id": drive_id}
+        return self.cmd(cmd, args)
