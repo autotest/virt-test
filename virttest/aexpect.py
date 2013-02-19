@@ -5,7 +5,7 @@ A class and functions used for running and controlling child processes.
 @copyright: 2008-2009 Red Hat Inc.
 """
 
-import os, sys, pty, select, termios, fcntl
+import os, sys, pty, select, termios, fcntl, time, signal
 
 BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
 
@@ -46,44 +46,103 @@ def _wait(filename):
 
 def _get_filenames(base_dir, a_id):
     return [os.path.join(base_dir, s + a_id) for s in
-            "shell-pid-", "status-", "output-", "inpipe-",
-            "lock-server-running-", "lock-client-starting-"]
+            "server-pid-", "shell-pid-", "status-", "output-",
+            "inpipe-", "lock-server-running-", "lock-client-starting-"]
+
+
+def _get_log_filename(base_dir, a_id):
+    return os.path.join(base_dir, "server-log-%s" % a_id)
 
 
 def _get_reader_filename(base_dir, a_id, reader):
     return os.path.join(base_dir, "outpipe-%s-%s" % (reader, a_id))
 
 
+def cleanup_files(filelist):
+    for filename in filelist:
+        try:
+            os.unlink(filename)
+        except OSError:
+            pass
+    # Try to cleanup BASE_DIR also
+    try:
+        os.rmdir(BASE_DIR)
+    except OSError:
+        pass
+    return
+
 # The following is the server part of the module.
 
 if __name__ == "__main__":
     a_id = sys.stdin.readline().strip()
     echo = sys.stdin.readline().strip() == "True"
-    readers = sys.stdin.readline().strip().split(",")
+    readers = sys.stdin.readline().strip()
+    if readers:
+        readers = readers.split(",")
+    else:
+        readers = []
     command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % a_id
+    # Let client optionally change BASE_DIR
+    bd = sys.stdin.readline().strip()
+    if bd:
+        BASE_DIR = bd
 
     # Define filenames to be used for communication
-    (shell_pid_filename,
+    (server_pid_filename,
+     shell_pid_filename,
      status_filename,
      output_filename,
      inpipe_filename,
      lock_server_running_filename,
      lock_client_starting_filename) = _get_filenames(BASE_DIR, a_id)
 
+    def log(msg):
+        open(_get_log_filename(BASE_DIR, a_id), "a").write(msg)
+
+    log("Server starting\n")
+    log("\techo: '%s'\n" % echo)
+    log("\treaders: %s\n" % readers)
+    log("\tcommand: '%s'\n" % command)
+    log("\tBASE_DIR: '%s'\n" % BASE_DIR)
+
+    for filename in _get_filenames(BASE_DIR, a_id):
+        log("Pipe: %s\n" %filename)
+
     # Populate the reader filenames list
     reader_filenames = [_get_reader_filename(BASE_DIR, a_id, reader)
                         for reader in readers]
 
+    log("Readers: %s\n" % reader_filenames)
+
     # Set $TERM = dumb
     os.putenv("TERM", "dumb")
 
+    log("Forking shell for command...\n")
+
     (shell_pid, shell_fd) = pty.fork()
-    if shell_pid == 0:
-        # Child process: run the command in a subshell
+    if shell_pid == 0: # Child process: run the command in a subshell
         os.execv("/bin/sh", ["/bin/sh", "-c", command])
-    else:
-        # Parent process
+        sys.exit(0) # just in case
+    else: # Parent process
+
+        # Cleanup handler (dependant on cleanup_list)
+        cleanup_list = _get_filenames(BASE_DIR, a_id) + reader_filenames
+        def cleanup(signum, frame):
+            # don't care about parameters, but keep pylint happy
+            del signum
+            del frame
+            cleanup_files(cleanup_list)
+        # register handlers for triggering clanup
+        for signum in [signal.SIGTERM]:
+            signal.signal(signum, cleanup)
+        log("Cleanup will remove: %s\n" % cleanup_list)
+
+        log("Forked off pid %s with fd %s\n" % (shell_pid, shell_fd))
         lock_server_running = _lock(lock_server_running_filename)
+
+        log("Server pid: %s\n" % os.getpid())
+        # Write server pid to a file (then close it)
+        open(server_pid_filename, "w").write(str(os.getpid()))
 
         # Set terminal echo on/off and disable pre- and post-processing
         attr = termios.tcgetattr(shell_fd)
@@ -97,25 +156,30 @@ if __name__ == "__main__":
             attr[3] &= ~termios.ECHO
         termios.tcsetattr(shell_fd, termios.TCSANOW, attr)
 
+        log("Setup termios: %s\n" % attr)
+
         # Open output file
         output_file = open(output_filename, "w")
+        log("Output file opened: %s\n" % output_filename)
+
         # Open input pipe
         os.mkfifo(inpipe_filename)
         inpipe_fd = os.open(inpipe_filename, os.O_RDWR)
+        log("Input Pipe opened: %s\n" % inpipe_filename)
+
         # Open output pipes (readers)
         reader_fds = []
         for filename in reader_filenames:
             os.mkfifo(filename)
             reader_fds.append(os.open(filename, os.O_RDWR))
+            log("Reader opened: %s\n" % filename)
 
-        # Write shell PID to file
-        fileobj = open(shell_pid_filename, "w")
-        fileobj.write(str(shell_pid))
-        fileobj.close()
+        # Write shell PID to file (then close it)
+        open(shell_pid_filename, "w").write(str(shell_pid))
+        log("Pid written to %s (closed)\n" % shell_pid_filename)
 
-        # Print something to stdout so the client can start working
-        print "Server %s ready" % a_id
-        sys.stdout.flush()
+        # Signal to client, server setup is complete
+        sys.stdout.write("Server %s ready\n" % a_id)
 
         # Initialize buffers
         buffers = ["" for reader in readers]
@@ -152,26 +216,16 @@ if __name__ == "__main__":
                 pid, status = os.waitpid(shell_pid, os.WNOHANG)
                 if pid:
                     status = os.WEXITSTATUS(status)
-                    break
+                    break # Child exited
             # If there's data to read from the client --
             if inpipe_fd in r:
                 data = os.read(inpipe_fd, 1024)
                 os.write(shell_fd, data)
 
+        # loop exited
+
         # Write the exit status to a file
-        fileobj = open(status_filename, "w")
-        fileobj.write(str(status))
-        fileobj.close()
-
-        # Wait for the client to finish initializing
-        _wait(lock_client_starting_filename)
-
-        # Delete FIFOs
-        for filename in [inpipe_filename]:
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
+        open(status_filename, "w").write(str(status))
 
         # Close all files and pipes
         output_file.close()
@@ -179,15 +233,34 @@ if __name__ == "__main__":
         for fd in reader_fds:
             os.close(fd)
 
-        _unlock(lock_server_running)
-        sys.exit(0)
+        # Close server streams
+        sys.stdin.close()
+        sys.stdout.close()
+        sys.stderr.close()
 
+        # Wait for the client to finish initializing
+        _wait(lock_client_starting_filename)
+
+        _unlock(lock_server_running)
+
+        # Wait until process killed
+        while True:
+            time.sleep(1) # don't busy-wait
+
+        cleanup(None, None)
+        sys.exit(0)
 
 # The following is the client part of the module.
 
 import subprocess, time, signal, re, threading, logging
 import utils_misc
 
+class ServerTimeoutError(Exception):
+    def __init__(self, a_id):
+        self._a_id = a_id
+    def __str__(self):
+        return ("Aexpect server process for %s did not start within timeout"
+                % self._a_id)
 
 class ExpectError(Exception):
     def __init__(self, patterns, output):
@@ -368,6 +441,9 @@ class Spawn:
     resumes _tail() if needed.
     """
 
+    # Don't wait forever for the server to start
+    server_start_timeout = 3
+
     def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
                  linesep="\n"):
         """
@@ -393,7 +469,8 @@ class Spawn:
             os.makedirs(BASE_DIR)
         except Exception:
             pass
-        (self.shell_pid_filename,
+        (self.server_pid_filename,
+         self.shell_pid_filename,
          self.status_filename,
          self.output_filename,
          self.inpipe_filename,
@@ -422,6 +499,7 @@ class Spawn:
         # the client to release the lock before exiting
         lock_client_starting = _lock(self.lock_client_starting_filename)
 
+        server_timedout = False
         # Start the server (which runs the command)
         if command:
             sub = subprocess.Popen("%s %s" % (sys.executable, __file__),
@@ -434,9 +512,21 @@ class Spawn:
             sub.stdin.write("%s\n" % echo)
             sub.stdin.write("%s\n" % ",".join(self.readers))
             sub.stdin.write("%s\n" % command)
+            sub.stdin.write("%s\n" % BASE_DIR)
+
             # Wait for the server to complete its initialization
-            while not "Server %s ready" % self.a_id in sub.stdout.readline():
-                pass
+            server_start_time = time.time()
+            server_timeout_time = server_start_time + self.server_start_timeout
+            while True:
+                if time.time() > server_timeout_time:
+                    server_timedout = True
+                    break
+                line = sub.stdout.readline()
+                if line.count("Server %s ready" % self.a_id):
+                    break
+                else: # Share any other output
+                    if line.strip():
+                        logging.debug("%s: %s" % (self.a_id, line.rstrip()))
 
         # Open the reading pipes
         self.reader_fds = {}
@@ -447,9 +537,12 @@ class Spawn:
         except Exception:
             pass
 
-        # Allow the server to continue
+        # Allow the server to continue (for fast exiting commands)
         _unlock(lock_client_starting)
 
+        if server_timedout:
+            self.close() # help cleanup
+            raise ServerTimeoutError(self.a_id)
 
     # The following two functions are defined to make sure the state is set
     # exclusively by the constructor call as specified in __getinitargs__().
@@ -534,6 +627,16 @@ class Spawn:
             return None
 
 
+    def get_server_pid(self):
+        """
+        Return the PID of the server controlling the shell
+        """
+        try:
+            return int(open(self.server_pid_filename, "r").read())
+        except Exception:
+            return None
+
+
     def get_status(self):
         """
         Wait for the process to exit and return its exit status, or None
@@ -566,7 +669,8 @@ class Spawn:
         """
         Return True if the process is running.
         """
-        return _locked(self.lock_server_running_filename)
+        server_pid = bool(self.get_server_pid() is not None)
+        return server_pid & _locked(self.lock_server_running_filename)
 
 
     def close(self, sig=signal.SIGKILL):
@@ -578,24 +682,28 @@ class Spawn:
         # Kill it if it's alive
         if self.is_alive():
             utils_misc.kill_process_tree(self.get_pid(), sig)
-        # Wait for the server to exit
-        _wait(self.lock_server_running_filename)
+            utils_misc.kill_process_tree(self.get_server_pid(), signal.SIGTERM)
+            time.sleep(0.1) # Give server small chance to self-clean
+            utils_misc.kill_process_tree(self.get_server_pid(), signal.SIGKILL)
         # Call all cleanup routines
         for hook in self.close_hooks:
             hook(self)
+        # Build a list of files to delete
+        cleanup_list = _get_filenames(BASE_DIR, self.a_id)
         # Close reader file descriptors
-        for fd in self.reader_fds.values():
+        for filename, fd in self.reader_fds.items():
             try:
                 os.close(fd)
+                cleanup_list.append(filename)
             except Exception:
                 pass
+        if self.log_file:
+            cleanup_list.append(self.log_file)
+        # remove server log
+        cleanup_list.append(_get_log_filename(BASE_DIR, self.a_id))
+        cleanup_files(cleanup_list)
         self.reader_fds = {}
-        # Remove all used files
-        for filename in (_get_filenames(BASE_DIR, self.a_id)):
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
+        self.log_file = None
 
 
     def set_linesep(self, linesep):
