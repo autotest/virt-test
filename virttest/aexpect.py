@@ -469,6 +469,7 @@ class Spawn:
 
 
     def __del__(self):
+        self._close_reader_fds()
         if self.auto_close:
             self.close()
 
@@ -508,6 +509,17 @@ class Spawn:
         @param reader: The name of the reader.
         """
         return self.reader_fds.get(reader)
+
+
+    def _close_reader_fds(self):
+        """
+        Close all reader file descriptors.
+        """
+        for fd in self.reader_fds.values():
+            try:
+                os.close(fd)
+            except OSError:
+                pass
 
 
     def get_id(self):
@@ -584,11 +596,7 @@ class Spawn:
         for hook in self.close_hooks:
             hook(self)
         # Close reader file descriptors
-        for fd in self.reader_fds.values():
-            try:
-                os.close(fd)
-            except Exception:
-                pass
+        self._close_reader_fds()
         self.reader_fds = {}
         # Remove all used files
         for filename in (_get_filenames(BASE_DIR, self.a_id)):
