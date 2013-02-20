@@ -880,6 +880,7 @@ class QMPMonitor(Monitor):
             self.protocol = "qmp"
             self._greeting = None
             self._events = []
+            self._supported_hmp_cmds = []
 
             # Make sure json is available
             try:
@@ -905,6 +906,7 @@ class QMPMonitor(Monitor):
             self.cmd("qmp_capabilities")
 
             self._get_supported_cmds()
+            self._get_supported_hmp_cmds()
 
         except MonitorError, e:
             self._close_sock()
@@ -1008,6 +1010,43 @@ class QMPMonitor(Monitor):
 
         if not self._supported_cmds:
             logging.warn("Could not get supported monitor cmds list")
+
+
+    def _get_supported_hmp_cmds(self):
+        """
+        Get supported human monitor cmds list.
+        """
+        cmds = self.human_monitor_cmd("help", debug=False)
+        if cmds:
+            cmd_list = re.findall("^(.*?) ", cmds, re.M)
+            self._supported_hmp_cmds = [c for c in cmd_list if c]
+
+        if not self._supported_cmds:
+            logging.warn("Could not get supported monitor cmds list")
+
+
+    def _has_hmp_command(self, cmd):
+        """
+        Check wheter monitor support hmp 'cmd'.
+
+        @param cmd: command string which will be checked.
+
+        @return: True if cmd is supported, False if not supported.
+        """
+        if cmd and cmd in self._supported_hmp_cmds:
+            return True
+        return False
+
+
+    def verify_supported_hmp_cmd(self, cmd):
+        """
+        Verify whether cmd is supported by hmp monitor.
+        If not, raise a MonitorNotSupportedCmdError Exception.
+
+        @param cmd: The cmd string need to verify.
+        """
+        if not self._has_hmp_command(cmd):
+            raise MonitorNotSupportedCmdError(self.name, cmd)
 
 
     def _log_response(self, cmd, resp, debug=True):
@@ -1316,6 +1355,8 @@ class QMPMonitor(Monitor):
             if not self._has_command(command):
                 if "=" in cmdline:
                     command = cmdline.split()[0]
+                    self.verify_supported_hmp_cmd(command)
+
                     cmdargs = " ".join(cmdline.split()[1:]).split(",")
                     for arg in cmdargs:
                         command += " " + arg.split("=")[-1]
@@ -1356,11 +1397,11 @@ class QMPMonitor(Monitor):
         Request info about something and return the response.
         """
         cmd = "query-%s" % what
-        if self._has_command(cmd):
-            return self.cmd("query-%s" % what)
-        else:
+        if not self._has_command(cmd):
             cmd = "info %s" % what
             return self.human_monitor_cmd(cmd)
+
+        return self.cmd("query-%s" % what)
 
 
     def query(self, what):
@@ -1379,12 +1420,14 @@ class QMPMonitor(Monitor):
 
         @return: The response to the command
         """
-        if self._has_command("screendump"):
-            args = {"filename": filename}
-            return self.cmd(cmd="screendump", args=args, debug=debug)
-        else:
-            cmdline = "screendump %s" % filename
+        cmd = "screendump"
+        if not self._has_command(cmd):
+            self.verify_supported_hmp_cmd(cmd)
+            cmdline = "%s %s" % (cmd, filename)
             return self.human_monitor_cmd(cmdline, debug=debug)
+
+        args = {"filename": filename}
+        return self.cmd(cmd=cmd, args=args, debug=debug)
 
 
     def sendkey(self, keystr, hold_time=1):
@@ -1524,6 +1567,7 @@ class QMPMonitor(Monitor):
         """
         cmd = "device_add"
         if not self._has_command(cmd):
+            self.verify_supported_hmp_cmd(cmd)
             args = self._convert_args(dargs)
             return self.human_monitor_cmd("%s %s" % (cmd, args))
 
@@ -1538,6 +1582,7 @@ class QMPMonitor(Monitor):
         """
         cmd = "device_del"
         if not self._has_command(cmd):
+            self.verify_supported_cmd(cmd)
             return self.human_monitor_cmd("%s %s" % (cmd, device_id))
 
         args = {"id": device_id}
@@ -1559,6 +1604,7 @@ class QMPMonitor(Monitor):
         cmd = "drive_add"
 
         if not self._has_command(cmd):
+            self.verify_supported_hmp_cmd(cmd)
             pci_addr = self._get_pci_addr(domain, bus, slot)
             args = self._convert_args(dargs)
             return self.human_monitor_cmd("%s %s %s" % (cmd, pci_addr, args))
@@ -1577,6 +1623,7 @@ class QMPMonitor(Monitor):
         """
         cmd = "drive_del"
         if not self._has_command(cmd):
+            self.verify_supported_hmp_cmd(cmd)
             return self.human_monitor_cmd("%s %s" % (cmd, drive_id))
 
         args = {"id": drive_id}
@@ -1595,6 +1642,7 @@ class QMPMonitor(Monitor):
         cmd = "__com.redhat_drive_add"
 
         if not self._has_command(cmd):
+            self.verify_supported_hmp_cmd(cmd)
             args = self._convert_args(dargs)
             return self.human_monitor_cmd("%s %s" % (cmd, args))
 
@@ -1612,6 +1660,7 @@ class QMPMonitor(Monitor):
         """
         cmd = "__com.redhat_drive_del"
         if not self._has_command(cmd):
+            self.verify_supported_hmp_cmd(cmd)
             return self.human_monitor_cmd("%s %s" % (cmd, drive_id))
 
         args = {"id": drive_id}
