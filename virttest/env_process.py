@@ -274,12 +274,14 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                 for image_name in vm_params.objects("images"):
                     image_params = vm_params.object_params(image_name)
                     # Call image_func for each image
-                    if vm is not None and vm.is_alive():
+                    unpause_vm = False
+                    if vm is not None and vm.is_alive() and not vm.is_paused():
                         vm.pause()
+                        unpause_vm = True
                     try:
                         image_func(test, image_params, image_name)
                     finally:
-                        if vm is not None and vm.is_alive():
+                        if unpause_vm:
                             vm.resume()
         else:
             for image_name in params.objects("images"):
