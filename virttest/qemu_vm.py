@@ -3031,3 +3031,68 @@ class VM(virt_vm.BaseVM):
             current_file = None
 
         return current_file
+
+
+    #NOTE: The argument 'dargs' is a workaround for some python keyword.
+    # eg, qemu uses 'if' as its drive_add option, but 'if' is a reserved
+    # word in python.
+    def device_add(self, dargs={}):
+        """
+        Hotplug a device via Monitor.
+
+        @param dargs: argument dict for the device.
+        """
+        domain = dargs.get("domain")
+        bus = dargs.get("bus")
+        slot = dargs.get("slot")
+        args = ({k: v for k, v in dargs.items()
+                 if k not in ("domain", "bus", "slot")})
+        try:
+            return self.monitor.device_add(args)
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            return self.monitor.pci_add(domain, bus, slot, args)
+
+
+
+    def device_del(self, device_id):
+        """
+        Hotunplug a device via Monitor.
+
+        @param device_id: the id of device which will be removed.
+        """
+        try:
+            return self.monitor.device_del(device_id)
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            return self.monitor.pci_del(device_id)
+
+
+    #NOTE: The argument 'dargs' is a workaround for some python keyword.
+    # eg, qemu uses 'if' as its drive_add option, but 'if' is a reserved
+    # word in python.
+    def drive_add(self, dargs={}):
+        """
+        Hotplug a host drive via Monitor.
+
+        @param dargs: argument dict for the drive device.
+        """
+        domain = dargs.get("domain")
+        bus = dargs.get("bus")
+        slot = dargs.get("slot")
+        args = ({k: v for k, v in dargs.items()
+                 if k not in ("domain", "bus", "slot")})
+        try:
+            return self.monitor.com_redhat_drive_add(args)
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            return self.monitor.drive_add(domain, bus, slot, args)
+
+
+    def drive_del(self, drive_id):
+        """
+        Hotunplug a host drive via Monitor.
+
+        @param drive_id: the id of drive which will be removed.
+        """
+        try:
+            return self.monitor.com_redhat_drive_del(drive_id)
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            return self.monitor.drive_del(drive_id)
