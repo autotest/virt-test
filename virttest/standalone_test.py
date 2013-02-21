@@ -519,7 +519,7 @@ def print_guest_list(options):
     for params in cartesian_parser.get_dicts():
         index += 1
         image_name = storage.get_image_filename(params, data_dir.get_data_dir())
-        shortname = ".".join(params['name'].split(".")[1:])
+        shortname = params['shortname']
         if os.path.isfile(image_name):
             out = (bcolors.blue + str(index) + bcolors.end + " " +
                    shortname + "\n")
