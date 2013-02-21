@@ -731,7 +731,7 @@ class Grubby(object):
     # most of these class methods, such as methods for running commands
     # and preparing grubby command line switches.
     #
-    
+
     def _check_grubby_version(self):
         '''
         Checks the version of grubby in use and warns if it's not good enough
