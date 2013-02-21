@@ -18,7 +18,7 @@ def run_sr_iov_boot_negative(test, params, env):
 
     neg_msg = params.get("negative_msg")
     if params.get("start_vm") == "yes":
-       raise error.TestError("Please set start_vm to no")
+        raise error.TestError("Please set start_vm to no")
     params["start_vm"] = "yes"
     try:
         error.context("Try to boot VM with negative parameters", logging.info)
