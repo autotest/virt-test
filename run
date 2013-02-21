@@ -178,10 +178,21 @@ class VirtTestRunParser(optparse.OptionParser):
                            dest="restore_image_between_tests",
                            help="Restore from the pristine image on *every test*")
         general.add_option("-g", "--guest-os", action="store", dest="guest_os",
-                           default="JeOS.17.64",
+                           default=None,
                            help=("Select the guest OS to be used. "
                                  "If -c is provided, this will be ignored. "
-                                 "Default: %default"))
+                                 "Default: %s" % DEFAULT_GUEST_OS))
+        general.add_option("--arch", action="store", dest="arch",
+                           default=None,
+                           help=("Architecture under test. "
+                                 "If -c is provided, this will be ignored. "
+                                 "Default: any that supports the given machine type"))
+        general.add_option("--machine-type", action="store", dest="machine_type",
+                           default=None,
+                           help=("Machine type under test. "
+                                 "If -c is provided, this will be ignored. "
+                                 "Default: all for the chosen guests, %s if "
+                                 "--guest-os not given." % DEFAULT_MACHINE_TYPE))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
                            help=('List of space separated tests to be '
@@ -254,6 +265,8 @@ class VirtTestRunParser(optparse.OptionParser):
         self.add_option_group(qemu)
 
 
+DEFAULT_MACHINE_TYPE = "i440fx"
+DEFAULT_GUEST_OS = "JeOS"
 QEMU_DEFAULT_SET = "migrate"
 LIBVIRT_DEFAULT_SET = ("unattended_install.import.import, virsh_domname, "
                        "remove_guest.without_disk")
@@ -357,6 +370,27 @@ class VirtTestApp(object):
             logging.info("Config provided, ignoring --smp option")
 
 
+    def _process_arch(self):
+        if self.options.arch is None:
+            pass
+        elif not self.options.config:
+            self.cartesian_parser.only_filter(self.options.arch)
+        else:
+            logging.info("Config provided, ignoring --arch option")
+
+
+    def _process_machine_type(self):
+        if self.options.machine_type is None:
+            # TODO: this is x86-specific, instead we can get the default arch
+            # from qemu binary and run on all supported machine types
+            if self.options.arch is None and self.options.guest_os is None:
+                self.cartesian_parser.only_filter(DEFAULT_MACHINE_TYPE)
+        elif not self.options.config:
+            self.cartesian_parser.only_filter(self.options.machine_type)
+        else:
+            logging.info("Config provided, ignoring --machine-type option")
+
+
     def _process_image_type(self):
         if not self.options.config:
             if self.options.image_type in SUPPORTED_IMAGE_TYPES:
@@ -400,6 +434,7 @@ class VirtTestApp(object):
 
         This method modifies the cartesian set by parsing additional lines.
         """
+
         self._process_qemu_bin()
         self._process_qemu_accel()
         self._process_bridge_mode()
@@ -413,15 +448,13 @@ class VirtTestApp(object):
     def _process_guest_os(self):
         if not self.options.config:
             from virttest import standalone_test
-            if (self.options.guest_os not in
-                standalone_test.get_guest_name_list(self.options)):
+            if len(standalone_test.get_guest_name_list(self.options)) == 0:
                 _restore_stdout()
                 print("Guest name %s is not on the known guest os list "
                       "(see --list-guests), aborting..." %
                       self.options.guest_os)
                 sys.exit(1)
-            if self.options.guest_os:
-                self.cartesian_parser.only_filter(self.options.guest_os)
+            self.cartesian_parser.only_filter(self.options.guest_os or DEFAULT_GUEST_OS)
         else:
             logging.info("Config provided, ignoring --guest-os option")
 
@@ -489,6 +522,8 @@ class VirtTestApp(object):
         This method modifies the cartesian set by parsing additional lines.
         """
         self._process_guest_os()
+        self._process_arch()
+        self._process_machine_type()
         self._process_restart_vm()
         self._process_restore_image_between_tests()
         self._process_mem()
@@ -573,7 +608,7 @@ class VirtTestApp(object):
                       "names correctly, and double "
                       "check that tests show "
                       "in --list-tests for guest '%s'" %
-                      (self.options.guest_os))
+                      (self.options.guest_os or DEFAULT_GUEST_OS))
                 sys.exit(1)
 
             if self.options.config:
