@@ -61,10 +61,7 @@ def preprocess_vm(test, params, env, name):
     vm_type = params.get('vm_type')
     target = params.get('target')
     if not vm:
-        vm_class = virt_vm.BaseVM.lookup_vm_class(vm_type, target)
-        if vm_class is not None:
-            vm = vm_class(name, params, test.bindir, env.get("address_cache"))
-            env.register_vm(name, vm)
+        vm = env.create_vm(vm_type, target, name, params, test.bindir)
 
     remove_vm = False
     if params.get("force_remove_vm") == "yes":
