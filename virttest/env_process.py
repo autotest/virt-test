@@ -50,19 +50,6 @@ def preprocess_image(test, params, image_name):
             if not image.create(params):
                 raise error.TestError("Could not create image")
 
-def lookup_vm_class(vm_type, target):
-    if vm_type == 'qemu':
-        import qemu_vm
-        return qemu_vm.VM
-    if vm_type == 'libvirt':
-        return libvirt_vm.VM
-    if vm_type == 'v2v':
-        if target == 'libvirt' or target is None:
-            return libvirt_vm.VM
-        if target == 'ovirt':
-            import ovirt
-            return ovirt.VMManager
-
 def preprocess_vm(test, params, env, name):
     """
     Preprocess a single VM object according to the instructions in params.
@@ -77,7 +64,7 @@ def preprocess_vm(test, params, env, name):
     vm_type = params.get('vm_type')
     target = params.get('target')
     if not vm:
-        vm_class = lookup_vm_class(vm_type, target)
+        vm_class = virt_vm.BaseVM.lookup_vm_class(vm_type, target)
         if vm_class is not None:
             vm = vm_class(name, params, test.bindir, env.get("address_cache"))
             env.register_vm(name, vm)
