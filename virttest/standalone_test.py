@@ -650,7 +650,7 @@ def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     logging.info("Tests passed: %d", n_tests_passed)
     logging.info("Tests failed: %d", n_tests_failed)
     if n_tests_skipped:
-        print_header("Tests skipped: %d", n_tests_skipped)
+        logging.info("Tests skipped: %d", n_tests_skipped)
     logging.info("Success rate: %.2f %%", success_rate)
 
 
