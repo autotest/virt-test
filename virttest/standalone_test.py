@@ -479,15 +479,18 @@ def print_test_list(options, cartesian_parser):
             pipe.write(out)
 
 
+def get_guest_name_parser(options):
+    cartesian_parser = cartesian_config.Parser()
+    cfgdir = os.path.join(data_dir.get_root_dir(), options.type, "cfg")
+    cartesian_parser.parse_file(os.path.join(cfgdir, "guest-os.cfg"))
+    return cartesian_parser
+
+
 def get_guest_name_list(options):
     global GUEST_NAME_LIST
     if GUEST_NAME_LIST is None:
-        cfg = os.path.join(data_dir.get_root_dir(), options.type,
-                           "cfg", "guest-os.cfg")
-        cartesian_parser = cartesian_config.Parser()
-        cartesian_parser.parse_file(cfg)
         guest_name_list = []
-        for params in cartesian_parser.get_dicts():
+        for params in get_guest_name_parser(options).get_dicts():
             shortname = ".".join(params['name'].split(".")[1:])
             guest_name_list.append(shortname)
 
@@ -506,17 +509,13 @@ def print_guest_list(options):
     @param options: OptParse object with cmdline options.
     @param cartesian_parser: Cartesian parser object with test options.
     """
-    cfg = os.path.join(data_dir.get_root_dir(), options.type,
-                       "cfg", "guest-os.cfg")
-    cartesian_parser = cartesian_config.Parser()
-    cartesian_parser.parse_file(cfg)
     pipe = get_paginator()
     index = 0
     pipe.write("Searched %s for guest images\n" %
                os.path.join(data_dir.get_data_dir(), 'images'))
     pipe.write("Available guests:")
     pipe.write("\n\n")
-    for params in cartesian_parser.get_dicts():
+    for params in get_guest_name_parser(options).get_dicts():
         index += 1
         image_name = storage.get_image_filename(params, data_dir.get_data_dir())
         shortname = params['shortname']
