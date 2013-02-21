@@ -242,6 +242,51 @@ class Monitor:
         raise NotImplementedError
 
 
+    # Methods that should work on both classes, as long as human_monitor_cmd()
+    # works:
+
+    re_numa_nodes = re.compile(r"^([0-9]+) nodes$", re.M)
+    re_numa_node_info = re.compile(r"^node ([0-9]+) (cpus|size): (.*)$", re.M)
+    @classmethod
+    def parse_info_numa(cls, r):
+        """
+        Parse 'info numa' output
+
+        See info_numa() for information about the return value.
+        """
+
+        nodes = cls.re_numa_nodes.search(r)
+        if nodes is None:
+            raise Exception("Couldn't get number of nodes from 'info numa' output")
+        nodes = int(nodes.group(1))
+
+        data = [[0, set()] for i in range(nodes)]
+        for nodenr,field,value in cls.re_numa_node_info.findall(r):
+            nodenr = int(nodenr)
+            if nodenr > nodes:
+                raise Exception("Invalid node number on 'info numa' output: %d", nodenr)
+            if field == 'size':
+                if not value.endswith(' MB'):
+                    raise Exception("Unexpected size value: %s", value)
+                megabytes = int(value[:-3])
+                data[nodenr][0] = megabytes
+            elif field == 'cpus':
+                cpus = set([int(v) for v in value.split()])
+                data[nodenr][1] = cpus
+        data = [tuple(i) for i in data]
+        return data
+
+    def info_numa(self):
+        """
+        Run 'info numa' command and parse returned information
+
+        @return: An array of (ram, cpus) tuples, where ram is the RAM size in
+                 MB and cpus is a set of CPU numbers
+        """
+        r = self.human_monitor_cmd("info numa")
+        return self.parse_info_numa(r)
+
+
 class HumanMonitor(Monitor):
     """
     Wraps "human monitor" commands.
