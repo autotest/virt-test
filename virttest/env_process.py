@@ -1,9 +1,9 @@
 import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
-import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm, qemu_vm
+import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
 import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
-import remote, ovirt, data_dir, utils_test
+import remote, data_dir, utils_test
 
 
 try:
@@ -52,6 +52,7 @@ def preprocess_image(test, params, image_name):
 
 def lookup_vm_class(vm_type, target):
     if vm_type == 'qemu':
+        import qemu_vm
         return qemu_vm.VM
     if vm_type == 'libvirt':
         return libvirt_vm.VM
@@ -59,6 +60,7 @@ def lookup_vm_class(vm_type, target):
         if target == 'libvirt' or target is None:
             return libvirt_vm.VM
         if target == 'ovirt':
+            import ovirt
             return ovirt.VMManager
 
 def preprocess_vm(test, params, env, name):
