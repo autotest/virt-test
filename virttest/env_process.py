@@ -62,16 +62,19 @@ def preprocess_vm(test, params, env, name):
     vm_type = params.get('vm_type')
     target = params.get('target')
     if not vm:
+        vm_class = None
         if vm_type == 'qemu':
-            vm = qemu_vm.VM(name, params, test.bindir, env.get("address_cache"))
+            vm_class = qemu_vm.VM
         if vm_type == 'libvirt':
-            vm = libvirt_vm.VM(name, params, test.bindir, env.get("address_cache"))
+            vm_class = libvirt_vm.VM
         if vm_type == 'v2v':
             if target == 'libvirt' or target is None:
-                vm = libvirt_vm.VM(name, params, test.bindir, env.get("address_cache"))
+                vm_class = libvirt_vm.VM
             if target == 'ovirt':
-                vm = ovirt.VMManager(name, params, test.bindir, env.get("address_cache"))
-        env.register_vm(name, vm)
+                vm_class = ovirt.VMManager
+        if vm_class is not None:
+            vm = vm_class(name, params, test.bindir, env.get("address_cache"))
+            env.register_vm(name, vm)
 
     remove_vm = False
     if params.get("force_remove_vm") == "yes":
