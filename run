@@ -178,10 +178,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            dest="restore_image_between_tests",
                            help="Restore from the pristine image on *every test*")
         general.add_option("-g", "--guest-os", action="store", dest="guest_os",
-                           default="JeOS.17.64",
+                           default=None,
                            help=("Select the guest OS to be used. "
                                  "If -c is provided, this will be ignored. "
-                                 "Default: %default"))
+                                 "Default: %s" % DEFAULT_GUEST_OS))
         general.add_option("--tests", action="store", dest="tests",
                            default="",
                            help=('List of space separated tests to be '
@@ -258,6 +258,7 @@ class VirtTestRunParser(optparse.OptionParser):
         self.add_option_group(qemu)
 
 
+DEFAULT_GUEST_OS = "JeOS.17.64"
 QEMU_DEFAULT_SET = "migrate"
 LIBVIRT_DEFAULT_SET = ("unattended_install.import.import, virsh_domname, "
                        "remove_guest.without_disk")
@@ -417,15 +418,13 @@ class VirtTestApp(object):
     def _process_guest_os(self):
         if not self.options.config:
             from virttest import standalone_test
-            if (self.options.guest_os not in
-                standalone_test.get_guest_name_list(self.options)):
+            if len(standalone_test.get_guest_name_list(self.options)) == 0:
                 _restore_stdout()
                 print("Guest name %s is not on the known guest os list "
                       "(see --list-guests), aborting..." %
                       self.options.guest_os)
                 sys.exit(1)
-            if self.options.guest_os:
-                self.cartesian_parser.only_filter(self.options.guest_os)
+            self.cartesian_parser.only_filter(self.options.guest_os or DEFAULT_GUEST_OS)
         else:
             logging.info("Config provided, ignoring --guest-os option")
 
@@ -585,7 +584,7 @@ class VirtTestApp(object):
                       "names correctly, and double "
                       "check that tests show "
                       "in --list-tests for guest '%s'" %
-                      (self.options.guest_os))
+                      (self.options.guest_os or DEFAULT_GUEST_OS))
                 sys.exit(1)
 
             if self.options.config:
