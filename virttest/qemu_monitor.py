@@ -222,6 +222,25 @@ class Monitor:
         if not self._has_command(cmd):
             raise MonitorNotSupportedCmdError(self.name, cmd)
 
+    # Methods that may be implemented by subclasses:
+
+    def human_monitor_cmd(self, cmd="", timeout=None,
+                          debug=True, fd=None):
+        """
+        Send HMP command
+
+        This method allows code to send HMP commands without the need to check
+        if ther monitor is QMPMonitor or HumanMonitor.
+
+        @param cmd: human monitor command.
+        @param timeout: Time duration to wait for response
+        @param debug: Whether to print the commands being sent and responses
+        @param fd: file object or file descriptor to pass
+
+        @return: The response to the command
+        """
+        raise NotImplementedError
+
 
 class HumanMonitor(Monitor):
     """
@@ -391,6 +410,19 @@ class HumanMonitor(Monitor):
         finally:
             self._lock.release()
 
+    def human_monitor_cmd(self, cmd="", timeout=CMD_TIMEOUT,
+                          debug=True, fd=None):
+        """
+        Send human monitor command directly
+
+        @param cmd: human monitor command.
+        @param timeout: Time duration to wait for response
+        @param debug: Whether to print the commands being sent and responses
+        @param fd: file object or file descriptor to pass
+
+        @return: The response to the command
+        """
+        return self.cmd(cmd, timeout, debug, fd)
 
     def verify_responsive(self):
         """
