@@ -442,6 +442,23 @@ class BaseVM(object):
                 break
 
 
+    @staticmethod
+    def lookup_vm_class(vm_type, target):
+        if vm_type == 'qemu':
+            import qemu_vm
+            return qemu_vm.VM
+        if vm_type == 'libvirt':
+            import libvirt_vm
+            return libvirt_vm.VM
+        if vm_type == 'v2v':
+            if target == 'libvirt' or target is None:
+                import libvirt_vm
+                return libvirt_vm.VM
+            if target == 'ovirt':
+                import ovirt
+                return ovirt.VMManager
+
+
     #
     # Public API - could be reimplemented with virt specific code
     #
@@ -814,7 +831,7 @@ class BaseVM(object):
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
-                return self.login(nic_index, internal_timeout, 
+                return self.login(nic_index, internal_timeout,
                                   username, password)
             except (remote.LoginError, VMError), e:
                 self.verify_alive()
