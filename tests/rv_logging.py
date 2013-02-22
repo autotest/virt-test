@@ -7,7 +7,6 @@ Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
 import logging, os
-from virttest.aexpect import ShellCmdError, ShellStatusError, ShellTimeoutError
 from autotest.client.shared import error
 from virttest import utils_misc, utils_spice
 
@@ -36,6 +35,9 @@ def run_rv_logging(test, params, env):
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
+    guest_root_session = guest_vm.wait_for_login(
+            timeout=int(params.get("login_timeout", 360)),
+            username="root", password="123456")
 
     scriptdir = os.path.join("scripts", script)
     script_path = utils_misc.get_path(test.virtdir, scriptdir)
@@ -49,35 +51,34 @@ def run_rv_logging(test, params, env):
     # Some logging tests need the full desktop environment
     guest_session.cmd("export DISPLAY=:0.0")
 
-    utils_spice.launch_startx(guest_vm)
-
     # Logging test for the qxl driver
     if(log_test == 'qxl'):
         logging.info("Running the logging test for the qxl driver")
-        guest_session.cmd("grep -i qxl " + qxl_logfile)
+        guest_root_session.cmd("grep -i qxl " + qxl_logfile)
     # Logging test for spice-vdagent
     elif(log_test == 'spice-vdagent'):
         logging.info("Running the logging test for spice-vdagent daemon")
-        utils_spice.start_vdagent(guest_session, test_timeout=15)
+        utils_spice.start_vdagent(guest_root_session, test_timeout=15)
 
         # Testing the log after stopping spice-vdagentd
-        utils_spice.stop_vdagent(guest_session, test_timeout=15)
-        output = guest_session.cmd("tail -n 3 " + spicevdagent_logfile +
+        utils_spice.stop_vdagent(guest_root_session, test_timeout=15)
+        output = guest_root_session.cmd("tail -n 3 " + spicevdagent_logfile +
                                    " | grep 'vdagentd quiting'")
 
         # Testing the log after starting spice-vdagentd
-        utils_spice.start_vdagent(guest_session, test_timeout=15)
-        output = guest_session.cmd("tail -n 2 " + spicevdagent_logfile +
+        utils_spice.start_vdagent(guest_root_session, test_timeout=15)
+        output = guest_root_session.cmd("tail -n 2 " + spicevdagent_logfile +
                                    " | grep 'opening vdagent virtio channel'")
 
         # Testing the log after restart spice-vdagentd
-        utils_spice.restart_vdagent(guest_session, test_timeout=10)
-        output = guest_session.cmd("tail -n 2 " + spicevdagent_logfile +
+        utils_spice.restart_vdagent(guest_root_session, test_timeout=10)
+        output = guest_root_session.cmd("tail -n 2 " + spicevdagent_logfile +
                                    " | grep 'opening vdagent virtio channel'")
 
-        cmd = "echo \"SPICE_VDAGENTD_EXTRA_ARGS=-dd\"> /etc/sysconfig/spice-vdagentd"
-        guest_session.cmd(cmd)
-        utils_spice.restart_vdagent(guest_session, test_timeout=10)
+        cmd = ("echo \"SPICE_VDAGENTD_EXTRA_ARGS=-dd\">"
+               "/etc/sysconfig/spice-vdagentd")
+        guest_root_session.cmd(cmd)
+        utils_spice.restart_vdagent(guest_root_session, test_timeout=10)
 
         # Finally test copying text within the guest
         cmd = "%s %s %s %s" % (interpreter, script_call,
@@ -101,12 +102,13 @@ def run_rv_logging(test, params, env):
         logging.debug("------------ End of script output of the Copying"
                       " Session ------------")
 
-        output = guest_session.cmd("tail -n 3 " + spicevdagent_logfile +
+        output = guest_root_session.cmd("tail -n 3 " + spicevdagent_logfile +
                                    " | grep 'clipboard grab'")
 
     else:
         # Couldn't find the right test to run
         guest_session.close()
+        guest_root_session.close()
         raise error.TestFail("Couldn't find the right test to run,"
                              + " check cfg files.")
     guest_session.close()
