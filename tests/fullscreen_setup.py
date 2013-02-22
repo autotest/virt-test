@@ -29,9 +29,10 @@ def run_fullscreen_setup(test, params, env):
     guest_session = guest_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
 
+    utils_spice.wait_timeout(10)
+
     logging.debug("Exporting guest display")
     guest_session.cmd("export DISPLAY=:0.0")
-    utils_spice.launch_startx(guest_vm)
 
     # Get the min, current, and max resolution on the guest
     output = guest_session.cmd("xrandr | grep Screen")
