@@ -1607,6 +1607,74 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     run_func(test, params, env)
 
 
+def get_readable_cdroms(params, session):
+    """
+    Get the cdrom list which contain media in guest.
+
+    @param params: Dictionary with the test parameters.
+    @param session: A shell session on the VM provided.
+    """
+    get_cdrom_cmd = params.get("cdrom_get_cdrom_cmd")
+    check_cdrom_patttern = params.get("cdrom_check_cdrom_pattern")
+    o = session.get_command_output(get_cdrom_cmd)
+    cdrom_list = re.findall(check_cdrom_patttern, o)
+    logging.debug("Found cdroms on guest: %s" % cdrom_list)
+
+    readable_cdroms = []
+    test_cmd = params.get("cdrom_test_cmd")
+    for d in cdrom_list:
+        s, o = session.cmd_status_output(test_cmd % d)
+        if s == 0:
+            readable_cdroms.append(d)
+            break
+
+    if readable_cdroms:
+        return readable_cdroms
+
+    raise error.TestFail("Could not find a cdrom device contain media.")
+
+
+def update_mac_ip_address(vm, params, timeout=360):
+    """
+    Get mac and ip address from guest then update the mac pool and
+    address cache
+
+    @param vm: VM object
+    @param params: Dictionary with the test parameters.
+    """
+    network_query = params.get("network_query", "ifconfig")
+    restart_network = params.get("restart_network", "service network restart")
+    mac_ip_filter = params.get("mac_ip_filter")
+    if timeout is None:
+        timeout = int(params.get("login_timeout"))
+    session = vm.wait_for_serial_login(timeout=360)
+    end_time = time.time() + timeout
+    macs_ips = []
+    i = 0
+    while time.time() < end_time:
+        try:
+            if i != 0 and i % 12 == 0:
+                session.cmd(restart_network)
+            s, o = session.cmd_status_output(network_query)
+            macs_ips = re.findall(mac_ip_filter, o)
+            # Get nics number
+        except Exception, e:
+            logging.warn(e)
+        nics = params.get("nics")
+        nic_minimum = len(re.split("\s+", nics.strip()))
+        if len(macs_ips) == nic_minimum:
+            break
+        i += 1
+        time.sleep(5)
+    if len(macs_ips) < nic_minimum:
+        logging.warn("Not all nics get ip address")
+
+    for (mac, ip) in macs_ips:
+        vlan = macs_ips.index((mac, ip))
+        vm.address_cache[mac.lower()] = ip
+        utils_misc.set_mac_address(vm.instance, vlan, mac)
+
+
 def pin_vm_threads(vm, node):
     """
     Pin VM threads to single cpu of a numa node
