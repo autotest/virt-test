@@ -273,20 +273,14 @@ variants:
             - etherboot:
                 pre_command = "alternatives --display qemu-pxe-roms |grep -q etherboot && alternatives --set 'qemu-pxe-roms' /usr/share/etherboot || true"
                 no Host_RHEL.6
-                variants:
-                    - @default:
-                    - with_query_cpu:
-                        type = query_cpus_when_pxeboot
-                        feature_map = "intel:ept amd:npt"
-                        mmu_check_cmd = "cat /sys/module/kvm_%s/parameters/%s"
             - gpxe:
                 pre_command = "alternatives --display qemu-pxe-roms |grep -q gpxe || alternatives --install /usr/share/qemu-pxe-roms qemu-pxe-roms /usr/share/gpxe 1; alternatives --set 'qemu-pxe-roms' /usr/share/gpxe"
-                variants:
-                    - @default:
-                    - with_query_cpu:
-                        type = query_cpus_when_pxeboot
-                        mmu_check_cmd = "cat /sys/module/kvm_%s/parameters/%s"
-                        feature_map = "intel:ept amd:npt"
+            - with_query_cpus:
+                type = query_cpus_when_pxeboot
+                pre_command = "alternatives --display qemu-pxe-roms |grep -q gpxe || alternatives --install /usr/share/qemu-pxe-roms qemu-pxe-roms /usr/share/gpxe 1; alternatives --set 'qemu-pxe-roms' /usr/share/gpxe"
+                no Host_RHEL.5
+                start_vm = "no"
+                restart_vm = "no"
 
     - module_probe:
         type = module_probe
