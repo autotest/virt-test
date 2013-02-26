@@ -777,7 +777,7 @@ variants:
                 cmd_get_time = "echo %TIME%"
         guest_s3, acpi_after_hotplug.acpi_guest_s3, balloon_check.enable.balloon-guest_s3:
             display = spice
-            s3_support_chk_cmd = 'wevtutil cl system && powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
+            s3_support_chk_cmd = 'wevtutil cl system && powercfg /h off  & powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
             s3_start_cmd = "rundll32.exe PowrProf.dll,SetSuspendState 0,1,0"
             s3_bg_program_setup_cmd = 'start /B ping -t localhost'
             s3_bg_program_chk_cmd = 'tasklist | findstr /I /C:"ping.exe"'
@@ -979,7 +979,7 @@ variants:
                 image_name = winXP
                 image_size = 30G
                 guest_s3:
-                    s3_support_chk_cmd = 'powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
+                    s3_support_chk_cmd = 'powercfg /h off  & powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
                     s3_log_chk_cmd = 'echo "Since WinXP does not record ACPI event, Do nothing"'
                 guest_s4, hibernate:
                     s4_support_chk_cmd = 'powercfg -h on'
@@ -1040,7 +1040,7 @@ variants:
                     shell_port = 23
                     shell_client = telnet
                 guest_s3:
-                    s3_support_chk_cmd = 'powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
+                    s3_support_chk_cmd = 'powercfg /h off  & powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
                     s3_log_chk_cmd = 'echo "Since Win2003 does not record ACPI event, Do nothing"'
                 guest_s4, hibernate:
                     s4_support_chk_cmd = 'powercfg -h on'
