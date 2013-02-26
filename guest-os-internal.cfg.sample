@@ -61,9 +61,7 @@ variants:
                 guest_load_command = touch /tmp/guest_load_timedrift; for (( I=0; I<`grep -c 'processor' /proc/cpuinfo`; I++ )); do echo $I;taskset -c $I /bin/bash -c 'while [ -e /tmp/guest_load_timedrift ]; do :; done&'; done
                 host_load_instances = 0
                 guest_load_stop_command = rm -f /tmp/guest_load_timedrift
-        balloon_check.enable.balloon-guest_s3, acpi_after_hotplug.acpi_guest_s3:
-            no virtio_blk
-            no virtio_net
+        guest_s3, balloon_check.enable.balloon-guest_s3, acpi_after_hotplug.acpi_guest_s3:
             s3_support_chk_cmd = 'dmesg -c  && grep -q mem /sys/power/state'
             s3_bg_program_setup_cmd = 'cd /tmp/; nohup ping localhost'
             s3_bg_program_chk_cmd = 'pgrep ping'

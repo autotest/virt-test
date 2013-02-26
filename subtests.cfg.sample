@@ -807,18 +807,10 @@ variants:
         RHEL.6:
             nfs_devname = /dev/sdb
 
-    - guest_s3:
+    - guest_suspend:
         no RHEL.3.9
         no RHEL.4
-        type = guest_s3
-        # The following parameters will be overwirtten in guest os's config.
-        s3_support_chk_cmd = 'dmesg -c  && grep -q mem /sys/power/state'
-        s3_bg_program_setup_cmd = 'cd /tmp/; nohup ping localhost'
-        s3_bg_program_chk_cmd = 'pgrep ping'
-        s3_bg_program_kill_cmd = 'pkill ping'
-        s3_log_chk_cmd = 'dmesg |grep -E "ACPI: Waking up from system sleep state S3"\|"ACPI: PCI interrupt for device .* disabled"'
-        s3_start_cmd = "echo mem > /sys/power/state"
-        services_up_timeout = 30
+        type = guest_suspend
         kill_vm_on_error = yes
         variants:
             - @default:
@@ -829,14 +821,38 @@ variants:
                 no virtio_blk
                 only RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
                 only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-            - globally_disable_s3:
+            - global_disable_s3:
+                only guest_s3
                 no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+                negative_test = yes
                 extra_params = " -global PIIX4_PM.disable_s3=1"
-            - globally_enable_s3:
+            - global_enable_s3:
+                only guest_s3
                 no RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
                 no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
                 extra_params = " -global PIIX4_PM.disable_s3=0"
-
+            - global_disable_s4:
+                only guest_s4
+                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+                negative_test = yes
+                extra_params = " -global PIIX4_PM.disable_s4=1"
+            - global_enable_s4:
+                only guest_s4
+                no RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
+                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
+                extra_params = " -global PIIX4_PM.disable_s4=0"
+        variants:
+            - guest_s3:
+                guest_suspend_type = "mem"
+                services_up_timeout = 30
+                # params: s3_support_chk_cmd, s3_bg_program_setup_cmd,
+                # s3_bg_program_chk_cmd, s3_bg_program_kill_cmd, s3_log_chk_cmd,
+                # s3_start_cmd and services_up_timeout are set in guest-os.cfg
+            - guest_s4:
+                guest_suspend_type = "disk"
+                # params: s4_support_chk_cmd, s4_bg_program_setup_cmd,
+                # s4_bg_program_chk_cmd, s4_bg_program_kill_cmd, s4_log_chk_cmd,
+                # s4_start_cmd and services_up_timeout are set in guest-os.cfg
 
     - timedrift:
         rtc_clock = "host"
@@ -1422,31 +1438,6 @@ variants:
         cdroms += " virtio"
         cdrom_virtio = isos/windows/virtio-win.iso
         kill_rundll = no
-
-    - guest_s4:
-        no RHEL.3
-        #kill_vm = yes
-        type = guest_s4
-        # params: s4_support_chk_cmd, s4_bg_program_setup_cmd,
-        # s4_bg_program_chk_cmd, s4_bg_program_kill_cmd, s4_log_chk_cmd,
-        # s4_start_cmd and services_up_timeout are set in guest-os.cfg
-        kill_vm_on_error = yes
-        variants:
-            - @default:
-                only RHEL.6.3, RHEL.6.4
-                only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-            - no_virtio:
-                no virtio_net
-                no virtio_blk
-                only RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
-                only Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-            - globally_disable_s4:
-                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-                extra_params = " -global PIIX4_PM.disable_s4=1"
-            - globally_enable_s4:
-                no RHEL.4, RHEL.5, RHEL.6.0, RHEL.6.1, RHEL.6.2
-                no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
-                extra_params = " -global PIIX4_PM.disable_s4=0"
 
     - hotplug_vcpu:
         type = hotplug_vcpu
