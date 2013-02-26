@@ -61,14 +61,14 @@ variants:
                 guest_load_command = touch /tmp/guest_load_timedrift; for (( I=0; I<`grep -c 'processor' /proc/cpuinfo`; I++ )); do echo $I;taskset -c $I /bin/bash -c 'while [ -e /tmp/guest_load_timedrift ]; do :; done&'; done
                 host_load_instances = 0
                 guest_load_stop_command = rm -f /tmp/guest_load_timedrift
-        guest_s3, acpi_after_hotplug.acpi_guest_s3:
+        guest_s3:
             s3_support_chk_cmd = 'dmesg -c  && grep -q mem /sys/power/state'
             s3_bg_program_setup_cmd = 'cd /tmp/; nohup ping localhost'
             s3_bg_program_chk_cmd = 'pgrep ping'
             s3_bg_program_kill_cmd = 'pkill ping'
             s3_log_chk_cmd = 'dmesg |grep -E "ACPI: Waking up from system sleep state S3"\|"ACPI: PCI interrupt for device .* disabled"'
             s3_start_cmd = "echo mem > /sys/power/state"
-        guest_s4, hibernate, acpi_after_hotplug.acpi_guest_s4:
+        guest_s4, hibernate:
             s4_support_chk_cmd = "dmesg -c && grep -q disk /sys/power/state"
             s4_bg_program_setup_cmd = "cd /tmp/; nohup ping localhost"
             s4_bg_program_chk_cmd = 'pgrep ping'
@@ -76,14 +76,9 @@ variants:
             s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
             s4_start_cmd = 'echo disk > /sys/power/state'
             services_up_timeout = 30
-        acpi_after_hotplug.acpi_guest_s4:
-            no virtio_blk
-            no virtio_net
         nic_hotplug:
             modprobe_module = acpiphp
         block_hotplug:
-            modprobe_module = acpiphp
-        acpi_after_hotplug:
             modprobe_module = acpiphp
         floppy_test:
             format_floppy_cmd = mkfs -t ext3 /dev/fd0
@@ -196,6 +191,8 @@ variants:
                             catch_serial_cmd =
                         usb_storage.check_options:
                             check_io_size_option = no
+                        pci_hotplug:
+                            modprobe_module = acpiphp
 
                         variants:
                             - 32:
@@ -280,6 +277,8 @@ variants:
                                 kernel_re = .*kernel-smp-%s.el.*.i686.*
                         usb_storage.check_options:
                             check_io_size_option = no
+                        pci_hotplug:
+                            modprobe_module = acpiphp
 
                         variants:
                             - 32:
@@ -338,6 +337,8 @@ variants:
                             cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
                         usb_storage.check_options:
                             check_io_size_option = no
+                        pci_hotplug:
+                            modprobe_module = acpiphp
 
                         variants:
                             - 32:
@@ -385,6 +386,8 @@ variants:
                             cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
                         usb_storage.check_options:
                             check_io_size_option = no
+                        pci_hotplug:
+                            modprobe_module = acpiphp
 
                         variants:
                             - 32:
@@ -432,6 +435,8 @@ variants:
                             cpu_threads_chk_cmd = "expr $(grep -c ',' /sys/devices/system/cpu/cpu0/topology/thread_siblings_list) + 1"
                         usb_storage.check_options:
                             check_io_size_option = no
+                        pci_hotplug:
+                            modprobe_module = acpiphp
 
                         variants:
                             - 32:
@@ -475,8 +480,6 @@ variants:
                             modprobe_module = ""
                         block_hotplug:
                             modprobe_module = ""
-                        acpi_after_hotplug:
-                            modprobe_module = ""
                         rh_kernel_update, kexec:
                            args_added = "console=tty0 console=ttyS0,115200"
                         variants:
@@ -519,8 +522,6 @@ variants:
                             modprobe_module = ""
                         block_hotplug:
                             modprobe_module = ""
-                        acpi_after_hotplug:
-                            modprobe_module = ""
                         rh_kernel_update, kexec:
                            args_added = "console=tty0 console=ttyS0,115200"
                         variants:
@@ -561,8 +562,6 @@ variants:
                         nic_hotplug:
                             modprobe_module = ""
                         block_hotplug:
-                            modprobe_module = ""
-                        acpi_after_hotplug:
                             modprobe_module = ""
                         rh_kernel_update, kexec:
                             args_added = "console=tty0 console=ttyS0,115200"
@@ -605,8 +604,6 @@ variants:
                         nic_hotplug:
                             modprobe_module = ""
                         block_hotplug:
-                            modprobe_module = ""
-                        acpi_after_hotplug:
                             modprobe_module = ""
                         rh_kernel_update, kexec:
                             args_added = "console=tty0 console=ttyS0,115200"
@@ -652,8 +649,6 @@ variants:
                         nic_hotplug:
                             modprobe_module = ""
                         block_hotplug:
-                            modprobe_module = ""
-                        acpi_after_hotplug:
                             modprobe_module = ""
                         rh_kernel_update, kexec:
                             args_added = "console=tty0 console=ttyS0,115200"
@@ -775,7 +770,7 @@ variants:
             host_load_instances = 8
             monotonicity:
                 cmd_get_time = "echo %TIME%"
-        guest_s3, acpi_after_hotplug.acpi_guest_s3:
+        guest_s3:
             display = spice
             s3_support_chk_cmd = 'wevtutil cl system && powercfg /h off  & powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
             s3_start_cmd = "rundll32.exe PowrProf.dll,SetSuspendState 0,1,0"
@@ -783,7 +778,7 @@ variants:
             s3_bg_program_chk_cmd = 'tasklist | findstr /I /C:"ping.exe"'
             s3_bg_program_kill_cmd = 'taskkill /IM ping.exe /F'
             s3_log_chk_cmd = 'wevtutil qe system /f:text  | findstr /I /C:"The system has resumed from sleep" /C:"The system is entering sleep"'
-        guest_s4, hibernate, acpi_after_hotpulg.acpi_guest_s4:
+        guest_s4, hibernate:
             s4_support_chk_cmd = powercfg /hibernate on
             s4_bg_program_setup_cmd = 'start ping -t localhost'
             s4_bg_program_chk_cmd = 'tasklist | find /I "ping.exe"'
@@ -792,22 +787,22 @@ variants:
             s4_log_chk_cmd = 'wevtutil qe system /f:text | findstr /I /C:"The system has resumed from sleep" /C:"The system is entering sleep"'
         network_ping:
             interface_status_cmd = ipconfig /all
-        nic_hotplug:
+        nic_hotplug, pci_hotplug.hotplug_nic:
             modprobe_acpiphp = no
             reference_cmd = systeminfo
             find_pci_cmd = ipconfig /all | find "Description"
             seconds_wait_for_device_install = 10
-            nic_virtio:
+            nic_virtio, nic_virtio_net:
                 match_string = "Red Hat VirtIO Ethernet Adapter"
             nic_e1000:
                 match_string = "Intel(R) PRO/1000 MT Network Connection"
-        block_hotplug:
+        block_hotplug, pci_hotplug.hotplug_block:
             modprobe_acpiphp = no
             reference_cmd = wmic diskdrive list brief
             find_pci_cmd = wmic diskdrive list brief
             seconds_wait_for_device_install = 10
             pci_test_cmd = echo select disk %s > dt && echo detail disk >> dt && echo exit >> dt && diskpart /s dt
-            block_virtio:
+            block_virtio, blk_virtio_blk:
                 match_string = "VirtIO SCSI Disk Device"
         format_disk:
             create_partition_cmd = "echo select disk 1 > cmd && echo create partition primary >> cmd && echo select partition 1 >> cmd && echo assign letter=I >> cmd && echo exit >> cmd && diskpart /s cmd"
