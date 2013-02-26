@@ -953,20 +953,30 @@ variants:
                     - balloon-migrate:
                         sub_balloon_test_enlarge = "migration"
                         sub_balloon_test_evict = "migration"
-                    - balloon-guest-s3:
+                    - guest_s3:
                         extra_params += " -global PIIX4_PM.disable_s3=0"
-                        sub_balloon_test_enlarge = "guest_s3"
-                        sub_balloon_test_evict = "guest_s3"
+                        sub_balloon_test_enlarge = "guest_suspend"
+                        sub_balloon_test_evict = "guest_suspend"
+                        guest_suspend_type = "mem"
+                        services_up_timeout = 30
+                        # params: s3_support_chk_cmd, s3_bg_program_setup_cmd,
+                        # s3_bg_program_chk_cmd, s3_bg_program_kill_cmd, s3_log_chk_cmd,
+                        # s3_start_cmd and services_up_timeout are set in guest-os.cfg
+                    - guest_s4:
+                        extra_params += " -global PIIX4_PM.disable_s4=0"
+                        sub_balloon_test_enlarge = "guest_suspend"
+                        sub_balloon_test_evict = "guest_suspend"
+                        guest_suspend_type = "disk"
+                        services_up_timeout = 30
+                        # params: s3_support_chk_cmd, s3_bg_program_setup_cmd,
+                        # s3_bg_program_chk_cmd, s3_bg_program_kill_cmd, s3_log_chk_cmd,
+                        # s3_start_cmd and services_up_timeout are set in guest-os.cfg
                     - balloon-reboot:
                         sub_balloon_test_enlarge = "boot"
                         sub_balloon_test_evict = "boot"
                         reboot_method = shell
                         kill_vm_on_error = yes
                         reboot = yes
-                    - balloon-guest-s4:
-                        extra_params += " -global PIIX4_PM.disable_s4=0"
-                        sub_balloon_test_enlarge = "guest_s4"
-                        sub_balloon_test_evict = "guest_s4"
                     - balloon-shutdown_enlarge:
                         sub_balloon_test_enlarge = "shutdown"
                         shutdown_method = shell
