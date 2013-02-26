@@ -1466,8 +1466,8 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_machine_type(help, machine_type, invalid_type)
 
         for cdrom in params.objects("cdroms"):
-            cd_format = params.get("cd_format", "")
             cdrom_params = params.object_params(cdrom)
+            cd_format = cdrom_params.get("cd_format", "")
             iso = cdrom_params.get("cdrom")
             bus = None
             port = None
