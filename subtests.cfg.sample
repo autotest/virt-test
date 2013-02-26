@@ -1823,7 +1823,6 @@ variants:
         os_type_client = linux
         os_type_host = linux
         shell_prompt_host =  \[root@.{0,50}][\#\$]
-        ver_cmd = rpm -qa |grep kvm
         variants:
             - netperf_exe:
                 use_cygwin = no
