@@ -46,7 +46,6 @@ def run_virsh_define(test, params, env):
     fail_info = do_rename(vm, new_name)
     logging.info("Generated uuid: %s", vm.get_uuid())
 
-    assert vm.uuid != uuid
     # Rename back to original to maintain known-state
     fail_info = do_rename(vm, vm_name, uuid, fail_info)
     logging.info("Final uuid: %s", vm.get_uuid())
