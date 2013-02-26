@@ -9,10 +9,9 @@ def run_virsh_setvcpus(test, params, env):
 
     The conmand can change the number of virtual CPUs in the guest domain.
     1.Prepare test environment,destroy or suspend a VM.
-    2.When the ibvirtd == "off", stop the libvirtd service.
-    3.Perform virsh setvcpus operation.
-    4.Recover test environment.
-    5.Confirm the test result.
+    2.Perform virsh setvcpus operation.
+    3.Recover test environment.
+    4.Confirm the test result.
     """
 
     vm_name = params.get("main_vm")
@@ -20,7 +19,6 @@ def run_virsh_setvcpus(test, params, env):
     xml_file = params.get("setvcpus_xml_file", "vm.xml")
     virsh.dumpxml(vm_name, xml_file)
     tmp_file = params.get("setvcpus_tmp_file", "tmp.xml")
-    libvirtd = params.get("libvirtd")
     pre_vm_state = params.get("setvcpus_pre_vm_state")
     command = params.get("setvcpus_command", "setvcpus")
     options = params.get("setvcpus_options")
@@ -61,8 +59,6 @@ def run_virsh_setvcpus(test, params, env):
     elif pre_vm_state == "shut off":
         vm.destroy()
 
-    if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
     if domain == "remote_name":
         remote_ssh_addr = params.get("remote_ip", None)
         remote_addr = params.get("local_ip", None)
@@ -122,9 +118,6 @@ def run_virsh_setvcpus(test, params, env):
                     cmd_chk = "cat /etc/libvirt/qemu/%s.xml" % vm_name
                     output1 = commands.getoutput(cmd_chk)
                     logging.info("guest-info:\n%s" % output1)
-    #recover libvirtd service start
-    if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
 
     virsh.destroy(vm_name)
     virsh.undefine(vm_name)
