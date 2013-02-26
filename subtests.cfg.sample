@@ -842,6 +842,14 @@ variants:
                 no Host_RHEL.5, Host_RHEL.6.0, Host_RHEL.6.1, Host_RHEL.6.2
                 extra_params = " -global PIIX4_PM.disable_s4=0"
         variants:
+            - @default:
+            - with_kvmclock:
+                no Windows
+                type = clock_getres
+                sub_test = guest_suspend
+            - without_kvmclock:
+                cpu_model_flags += " -kvmclock"
+        variants:
             - guest_s3:
                 guest_suspend_type = "mem"
                 services_up_timeout = 30
