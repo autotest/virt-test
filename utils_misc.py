@@ -1909,7 +1909,7 @@ def get_cpu_model():
         for i in pattern_list[1:]:
             pattern += r".+(\b%s\b)" % i
         return pattern
- 
+
     cpu_types = {"AuthenticAMD": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
                                   "Opteron_G2", "Opteron_G1"],
                  "GenuineIntel": ["Haswell", "SandyBridge", "Westmere",
@@ -1944,7 +1944,7 @@ def get_cpu_model():
                 break
     else:
         logging.warn("Can not get cpu flags from cpuinfo")
- 
+
     if cpu_model:
         cpu_type_list = cpu_types.get(vendor)
         cpu_support_model = cpu_type_list[cpu_type_list.index(cpu_model):]
@@ -4462,3 +4462,16 @@ def standard_value(value_str, standard_unit="M", base="1024"):
         data *= multiple
 
     return str(data)
+
+def check_if_vm_vcpu_match(vcpu_desire, vm):
+    """
+    This checks whether the VM vCPU quantity matches
+    the value desired.
+    """
+    vcpu_actual = vm.get_cpu_count()
+    if vcpu_desire != vcpu_actual:
+        logging.debug("CPU quantity mismatched !!! guest said it got %s "
+          "but we assigned %s" % (vcpu_actual, vcpu_desire))
+        return False
+    logging.info("CPU quantity matched: %s" % vcpu_actual)
+    return True
