@@ -32,3 +32,14 @@ Errors originating beneath this module (e.g. w/in virsh or libvirt_vm)
 should not be caught (so caller can test for them).  Errors detected
 within this module should raise LibvirtXMLError or a subclass.
 """
+
+# These are the objects considered for common use:
+
+# all exceptions are siblings of LibvirtXMLError
+from virttest.libvirt_xml.xcepts import LibvirtXMLError
+
+from virttest.libvirt_xml.libvirt_xml import LibvirtXML
+
+from virttest.libvirt_xml.network_xml import RangeList, IPXML, NetworkXML
+
+from virttest.libvirt_xml.vm_xml import VMXML

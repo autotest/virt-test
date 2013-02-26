@@ -327,7 +327,7 @@ class NetworkXML(NetworkXMLBase):
         """
         result = {}
         # Values should all share virsh property
-        new_netxml = NetworkXML("NoName", virsh_instance)
+        new_netxml = NetworkXML(virsh_instance)
         networks = new_netxml.virsh.net_state_dict(only_names=True).keys()
         for net_name in networks:
             new_copy = new_netxml.copy()

@@ -30,7 +30,7 @@ def do_low_level_test(virsh_dargs, test_xml, options_ref, extra):
 
 def do_high_level_test(virsh_dargs, test_xml, net_name, net_uuid, bridge):
 
-    test_netxml = libvirt_xml.NetworkXML("NoName", virsh.Virsh(**virsh_dargs))
+    test_netxml = libvirt_xml.NetworkXML(virsh.Virsh(**virsh_dargs))
     test_netxml.xml = test_xml.name
 
     # modify XML if called for
@@ -68,7 +68,7 @@ def run_virsh_net_create(test, params, env):
     1) Gather test parameters
     2) Store current libvirt host network state
     3) Call virsh net create on possibly modified network XML
-    4) Recover original libvirtd and network.
+    4) Recover original network.
     5) Check result.
     """
 
@@ -76,8 +76,6 @@ def run_virsh_net_create(test, params, env):
     uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
                                                        "default"))
     status_error = "yes" == params.get("status_error", "no")
-    # libvirtd also controls use of Virsh or VirshPersistent
-    libvirtd = "on" == params.get("libvirtd", "on")
     net_name = params.get("net_create_net_name", "") # default is tested
     net_uuid = params.get("net_create_net_uuid", "") # default is tested
     options_ref = params.get("net_create_options_ref", "") # default is tested
@@ -121,11 +119,6 @@ def run_virsh_net_create(test, params, env):
 
     #Run test case
 
-    # Prepare libvirtd status
-    if not libvirtd: # TODO: Support stop on remote system
-        vrsh.close_session() # all virsh commands will probably fail
-        libvirt_vm.service_libvirtd_control("stop")
-
     # Be nice to user
     if status_error:
         logging.info("The following is expected to fail...")
@@ -147,11 +140,6 @@ def run_virsh_net_create(test, params, env):
             # In case test itself has errors, warn they are real.
             logging.info("The following is NOT expected to fail...")
 
-        # Recover libvirtd service start
-        if not libvirtd: # TODO: Support start on remote system
-            libvirt_vm.service_libvirtd_control("start")
-            vrsh.new_session() # Virsh instance shared with backup netxml values
-
         # Done with file, cleanup
         del test_xml
 
@@ -168,8 +156,7 @@ def run_virsh_net_create(test, params, env):
                 netxml[state] = backup_state[netxml.name][state]
 
         # Close down persistent virsh session (including for all netxml copies)
-        if hasattr(vrsh, 'close_session'):
-            vrsh.close_session()
+        vrsh.close_session()
 
     # Check Result
     if status_error: # An error was expected

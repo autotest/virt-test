@@ -101,11 +101,11 @@ class LibvirtXMLBase(propcan.PropCanBase):
 
     # Can't use accessors module here, would make circular dep.
     def set_xmltreefile(self, value):
+        del value # keep pylint happy
         raise xcepts.LibvirtXMLForbiddenError("xmltreefile is read-only")
 
 
-    # Can't use accessors module here, would make circular dep.
-    def set_xmltreefile(self, value):
+    def del_xmltreefile(self):
         raise xcepts.LibvirtXMLForbiddenError("xmltreefile is read-only")
 
 
