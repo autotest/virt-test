@@ -497,8 +497,12 @@ class QtreeDisksContainer(object):
             for prop in current.iterkeys():
                 handled = False
                 if prop == "drive_format":
+                    # HOOK: ahci disk is ide-* disk
+                    if (image_params.get(prop) == 'ahci' and
+                                current.get(prop).startswith('ide-')):
+                        handled = True
                     # HOOK: params to qemu translation
-                    if current.get(prop).startswith(image_params.get(prop)):
+                    elif current.get(prop).startswith(image_params.get(prop)):
                         handled = True
                 elif (image_params.get(prop) and
                         image_params.get(prop) == current.get(prop)):
