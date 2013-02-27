@@ -3,7 +3,7 @@
 import unittest, tempfile, os, glob, logging
 import common
 import xml_utils
-from virttest import ElementTree
+from virttest import element_tree as ElementTree
 
 
 class xml_test_data(unittest.TestCase):
