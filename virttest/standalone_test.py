@@ -401,6 +401,11 @@ def create_config_files(options):
         options.type = parent_config_dir
         test_dir = os.path.join(test_dir, parent_config_dir)
 
+    if not os.path.exists(os.path.join(test_dir, "cfg")):
+        print_stdout("Setup error: %s does not exist" % os.path.join(test_dir, "cfg"))
+        print_stdout("Perhaps you have not specified -t?")
+        sys.exit(1)
+
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
     bootstrap.create_subtests_cfg(options.type)
     bootstrap.create_guest_os_cfg(options.type)
