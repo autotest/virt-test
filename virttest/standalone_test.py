@@ -12,6 +12,9 @@ TAG_INDEX = None
 
 def get_tag_index(options, params):
     global TAG_INDEX
+    if options.config:
+        TAG_INDEX = -1
+        return TAG_INDEX
     if TAG_INDEX is None:
         guest_name_list = get_guest_name_list(options)
 
@@ -27,6 +30,8 @@ def get_tag_index(options, params):
 
 
 def get_tag(params, index):
+    if index == -1:
+        return params['shortname']
     name = params['name']
     name = name[index:]
     return ".".join(name.split("."))
