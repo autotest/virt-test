@@ -93,7 +93,11 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
             continue
 
         # Read image file
-        (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
+        try:
+            (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
+        except IOError, e:
+            logging.warn(e)
+            continue
 
         # Make sure image is valid
         if not ppm_utils.image_verify_ppm_file(scrdump_filename):
