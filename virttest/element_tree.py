@@ -35,6 +35,7 @@
 # 2005-03-02 fl   fixed iterparse support for pre-2.2 versions
 # 2012-06-29 cevich@redhat.com Made all classes new-style
 # 2012-07-02 cevich@redhat.com Include dist. ElementPath
+# 2013-02-27 cevich@redhat.com renamed module files, kept namespace.
 #
 # Copyright (c) 1999-2005 by Fredrik Lundh.  All rights reserved.
 #
@@ -121,7 +122,7 @@ except ImportError:
 try:
     import autotest.client.shared.ElementPath as ElementPath
 except ImportError:
-    from virttest import ElementPath
+    from virttest import element_path as ElementPath
 
 # TODO: add support for custom namespace resolvers/default namespaces
 # TODO: add improved support for incremental parsing
