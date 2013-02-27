@@ -39,7 +39,7 @@
 import os, shutil, tempfile, string, StringIO, logging
 from xml.parsers import expat
 # We *have* to use our ElementTree fork :(
-from virttest import ElementTree
+from virttest import element_tree as ElementTree
 
 # Also used by unittests
 TMPPFX = 'xml_utils_temp_'
