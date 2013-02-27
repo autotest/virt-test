@@ -23,7 +23,7 @@ mandatory_headers = {'qemu': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
                      'v2v': [],
                      'libguestfs': []}
 
-first_subtest = {'qemu': ['unattended_install'],
+first_subtest = {'qemu': ['unattended_install', 'steps'],
                 'libvirt': ['unattended_install'],
                 'openvswitch': ['unattended_install'],
                 'v2v': ['unattended_install'],
