@@ -213,7 +213,7 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Whether to reboot the vm between every test. "
                                  "Default: False"))
         general.add_option("-m", "--mem", action="store", dest="mem",
-                           default="512",
+                           default="1024",
                            help=("RAM dedicated to the main VM. Default:"
                                  "%default"))
         self.add_option_group(general)
