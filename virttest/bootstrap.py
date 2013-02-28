@@ -228,7 +228,7 @@ def download_asset(asset, interactive=True, restore_image=False):
                              uncompressed_file_exists)
 
             if os.path.isfile(destination) and restore_image:
-                os.chdir(os.path.dirname(destination))
+                os.chdir(os.path.dirname(destination_uncompressed))
                 uncompress_cmd = asset_info['uncompress_cmd']
                 utils.run("%s %s" % (uncompress_cmd, destination))
 
