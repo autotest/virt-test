@@ -580,6 +580,7 @@ def bootstrap_tests(options):
               'default_userspace_paths': None,
               'check_modules': check_modules,
               'online_docs_url': online_docs_url,
+              'download_image': not options.no_downloads,
               'restore_image': options.restore,
               'interactive': False}
 
