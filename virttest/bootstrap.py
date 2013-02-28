@@ -74,7 +74,20 @@ def get_asset_info(asset):
             'downloaded': asset_exists}
 
 
-def download_file(asset_info, interactive=False):
+def uncompress_asset(asset_info, force=False):
+    destination = asset_info['destination']
+    uncompress_cmd = asset_info['uncompress_cmd']
+    if uncompress_cmd is not None:
+        destination_uncompressed = asset_info['destination_uncompressed']
+        uncompressed_file_exists = os.path.exists(destination_uncompressed)
+        force = (force or not uncompressed_file_exists)
+
+        if os.path.isfile(destination) and force:
+            os.chdir(os.path.dirname(destination_uncompressed))
+            utils.run("%s %s" % (uncompress_cmd, destination))
+
+
+def download_file(asset_info, interactive=False, force=False):
     """
     Verifies if file that can be find on url is on destination with right hash.
 
@@ -82,9 +95,6 @@ def download_file(asset_info, interactive=False):
     appears to be missing or corrupted, let the user know.
 
     @param asset_info: Dictionary returned by get_asset_info
-
-    @return: True, if file had to be downloaded
-             False, if file didn't have to be downloaded
     """
     file_ok = False
     problems_ignored = False
@@ -177,7 +187,7 @@ def download_file(asset_info, interactive=False):
         if not problems_ignored:
             logging.info("%s present, with proper checksum", destination)
 
-    return had_to_download
+    uncompress_asset(asset_info=asset_info, force=force or had_to_download)
 
 
 def download_asset(asset, interactive=True, restore_image=False):
@@ -212,21 +222,7 @@ def download_asset(asset, interactive=True, restore_image=False):
         answer = "y"
 
     if answer == "y":
-        had_to_download = download_file(asset_info=asset_info, interactive=interactive)
-
-        requires_uncompress = asset_info['uncompress_cmd'] is not None
-        if requires_uncompress:
-            destination_uncompressed = asset_info['destination_uncompressed']
-            uncompressed_file_exists = os.path.exists(destination_uncompressed)
-
-            restore_image = (restore_image or had_to_download or not
-                             uncompressed_file_exists)
-
-            if os.path.isfile(destination) and restore_image:
-                os.chdir(os.path.dirname(destination_uncompressed))
-                uncompress_cmd = asset_info['uncompress_cmd']
-                utils.run("%s %s" % (uncompress_cmd, destination))
-
+        download_file(asset_info=asset_info, interactive=interactive)
 
 def verify_recommended_programs(t_type):
     cmds = recommended_programs[t_type]
