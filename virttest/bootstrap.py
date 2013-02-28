@@ -81,7 +81,7 @@ def download_file(asset, interactive=False):
     This function will verify the SHA1 hash of the file. If the file
     appears to be missing or corrupted, let the user know.
 
-    @param asset: String describing an asset file inside the shared/download.d
+    @param asset: String describing an asset file inside the shared/downloads
             directory. This asset file is a .ini file with information about
             download and SHA1SUM url data.
 
@@ -188,7 +188,7 @@ def download_asset(asset, interactive=True, restore_image=False):
     """
     Download an asset defined on an asset file.
 
-    Asset files are located under /shared/download.d, are .ini files with the
+    Asset files are located under /shared/downloads, are .ini files with the
     following keys defined:
         title: Title string to display in the download progress bar.
         url = URL of the resource
