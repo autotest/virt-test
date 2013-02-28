@@ -60,7 +60,7 @@ def get_asset_info(asset):
                                                  'destination_uncompressed')
         if not os.path.isabs(destination_uncompressed):
             destination_uncompressed = os.path.join(data_dir.get_data_dir(),
-                                                    destination)
+                                                    destination_uncompressed)
         uncompress_cmd = asset_cfg.get(asset, 'uncompress_cmd')
     except:
         destination_uncompressed = None
