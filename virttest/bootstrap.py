@@ -1,7 +1,7 @@
 import urllib2, logging, os, glob, shutil, ConfigParser
 from autotest.client.shared import logging_manager
 from autotest.client import utils
-import utils_misc, data_dir
+import utils_misc, data_dir, re
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
@@ -61,9 +61,12 @@ def get_asset_info(asset):
         if not os.path.isabs(destination_uncompressed):
             destination_uncompressed = os.path.join(data_dir.get_data_dir(),
                                                     destination_uncompressed)
-        uncompress_cmd = asset_cfg.get(asset, 'uncompress_cmd')
     except:
         destination_uncompressed = None
+
+    try:
+        uncompress_cmd = asset_cfg.get(asset, 'uncompress_cmd')
+    except:
         uncompress_cmd = None
 
 
@@ -77,14 +80,31 @@ def get_asset_info(asset):
 def uncompress_asset(asset_info, force=False):
     destination = asset_info['destination']
     uncompress_cmd = asset_info['uncompress_cmd']
+    destination_uncompressed = asset_info['destination_uncompressed']
+
+    archive_re = re.compile(r".*\.(gz|xz|7z|bz2)$")
+    if destination_uncompressed is not None:
+        if uncompress_cmd is None:
+            match = archive_re.match(destination)
+            if match:
+                if match.group(1) == 'gz':
+                    uncompress_cmd = 'gzip -cd %s > %s' % (destination_uncompressed, destination)
+                elif match.group(1) == 'xz':
+                    uncompress_cmd = 'xz -cd %s > %s' % (destination_uncompressed, destination)
+                elif match.group(1) == 'bz2':
+                    uncompress_cmd = 'bzip2 -cd %s > %s' % (destination_uncompressed, destination)
+                elif match.group(1) == '7z':
+                    uncompress_cmd = '7za -y e %s' % destination
+        else:
+            uncompress_cmd = "%s %s" % (uncompress_cmd, destination)
+
     if uncompress_cmd is not None:
-        destination_uncompressed = asset_info['destination_uncompressed']
         uncompressed_file_exists = os.path.exists(destination_uncompressed)
         force = (force or not uncompressed_file_exists)
 
         if os.path.isfile(destination) and force:
             os.chdir(os.path.dirname(destination_uncompressed))
-            utils.run("%s %s" % (uncompress_cmd, destination))
+            utils.run(uncompress_cmd)
 
 
 def download_file(asset_info, interactive=False, force=False):
@@ -188,7 +208,6 @@ def download_file(asset_info, interactive=False, force=False):
             logging.info("%s present, with proper checksum", destination)
 
     uncompress_asset(asset_info=asset_info, force=force or had_to_download)
-
 
 def download_asset(asset, interactive=True, restore_image=False):
     """
