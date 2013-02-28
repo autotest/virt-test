@@ -90,6 +90,9 @@ def run_netperf(test, params, env):
                                  "%s/%s" % (netperf_dir, i), "/tmp/")
         ssh_cmd(session, params.get("setup_cmd"))
 
+        agent_path =  os.path.join(test.virtdir, "scripts/netperf_agent.py")
+        remote.scp_to_remote(ip, shell_port, username, password,
+                             agent_path, "/tmp/")
 
     def _pin_vm_threads(vm, node):
         if node:
@@ -157,14 +160,8 @@ def run_netperf(test, params, env):
     client = params.get("client", "localhost")
     client_ip = client
     clients = []
-    clients_n = 1
-    # Get the sessions that needed when run netperf parallel
-    # The default client connect is the first one.
-    if params.get("sessions") or params.get("sessions_rr"):
-        sessions_str = params.get('sessions') + " " + params.get("sessions_rr")
-        for i in sessions_str.split():
-            clients_n = max(clients_n, int(i.strip()))
-    for i in range(clients_n + 1):
+    # client session 1 for control, session 2 for data communication
+    for i in range(2):
         if client in params.get("vms"):
             vm_client = utils_test.get_living_vm(env, client)
             tmp = vm_client.wait_for_login(timeout=login_timeout)
@@ -474,15 +471,10 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             output = ssh_cmd(client_s, "numactl --hardware")
             n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
-        cmd += "%s -D 1 -H %s -l %s %s" % (client_path, server, int(l)*1.5, nf_args)
+        cmd += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (i,
+               client_path, server, int(l)*1.5, nf_args)
         cmd += " >> %s" % fname
-
         ssh_cmd(client_s, cmd)
-        output = ssh_cmd(client_s, "cat %s" % fname)
-        if not os.path.exists(fname):
-            f = file(fname, "w")
-            f.write(output)
-            f.close()
 
 
     def parse_demo_result(fname, sessions):
@@ -518,14 +510,13 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     pid = str(os.getpid())
     fname = "/tmp/netperf.%s.nf" % pid
     ssh_cmd(clients[-1], "rm -f %s" % fname)
-    threads = []
     numa_enable = params.get("netperf_with_numa", "yes") == "yes"
-    for i in range(int(sessions)):
-        t = threading.Thread(target=netperf_thread,
-                             kwargs={"i": i, "numa_enable": numa_enable,
-                                     "client_s":clients[i]})
-        threads.append(t)
-        t.start()
+    client_thread = threading.Thread(target=netperf_thread,
+                                     kwargs={"i": int(sessions),
+                                     "numa_enable": numa_enable,
+                                     "client_s":clients[0]})
+    client_thread.start()
+
     ret = {}
     ret['pid'] = pid
 
@@ -556,9 +547,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             for i in range(len(end_state) / 2):
                 ret[end_state[i * 2]] = (end_state[i * 2 + 1]
                                          - start_state[i * 2 + 1])
-    # wait all the threads stop
-    for t in threads:
-        t.join()
+
+    client_thread.join()
 
     # recover result file to remove the noise from end
     f = open(fname, "w")
