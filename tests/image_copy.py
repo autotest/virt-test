@@ -59,8 +59,14 @@ def run_image_copy(test, params, env):
     else:
         asset_info = asset.get_asset_info(asset_name)
 
+    # Do not force extraction if integrity information is available
+    if asset_info['sha1_url']:
+        force = params.get("force_copy", "no") == "yes"
+    else:
+        force = params.get("force_copy", "yes") == "yes"
+
     try:
-        asset.download_file(asset_info, interactive=False, force=True)
+        asset.download_file(asset_info, interactive=False, force=force)
 
     finally:
         if params.get("sub_type"):
