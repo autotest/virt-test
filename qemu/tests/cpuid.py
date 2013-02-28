@@ -487,6 +487,35 @@ def run_cpuid(test, params, env):
             if (has_error is False) and (xfail is True):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
+    class cpuid_bit_test(MiniSubtest):
+        """
+        test bits in specified leaf:func:reg
+        """
+        def test(self):
+            has_error = False
+            flags = params.get("flags","")
+            leaf = params.get("leaf","0x40000000")
+            idx = params.get("index","0x00")
+            reg = params.get("reg","eax")
+            if params.get("bits") is None:
+                raise error.TestNAError("'bits' must be specified in"
+                                        "config for this test")
+            bits = params.get("bits").split()
+            try:
+                out = get_guest_cpuid(self, cpu_model, flags)
+                r = cpuid_regs_to_dic('%s %s' % (leaf, idx), out)[reg]
+                logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
+                for i in bits:
+                    if (r & (1 << int(i))) == 0:
+                        raise error.TestFail("CPUID(%s.%s).%s[%s] is not set" %
+                                             (leaf, idx, reg, i))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
 
     # subtests runner
     test_type = params.get("test_type")
