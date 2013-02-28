@@ -7,7 +7,7 @@ import os, sys, tempfile, glob, logging
 _ROOT_PATH = os.path.join(sys.modules[__name__].__file__, "..", "..")
 ROOT_DIR = os.path.abspath(_ROOT_PATH)
 DATA_DIR = os.path.join(ROOT_DIR, 'shared', 'data')
-DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'shared', 'download.d')
+DOWNLOAD_DIR = os.path.join(ROOT_DIR, 'shared', 'downloads')
 TMP_DIR = os.path.join(ROOT_DIR, 'tmp')
 BACKING_DATA_DIR = None
 
