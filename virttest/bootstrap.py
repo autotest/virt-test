@@ -203,8 +203,7 @@ def download_asset(asset, interactive=True, restore_image=False):
                           in order to restore the image.
     """
     asset_info = get_asset_info(asset)
-    destination = os.path.join(data_dir.get_data_dir(),
-                               asset_info['destination'])
+    destination = asset_info['destination']
 
     if (interactive and not os.path.isfile(destination)):
         answer = utils.ask("File %s not present. Do you want to download it?" %
