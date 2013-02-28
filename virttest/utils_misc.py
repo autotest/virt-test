@@ -1538,3 +1538,50 @@ def signal_program(program_name, sig=signal.SIGTERM, pid_files_dir=None):
     pid = get_pid_from_file(program_name, pid_files_dir)
     if pid:
         utils.signal_pid(pid, sig)
+
+
+def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
+    """
+    Normalize a data size in one order of magnitude to another (MB to GB,
+    for example).
+
+    @param value_str: a string include the data and unit
+    @param order_magnitude: the magnitude order of result
+    @param factor: the factor between two relative order of magnitude.
+                   Normally could be 1024 or 1000
+    """
+    def _get_magnitude_index(magnitude_list, magnitude_value):
+        for i in magnitude_list:
+            order_magnitude = re.findall("[\s\d](%s)" % i,
+                                         str(magnitude_value), re.I)
+            if order_magnitude:
+                return magnitude_list.index(order_magnitude[0].upper())
+        return -1
+
+    magnitude_list = ['B', 'K', 'M', 'G', 'T']
+    try:
+        data = float(re.findall("[\d\.]+",value_str)[0])
+    except IndexError:
+        logging.error("Incorrect data size format. Please check %s"
+                     " has both data and unit." % value_str)
+        return ""
+
+    magnitude_index = _get_magnitude_index(magnitude_list, value_str)
+    order_magnitude_index = _get_magnitude_index(magnitude_list,
+                                                 " %s" % order_magnitude)
+
+    if magnitude_index < 0 or order_magnitude_index < 0:
+        logging.error("Unknown input order of magnitude. Please check your"
+                      "value '%s' and desired order of magnitude"
+                      " '%s'." % (value_str, order_magnitude))
+        return ""
+
+    if magnitude_index > order_magnitude_index:
+        multiple = float(factor)
+    else:
+        multiple = float(factor) ** -1
+
+    for _ in range(abs(magnitude_index - order_magnitude_index)):
+        data *= multiple
+
+    return str(data)
