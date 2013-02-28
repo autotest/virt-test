@@ -559,7 +559,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
 
 def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
               check_modules, online_docs_url, restore_image=False,
-              interactive=True, verbose=False):
+              download_image=True, interactive=True, verbose=False):
     """
     Common virt test assistant module.
 
@@ -612,10 +612,11 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     create_subtests_cfg(test_name)
     create_guest_os_cfg(test_name)
 
-    logging.info("")
-    step += 2
-    logging.info("%s - Verifying (and possibly downloading) guest image", step)
-    download_asset('jeos', interactive=interactive, restore_image=restore_image)
+    if download_image or restore_image:
+        logging.info("")
+        step += 2
+        logging.info("%s - Verifying (and possibly downloading) guest image", step)
+        download_asset('jeos', interactive=interactive, restore_image=restore_image)
 
     if check_modules:
         logging.info("")
