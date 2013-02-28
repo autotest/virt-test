@@ -75,14 +75,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         Accessor method for 'xml' property returns xmlTreeFile backup filename
         """
-        try:
-            # don't call get_xml() recursivly
-            xml = self.dict_get('xml')
-            if xml == None:
-                raise KeyError
-        except (KeyError, AttributeError):
-            raise xcepts.LibvirtXMLError("No xml data has been loaded")
-        return xml.name # The filename
+        return self.xmltreefile.name # The filename
 
 
     def get_xmltreefile(self):
@@ -96,17 +89,19 @@ class LibvirtXMLBase(propcan.PropCanBase):
                 raise KeyError
         except (KeyError, AttributeError):
             raise xcepts.LibvirtXMLError("No xml data has been loaded")
-        return xml
+        return xml # XMLTreeFile loaded by set_xml() method
 
 
-    # Can't use accessors module here, would make circular dep.
     def set_xmltreefile(self, value):
-        del value # keep pylint happy
-        raise xcepts.LibvirtXMLForbiddenError("xmltreefile is read-only")
+        if not issubclass(type(value), xml_utils.XMLTreeFile):
+            raise xcepts.LibvirtXMLError("xmltreefile value must be XMLTreefile"
+                                         " type or subclass, not a %s"
+                                         % type(value))
+        self.dict_set('xml', value)
 
 
     def del_xmltreefile(self):
-        raise xcepts.LibvirtXMLForbiddenError("xmltreefile is read-only")
+        self.dict_del('xml')
 
 
     def copy(self):
