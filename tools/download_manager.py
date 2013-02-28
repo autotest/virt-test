@@ -21,19 +21,11 @@ Downloads blobs defined in assets. Assets are .ini files that contain the
 import glob, os, sys, logging, time
 import common
 from autotest.client.shared import logging_manager
-from virttest import bootstrap, data_dir, utils_misc
+from virttest import asset, utils_misc
 
-
-def get_all_assets():
-    asset_data_list = []
-    download_dir = data_dir.get_download_dir()
-    for asset in glob.glob(os.path.join(download_dir, '*.ini')):
-        asset_name = os.path.basename(asset).split('.')[0]
-        asset_data_list.append(bootstrap.get_asset_info(asset_name))
-    return asset_data_list
 
 def download_assets():
-    all_assets = get_all_assets()
+    all_assets = asset.get_all_assets()
     if all_assets:
         logging.info("Available download assets:")
         logging.info("")
@@ -63,7 +55,7 @@ def download_assets():
 
     for idx in index_list:
         asset_info = all_assets[idx]
-        bootstrap.download_file(asset_info['shortname'], interactive=True)
+        asset.download_file(asset_info, interactive=True)
 
 if __name__ == "__main__":
     logging_manager.configure_logging(utils_misc.VirtLoggingConfig())

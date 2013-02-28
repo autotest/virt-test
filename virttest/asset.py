@@ -1,6 +1,7 @@
 import urllib2, logging, os, glob, ConfigParser
+from autotest.client.shared import logging_manager
 from autotest.client import utils
-import data_dir, re
+import utils_misc, data_dir, re
 
 def get_all_assets():
     asset_data_list = []
@@ -9,29 +10,6 @@ def get_all_assets():
         asset_name = os.path.basename(asset).split('.')[0]
         asset_data_list.append(get_asset_info(asset_name))
     return asset_data_list
-
-
-def get_file_asset(title, src_path, destination):
-    if not os.path.isabs(destination):
-        destination = os.path.join(data_dir.get_data_dir(), destination)
-
-    for ext in (".xz", ".gz", ".7z", ".bz2"):
-        if os.path.exists(src_path + ext):
-            destination = destination + ext
-            logging.debug('Found source image %s', destination)
-            return {'url': None, 'sha1_url': None, 'destination': src_path + ext,
-                    'destination_uncompressed': destination,
-                    'uncompress_cmd': None, 'shortname': title, 'title': title,
-                    'downloaded': True}
-
-    if os.path.exists(src_path):
-        logging.debug('Found source image %s', destination)
-        return {'url': src_path, 'sha1_url': None, 'destination': destination,
-                'destination_uncompressed': None, 'uncompress_cmd': None,
-                'shortname': title, 'title': title,
-                'downloaded': os.path.exists(destination)}
-
-    return None
 
 
 def get_asset_info(asset):
@@ -84,14 +62,11 @@ def uncompress_asset(asset_info, force=False):
             match = archive_re.match(destination)
             if match:
                 if match.group(1) == 'gz':
-                    uncompress_cmd = ('gzip -cd %s > %s' %
-                                      (destination_uncompressed, destination))
+                    uncompress_cmd = 'gzip -cd %s > %s' % (destination_uncompressed, destination)
                 elif match.group(1) == 'xz':
-                    uncompress_cmd = ('xz -cd %s > %s' %
-                                      (destination_uncompressed, destination))
+                    uncompress_cmd = 'xz -cd %s > %s' % (destination_uncompressed, destination)
                 elif match.group(1) == 'bz2':
-                    uncompress_cmd = ('bzip2 -cd %s > %s' %
-                                      (destination_uncompressed, destination))
+                    uncompress_cmd = 'bzip2 -cd %s > %s' % (destination_uncompressed, destination)
                 elif match.group(1) == '7z':
                     uncompress_cmd = '7za -y e %s' % destination
         else:
