@@ -81,6 +81,21 @@ git_repo_foo_commit = bc732ad8b2ed8be52160b893735417b43a1e91a8
         self.assertEqual(h.commit, 'bc732ad8b2ed8be52160b893735417b43a1e91a8')
 
 
+    def test_normalize_data_size(self):
+        n1 = utils_misc.normalize_data_size("12M")
+        n2 = utils_misc.normalize_data_size("1024M", "G")
+        n3 = utils_misc.normalize_data_size("1024M", "T")
+        n4 = utils_misc.normalize_data_size("1000M", "G", 1000)
+        n5 = utils_misc.normalize_data_size("1T", "G", 1000)
+        n6 = utils_misc.normalize_data_size("1T", "M")
+        self.assertEqual(n1, "12.0")
+        self.assertEqual(n2, "1.0")
+        self.assertEqual(n3, "0.0009765625")
+        self.assertEqual(n4, "1.0")
+        self.assertEqual(n5, "1000.0")
+        self.assertEqual(n6, "1048576.0")
+
+
 class FakeCmd(object):
     def __init__(self, cmd):
         self.fake_cmds = [
