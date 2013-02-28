@@ -74,16 +74,14 @@ def get_asset_info(asset):
             'downloaded': asset_exists}
 
 
-def download_file(asset, interactive=False):
+def download_file(asset_info, interactive=False):
     """
     Verifies if file that can be find on url is on destination with right hash.
 
     This function will verify the SHA1 hash of the file. If the file
     appears to be missing or corrupted, let the user know.
 
-    @param asset: String describing an asset file inside the shared/downloads
-            directory. This asset file is a .ini file with information about
-            download and SHA1SUM url data.
+    @param asset_info: Dictionary returned by get_asset_info
 
     @return: True, if file had to be downloaded
              False, if file didn't have to be downloaded
@@ -92,8 +90,6 @@ def download_file(asset, interactive=False):
     problems_ignored = False
     had_to_download = False
     sha1 = None
-
-    asset_info = get_asset_info(asset)
 
     url = asset_info['url']
     sha1_url = asset_info['sha1_url']
@@ -217,7 +213,7 @@ def download_asset(asset, interactive=True, restore_image=False):
         answer = "y"
 
     if answer == "y":
-        had_to_download = download_file(asset=asset, interactive=interactive)
+        had_to_download = download_file(asset_info=asset_info, interactive=interactive)
 
         requires_uncompress = asset_info['uncompress_cmd'] is not None
         if requires_uncompress:
