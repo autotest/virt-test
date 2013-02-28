@@ -170,6 +170,9 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("Explicitly choose a cartesian config. "
                                  "When choosing this, some options will be "
                                  "ignored"))
+        general.add_option( "--no-downloads", action="store_true",
+                           dest="no_downloads", default=False,
+                           help="Do not attempt to download JeOS images")
         general.add_option("-r", "--restore-image", action="store_true",
                            dest="restore",
                            help="Restore guest image from the pristine image")
