@@ -1,7 +1,7 @@
 """
 Group of cpuid tests for X86 CPU
 """
-import logging, re, sys, traceback, os
+import logging, re, sys, traceback, os, string
 from autotest.client.shared import error, utils
 from autotest.client.shared import test as test_module
 from virttest import utils_misc, env_process
@@ -439,6 +439,47 @@ def run_cpuid(test, params, env):
                     raise error.TestFail("Guest's model_id [%s], doesn't match "
                                          "required model_id [%s]" %
                                          (guest_model_id, model_id))
+            except:
+                has_error = True
+                if xfail is False:
+                    raise
+            if (has_error is False) and (xfail is True):
+                raise error.TestFail("Test was expected to fail, but it didn't")
+
+    def cpuid_regs_to_string(cpuid_dump, leaf, idx, regs):
+        r = cpuid_regs_to_dic('%s %s' % (leaf, idx), cpuid_dump)
+        signature = ""
+        for i in regs:
+            for shift in range(0, 4):
+                c = chr((r[i] >> (shift * 8)) & 0xFF)
+                if c in string.printable:
+                    signature = signature + c
+                else:
+                    signature = "%s\\x%02x" % (signature, ord(c))
+        logging.debug("(%s.%s:%s: signature: %s" % (leaf, idx, str(regs),
+                                                    signature))
+        return signature
+
+    class cpuid_signature(MiniSubtest):
+        """
+        test signature in specified leaf:index:regs
+        """
+        def test(self):
+            has_error = False
+            flags = params.get("flags","")
+            leaf = params.get("leaf","0x40000000")
+            idx = params.get("index","0x00")
+            regs = params.get("regs","ebx ecx edx").split()
+            if params.get("signature") is None:
+                raise error.TestNAError("'signature' must be specified in"
+                                        "config for this test")
+            try:
+                out = get_guest_cpuid(self, cpu_model, flags)
+                signature = cpuid_regs_to_string(out, leaf, idx, regs)
+                if signature != params.get("signature"):
+                    raise error.TestFail("Guest's signature [%s], doesn't"
+                                         "match required signature [%s]" %
+                                         (signature, params.get("signature")))
             except:
                 has_error = True
                 if xfail is False:
