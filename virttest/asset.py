@@ -12,6 +12,30 @@ def get_all_assets():
     return asset_data_list
 
 
+def get_file_asset(title, src_path, destination):
+    if not os.path.isabs(destination):
+        destination = os.path.join(data_dir.get_data_dir(), destination)
+
+    for ext in (".xz", ".gz", ".7z", ".bz2"):
+        if os.path.exists(src_path + ext):
+            destination_uncompressed = destination
+            destination = destination + ext
+            logging.debug('Found source image %s', destination)
+            return {'url': None, 'sha1_url': None, 'destination': src_path + ext,
+                    'destination_uncompressed': destination,
+                    'uncompress_cmd': None, 'shortname': title, 'title': title,
+                    'downloaded': True}
+
+    if os.path.exists(src_path):
+        logging.debug('Found source image %s', destination)
+        return {'url': src_path, 'sha1_url': None, 'destination': destination,
+                'destination_uncompressed': None, 'uncompress_cmd': None,
+                'shortname': title, 'title': title,
+                'downloaded': os.path.exists(destination)}
+
+    return None
+
+
 def get_asset_info(asset):
     asset_path = os.path.join(data_dir.get_download_dir(), '%s.ini' % asset)
     asset_cfg = ConfigParser.ConfigParser()
