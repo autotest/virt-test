@@ -786,13 +786,13 @@ def run_tests(parser, options):
                     break
 
         current_status = False
+
+        pretty_index = "(%d/%d)" % (index, n_tests)
+        t = Test(dct, options)
+        print_stdout("%s %s:" % (pretty_index, t.tag), end=False)
+
         if dependencies_satisfied:
-            t = Test(dct, options)
             t.set_debugdir(debugdir)
-
-            pretty_index = "(%d/%d)" % (index, n_tests)
-            print_stdout("%s %s:" % (pretty_index, t.tag), end=False)
-
             try:
                 try:
                     t_begin = time.time()
@@ -848,8 +848,6 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            shortname = get_tag(d, tag_index)
-            print_stdout("%s:" % shortname, end=False)
             print_skip()
             status_dct[dct.get("name")] = False
             continue
