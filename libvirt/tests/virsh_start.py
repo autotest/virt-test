@@ -58,7 +58,7 @@ def run_virsh_start(test, params, env):
     local_ip = params.get("local_ip", "ENTER.YOUR.LOCAL.IP")
     if pre_operation == "remote" and ( remote_ip.count("ENTER.YOUR.") or
                                        local_ip.count("ENTER.YOUR.")):
-       raise error.TestNAError("Remote test parameters not configured")
+        raise error.TestNAError("Remote test parameters not configured")
 
     try:
         #prepare before start vm

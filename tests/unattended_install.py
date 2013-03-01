@@ -518,18 +518,9 @@ class UnattendedInstallConfig(object):
                 # Standard setting is kickstart disk in /dev/sr0 and
                 # install cdrom in /dev/sr1. When we get ks via http,
                 # we need to change repo configuration to /dev/sr0
-                if 'repo=cdrom' in kernel_params:
-                    if ((self.vm.driver_type == 'xen') and
-                      (self.params.get('hvm_or_pv') == 'pv')):
-                        kernel_params = re.sub('repo\=[\:\w\d\/]*',
-                                               'repo=http://%s:%s' %
-                                                  (self.url_auto_content_ip,
-                                                   self.url_auto_content_port),
-                                               kernel_params)
-                    else:
-                        kernel_params = re.sub('repo\=cdrom[\:\w\d\/]*',
-                                               'repo=cdrom:/dev/sr0',
-                                               kernel_params)
+                kernel_params = re.sub('repo\=cdrom[\:\w\d\/]*',
+                                       'repo=cdrom:/dev/sr0',
+                                       kernel_params)
 
                 self.kernel_params = kernel_params
             elif self.params.get('unattended_delivery_method') == 'cdrom':
@@ -539,6 +530,20 @@ class UnattendedInstallConfig(object):
                 boot_disk = utils_disk.FloppyDisk(self.floppy,
                                                   self.qemu_img_binary,
                                                   self.tmpdir, self.vfd_size)
+                ks_param = 'ks=floppy'
+                kernel_params = self.kernel_params
+                if 'ks=' in kernel_params:
+                    kernel_params = re.sub('ks\=[\w\d\:\.\/]+',
+                                          ks_param,
+                                          kernel_params)
+                else:
+                    kernel_params = '%s %s' % (kernel_params, ks_param)
+
+                kernel_params = re.sub('repo\=cdrom[\:\w\d\/]*',
+                                       'repo=cdrom:/dev/sr0',
+                                       kernel_params)
+
+                self.kernel_params = kernel_params
             else:
                 raise ValueError("Neither cdrom_unattended nor floppy set "
                                  "on the config file, please verify")
@@ -553,6 +558,16 @@ class UnattendedInstallConfig(object):
                     boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
                                                           self.tmpdir)
                 elif self.floppy:
+                    autoyast_param = 'autoyast=floppy'
+                    kernel_params = self.kernel_params
+                    if 'autoyast=' in kernel_params:
+                        kernel_params = re.sub('autoyast\=[\w\d\:\.\/]+',
+                                              autoyast_param,
+                                              kernel_params)
+                    else:
+                        kernel_params = '%s %s' % (kernel_params, autoyast_param)
+
+                    self.kernel_params = kernel_params
                     boot_disk = utils_disk.FloppyDisk(self.floppy,
                                                       self.qemu_img_binary,
                                                       self.tmpdir,
@@ -653,6 +668,14 @@ class UnattendedInstallConfig(object):
                 utils.run("cp %s %s" % (self.kernel, pxe_kernel))
                 utils.run("cp %s %s" % (self.initrd, pxe_initrd))
 
+                if 'repo=cdrom' in self.kernel_params:
+                    # Red Hat
+                    self.kernel_params = re.sub('repo\=[\:\w\d\/]*',
+                                           'repo=http://%s:%s' %
+                                              (self.url_auto_content_ip,
+                                               self.url_auto_content_port),
+                                           self.kernel_params)
+
 
     @error.context_aware
     def setup_url_auto(self):
@@ -689,6 +712,12 @@ class UnattendedInstallConfig(object):
 
             utils.run(kernel_cmd, verbose=DEBUG)
             utils.run(initrd_cmd, verbose=DEBUG)
+
+            if 'repo=cdrom' in self.kernel_params:
+                # Red Hat
+                self.kernel_params = re.sub('repo\=[\:\w\d\/]*',
+                                       'repo=%s' % self.url,
+                                       self.kernel_params)
 
         elif self.vm_type == 'libvirt':
             logging.info("Not downloading vmlinuz/initrd.img from %s, "

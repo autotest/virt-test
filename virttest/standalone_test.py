@@ -12,6 +12,9 @@ TAG_INDEX = None
 
 def get_tag_index(options, params):
     global TAG_INDEX
+    if options.config:
+        TAG_INDEX = -1
+        return TAG_INDEX
     if TAG_INDEX is None:
         guest_name_list = get_guest_name_list(options)
 
@@ -27,6 +30,8 @@ def get_tag_index(options, params):
 
 
 def get_tag(params, index):
+    if index == -1:
+        return params['shortname']
     name = params['name']
     name = name[index:]
     return ".".join(name.split("."))
@@ -396,6 +401,11 @@ def create_config_files(options):
         options.type = parent_config_dir
         test_dir = os.path.join(test_dir, parent_config_dir)
 
+    if not os.path.exists(os.path.join(test_dir, "cfg")):
+        print_stdout("Setup error: %s does not exist" % os.path.join(test_dir, "cfg"))
+        print_stdout("Perhaps you have not specified -t?")
+        sys.exit(1)
+
     bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
     bootstrap.create_subtests_cfg(options.type)
     bootstrap.create_guest_os_cfg(options.type)
@@ -479,15 +489,25 @@ def print_test_list(options, cartesian_parser):
             pipe.write(out)
 
 
+def get_guest_name_parser(options):
+    cartesian_parser = cartesian_config.Parser()
+    cfgdir = os.path.join(data_dir.get_root_dir(), options.type, "cfg")
+    cartesian_parser.parse_file(os.path.join(cfgdir, "machines.cfg"))
+    cartesian_parser.parse_file(os.path.join(cfgdir, "guest-os.cfg"))
+    if options.arch:
+        cartesian_parser.only_filter(options.arch)
+    if options.machine_type:
+        cartesian_parser.only_filter(options.machine_type)
+    if options.guest_os:
+        cartesian_parser.only_filter(options.guest_os)
+    return cartesian_parser
+
+
 def get_guest_name_list(options):
     global GUEST_NAME_LIST
     if GUEST_NAME_LIST is None:
-        cfg = os.path.join(data_dir.get_root_dir(), options.type,
-                           "cfg", "guest-os.cfg")
-        cartesian_parser = cartesian_config.Parser()
-        cartesian_parser.parse_file(cfg)
         guest_name_list = []
-        for params in cartesian_parser.get_dicts():
+        for params in get_guest_name_parser(options).get_dicts():
             shortname = ".".join(params['name'].split(".")[1:])
             guest_name_list.append(shortname)
 
@@ -506,20 +526,16 @@ def print_guest_list(options):
     @param options: OptParse object with cmdline options.
     @param cartesian_parser: Cartesian parser object with test options.
     """
-    cfg = os.path.join(data_dir.get_root_dir(), options.type,
-                       "cfg", "guest-os.cfg")
-    cartesian_parser = cartesian_config.Parser()
-    cartesian_parser.parse_file(cfg)
     pipe = get_paginator()
     index = 0
     pipe.write("Searched %s for guest images\n" %
                os.path.join(data_dir.get_data_dir(), 'images'))
     pipe.write("Available guests:")
     pipe.write("\n\n")
-    for params in cartesian_parser.get_dicts():
+    for params in get_guest_name_parser(options).get_dicts():
         index += 1
         image_name = storage.get_image_filename(params, data_dir.get_data_dir())
-        shortname = ".".join(params['name'].split(".")[1:])
+        shortname = params['shortname']
         if os.path.isfile(image_name):
             out = (bcolors.blue + str(index) + bcolors.end + " " +
                    shortname + "\n")
@@ -564,6 +580,7 @@ def bootstrap_tests(options):
               'default_userspace_paths': None,
               'check_modules': check_modules,
               'online_docs_url': online_docs_url,
+              'download_image': not options.no_downloads,
               'restore_image': options.restore,
               'interactive': False}
 
@@ -775,13 +792,13 @@ def run_tests(parser, options):
                     break
 
         current_status = False
+
+        pretty_index = "(%d/%d)" % (index, n_tests)
+        t = Test(dct, options)
+        print_stdout("%s %s:" % (pretty_index, t.tag), end=False)
+
         if dependencies_satisfied:
-            t = Test(dct, options)
             t.set_debugdir(debugdir)
-
-            pretty_index = "(%d/%d)" % (index, n_tests)
-            print_stdout("%s %s:" % (pretty_index, t.tag), end=False)
-
             try:
                 try:
                     t_begin = time.time()
@@ -837,8 +854,6 @@ def run_tests(parser, options):
                 t.stop_file_logging()
                 current_status = False
         else:
-            shortname = get_tag(d, tag_index)
-            print_stdout("%s:" % shortname, end=False)
             print_skip()
             status_dct[dct.get("name")] = False
             continue

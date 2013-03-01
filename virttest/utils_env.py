@@ -1,4 +1,5 @@
 import cPickle, UserDict, os, logging
+import virt_vm
 
 ENV_VERSION = 1
 
@@ -89,7 +90,7 @@ class Env(UserDict.IterableUserDict):
         for key in self.data:
             try:
                 if key.startswith("vm__"):
-                    self.data[key].destroy()
+                    self.data[key].destroy(gracefully=False)
                 elif key == "tcpdump":
                     self.data[key].close()
             except Exception:
@@ -115,6 +116,16 @@ class Env(UserDict.IterableUserDict):
         """
         return self.data.get("vm__%s" % name)
 
+
+    def create_vm(self, vm_type, target, name, params, bindir):
+        """
+        Create and register a VM in this Env object
+        """
+        vm_class = virt_vm.BaseVM.lookup_vm_class(vm_type, target)
+        if vm_class is not None:
+            vm = vm_class(name, params, bindir, self.get("address_cache"))
+            self.register_vm(name, vm)
+            return vm
 
     def register_vm(self, name, vm):
         """

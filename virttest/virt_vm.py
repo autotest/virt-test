@@ -442,6 +442,23 @@ class BaseVM(object):
                 break
 
 
+    @staticmethod
+    def lookup_vm_class(vm_type, target):
+        if vm_type == 'qemu':
+            import qemu_vm
+            return qemu_vm.VM
+        if vm_type == 'libvirt':
+            import libvirt_vm
+            return libvirt_vm.VM
+        if vm_type == 'v2v':
+            if target == 'libvirt' or target is None:
+                import libvirt_vm
+                return libvirt_vm.VM
+            if target == 'ovirt':
+                import ovirt
+                return ovirt.VMManager
+
+
     #
     # Public API - could be reimplemented with virt specific code
     #
@@ -681,6 +698,7 @@ class BaseVM(object):
         """
         panic_re = [r"BUG:.*---\[ end trace .* \]---"]
         panic_re.append(r"------------\[ cut here.*\[ end trace .* \]---")
+        panic_re.append(r"general protection fault:.* RSP.*>")
         panic_re = "|".join(panic_re)
         if self.serial_console is not None:
             data = self.serial_console.get_output()
@@ -756,7 +774,8 @@ class BaseVM(object):
 
 
     @error.context_aware
-    def login(self, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def login(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+              username=None, password=None):
         """
         Log into the guest via SSH/Telnet/Netcat.
         If timeout expires while waiting for output from the guest (e.g. a
@@ -768,8 +787,10 @@ class BaseVM(object):
         @return: A ShellSession object.
         """
         error.context("logging into '%s'" % self.name)
-        username = self.params.get("username", "")
-        password = self.params.get("password", "")
+        if not username:
+            username = self.params.get("username", "")
+        if not password:
+            password = self.params.get("password", "")
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
@@ -786,15 +807,17 @@ class BaseVM(object):
         return session
 
 
-    def remote_login(self, nic_index=0, timeout=LOGIN_TIMEOUT):
+    def remote_login(self, nic_index=0, timeout=LOGIN_TIMEOUT,
+                     username=None, password=None):
         """
         Alias for login() for backward compatibility.
         """
-        return self.login(nic_index, timeout)
+        return self.login(nic_index, timeout, username, password)
 
 
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
-                       internal_timeout=LOGIN_TIMEOUT):
+                       internal_timeout=LOGIN_TIMEOUT,
+                       username=None, password=None):
         """
         Make multiple attempts to log into the guest via SSH/Telnet/Netcat.
 
@@ -809,7 +832,8 @@ class BaseVM(object):
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
-                return self.login(nic_index, internal_timeout)
+                return self.login(nic_index, internal_timeout,
+                                  username, password)
             except (remote.LoginError, VMError), e:
                 self.verify_alive()
                 e = str(e)
@@ -818,12 +842,14 @@ class BaseVM(object):
                     error_messages.append(e)
             time.sleep(2)
         # Timeout expired; try one more time but don't catch exceptions
-        return self.login(nic_index, internal_timeout)
+        return self.login(nic_index, internal_timeout,
+                          username, password)
 
 
     @error.context_aware
     def copy_files_to(self, host_path, guest_path, nic_index=0, limit="",
-                      verbose=False, timeout=COPY_FILES_TIMEOUT):
+                      verbose=False, timeout=COPY_FILES_TIMEOUT,
+                      username=None, password=None):
         """
         Transfer files to the remote host(guest).
 
@@ -836,8 +862,10 @@ class BaseVM(object):
                 copy.
         """
         error.context("sending file(s) to '%s'" % self.name)
-        username = self.params.get("username", "")
-        password = self.params.get("password", "")
+        if not username:
+            username = self.params.get("username", "")
+        if not password:
+            password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
         address = self.get_address(nic_index)
         port = self.get_port(int(self.params.get("file_transfer_port")))
@@ -851,7 +879,8 @@ class BaseVM(object):
 
     @error.context_aware
     def copy_files_from(self, guest_path, host_path, nic_index=0, limit="",
-                        verbose=False, timeout=COPY_FILES_TIMEOUT):
+                        verbose=False, timeout=COPY_FILES_TIMEOUT,
+                        username=None,password=None):
         """
         Transfer files from the guest.
 
@@ -864,8 +893,10 @@ class BaseVM(object):
                 copy.
         """
         error.context("receiving file(s) from '%s'" % self.name)
-        username = self.params.get("username", "")
-        password = self.params.get("password", "")
+        if not username:
+            username = self.params.get("username", "")
+        if not password:
+            password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
         address = self.get_address(nic_index)
         port = self.get_port(int(self.params.get("file_transfer_port")))
@@ -878,7 +909,8 @@ class BaseVM(object):
 
 
     @error.context_aware
-    def serial_login(self, timeout=LOGIN_TIMEOUT):
+    def serial_login(self, timeout=LOGIN_TIMEOUT,
+                     username=None, password=None):
         """
         Log into the guest via the serial console.
         If timeout expires while waiting for output from the guest (e.g. a
@@ -888,8 +920,10 @@ class BaseVM(object):
         @return: ShellSession object on success and None on failure.
         """
         error.context("logging into '%s' via serial console" % self.name)
-        username = self.params.get("username", "")
-        password = self.params.get("password", "")
+        if not username:
+            username = self.params.get("username", "")
+        if not password:
+            password = self.params.get("password", "")
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         status_test_command = self.params.get("status_test_command", "")
@@ -906,7 +940,8 @@ class BaseVM(object):
 
 
     def wait_for_serial_login(self, timeout=LOGIN_WAIT_TIMEOUT,
-                              internal_timeout=LOGIN_TIMEOUT):
+                              internal_timeout=LOGIN_TIMEOUT,
+                              username=None, password=None):
         """
         Make multiple attempts to log into the guest via serial console.
 
@@ -929,7 +964,7 @@ class BaseVM(object):
                     error_messages.append(e)
             time.sleep(2)
         # Timeout expired; try one more time but don't catch exceptions
-        return self.serial_login(internal_timeout)
+        return self.serial_login(internal_timeout, username, password)
 
 
     def get_uuid(self):

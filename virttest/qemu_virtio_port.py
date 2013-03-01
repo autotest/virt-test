@@ -257,7 +257,7 @@ class GuestWorker(object):
         self.session = utils_test.wait_for_login(self.vm)
         self._execute_worker(timeout)
 
-    def cmd(self, cmd, timeout=10):
+    def cmd(self, cmd, timeout=10, patterns=None):
         """
         Wrapper around the self.cmd command which executes the command on
         guest. Unlike self._cmd command when the command fails it raises the
@@ -266,7 +266,7 @@ class GuestWorker(object):
         @param timeout: Timeout used to verify expected output.
         @return: Tuple (match index, data)
         """
-        match, data = self._cmd(cmd, timeout)
+        match, data = self._cmd(cmd, timeout, patterns)
         if match == 1 or match is None:
             raise VirtioPortException("Failed to execute '%s' on"
                                       " virtio_console_guest.py, "
@@ -274,23 +274,33 @@ class GuestWorker(object):
                                       (cmd, self.vm.name, data))
         return (match, data)
 
-    def _cmd(self, cmd, timeout=10):
+    def _cmd(self, cmd, timeout=10, patterns=None):
         """
         Execute given command inside the script's main loop.
         @param command: Command that will be executed.
         @param timeout: Timeout used to verify expected output.
+        @param patterns: Expected patterns; have to startwith ^PASS: or ^FAIL:
         @return: Tuple (match index, data)
         """
+        if not patterns:
+            patterns = ("^PASS:", "^FAIL:")
         logging.debug("Executing '%s' on virtio_console_guest.py,"
                       " vm: %s, timeout: %s", cmd, self.vm.name, timeout)
         self.session.sendline(cmd)
         try:
-            (match, data) = self.session.read_until_last_line_matches(
-                                                ["PASS:", "FAIL:"], timeout)
-
+            (match, data) = self.session.read_until_any_line_matches(patterns,
+                                        timeout=timeout)
+            if patterns[match].startswith('^PASS:'):
+                match = 0
+            elif patterns[match].startswith('^FAIL:'):
+                match = 1
+            else:
+                data = ("Incorrect pattern %s. Data in console:\n%s"
+                        % (patterns[match], data))
+                match = None
         except aexpect.ExpectError, inst:
             match = None
-            data = "Cmd process timeout. Data in console: " + inst.output
+            data = "Cmd process timeout. Data in console:\n" + inst.output
 
         self.vm.verify_kernel_crash()
 
@@ -329,7 +339,9 @@ class GuestWorker(object):
         if not self.vm or self.vm.is_dead():
             return
         # in LOOP_NONE mode it might stuck in read/write
-        match, tmp = self._cmd("virt.exit_threads()", 3)
+        # This command can't fail, can only freze so wait for the correct msg
+        match, tmp = self._cmd("virt.exit_threads()", 3, ("^PASS: All threads"
+                               " finished",))
         if match is None:
             logging.warn("Workaround the stuck thread on guest")
             # Thread is stuck in read/write
@@ -346,7 +358,21 @@ class GuestWorker(object):
                 recv_pt.sock.recv(1024)
 
         # This will cause fail in case anything went wrong.
-        self.cmd("print 'PASS: nothing'", 10)
+        match, tmp = self._cmd("print 'PASS: nothing'", 10, ('^PASS: nothing',
+                                                             '^FAIL:'))
+        if match is not 0:
+            try:
+                self.session.close()
+                self.session = utils_test.wait_for_login(self.vm)
+                self.cmd("killall -9 python "
+                         "&& echo -n PASS: python killed"
+                         "|| echo -n PASS: python was already dead", 10)
+                self._execute_worker()
+                self._init_guest()
+            except Exception, inst:
+                logging.error(inst)
+                raise VirtioPortFatalException("virtio-console driver is "
+                            "irreparably blocked, further tests might FAIL.")
 
     def cleanup_ports(self):
         """
@@ -357,19 +383,21 @@ class GuestWorker(object):
         """
         # Check if python is still alive
         match, tmp = self._cmd("is_alive()", 10)
-        if (match is None) or (match != 0):
+        if match is not 0:
             logging.error("Python died/is stuck/have remaining threads")
             logging.debug(tmp)
             try:
                 self.vm.verify_kernel_crash()
 
-                match, tmp = self._cmd("guest_exit()", 10)
-                if (match is None) or (match == 0):
+                match, tmp = self._cmd("guest_exit()", 10, ('^FAIL:',
+                                            '^PASS: virtio_guest finished'))
+                if match is not 0:
+                    logging.debug(tmp)
                     self.session.close()
                     self.session = utils_test.wait_for_login(self.vm)
-                self.cmd("killall -9 python "
-                         "&& echo -n PASS: python killed"
-                         "|| echo -n PASS: python was already dead", 10)
+                    self.cmd("killall -9 python "
+                             "&& echo -n PASS: python killed"
+                             "|| echo -n PASS: python was already dead", 10)
 
                 self._execute_worker()
                 self._init_guest()
@@ -389,7 +417,16 @@ class GuestWorker(object):
             self.vm.verify_kernel_crash()
         # Quit worker
         if self.session and self.vm and self.vm.is_alive():
-            self.cmd("guest_exit()", 10)
+            match, tmp = self._cmd("guest_exit()", 10)
+            if match is not 0:
+                logging.warn('guest_worker stuck during cleanup,'
+                             ' killing python...')
+                self.session.close()
+                self.session = utils_test.wait_for_login(self.vm)
+                self.cmd("killall -9 python "
+                         "&& echo -n PASS: python killed"
+                         "|| echo -n PASS: python was already dead", 10)
+            self.session.close()
         self.session = None
         self.vm = None
 
@@ -463,6 +500,12 @@ class ThSendCheck(Thread):
 
     def run(self):
         logging.debug("ThSendCheck %s: run", self.getName())
+        _err_msg_exception = ('ThSendCheck ' + str(self.getName()) + ': Got '
+                              'exception %s, continuing')
+        _err_msg_disconnect = ('ThSendCheck ' + str(self.getName()) + ': Port '
+                               'disconnected, waiting for new port.')
+        _err_msg_reconnect = ('ThSendCheck ' + str(self.getName()) + ': Port '
+                              'reconnected, continuing.')
         too_much_data = False
         if self.reduced_set:
             rand_a = 65
@@ -477,7 +520,22 @@ class ThSendCheck(Thread):
                 while not self.exitevent.isSet() and len(queue) > 1048576:
                     too_much_data = True
                     time.sleep(0.1)
-            ret = select.select([], [self.port.sock], [], 1.0)
+            try:
+                ret = select.select([], [self.port.sock], [], 1.0)
+            except Exception, inst:
+                # self.port is not yet set while reconnecting
+                if self.migrate_event is None:
+                    raise error.TestFail("ThSendCheck %s: Broken pipe. If this"
+                                   " is expected behavior set migrate_event "
+                                   "to support reconnection." % self.getName())
+                if self.port.sock is None:
+                    logging.debug(_err_msg_disconnect)
+                    while self.port.sock is None:
+                        time.sleep(0.1)
+                    logging.debug(_err_msg_reconnect)
+                else:
+                    logging.debug(_err_msg_exception, inst)
+                continue
             if ret[1]:
                 # Generate blocklen of random data add them to the FIFO
                 # and send them over virtio_console
@@ -493,7 +551,7 @@ class ThSendCheck(Thread):
                         idx = self.port.sock.send(buf)
                     except Exception, inst:
                         # Broken pipe
-                        if inst.errno != 32:
+                        if not hasattr(inst, 'errno') or inst.errno != 32:
                             continue
                         if self.migrate_event is None:
                             self.exitevent.set()
@@ -623,12 +681,43 @@ class ThRecvCheck(Thread):
         other thread.
         """
         logging.debug("ThRecvCheck %s: run", self.getName())
+        _err_msg_missing_migrate_ev = ("ThRecvCheck %s: Broken pipe. If "
+                        "this is expected behavior set migrate_event to "
+                        "support reconnection." % self.getName())
+        _err_msg_exception = ('ThRecvCheck ' + str(self.getName()) + ': Got '
+                              'exception %s, continuing')
+        _err_msg_disconnect = ('ThRecvCheck ' + str(self.getName()) + ': Port '
+                               'disconnected, waiting for new port.')
+        _err_msg_reconnect = ('ThRecvCheck ' + str(self.getName()) + ': Port '
+                              'reconnected, continuing.')
         attempt = 10
         minsendidx = self.sendlen
         while not self.exitevent.isSet():
-            ret = select.select([self.port.sock], [], [], 1.0)
+            try:
+                ret = select.select([self.port.sock], [], [], 1.0)
+            except Exception, inst:
+                # self.port is not yet set while reconnecting
+                if self.port.sock is None:
+                    logging.debug(_err_msg_disconnect)
+                    while self.port.sock is None:
+                        time.sleep(0.1)
+                    logging.debug(_err_msg_reconnect)
+                else:
+                    logging.debug(_err_msg_exception, inst)
+                continue
             if ret[0] and (not self.exitevent.isSet()):
-                buf = self.port.sock.recv(self.blocklen)
+                try:
+                    buf = self.port.sock.recv(self.blocklen)
+                except Exception, inst:
+                    # self.port is not yet set while reconnecting
+                    if self.port.sock is None:
+                        logging.debug(_err_msg_disconnect)
+                        while self.port.sock is None:
+                            time.sleep(0.1)
+                        logging.debug(_err_msg_reconnect)
+                    else:
+                        logging.debug(_err_msg_exception, inst)
+                    continue
                 if buf:
                     # Compare the received data with the control data
                     for char in buf:
@@ -678,10 +767,7 @@ class ThRecvCheck(Thread):
                         attempt -= 1
                         if self.migrate_event is None:
                             self.exitevent.set()
-                            raise error.TestFail("ThRecvCheck %s: Broken pipe."
-                                    " If this is expected behavior set migrate"
-                                    "_event to support reconnection." %
-                                    self.getName())
+                            raise error.TestFail(_err_msg_missing_migrate_ev)
                         logging.debug("ThRecvCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
                         # TODO BUG: data from the socket on host can be lost
