@@ -595,9 +595,10 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("bootindex", bootindex)
                 format = "none"
                 index = None
-            elif format == "usb2":
-                tmp = "usb2.%s" % (index or utils_misc.generate_random_id())
-                blkdev_id = tmp
+
+            if format in ['usb1', 'usb2', 'usb3']:
+                tmp = index or utils_misc.generate_random_id()
+                blkdev_id = "%s.%s" % (format, tmp)
                 dev += " -device usb-storage"
                 dev += _add_option("bus", bus)
                 dev += _add_option("port", port)
