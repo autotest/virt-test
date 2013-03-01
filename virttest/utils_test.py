@@ -29,6 +29,7 @@ from autotest.client import utils, os_dep
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
 import aexpect, utils_misc, virt_vm, remote, storage, env_process, utils_cgroup
+import virttest
 
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
@@ -1716,7 +1717,6 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                          os.path.join(destination_autotest_path,
                                       'autotest-local'))
     if not kernel_install_present:
-        import virttest
         kernel_install_dir = os.path.join(virttest.data_dir.get_root_dir(),
                                           "shared", "deps",
                                           "test_kernel_install")
