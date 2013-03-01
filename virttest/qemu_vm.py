@@ -2868,6 +2868,10 @@ class VM(virt_vm.BaseVM):
             return o.get("status") == "failed"
 
     def mig_cancelled(self):
+        if self.mig_succeeded():
+            raise virt_vm.VMMigrateCancelError("Migration completed successfully")
+        elif self.mig_failed():
+            raise virt_vm.VMMigrateFailedError("Migration failed")
         o = self.monitor.info("migrate")
         if isinstance(o, str):
             return ("Migration status: cancelled" in o or
