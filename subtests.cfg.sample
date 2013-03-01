@@ -3422,6 +3422,9 @@ variants:
         kill_vm_on_error = yes
         reboot_method = shell
         sleep_before_reset = 10
+        monitors = 'hmp1'
+        monitor_type = human
+        main_monitor = hmp1
 
     - tsc_drift:
         only Linux
