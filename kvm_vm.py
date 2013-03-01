@@ -3103,3 +3103,62 @@ class VM(virt_vm.BaseVM):
             current_file = None
 
         return current_file
+
+
+    def block_mirror(self, device, target, speed, sync,
+                     format, mode="absolute-paths"):
+        """
+        Mirror block device to target file;
+
+        @param device: device ID
+        @param target: destination image file name;
+        @param speed: max limited speed, default unit is B/s;
+        @param sync: what parts of the disk image should be copied to the
+                     destination;
+        @param mode: new image open mode
+        @param format: target image format
+        """
+        cmd = self.params.get("block_mirror_cmd", "__com.redhat_drive-mirror")
+        return self.monitor.block_mirror(device, target, speed,
+                                         sync, format, mode, cmd)
+
+
+    def block_reopen(self, device, new_image, format="qcow2"):
+        """
+        Reopen a new image, no need to do this step in rhel7 host
+
+        @param device: device ID
+        @param new_image: new image filename
+        @param format: new image format
+        """
+        cmd = self.params.get("block_reopen_cmd", "__com.redhat_drive-reopen")
+        return self.monitor.block_reopen(device, new_image, format, cmd)
+
+
+    def cancel_block_job(self, device):
+        """
+        cancel active job on the image_file
+
+        @param device: device ID
+        @param timeout: seconds wait job cancel timeout, default is 3s
+        """
+        return self.monitor.cancel_block_job(device)
+
+
+    def set_job_speed(self, device, speed="0"):
+        """
+        set max speed of block job;
+
+        @param device: device ID
+        @param speed: max speed of block job
+        """
+        return self.monitor.set_block_job_speed(device, speed)
+
+
+    def get_job_status(self, device):
+        """
+        get block job info;
+
+        @param device: device ID
+        """
+        return self.monitor.query_block_job(device)

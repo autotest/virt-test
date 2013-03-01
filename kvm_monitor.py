@@ -555,7 +555,7 @@ class HumanMonitor(Monitor):
 
         @return: The command's output
         """
-        cmd = "block-job-set-speed %s %s" % (device, speed)
+        cmd = "block-job-set-speed %s %sB" % (device, speed)
         return self.cmd(cmd)
 
 
@@ -588,6 +588,7 @@ class HumanMonitor(Monitor):
                     job["type"] = "stream"
                 else:
                     job["type"] = "mirror"
+                job["device"] = device
                 job["offset"] = int(re.findall("\d+", output)[-3])
                 job["len"] = int(re.findall("\d+", output)[-2])
                 job["speed"] = int(re.findall("\d+", output)[-1])
@@ -611,6 +612,55 @@ class HumanMonitor(Monitor):
         except Exception:
             pass
         return backing_file
+
+
+    def block_mirror(self, device, target, speed, sync, format, mode,
+            cmd="__com.redhat_drive-mirror"):
+        """
+        Start mirror type block device copy job
+
+        @param device: device ID
+        @param target: target image
+        @param speed: limited speed, unit is B/s
+        @param sync: full copy to target image(unsupport in human monitor)
+        @param mode: target image create mode, 'absolute-paths' or 'existing'
+        @param format: target image format
+        @param cmd: block mirror command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = " ".join([device, target, format])
+        if cmd.startswith("__com.redhat"):
+            if mode == "existing":
+                args = "-n %s" % args
+            if sync == "full":
+                args ="-f %s" % args
+        else:
+            if speed:
+                args = "%s %sB" % (args, speed)
+        cmd = "%s %s" % (cmd, args)
+        return self.cmd(cmd)
+
+
+    def block_reopen(self, device, new_image_file, image_format,
+            cmd="__com.redhat_drive-reopen"):
+        """
+        Reopen new target image
+
+        @param device: device ID
+        @param new_image_file: new image file name
+        @param image_format: new image file format
+        @param cmd: image reopen command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = device
+        if cmd.startswith("__com.redhat"):
+            args += " ".join([new_image_file, image_format])
+        cmd = "%s %s" % (cmd, args)
+        return self.cmd(cmd)
 
 
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
@@ -1365,7 +1415,7 @@ class QMPMonitor(Monitor):
         @return: The command's output
         """
         args = {"device": device,
-                "speed": int(speed) * 1048576}
+                "speed": speed}
         return self.cmd("block-job-set-speed", args)
 
 
@@ -1415,6 +1465,58 @@ class QMPMonitor(Monitor):
         except Exception:
             pass
         return backing_file
+
+
+    def block_mirror(self, device, target, speed, sync, format, mode,
+            cmd="__com.redhat_drive-mirror"):
+        """
+        Start mirror type block device copy job
+
+        @param device: device ID
+        @param target: target image
+        @param speed: limited speed, unit is B/s
+        @param sync: what parts of the disk image should be copied to the
+                     destination;
+        @param mode: 'absolute-paths' or 'existing'
+        @param format: target image format
+        @param cmd: block mirror command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = {"device": device,
+                "target": target}
+        if cmd.startswith("__com.redhat"):
+            args["full"] = sync
+        else:
+            args["sync"] = sync
+        if mode:
+            args["mode"] = mode
+        if format:
+            args["format"] = format
+        if speed:
+            args["speed"] = speed
+        return self.cmd(cmd, args)
+
+
+    def block_reopen(self, device, new_image_file, image_format,
+            cmd="__com.redhat_drive-reopen"):
+        """
+        Reopen new target image;
+
+        @param device: device ID
+        @param new_image_file: new image file name
+        @param image_format: new image file format
+        @param cmd: image reopen command
+
+        @return: the command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = {"device": device}
+        if cmd.startswith("__com.redhat"):
+            args["new-image-file"] = new_image_file
+            args["format"] = image_format
+        return self.cmd(cmd, args)
 
 
     def getfd(self, fd, name):
