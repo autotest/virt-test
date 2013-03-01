@@ -207,6 +207,11 @@ class VirtTestRunParser(optparse.OptionParser):
         general.add_option("--list-guests", action="store_true",
                            dest="list_guests",
                            help="List guests available")
+        general.add_option("--logs-dir", action="store", dest="logdir",
+                           help=("Path to the logs directory. "
+                                 "Default path: %s" %
+                                 os.path.join(data_dir.get_backing_data_dir(),
+                                              'logs')))
         general.add_option("--data-dir", action="store", dest="datadir",
                            help=("Path to a data dir. "
                                  "Default path: %s" %
