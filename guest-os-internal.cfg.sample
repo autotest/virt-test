@@ -709,6 +709,18 @@ variants:
         cdrom_get_cdrom_cmd = "echo list volume > check_cdrom && echo exit >> check_cdrom && diskpart /s check_cdrom"
         cdrom_check_cdrom_pattern = "\d\s+(\w).*CD-ROM"
         cdrom_test_cmd = "dir %s:\"
+        block_mirror.with_stress.dd:
+            start_cmd = "for /L %i in (1,1,3) do (dd if=/dev/random of=c:\test.img bs=1M count=2048 && del /f /s /q c:\test.img)"
+            stop_cmd = 'taskkill /F /T /IM dd.exe & del /f /s /q "c:\test.img"'
+            check_cmd = 'tasklist | findstr /I  "dd.exe"'
+        block_mirror.with_stress.heavyload:
+            start_cmd = "heavyload /CPU /MEMORY /START"
+            check_cmd = 'tasklist | findstr /I  "heavyload.exe"'
+            stop_cmd = "taskkill /T /F /IM heavyload.exe"
+        block_mirror.powerdown:
+            start_cmd = "heavyload /CPU /MEMORY /START"
+            check_cmd = 'tasklist | findstr /I  "heavyload.exe"'
+            stop_cmd = "taskkill /T /F /IM heavyload.exe"
         unattended_install:
             dump_path = C:\Windows\Memory.dmp
             analyze_cmd = E:\autoit3.exe E:\dump_control.au3
