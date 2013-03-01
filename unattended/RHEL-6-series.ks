@@ -51,6 +51,9 @@ qemu-guest-agent
 echo "OS install is completed" > /dev/ttyS0
 grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
 dhclient
+wget http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/autotest/repo/rhel-autotest.repo -O /etc/yum.repos.d/rhel-autotest.repo
+yum makecache
+yum install -y stress
 chkconfig sshd on
 iptables -F
 echo 0 > /selinux/enforce

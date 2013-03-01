@@ -34,6 +34,9 @@ grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
 grubby --args="divider=10" --update-kernel=$(grubby --default-kernel)
 cd home
 dhclient
+wget http://fileshare.englab.nay.redhat.com/pub/section2/kvm/pub/autotest/repo/rhel-autotest.repo -O /etc/yum.repos.d/rhel-autotest.repo
+yum makecache
+yum install -y stress
 chkconfig sshd on
 iptables -F
 echo 0 > selinux/enforce
