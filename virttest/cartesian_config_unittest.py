@@ -36,6 +36,16 @@ class CartesianConfigTest(unittest.TestCase):
         p.parse_string(string)
         self._checkDictionaries(p, reference)
 
+
+    def _checkStringDump(self, string, dump):
+        p = cartesian_config.Parser()
+        p.parse_string(string)
+
+        dumpdata = None
+        exec "dumpdata = " + dump
+        self._checkDictionaries(p, dumpdata)
+
+
     def testSimpleVariant(self):
         self._checkStringConfig("""
             c = abc
@@ -47,6 +57,36 @@ class CartesianConfigTest(unittest.TestCase):
             """,
             [dict(name='a', shortname='a', dep=[], x='va', c='abc'),
              dict(name='b', shortname='b', dep=[], x='vb', c='abc')])
+
+
+    def testFilterMixing(self):
+        self._checkStringDump("""
+            variants:
+                - unknown_qemu:
+                - rhel64:
+            only unknown_qemu
+            variants:
+                - kvm:
+                - nokvm:
+            variants:
+                - testA:
+                    nokvm:
+                        no unknown_qemu
+                - testB:
+            """,
+            """[
+{'dep': [],
+ 'name': 'testA.kvm.unknown_qemu',
+ 'shortname': 'testA.kvm.unknown_qemu'},
+{'dep': [],
+ 'name': 'testB.kvm.unknown_qemu',
+ 'shortname': 'testB.kvm.unknown_qemu'},
+{'dep': [],
+ 'name': 'testB.nokvm.unknown_qemu',
+ 'shortname': 'testB.nokvm.unknown_qemu'},
+]
+            """)
+
 
     def testHugeTest1(self):
         self._checkConfigDump('testcfg.huge/test1.cfg',
