@@ -60,6 +60,9 @@ num_failed_cases = 5
 
 
 class Node(object):
+    __slots__ = ["name", "dep", "content", "children", "labels",
+                 "append_to_shortname", "failed_cases", "default"]
+
     def __init__(self):
         self.name = []
         self.dep = []
@@ -104,6 +107,8 @@ def _might_match_adjacent(block, ctx, ctx_set, descendant_labels):
 
 # Filter must inherit from object (otherwise type() won't work)
 class Filter(object):
+    __slots__ = ["filter"]
+
     def __init__(self, s):
         self.filter = []
         for char in s:
@@ -140,6 +145,8 @@ class Filter(object):
 
 
 class NoOnlyFilter(Filter):
+    __slots__ = ["line"]
+
     def __init__(self, line):
         Filter.__init__(self, line.split(None, 1)[1])
         self.line = line
@@ -184,6 +191,8 @@ class NoFilter(NoOnlyFilter):
 
 
 class Condition(NoFilter):
+    __slots__ = ["content"]
+
     def __init__(self, line):
         Filter.__init__(self, line.rstrip(":"))
         self.line = line
@@ -191,6 +200,8 @@ class Condition(NoFilter):
 
 
 class NegativeCondition(OnlyFilter):
+    __slots__ = ["content"]
+
     def __init__(self, line):
         Filter.__init__(self, line.lstrip("!").rstrip(":"))
         self.line = line
@@ -205,7 +216,6 @@ class Parser(object):
 
     @see: https://github.com/autotest/autotest/wiki/KVMAutotest-CartesianConfigParametersIntro
     """
-
     def __init__(self, filename=None, debug=False):
         """
         Initialize the parser and optionally parse a file.
@@ -591,46 +601,59 @@ class Parser(object):
 _reserved_keys = set(("name", "shortname", "dep"))
 
 
+def _subtitution(value, d):
+    """
+    Only optimization string Template subtitute is quite expensive operation.
+
+    @param value: String where could be $string for subtitution.
+    @param d: Dictionary from which should be value subtituted to value.
+
+    @return: Substituted string
+    """
+    if "$" in value:
+        st = string.Template(value)
+        return st.safe_substitute(d)
+    else:
+        return value
+
+
 def _op_set(d, key, value):
     if key not in _reserved_keys:
-        st = string.Template(value)
-        d[key] = st.safe_substitute(d)
+        d[key] = _subtitution(value, d)
 
 
 def _op_append(d, key, value):
     if key not in _reserved_keys:
-        st = string.Template(value)
-        d[key] = d.get(key, "") + st.safe_substitute(d)
+        d[key] = d.get(key, "") + _subtitution(value, d)
 
 
 def _op_prepend(d, key, value):
     if key not in _reserved_keys:
-        st = string.Template(value)
-        d[key] = st.safe_substitute(d) + d.get(key, "")
+        d[key] = _subtitution(value, d) + d.get(key, "")
 
 
 def _op_regex_set(d, exp, value):
     exp = re.compile("%s$" % exp)
-    st = string.Template(value)
+    value = _subtitution(value, d)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] = st.safe_substitute(d)
+            d[key] = value
 
 
 def _op_regex_append(d, exp, value):
     exp = re.compile("%s$" % exp)
-    st = string.Template(value)
+    value = _subtitution(value, d)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] += st.safe_substitute(d)
+            d[key] += value
 
 
 def _op_regex_prepend(d, exp, value):
     exp = re.compile("%s$" % exp)
-    st = string.Template(value)
+    value = _subtitution(value, d)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] = st.safe_substitute(d) + d[key]
+            d[key] = value + d[key]
 
 
 def _op_regex_del(d, empty, exp):
@@ -652,6 +675,8 @@ _ops_exp = re.compile("|".join([op[0] for op in _ops.values()]))
 
 
 class Op(object):
+    __slots__ = ["func", "key", "value"]
+
     def __init__(self, line, m):
         self.func = _ops[m.group()][1]
         self.key = line[:m.start()].strip()
