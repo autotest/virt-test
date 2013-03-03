@@ -30,6 +30,7 @@ Cartesian configuration format file parser.
 
 import re, os, optparse, collections, string
 
+
 class ParserError:
     def __init__(self, msg, line=None, filename=None, linenum=None):
         self.msg = msg
@@ -70,25 +71,39 @@ class Node(object):
         self.failed_cases = collections.deque()
 
 
+    def dump(self, indent, recurse=False):
+        print("%s%s" % (" " * indent, self.name))
+        print("%s%s" % (" " * indent, self))
+        print("%s%s" % (" " * indent, self.content))
+        print("%s%s" % (" " * indent, self.failed_cases))
+        if recurse:
+            for child in self.children:
+                child.dump(indent + 3, recurse)
+
+
 def _match_adjacent(block, ctx, ctx_set):
-    # TODO: explain what this function does
+    """
+    It try to match as much block as possible from ctx.
+
+    @return: Count of matched blocks.
+    """
     if block[0] not in ctx_set:
         return 0
     if len(block) == 1:
-        return 1
+        return 1                          # First match and length is 1.
     if block[1] not in ctx_set:
-        return int(ctx[-1] == block[0])
+        return int(ctx[-1] == block[0])   # Check match with last from ctx.
     k = 0
     i = ctx.index(block[0])
-    while i < len(ctx):
-        if k > 0 and ctx[i] != block[k]:
+    while i < len(ctx):                   # Try to  match all of blocks.
+        if k > 0 and ctx[i] != block[k]:  # Block not match
             i -= k - 1
-            k = 0
+            k = 0                         # Start from first block in next ctx.
         if ctx[i] == block[k]:
             k += 1
-            if k >= len(block):
+            if k >= len(block):           # match all of blocks
                 break
-            if block[k] not in ctx_set:
+            if block[k] not in ctx_set:   # block in not in whole ctx.
                 break
         i += 1
     return k
@@ -96,7 +111,7 @@ def _match_adjacent(block, ctx, ctx_set):
 
 def _might_match_adjacent(block, ctx, ctx_set, descendant_labels):
     matched = _match_adjacent(block, ctx, ctx_set)
-    for elem in block[matched:]:
+    for elem in block[matched:]:        # Try to find rest of blocks in subtree
         if elem not in descendant_labels:
             return False
     return True
@@ -109,9 +124,12 @@ class Filter(object):
         for char in s:
             if not (char.isalnum() or char.isspace() or char in ".,_-"):
                 raise ParserError("Illegal characters in filter")
+        for word in s.replace(",", " ").split():                     # OR
+            word = [block.split(".") for block in word.split("..")]  # AND
         for word in s.replace(",", " ").split():
             word = [block.split(".") for block in word.split("..")]
             for block in word:
+            for block in word:                                       # .
                 for elem in block:
                     if not elem:
                         raise ParserError("Syntax error")
@@ -119,16 +137,17 @@ class Filter(object):
 
 
     def match(self, ctx, ctx_set):
-        for word in self.filter:
-            for block in word:
+        for word in self.filter:  # Go through ,
+            for block in word:    # Go through ..
                 if _match_adjacent(block, ctx, ctx_set) != len(block):
                     break
             else:
-                return True
+                return True       # All match
         return False
 
 
     def might_match(self, ctx, ctx_set, descendant_labels):
+        # There is some posibility to match in children blocks.
         for word in self.filter:
             for block in word:
                 if not _might_match_adjacent(block, ctx, ctx_set,
@@ -147,10 +166,12 @@ class NoOnlyFilter(Filter):
 
 class OnlyFilter(NoOnlyFilter):
     def is_irrelevant(self, ctx, ctx_set, descendant_labels):
+        # Matched in this tree.
         return self.match(ctx, ctx_set)
 
 
     def requires_action(self, ctx, ctx_set, descendant_labels):
+        # Impossible to match in this tree.
         return not self.might_match(ctx, ctx_set, descendant_labels)
 
 
@@ -162,6 +183,14 @@ class OnlyFilter(NoOnlyFilter):
                     _match_adjacent(block, failed_ctx, failed_ctx_set)):
                     return self.might_match(ctx, ctx_set, descendant_labels)
         return False
+
+
+    def __str__(self):
+        return "Only %s" % (self.filter)
+
+
+    def __repr__(self):
+        return "Only %s" % (self.filter)
 
 
 class NoFilter(NoOnlyFilter):
@@ -181,6 +210,14 @@ class NoFilter(NoOnlyFilter):
                     _match_adjacent(block, failed_ctx, failed_ctx_set)):
                     return not self.match(ctx, ctx_set)
         return False
+
+
+    def __str__(self):
+        return "No %s" % (self.filter)
+
+
+    def __repr__(self):
+        return "No %s" % (self.filter)
 
 
 class Condition(NoFilter):
@@ -370,6 +407,8 @@ class Parser(object):
                 node.failed_cases.pop()
 
         node = node or self.node
+        if self.debug:
+            node.dump(0)
         # Update dep
         for d in node.dep:
             dep = dep + [".".join(ctx + [d])]
@@ -384,7 +423,10 @@ class Parser(object):
         # Check previously failed filters
         for i, failed_case in enumerate(node.failed_cases):
             if not might_pass(*failed_case):
-                self._debug("    this subtree has failed before")
+                self._debug("\n*    this subtree has failed before %s\n"
+                            "         content: %s\n"
+                            "         failcase:%s\n",
+                            name, content + node.content, failed_case)
                 del node.failed_cases[i]
                 node.failed_cases.appendleft(failed_case)
                 return
@@ -395,6 +437,7 @@ class Parser(object):
         if (not process_content(node.content, new_internal_filters) or
             not process_content(content, new_external_filters)):
             add_failed_case()
+            self._debug("Failed_cases %s", node.failed_cases)
             return
         # Update shortname
         if node.append_to_shortname:
@@ -785,6 +828,9 @@ if __name__ == "__main__":
     c = Parser(args[0], debug=options.debug)
     for s in args[1:]:
         c.parse_string(s)
+
+    if options.debug:
+        c.node.dump(0, True)
 
     dicts = c.get_dicts()
     print_dicts(options, dicts)
