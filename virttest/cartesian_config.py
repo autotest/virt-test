@@ -330,6 +330,14 @@ class NoOnlyFilter(Filter):
         self.line = line
 
 
+    def __eq__(self, o):
+        if isinstance(o, self.__class__):
+            if self.filter == o.filter:
+                return True
+
+        return False
+
+
 class OnlyFilter(NoOnlyFilter):
     def is_irrelevant(self, ctx, ctx_set, descendant_labels):
         # Matched in this tree.
@@ -384,6 +392,17 @@ class NoFilter(NoOnlyFilter):
 
     def __repr__(self):
         return "No %s" % (self.filter)
+
+
+class ExcludeFilter(object):
+    __slots__ = ["excluded"]
+
+    def __init__(self, excluded):
+        self.excluded = excluded
+
+
+    def apply_to_dict(self, d):
+        pass
 
 
 class Condition(NoFilter):
@@ -509,19 +528,27 @@ class Parser(object):
             # 3. Move failed filters into failed_filters, so that next time we
             #    reach this node or one of its ancestors, we'll check those
             #    filters first.
+            blocked_filters = []
             for t in content:
                 filename, linenum, obj = t
                 if type(obj) is Op:
+                    new_content.append(t)
+                    continue
+                if type(obj) is ExcludeFilter:
+                    blocked_filters.append(obj.excluded)
                     new_content.append(t)
                     continue
                 # obj is an OnlyFilter/NoFilter/Condition/NegativeCondition
                 if obj.requires_action(ctx, ctx_set, labels):
                     # This filter requires action now
                     if type(obj) is OnlyFilter or type(obj) is NoFilter:
-                        self._debug("    filter did not pass: %r (%s:%s)",
-                                    obj.line, filename, linenum)
-                        failed_filters.append(t)
-                        return False
+                        if not obj in blocked_filters:
+                            self._debug("    filter did not pass: %r (%s:%s)",
+                                        obj.line, filename, linenum)
+                            failed_filters.append(t)
+                            return False
+                        else:
+                            continue
                     else:
                         self._debug("    conditional block matches: %r (%s:%s)",
                                     obj.line, filename, linenum)
@@ -542,6 +569,7 @@ class Parser(object):
                     # Keep the filter and check it again later
                     new_content.append(t)
             return True
+
 
         def might_pass(failed_ctx,
                        failed_ctx_set,
@@ -851,6 +879,25 @@ class Parser(object):
                     e.linenum = linenum
                     raise
                 node.content += [(cr.filename, linenum, f)]
+                continue
+
+            # Parse block filter
+            if words[0] == "exclude":
+                try:
+                    sub_words = words[1].split(None, 1)
+                    f = None
+                    if sub_words[0] == "only":
+                        f = OnlyFilter(words[1])
+                    elif sub_words[0] == "no":
+                        f = NoFilter(words[1])
+                except ParserError, e:
+                    e.line = line
+                    e.filename = cr.filename
+                    e.linenum = linenum
+                    raise
+                if type(f) in (OnlyFilter, NoFilter):
+                    f = ExcludeFilter(f)
+                    node.content = [(cr.filename, linenum, f)] + node.content
                 continue
 
             # Look for operators
