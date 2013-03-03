@@ -25,6 +25,89 @@ Cartesian configuration format file parser.
  <filter>:
  The last one starts a conditional block.
 
+
+Formal definition:
+
+regexp from python http://docs.python.org/2/library/re.html
+Not deterministic but more readable for people.
+Spaces between terminals and nontermials are only for better
+reading of definitions.
+
+E={\n, #, :, "-", =, +=, <=, ?=, ?+=, ?<=, !, < , del, @, variants, include, only, no, name, value, exclude}
+N={S, DEL, FILTER, FILTER_NAME, FILTER_GROUP, PN_FILTER_GROUP, STAT, VARIANT, VAR-NAME, VAR-NAME-F, VAR, COMMENT, TEXT, DEPS, DEPS-NAME-F, EXCLUDE}
+
+I = I^n | n in N              // indentation from start of line where n is indentation length.
+I = I^n+x | n,x in N          // indentation with shift
+start symbol = S
+end symbol = eps
+
+S -> I^0+x STATV | eps
+
+#
+#I^n    STATV
+#I^n    STATV
+#
+
+I^n STATV -> I^n STATV \n I^n STATV | I^n STAT | I^n variants VARIANT
+
+I^n STAT -> I^n STAT \n I^n STAT | I^n COMMENT | I^n include INC
+I^n STAT -> I^n del DEL | I^n FILTER | I^n EXCLUDE
+
+DEL -> name \n
+
+I^n STAT -> I^n name = VALUE | I^n name += VALUE | I^n name <= VALUE
+I^n STAT -> I^n name ?= VALUE | I^n name ?+= VALUE | I^n name ?<= VALUE
+
+VALUE -> TEXT \n | 'TEXT' \n | "TEXT" \n
+
+COMMENT_BLOCK -> #TEXT | //TEXT
+COMMENT ->  COMMENT_BLOCK\n
+COMMENT ->  COMMENT_BLOCK\n
+
+TEXT = [^\n] TEXT            //python format regexp
+
+#
+#I^n    variant VAR #comments:             add possibility for comment
+#I^n+x       VAR-NAME: DEPS
+#I^n+x+x2        STATV
+#I^n         VAR-NAME:
+#
+
+I^n VARIANT -> VAR COMMENT_BLOCK\n I^n+x VAR-NAME
+VAR -> VAR-NAME-F : | :                          // Named | unnamed variant
+
+I^n VAR-NAME -> I^n VAR-NAME \n I^n VAR-NAME | I^n VAR-NAME-N \n I^n+x STATV
+VAR-NAME-N -> - @VAR-NAME-F: DEPS | - VAR-NAME-F: DEPS
+VAR-NAME-F -> [a-zA-Z0-9\._-]+                  // Python regexp
+
+DEPS -> DEPS-NAME-F | DEPS-NAME-F,DEPS
+DEPS-NAME-F -> [a-zA-Z0-9\._- ]+                  // Python regexp
+
+INC -> name \n
+
+#
+# FILTER_GROUP: STAT
+#     STAT
+#
+I^n STAT -> I^n PN_FILTER_GROUP | I^n ! PN_FILTER_GROUP
+
+PN_FILTER_GROUP -> FILTER_GROUP: \n I^n+x STAT | FILTER_GROUP: STAT \n I^n+x STAT
+
+#
+# only FILTER_GROUP
+# no FILTER_GROUP
+
+FILTER -> only FILTER_GROUP \n | no FILTER_GROUP \n
+
+FILTER_GROUP -> FILTER_NAME
+FILTER_GROUP -> FILTER_GROUP..FILTER_GROUP
+FILTER_GROUP -> FILTER_GROUP,FILTER_GROUP
+
+FILTER_NAME -> FILTER_NAME.FILTER_NAME
+FILTER_NAME -> VAR-NAME-F | VAR-NAME-F=VAR-NAME-F
+
+EXCLUDE -> exclude FILTER
+
 @copyright: Red Hat 2008-2011
 """
 
