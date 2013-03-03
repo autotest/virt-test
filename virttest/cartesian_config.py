@@ -140,6 +140,7 @@ class Node(object):
         self.labels = set()
         self.append_to_shortname = False
         self.failed_cases = collections.deque()
+        self.default = False
 
 
     def dump(self, indent, recurse=False):
@@ -322,14 +323,17 @@ class Parser(object):
 
     @see: https://github.com/autotest/autotest/wiki/KVMAutotest-CartesianConfigParametersIntro
     """
-    def __init__(self, filename=None, debug=False):
+    def __init__(self, filename=None, defaults=False, debug=False):
         """
         Initialize the parser and optionally parse a file.
 
         @param filename: Path of the file to parse.
+        @param defaults: If True adds only defaults variant from variants
+                         if there is some.
         @param debug: Whether to turn on debugging output.
         """
         self.node = Node()
+        self.defaults = defaults
         self.debug = debug
         if filename:
             self.parse_file(filename)
@@ -526,10 +530,18 @@ class Parser(object):
 
         # Recurse into children
         count = 0
-        for n in node.children:
-            for d in self.get_dicts(n, ctx, new_content, shortname, dep):
-                count += 1
-                yield d
+        if self.defaults:
+            for n in node.children:
+                for d in self.get_dicts(n, ctx, new_content, shortname, dep):
+                    count += 1
+                    yield d
+                if n.default and count:
+                    break
+        else:
+            for n in node.children:
+                for d in self.get_dicts(n, ctx, new_content, shortname, dep):
+                    count += 1
+                    yield d
         # Reached leaf?
         if not node.children:
             self._debug("    reached leaf, returning it")
@@ -581,6 +593,7 @@ class Parser(object):
         @param prev_indent: The indent level of the "parent" block.
         @return: A node object.
         """
+        already_default = False
         node4 = Node()
 
         while True:
@@ -608,7 +621,9 @@ class Parser(object):
             node2.labels = node.labels
 
             node3 = self._parse(cr, node2, prev_indent=indent)
-            node3.name = [Label(var_name, n) for n in name.lstrip("@").split(".")]
+            is_default = name.startswith("@")
+            name = name.lstrip("@")
+            node3.name = [Label(var_name, n) for n in name.split(".")]
             node3.dep = [Label(var_name, d) for d in dep.replace(",", " ").split()]
 
             if var_name:
@@ -616,9 +631,20 @@ class Parser(object):
                 op_match = _ops_exp.search(l)
                 node3.content += [(cr.filename, linenum, Op(l, op_match))]
 
-            is_default = name.startswith("@")
+            node3.append_to_shortname = not is_default
 
-            node4.children += [node3]
+            if self.defaults:        # relevant only if defaults is True
+                if is_default and not already_default:
+                    node3.default = True
+                    already_default = True
+                if node3.default:
+                    # Move default variant in front of rest of all variants.
+                    # Speed optimization.
+                    node4.children.insert(0, node3)
+                else:
+                    node4.children += [node3]
+            else:
+                node4.children += [node3]
             node4.labels.update(node3.labels)
             node4.labels.update(node3.name)
 
@@ -940,12 +966,15 @@ if __name__ == "__main__":
                       help="show dict contents")
     parser.add_option("-r", "--repr", dest="repr_mode", action="store_true",
                       help="Output parsing results Python format")
+    parser.add_option("-d", "--defaults", dest="defaults", action="store_true",
+                      help="use only default variant of variants if there"
+                           " is some")
 
     options, args = parser.parse_args()
     if not args:
         parser.error("filename required")
 
-    c = Parser(args[0], debug=options.debug)
+    c = Parser(args[0], defaults=options.defaults, debug=options.debug)
     for s in args[1:]:
         c.parse_string(s)
 
