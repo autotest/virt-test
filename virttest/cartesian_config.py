@@ -338,19 +338,29 @@ class Parser(object):
                        failed_ctx_set,
                        failed_external_filters,
                        failed_internal_filters):
+            all_content = content + node.content
+            for t in failed_external_filters + failed_internal_filters:
+                if not t in all_content:
+                    return True
             for t in failed_external_filters:
-                if t not in content:
-                    return True
                 _, _, external_filter = t
-                if external_filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
-                                     labels):
+                if not external_filter.might_pass(failed_ctx,
+                                                  failed_ctx_set,
+                                                  ctx, ctx_set,
+                                                  labels):
+                    return False
+            for t in failed_internal_filters:
+                if not t in node.content:
                     return True
+
             for t in failed_internal_filters:
                 _, _, internal_filter = t
-                if internal_filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
-                                     labels):
-                    return True
-            return False
+                if not internal_filter.might_pass(failed_ctx,
+                                                  failed_ctx_set,
+                                                  ctx, ctx_set,
+                                                  labels):
+                    return False
+            return True
 
         def add_failed_case():
             node.failed_cases.appendleft((ctx, ctx_set,
