@@ -145,6 +145,74 @@ class MissingIncludeError:
 num_failed_cases = 5
 
 
+class Label(object):
+    __slots__ = ["name", "var_name", "long_name", "hash_val", "hash_var"]
+
+    def __init__(self, name, next_name=None):
+        if next_name is None:
+            self.name = name
+            self.var_name = None
+        else:
+            self.name = next_name
+            self.var_name = name
+
+        if self.var_name is None:
+            self.long_name = "%s" % (self.name)
+        else:
+            self.long_name = "%s>%s" % (self.var_name, self.name)
+
+        self.hash_val = self.hash_name()
+        self.hash_var = None
+        if self.var_name:
+            self.hash_var = self.hash_variant()
+
+
+    def __str__(self):
+        return self.long_name
+
+
+    def __repr__(self):
+        return self.long_name
+
+
+    def __eq__(self, o):
+        """
+        The comparison is asymmetric due to optimization.
+        """
+        if o.var_name:
+            if self.long_name == o.long_name:
+                return True
+        else:
+            if self.name == o.name:
+                return True
+        return False
+
+
+    def __ne__(self, o):
+        """
+        The comparison is asymmetric due to optimization.
+        """
+        if o.var_name:
+            if self.long_name != o.long_name:
+                return True
+        else:
+            if self.name != o.name:
+                return True
+        return False
+
+
+    def __hash__(self):
+        return self.hash_val
+
+
+    def hash_name(self):
+        return sum([i + 1 * ord(x) for i, x in enumerate(self.name)])
+
+
+    def hash_variant(self):
+        return sum([i + 1 * ord(x) for i, x in enumerate(str(self))])
+
+
 class Node(object):
     __slots__ = ["name", "dep", "content", "children", "labels",
                  "append_to_shortname", "failed_cases", "default"]
@@ -212,18 +280,19 @@ class Filter(object):
     def __init__(self, s):
         self.filter = []
         for char in s:
-            if not (char.isalnum() or char.isspace() or char in ".,_-"):
+            if not (char.isalnum() or char.isspace() or char in ".,_->"):
                 raise ParserError("Illegal characters in filter")
         for word in s.replace(",", " ").split():                     # OR
             word = [block.split(".") for block in word.split("..")]  # AND
-        for word in s.replace(",", " ").split():
-            word = [block.split(".") for block in word.split("..")]
-            for block in word:
+            words = []
             for block in word:                                       # .
+                b = []
                 for elem in block:
                     if not elem:
                         raise ParserError("Syntax error")
-            self.filter += [word]
+                    b.append(Label(*elem.split(">")))
+                words.append(b)
+            self.filter += [words]
 
 
     def match(self, ctx, ctx_set):
@@ -506,15 +575,16 @@ class Parser(object):
         #    node.dump(0)
         # Update dep
         for d in node.dep:
-            dep = dep + [".".join(ctx + [d])]
+            dep = dep + [".".join([str(label) for label in ctx + [d]])]
         # Update ctx
         ctx = ctx + node.name
         ctx_set = set(ctx)
         labels = node.labels
         # Get the current name
-        name = ".".join(ctx)
+        name = ".".join([str(label) for label in ctx])
         if node.name:
             self._debug("checking out %r", name)
+
         # Check previously failed filters
         for i, failed_case in enumerate(node.failed_cases):
             if not might_pass(*failed_case):
@@ -534,9 +604,11 @@ class Parser(object):
             add_failed_case()
             self._debug("Failed_cases %s", node.failed_cases)
             return
+
         # Update shortname
         if node.append_to_shortname:
             shortname = shortname + node.name
+
         # Recurse into children
         count = 0
         for n in node.children:
@@ -546,7 +618,8 @@ class Parser(object):
         # Reached leaf?
         if not node.children:
             self._debug("    reached leaf, returning it")
-            d = {"name": name, "dep": dep, "shortname": ".".join(shortname)}
+            d = {"name": name, "dep": dep,
+                 "shortname": ".".join([str(sn) for sn in shortname])}
             for _, _, op in new_content:
                 op.apply_to_dict(d)
             yield d
@@ -583,7 +656,7 @@ class Parser(object):
         print s % args
 
 
-    def _parse_variants(self, cr, node, prev_indent=-1):
+    def _parse_variants(self, cr, node, prev_indent=-1, var_name=None):
         """
         Read and parse lines from a FileReader object until a line with an
         indent level lower than or equal to prev_indent is encountered.
@@ -591,6 +664,7 @@ class Parser(object):
         @param cr: A FileReader/StrReader object.
         @param node: A node to operate on.
         @param prev_indent: The indent level of the "parent" block.
+        @param var_name: Variants name
         @return: A node object.
         """
         node4 = Node()
@@ -620,9 +694,15 @@ class Parser(object):
             node2.labels = node.labels
 
             node3 = self._parse(cr, node2, prev_indent=indent)
-            node3.name = name.lstrip("@").split(".")
-            node3.dep = dep.replace(",", " ").split()
-            node3.append_to_shortname = not name.startswith("@")
+            node3.name = [Label(var_name, n) for n in name.lstrip("@").split(".")]
+            node3.dep = [Label(var_name, d) for d in dep.replace(",", " ").split()]
+
+            if var_name:
+                l = "%s = %s" % (var_name, name)
+                op_match = _ops_exp.search(l)
+                node3.content += [(cr.filename, linenum, Op(l, op_match))]
+
+            is_default = name.startswith("@")
 
             node4.children += [node3]
             node4.labels.update(node3.labels)
@@ -649,14 +729,44 @@ class Parser(object):
             words = line.split(None, 1)
 
             # Parse 'variants'
-            if line == "variants:":
+            if line.startswith("variants"):
                 # 'variants' is not allowed inside a conditional block
                 if (isinstance(node, Condition) or
                     isinstance(node, NegativeCondition)):
                     raise ParserError("'variants' is not allowed inside a "
                                       "conditional block",
                                       None, cr.filename, linenum)
-                node = self._parse_variants(cr, node, prev_indent=indent)
+                name = None
+                if not words[0] in ["variants", "variants:"]:
+                    raise ParserError("Illegal characters in variants",
+                                       line, cr.filename, linenum)
+                if words[0] == "variants":
+                    try:
+                        name, _ = words[1].split(":")  # split name and comment
+                    except ValueError:
+                        raise ParserError("Missing : in variants expression",
+                                              line, cr.filename, linenum)
+                    for char in name:
+                        if not (char.isalnum() or char.isspace() or
+                                char in "._-=,"):
+                            raise ParserError("Illegal characters in variants",
+                                              line, cr.filename, linenum)
+                var_name = None
+                if name:
+                    block = name.split(",")
+                    for b in block:
+                        oper = b.split("=")
+                        if oper[0] == "name":
+                            if len(oper) == 1:
+                                raise ParserError("Missing name of variants",
+                                                  line, cr.filename, linenum)
+                            var_name = oper[1].strip()
+                        else:
+                            raise ParserError("Ilegal variants param",
+                                               line, cr.filename, linenum)
+                node = self._parse_variants(cr, node, prev_indent=indent,
+                                            var_name=var_name)
+                                            var_name=name)
                 continue
 
             # Parse 'include' statements
