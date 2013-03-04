@@ -5,7 +5,7 @@ Utility classes and functions to handle KVM Qtree parsing and verification.
 @copyright: 2012 Red Hat Inc.
 """
 import logging, os, re
-import storage
+import storage, utils_misc
 
 OFFSET_PER_LEVEL = 2
 
@@ -423,7 +423,7 @@ class QtreeDisksContainer(object):
         # host, channel, id, lun, vendor
         _scsis = re.findall(r'Host:\s+(\w+)\s+Channel:\s+(\d+)\s+Id:\s+(\d+)'
                              '\s+Lun:\s+(\d+)\n\s+Vendor:\s+([a-zA-Z0-9_-]+)'
-                             '\s+Model: ', info)
+                             '\s+Model:.*\n.*Type:\s+([a-zA-Z0-9_-]+)', info)
         disks = set()
         # Check only scsi disks
         for disk in self.disks:
@@ -438,8 +438,7 @@ class QtreeDisksContainer(object):
         scsis = set()
         for scsi in _scsis:
             # Ignore IDE disks
-            # TODO: Consider passthrough devices
-            if scsi[4].startswith('QEMU'):
+            if scsi[4] != 'CD-ROM':
                 scsis.add("%d-%d-%d" % (int(scsi[1]), int(scsi[2]),
                                         int(scsi[3])))
             else:
@@ -469,6 +468,16 @@ class QtreeDisksContainer(object):
                 disks[disk.get_qname()] = disk.get_params().copy()
         # We don't have the params name so we need to map file_names instead
         qname = None
+        for name in params.objects('cdroms'):
+            image_name = utils_misc.get_path(data_dir.get_data_dir(),
+                                params.object_params(name).get('cdrom', ''))
+            image_name = os.path.realpath(image_name)
+            for (qname, disk) in disks.iteritems():
+                if disk.get('image_name') == image_name:
+                    break
+            else:
+                continue    # Not /proc/scsi cdrom device
+            disks.pop(qname)
         for name in params.objects('images'):
             current = None
             image_params = params.object_params(name)
