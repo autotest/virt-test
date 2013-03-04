@@ -133,6 +133,7 @@ def run_cpuflags(test, params, env):
             self.last_arch = None
             self.last_model = None
             self.sub_model = False
+            self.all_flags = []
 
 
         def start_element(self, name, attrs):
@@ -149,6 +150,8 @@ def run_cpuflags(test, params, env):
             elif name == "feature":
                 if not self.last_model is None:
                     self.last_model.append(attrs['name'])
+                else:
+                    self.all_flags.append(attrs['name'])
 
 
         def end_element(self, name):
@@ -181,6 +184,9 @@ def run_cpuflags(test, params, env):
         return set(map(utils_misc.Flag, flags))
 
 
+    get_guest_host_cpuflags_BAD = get_guest_host_cpuflags_1350
+
+
     def get_all_qemu_flags_legacy():
         cmd = qemu_binary + " -cpu ?cpuid"
         output = utils.run(cmd).stdout
@@ -208,6 +214,18 @@ def run_cpuflags(test, params, env):
         return set(map(utils_misc.Flag, flags))
 
 
+    def get_all_qemu_flags_BAD():
+        """
+        Get cpu flags correspond with cpumodel parameters.
+
+        @param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
+        @return: [corespond flags]
+        """
+        p = ParseCpuFlags()
+        p.parse_file(cpuflags_def)
+        return set(map(utils_misc.Flag, p.all_flags))
+
+
     def get_cpu_models_legacy():
         """
         Get all cpu models from qemu.
@@ -233,14 +251,21 @@ def run_cpuflags(test, params, env):
         cpu_re = re.compile("x86\s+\[?(\w+)\]?")
         return cpu_re.findall(output)
 
+    get_cpu_models_BAD = get_cpu_models_1350
+
 
     def get_qemu_cpu_cmd_version():
-        cmd = qemu_binary + " -cpu ?"
-        output = utils.run(cmd).stdout
-        if "CPUID" in output:
-            return "1350"
-        else:
+        cmd = qemu_binary + " -cpu ?cpuid"
+        try:
+            utils.run(cmd).stdout
             return "legacy"
+        except:
+            cmd = qemu_binary + " -cpu ?"
+            output = utils.run(cmd).stdout
+            if "CPUID" in output:
+                return "1350"
+            else:
+                return "BAD"
 
 
     qcver = get_qemu_cpu_cmd_version()
