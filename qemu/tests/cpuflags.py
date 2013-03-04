@@ -112,7 +112,7 @@ def run_cpuflags(test, params, env):
         cmd = qemu_binary + " -cpu ?dump"
         output = utils.run(cmd).stdout
         re.escape(cpumodel)
-        pattern = (".+%s.*\n.*\n +feature_edx .+ \((.*)\)\n +feature_"
+        pattern = (r".+%s.*\n.*\n +feature_edx .+ \((.*)\)\n +feature_"
                    "ecx .+ \((.*)\)\n +extfeature_edx .+ \((.*)\)\n +"
                    "extfeature_ecx .+ \((.*)\)\n" % (cpumodel))
         flags = []
@@ -235,7 +235,7 @@ def run_cpuflags(test, params, env):
         cmd = qemu_binary + " -cpu ?"
         output = utils.run(cmd).stdout
 
-        cpu_re = re.compile("\w+\s+\[?(\w+)\]?")
+        cpu_re = re.compile(r"\w+\s+\[?(\w+)\]?")
         return cpu_re.findall(output)
 
 
@@ -248,7 +248,7 @@ def run_cpuflags(test, params, env):
         cmd = qemu_binary + " -cpu ?"
         output = utils.run(cmd).stdout
 
-        cpu_re = re.compile("x86\s+\[?(\w+)\]?")
+        cpu_re = re.compile(r"x86\s+\[?(\w+)\]?")
         return cpu_re.findall(output)
 
     get_cpu_models_BAD = get_cpu_models_1350
@@ -377,7 +377,7 @@ def run_cpuflags(test, params, env):
                 online.append(cpu)
         cpu_proc = vm_session.cmd_output("cat /proc/cpuinfo")
         cpu_state_proc = map(lambda x: int(x),
-                               re.findall("processor\s+:\s*(\d+)\n", cpu_proc))
+                              re.findall(r"processor\s+:\s*(\d+)\n", cpu_proc))
         if set(online) != set(cpu_state_proc):
             raise error.TestError("Some cpus are disabled but %s are still "
                                   "visible like online in /proc/cpuinfo." %
@@ -655,7 +655,7 @@ def run_cpuflags(test, params, env):
                 except error.CmdError, e:
                     out = e.result_obj.stderr
             finally:
-                uns_re = re.compile("^warning:.*flag '(.+)'", re.MULTILINE)
+                uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
                 warn_flags = set(map(utils_misc.Flag, uns_re.findall(out)))
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 if fwarn_flags:
@@ -690,7 +690,7 @@ def run_cpuflags(test, params, env):
                 except error.CmdError:
                     logging.error("Host boot with unsupported flag")
             finally:
-                uns_re = re.compile("^warning:.*flag '(.+)'", re.MULTILINE)
+                uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
                 warn_flags = set(map(utils_misc.Flag, uns_re.findall(out)))
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 if fwarn_flags:
