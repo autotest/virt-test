@@ -18,7 +18,7 @@ if os.name == "posix":  # Linux
 else:   # Windows
     os_linux = False
     try:
-        import _winreg, ctypes, win32file
+        import win32file
     except ImportError, failure_detail:
         print "Import failed. Do you have ctypes and pywin32 installed?"
         raise failure_detail
@@ -179,7 +179,7 @@ class VirtioGuest:
         """
         raise NotImplementedError
 
-    def recv(self, port, length=1, buffer=1024, mode=True):
+    def recv(self, port, length=1, bfr=1024, mode=True):
         """
         Receive a data of arbitrary length.
 
@@ -189,7 +189,7 @@ class VirtioGuest:
         """
         raise NotImplementedError
 
-    def clean_port(self, port, buffer=1024):
+    def clean_port(self, port, bfr=1024):
         raise NotImplementedError
 
 
@@ -252,11 +252,11 @@ class VirtioGuestPosix(VirtioGuest):
                 open_db_file = "%s/virtio-ports/%s" % (DEBUGPATH, name)
                 f = open(open_db_file, 'r')
                 port = {}
-                file = []
+                line_list = []
                 for line in iter(f):
-                    file.append(line)
+                    line_list.append(line)
                 try:
-                    for line in file:
+                    for line in line_list:
                         m = re.match("(\S+): (\S+)", line)
                         port[m.group(1)] = m.group(2)
 
@@ -531,20 +531,20 @@ class VirtioGuestPosix(VirtioGuest):
 
         @param mask: poll return mask
         """
-        str = ""
+        out = ""
         if (mask & select.POLLIN):
-            str += "IN "
+            out += "IN "
         if (mask & select.POLLPRI):
-            str += "PRI IN "
+            out += "PRI IN "
         if (mask & select.POLLOUT):
-            str += "OUT "
+            out += "OUT "
         if (mask & select.POLLERR):
-            str += "ERR "
+            out += "ERR "
         if (mask & select.POLLHUP):
-            str += "HUP "
+            out += "HUP "
         if (mask & select.POLLMSG):
-            str += "MSG "
-        return str
+            out += "MSG "
+        return out
 
     def poll(self, port, expected, timeout=500):
         """
@@ -708,14 +708,14 @@ class VirtioGuestPosix(VirtioGuest):
         else:
             print "PASS: Set to sync mode"
 
-    def close(self, file):
+    def close(self, filepath):
         """
         Close open port.
 
-        @param file: File to close.
+        @param filepath: File to close.
         """
         descriptor = None
-        path = self.ports[file]["path"]
+        path = self.ports[filepath]["path"]
         if path is not None:
             if path in self.files.keys():
                 descriptor = self.files[path]
@@ -843,7 +843,7 @@ class VirtioGuestPosix(VirtioGuest):
             print ("FAIL: Partial send: desired %d, transfered %d" %
                    (length, writes))
 
-    def recv(self, port, length=1, buffer=1024, mode=True):
+    def recv(self, port, length=1, bfr=1024, mode=True):
         """
         Receive a data of arbitrary length.
 
@@ -855,13 +855,13 @@ class VirtioGuestPosix(VirtioGuest):
 
         recvs = ""
         try:
-            recvs = os.read(in_f[0], buffer)
+            recvs = os.read(in_f[0], bfr)
         except Exception, inst:
             print inst
         if mode:
             while (len(recvs) < length):
                 try:
-                    recvs += os.read(in_f[0], buffer)
+                    recvs += os.read(in_f[0], bfr)
                 except Exception, inst:
                     print inst
         if len(recvs) >= length:
@@ -870,12 +870,12 @@ class VirtioGuestPosix(VirtioGuest):
             print ("FAIL: Partial recv: desired %d, transfered %d" %
                    (length, len(recvs)))
 
-    def clean_port(self, port, buffer=1024):
+    def clean_port(self, port, bfr=1024):
         in_f = self._open([port])
         ret = select.select([in_f[0]], [], [], 1.0)
         buf = ""
         if ret[0]:
-            buf = os.read(in_f[0], buffer)
+            buf = os.read(in_f[0], bfr)
         print ("PASS: Rest in socket: ") + str(buf[:10])
 
 
@@ -922,7 +922,7 @@ class VirtioGuestNt(VirtioGuest):
                                               win32file.FILE_ATTRIBUTE_NORMAL,
                                               None)
                 win32file.CloseHandle(hFile)
-            except win32file.error, inst:
+            except win32file.error:
                 remove.append(port['name'])
                 print "Fail to open port %s" % port['name']
         for name in remove:
@@ -950,14 +950,14 @@ class VirtioGuestNt(VirtioGuest):
 
         print "PASS: Init and check virtioconsole files in system."
 
-    def close(self, file):
+    def close(self, filepath):
         """
         Close open port.
 
-        @param file: File to close.
+        @param filepath: File to close.
         """
         hFile = None
-        path = self.ports[file]["path"]
+        path = self.ports[filepath]["path"]
         if path is not None:
             if path in self.files.keys():
                 hFile = self.files[path]
@@ -1222,7 +1222,7 @@ def guest_exit():
     exiting = True
 
 
-def compile():
+def compile_script():
     """
     Compile virtio_console_guest.py to speed up.
     """
@@ -1243,9 +1243,9 @@ def worker(virt):
     while not exiting:
         d = p.poll()
         if (d[0][1] == select.POLLIN):
-            str = raw_input()
+            out = raw_input()
             try:
-                exec str
+                exec out
             except Exception:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 print "On Guest exception from: \n" + "".join(
@@ -1294,10 +1294,10 @@ class Daemon:
                 continue
             fd_dir = os.path.join('/proc', pid, 'fd')
             try:
-                for file in os.listdir(fd_dir):
+                for filepath in os.listdir(fd_dir):
                     try:
-                        p = os.path.join(fd_dir, file)
-                        link = os.readlink(os.path.join(fd_dir, file))
+                        p = os.path.join(fd_dir, filepath)
+                        link = os.readlink(os.path.join(fd_dir, filepath))
                         if link == path:
                             mode = os.lstat(p).st_mode
                             opens.append([pid, mode])
@@ -1475,7 +1475,7 @@ def main_nt():
 
 if __name__ == "__main__":
     if (len(sys.argv) > 1) and (sys.argv[1] == "-c"):
-        compile()
+        compile_script()
 
     if os_linux:    # Linux
         main()
