@@ -4883,6 +4883,20 @@ variants:
                         probe_var_key = vq elem in_num out_num
                         stap_script_file = virtqueue_pop.stp
 
+    - rhevonly_cmds_check:
+        type = rhevonly_commands_check
+        only Linux
+        monitors = "humanmonitor1 qmp1"
+        monitor_type_humanmonitor1 = human
+        monitor_type_qmp1 = qmp
+        variants:
+            - qmp:
+                main_monitor = qmp1
+                black_list = "block-stream __com.redhat_drive-reopen __com.redhat_drive-mirror transaction blockdev-snapshot-sync"
+            - human:
+                main_monitor = humanmonitor1
+                black_list = "block-stream __com.redhat_drive-reopen __com.redhat_drive-mirror"
+
     - block_stream:
         only Host_RHEL.6
         no RHEL.6.1
