@@ -2546,6 +2546,15 @@ variants:
                 # s4_bg_program_chk_cmd, s4_bg_program_kill_cmd, s4_log_chk_cmd,
                 # s4_start_cmd and services_up_timeout are set in guest-os.cfg
 
+    - cdrom_not_insert:
+        only Linux
+        no Host_RHEL.5
+        type = cdrom
+        not_insert_at_start = yes
+        start_vm = no
+        cdroms = cd1
+        cdrom_without_file = yes
+
     - floppy_test:
         type = floppy
         start_vm = no
