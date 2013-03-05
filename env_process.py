@@ -520,6 +520,17 @@ def postprocess(test, params, env):
                     logging.warn(e)
                     vm.destroy(gracefully=False)
 
+    # Kill VMs with deleted disks
+    for vm in env.get_all_vms():
+        destroy = False
+        vm_params = params.object_params(vm.name)
+        for image in vm_params.objects('images'):
+            if params.object_params(image).get('remove_image') == 'yes':
+                destroy = True
+        if destroy and not vm.is_dead():
+            logging.debug('Image of VM %s was removed, destroing it.', vm.name)
+            vm.destroy()
+
     # Kill all aexpect tail threads
     aexpect.kill_tail_threads()
 
