@@ -25,10 +25,94 @@ Cartesian configuration format file parser.
  <filter>:
  The last one starts a conditional block.
 
+
+Formal definition:
+
+regexp from python http://docs.python.org/2/library/re.html
+Not deterministic but more readable for people.
+Spaces between terminals and nontermials are only for better
+reading of definitions.
+
+E={\n, #, :, "-", =, +=, <=, ?=, ?+=, ?<=, !, < , del, @, variants, include, only, no, name, value, exclude}
+N={S, DEL, FILTER, FILTER_NAME, FILTER_GROUP, PN_FILTER_GROUP, STAT, VARIANT, VAR-NAME, VAR-NAME-F, VAR, COMMENT, TEXT, DEPS, DEPS-NAME-F, EXCLUDE}
+
+I = I^n | n in N              // indentation from start of line where n is indetation length.
+I = I^n+x | n,x in N          // indentation with shift
+start symbol = S
+end symbol = eps
+
+S -> I^0+x STATV | eps
+
+#
+#I^n    STATV
+#I^n    STATV
+#
+
+I^n STATV -> I^n STATV \n I^n STATV | I^n STAT | I^n variants VARIANT
+
+I^n STAT -> I^n STAT \n I^n STAT | I^n COMMENT | I^n include INC
+I^n STAT -> I^n del DEL | I^n FILTER | I^n EXCLUDE
+
+DEL -> name \n
+
+I^n STAT -> I^n name = VALUE | I^n name += VALUE | I^n name <= VALUE
+I^n STAT -> I^n name ?= VALUE | I^n name ?+= VALUE | I^n name ?<= VALUE
+
+VALUE -> TEXT \n | 'TEXT' \n | "TEXT" \n
+
+COMMENT_BLOCK -> #TEXT | //TEXT
+COMMENT ->  COMMENT_BLOCK\n
+COMMENT ->  COMMENT_BLOCK\n
+
+TEXT = [^\n] TEXT            //python format regexp
+
+#
+#I^n    variant VAR #comments:             add possibility for comment
+#I^n+x       VAR-NAME: DEPS
+#I^n+x+x2        STATV
+#I^n         VAR-NAME:
+#
+
+I^n VARIANT -> VAR COMMENT_BLOCK\n I^n+x VAR-NAME
+VAR -> VAR-NAME-F : | :                          // Named | unnamed variant
+
+I^n VAR-NAME -> I^n VAR-NAME \n I^n VAR-NAME | I^n VAR-NAME-N \n I^n+x STATV
+VAR-NAME-N -> - @VAR-NAME-F: DEPS | - VAR-NAME-F: DEPS
+VAR-NAME-F -> [a-zA-Z0-9\._-]+                  // Python regexp
+
+DEPS -> DEPS-NAME-F | DEPS-NAME-F,DEPS
+DEPS-NAME-F -> [a-zA-Z0-9\._- ]+                  // Python regexp
+
+INC -> name \n
+
+#
+# FILTER_GROUP: STAT
+#     STAT
+#
+I^n STAT -> I^n PN_FILTER_GROUP | I^n ! PN_FILTER_GROUP
+
+PN_FILTER_GROUP -> FILTER_GROUP: \n I^n+x STAT | FILTER_GROUP: STAT \n I^n+x STAT
+
+#
+# only FILTER_GROUP
+# no FILTER_GROUP
+
+FILTER -> only FILTER_GROUP \n | no FILTER_GROUP \n
+
+FILTER_GROUP -> FILTER_NAME
+FILTER_GROUP -> FILTER_GROUP..FILTER_GROUP
+FILTER_GROUP -> FILTER_GROUP,FILTER_GROUP
+
+FILTER_NAME -> FILTER_NAME.FILTER_NAME
+FILTER_NAME -> VAR-NAME-F | VAR-NAME-F=VAR-NAME-F
+
+EXCLUDE -> exclude FILTER
+
 @copyright: Red Hat 2008-2011
 """
 
 import re, os, optparse, collections, string
+
 
 class ParserError:
     def __init__(self, msg, line=None, filename=None, linenum=None):
@@ -59,7 +143,78 @@ class MissingIncludeError:
 num_failed_cases = 5
 
 
+class Label(object):
+    __slots__ = ["name", "var_name", "long_name", "hash_val", "hash_var"]
+
+    def __init__(self, name, next_name=None):
+        if next_name is None:
+            self.name = name
+            self.var_name = None
+        else:
+            self.name = next_name
+            self.var_name = name
+
+        if self.var_name is None:
+            self.long_name = "%s" % (self.name)
+        else:
+            self.long_name = "%s>%s" % (self.var_name, self.name)
+
+        self.hash_val = self.hash_name()
+        self.hash_var = None
+        if self.var_name:
+            self.hash_var = self.hash_variant()
+
+
+    def __str__(self):
+        return self.long_name
+
+
+    def __repr__(self):
+        return self.long_name
+
+
+    def __eq__(self, o):
+        """
+        The comparison is asymmetric due to optimization.
+        """
+        if o.var_name:
+            if self.long_name == o.long_name:
+                return True
+        else:
+            if self.name == o.name:
+                    return True
+        return False
+
+
+    def __ne__(self, o):
+        """
+        The comparison is asymmetric due to optimization.
+        """
+        if o.var_name:
+            if self.long_name != o.long_name:
+                return True
+        else:
+            if self.name != o.name:
+                    return True
+        return False
+
+
+    def __hash__(self):
+        return self.hash_val
+
+
+    def hash_name(self):
+        return sum([i + 1 * ord(x) for i, x in enumerate(self.name)])
+
+
+    def hash_variant(self):
+        return sum([i + 1 * ord(x) for i, x in enumerate(str(self))])
+
+
 class Node(object):
+    __slots__ = ["name", "dep", "content", "children", "labels",
+                 "append_to_shortname", "failed_cases", "default"]
+
     def __init__(self):
         self.name = []
         self.dep = []
@@ -68,27 +223,42 @@ class Node(object):
         self.labels = set()
         self.append_to_shortname = False
         self.failed_cases = collections.deque()
+        self.default = False
+
+
+    def dump(self, indent, recurse=False):
+        print("%s%s" % (" " * indent, self.name))
+        print("%s%s" % (" " * indent, self))
+        print("%s%s" % (" " * indent, self.content))
+        print("%s%s" % (" " * indent, self.failed_cases))
+        if recurse:
+            for child in self.children:
+                child.dump(indent + 3, recurse)
 
 
 def _match_adjacent(block, ctx, ctx_set):
-    # TODO: explain what this function does
+    """
+    It try to match as much block as possible from ctx.
+
+    @return: Count of matched blocks.
+    """
     if block[0] not in ctx_set:
         return 0
     if len(block) == 1:
-        return 1
+        return 1                          # First match and length is 1.
     if block[1] not in ctx_set:
-        return int(ctx[-1] == block[0])
+        return int(ctx[-1] == block[0])   # Check match with last from ctx.
     k = 0
     i = ctx.index(block[0])
-    while i < len(ctx):
-        if k > 0 and ctx[i] != block[k]:
+    while i < len(ctx):                   # Try to  match all of blocks.
+        if k > 0 and ctx[i] != block[k]:  # Block not match
             i -= k - 1
-            k = 0
+            k = 0                         # Start from first block in next ctx.
         if ctx[i] == block[k]:
             k += 1
-            if k >= len(block):
+            if k >= len(block):           # match all of blocks
                 break
-            if block[k] not in ctx_set:
+            if block[k] not in ctx_set:   # block in not in whole ctx.
                 break
         i += 1
     return k
@@ -96,7 +266,7 @@ def _match_adjacent(block, ctx, ctx_set):
 
 def _might_match_adjacent(block, ctx, ctx_set, descendant_labels):
     matched = _match_adjacent(block, ctx, ctx_set)
-    for elem in block[matched:]:
+    for elem in block[matched:]:        # Try to find rest of blocks in subtree
         if elem not in descendant_labels:
             return False
     return True
@@ -104,31 +274,38 @@ def _might_match_adjacent(block, ctx, ctx_set, descendant_labels):
 
 # Filter must inherit from object (otherwise type() won't work)
 class Filter(object):
+    __slots__ = ["filter"]
+
     def __init__(self, s):
         self.filter = []
         for char in s:
-            if not (char.isalnum() or char.isspace() or char in ".,_-"):
+            if not (char.isalnum() or char.isspace() or char in ".,_->"):
                 raise ParserError("Illegal characters in filter")
-        for word in s.replace(",", " ").split():
-            word = [block.split(".") for block in word.split("..")]
-            for block in word:
+        for word in s.replace(",", " ").split():                     # OR
+            word = [block.split(".") for block in word.split("..")]  # AND
+            words = []
+            for block in word:                                       # .
+                b = []
                 for elem in block:
                     if not elem:
                         raise ParserError("Syntax error")
-            self.filter += [word]
+                    b.append(Label(*elem.split(">")))
+                words.append(b)
+            self.filter += [words]
 
 
     def match(self, ctx, ctx_set):
-        for word in self.filter:
-            for block in word:
+        for word in self.filter:  # Go through ,
+            for block in word:    # Go through ..
                 if _match_adjacent(block, ctx, ctx_set) != len(block):
                     break
             else:
-                return True
+                return True       # All match
         return False
 
 
     def might_match(self, ctx, ctx_set, descendant_labels):
+        # There is some posibility to match in children blocks.
         for word in self.filter:
             for block in word:
                 if not _might_match_adjacent(block, ctx, ctx_set,
@@ -140,17 +317,29 @@ class Filter(object):
 
 
 class NoOnlyFilter(Filter):
+    __slots__ = ["line"]
+
     def __init__(self, line):
         Filter.__init__(self, line.split(None, 1)[1])
         self.line = line
 
 
+    def __eq__(self, o):
+        if isinstance(o, self.__class__):
+            if self.filter == o.filter:
+                return True
+
+        return False
+
+
 class OnlyFilter(NoOnlyFilter):
     def is_irrelevant(self, ctx, ctx_set, descendant_labels):
+        # Matched in this tree.
         return self.match(ctx, ctx_set)
 
 
     def requires_action(self, ctx, ctx_set, descendant_labels):
+        # Impossible to match in this tree.
         return not self.might_match(ctx, ctx_set, descendant_labels)
 
 
@@ -162,6 +351,14 @@ class OnlyFilter(NoOnlyFilter):
                     _match_adjacent(block, failed_ctx, failed_ctx_set)):
                     return self.might_match(ctx, ctx_set, descendant_labels)
         return False
+
+
+    def __str__(self):
+        return "Only %s" % (self.filter)
+
+
+    def __repr__(self):
+        return "Only %s" % (self.filter)
 
 
 class NoFilter(NoOnlyFilter):
@@ -183,7 +380,28 @@ class NoFilter(NoOnlyFilter):
         return False
 
 
+    def __str__(self):
+        return "No %s" % (self.filter)
+
+
+    def __repr__(self):
+        return "No %s" % (self.filter)
+
+
+class ExcludeFilter(object):
+    __slots__ = ["excluded"]
+
+    def __init__(self, excluded):
+        self.excluded = excluded
+
+
+    def apply_to_dict(self, d):
+        pass
+
+
 class Condition(NoFilter):
+    __slots__ = ["content"]
+
     def __init__(self, line):
         Filter.__init__(self, line.rstrip(":"))
         self.line = line
@@ -191,6 +409,8 @@ class Condition(NoFilter):
 
 
 class NegativeCondition(OnlyFilter):
+    __slots__ = ["content"]
+
     def __init__(self, line):
         Filter.__init__(self, line.lstrip("!").rstrip(":"))
         self.line = line
@@ -205,15 +425,17 @@ class Parser(object):
 
     @see: https://github.com/autotest/autotest/wiki/KVMAutotest-CartesianConfigParametersIntro
     """
-
-    def __init__(self, filename=None, debug=False):
+    def __init__(self, filename=None, defaults=False, debug=False):
         """
         Initialize the parser and optionally parse a file.
 
         @param filename: Path of the file to parse.
+        @param defaults: If True adds only defaults variant from variants
+                         if there is some.
         @param debug: Whether to turn on debugging output.
         """
         self.node = Node()
+        self.defaults = defaults
         self.debug = debug
         if filename:
             self.parse_file(filename)
@@ -300,19 +522,27 @@ class Parser(object):
             # 3. Move failed filters into failed_filters, so that next time we
             #    reach this node or one of its ancestors, we'll check those
             #    filters first.
+            blocked_filters = []
             for t in content:
                 filename, linenum, obj = t
                 if type(obj) is Op:
+                    new_content.append(t)
+                    continue
+                if type(obj) is ExcludeFilter:
+                    blocked_filters.append(obj.excluded)
                     new_content.append(t)
                     continue
                 # obj is an OnlyFilter/NoFilter/Condition/NegativeCondition
                 if obj.requires_action(ctx, ctx_set, labels):
                     # This filter requires action now
                     if type(obj) is OnlyFilter or type(obj) is NoFilter:
-                        self._debug("    filter did not pass: %r (%s:%s)",
-                                    obj.line, filename, linenum)
-                        failed_filters.append(t)
-                        return False
+                        if not obj in blocked_filters:
+                            self._debug("    filter did not pass: %r (%s:%s)",
+                                        obj.line, filename, linenum)
+                            failed_filters.append(t)
+                            return False
+                        else:
+                            continue
                     else:
                         self._debug("    conditional block matches: %r (%s:%s)",
                                     obj.line, filename, linenum)
@@ -334,23 +564,34 @@ class Parser(object):
                     new_content.append(t)
             return True
 
+
         def might_pass(failed_ctx,
                        failed_ctx_set,
                        failed_external_filters,
                        failed_internal_filters):
+            all_content = content + node.content
+            for t in failed_external_filters + failed_internal_filters:
+                if not t in all_content:
+                    return True
             for t in failed_external_filters:
-                if t not in content:
-                    return True
                 _, _, external_filter = t
-                if external_filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
-                                     labels):
+                if not external_filter.might_pass(failed_ctx,
+                                                  failed_ctx_set,
+                                                  ctx, ctx_set,
+                                                  labels):
+                    return False
+            for t in failed_internal_filters:
+                if not t in node.content:
                     return True
+
             for t in failed_internal_filters:
                 _, _, internal_filter = t
-                if internal_filter.might_pass(failed_ctx, failed_ctx_set, ctx, ctx_set,
-                                     labels):
-                    return True
-            return False
+                if not internal_filter.might_pass(failed_ctx,
+                                                  failed_ctx_set,
+                                                  ctx, ctx_set,
+                                                  labels):
+                    return False
+            return True
 
         def add_failed_case():
             node.failed_cases.appendleft((ctx, ctx_set,
@@ -360,21 +601,27 @@ class Parser(object):
                 node.failed_cases.pop()
 
         node = node or self.node
+        if self.debug:
+            node.dump(0)
         # Update dep
         for d in node.dep:
-            dep = dep + [".".join(ctx + [d])]
+            dep = dep + [".".join([str(label) for label in ctx + [d]])]
         # Update ctx
         ctx = ctx + node.name
         ctx_set = set(ctx)
         labels = node.labels
         # Get the current name
-        name = ".".join(ctx)
+        name = ".".join([str(label) for label in ctx])
         if node.name:
             self._debug("checking out %r", name)
+
         # Check previously failed filters
         for i, failed_case in enumerate(node.failed_cases):
             if not might_pass(*failed_case):
-                self._debug("    this subtree has failed before")
+                self._debug("\n*    this subtree has failed before %s\n"
+                            "         content: %s\n"
+                            "         failcase:%s\n",
+                            name, content + node.content, failed_case)
                 del node.failed_cases[i]
                 node.failed_cases.appendleft(failed_case)
                 return
@@ -385,20 +632,32 @@ class Parser(object):
         if (not process_content(node.content, new_internal_filters) or
             not process_content(content, new_external_filters)):
             add_failed_case()
+            self._debug("Failed_cases %s", node.failed_cases)
             return
+
         # Update shortname
         if node.append_to_shortname:
             shortname = shortname + node.name
+
         # Recurse into children
         count = 0
-        for n in node.children:
-            for d in self.get_dicts(n, ctx, new_content, shortname, dep):
-                count += 1
-                yield d
+        if self.defaults:
+            for n in node.children:
+                for d in self.get_dicts(n, ctx, new_content, shortname, dep):
+                    count += 1
+                    yield d
+                if n.default and count:
+                    break
+        else:
+            for n in node.children:
+                for d in self.get_dicts(n, ctx, new_content, shortname, dep):
+                    count += 1
+                    yield d
         # Reached leaf?
         if not node.children:
             self._debug("    reached leaf, returning it")
-            d = {"name": name, "dep": dep, "shortname": ".".join(shortname)}
+            d = {"name": name, "dep": dep,
+                 "shortname": ".".join([str(sn) for sn in shortname])}
             for _, _, op in new_content:
                 op.apply_to_dict(d)
             yield d
@@ -435,7 +694,7 @@ class Parser(object):
         print s % args
 
 
-    def _parse_variants(self, cr, node, prev_indent=-1):
+    def _parse_variants(self, cr, node, prev_indent=-1, var_name=None):
         """
         Read and parse lines from a FileReader object until a line with an
         indent level lower than or equal to prev_indent is encountered.
@@ -445,6 +704,7 @@ class Parser(object):
         @param prev_indent: The indent level of the "parent" block.
         @return: A node object.
         """
+        already_default = False
         node4 = Node()
 
         while True:
@@ -472,11 +732,30 @@ class Parser(object):
             node2.labels = node.labels
 
             node3 = self._parse(cr, node2, prev_indent=indent)
-            node3.name = name.lstrip("@").split(".")
-            node3.dep = dep.replace(",", " ").split()
-            node3.append_to_shortname = not name.startswith("@")
+            is_default = name.startswith("@")
+            name = name.lstrip("@")
+            node3.name = [Label(var_name, n) for n in name.split(".")]
+            node3.dep = [Label(var_name, d) for d in dep.replace(",", " ").split()]
 
-            node4.children += [node3]
+            if var_name:
+                l = "%s = %s" % (var_name, name)
+                op_match = _ops_exp.search(l)
+                node3.content += [(cr.filename, linenum, Op(l, op_match))]
+
+            node3.append_to_shortname = not is_default
+
+            if self.defaults:        # relevant only if defaults is True
+                if is_default and not already_default:
+                    node3.default = True
+                    already_default = True
+                if node3.default:
+                    # Move default variant in front of rest of all variants.
+                    # Speed optimization.
+                    node4.children.insert(0, node3)
+                else:
+                    node4.children += [node3]
+            else:
+                node4.children += [node3]
             node4.labels.update(node3.labels)
             node4.labels.update(node3.name)
 
@@ -501,14 +780,30 @@ class Parser(object):
             words = line.split(None, 1)
 
             # Parse 'variants'
-            if line == "variants:":
+            if line.startswith("variants"):
                 # 'variants' is not allowed inside a conditional block
                 if (isinstance(node, Condition) or
                     isinstance(node, NegativeCondition)):
                     raise ParserError("'variants' is not allowed inside a "
                                       "conditional block",
                                       None, cr.filename, linenum)
-                node = self._parse_variants(cr, node, prev_indent=indent)
+                name = None
+                if not words[0] in ["variants", "variants:"]:
+                    raise ParserError("Illegal characters in variants",
+                                       line, cr.filename, linenum)
+                if words[0] == "variants":
+                    try:
+                        name, _ = words[1].split(":")  # split name and comment
+                    except ValueError:
+                        raise ParserError("Missing : in variants expression",
+                                              line, cr.filename, linenum)
+                    for char in name:
+                        if not (char.isalnum() or char.isspace() or
+                                char in "._-"):
+                            raise ParserError("Illegal characters in variants",
+                                              line, cr.filename, linenum)
+                node = self._parse_variants(cr, node, prev_indent=indent,
+                                            var_name=name)
                 continue
 
             # Parse 'include' statements
@@ -542,6 +837,25 @@ class Parser(object):
                     e.linenum = linenum
                     raise
                 node.content += [(cr.filename, linenum, f)]
+                continue
+
+            # Parse block filter
+            if words[0] == "exclude":
+                try:
+                    sub_words = words[1].split(None, 1)
+                    f = None
+                    if sub_words[0] == "only":
+                        f = OnlyFilter(words[1])
+                    elif sub_words[0] == "no":
+                        f = NoFilter(words[1])
+                except ParserError, e:
+                    e.line = line
+                    e.filename = cr.filename
+                    e.linenum = linenum
+                    raise
+                if type(f) in (OnlyFilter, NoFilter):
+                    f = ExcludeFilter(f)
+                    node.content = [(cr.filename, linenum, f)] + node.content
                 continue
 
             # Look for operators
@@ -581,46 +895,59 @@ class Parser(object):
 _reserved_keys = set(("name", "shortname", "dep"))
 
 
+def _subtitution(value, d):
+    """
+    Only optimization string Template subtitute is quite expensive operation.
+
+    @param value: String where could be $string for subtitution.
+    @param d: Dictionary from which should be value subtituted to value.
+
+    @return: Substituted string
+    """
+    if "$" in value:
+        st = string.Template(value)
+        return st.safe_substitute(d)
+    else:
+        return value
+
+
 def _op_set(d, key, value):
     if key not in _reserved_keys:
-        st = string.Template(value)
-        d[key] = st.safe_substitute(d)
+        d[key] = _subtitution(value, d)
 
 
 def _op_append(d, key, value):
     if key not in _reserved_keys:
-        st = string.Template(value)
-        d[key] = d.get(key, "") + st.safe_substitute(d)
+        d[key] = d.get(key, "") + _subtitution(value, d)
 
 
 def _op_prepend(d, key, value):
     if key not in _reserved_keys:
-        st = string.Template(value)
-        d[key] = st.safe_substitute(d) + d.get(key, "")
+        d[key] = _subtitution(value, d) + d.get(key, "")
 
 
 def _op_regex_set(d, exp, value):
     exp = re.compile("%s$" % exp)
-    st = string.Template(value)
+    value = _subtitution(value, d)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] = st.safe_substitute(d)
+            d[key] = value
 
 
 def _op_regex_append(d, exp, value):
     exp = re.compile("%s$" % exp)
-    st = string.Template(value)
+    value = _subtitution(value, d)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] += st.safe_substitute(d)
+            d[key] += value
 
 
 def _op_regex_prepend(d, exp, value):
     exp = re.compile("%s$" % exp)
-    st = string.Template(value)
+    value = _subtitution(value, d)
     for key in d:
         if key not in _reserved_keys and exp.match(key):
-            d[key] = st.safe_substitute(d) + d[key]
+            d[key] = value + d[key]
 
 
 def _op_regex_del(d, empty, exp):
@@ -642,6 +969,8 @@ _ops_exp = re.compile("|".join([op[0] for op in _ops.values()]))
 
 
 class Op(object):
+    __slots__ = ["func", "key", "value"]
+
     def __init__(self, line, m):
         self.func = _ops[m.group()][1]
         self.key = line[:m.start()].strip()
@@ -767,14 +1096,20 @@ if __name__ == "__main__":
                       help="show dict contents")
     parser.add_option("-r", "--repr", dest="repr_mode", action="store_true",
                       help="Output parsing results Python format")
+    parser.add_option("-d", "--defaults", dest="defaults", action="store_true",
+                      help="use only default variant of variants if there"
+                           " is some")
 
     options, args = parser.parse_args()
     if not args:
         parser.error("filename required")
 
-    c = Parser(args[0], debug=options.debug)
+    c = Parser(args[0], defaults=options.defaults, debug=options.debug)
     for s in args[1:]:
         c.parse_string(s)
+
+    if options.debug:
+        c.node.dump(0, True)
 
     dicts = c.get_dicts()
     print_dicts(options, dicts)
