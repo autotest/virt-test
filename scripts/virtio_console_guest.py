@@ -336,8 +336,10 @@ class VirtioGuestPosix(VirtioGuest):
             @param cachesize: Block to receive and send.
             """
             Thread.__init__(self, name="Switch")
-            self.in_files = in_files
-            self.out_files = out_files
+            self.in_files = in_files[0]
+            self.in_names = in_files[1]
+            self.out_files = out_files[0]
+            self.out_names = out_files[1]
             self.exit_thread = event
             self.method = method
 
@@ -414,57 +416,89 @@ class VirtioGuestPosix(VirtioGuest):
             data = ""
             while not self.exit_thread.isSet():
                 data = ""
-                for desc in self.in_files:
+                for i in xrange(len(self.in_files)):
+                    if self.exit_thread.isSet():
+                        break
+                    desc = self.in_files[i]
                     try:
                         data += os.read(desc, self.cachesize)
                     except OSError, inst:
-                        print "Reconnecting, readerr %s" % inst
-                        _desc = desc
-                        for item in virt.files.iteritems():
-                            if item[1] == desc:
-                                path = item[0]
-                                break
-                        for item in virt.ports.iteritems():
-                            if item[1]['path'] == path:
-                                name = item[0]
-                                break
-                        virt.close(name)
-                        while not self.exit_thread.isSet():
-                            try:
-                                desc = virt._open([name])[0]
-                                print "PASS: Opened %s" % name
-                                break
-                            except OSError:
-                                time.sleep(1)
-                        self.in_files[self.in_files.index(_desc)] = desc
+                        if inst.errno == 9:
+                            # Wait 0.1 before spoiling output with additional
+                            # log information.
+                            #time.sleep(0.5)
+                            sys.stdout.write("FD closed, readerr %s\n" % inst)
+                            while self.in_names[i] not in virt.files:
+                                time.sleep(0.1)
+                            self.in_files[i] = virt.files[self.in_names[i]]
+                        else:
+                            sys.stdout.write("Missing device, readerr %s\n"
+                                             % inst)
+                            _desc = desc
+                            for item in virt.files.iteritems():
+                                if item[1] == desc:
+                                    path = item[0]
+                                    break
+                            for item in virt.ports.iteritems():
+                                if item[1]['path'] == path:
+                                    name = item[0]
+                                    break
+                            virt.close(name)
+                            while not self.exit_thread.isSet():
+                                try:
+                                    desc = virt._open([name])[0]
+                                    sys.stdout.write("PASS: Opened %s\n"
+                                                     % name)
+                                    break
+                                except OSError:
+                                    time.sleep(1)
+                            self.in_files[self.in_files.index(_desc)] = desc
                 if data != "":
-                    for desc in self.out_files:
+                    for i in xrange(len(self.out_files)):
+                        if self.exit_thread.isSet():
+                            break
+                        desc = self.out_files[i]
                         written = False
                         while not written:
                             try:
+                                if self.exit_thread.isSet():
+                                    break
                                 os.write(desc, data)
                                 written = True
                             except OSError, inst:
-                                print "Reconnecting, writeerr %s" % inst
-                                _desc = desc
-                                for item in virt.files.iteritems():
-                                    if item[1] == desc:
-                                        path = item[0]
-                                        break
-                                for item in virt.ports.iteritems():
-                                    if item[1]['path'] == path:
-                                        name = item[0]
-                                        break
-                                virt.close(name)
-                                while not self.exit_thread.isSet():
-                                    try:
-                                        desc = virt._open([name])[0]
-                                        print "PASS: Opened %s" % name
-                                        break
-                                    except OSError:
-                                        time.sleep(1)
-                                _desc = self.out_files.index(_desc)
-                                self.out_files[_desc] = desc
+                                if inst.errno == 9:
+                                    # Wait 0.1 before spoiling output with
+                                    # additional log information.
+                                    #time.sleep(0.5)
+                                    sys.stdout.write("FD closed, writeerr %s\n"
+                                                     % inst)
+                                    while self.out_names[i] not in virt.files:
+                                        time.sleep(0.1)
+                                    self.out_files[i] = virt.files[
+                                                            self.out_names[i]]
+                                else:
+                                    sys.stdout.write("Missing device, writeerr"
+                                                     " %s\n" % inst)
+                                    _desc = desc
+                                    for item in virt.files.iteritems():
+                                        if item[1] == desc:
+                                            path = item[0]
+                                            break
+                                    for item in virt.ports.iteritems():
+                                        if item[1]['path'] == path:
+                                            name = item[0]
+                                            break
+                                    virt.close(name)
+                                    while not self.exit_thread.isSet():
+                                        try:
+                                            desc = virt._open([name])[0]
+                                            sys.stdout.write("PASS: Opened "
+                                                             "%s\n" % name)
+                                            break
+                                        except OSError:
+                                            time.sleep(1)
+                                    _desc = self.out_files.index(_desc)
+                                    self.out_files[_desc] = desc
 
         def run(self):
             if (self.method == VirtioGuest.LOOP_POLL):
@@ -760,11 +794,14 @@ class VirtioGuestPosix(VirtioGuest):
 
         in_f = self._open(in_files)
         out_f = self._open(out_files)
+        in_files = [self.ports[item]["path"] for item in in_files]
+        out_files = [self.ports[item]["path"] for item in out_files]
 
-        s = self.Switch(in_f, out_f, self.exit_thread, cachesize, mode)
+        s = self.Switch([in_f, in_files], [out_f, out_files], self.exit_thread,
+                        cachesize, mode)
         s.start()
         self.threads.append(s)
-        print "PASS: Start switch"
+        sys.stdout.write("PASS: Start switch\n")
 
     def exit_threads(self):
         """
@@ -772,7 +809,7 @@ class VirtioGuestPosix(VirtioGuest):
         """
         self.exit_thread.set()
         for th in self.threads:
-            print "join"
+            print "join %s" % th.getName()
             th.join()
         self.exit_thread.clear()
 
@@ -787,7 +824,7 @@ class VirtioGuestPosix(VirtioGuest):
         Quit consoleswitch.
         """
         self.exit_threads()
-        exit()
+        sys.exit(0)
 
     def send_loop_init(self, port, length):
         """
@@ -1229,7 +1266,7 @@ def compile_script():
     import py_compile
     py_compile.compile(__file__, "%so" % __file__)
     print "PASS: compile"
-    sys.exit()
+    sys.exit(0)
 
 
 def worker(virt):
