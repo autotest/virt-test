@@ -245,6 +245,12 @@ class VirtTestRunParser(optparse.OptionParser):
                         help=("Bridge name to be used "
                               "(if you chose bridge as nettype). "
                               "Default: %default"))
+        qemu.add_option("--vhost", action="store", dest="vhost",
+                        default="off",
+                        help=("Whether to enable vhost for qemu "
+                              "(on/off/force). Depends on nettype=bridge. "
+                              "If -c is provided, this will be ignored. "
+                              "Default: %default"))
         qemu.add_option("--monitor", action="store", dest="monitor",
                         default='human',
                         help="Monitor type (human or qmp). Default: %default")
@@ -440,6 +446,26 @@ class VirtTestApp(object):
             logging.info("Config provided, ignoring --disk-bus option")
 
 
+    def _process_vhost(self):
+        if not self.options.config:
+            if self.options.nettype == "bridge":
+                if self.options.vhost == "on":
+                    self.cartesian_parser.assign("netdev_extra_params",
+                                                 '"vhost=on"')
+                elif self.options.vhost == "force":
+                    self.cartesian_parser.assign("netdev_extra_params",
+                                                 '"vhostforce=on"')
+            else:
+                if self.options.vhost in ["on", "force"]:
+                    _restore_stdout()
+                    print("Nettype %s is incompatible with vhost %s, "
+                          "aborting..." %
+                          (self.options.nettype, self.options.vhost))
+                    sys.exit(1)
+        else:
+            logging.info("Config provided, ignoring --vhost option")
+
+
     def _process_qemu_specific_options(self):
         """
         Calls for processing all options specific to the qemu test.
@@ -455,6 +481,7 @@ class VirtTestApp(object):
         self._process_image_type()
         self._process_nic_model()
         self._process_disk_buses()
+        self._process_vhost()
 
 
     def _process_guest_os(self):
