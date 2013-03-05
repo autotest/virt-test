@@ -2138,9 +2138,8 @@ variants:
             - @specifiable:
                 variants:
                     # Tests which uses preprocessed VM
-                    - @with_vm:
+                    - virtio_console_smoke:
                         variants:
-                            # Smoke tests
                             - open:
                                virtio_console_test = open
                             - check_zero_sym:
@@ -2175,7 +2174,8 @@ variants:
                                 virtio_console_test = rw_nonblocking_mode
                             - basic_loopback:
                                 virtio_console_test = basic_loopback
-                            # Destructive tests
+                    - @with_vm:
+                        variants:
                             - rmmod:
                                 only Linux
                                 virtio_console_test = rmmod
