@@ -224,6 +224,11 @@ class VirtTestRunParser(optparse.OptionParser):
                            default="1024",
                            help=("RAM dedicated to the main VM. Default:"
                                  "%default"))
+        general.add_option("--no", action="store", dest="no_filter", default="",
+                           help=("List of space separated no filters to be "
+                                 "passed to the config parser. If -c is "
+                                 "provided, this will be ignored"))
+
         self.add_option_group(general)
 
         qemu = optparse.OptionGroup(self, 'Options specific to the qemu test')
@@ -276,10 +281,6 @@ class VirtTestRunParser(optparse.OptionParser):
                               " ".join(SUPPORTED_DISK_BUSES) +
                               ". If -c is provided, this will be ignored. "
                               "Default: %default"))
-        qemu.add_option("--no", action="store", dest="no_filter", default="",
-                        help=("List of space separated no filters to be "
-                              "passed to the config parser. If -c is "
-                              "provided, this will be ignored"))
         self.add_option_group(qemu)
 
 
