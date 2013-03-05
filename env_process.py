@@ -482,6 +482,7 @@ def preprocess(test, params, env):
         global _screendump_thread, _screendump_thread_termination_event
         _screendump_thread_termination_event = threading.Event()
         _screendump_thread = threading.Thread(target=_take_screendumps,
+                                              name='ScreenDump',
                                               args=(test, params, env))
         _screendump_thread.start()
 
@@ -741,3 +742,6 @@ def _take_screendumps(test, params, env):
                 _screendump_thread_termination_event = None
                 break
             _screendump_thread_termination_event.wait(delay)
+        else:
+            # Exit event was deleted, exit this thread
+            break
