@@ -2221,6 +2221,8 @@ variants:
                                     - replug_random:
                                         only spread_linear
                                         virtio_console_interruption = replug_random
+                                    - suspend:
+                                        virtio_console_interruption = s3
                                     - hibernate:
                                         # set_s4_cmd and check_s4_support_cmd must
                                         # be set in guest-os.cfg
