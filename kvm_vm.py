@@ -639,8 +639,10 @@ class VM(virt_vm.BaseVM):
             # -drive part
             if blkdebug is not None:
                 cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
-            else:
+            elif filename:
                 cmd = " -drive file='%s'" % filename
+            else:
+                cmd = " -drive "
 
             cmd += _add_option("index", index)
             cmd += _add_option("if", format)
@@ -655,6 +657,7 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("readonly", readonly, bool)
             cmd += _add_option("format", imgfmt)
             cmd += _add_option("aio", aio)
+            cmd = re.sub("\s+,", " ", cmd)
 
             return cmd + dev
 
@@ -1491,34 +1494,36 @@ class VM(virt_vm.BaseVM):
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
                 iso = utils_misc.get_path(root_dir, iso)
-                if params.get("index_enable") == "yes":
-                    drive_index = cdrom_params.get("drive_index")
-                    if drive_index:
-                        index = drive_index
-                    else:
-                        index_global = get_index(index_global)
-                        index = str(index_global)
-                        index_global += 1
-                else:
-                    index = None
-                if has_option(help, "device"):
-                    if not cd_format.startswith("scsi-"):
-                        cd_format = "ide"
-                    qemu_cmd += add_drive(help, iso, index, cd_format,
-                                          media="cdrom",
-                                          ide_bus=ide_bus,
-                                          ide_unit=ide_unit,
-                                          bus = bus,
-                                          scsi_disk = scsi_disk)
-                else:
-                    qemu_cmd += add_cdrom(help, iso, index)
-                if cd_format == "ide":
-                    if ide_unit == 1:
-                        ide_bus += 1
-                    ide_unit ^= 1
-                elif cd_format.startswith("scsi-"):
-                    scsi_disk += 1
+            elif params.get("cdrom_without_file") != "yes":
+                continue
 
+            if params.get("index_enable") == "yes":
+                drive_index = cdrom_params.get("drive_index")
+                if drive_index:
+                    index = drive_index
+                else:
+                    index_global = get_index(index_global)
+                    index = str(index_global)
+                    index_global += 1
+            else:
+                index = None
+            if has_option(help, "device"):
+                if not cd_format.startswith("scsi-"):
+                    cd_format = "ide"
+                qemu_cmd += add_drive(help, iso, index, cd_format,
+                                      media="cdrom",
+                                      ide_bus=ide_bus,
+                                      ide_unit=ide_unit,
+                                      bus = bus,
+                                      scsi_disk = scsi_disk)
+            else:
+                qemu_cmd += add_cdrom(help, iso, index)
+            if cd_format == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            elif cd_format.startswith("scsi-"):
+                scsi_disk += 1
 
         soundhw = params.get("soundcards")
         if soundhw:
@@ -1829,13 +1834,13 @@ class VM(virt_vm.BaseVM):
                 pa_type = nic_params.get("pci_assignable")
                 if pa_type and pa_type != "no":
                     if self.pci_assignable is None:
-                       self.pci_assignable = test_setup.PciAssignable(
-                           driver=params.get("driver"),
-                           driver_option=params.get("driver_option"),
-                           host_set_flag = params.get("host_setup_flag"),
-                           kvm_params = params.get("kvm_default"),
-                           vf_filter_re = params.get("vf_filter_re"),
-                           pf_filter_re = params.get("pf_filter_re"))
+                        self.pci_assignable = test_setup.PciAssignable(
+                            driver=params.get("driver"),
+                            driver_option=params.get("driver_option"),
+                            host_set_flag = params.get("host_setup_flag"),
+                            kvm_params = params.get("kvm_default"),
+                            vf_filter_re = params.get("vf_filter_re"),
+                            pf_filter_re = params.get("pf_filter_re"))
                     # Virtual Functions (VF) assignable devices
                     if pa_type == "vf":
                         self.pci_assignable.add_device(device_type=pa_type)
