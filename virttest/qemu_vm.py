@@ -591,8 +591,10 @@ class VM(virt_vm.BaseVM):
 
             if blkdebug is not None:
                 cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
-            else:
+            elif filename:
                 cmd = " -drive file='%s'" % filename
+            else:
+                cmd = " -drive "
 
             cmd += _add_option("index", index)
             cmd += _add_option("if", fmt)
@@ -606,6 +608,7 @@ class VM(virt_vm.BaseVM):
                 cmd += _add_option("boot", boot, bool)
             cmd += _add_option("id", name)
             cmd += _add_option("readonly", readonly, bool)
+            cmd = re.sub("\s+,", " ", cmd)
             return cmd + dev
 
         def add_nic(help_text, vlan, model=None, mac=None, device_id=None, netdev_id=None,
@@ -1354,6 +1357,8 @@ class VM(virt_vm.BaseVM):
                               utils_misc.get_path(data_dir.get_data_dir(), iso),
                                       cdrom_params.get("drive_index"),
                                       cd_format, bus)
+            elif params.get("cdrom_without_file") != "yes":
+                continue
 
         soundhw = params.get("soundcards")
         if soundhw:
