@@ -655,8 +655,10 @@ def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     logging.info("Job total elapsed time: %.2f s", job_elapsed_time)
 
     n_tests_passed = n_tests - n_tests_skipped - n_tests_failed
-    success_rate = ((float(n_tests_passed) /
-                     float(n_tests - n_tests_skipped)) * 100)
+    success_rate = 0
+    if (n_tests - n_tests_skipped > 0):
+        success_rate = ((float(n_tests_passed) /
+                         float(n_tests - n_tests_skipped)) * 100)
 
     print_header("TESTS PASSED: %d" % n_tests_passed)
     print_header("TESTS FAILED: %d" % n_tests_failed)
