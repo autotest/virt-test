@@ -51,6 +51,7 @@ def run_smbios_table(test, params, env):
         tmp = utils_misc.get_support_machine_type(qemu_binary)
         (support_machine_types, expect_system_versions) = tmp
 
+    failures = []
     for m_type in support_machine_types:
         params["machine_type"] = m_type
         params["start_vm"] = "yes"
@@ -62,7 +63,6 @@ def run_smbios_table(test, params, env):
         session = vm1.wait_for_login(timeout = login_timeout)
 
         error.context("Check smbios info on guest is setted as expected")
-        failures = []
 
         for sm_type in smbios_type.split():
             if sm_type == "Bios":
