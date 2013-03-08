@@ -5,6 +5,7 @@ import common
 from virttest import xml_utils, virsh
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
 from virttest.libvirt_xml import libvirt_xml
+from virttest.libvirt_xml.devices import librarian
 
 
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
@@ -248,6 +249,20 @@ class testNetworkXML(LibvirtXMLTestBase):
         ipxml = netxml.ip
         self.assertEqual(ipxml.address, 'address_test')
         self.assertEqual(ipxml.netmask, 'netmask_test')
+
+
+class testLibrarian(LibvirtXMLTestBase):
+
+    def testBadNames(self):
+        for badname in ('__init__', 'librarian', '__doc__', '/dev/null', '', None):
+            self.assertRaises(ValueError, librarian.get, badname)
+
+
+    def testNoModule(self):
+        original_known_types = librarian.known_types
+        for badname in ('DoesNotExist', '/dev/null', '', None):
+            librarian.known_types.add(badname)
+            self.assertRaises(ValueError, librarian.get, badname)
 
 
 if __name__ == "__main__":
