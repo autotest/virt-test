@@ -5,6 +5,7 @@ import common
 from virttest import xml_utils, virsh
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
 from virttest.libvirt_xml import libvirt_xml
+from virttest.libvirt_xml.devices import devlib
 
 
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
@@ -235,6 +236,20 @@ class testNetworkXML(LibvirtXMLTestBase):
         self.assertEqual(test_xtf.find('name').text, 'test1')
         self.assertEqual(test_xtf.find('uuid').text, 'test2')
         self.assertEqual(test_xtf.find('bridge').get('test3'), 'test4')
+
+
+class testDevLib(LibvirtXMLTestBase):
+
+    def testBadNames(self):
+        for badname in ('__init__', 'devlib', '__doc__', '/dev/null', '', None):
+            self.assertRaises(ValueError, devlib.get, badname)
+
+
+    def testNoModule(self):
+        original_known_types = devlib.known_types
+        for badname in ('DoesNotExist', '/dev/null', '', None):
+            devlib.known_types.add(badname)
+            self.assertRaises(ValueError, devlib.get, badname)
 
 
 if __name__ == "__main__":
