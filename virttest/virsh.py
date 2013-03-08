@@ -1729,7 +1729,6 @@ def snapshot_revert(name, snapshot, **dargs):
     return command("snapshot-revert %s %s" % (name, snapshot), **dargs)
 
 
-
 def snapshot_delete(name, snapshot, **dargs):
     """
     Remove domain snapshot
@@ -1772,6 +1771,7 @@ def cpu_stats(name, options, **dargs):
         cmd += " %s" % options
 
     return command(cmd, **dargs)
+
 
 def change_media(name, device, options, **dargs):
     """
@@ -1817,3 +1817,13 @@ def numatune(name, mode=None, nodeset=None, options=None, **dargs):
         cmd += " --nodeset %s" % nodeset
 
     return command(cmd, **dargs)
+
+
+def ttyconsole(name, **dargs):
+    """
+    Print tty console device.
+
+    @param name: name, uuid or id of domain
+    @return: CmdResult instance
+    """
+    return command("ttyconsole %s" % name, **dargs)
