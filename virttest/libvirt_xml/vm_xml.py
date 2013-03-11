@@ -7,7 +7,7 @@ import logging
 from autotest.client.shared import error
 from virttest import virsh
 from virttest.libvirt_xml import base, accessors, xcepts
-from virttest.libvirt_xml.devices import devlib
+from virttest.libvirt_xml.devices import device_librarian
 
 class VMXMLBase(base.LibvirtXMLBase):
     """
