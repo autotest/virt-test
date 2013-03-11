@@ -3,13 +3,13 @@ Common base classes for devices
 """
 
 from virttest import virsh
-from libvirt_xml import base, xcepts, accessors
+from virttest.libvirt_xml import base, xcepts, accessors
 
 class UntypedDeviceBase(base.LibvirtXMLBase):
 
     __slots__ = base.LibvirtXMLBase.__slots__
 
-    def __init__(self, virsh_instance=virsh, device_tag):
+    def __init__(self, virsh_instance=virsh, device_tag=None):
         super(UntypedDeviceBase, self).__init__(virsh_instance)
         self.xml = u"<%s/>" % device_tag
 
@@ -18,7 +18,7 @@ class TypedDeviceBase(UntypedDeviceBase):
 
     __slots__ = UntypedDeviceBase.__slots__ + ('type_name')
 
-    def __init__(self, virsh_instance=virsh, device_tag, type_name):
+    def __init__(self, virsh_instance=virsh, device_tag=None, type_name=None):
         # generate getter, setter, deleter for 'type_name' property
         accessors.XMLAttribute('type_name', self,
                                # each device is it's own XML "document"
