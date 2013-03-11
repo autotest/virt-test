@@ -40,25 +40,6 @@ class VMXMLDevices(list):
             self.append(item)
 
 
-class VMXMLDevices(VMXMLDevicesBase):
-    """
-    Higher-level manipulations related to Devices in VM's XML.
-    """
-
-    @staticmethod
-    def get_all_device_nodes(vmxml):
-        """
-        Put all nodes of devices into a list.
-        """
-        devices_node = vmxml.dict_get('xml').find('devices')
-        devices = VMXMLDevices()
-        for node in devices_node:
-            device_tag = node.tag
-            device_class = librarian.get(device_tag)
-            new_one = device_class.new_from_element(node)
-            devices.append(new_one)
-        return devices
-
 class VMXMLBase(base.LibvirtXMLBase):
     """
     Accessor methods for VMXML class properties (items in __slots__)
@@ -150,6 +131,21 @@ class VMXML(VMXMLBase):
         Return class that handles type_name devices, or raise exception.
         """
         return librarian.get(type_name)
+
+
+    @staticmethod
+    def get_all_device_nodes(vmxml):
+        """
+        Put all nodes of devices into a list.
+        """
+        devices_node = vmxml.dict_get('xml').find('devices')
+        devices = VMXMLDevices()
+        for node in devices_node:
+            device_tag = node.tag
+            device_class = librarian.get(device_tag)
+            new_one = device_class.new_from_element(node)
+            devices.append(new_one)
+        return devices
 
 
     def undefine(self):
