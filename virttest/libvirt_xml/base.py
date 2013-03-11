@@ -17,11 +17,12 @@ class LibvirtXMLBase(propcan.PropCanBase):
             set: validates and sets value
             get: returns value
             del: removes value
-
+        validates: virtual, read-only, return True/False from virt-xml-validate
     """
 
-    __slots__ = ('xml', 'virsh', 'xmltreefile', 'xmlstr')
+    __slots__ = ('xml', 'virsh', 'xmltreefile', 'validates')
 
+    __schema_name__ = None
 
     def __init__(self, virsh_instance=virsh):
         """
@@ -118,3 +119,40 @@ class LibvirtXMLBase(propcan.PropCanBase):
         except xcepts.LibvirtXMLError: # Allow other exceptions through
             pass # no XML was loaded yet
         return the_copy
+
+
+    def get_validates(self):
+        """
+        Accessor method for 'validates' property returns virt-xml-validate T/F
+        """
+        # self.xml is the filename
+        ret = self.validates(self.xml, self.super_get('__schema_name__'))
+        if ret.exit_status == 0:
+            return True
+        else:
+            return False
+
+
+    def set_validates(self, value):
+        """
+        Raises LibvirtXMLError
+        """
+        raise xcepts.LibvirtXMLError("Read only property")
+
+
+    def del_validates(self):
+        """
+        Raises LibvirtXMLError
+        """
+        raise xcepts.LibvirtXMLError("Read only property")
+
+
+    @staticmethod
+    def validates(filename, schema_name=None):
+        command = 'virt-xml-validate %s' % self.xml # filename
+        if schema_name:
+            command += ' %s' % schema_name
+        cmdresult = utils.run(command,
+                              verbose=self.virsh.verbose,
+                              ignore_status=True)
+        return cmdresult
