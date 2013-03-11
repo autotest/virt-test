@@ -4915,10 +4915,10 @@ variants:
         variants:
             - qmp:
                 main_monitor = qmp1
-                black_list = "block-stream __com.redhat_drive-reopen __com.redhat_drive-mirror transaction blockdev-snapshot-sync"
+                black_list = "block-stream __com.redhat_drive-reopen __com.redhat_drive-mirror transaction blockdev-snapshot-sync drive-mirror blockdev-snapshot-sync"
             - human:
                 main_monitor = humanmonitor1
-                black_list = "block-stream __com.redhat_drive-reopen __com.redhat_drive-mirror"
+                black_list = "block-stream __com.redhat_drive-reopen __com.redhat_drive-mirror drive_mirror blockdev-snapshot-sync"
 
     - block_stream:
         only Host_RHEL.6
