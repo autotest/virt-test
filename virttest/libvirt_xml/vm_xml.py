@@ -7,7 +7,46 @@ import logging
 from autotest.client.shared import error
 from virttest import virsh
 from virttest.libvirt_xml import base, accessors, xcepts
-from virttest.libvirt_xml.devices import device_librarian
+from virttest.libvirt_xml.devices import librarian
+
+
+class VMXMLDevicesBase(base.LibvirtXMLBase):
+    """
+    Accessor methods for VMXMLDevicesBase class properties.
+    """
+
+    __slot__ = base.LibvirtXMLBase.__slots__
+
+    def __init__(self, virsh_instance=virsh):
+        # No special attribute for devices in vm XML format
+        super(VMXMLDevicesBase, self).__init__(virsh_instance)
+
+
+class VMXMLDevices(VMXMLDevicesBase):
+    """
+    Higher-level manipulations related to Devices in VM's XML.
+    """
+
+    def __init__(self, vmxml, virsh_instance=virsh):
+        """
+        Create new VM XML instance
+        """
+        super(VMXMLDevices, self).__init__(virsh_instance)
+        # VMXMLDevices class should work for VMXML class
+        self.xml = vmxml
+
+
+    @staticmethod
+    def get_all_device_nodes(vmxml):
+        """
+        Put all nodes of devices into a list.
+        """
+        devices_node = vmxml.dict_get('xml').find('devices')
+        devices = []
+        for node in devices_node:
+            print node
+        # Working...
+
 
 class VMXMLBase(base.LibvirtXMLBase):
     """
@@ -92,6 +131,14 @@ class VMXML(VMXMLBase):
         vmxml = VMXML(virsh_instance=virsh_instance)
         vmxml['xml'] = virsh_instance.dumpxml(vm_name)
         return vmxml
+
+
+    @staticmethod
+    def get_device_class(type_name):
+        """
+        Return class that handles type_name devices, or raise exception.
+        """
+        return librarian.get(type_name)
 
 
     def undefine(self):
