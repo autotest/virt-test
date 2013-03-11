@@ -6,7 +6,7 @@ Always raises ValueError for bad/unknown/unsupported type names
 
 import os, imp
 
-# Avoid accidental names like __init__, devlib, and/or other support modules
+# Avoid accidental names like __init__, librarian, and/or other support modules
 known_types = set(('disk', 'filesystem', 'address', 'controller', 'lease',
                    'hostdev', 'redirdev', 'smartcard', 'interface', 'input',
                    'hub', 'graphics', 'video', 'parallel', 'serial', 'console',
