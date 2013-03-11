@@ -3,7 +3,7 @@ Classes to support XML for serial devices
 http://libvirt.org/formatdomain.html#elementCharSerial
 """
 
-from devices import base
+import base
 
 class SerialBase(base.TypedDeviceBase):
 
