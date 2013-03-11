@@ -7,11 +7,20 @@ from virttest.libvirt_xml import base, xcepts, accessors
 
 class UntypedDeviceBase(base.LibvirtXMLBase):
 
-    __slots__ = base.LibvirtXMLBase.__slots__
+    __slots__ = base.LibvirtXMLBase.__slots__ + ('device_tag')
 
     def __init__(self, virsh_instance=virsh, device_tag=None):
         super(UntypedDeviceBase, self).__init__(virsh_instance)
+        # Just a regular dictionary value
+        self['device_tag'] = device_tag
+        # setup bare-bones XML
         self.xml = u"<%s/>" % device_tag
+
+
+    @staticmethod
+    def new_from_element(element):
+        # Subclasses required to override this
+        raise NotImplimentedError
 
 
 class TypedDeviceBase(UntypedDeviceBase):
