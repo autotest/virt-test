@@ -9,17 +9,35 @@ from virttest import virsh
 from virttest.libvirt_xml import base, accessors, xcepts
 from virttest.libvirt_xml.devices import librarian
 
-
-class VMXMLDevicesBase(base.LibvirtXMLBase):
+class VMXMLDevices(list):
     """
-    Accessor methods for VMXMLDevicesBase class properties.
+    List of device instances from classes handed out by librarian.get()
     """
 
-    __slot__ = base.LibvirtXMLBase.__slots__
+    def __type_check__(self, other):
+        try:
+            # Raise error if object isn't dict-like or doesn't have key
+            device_tag = other['device_tag']
+            # Check that we have support for this type
+            librarian.get(device_tag)
+        except Exception: # Required to always raise TypeError for list API
+            raise TypeError("Unsupported item type: %s" % str(other_type))
 
-    def __init__(self, virsh_instance=virsh):
-        # No special attribute for devices in vm XML format
-        super(VMXMLDevicesBase, self).__init__(virsh_instance)
+
+    def __setitem__(self, key, value):
+        self.__type_check__(value)
+        super(VMXMLDevicesBase, self).__setitem__(key, value)
+
+
+    def append(self, value):
+        self.__type_check__(value)
+        super(VMXMLDevicesBase, self).append(value)
+
+
+    def extend(self, iterable):
+        # Make sure __type_check__ happens
+        for item in iterable:
+            self.append(item)
 
 
 class VMXMLDevices(VMXMLDevicesBase):
@@ -27,26 +45,19 @@ class VMXMLDevices(VMXMLDevicesBase):
     Higher-level manipulations related to Devices in VM's XML.
     """
 
-    def __init__(self, vmxml, virsh_instance=virsh):
-        """
-        Create new VM XML instance
-        """
-        super(VMXMLDevices, self).__init__(virsh_instance)
-        # VMXMLDevices class should work for VMXML class
-        self.xml = vmxml
-
-
     @staticmethod
     def get_all_device_nodes(vmxml):
         """
         Put all nodes of devices into a list.
         """
         devices_node = vmxml.dict_get('xml').find('devices')
-        devices = []
+        devices = VMXMLDevices()
         for node in devices_node:
-            print node
-        # Working...
-
+            device_tag = node.tag
+            device_class = librarian.get(device_tag)
+            new_one = device_class.new_from_element(node)
+            devices.append(new_one)
+        return devices
 
 class VMXMLBase(base.LibvirtXMLBase):
     """
