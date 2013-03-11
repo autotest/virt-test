@@ -5,7 +5,7 @@ http://libvirt.org/formatdomain.html
 
 import logging
 from autotest.client.shared import error
-from virttest import virsh
+from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 from virttest.libvirt_xml.devices import librarian
 
@@ -65,7 +65,7 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
-                                                 'uuid', 'vcpu')
+                                                 'uuid', 'vcpu', 'devices')
 
 
     def __init__(self, virsh_instance=virsh):
@@ -91,6 +91,39 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  parent_xpath='/',
                                  tag_name='vcpu')
         super(VMXMLBase, self).__init__(virsh_instance)
+
+
+    def get_devices(self):
+        """
+        Put all nodes of devices into a list.
+        """
+        devices = VMXMLDevices()
+        for node in self.xmltreefile.find('/devices'):
+            device_tag = node.tag
+            device_class = librarian.get(device_tag)
+            new_one = device_class.new_from_element(node)
+            devices.append(new_one)
+        return devices
+
+
+    def set_devices(self, value):
+        value_type = type(value)
+        if not issubclass(value_type, VMXMLDevices):
+            raise LibvirtXMLError("Value %s Must be a VMXMLDevices or subclass "
+                                  "not a %s" % (str(value), str(value_type))
+        # Start with clean slate
+        self.del_devices()
+        if len(value) > 0:
+            devices_element = xml_utils.ElementTree.SubElement(
+                                    self.xmltreefile.getroot(), 'devices')
+            for device in value:
+                # Separate the element from the tree
+                device_element = device.getroot()
+                devices_element.append(device_element)
+
+
+    def del_devices(self):
+        self.xmltreefile.remove_by_xpath('/devices')
 
 
 class VMXML(VMXMLBase):
@@ -131,21 +164,6 @@ class VMXML(VMXMLBase):
         Return class that handles type_name devices, or raise exception.
         """
         return librarian.get(type_name)
-
-
-    @staticmethod
-    def get_all_device_nodes(vmxml):
-        """
-        Put all nodes of devices into a list.
-        """
-        devices_node = vmxml.dict_get('xml').find('devices')
-        devices = VMXMLDevices()
-        for node in devices_node:
-            device_tag = node.tag
-            device_class = librarian.get(device_tag)
-            new_one = device_class.new_from_element(node)
-            devices.append(new_one)
-        return devices
 
 
     def undefine(self):
