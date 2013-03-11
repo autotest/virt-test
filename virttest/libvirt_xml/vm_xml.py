@@ -7,7 +7,38 @@ import logging
 from autotest.client.shared import error
 from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
-from virttest.libvirt_xml.devices import device_librarian
+from virttest.libvirt_xml.devices import librarian
+
+class VMXMLDevices(list):
+    """
+    List of device instances from classes handed out by librarian.get()
+    """
+
+    def __type_check__(self, other):
+        try:
+            # Raise error if object isn't dict-like or doesn't have key
+            device_tag = other['device_tag']
+            # Check that we have support for this type
+            librarian.get(device_tag)
+        except Exception: # Required to always raise TypeError for list API
+            raise TypeError("Unsupported item type: %s" % str(other_type))
+
+
+    def __setitem__(self, key, value):
+        self.__type_check__(value)
+        super(VMXMLDevicesBase, self).__setitem__(key, value)
+
+
+    def append(self, value):
+        self.__type_check__(value)
+        super(VMXMLDevicesBase, self).append(value)
+
+
+    def extend(self, iterable):
+        # Make sure __type_check__ happens
+        for item in iterable:
+            self.append(item)
+
 
 class VMXMLBase(base.LibvirtXMLBase):
     """
@@ -35,7 +66,7 @@ class VMXMLBase(base.LibvirtXMLBase):
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
-                                                 'current_mem')
+                                                 'current_mem', 'devices')
 
 
     def __init__(self, virsh_instance=virsh):
@@ -73,6 +104,39 @@ class VMXMLBase(base.LibvirtXMLBase):
         super(VMXMLBase, self).__init__(virsh_instance)
 
 
+    def get_devices(self):
+        """
+        Put all nodes of devices into a list.
+        """
+        devices = VMXMLDevices()
+        for node in self.xmltreefile.find('/devices'):
+            device_tag = node.tag
+            device_class = librarian.get(device_tag)
+            new_one = device_class.new_from_element(node)
+            devices.append(new_one)
+        return devices
+
+
+    def set_devices(self, value):
+        value_type = type(value)
+        if not issubclass(value_type, VMXMLDevices):
+            raise LibvirtXMLError("Value %s Must be a VMXMLDevices or subclass "
+                                  "not a %s" % (str(value), str(value_type))
+        # Start with clean slate
+        self.del_devices()
+        if len(value) > 0:
+            devices_element = xml_utils.ElementTree.SubElement(
+                                    self.xmltreefile.getroot(), 'devices')
+            for device in value:
+                # Separate the element from the tree
+                device_element = device.getroot()
+                devices_element.append(device_element)
+
+
+    def del_devices(self):
+        self.xmltreefile.remove_by_xpath('/devices')
+
+
 class VMXML(VMXMLBase):
     """
     Higher-level manipulations related to VM's XML or guest/host state
@@ -103,6 +167,14 @@ class VMXML(VMXMLBase):
         vmxml = VMXML(virsh_instance=virsh_instance)
         vmxml['xml'] = virsh_instance.dumpxml(vm_name)
         return vmxml
+
+
+    @staticmethod
+    def get_device_class(type_name):
+        """
+        Return class that handles type_name devices, or raise exception.
+        """
+        return librarian.get(type_name)
 
 
     def undefine(self):
