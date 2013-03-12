@@ -19,7 +19,7 @@ def get(name):
             raise ValueError(errmsg)
         mod_path = os.path.abspath(os.path.dirname(__file__))
         try:
-            filename, pathname, description = imp.find_module(name, mod_path)
+            filename, pathname, description = imp.find_module(name, [mod_path])
             modobj = imp.load_module(name, filename, pathname, description)
             # Enforce good class name style
             return getattr(modobj, name.capitalize())
