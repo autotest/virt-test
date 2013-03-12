@@ -1781,7 +1781,7 @@ def run_virtio_console(test, params, env):
         try:
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
-                      timeout=360)
+                      timeout=720)
         except Exception, details:
             for proces in process:
                 proces.terminate()
@@ -1825,7 +1825,7 @@ def run_virtio_console(test, params, env):
         try:
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
-                      timeout=360)
+                      timeout=720)
         except Exception, details:
             raise error.TestFail("Fail to reboot VM:\n%s" % details)
 
