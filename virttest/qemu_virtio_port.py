@@ -198,6 +198,12 @@ class GuestWorker(object):
         # Copy, compile and run the worker
         timeout = 10
         if self.session.cmd_status(cmd_already_compiled_chck):
+            if self.os_linux:
+                # Disable serial-getty@hvc0.service on systemd-like hosts
+                self.session.cmd_status('systemctl mask '
+                                        'serial-getty@hvc0.service')
+                self.session.cmd_status('systemctl stop '
+                                        'serial-getty@hvc0.service')
             # Copy virtio_console_guest.py into guests
             base_path = os.path.dirname(data_dir.get_data_dir())
             vksmd_src = os.path.join(base_path, 'scripts',
