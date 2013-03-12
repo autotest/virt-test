@@ -698,6 +698,7 @@ def run_virtio_console(test, params, env):
 
             for thread in threads:
                 if thread.isAlive():
+                    vm.destroy()
                     del exit_event
                     del threads[:]
                     raise error.TestError("Not all threads finished.")
@@ -1018,7 +1019,13 @@ def run_virtio_console(test, params, env):
         error.context("Stopping loopback", logging.info)
         exit_event.set()
         workaround_unfinished_threads = False
-        for thread in threads:
+        threads[0].join(5)
+        if threads[0].isAlive():
+            workaround_unfinished_threads = True
+            logging.error('Send thread stuck, destroing the VM and '
+                    'stopping loopback test to prevent autotest freeze.')
+            vm.destroy()
+        for thread in threads[1:]:
             logging.debug('Joining %s', thread)
             thread.join(5)
             if thread.isAlive():
@@ -1047,6 +1054,7 @@ def run_virtio_console(test, params, env):
 
         for thread in threads:
             if thread.isAlive():
+                vm.destroy()
                 del exit_event
                 del threads[:]
                 raise error.TestError("Not all threads finished.")
@@ -1371,7 +1379,9 @@ def run_virtio_console(test, params, env):
         threads[0].join(5)
         if threads[0].isAlive():
             workaround_unfinished_threads = True
-            logging.debug("Unable to destroy the thread %s", threads[0])
+            logging.error('Send thread stuck, destroing the VM and '
+                    'stopping loopback test to prevent autotest freeze.')
+            vm.destroy()
         tmp = "%d data sent; " % threads[0].idx
         err = ""
 
@@ -1395,6 +1405,7 @@ def run_virtio_console(test, params, env):
 
         for thread in threads:
             if thread.isAlive():
+                vm.destroy()
                 del exit_event
                 del threads[:]
                 raise error.TestError("Not all threads finished.")
