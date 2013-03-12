@@ -7,7 +7,7 @@ from virttest.libvirt_xml import base, xcepts, accessors
 
 class UntypedDeviceBase(base.LibvirtXMLBase):
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('device_tag')
+    __slots__ = base.LibvirtXMLBase.__slots__ + ('device_tag',)
 
     def __init__(self, virsh_instance=virsh, device_tag=None):
         super(UntypedDeviceBase, self).__init__(virsh_instance)
@@ -25,7 +25,7 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
 
 class TypedDeviceBase(UntypedDeviceBase):
 
-    __slots__ = UntypedDeviceBase.__slots__ + ('type_name')
+    __slots__ = UntypedDeviceBase.__slots__ + ('type_name',)
 
     def __init__(self, virsh_instance=virsh, device_tag=None, type_name=None):
         # generate getter, setter, deleter for 'type_name' property
