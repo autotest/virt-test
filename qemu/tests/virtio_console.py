@@ -936,17 +936,27 @@ def run_virtio_console(test, params, env):
             interruption = _s3
             acceptable_loss = 2000
             session = vm.wait_for_login()
-            ret = session.cmd_status(params.get("check_s3_support_cmd"))
+            _check_support_cmd = params.get("check_s3_support_cmd")
+            set_s3_cmd = params.get('set_s3_cmd')
+            if not _check_support_cmd or not set_s3_cmd:
+                raise error.TestError("Suspend cmd '%s' or check cmd '%s' is "
+                                      "missing, bad configuration."
+                                      % (set_s3_cmd, _check_support_cmd))
+            ret = session.cmd_status(_check_support_cmd)
             if ret:
                 raise error.TestNAError("Suspend to mem (S3) not supported.")
-            set_s3_cmd = params.get('set_s3_cmd')
         elif interruption == 's4':
             interruption = _s4
             session = vm.wait_for_login()
-            ret = session.cmd_status(params.get("check_s4_support_cmd"))
+            _check_support_cmd = params.get("check_s4_support_cmd")
+            set_s4_cmd = params.get('set_s4_cmd')
+            if not _check_support_cmd or not set_s3_cmd:
+                raise error.TestError("Hibernate cmd '%s' or check cmd '%s' is"
+                                      " missing, bad configuration."
+                                      % (set_s3_cmd, _check_support_cmd))
+            ret = session.cmd_status(_check_support_cmd)
             if ret:
                 raise error.TestNAError("Suspend to disk (S4) not supported.")
-            set_s4_cmd = params.get('set_s4_cmd')
             acceptable_loss = 99999999      # loss is set in S4 rutine
             send_resume_ev = threading.Event()
             recv_resume_ev = threading.Event()
