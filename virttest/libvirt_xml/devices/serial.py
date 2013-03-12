@@ -3,7 +3,9 @@ Classes to support XML for serial devices
 http://libvirt.org/formatdomain.html#elementCharSerial
 """
 
-import base
+from virttest.libvirt_xml.devices import base
+from virttest import element_tree
+
 
 class SerialBase(base.TypedDeviceBase):
 
@@ -17,3 +19,19 @@ class SerialBase(base.TypedDeviceBase):
         #TODO: Support 'target_type' and 'target_address'
         #      These need 'address' device/module added
         super(SerialBase, self).__init__(virsh_instance, 'serial', 'pty')
+
+
+class Serial(SerialBase):
+
+    __slots__ = SerialBase.__slots__
+
+    def __init__(self, virsh_instance=base.virsh, serial_type='pty'):
+        super(Serial, self).__init__(virsh_instance)
+        self.xml = u"<serial type='%s'></serial>" % serial_type
+
+
+    @staticmethod
+    def new_from_element(element, virsh_instance=base.virsh):
+        serial_xml = Serial(virsh_instance=virsh_instance)
+        serial_xml['xml'] = element_tree.tostring(element)
+        return serial_xml
