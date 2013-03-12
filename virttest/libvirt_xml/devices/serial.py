@@ -32,6 +32,7 @@ class Serial(SerialBase):
 
     @staticmethod
     def new_from_element(element, virsh_instance=base.virsh):
+        # Typed device
         serial_xml = Serial(virsh_instance=virsh_instance)
-        serial_xml['xml'] = element_tree.tostring(element)
+        serial_xml['xml'] = str(element) # retrieve XML string
         return serial_xml
