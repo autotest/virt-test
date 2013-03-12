@@ -25,7 +25,7 @@ class Serial(SerialBase):
 
     __slots__ = SerialBase.__slots__
 
-    def __init__(self, virsh_instance=base.virsh, serial_type='pty'):
+    def __init__(self, serial_type='pty', virsh_instance=base.virsh):
         super(Serial, self).__init__(virsh_instance)
         self.xml = u"<serial type='%s'></serial>" % serial_type
 

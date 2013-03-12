@@ -181,7 +181,7 @@ class TestVMXML(LibvirtXMLTestBase):
 
 
     def _from_scratch(self):
-        vmxml = vm_xml.VMXML(self.dummy_virsh, 'test1')
+        vmxml = vm_xml.VMXML('test1', self.dummy_virsh)
         vmxml.vm_name = 'test2'
         vmxml.uuid = 'test3'
         vmxml.vcpu = 4
@@ -215,8 +215,8 @@ class TestVMXML(LibvirtXMLTestBase):
 class testNetworkXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
-        netxml = network_xml.NetworkXML(virsh_instance = self.dummy_virsh,
-                                        network_name = 'test0')
+        netxml = network_xml.NetworkXML(network_name = 'test0',
+                                        virsh_instance = self.dummy_virsh)
         self.assertEqual(netxml.name, 'test0')
         netxml.name = 'test1'
         netxml.uuid = 'test2'

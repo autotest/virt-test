@@ -69,7 +69,7 @@ class VMXMLBase(base.LibvirtXMLBase):
                                                  'uuid', 'vcpu', 'devices')
 
 
-    def __init__(self, virsh_instance=virsh):
+    def __init__(self, virsh_instance=base.virsh):
         accessors.XMLAttribute(property_name="hypervisor_type",
                                libvirtxml=self,
                                forbidden=None,
@@ -91,7 +91,7 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='vcpu')
-        super(VMXMLBase, self).__init__(virsh_instance)
+        super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 
     def get_devices(self, device_type=None):
@@ -141,11 +141,11 @@ class VMXML(VMXMLBase):
     __slots__ = VMXMLBase.__slots__
 
 
-    def __init__(self, virsh_instance=virsh, hypervisor_type='kvm'):
+    def __init__(self, hypervisor_type='kvm', virsh_instance=base.virsh):
         """
         Create new VM XML instance
         """
-        super(VMXML, self).__init__(virsh_instance)
+        super(VMXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.xml = u"<domain type='%s'></domain>" % hypervisor_type
 
@@ -159,6 +159,7 @@ class VMXML(VMXMLBase):
         @param: virsh_instance: virsh module or instance to use
         @return: New initialized VMXML instance
         """
+        # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
         vmxml['xml'] = virsh_instance.dumpxml(vm_name)
         return vmxml
@@ -185,7 +186,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def vm_rename(vm, new_name, uuid=None, virsh_instance=virsh):
+    def vm_rename(vm, new_name, uuid=None, virsh_instance=base.virsh):
         """
         Rename a vm from its XML.
 
@@ -196,7 +197,7 @@ class VMXML(VMXMLBase):
         """
         if vm.is_alive():
             vm.destroy(gracefully=True)
-        vmxml = VMXML.new_from_dumpxml(vm.name, virsh_instance=virsh_instance)
+        vmxml = VMXML.new_from_dumpxml(vm_name=vm.name, virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:

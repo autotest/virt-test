@@ -9,7 +9,7 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('device_tag',)
 
-    def __init__(self, virsh_instance=virsh, device_tag=None):
+    def __init__(self, device_tag, virsh_instance=base.virsh):
         super(UntypedDeviceBase, self).__init__(virsh_instance)
         # Just a regular dictionary value
         self['device_tag'] = device_tag
@@ -27,7 +27,7 @@ class TypedDeviceBase(UntypedDeviceBase):
 
     __slots__ = UntypedDeviceBase.__slots__ + ('type_name',)
 
-    def __init__(self, virsh_instance=virsh, device_tag=None, type_name=None):
+    def __init__(self, device_tag, type_name, virsh_instance=base.virsh):
         # generate getter, setter, deleter for 'type_name' property
         accessors.XMLAttribute('type_name', self,
                                # each device is it's own XML "document"
@@ -35,4 +35,5 @@ class TypedDeviceBase(UntypedDeviceBase):
                                parent_xpath='/',
                                tag_name=device_tag,
                                attribute='type')
-        super(TypedDeviceBase, self).__init__(virsh_instance, device_tag)
+        super(TypedDeviceBase, self).__init__(device_tag, virsh_instance)
+        self.type_name = type_name
