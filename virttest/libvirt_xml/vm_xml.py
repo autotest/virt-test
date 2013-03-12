@@ -9,6 +9,7 @@ from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 from virttest.libvirt_xml.devices import librarian
 
+
 class VMXMLDevices(list):
     """
     List of device instances from classes handed out by librarian.get()
@@ -21,17 +22,17 @@ class VMXMLDevices(list):
             # Check that we have support for this type
             librarian.get(device_tag)
         except Exception: # Required to always raise TypeError for list API
-            raise TypeError("Unsupported item type: %s" % str(other_type))
+            raise TypeError("Unsupported item type: %s" % str(type(other)))
 
 
     def __setitem__(self, key, value):
         self.__type_check__(value)
-        super(VMXMLDevicesBase, self).__setitem__(key, value)
+        super(VMXMLDevices, self).__setitem__(key, value)
 
 
     def append(self, value):
         self.__type_check__(value)
-        super(VMXMLDevicesBase, self).append(value)
+        super(VMXMLDevices, self).append(value)
 
 
     def extend(self, iterable):
@@ -93,12 +94,17 @@ class VMXMLBase(base.LibvirtXMLBase):
         super(VMXMLBase, self).__init__(virsh_instance)
 
 
-    def get_devices(self):
+    def get_devices(self, device_type=None):
         """
         Put all nodes of devices into a list.
         """
         devices = VMXMLDevices()
-        for node in self.xmltreefile.find('/devices'):
+        all_devices = self.xmltreefile.find('devices')
+        if device_type is not None:
+            device_nodes = all_devices.findall(device_type)
+        else:
+            device_nodes = all_devices
+        for node in device_nodes:
             device_tag = node.tag
             device_class = librarian.get(device_tag)
             new_one = device_class.new_from_element(node)
@@ -110,7 +116,7 @@ class VMXMLBase(base.LibvirtXMLBase):
         value_type = type(value)
         if not issubclass(value_type, VMXMLDevices):
             raise LibvirtXMLError("Value %s Must be a VMXMLDevices or subclass "
-                                  "not a %s" % (str(value), str(value_type))
+                                  "not a %s" % (str(value), str(value_type)))
         # Start with clean slate
         self.del_devices()
         if len(value) > 0:
