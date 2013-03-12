@@ -47,7 +47,7 @@ def run_timedrift_with_reboot(test, params, env):
             # Run current iteration
             logging.info("Rebooting: iteration %d of %d...",
                          (i + 1), reboot_iterations)
-            session = vm.reboot(session)
+            session = vm.reboot(session, timeout=timeout)
             # Get time after current iteration
             (ht1_, gt1_) = utils_test.get_time(session, time_command,
                                                    time_filter_re, time_format)
