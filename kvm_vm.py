@@ -1113,6 +1113,13 @@ class VM(virt_vm.BaseVM):
             return " -device sga"
 
 
+        def add_option_rom(help, opt_rom):
+            if not has_option(help, "option-rom"):
+                return ""
+
+            return " -option-rom %s" % opt_rom
+
+
         def add_watchdog(help, device_type=None, action="reset"):
             watchdog_cmd = ""
             if has_option(help,  "watchdog"):
@@ -1724,6 +1731,11 @@ class VM(virt_vm.BaseVM):
             WD_type = params.get("watchdog_device_type",  None)
             WD_action = params.get("watchdog_action", "reset")
             qemu_cmd += add_watchdog(help, WD_type, WD_action)
+
+        option_roms = params.get("option_roms")
+        if option_roms:
+            for opt_rom in option_roms.split():
+                qemu_cmd += add_option_rom(help, opt_rom)
 
 
         return qemu_cmd
