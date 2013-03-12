@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import unittest, logging, os
 import gzip
 import cartesian_config
