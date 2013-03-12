@@ -85,8 +85,7 @@ class CartesianConfigTest(unittest.TestCase):
 {'dep': [],
  'name': 'testB.nokvm.unknown_qemu',
  'shortname': 'testB.nokvm.unknown_qemu'},
-]
-            """)
+]""")
 
 
     def testHugeTest1(self):
