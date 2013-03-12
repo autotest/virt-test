@@ -1157,6 +1157,13 @@ class VM(virt_vm.BaseVM):
             return " -device sga"
 
 
+        def add_option_rom(help_text, opt_rom):
+            if not has_option(help_text, "option-rom"):
+                return ""
+
+            return " -option-rom %s" % opt_rom
+
+
         # End of command line option wrappers
 
         if name is None:
@@ -1788,6 +1795,11 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_sga(help_text)
 
         return qemu_cmd
+
+        option_roms = params.get("option_roms")
+        if option_roms:
+            for opt_rom in option_roms.split():
+                qemu_cmd += add_option_rom(help, opt_rom)
 
 
     def _nic_tap_add_helper(self, nic):
