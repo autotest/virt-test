@@ -654,7 +654,7 @@ class VM(virt_vm.BaseVM):
             if has_option(help_text, "netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if netdev_extra_params:
-                    cmd += ",%s" % netdev_extra_params
+                    cmd += "%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
             if mode == "tap" and tapfd:
