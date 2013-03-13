@@ -2406,8 +2406,8 @@ variants:
                 kill_vm = yes
                 force_create_image_stg1 = no
                 force_create_image_stg2 = no
-                background_cmd = "for i in 1 2 3 4; do (nohup dd if=/dev/urandom of=/mnt/file bs=102400 count=10000000 &) done; while true; do sync; done"
-                check_cmd = pgrep dd
+                background_cmd =  sh -c 'for i in `seq 1 4`;do (dd if=/dev/random of=/mnt/file bs=102400 count=10000000 &); (while true; do sync;done &);done'
+                check_cmd = pidof dd
                 remove_image_stg1 = yes
                 remove_image_stg2 = yes
                 clean = yes
@@ -2418,8 +2418,8 @@ variants:
         only qcow2
         type = ioquit
         kill_vm = yes
-        background_cmd = "for i in 1 2 3 4; do (nohup dd if=/dev/urandom of=/tmp/file bs=102400 count=10000000 &) done; while true; do sync; done"
-        check_cmd = pgrep dd
+        background_cmd =  sh -c 'for i in `seq 1 4`;do (dd if=/dev/random of=/mnt/file bs=102400 count=10000000 &); (while true; do sync;done &);done'
+        check_cmd = pidof dd
         check_img = yes
         post_command_noncritical = no
 
