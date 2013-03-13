@@ -273,7 +273,7 @@ class ShellStatusError(ShellError):
 
 
 def run_bg(command, termination_func=None, output_func=None, output_prefix="",
-           timeout=1.0):
+           timeout=1.0, auto_close=True):
     """
     Run command as a subprocess.  Call output_func with each line of output
     from the subprocess (prefixed by output_prefix).  Call termination_func
@@ -292,13 +292,16 @@ def run_bg(command, termination_func=None, output_func=None, output_prefix="",
             before passing it to stdout_func
     @param timeout: Time duration (in seconds) to wait for the subprocess to
             terminate before returning
+    @param auto_close: If True, close() the instance automatically when its
+                reference count drops to zero (default False).
 
     @return: A Tail object.
     """
-    process = Tail(command=command,
+    process = Expect(command=command,
                    termination_func=termination_func,
                    output_func=output_func,
-                   output_prefix=output_prefix)
+                   output_prefix=output_prefix,
+                   auto_close=auto_close)
 
     end_time = time.time() + timeout
     while time.time() < end_time and process.is_alive():
