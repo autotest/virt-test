@@ -2704,7 +2704,10 @@ class VM(virt_vm.BaseVM):
                 uri = "unix:%s" % clone.migration_file
             elif protocol == "exec":
                 if local:
-                    uri = '"exec:nc localhost %s"' % clone.migration_port
+                    if not migration_exec_cmd_src:
+                        uri = '"exec:nc localhost %s"' % clone.migration_port
+                    else:
+                        uri = '"exec:%s"' % (migration_exec_cmd_src)
                 else:
                     uri = '"exec:%s"' % (migration_exec_cmd_src)
             elif protocol == "fd":

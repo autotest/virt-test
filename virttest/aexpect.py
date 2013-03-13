@@ -295,7 +295,7 @@ def run_bg(command, termination_func=None, output_func=None, output_prefix="",
 
     @return: A Tail object.
     """
-    process = Tail(command=command,
+    process = Expect(command=command,
                    termination_func=termination_func,
                    output_func=output_func,
                    output_prefix=output_prefix)
