@@ -151,6 +151,12 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                                  'autostart', 'persistent',
                                                  'fwd_mode', 'mac', 'ip')
 
+    __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
+                                            'defined', 'active',
+                                            'autostart', 'persistent')
+
+    __schema_name__ = "network"
+
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText('name', self, parent_xpath='/',
                                  tag_name='name')
@@ -278,7 +284,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             ip_root = xmltreefile.reroot('/ip')
         except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
-        ipxml = IPXML(self.dict_get('virsh'))
+        ipxml = IPXML(virsh_instance = self.dict_get('virsh'))
         ipxml.xmltreefile = ip_root
         return ipxml
 
