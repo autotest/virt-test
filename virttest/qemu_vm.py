@@ -1783,14 +1783,16 @@ class VM(virt_vm.BaseVM):
                 logging.info("Running Proxy Helper:\n%s", proxy_helper_cmd)
                 self.process = aexpect.run_bg(proxy_helper_cmd, None,
                                               logging.info,
-                                              "[9p proxy helper]")
+                                              "[9p proxy helper]",
+                                              auto_close=False)
 
             logging.info("Running qemu command (reformatted):")
             for item in qemu_command.replace(" -", " \n    -").splitlines():
                 logging.info("%s", item)
             self.qemu_command = qemu_command
             self.process = aexpect.run_bg(qemu_command, None,
-                                          logging.info, "[qemu output] ")
+                                          logging.info, "[qemu output] ",
+                                          auto_close=False)
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
