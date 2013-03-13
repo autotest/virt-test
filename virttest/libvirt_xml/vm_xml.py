@@ -21,7 +21,8 @@ class VMXMLDevices(list):
             device_tag = other['device_tag']
             # Check that we have support for this type
             librarian.get(device_tag)
-        except Exception: # Required to always raise TypeError for list API
+        except (AttributeError, TypeError, xcepts.LibvirtXMLError):
+            # Required to always raise TypeError for list API in VMXML class
             raise TypeError("Unsupported item type: %s" % str(type(other)))
 
 
@@ -69,6 +70,9 @@ class VMXMLBase(base.LibvirtXMLBase):
                                                  'uuid', 'vcpu', 'max_mem',
                                                  'current_mem', 'devices')
 
+    __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
+
+    __schema_name__ = "domain"
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLAttribute(property_name="hypervisor_type",
@@ -107,7 +111,7 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     def get_devices(self, device_type=None):
         """
-        Put all nodes of devices into a list.
+        Put all nodes of devices into a VMXMLDevices instance.
         """
         devices = VMXMLDevices()
         all_devices = self.xmltreefile.find('devices')
@@ -124,10 +128,14 @@ class VMXMLBase(base.LibvirtXMLBase):
 
 
     def set_devices(self, value):
+        """
+        Define devices based on contents of VMXMLDevices instance
+        """
         value_type = type(value)
         if not issubclass(value_type, VMXMLDevices):
-            raise LibvirtXMLError("Value %s Must be a VMXMLDevices or subclass "
-                                  "not a %s" % (str(value), str(value_type)))
+            raise xcepts.LibvirtXMLError("Value %s Must be a VMXMLDevices or "
+                                         "subclass not a %s"
+                                         % (str(value), str(value_type)))
         # Start with clean slate
         self.del_devices()
         if len(value) > 0:
@@ -137,10 +145,15 @@ class VMXMLBase(base.LibvirtXMLBase):
                 # Separate the element from the tree
                 device_element = device.getroot()
                 devices_element.append(device_element)
+        self.xmltreefile.write()
 
 
     def del_devices(self):
+        """
+        Remove all devices
+        """
         self.xmltreefile.remove_by_xpath('/devices')
+        self.xmltreefile.write()
 
 
 class VMXML(VMXMLBase):
@@ -302,6 +315,7 @@ class VMXML(VMXMLBase):
         return 0
 
 
+    # ToDo: Convert into numa property (needs nested-dict accessorgenerator)
     def get_numa_params(self, vm_name):
         """
         Return VM's numa setting from XML definition
@@ -314,11 +328,10 @@ class VMXML(VMXMLBase):
             try:
                 numa_params['mode'] = numa.find('memory').get('mode')
                 numa_params['nodeset'] = numa.find('memory').get('nodeset')
-            except:
+            except TypeError:
                 logging.error("Can't find <memory> element")
-        except:
+        except TypeError:
             logging.error("Can't find <numatune> element")
-
         return numa_params
 
 
@@ -340,12 +353,12 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def set_primary_serial(vm_name, type, port, path=None):
+    def set_primary_serial(vm_name, dev_type, port, path=None):
         """
         Set primary serial's features of vm_name.
 
         @param vm_name: Name of defined vm to set primary serial.
-        @param type: the type of serial:pty,file...
+        @param dev_type: the type of serial:pty,file...
         @param port: the port of serial
         @param path: the path of serial, it is not necessary for pty
         # TODO: More features
@@ -363,7 +376,7 @@ class VMXML(VMXMLBase):
             # Create elements of serial target, default port is 0
             xml_utils.ElementTree.SubElement(serial, 'target', {'port': '0'})
 
-        serial.set('type', type)
+        serial.set('type', dev_type)
         serial.find('target').set('port', port)
         # path may not be exist.
         if path is not None:
@@ -417,7 +430,3 @@ class VMXML(VMXMLBase):
             return features
         else:
             return None
-
-
-    #TODO: Add function to create from xml_utils.TemplateXML()
-    # def new_from_template(...)
