@@ -68,6 +68,9 @@ class VMXMLBase(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'devices')
 
+    __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
+
+    __schema_name__ = "domain"
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLAttribute(property_name="hypervisor_type",

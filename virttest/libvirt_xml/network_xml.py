@@ -151,6 +151,12 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                                  'autostart', 'persistent',
                                                  'fwd_mode', 'mac', 'ip')
 
+    __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
+                                            'defined', 'active',
+                                            'autostart', 'persistent')
+
+    __schema_name__ = "network"
+
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText('name', self, parent_xpath='/',
                                  tag_name='name')

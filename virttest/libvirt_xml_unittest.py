@@ -6,6 +6,7 @@ from virttest import xml_utils, virsh
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
 from virttest.libvirt_xml import libvirt_xml
 from virttest.libvirt_xml.devices import librarian
+from virttest.libvirt_xml.devices import base as devices_base
 
 
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
@@ -45,6 +46,15 @@ class LibvirtXMLTestBase(unittest.TestCase):
         return ("<domain type='kvm'>"
                 "    <name>%s</name>"
                 "    <uuid>%s</uuid>"
+                "    <devices>" # Tests below depend on device order
+                "       <serial type='pty'>"
+                "           <target port='0'/>"
+                "       </serial>"
+                "       <serial type='pty'>"
+                "           <target port='1'/>"
+                "           <source path='/dev/null'/>"
+                "       </serial>"
+                "    </devices>"
                 "</domain>" % (name, LibvirtXMLTestBase._domuuid(None)))
 
 
@@ -240,16 +250,78 @@ class testNetworkXML(LibvirtXMLTestBase):
 
 class testLibrarian(LibvirtXMLTestBase):
 
-    def testBadNames(self):
+    def test_bad_names(self):
         for badname in ('__init__', 'librarian', '__doc__', '/dev/null', '', None):
             self.assertRaises(ValueError, librarian.get, badname)
 
 
-    def testNoModule(self):
+    def test_no_module(self):
         original_known_types = librarian.known_types
         for badname in ('DoesNotExist', '/dev/null', '', None):
             librarian.known_types.add(badname)
             self.assertRaises(ValueError, librarian.get, badname)
+
+
+    def test_serial_class(self):
+        Serial = librarian.get('serial')
+        self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
+        self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
+
+
+class testSerialXML(LibvirtXMLTestBase):
+
+    XML = u"<serial type='pty'><source path='/dev/null'/><target port='-1'/></serial>"
+
+    def _from_scratch(self):
+        serial = librarian.get('serial')(virsh_instance = self.dummy_virsh)
+        self.assertEqual(serial.device_tag, 'serial')
+        self.assertEqual(serial.type_name, 'pty')
+        self.assertEqual(serial.virsh, self.dummy_virsh)
+        serial.source_path = '/dev/null'
+        # Test dict-like access also
+        serial['target_port'] = "-1"
+        return serial
+
+
+    def test_getters(self):
+        serial = self._from_scratch()
+        self.assertEqual(serial.source_path, '/dev/null')
+        self.assertEqual(serial.target_port, '-1')
+
+
+    def test_from_element(self):
+        element = xml_utils.ElementTree.fromstring(self.XML)
+        serial1 = self._from_scratch()
+        serial2 = librarian.get('serial').new_from_element(element)
+        self.assertEqual(serial1, serial2)
+        serial2.target_port = '0'
+        self.assertTrue(serial1 != serial2)
+        serial1['target_port'] = '0'
+        self.assertEqual(serial1, serial2)
+
+
+    def test_vm_get_by_class(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        serial_devices = vmxml.get_devices(device_type='serial')
+        self.assertEqual(len(serial_devices), 2)
+
+
+    def test_vm_get_modify(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        devices = vmxml['devices']
+        serial1 = devices[0]
+        serial2 = devices[1]
+        self.assertEqual(serial1.device_tag, 'serial')
+        self.assertEqual(serial2.device_tag, 'serial')
+        self.assertEqual(serial1.type_name, 'pty')
+        self.assertEqual(serial2.type_name, 'pty')
+        self.assertFalse(serial1 == serial2)
+        self.assertRaises(xcepts.LibvirtXMLError, getattr, serial1, 'source_path')
+        # mix up access style
+        serial1['source_path'] = serial2['source_path']
+        self.assertFalse(serial1 == serial2)
+        serial1.target_port = "1"
+        self.assertEqual(serial1, serial2)
 
 
 if __name__ == "__main__":

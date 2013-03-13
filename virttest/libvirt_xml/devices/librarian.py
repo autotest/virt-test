@@ -14,14 +14,14 @@ known_types = set(('disk', 'filesystem', 'address', 'controller', 'lease',
                    'seclabel'))
 
 def get(name):
-        errmsg = "Unknown/unsupported type %s" % name
-        if name not in known_types:
-            raise ValueError(errmsg)
-        mod_path = os.path.abspath(os.path.dirname(__file__))
-        try:
-            filename, pathname, description = imp.find_module(name, [mod_path])
-            modobj = imp.load_module(name, filename, pathname, description)
-            # Enforce good class name style
-            return getattr(modobj, name.capitalize())
-        except (TypeError, ImportError, AttributeError):
-            raise ValueError(errmsg)
+    errmsg = "Unknown/unsupported type %s" % name
+    if name not in known_types:
+        raise ValueError(errmsg)
+    mod_path = os.path.abspath(os.path.dirname(__file__))
+    try:
+        filename, pathname, description = imp.find_module(name, [mod_path])
+        modobj = imp.load_module(name, filename, pathname, description)
+        # Enforce good class name style
+        return getattr(modobj, name.capitalize())
+    except (TypeError, ImportError, AttributeError):
+        raise ValueError(errmsg)

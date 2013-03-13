@@ -1,4 +1,5 @@
 
+from autotest.client import utils
 from virttest import propcan, xml_utils, virsh
 from virttest.libvirt_xml import xcepts
 
@@ -21,7 +22,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
     """
 
     __slots__ = ('xml', 'virsh', 'xmltreefile', 'validates')
-
+    __uncompareable__ = __slots__
     __schema_name__ = None
 
     def __init__(self, virsh_instance=virsh):
@@ -30,7 +31,8 @@ class LibvirtXMLBase(propcan.PropCanBase):
 
         @param: virsh_instance: virsh module or instance to use
         """
-        # Don't define any initial property values
+        self.dict_set('xmltreefile', None)
+        self.dict_set('validates', None)
         super(LibvirtXMLBase, self).__init__({'virsh':virsh_instance,
                                               'xml':None})
         # Can't use accessors module here, would make circular dep.
@@ -42,6 +44,22 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         return str(self.dict_get('xml'))
 
+
+    def __eq__(self, other):
+        uncomparable = set(self.super_get('__uncompareable__'))
+        D1 = {}
+        D2 = {}
+        slots = set(self.__slots__) | set(other.__slots__)
+        for slot in slots - uncomparable:
+            try:
+                D1[slot] = getattr(self, slot)
+            except xcepts.LibvirtXMLNotFoundError:
+                pass # Unset virtual values won't have keys
+            try:
+                D2[slot] = getattr(other, slot)
+            except xcepts.LibvirtXMLNotFoundError:
+                pass # Unset virtual values won't have keys
+        return D1 == D2
 
     def set_virsh(self, value):
         """Accessor method for virsh property, make sure it's right type"""
@@ -149,10 +167,8 @@ class LibvirtXMLBase(propcan.PropCanBase):
 
     @staticmethod
     def validates(filename, schema_name=None):
-        command = 'virt-xml-validate %s' % self.xml # filename
+        command = 'virt-xml-validate %s' % filename
         if schema_name:
             command += ' %s' % schema_name
-        cmdresult = utils.run(command,
-                              verbose=self.virsh.verbose,
-                              ignore_status=True)
+        cmdresult = utils.run(command, ignore_status=True)
         return cmdresult
