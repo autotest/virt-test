@@ -3,7 +3,6 @@ Module simplifying manipulation of XML described at
 http://libvirt.org/formatcaps.html
 """
 
-from virttest import virsh
 from virttest.libvirt_xml import base, accessors
 
 class LibvirtXML(base.LibvirtXMLBase):
@@ -21,6 +20,7 @@ class LibvirtXML(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('uuid',
                                                  'os_arch_machine_map',)
 
+    __schema_name__ = "capability"
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText(property_name="uuid",
