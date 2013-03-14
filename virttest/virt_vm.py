@@ -889,6 +889,7 @@ class BaseVM(object):
         remote.copy_files_to(address, client, username, password, port,
                                   host_path, guest_path, limit, log_filename,
                                   verbose, timeout)
+        utils_misc.close_log_file(log_filename)
 
 
     @error.context_aware
@@ -920,6 +921,7 @@ class BaseVM(object):
         remote.copy_files_from(address, client, username, password, port,
                                     guest_path, host_path, limit, log_filename,
                                     verbose, timeout)
+        utils_misc.close_log_file(log_filename)
 
 
     @error.context_aware
