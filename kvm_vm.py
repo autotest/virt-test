@@ -586,6 +586,7 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("physical_block_size", physical_block_size)
                 dev += _add_option("logical_block_size", logical_block_size)
                 dev += _add_option("drive", blkdev_id)
+                dev += _add_option("id", "usb-disk%s" % tmp)
                 format = "none"
                 index = None
             elif format and format.startswith("scsi-"):

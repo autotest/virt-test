@@ -4905,6 +4905,17 @@ variants:
                             - usb_port_claim:
                                 probe_var_key = bus port
                                 stap_script_file = usb_port_claim.stp
+                            - usb_port_release:
+                                index_enable = yes
+                                probe_var_key = bus port
+                                stap_script_file = usb_port_release.stp
+                                cmds_exec = "monitor:device_del id=usb-disk1"
+                            - usb_port_detach:
+                                index_enable = yes
+                                probe_var_key = bus port
+                                stap_script_file = usb_port_detach.stp
+                                cmds_exec = "monitor:device_del id=usb-disk1"
+
                     - @set:
                         variants:
                             - usb_set_addr:
