@@ -5371,10 +5371,14 @@ unattended_install.url:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.1/Server/x86_64/os/
     RHEL.6.1.32:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-6/6.1/Server/i386/os/
-    RHEL.5.9.64:
+    RHEL.5.10.64:
         url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-5-Server/tree-x86_64/
-    RHEL.5.9.32:
+    RHEL.5.10.32:
         url = http://download.englab.nay.redhat.com/pub/rhel/rel-eng/latest-RHEL-5-Server/tree-i386/
+    RHEL.5.9.64:
+        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-5-Server/U9/x86_64/os/
+    RHEL.5.9.32:
+        url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-5-Server/U9/i386/os/
     RHEL.5.8.64:
         url = http://download.englab.nay.redhat.com/pub/rhel/released/RHEL-5-Server/U8/x86_64/os/
     RHEL.5.8.32:
@@ -5412,10 +5416,14 @@ unattended_install.nfs:
         nfs_dir += RHEL-6/6.1/Server/x86_64/os
     RHEL.6.1.32:
         nfs_dir += RHEL-6/6.1/Server/i386/os
-    RHEL.5.9.64:
+    RHEL.5.10.64:
         nfs_dir = /pub/rhel/rel-eng/latest-RHEL-5-Server/tree-x86_64
-    RHEL.5.9.32:
+    RHEL.5.10.32:
         nfs_dir = /pub/rhel/rel-eng/latest-RHEL-5-Server/tree-i386
+    RHEL.5.9.64:
+        nfs_dir += RHEL-5-Server/U9/x86_64/os
+    RHEL.5.9.32:
+        nfs_dir += RHEL-5-Server/U9/i386/os
     RHEL.5.8.64:
         nfs_dir += RHEL-5-Server/U8/x86_64/os
     RHEL.5.8.32:
@@ -5469,17 +5477,29 @@ rh_kernel_update, kexec:
         kernel_version = 2.6.32-131.0.15.el6.i686
         kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.32/131.0.15.el6/i686/kernel-2.6.32-131.0.15.el6.i686.rpm
         kernel_suffix = el6.i686
+    RHEL.5.10.64:
+        kernel_version = kernel-2.6.18-349.el5
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/349.el5/x86_64/kernel-2.6.18-349.el5.x86_64.rpm
+        kernel_suffix = el5
+    RHEL.5.10.PAE:
+        kernel_version = kernel-2.6.18-349.el5PAE
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/349.el5/i686/kernel-PAE-2.6.18-349.el5.i686.rpm
+        kernel_suffix = el5PAE
+    RHEL.5.10.32:
+        kernel_version = kernel-2.6.18-349.el5
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/349.el5/i686/kernel-2.6.18-349.el5.i686.rpm
+        kernel_suffix = el5
     RHEL.5.9.64:
-        kernel_version = kernel-2.6.18-343.el5
-        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/343.el5/x86_64/kernel-2.6.18-343.el5.x86_64.rpm
+        kernel_version = kernel-2.6.18-348.el5
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/348.el5/x86_64/kernel-2.6.18-348.el5.x86_64.rpm
         kernel_suffix = el5
     RHEL.5.9.PAE:
-        kernel_version = kernel-2.6.18-343.el5PAE
-        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/343.el5/i686/kernel-PAE-2.6.18-343.el5.i686.rpm
+        kernel_version = kernel-2.6.18-348.el5PAE
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/348.el5/i686/kernel-PAE-2.6.18-348.el5.i686.rpm
         kernel_suffix = el5PAE
     RHEL.5.9.32:
-        kernel_version = kernel-2.6.18-343.el5
-        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/343.el5/i686/kernel-2.6.18-343.el5.i686.rpm
+        kernel_version = kernel-2.6.18-348.el5
+        kernel_rpm = http://download.devel.redhat.com/brewroot/packages/kernel/2.6.18/348.el5/i686/kernel-2.6.18-348.el5.i686.rpm
         kernel_suffix = el5
     RHEL.5.8.64:
         kernel_version = 2.6.18-298.el5
