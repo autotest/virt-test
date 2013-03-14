@@ -1452,7 +1452,22 @@ variants:
                  check_cmd = wmic sysdriver get caption
                  check_cmd_block = wmic diskdrive get caption
                  check_cmd_nic = wmic nic get caption
+            - upgrade_downgrade:
+                 prewhql_install = yes
+                 cdrom_virtio = /tmp/prewhql.iso
+                 url_virtio_win = http://download.devel.redhat.com/brewroot/packages/virtio-win-prewhql/0.1/54/win/virtio-win-prewhql-0.1.zip
+                 check_str_balloon = Virtio Balloon
+                 check_str_block = Virtio SCSI DISK
+                 check_str_nic = VirtIO Ethernet Adapter
+                 check_cmd = wmic sysdriver get caption
+                 check_cmd_block = wmic diskdrive get caption
+                 check_cmd_nic = wmic nic get caption
 
+                 variants:
+                     - block:
+                         drivers_install = block
+                         op_cmd = cmd /c  E:\\whql\virtio_driver_check_whql.exe F:\\WXp\\x86 block
+                         driver_install_cmd_block = cmd /c  E:\\whql\virtio_driver_install_whql.exe F:\\WXp\\x86 block
             - check_info:
                 type = win_virtio_update
                 drivers_install = "balloon;block;nic"
