@@ -2,7 +2,7 @@ import os, sys, logging, imp, Queue
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, utils_params, utils_env, env_process
-from virttest import data_dir, bootstrap
+from virttest import data_dir, bootstrap, funcatexit
 
 
 class virt(test.test):
@@ -132,8 +132,14 @@ class virt(test.test):
                         finally:
                             env.save()
                     test_passed = True
+                    error_message = funcatexit.run_exitfuncs(env, t_type)
+                    if error_message:
+                        logging.error(error_message)
 
                 except Exception, e:
+                    error_message = funcatexit.run_exitfuncs(env, t_type)
+                    if error_message:
+                        logging.error(error_message)
                     logging.error("Test failed: %s: %s",
                                   e.__class__.__name__, e)
                     try:
