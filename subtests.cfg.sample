@@ -1432,13 +1432,6 @@ variants:
         driver_install_cmd_balloon = cmd /c WIN_UILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\Balloon\\xp\\x86 balloon
         driver_install_cmd_block = cmd /c  WIN_UILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\viostor\\xp\\x86 block
         driver_install_cmd_nic = cmd /c WIN_UILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\\NetKVM\\xp\\x86 nic
-        check_str_balloon = Virtio Balloon
-        check_str_block = Virtio SCSI DISK
-        check_str_nic = VirtIO Ethernet Adapter
-        check_cmd = wmic sysdriver get caption
-        check_cmd_block = wmic diskdrive get caption
-        check_cmd_nic = wmic nic get caption
-
         extra_params += " -balloon virtio"
         images += " stg"
         image_name_stg = "storage"
@@ -1450,6 +1443,37 @@ variants:
         cdroms += " virtio"
         cdrom_virtio = isos/windows/virtio-win.iso
         kill_rundll = no
+        variants:
+            - install_driver:
+                 case_type = driver_install
+                 check_str_balloon = Virtio Balloon
+                 check_str_block = Virtio SCSI DISK
+                 check_str_nic = VirtIO Ethernet Adapter
+                 check_cmd = wmic sysdriver get caption
+                 check_cmd_block = wmic diskdrive get caption
+                 check_cmd_nic = wmic nic get caption
+
+            - check_info:
+                type = win_virtio_update
+                drivers_install = "balloon;block;nic"
+                only Windows
+                vms = ""
+                check_info = yes
+                drivers_check = "balloon;nic;block"
+                mount_point = "/tmp/mnt"
+                driver_install_cmd_balloon = cmd /c WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\Balloon\\2k3\\x86 balloon
+                driver_install_cmd_block = cmd /c  WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\viostor\\2k3\\x86 block
+                driver_install_cmd_nic = cmd /c WIN_UTILS:\\whql\virtio_driver_install_whql.exe WIN_VIRTIO:\\NetKVM\\2k3\\x86 nic
+                check_str = "version::DriverVer=\d+/\d+/\d+,([\d\.]+);name::DeviceDesc\s+=\s+"(.*)";copyright::Copyright \(c\).*"
+                check_cmd = "version::wmic datafile where name='DRIVER_PATH' get version;name::C:\pecheck.py DRIVER_PATH DRIVER_PATTERN_name;copyright::C:\pecheck.py DRIVER_PATH DRIVER_PATTERN_copyright"
+                info_pattern_name_balloon = "FileDescription:\s+(.*)"
+                info_pattern_name = "ProductName:\s+(.*)"
+                info_pattern_copyright = "LegalCopyright:\s+(.*)"
+                sys_file_path_balloon = "c:\\\\windows\\\\system32\\\\drivers\\\\balloon.sys"
+                sys_file_path_block = "c:\\\\windows\\\\system32\\\\drivers\\\\viostor.sys"
+                sys_file_path_nic = "c:\\\\windows\\\\system32\\\\drivers\\\\netkvm.sys"
+                python_scripts = "del C:\pecheck.py && echo import pefile, re, sys > C:\pecheck.py && echo filename = sys.argv[1] >>  C:\pecheck.py && echo pattern_c =  sys.argv[2] >> C:\pecheck.py && echo pe = pefile.PE(filename) >> C:\pecheck.py && echo peinfo = pe.dump_info() >> C:\pecheck.py && echo print re.findall(pattern_c, peinfo)[0].strip() >> C:\pecheck.py"
+                pattern_driver = WIN_VIRTIO:(.*)[/s+"]
 
     - hotplug_vcpu:
         login_timeout = 240
