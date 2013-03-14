@@ -1785,6 +1785,42 @@ def find_substring(string, pattern1, pattern2=None):
     return ret[0]
 
 
+def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
+                           storage_path="/tmp/prewhql.iso",
+                           re_hw_id="(PCI.{14,50})\r\n", run_cmd=True):
+    """
+    Get windows driver's hardware id from inf files.
+
+    @param dirver: Configurable driver name.
+    @param mount_point: Mount point for the driver storage
+    @param storage_path: The path of the virtio driver storage
+    @param re_hw_id: the pattern for getting hardware id from inf files
+    @param run_cmd:  Use hardware id in windows cmd command or not
+
+    Return: Windows driver's hardware id
+    """
+    if not os.path.exists(mount_point):
+        os.mkdir(_mount_point)
+
+    if not os.path.ismount(mount_point):
+        utils.system("mount %s %s -o loop" % (storage_path, mount_point),
+                     timeout=60)
+    driver_link = os.path.join(mount_point, driver_path)
+    try:
+        txt_file = open(driver_link, "r")
+        txt = txt_file.read()
+        hwid = re.findall(re_hardware_id, txt)[-1].rstrip()
+        if run_cmd:
+            hwid = '^&'.join(hwid.split('&'))
+        txt_file.close()
+        utils.system("umount %s" % mount_point)
+        return hwid
+    except Exception, e:
+        logging.error("Fail to get hardware id with exception: %s" % e)
+        utils.system("umount %s" % mount_point)
+        return ""
+
+
 class BackgroundTest(object):
     """
     This class would run a test in background through a dedicated thread.
