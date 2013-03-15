@@ -145,7 +145,7 @@ variants:
                 create_image = no
 
     - rh_kernel_update:
-        only Linux
+        only RHEL
         no RHEL.3.9
         type = rh_kernel_update
         rpm_timeout = 1200
