@@ -160,7 +160,7 @@ variants:
                 variants:
                     - 3.9:
                         kill_vm_gracefully = no
-                        image_name = RHEL-3.9
+                        image_name = images/RHEL-3.9
                         guest_name = RHEL-3.9
                         image_size = 20G
                         password = 123456
@@ -224,7 +224,7 @@ variants:
                                 guest_name += -PAE
 
                     - 4.9:
-                        image_name = RHEL-4.9
+                        image_name = images/RHEL-4.9
                         guest_name = RHEL-4.9
                         image_size = 20G
                         brew_tag = dist-4E-kernel
@@ -322,7 +322,7 @@ variants:
 
                     - 5.7:
                         guest_name = RHEL-Server-5.7
-                        image_name = RHEL-Server-5.7
+                        image_name = images/RHEL-Server-5.7
                         image_size = 20G
                         brew_tag = RHEL-5.7-Z
                         physical_resources_check:
@@ -371,7 +371,7 @@ variants:
 
                     - 5.8:
                         guest_name = RHEL-Server-5.8
-                        image_name = RHEL-Server-5.8
+                        image_name = images/RHEL-Server-5.8
                         image_size = 20G
                         brew_tag = RHEL-5.8-Z
                         physical_resources_check:
@@ -420,7 +420,7 @@ variants:
 
                     - 5.9:
                         guest_name = RHEL-Server-5.9
-                        image_name = RHEL-Server-5.9
+                        image_name = images/RHEL-Server-5.9
                         image_size = 20G
                         brew_tag = dist-5E-U9
                         physical_resources_check:
@@ -473,7 +473,7 @@ variants:
 
                     - 6.1:
                         guest_name = RHEL-Server-6.1
-                        image_name = RHEL-Server-6.1
+                        image_name = images/RHEL-Server-6.1
                         image_size = 20G
                         brew_tag = RHEL-6.1-Z-candidate
                         nic_hotplug:
@@ -515,7 +515,7 @@ variants:
 
                     - 6.2:
                         guest_name = RHEL-Server-6.2
-                        image_name = RHEL-Server-6.2
+                        image_name = images/RHEL-Server-6.2
                         image_size = 20G
                         brew_tag = RHEL-6.2-Z-candidate
                         nic_hotplug:
@@ -556,7 +556,7 @@ variants:
 
                     - 6.3:
                         guest_name = RHEL-Server-6.3
-                        image_name = RHEL-Server-6.3
+                        image_name = images/RHEL-Server-6.3
                         image_size = 20G
                         brew_tag = RHEL-6.3-Z-candidate
                         nic_hotplug:
@@ -598,7 +598,7 @@ variants:
 
                     - 6.4:
                         guest_name = RHEL-Server-6.4
-                        image_name = RHEL-Server-6.4
+                        image_name = images/RHEL-Server-6.4
                         image_size = 20G
                         brew_tag = RHEL-6.4-candidate
                         nic_hotplug:
@@ -638,7 +638,7 @@ variants:
                                     cdrom_cd1 = isos/linux/RHEL6.4-Server-x86_64.iso
                     - 7.0:
                         guest_name = RHEL-Server-7.0
-                        image_name = RHEL-Server-7.0
+                        image_name = images/RHEL-Server-7.0
                         image_size = 20G
                         brew_tag = rhel-7.0-candidate
                         unattended_install.cdrom, check_block_size.4096_512, check_block_size.512_512:
@@ -984,7 +984,7 @@ variants:
         variants:
             - WinXP:
                 guest_name = WinXP
-                image_name = winXP
+                image_name = images/winXP
                 image_size = 30G
                 guest_s3, suspend:
                     s3_support_chk_cmd = 'powercfg /h off  & powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
@@ -1040,7 +1040,7 @@ variants:
 
             - Win2003:
                 guest_name = Win2003
-                image_name = win2003
+                image_name = images/win2003
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
@@ -1146,7 +1146,7 @@ variants:
                             device:
                                 dd_data_whqlqual = Basic
                             device.net:
-                                image_name_supportvm = win2003-64-supportvm
+                                image_name_supportvm = images/win2003-64-supportvm
                         sysprep:
                             unattended_file = win2003-64.sif
                         whql_env_setup:
@@ -1162,7 +1162,7 @@ variants:
                             kill_rundll = yes
 
             - Win2008:
-                image_name = win2008
+                image_name = images/win2008
                 guest_name = Win2008
                 image_size = 30G
                 # 801196#c97
@@ -1275,7 +1275,7 @@ variants:
                             driver_install_cmd_nic = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\2k8\\amd64\\netkvm.inf"
  
             - Win2008r2:
-                image_name = win2008r2
+                image_name = images/win2008r2
                 guest_name = Win2008r2
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
@@ -1352,7 +1352,7 @@ variants:
 
             - Win7:
                 guest_name = Win7
-                image_name = win7
+                image_name = images/win7
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
@@ -1394,7 +1394,7 @@ variants:
                             device:
                                 dd_data_whqlqual = Logo
                             device.net:
-                                image_name_supportvm = win7-32-supportvm
+                                image_name_supportvm = images/win7-32-supportvm
                         sysprep:
                             unattended_file = win7-32-autounattend.xml
                         whql_env_setup:
@@ -1447,7 +1447,7 @@ variants:
                             device:
                                 dd_data_whqlqual = Logo
                             device.net:
-                                image_name_supportvm = win7-64-supportvm
+                                image_name_supportvm = images/win7-64-supportvm
                         sysprep:
                             unattended_file = win7-64-autounattend.xml
                         whql_env_setup:
@@ -1468,7 +1468,7 @@ variants:
 
             - Win8:
                 guest_name = Win8
-                image_name = win8
+                image_name = images/win8
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
                 reboot_command = shutdown /r /f /t 0
@@ -1510,7 +1510,7 @@ variants:
                             device:
                                 dd_data_whqlqual = Logo
                             device.net:
-                                image_name_supportvm = win7-32-supportvm
+                                image_name_supportvm = images/win7-32-supportvm
                         sysprep:
                             unattended_file = win8-32-autounattend.xml
                         whql_env_setup:
@@ -1563,7 +1563,7 @@ variants:
                             device:
                                 dd_data_whqlqual = Logo
                             device.net:
-                                image_name_supportvm = win7-64-supportvm
+                                image_name_supportvm = images/win7-64-supportvm
                         sysprep:
                             unattended_file = win8-64-autounattend.xml
                         whql_env_setup:
@@ -1583,7 +1583,7 @@ variants:
                             driver_install_cmd_nic = cmd /c WIN_UTILS:\\AutoIt3_x64.exe WIN_UTILS:\\virtio_driver_install.au3 pnputil "-i -a WIN_VIRTIO:\\NetKVM\\w8\\amd64\\netkvm.inf"
 
             - Win2012:
-                image_name = win2012
+                image_name = images/win2012
                 guest_name = Win2012
                 image_size = 30G
                 shutdown_command = shutdown /s /f /t 0
