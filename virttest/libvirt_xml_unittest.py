@@ -7,8 +7,10 @@ from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
 from virttest.libvirt_xml import libvirt_xml
 from virttest.libvirt_xml.devices import librarian
 from virttest.libvirt_xml.devices import base as devices_base
+from virttest.libvirt_xml.devices import address
 
-
+# save a copy
+ORIGINAL_DEVICE_TYPES = list(librarian.device_types)
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
 _CAPABILITIES = """<capabilities><host>
 <uuid>%s</uuid><cpu><arch>x86_64</arch><model>
@@ -29,7 +31,6 @@ CAPABILITIES = _CAPABILITIES % UUID
 class LibvirtXMLTestBase(unittest.TestCase):
 
     # Override instance methods needed for testing
-
 
     @staticmethod
     def _capabilities(option='', **dargs):
@@ -58,6 +59,16 @@ class LibvirtXMLTestBase(unittest.TestCase):
                 "</domain>" % (name, LibvirtXMLTestBase._domuuid(None)))
 
 
+    # This must pass b/c address ADDR_ATTRS & Address.set_type_name requirements
+    def verify_address_conflicts(self, test_class):
+        for operation, slot in address.Address.slot_operations():
+            # only need to check slot name once
+            if operation == 'get_':
+                self.assertFalse(hasattr(test_class, slot))
+            # Check all accessor names
+            self.assertFalse(hasattr(test_class, operation + slot))
+
+
     def setUp(self):
         # cause all virsh commands to do nothing and return nothing
         # necessary so virsh module doesn't complain about missing virsh command
@@ -69,6 +80,11 @@ class LibvirtXMLTestBase(unittest.TestCase):
         self.dummy_virsh.super_set('capabilities', self._capabilities)
         self.dummy_virsh.super_set('dumpxml', self._dumpxml)
         self.dummy_virsh.super_set('domuuid', self._domuuid)
+
+
+
+    def tearDown(self):
+        librarian.device_types = list(ORIGINAL_DEVICE_TYPES)
 
 
 class AccessorsTest(LibvirtXMLTestBase):
@@ -158,6 +174,10 @@ class TestLibvirtXML(LibvirtXMLTestBase):
         return libvirt_xml.LibvirtXML(self.dummy_virsh)
 
 
+    def test_verify_address_conflicts(self):
+        self.verify_address_conflicts(libvirt_xml.LibvirtXML)
+
+
     def test_uuid(self):
         lvxml = self._from_scratch()
         test_uuid = lvxml.uuid
@@ -233,6 +253,11 @@ class testNetworkXML(LibvirtXMLTestBase):
         netxml.bridge = {'test3':'test4'}
         return netxml
 
+
+    def test_verify_address_conflicts(self):
+        self.verify_address_conflicts(network_xml.NetworkXML)
+
+
     def test_getters(self):
         netxml = self._from_scratch()
         self.assertEqual(netxml.name, 'test1')
@@ -250,16 +275,19 @@ class testNetworkXML(LibvirtXMLTestBase):
 
 class testLibrarian(LibvirtXMLTestBase):
 
+
     def test_bad_names(self):
         for badname in ('__init__', 'librarian', '__doc__', '/dev/null', '', None):
-            self.assertRaises(ValueError, librarian.get, badname)
+            self.assertRaises(xcepts.LibvirtXMLError, librarian.get, badname)
 
 
     def test_no_module(self):
-        original_known_types = librarian.known_types
+        # Bypass type-check to induse module load failure
+        original_device_types = librarian.device_types
         for badname in ('DoesNotExist', '/dev/null', '', None):
-            librarian.known_types.add(badname)
-            self.assertRaises(ValueError, librarian.get, badname)
+            librarian.device_types.append(badname)
+            self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
+                              badname)
 
 
     def test_serial_class(self):
@@ -268,12 +296,20 @@ class testLibrarian(LibvirtXMLTestBase):
         self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
 
 
+    def test_verify_address_conflicts(self):
+        for device_type in librarian.device_types:
+            # skip check address type
+            if device_type == 'address':
+                continue
+            self.verify_address_conflicts(librarian.get(device_type))
+
+
 class testSerialXML(LibvirtXMLTestBase):
 
     XML = u"<serial type='pty'><source path='/dev/null'/><target port='-1'/></serial>"
 
     def _from_scratch(self):
-        serial = librarian.get('serial')(virsh_instance = self.dummy_virsh)
+        serial = librarian.get('Serial')(virsh_instance = self.dummy_virsh)
         self.assertEqual(serial.device_tag, 'serial')
         self.assertEqual(serial.type_name, 'pty')
         self.assertEqual(serial.virsh, self.dummy_virsh)
@@ -292,7 +328,7 @@ class testSerialXML(LibvirtXMLTestBase):
     def test_from_element(self):
         element = xml_utils.ElementTree.fromstring(self.XML)
         serial1 = self._from_scratch()
-        serial2 = librarian.get('serial').new_from_element(element)
+        serial2 = librarian.get('Serial').new_from_element(element)
         self.assertEqual(serial1, serial2)
         serial2.target_port = '0'
         self.assertTrue(serial1 != serial2)
@@ -323,6 +359,15 @@ class testSerialXML(LibvirtXMLTestBase):
         serial1.target_port = "1"
         self.assertEqual(serial1, serial2)
 
+
+class testAddressXML(LibvirtXMLTestBase):
+
+    def test_librarian(self):
+        for address_type in ['PCIAddress', 'DriveAddress',
+                             'VirtioSerialAddress', 'CCIDAddress',
+                             'USBAddress', 'SPAPR-VIOAddress', 'CCWAddress']:
+            self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
+                              address_type.lower())
 
 if __name__ == "__main__":
     unittest.main()
