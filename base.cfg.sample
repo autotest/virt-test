@@ -455,7 +455,7 @@ host_setup_flag = 0
 sysfs_dir = "/sys"
 
 # Prepend images directory to each images.
-image_name(_.*)? ?<= images/
+# image_name(_.*)? ?<= images/
 # Prepend steps directory to every step files.
 steps ?<= steps/
 # libvirt (virt-install optional arguments)
