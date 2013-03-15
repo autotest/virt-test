@@ -266,7 +266,7 @@ class XMLElementText(AccessorGeneratorBase):
 
         @param: property_name: String name of property (for exception detail)
         @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        @param: forbidden: Optional list of 'get', 'set', 'del'
         @param: parent_xpath: XPath string of parent element
         @param: tag_name: element tag name to manipulate text attribute on.
         """
