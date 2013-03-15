@@ -393,6 +393,65 @@ vcpu_cores = 0
 vcpu_threads = 1
 vcpu_sockets = 2
 
+#nic_script = scripts/qemu-ifup
+#nic_script = scripts/qemu-ifup-ipv6
+#mac_prefix = 00:11:22:33:
+
+always_use_tcpdump = yes
+address_ranges = r1
+address_range_base_mac_r1 = 00:11:22:33:AB:08
+#address_range_base_ip_r1 = 10.66.0.0
+#address_range_size_r1 = 16
+snapshot_name = vm
+
+image_snapshot = no
+image_boot = no
+
+# parallel capability
+# single run test would fix this parameter
+#parallel = yes
+
+rtc_drift = "slew"
+cpu_model = qemu64
+auto_cpu_model = "yes"
+cpu_model_flags = ""
+# Network method
+use_nic_scritps = no
+
+nic_model = e1000
+
+post_command_noncritical = yes
+mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
+
+#If we need to setup host env
+#for host_setup_flag:
+#    0(00): do nothing
+#    1(01): setup env
+#    2(10): cleanup env
+#    3(11): setup and cleanup env
+
+host_setup_flag = 0
+sysfs_dir = "/sys"
+
+# Prepend images directory to each images.
+# image_name(_.*)? ?<= images/
+# Prepend steps directory to every step files.
+steps ?<= steps/
+# libvirt (virt-install optional arguments)
+# TODO: Rename these with 'libvirt_' prefix
+use_autostart = no
+use_check_cpu = yes
+use_debug = yes
+use_no_reboot = no
+use_os_variant = no
+use_os_type = yes
+# if using 'url = auto' to install, url_auto_ip must match IP on
+# selected virsh network or bridge
+url_auto_ip = 192.168.122.1
+# wait in minutes for virt-install to finish (bz still open)
+use_virt_install_wait = no
+virt_install_wait_time = 300
+
 # NFS directory of guest images
 images_good = fileserver.foo.com:/autotest/images_good
 
