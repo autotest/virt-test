@@ -19,43 +19,34 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
         self.xml = u"<%s/>" % device_tag
 
 
-    def valid_element(self, element):
-        element_type = type(element)
-        # element class is protected by generator
-        element_class = type(xml_utils.ElementTree.Element('foobar'))
-        correct_class = issubclass(element_type, element_class)
-        correct_tag = self.device_tag == element.tag
-        is_element = xml_utils.ElementTree.iselement(element)
-        for is_true in (correct_class, correct_tag, is_element):
-            if not is_true:
-                return False
-        return True
+    def from_element(self, element):
+        class_name = self.__class__.__name__
+        if element.tag != class_name.lower():
+            raise xcepts.LibvirtXMLError('Refusing to create %s instance'
+                                         'from %s tagged element'
+                                         % (class_name, element.tag))
+        # XMLTreeFile only supports element trees
+        et = xml_utils.ElementTree.ElementTree(element)
+        # ET only writes to open file-like objects
+        xmlstr = StringIO()
+        # Need element tree string value to initialize LibvirtXMLBase.xml
+        et.write(xmlstr, xml_utils.ENCODING)
+        self.xml = xmlstr.getvalue()
 
 
     @classmethod
     def new_from_element(cls, element, virsh_instance=base.virsh):
+        # subclasses __init__ only takes virsh_instance parameter
         instance = cls(virsh_instance=virsh_instance)
-        if instance.valid_element(element):
-            # XMLTreeFile only supports element trees
-            et = xml_utils.ElementTree.ElementTree(element)
-            # ET only writes to open file-like objects
-            xmlstr = StringIO()
-            # Need element tree string value to initialize LibvirtXMLBase.xml
-            et.write(xmlstr, xml_utils.ENCODING)
-            instance.xml = xmlstr.getvalue()
-            return instance
-        else:
-            raise xcepts.LibvirtXMLError("Invalid element '%s' for device "
-                                         "class '%s'"
-                                         % (str(element), # don't presume type
-                                            str(cls)))
+        instance.from_element(element)
+        return instance
 
 
 class TypedDeviceBase(UntypedDeviceBase):
 
     __slots__ = UntypedDeviceBase.__slots__ + ('type_name',)
 
-    # Subclasses are expected to hide device_tag and type_name
+    # Subclasses are expected to hide device_tag
     def __init__(self, device_tag, type_name, virsh_instance=base.virsh):
         # generate getter, setter, deleter for 'type_name' property
         accessors.XMLAttribute('type_name', self,
@@ -65,4 +56,15 @@ class TypedDeviceBase(UntypedDeviceBase):
                                tag_name=device_tag,
                                attribute='type')
         super(TypedDeviceBase, self).__init__(device_tag, virsh_instance)
+        # Calls accessor to modify xml
         self.type_name = type_name
+
+
+    @classmethod
+    def new_from_element(cls, element, virsh_instance=base.virsh):
+        device_tag = element.tag
+        type_name = element.get('type', None)
+        instance = cls(type_name=type_name,
+                       virsh_instance=virsh_instance)
+        instance.from_element(element)
+        return instance
