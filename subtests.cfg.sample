@@ -5261,6 +5261,12 @@ variants:
         file_md5_check_timeout = 600
         dd_cmd = "dd if=/dev/zero of=%s oflag=direct bs=1M count=%d"
 
+    - vhost_with_cgroup:
+        only virtio_net
+        start_vm = no
+        type = vhost_with_cgroup
+        vhost_nic1 = "vhost=on"
+
 # Internal case configuration end. Don't add any case below this line.
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
