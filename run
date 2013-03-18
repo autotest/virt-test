@@ -399,13 +399,14 @@ class VirtTestApp(object):
 
 
     def _process_machine_type(self):
-        if self.options.machine_type is None:
-            # TODO: this is x86-specific, instead we can get the default arch
-            # from qemu binary and run on all supported machine types
-            if self.options.arch is None and self.options.guest_os is None:
-                self.cartesian_parser.only_filter(DEFAULT_MACHINE_TYPE)
-        elif not self.options.config:
-            self.cartesian_parser.only_filter(self.options.machine_type)
+        if not self.options.config:
+            if self.options.machine_type is None:
+                # TODO: this is x86-specific, instead we can get the default
+                # arch from qemu binary and run on all supported machine types
+                if self.options.arch is None and self.options.guest_os is None:
+                    self.cartesian_parser.only_filter(DEFAULT_MACHINE_TYPE)
+            else:
+                self.cartesian_parser.only_filter(self.options.machine_type)
         else:
             logging.info("Config provided, ignoring --machine-type option")
 
