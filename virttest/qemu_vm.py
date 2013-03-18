@@ -1768,11 +1768,13 @@ class VM(virt_vm.BaseVM):
                 proxy_helper_cmd =  utils_misc.get_path(root_dir,
                                                         proxy_helper_name)
                 if not proxy_helper_cmd:
-                    raise virt_vm.VMCreateError("Proxy command not specified")
+                    raise virt_vm.VMConfigMissingError(self.name,
+                                                       "9p_proxy_binary")
 
                 p9_export_dir = params.get("9p_export_dir")
                 if not p9_export_dir:
-                    raise virt_vm.VMCreateError("Export dir not specified")
+                    raise virt_vm.VMConfigMissingError(self.name,
+                                                       "9p_export_dir")
 
                 proxy_helper_cmd += " -p " + p9_export_dir
                 proxy_helper_cmd += " -u 0 -g 0"
