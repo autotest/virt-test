@@ -19,7 +19,13 @@ class MonitorError(Exception):
 
 
 class MonitorConnectError(MonitorError):
-    pass
+    def __init__(self, monitor_name):
+        MonitorError.__init__(self)
+        self.monitor_name = monitor_name
+
+
+    def __str__(self):
+        return "Could not connect to monitor '%s'" % self.monitor_name
 
 
 class MonitorSocketError(MonitorError):
