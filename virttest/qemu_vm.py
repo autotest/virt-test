@@ -2142,6 +2142,7 @@ class VM(virt_vm.BaseVM):
                 else:
                     logging.error("Could not connect to monitor '%s'" %
                                   monitor_name)
+                    e = qemu_monitor.MonitorConnectError(monitor_name)
                     self.destroy(gracefully=False)
                     raise e
                 # Add this monitor to the list
