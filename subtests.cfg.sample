@@ -1503,7 +1503,7 @@ variants:
         # if you want to test with a guest booted with diff SMP, pls modify it.
         # you might want to modify the vcpu_maxcpus to suit your host
         variants:
-            - reboot:
+            - with_reboot:
                 type = hotplug_vcpu
             - nonexist_vcpu:
                 type = hotplug_nonexist_vcpu
@@ -3303,11 +3303,11 @@ variants:
         repeat_times = 1
         wait_secs_for_hook_up = 3
         variants:
-            - reboot:
+            - with_reboot:
                 sub_type_after_unplug = boot
                 reboot_method = shell
                 reboot = yes
-            - shutdown:
+            - with_shutdown:
                 sub_type_after_unplug = shutdown
                 shutdown_method = shell
                 check_img = yes
@@ -5088,7 +5088,7 @@ variants:
                         before_start = "load_stress"
                         when_steady = "reopen"
                         after_reopen = "reboot verify_alive"
-            - reboot:
+            - with_reboot:
                 type = block_mirror_reboot
                 when_steady = "reopen stop_reset"
                 after_reopen = "reboot verify_alive"
