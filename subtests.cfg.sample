@@ -5251,6 +5251,16 @@ variants:
         Host_RHEL.7:
             option_roms = "pxe-e1000.rom pxe-rtl8139.rom vgabios-qxl.bin"
 
+    - bigfile_transfer_over_ipv6:
+        only Linux
+        type = transfer_file_over_ipv6
+        vms = "vm1 vm2"
+        image_snapshot = yes
+        filesize = 4096
+        file_trans_timeout = 1200
+        file_md5_check_timeout = 600
+        dd_cmd = "dd if=/dev/zero of=%s oflag=direct bs=1M count=%d"
+
 # Internal case configuration end. Don't add any case below this line.
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
