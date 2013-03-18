@@ -1850,6 +1850,7 @@ class VM(virt_vm.BaseVM):
                         logging.warn(e)
                         time.sleep(1)
                 else:
+                    e = qemu_monitor.MonitorConnectError(monitor_name)
                     self.destroy()
                     raise e
                 # Add this monitor to the list
