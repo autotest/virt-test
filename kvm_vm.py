@@ -627,6 +627,7 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("drive", blkdev_id)
                 dev += _add_option("id", id)
                 dev += _add_option("x-data-plane", x_data_plane, bool)
+                dev += _add_option("bootindex", bootindex)
                 format = "none"
             if format == "floppy":
                 drivelist = ['driveA','driveB']
@@ -1483,6 +1484,7 @@ class VM(virt_vm.BaseVM):
             iso = cdrom_params.get("cdrom")
             bus = None
             port = None
+            bootindex = cdrom_params.get("bootindex")
             if cd_format == "usb1":
                 bus, port = get_free_usb_port(image_name, "uhci")
             if cd_format == "usb2":
@@ -1520,6 +1522,7 @@ class VM(virt_vm.BaseVM):
                 if not cd_format.startswith("scsi-"):
                     cd_format = "ide"
                 qemu_cmd += add_drive(help, iso, index, cd_format,
+                                      bootindex=bootindex,
                                       media="cdrom",
                                       ide_bus=ide_bus,
                                       ide_unit=ide_unit,
