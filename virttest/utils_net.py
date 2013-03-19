@@ -1664,5 +1664,7 @@ def update_mac_ip_address(vm, params, timeout=None):
 
     for (mac, ip) in macs_ips:
         vlan = macs_ips.index((mac, ip))
+        if "-" in mac:
+            mac = mac.replace("-", ".")
         vm.address_cache[mac.lower()] = ip
         vm.virtnet.set_mac_address(vlan, mac)
