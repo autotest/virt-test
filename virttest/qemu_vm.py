@@ -3389,6 +3389,17 @@ class VM(virt_vm.BaseVM):
         return current_file
 
 
+    def block_stream(self, device, speed, base=None):
+        """
+        start to stream block device, aka merge snapshot;
+
+        @param device: device ID;
+        @param speed: limited speed, default unit B/s;
+        @param base: base file;
+        """
+        return self.monitor.block_stream(device, speed, base)
+
+
     def block_mirror(self, device, target, speed, sync,
                      format, mode="absolute-paths"):
         """
