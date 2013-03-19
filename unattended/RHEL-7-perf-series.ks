@@ -37,6 +37,8 @@ telnet
 portmap
 net-snmp
 mkisofs
+numactl-libs
+numactl
 %end
 
 %post
