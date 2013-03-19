@@ -39,6 +39,8 @@ nc
 NetworkManager
 ntpdate
 redhat-lsb
+numactl-libs
+numactl
 %end
 
 %post
