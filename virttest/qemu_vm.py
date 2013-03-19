@@ -692,7 +692,8 @@ class VM(virt_vm.BaseVM):
             return cmd + dev
 
         def add_nic(help_text, vlan, model=None, mac=None, device_id=None,
-                    netdev_id=None, nic_extra_params=None, pci_addr=None):
+                    netdev_id=None, nic_extra_params=None, pci_addr=None,
+                    bootindex=None):
             free_pci_addr = get_free_pci_addr(pci_addr)
             if model == 'none':
                 return ''
@@ -717,6 +718,7 @@ class VM(virt_vm.BaseVM):
                 cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                 if nic_extra_params:
                     cmd += ",%s" % nic_extra_params
+                cmd += _add_option("bootindex", bootindex)
             else:
                 cmd = " -net nic" + netdev_vlan_str
                 if model:
@@ -1435,6 +1437,7 @@ class VM(virt_vm.BaseVM):
                 mac = nic.get('mac')
                 nic_model = nic.get("nic_model")
                 nic_extra = nic.get("nic_extra_params")
+                bootindex = nic_params.get("bootindex")
                 netdev_extra = nic.get("netdev_extra_params")
                 bootp = nic.get("bootp")
                 if nic.get("tftp"):
@@ -1451,7 +1454,8 @@ class VM(virt_vm.BaseVM):
                 # Handle the '-net nic' part
                 qemu_cmd += add_nic(help_text, vlan, nic_model, mac,
                                     device_id, netdev_id, nic_extra,
-                                    nic_params.get("nic_pci_addr"))
+                                    nic_params.get("nic_pci_addr"),
+                                    bootindex)
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
                                     bootp, redirs, netdev_id, netdev_extra,
