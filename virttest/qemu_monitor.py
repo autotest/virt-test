@@ -620,14 +620,14 @@ class HumanMonitor(Monitor):
         Start block-stream job;
 
         @param device: device ID
-        @param speed: int value, limited speed value, unit is MB/s
+        @param speed: int type, lmited speed(B/s)
         @param base: base file
 
         @return: The command's output
         """
         cmd = "block-stream %s" % device
         if speed is not None:
-            cmd = "%s %s" % (cmd, speed)
+            cmd = "%s %sB" % (cmd, speed)
         if base:
             cmd = "%s %s" % (cmd, base)
         return self.cmd(cmd)
@@ -638,7 +638,7 @@ class HumanMonitor(Monitor):
         Set limited speed for runnig job on the device
 
         @param device: device ID
-        @param speed: int type, limited speed value, unit is MB/s
+        @param speed: int type, limited speed(B/s)
 
         @return: The command's output
         """
@@ -1493,14 +1493,14 @@ class QMPMonitor(Monitor):
         Start block-stream job;
 
         @param device: device ID
-        @param speed: int value, limited speed value, unit is MB/s
+        @param speed: int type, limited speed(B/s)
         @param base: base file
 
         @return: The command's output
         """
         args = {"device": device}
         if speed is not None:
-            args["speed"] = int(speed) * 1048576
+            args["speed"] = speed
         if base:
             args["base"] = base
         return self.cmd("block-stream", args)
@@ -1511,7 +1511,7 @@ class QMPMonitor(Monitor):
         Set limited speed for runnig job on the device
 
         @param device: device ID
-        @param speed: int type, limited speed value, unit is MB/s
+        @param speed: int type, limited speed(B/s)
 
         @return: The command's output
         """
