@@ -70,19 +70,19 @@ def run_cdrom(test, params, env):
         blocks = vm.monitor.info("block")
         cdfile = None
         if isinstance(blocks, str):
-            cdfile = re.findall('%s: .*file=(\S*) ' % device, blocks)
-            if not cdfile:
-                return None
-            else:
-                cdfile = cdfile[0]
+            file_list = re.findall('%s: .*file=(\S*) ' % device, blocks)
+            if file_list:
+                cdfile = file_list[0]
         else:
             for block in blocks:
                 if block['device'] == device:
                     try:
                         cdfile = block['inserted']['file']
+                        break
                     except KeyError:
                         continue
         return cdfile
+
 
     def check_cdrom_tray(cdrom, mode='monitor', dev_name="/dev/sr0"):
         """ Checks whether the tray is opend """
