@@ -187,13 +187,13 @@ def run_cdrom(test, params, env):
 
 
     def eject_test_via_monitor(qemu_cdrom_device, guest_cdrom_device,
-                               iso_image, max_times):
+                               iso_image, max_test_times):
         """
         Test cdrom eject function via qemu monitor.
         """
-        error.context("Eject the iso image in monitor %s times" % max_times,
-                      logging.info)
-        for i in range(1, max_times):
+        error.context("Eject the iso image in monitor"
+                      " %s times" % max_test_times, logging.info)
+        for i in range(1, max_test_times):
             session.cmd('eject %s' % guest_cdrom_device)
             eject_cdrom(qemu_cdrom_device, vm.monitor)
             time.sleep(2)
@@ -213,7 +213,7 @@ def run_cdrom(test, params, env):
 
 
     def check_tray_status_test(qemu_cdrom_device, guest_cdrom_device,
-                               max_times):
+                               max_test_times):
         """
         Test cdrom tray status reporting function.
         """
@@ -229,9 +229,9 @@ def run_cdrom(test, params, env):
             logging.warn("cdrom_test_tray_status test is skipped...")
             return
 
-        error.context("Eject the cdrom in guest %s times" % max_times,
+        error.context("Eject the cdrom in guest %s times" % max_test_times,
                       logging.info)
-        for i in range(1, max_times):
+        for i in range(1, max_test_times):
             session.cmd('eject %s' % guest_cdrom_device)
             if not is_tray_opened(qemu_cdrom_device):
                 raise error.TestFail("Monitor reports tray closed"
@@ -300,9 +300,9 @@ def run_cdrom(test, params, env):
             raise error.TestFail("On disk and on cdrom files are different, "
                                  "md5 mismatch")
 
-        error.context("Mount/Unmount cdrom for %s times" % max_times,
+        error.context("Mount/Unmount cdrom for %s times" % max_test_times,
                       logging.info)
-        for _ in range(1, max_times):
+        for _ in range(1, max_test_times):
             try:
                 session.cmd("umount %s" % guest_cdrom_device)
                 session.cmd("mount %s /mnt" % guest_cdrom_device)
@@ -380,14 +380,14 @@ def run_cdrom(test, params, env):
                                  " unlocked" % qemu_cdrom_device)
         del func
 
-    max_times = int(params.get("max_times", 100))
+    max_test_times = int(params.get("cdrom_max_test_times", 100))
     if params.get("cdrom_test_eject") == "yes":
         eject_test_via_monitor(qemu_cdrom_device, guest_cdrom_device,
-                               iso_image, max_times)
+                               iso_image, max_test_times)
 
     if params.get('cdrom_test_tray_status') == 'yes':
         check_tray_status_test(qemu_cdrom_device, guest_cdrom_device,
-                               max_times)
+                               max_test_times)
 
     if params.get('cdrom_test_locked') == 'yes':
         check_tray_locked_test(qemu_cdrom_device, guest_cdrom_device)
