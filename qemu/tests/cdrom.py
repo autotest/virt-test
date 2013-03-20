@@ -372,12 +372,11 @@ def run_cdrom(test, params, env):
         session.cmd('eject %s' % cdrom_dev)
         eject_cdrom(device, vm.monitor)
         if get_cdrom_file(device) is not None:
-            raise error.TestFail("Device %s was not ejected (%s)" % (cdrom, i))
+            raise error.TestFail("Device %s was not ejected" % cdrom)
 
         change_cdrom(device, cdrom_orig, vm.monitor)
         if get_cdrom_file(device) != cdrom_orig:
-            raise error.TestFail("It wasn't possible to change cdrom %s (%s)"
-                                  % (cdrom, i))
+            raise error.TestFail("Could not change cdrom image %s" % cdrom)
 
     session.close()
     cleanup_cdroms(cdrom_dir)
