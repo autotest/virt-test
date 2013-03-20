@@ -137,8 +137,10 @@ def run_cdrom(test, params, env):
             monitor.cmd("change", args={'device': device, 'target': target})
 
 
-    def get_cdrom_device():
-        """Get cdrom device when cdrom is not insert."""
+    def get_empty_cdrom_device():
+        """
+        Get cdrom device when cdrom is not insert.
+        """
         device = None
         blocks = vm.monitor.info("block")
         if isinstance(blocks, str):
@@ -174,7 +176,7 @@ def run_cdrom(test, params, env):
     logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
     if params.get('not_insert_at_start') == "yes":
         error.context("Locked without media present", logging.info)
-        device = get_cdrom_device()
+        device = get_empty_cdrom_device()
         cdrom_dev = cdrom_dev_list[0]
         if vm.check_block_locked(device):
             raise error.TestFail("Device should not be locked just after "
