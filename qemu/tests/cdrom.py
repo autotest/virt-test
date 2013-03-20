@@ -174,11 +174,129 @@ def run_cdrom(test, params, env):
         return device
 
 
+    def eject_test_via_monitor(max_times):
+        """
+        Test cdrom eject function via qemu monitor.
+        """
+        error.context("Eject the cdrom in monitor %s times" % max_times,
+                      logging.info)
+        for i in range(1, max_times):
+            session.cmd('eject %s' % cdrom_dev)
+            eject_cdrom(device, vm.monitor)
+            time.sleep(2)
+            if get_cdrom_file(device) is not None:
+                raise error.TestFail("Device %s was not ejected"
+                                     " (round %s)" % (cdrom, i))
+
+            cdrom = cdrom_new
+            # On even attempts, try to change the cdrom
+            if i % 2 == 0:
+                cdrom = cdrom_orig
+            change_cdrom(device, cdrom, vm.monitor)
+            if get_cdrom_file(device) != cdrom:
+                raise error.TestFail("Could not change cdrom image %s"
+                                     " (round %s)" % (cdrom, i))
+            time.sleep(workaround_eject_time)
+
+
+    def check_tray_status_test(max_times):
+        """
+        Test cdrom tray status reporting function.
+        """
+        error.context("Copy test script to guest")
+        tray_check_src = params.get("tray_check_src")
+        if tray_check_src:
+            tray_check_src = utils_misc.get_path(test.virtdir,
+                                                 "deps/%s" % tray_check_src)
+            vm.copy_files_to(tray_check_src, "/tmp")
+
+        if is_tray_opened(device) is None:
+            logging.warn("Tray status reporting is not supported by qemu!")
+            logging.warn("cdrom_test_tray_status test is skipped...")
+            return
+
+        error.context("Eject the cdrom in guest %s times" % max_times,
+                      logging.info)
+        for i in range(1, max_times):
+            session.cmd('eject %s' % cdrom_dev)
+            if not is_tray_opened(device):
+                raise error.TestFail("Monitor reports tray closed"
+                                     " when ejecting (round %s)" % i)
+            session.cmd('dd if=%s of=/dev/null count=1' % cdrom_dev)
+            if is_tray_opened(device):
+                raise error.TestFail("Monitor reports tray opened when reading"
+                                     " cdrom in guest (round %s)" % i)
+            time.sleep(workaround_eject_time)
+
+
+    def check_tray_locked_test(device, cdrom_dev):
+        """
+        Test cdrom tray locked function.
+        """
+        error.context("Check cdrom tray status after cdrom is locked",
+                      logging.info)
+        if is_tray_opened(device, mode='mixed', dev_name=cdrom_dev) is None:
+            logging.warn("Tray status reporting is not supported by qemu!")
+            logging.warn("cdrom_test_locked test is skipped...")
+            return
+
+        eject_failed = False
+        eject_failed_msg = "Tray should be closed even in locked status"
+        session.cmd('eject %s' % cdrom_dev)
+        if not is_tray_opened(device, mode='mixed', dev_name=cdrom_dev):
+            raise error.TestFail("Tray should not in closed status")
+        session.cmd('eject -i on %s' % cdrom_dev)
+        try:
+            session.cmd('eject -t %s' % cdrom_dev)
+        except aexpect.ShellCmdError, e:
+            eject_failed = True
+            eject_failed_msg += ", eject command failed: %s" % str(e)
+        if (eject_failed
+            or is_tray_opened(device, mode='mixed', dev_name=cdrom_dev)):
+            raise error.TestFail(eject_failed_msg)
+        session.cmd('eject -i off %s' % cdrom_dev)
+        session.cmd('eject -t %s' % cdrom_dev)
+
+
+    def file_operation_test(cdrom_dev, session):
+        """
+        Cdrom file operation test.
+        """
+        error.context("Mounting the cdrom under /mnt", logging.info)
+        session.cmd("mount %s %s" % (cdrom_dev, "/mnt"), timeout=30)
+
+        filename = "new"
+
+        error.context("File copying test", logging.info)
+        session.cmd("rm -f /tmp/%s" % filename)
+        session.cmd("cp -f /mnt/%s /tmp/" % filename)
+
+        error.context("Compare file on disk and on cdrom", logging.info)
+        f1_hash = session.cmd("md5sum /mnt/%s" % filename).split()[0].strip()
+        f2_hash = session.cmd("md5sum /tmp/%s" % filename).split()[0].strip()
+        if f1_hash != f2_hash:
+            raise error.TestFail("On disk and on cdrom files are different, "
+                                 "md5 mismatch")
+
+        error.context("Mount/Unmount cdrom for %s times" % max_times,
+                      logging.info)
+        for i in range(1, max_times):
+            try:
+                session.cmd("umount %s" % cdrom_dev)
+                session.cmd("mount %s /mnt" % cdrom_dev)
+            except aexpect.ShellError, detail:
+                logging.error("Mount/Unmount fail, detail: '%s'", detail)
+                logging.debug(session.cmd("cat /etc/mtab"))
+                raise
+
+        session.cmd("umount %s" % cdrom_dev)
+
+
+    # Test main body start.
     if (not params.get("not_insert_at_start")
         or params.get("not_insert_at_start") == "no"):
         cdrom_new = master_cdroms(params)
         cdrom_dir = os.path.dirname(cdrom_new)
-
 
     vm = env.get_vm(params["main_vm"])
     vm.create()
@@ -234,113 +352,17 @@ def run_cdrom(test, params, env):
             raise error.TestFail("Device %s could not be unlocked" % device)
 
     max_times = int(params.get("max_times", 100))
-    error.context("Eject the cdrom in monitor %s times" % max_times,
-            logging.info)
-    for i in range(1, max_times):
-        session.cmd('eject %s' % cdrom_dev)
-        eject_cdrom(device, vm.monitor)
-        time.sleep(2)
-        if get_cdrom_file(device) is not None:
-            raise error.TestFail("Device %s was not ejected (%s)" % (cdrom, i))
+    if params.get("cdrom_test_eject") == "yes":
+        eject_test_via_monitor(max_times)
 
-        cdrom = cdrom_new
-        # On even attempts, try to change the cdrom
-        if i % 2 == 0:
-            cdrom = cdrom_orig
-        change_cdrom(device, cdrom, vm.monitor)
-        if get_cdrom_file(device) != cdrom:
-            raise error.TestFail("It wasn't possible to change cdrom %s (%s)"
-                                  % (cdrom, i))
-        time.sleep(workaround_eject_time)
+    if params.get('cdrom_test_tray_status') == 'yes':
+        check_tray_status_test(max_times)
 
-    if params.get("tray_check_src"):
-        tray_check_src = utils_misc.get_path(test.virtdir,
-                                     "deps/%s" % params.get("tray_check_src"))
-        vm.copy_files_to(tray_check_src, "/tmp")
+    if params.get('cdrom_test_locked') == 'yes':
+        check_tray_locked_test(device, cdrom_dev)
 
-    error.context('Eject the cdrom in guest %s times' % max_times,
-            logging.info)
-    if params.get('cdrom_test_tray_status') != 'yes':
-        pass
-    elif is_tray_opened(device) is None:
-        logging.error("Tray reporting not supported by qemu!")
-        logging.error("cdrom_test_tray_status skipped...")
-    else:
-        for i in range(1, max_times):
-            session.cmd('eject %s' % cdrom_dev)
-            if not is_tray_opened(device):
-                raise error.TestFail("Monitor reports closed tray (%s)" % i)
-            session.cmd('dd if=%s of=/dev/null count=1' % cdrom_dev)
-            if is_tray_opened(device):
-                raise error.TestFail("Monitor reports opened tray (%s)" % i)
-            time.sleep(workaround_eject_time)
-
-    error.context("Check cdrom tray status after cdrom is locked",
-            logging.info)
-    if params.get('cdrom_test_locked') != 'yes':
-        pass
-    elif is_tray_opened(device, mode='mixed', dev_name=cdrom_dev) is None:
-        logging.error("Tray reporting not supported by qemu!")
-        logging.error("cdrom_test_locked skipped...")
-    else:
-        eject_failed = False
-        eject_failed_msg = "Tray should be closed even in locked status"
-        session.cmd('eject %s' % cdrom_dev)
-        if not is_tray_opened(device, mode='mixed', dev_name=cdrom_dev):
-            raise error.TestFail("Tray should not in closed status")
-        session.cmd('eject -i on %s' % cdrom_dev)
-        try:
-            session.cmd('eject -t %s' % cdrom_dev)
-        except aexpect.ShellCmdError, e:
-            eject_failed = True
-            eject_failed_msg += ", eject command failed: %s" % str(e)
-        if (eject_failed
-            or is_tray_opened(device, mode='mixed', dev_name=cdrom_dev)):
-            raise error.TestFail(eject_failed_msg)
-        session.cmd('eject -i off %s' % cdrom_dev)
-        session.cmd('eject -t %s' % cdrom_dev)
-
-    error.context("Check whether the cdrom is read-only", logging.info)
-    try:
-        output = session.cmd("echo y | mkfs %s" % cdrom_dev)
-        raise error.TestFail("Attempt to format cdrom %s succeeded" %
-                                                                    cdrom_dev)
-    except aexpect.ShellError:
-        pass
-
-    sub_test = params.get("sub_test")
-    if sub_test:
-        error.context("Run sub test '%s' before doing file"
-                      " operation" % sub_test, logging.info)
-        params["cdrom_cd1"] = os.path.basename(cdrom)
-        utils_test.run_virt_sub_test(test, params, env, sub_test)
-
-    error.context("Mounting the cdrom under /mnt", logging.info)
-    session.cmd("mount %s %s" % (cdrom_dev, "/mnt"), timeout=30)
-
-    filename = "new"
-
-    error.context("File copying test", logging.info)
-    session.cmd("rm -f /tmp/%s" % filename)
-    session.cmd("cp -f /mnt/%s /tmp/" % filename)
-
-    error.context("Compare file on disk and on cdrom", logging.info)
-    f1_hash = session.cmd("md5sum /mnt/%s" % filename).split()[0].strip()
-    f2_hash = session.cmd("md5sum /tmp/%s" % filename).split()[0].strip()
-    if f1_hash != f2_hash:
-        raise error.TestFail("On disk and on cdrom files are different, "
-                             "md5 mismatch")
-
-    error.context("Mount/Unmount cdrom for %s times" % max_times, logging.info)
-    for i in range(1, max_times):
-        try:
-            session.cmd("umount %s" % cdrom_dev)
-            session.cmd("mount %s /mnt" % cdrom_dev)
-        except aexpect.ShellError:
-            logging.debug(session.cmd("cat /etc/mtab"))
-            raise
-
-    session.cmd("umount %s" % cdrom_dev)
+    if params.get("cdrom_test_file_operation") == "yes":
+        file_operation_test(cdrom_dev, session)
 
     error.context("Cleanup", logging.info)
     # Return the cdrom_orig
