@@ -5346,6 +5346,16 @@ variants:
                     - with_specify_device:
                         boot_device = "virtio-scsi Drive"
 
+    - virtual_nic_private:
+        #now this case only support linux guest, will support windows later
+        only Linux
+        type = virtual_nic_private
+        vms = "vm1 vm2 vm3"
+        image_snapshot = yes
+        catch_date = "%s.* > %s.ssh"
+        tcpdump_cmd = "tcpdump -s 0 -n tcp -vv port ssh and dst %s and src %s -i %s "
+        dd_cmd = "dd if=/dev/urandom of=%s oflag=direct bs=1M count=%d"
+        filesize = 100
 # Internal case configuration end. Don't add any case below this line.
 # (THIS LINE IS RESERVED FOR MERGE)
 # (THIS LINE IS RESERVED FOR MERGE)
