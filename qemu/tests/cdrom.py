@@ -110,7 +110,7 @@ def run_cdrom(test, params, env):
         return (is_open, checked)
 
 
-    def check_cdrom_tray(cdrom, mode='monitor', dev_name="/dev/sr0"):
+    def is_tray_opened(cdrom, mode='monitor', dev_name="/dev/sr0"):
         """
         Checks whether the tray is opend
 
@@ -262,16 +262,16 @@ def run_cdrom(test, params, env):
             logging.info)
     if params.get('cdrom_test_tray_status') != 'yes':
         pass
-    elif check_cdrom_tray(device) is None:
+    elif is_tray_opened(device) is None:
         logging.error("Tray reporting not supported by qemu!")
         logging.error("cdrom_test_tray_status skipped...")
     else:
         for i in range(1, max_times):
             session.cmd('eject %s' % cdrom_dev)
-            if not check_cdrom_tray(device):
+            if not is_tray_opened(device):
                 raise error.TestFail("Monitor reports closed tray (%s)" % i)
             session.cmd('dd if=%s of=/dev/null count=1' % cdrom_dev)
-            if check_cdrom_tray(device):
+            if is_tray_opened(device):
                 raise error.TestFail("Monitor reports opened tray (%s)" % i)
             time.sleep(workaround_eject_time)
 
@@ -279,14 +279,14 @@ def run_cdrom(test, params, env):
             logging.info)
     if params.get('cdrom_test_locked') != 'yes':
         pass
-    elif check_cdrom_tray(device, mode='mixed', dev_name=cdrom_dev) is None:
+    elif is_tray_opened(device, mode='mixed', dev_name=cdrom_dev) is None:
         logging.error("Tray reporting not supported by qemu!")
         logging.error("cdrom_test_locked skipped...")
     else:
         eject_failed = False
         eject_failed_msg = "Tray should be closed even in locked status"
         session.cmd('eject %s' % cdrom_dev)
-        if not check_cdrom_tray(device, mode='mixed', dev_name=cdrom_dev):
+        if not is_tray_opened(device, mode='mixed', dev_name=cdrom_dev):
             raise error.TestFail("Tray should not in closed status")
         session.cmd('eject -i on %s' % cdrom_dev)
         try:
@@ -295,7 +295,7 @@ def run_cdrom(test, params, env):
             eject_failed = True
             eject_failed_msg += ", eject command failed: %s" % str(e)
         if (eject_failed
-            or check_cdrom_tray(device, mode='mixed', dev_name=cdrom_dev)):
+            or is_tray_opened(device, mode='mixed', dev_name=cdrom_dev)):
             raise error.TestFail(eject_failed_msg)
         session.cmd('eject -i off %s' % cdrom_dev)
         session.cmd('eject -t %s' % cdrom_dev)
