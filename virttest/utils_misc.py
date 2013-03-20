@@ -11,6 +11,31 @@ from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
 import utils_koji, data_dir
 
+# TODO: remove this import when log_last_traceback is moved to autotest
+import traceback
+
+# TODO: this function is being moved into autotest. For compatibility
+# reasons keep it here too but new code should use the one from base_utils.
+def log_last_traceback(msg=None, log=logging.error):
+    """
+    @warning: This function is being moved into autotest and your code should
+              use autotest.client.shared.base_utils function instead.
+    Writes last traceback into specified log.
+    @param msg: Override the default message. ["Original traceback"]
+    @param log: Where to log the traceback [logging.error]
+    """
+    if not log:
+        log = logging.error
+    if msg:
+        log(msg)
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    if not exc_traceback:
+        log('Requested log_last_traceback but no exception was raised.')
+        return
+    log("Original " +
+        "".join(traceback.format_exception(exc_type, exc_value,
+                                           exc_traceback)))
+
 
 def lock_file(filename, mode=fcntl.LOCK_EX):
     f = open(filename, "w")
