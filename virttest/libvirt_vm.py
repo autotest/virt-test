@@ -692,8 +692,12 @@ class VM(virt_vm.BaseVM):
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
+
+            base_dir = image_params.get("images_base_dir",
+                                        data_dir.get_data_dir())
+
             filename = storage.get_image_filename(image_params,
-                                                  data_dir.get_data_dir())
+                                                  base_dir)
             if image_params.get("use_storage_pool") == "yes":
                 filename = None
                 virt_install_cmd += add_drive(help_text,

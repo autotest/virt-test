@@ -26,7 +26,8 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
-    base_dir = data_dir.get_data_dir()
+    base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+
     if params.get("storage_type") == "iscsi":
         iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         params["image_name"] = iscsidev.setup()
