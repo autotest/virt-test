@@ -6,8 +6,8 @@ d-i console-tools/archs select at
 d-i console-keymaps-at/keymap select us
 
 d-i netcfg/choose_interface select auto
-d-i netcfg/get_hostname string unassigned-hostname
-d-i netcfg/get_domain string unassigned-domain
+d-i netcfg/get_hostname string autotest-ubuntu-guest
+d-i netcfg/get_domain string virt-tests
 d-i netcfg/wireless_wep string
 
 d-i clock-setup/utc boolean true
