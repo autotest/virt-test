@@ -534,7 +534,8 @@ def print_guest_list(options):
     pipe.write("\n\n")
     for params in get_guest_name_parser(options).get_dicts():
         index += 1
-        image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+        base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+        image_name = storage.get_image_filename(params, base_dir)
         shortname = params['shortname']
         if os.path.isfile(image_name):
             out = (bcolors.blue + str(index) + bcolors.end + " " +
