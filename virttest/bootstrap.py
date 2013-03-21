@@ -323,16 +323,14 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     # subtest.cfg.sample, this file takes precedence over the shared
     # subtest.cfg.sample. So, yank this file from the cfg file list.
 
-    idx = 0
+    config_file_list_shared_keep = []
     for cf in config_file_list_shared:
         basename = os.path.basename(cf)
         target = os.path.join(test_dir, "cfg", basename)
-        if target in config_file_list:
-            config_file_list_shared.pop(idx)
-        idx += 1
+        if target not in config_file_list:
+            config_file_list_shared_keep.append(cf)
 
-    config_file_list += config_file_list_shared
-
+    config_file_list += config_file_list_shared_keep
     for config_file in config_file_list:
         src_file = config_file
         dst_file = os.path.join(test_dir, "cfg", os.path.basename(config_file))
