@@ -1137,12 +1137,17 @@ def net_state_dict(only_names=False, **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: dictionary
     """
-    dargs['ignore_status'] = True # so persistent check can work
-    netlist = net_list("--all", print_info=True).stdout.strip().splitlines()
+    # Using multiple virsh commands in different ways
+    dargs['ignore_status'] = False # force problem detection
+    net_list_result = net_list("--all", **dargs)
+    # If command failed, exception would be raised here
+    netlist = net_list_result.stdout.strip().splitlines()
     # First two lines contain table header
+    # TODO: Double-check first-two lines really are header
     netlist = netlist[2:]
     result = {}
     for line in netlist:
+        # Split on whitespace, assume 3 columns
         linesplit = line.split(None, 3)
         name = linesplit[0]
         # Several callers in libvirt_xml only requre defined names
@@ -1152,20 +1157,21 @@ def net_state_dict(only_names=False, **dargs):
         # Keep search fast & avoid first-letter capital problems
         active = not bool(linesplit[1].count("nactive"))
         autostart = bool(linesplit[2].count("es"))
+        # There is no representation of persistent status in output
         try:
-            # These will throw exception if network is transient
-            if autostart:
+            # Rely on net_autostart will raise() if not persistent state
+            if autostart: # Enabled, try enabling again
+                # dargs['ignore_status'] already False
                 net_autostart(name, **dargs)
-            else:
+            else: # Disabled, try disabling again
                 net_autostart(name, "--disable", **dargs)
             # no exception raised, must be persistent
             persistent = True
-        except error.CmdError, cmdstatus:
-            # Keep search fast & avoid first-letter capital problems
-            if not bool(cmdstatus.stdout.count("ransient")):
+        except error.CmdError, detail:
+            # Exception thrown, could be transient or real problem
+            if bool(detail.result_obj.stderr.count("ransient")):
                 persistent = False
-            else:
-                # Different error occured, re-raise it
+            else: # A unexpected problem happened, re-raise it.
                 raise
         # Warning: These key names are used by libvirt_xml and test modules!
         result[name] = {'active':active,
