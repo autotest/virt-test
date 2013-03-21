@@ -540,16 +540,16 @@ class UnattendedInstallConfig(object):
 
         base_initrd = os.path.basename(self.initrd)
         os.chdir(remaster_path)
-        utils.run("gzip -d < ../%s | cpio --extract --make-directories "
+        utils.run("gzip -d < ../%s | fakeroot cpio --extract --make-directories "
                   "--no-absolute-filenames" % base_initrd, verbose=DEBUG)
         utils.run("cp %s %s" % (self.unattended_file, dest_fname),
                   verbose=DEBUG)
 
         if self.params.get("vm_type") == "libvirt":
-            utils.run("find . | cpio -H newc --create > ../%s.img" %
+            utils.run("find . | fakeroot cpio -H newc --create > ../%s.img" %
                       base_initrd.rstrip(".gz"), verbose=DEBUG)
         else:
-            utils.run("find . | cpio -H newc --create | gzip -9 > ../%s" %
+            utils.run("find . | fakeroot cpio -H newc --create | gzip -9 > ../%s" %
                       base_initrd, verbose=DEBUG)
 
         os.chdir(self.image_path)
