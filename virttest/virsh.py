@@ -1591,6 +1591,37 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     return command(cmd, **dargs)
 
 
+def setmaxmem(domainarg=None, sizearg=None, domain=None,
+              size=None, use_kilobytes=False, flagstr="", **dargs):
+    """
+    Change the maximum memory allocation for the guest domain.
+
+    @param: domainarg: Domain name (first pos. parameter)
+    @param: sizearg: Memory size in KiB (second. pos. parameter)
+    @param: domain: Option to --domain parameter
+    @param: size: Option to --size or --kilobytes parameter
+    @param: use_kilobytes: True for --kilobytes, False for --size
+    @param: flagstr: string of "--config, --live, --current, etc."
+    @returns: CmdResult instance
+    @raises: error.CmdError: if libvirtd is not running.
+    """
+    cmd = "setmaxmem"
+    if domainarg is not None: # Allow testing of ""
+        cmd += " %s" % domainarg
+    if sizearg is not None: # Allow testing of 0 and ""
+        cmd += " %s" % sizearg
+    if domain is not None: # Allow testing of --domain ""
+        cmd += " --domain %s" % domain
+    if size is not None: # Allow testing of --size "" or --size 0
+        if use_kilobytes:
+            cmd += " --kilobytes %s" % size
+        else:
+            cmd += " --size %s" % size
+    if len(flagstr) > 0:
+        cmd += " %s" % flagstr
+    return command(cmd, **dargs)
+
+
 def snapshot_create(name, **dargs):
     """
     Create snapshot of domain.
