@@ -1488,3 +1488,12 @@ class VM(virt_vm.BaseVM):
             if details['device'] == "disk":
                 disk_devices[target] = details
         return disk_devices
+
+
+    def get_max_mem(self):
+        """
+        Get vm's maximum memory(kilobytes).
+        """
+        dominfo_dict = self.dominfo()
+        max_mem = dominfo_dict['Max memory'].split(' ')[0] # strip off 'kb'
+        return int(max_mem)
