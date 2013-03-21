@@ -12,7 +12,7 @@ try:
 except ImportError:
     from virttest import iscsi
 
-import utils_misc, virt_vm
+import utils_misc, virt_vm, gluster
 
 
 def preprocess_images(bindir, params, env):
@@ -119,13 +119,17 @@ def get_image_filename(params, root_dir):
                                             (re_name, matching_images,
                                              indirect_image_select))
     image_format = params.get("image_format", "qcow2")
+    gluster_image = params.get("gluster_brick")
     if params.get("image_raw_device") == "yes":
         return image_name
     if image_format:
         image_filename = "%s.%s" % (image_name, image_format)
     else:
         image_filename = image_name
-    image_filename = utils_misc.get_path(root_dir, image_filename)
+    if gluster_image:
+        image_filename = gluster.get_image_filename(params, image_name, image_format)
+    else:
+        image_filename = utils_misc.get_path(root_dir, image_filename)
     return image_filename
 
 
