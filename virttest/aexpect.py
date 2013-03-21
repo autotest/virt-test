@@ -295,7 +295,7 @@ def run_bg(command, termination_func=None, output_func=None, output_prefix="",
     @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
 
-    @return: A Tail object.
+    @return: A Expect object.
     """
     process = Expect(command=command,
                    termination_func=termination_func,
