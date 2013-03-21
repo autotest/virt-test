@@ -33,7 +33,8 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
-                                                 'uuid', 'vcpu')
+                                                 'uuid', 'vcpu', 'max_mem',
+                                                 'current_mem')
 
 
     def __init__(self, virsh_instance=virsh):
@@ -58,6 +59,16 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='vcpu')
+        accessors.XMLElementInt(property_name="max_mem",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='memory')
+        accessors.XMLElementInt(property_name="current_mem",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='currentMemory')
         super(VMXMLBase, self).__init__(virsh_instance)
 
 
