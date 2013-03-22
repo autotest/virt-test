@@ -20,7 +20,7 @@ def type_check(name, thing, expected):
     except TypeError:
         it_is = isinstance(thing, expected)
     if not it_is:
-        raise ValueError("%s is not a %s, it is a %s"
+        raise ValueError('%s value is not a %s, it is a %s'
                          % (name, expected_string, is_a_name))
 
 
@@ -63,9 +63,10 @@ class AccessorBase(PropCanBase):
         for slot in self.__slots__:
             if slot in AccessorBase.__slots__:
                 continue # already checked these
-            type_check('slot', slot, str)
+            type_check('Required accessor generator parameter name', slot, str)
             value = dargs.get(slot, None)
-            type_check('value', value, str)
+            type_check('Required accessor generator parameter %s' % slot,
+                                                                     value, str)
             self.dict_set(slot, value)
 
 
