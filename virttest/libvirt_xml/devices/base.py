@@ -42,6 +42,14 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
         return instance
 
 
+    @classmethod
+    def new_from_dict(cls, properties, virsh_instance=base.virsh):
+        instance = cls(virsh_instance=virsh_instance)
+        for key, value in properties.items():
+            setattr(instance, key, value)
+        return instance
+
+
 class TypedDeviceBase(UntypedDeviceBase):
 
     __slots__ = UntypedDeviceBase.__slots__ + ('type_name',)

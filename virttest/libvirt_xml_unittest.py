@@ -362,12 +362,25 @@ class testSerialXML(LibvirtXMLTestBase):
 
 class testAddressXML(LibvirtXMLTestBase):
 
-    def test_librarian(self):
-        for address_type in ['PCIAddress', 'DriveAddress',
-                             'VirtioSerialAddress', 'CCIDAddress',
-                             'USBAddress', 'SPAPR-VIOAddress', 'CCWAddress']:
-            self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
-                              address_type.lower())
+    def test_dynamic_accessors(self):
+        addr_types = address.ADDR_ATTRS.keys()
+        # Reserve 'ccw' type for error testing
+        del addr_types[addr_types.index('ccw')]
+        for addr_type in addr_types:
+            addr = address.Address(self.dummy_virsh)
+            addr.type_name = addr_type
+            for prop in address.ADDR_ATTRS[addr_type]:
+                setattr(addr, prop, 'test_%s' % prop)
+                self.assertEqual(getattr(addr, prop), 'test_%s' % prop)
+            # Use unique ccw properties for error testing
+            self.assertRaises(xcepts.LibvirtXMLForbiddenError,
+                              setattr, addr, 'cssid', 'foobar')
+            self.assertRaises(xcepts.LibvirtXMLForbiddenError,
+                              addr.__setitem__, 'ssid', 'foobar')
+            # Should also match LibvirtXMLError
+            self.assertRaises(xcepts.LibvirtXMLError,
+                              addr.__setattr__, 'devno', 'foobar')
+
 
 if __name__ == "__main__":
     unittest.main()
