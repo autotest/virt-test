@@ -24,12 +24,12 @@ class scheduler:
         self.total_mem = total_mem
         self.bindir = bindir
         # Pipes -- s stands for scheduler, w stands for worker
-        self.s2w = [os.pipe() for i in range(num_workers)]
-        self.w2s = [os.pipe() for i in range(num_workers)]
-        self.s2w_r = [os.fdopen(r, "r", 0) for r, w in self.s2w]
-        self.s2w_w = [os.fdopen(w, "w", 0) for r, w in self.s2w]
-        self.w2s_r = [os.fdopen(r, "r", 0) for r, w in self.w2s]
-        self.w2s_w = [os.fdopen(w, "w", 0) for r, w in self.w2s]
+        self.s2w = [os.pipe() for _ in range(num_workers)]
+        self.w2s = [os.pipe() for _ in range(num_workers)]
+        self.s2w_r = [os.fdopen(r, "r", 0) for r, _ in self.s2w]
+        self.s2w_w = [os.fdopen(w, "w", 0) for _, w in self.s2w]
+        self.w2s_r = [os.fdopen(r, "r", 0) for r, _ in self.w2s]
+        self.w2s_w = [os.fdopen(w, "w", 0) for _, w in self.w2s]
         # "Personal" worker dicts contain modifications that are applied
         # specifically to each worker.  For example, each worker must use a
         # different environment file and a different MAC address pool.
@@ -104,11 +104,9 @@ class scheduler:
 
         while True:
             # Wait for a message from a worker
-            r, w, x = select.select(self.w2s_r, [], [], float(2))
+            r, _, _ = select.select(self.w2s_r, [], [])
 
             someone_is_ready = False
-            if idle_workers:
-                someone_is_ready = True
 
             for pipe in r:
                 worker_index = self.w2s_r.index(pipe)
@@ -143,7 +141,7 @@ class scheduler:
             if not someone_is_ready:
                 continue
 
-            for worker in idle_workers:
+            for worker in idle_workers[:]:
                 # Find a test for this worker
                 test_found = False
                 for i, test in enumerate(self.tests):

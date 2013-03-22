@@ -600,11 +600,12 @@ class PciAssignable(object):
         if not (s or "Cannot get driver information" in pci_id):
             return pci_id[5:]
         cmd = "lspci | awk '/%s/ {print $1}'" % search_str
-        pci_ids = [id for id in commands.getoutput(cmd).splitlines()]
+        pci_ids = [i for i in commands.getoutput(cmd).splitlines()]
         nic_id = int(re.search('[0-9]+', name).group(0))
         if (len(pci_ids) - 1) < nic_id:
             return None
         return pci_ids[nic_id]
+
 
     @error.context_aware
     def _release_dev(self, pci_id):

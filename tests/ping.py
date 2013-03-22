@@ -21,13 +21,6 @@ def run_ping(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    def _get_loss_ratio(output):
-        if params.get("strict_check", "no") == "yes":
-            ratio = utils_test.get_loss_ratio(output)
-            if ratio != 0:
-                raise error.TestFail("Loss ratio is %s" % ratio)
-
-
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
@@ -50,30 +43,35 @@ def run_ping(test, params, env):
 
     counts = params.get("ping_counts", 100)
     flood_minutes = float(params.get("flood_minutes", 10))
+    nics = vm.virtnet
+    strict_check = params.get("strict_check", "no") == "yes"
 
     packet_sizes = [0, 1, 4, 48, 512, 1440, 1500, 1505, 4054, 4055, 4096, 4192,
                     8878, 9000, 32767, 65507]
 
     try:
-        for i, nic in enumerate(vm.virtnet):
-            nic_name = nic.get("nic_name")
+        for i, nic in enumerate(nics):
             ip = vm.get_address(i)
             if not ip:
                 logging.error("Could not get the ip of nic index %d: %s",
-                              i, nic_name)
+                              i, nic)
                 continue
 
             error.base_context("Ping test on nic %s (index %d) from host"
-                               " side" % (nic_name, i), logging.info)
+                               " side" % (nic, i), logging.info)
             for size in packet_sizes:
                 error.context("Ping with packet size %s" % size, logging.info)
                 status, output = utils_test.ping(ip, 10, packetsize=size,
                                                  timeout=20)
-                _get_loss_ratio(output)
-
-                if status != 0:
-                    raise error.TestFail("Ping failed, status: %s,"
-                                         " output: %s" % (status, output))
+                if strict_check:
+                    ratio = utils_test.get_loss_ratio(output)
+                    if ratio != 0:
+                        raise error.TestFail("Loss ratio is %s for packet size"
+                                             " %s" % (ratio, size))
+                else:
+                    if status != 0:
+                        raise error.TestFail("Ping failed, status: %s,"
+                                             " output: %s" % (status, output))
 
             error.context("Flood ping test", logging.info)
             utils_test.ping(ip, None, flood=True, output_func=None,
@@ -83,11 +81,15 @@ def run_ping(test, params, env):
                           " usable.", logging.info)
             status, output = utils_test.ping(ip, counts,
                                              timeout=float(counts) * 1.5)
-            _get_loss_ratio(output)
-
-            if status != 0:
-                raise error.TestFail("Ping returns non-zero value %s" %
-                                     output)
+            if strict_check:
+                ratio = utils_test.get_loss_ratio(output)
+                if ratio != 0:
+                    raise error.TestFail("Ping failed, status: %s,"
+                                         " output: %s" % (status, output))
+            else:
+                if status != 0:
+                    raise error.TestFail("Ping returns non-zero value %s" %
+                                         output)
 
             if ping_ext_host:
                 error.base_context("Ping test from guest side,"

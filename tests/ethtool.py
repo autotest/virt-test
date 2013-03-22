@@ -104,7 +104,9 @@ def run_ethtool(test, params, env):
         session2.cmd_output("rm -rf %s" % filename)
         dd_cmd = ("dd if=/dev/urandom of=%s bs=1M count=%s" %
                   (filename, params.get("filesize")))
+
         failure = (False, "Failed to create file using dd, cmd: %s" % dd_cmd)
+
         logging.info("Creating file in source host, cmd: %s", dd_cmd)
         ethname = utils_test.get_linux_ifname(session,
                                                   vm.get_mac_address(0))

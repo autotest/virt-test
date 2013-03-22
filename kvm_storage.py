@@ -38,7 +38,7 @@ class QemuImg(storage.QemuImg):
         @note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
-               cluster_size (optional) -- the cluster size for the image
+               image_cluster_size (optional) -- the cluster size for the image
                image_size -- the requested size of the image (a string
                    qemu-img can understand, such as '10G')
                create_with_dd -- use dd to create the image (raw format only)
@@ -68,7 +68,7 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " -f %s" % self.image_format
 
-            cluster_size = params.get("cluster_size")
+            image_cluster_size = params.get("image_cluster_size", None)
             preallocated = params.get("preallocated", "off")
             encrypted = params.get("encrypted", "off")
 
@@ -79,7 +79,7 @@ class QemuImg(storage.QemuImg):
             if encrypted != "off":
                 qemu_img_cmd += "encrypted=%s," % encrypted
 
-            if cluster_size:
+            if image_cluster_size is not None:
                 qemu_img_cmd += "cluster_size=%s," % cluster_size
             qemu_img_cmd = qemu_img_cmd.rstrip(" -o")
             qemu_img_cmd = qemu_img_cmd.rstrip(",")
@@ -422,7 +422,7 @@ class Iscsidev(storage.Iscsidev):
         """
         Logout the iscsi target and clean up the config and image.
         """
-        if self.cleanup:
+        if self.exec_cleanup:
             self.iscsidevice.cleanup()
             if self.emulated_file_remove:
                 logging.debug("Removing file %s", self.emulated_image)

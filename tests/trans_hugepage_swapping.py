@@ -80,6 +80,7 @@ def run_trans_hugepage_swapping(test, params, env):
                 vm_key = vm0_key.clone(vm0, params)
                 env.register_vm(vm_name, vm_key)
                 env_process.preprocess_vm(test, params, env, vm_name)
+                vm_key.create()
                 session = vm_key.wait_for_login(timeout=login_timeout)
             else:
                 session = vm.wait_for_login(timeout=login_timeout)

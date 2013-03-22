@@ -26,7 +26,7 @@ class VAgentConnectError(VAgentError):
 
 class VAgentSocketError(VAgentError):
     def __init__(self, msg, e):
-        VAgentError.__init__(self)
+        VAgentError.__init__(self, msg, e)
         self.msg = msg
         self.e = e
 

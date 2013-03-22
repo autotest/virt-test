@@ -23,20 +23,20 @@ TimeZone = 85
 OemSkipWelcome = 1
 
 [UserData]
-ProductKey=KVM_TEST_CDKEY
-FullName="Autotest Mindless Drone"
-OrgName="Autotest"
-ComputerName=*
+ProductKey = KVM_TEST_CDKEY
+FullName = "Autotest Mindless Drone"
+OrgName = "Autotest"
+ComputerName = *
 
 [LicenseFilePrintData]
-AutoMode=PerServer
-AutoUsers=15
+AutoMode = PerServer
+AutoUsers = 15
 
 [Identification]
-JoinWorkgroup=WORKGROUP
+JoinWorkgroup = WORKGROUP
 
 [Networking]
-InstallDefaultComponents=Yes
+InstallDefaultComponents = Yes
 
 [Components]
 

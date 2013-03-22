@@ -565,7 +565,7 @@ class VirtIface(PropCan):
 
     def __getstate__(self):
         state = {}
-        for key in self.__class__.__slots__:
+        for key in VirtIface.__slots__:
             if self.has_key(key):
                 state[key] = self[key]
         return state
@@ -957,7 +957,6 @@ class ParamsNet(VMNet):
         nic_name = nic.nic_name
         nic_params = self.params.object_params(nic_name)
         params_mac = nic_params.get('mac')
-        old_mac = nic.get('mac')
         if params_mac and self.container_class.mac_is_valid(params_mac):
             new_mac = params_mac.lower()
         else:
@@ -973,7 +972,6 @@ class ParamsNet(VMNet):
         nic_name = nic.nic_name
         nic_params = self.params.object_params(nic_name)
         params_ip = nic_params.get('ip')
-        old_ip = nic.get('ip')
         if params_ip:
             new_ip = params_ip
         else:
@@ -1344,11 +1342,11 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
 # Utility functions for dealing with external processes
 
 def find_command(cmd):
-    for dir in ["/usr/local/sbin", "/usr/local/bin",
+    for path in ["/usr/local/sbin", "/usr/local/bin",
                 "/usr/sbin", "/usr/bin", "/sbin", "/bin"]:
-        file = os.path.join(dir, cmd)
-        if os.path.exists(file):
-            return file
+        cmd_path = os.path.join(path, cmd)
+        if os.path.exists(cmd_path):
+            return cmd_path
     raise ValueError('Missing command: %s' % cmd)
 
 
@@ -1479,14 +1477,14 @@ def log_line(filename, line):
     _open_log_files[filename].flush()
 
 
-def set_log_file_dir(dir):
+def set_log_file_dir(directory):
     """
     Set the base directory for log files created by log_line().
 
     @param dir: Directory for log files.
     """
     global _log_file_dir
-    _log_file_dir = dir
+    _log_file_dir = directory
 
 
 # The following are miscellaneous utility functions.
@@ -1528,23 +1526,23 @@ def generate_random_id():
     return "id" + generate_random_string(6)
 
 
-def generate_tmp_file_name(file, ext=None, dir='/tmp/'):
+def generate_tmp_file_name(file_name, ext=None, directory='/tmp/'):
     """
     Returns a temporary file name. The file is not created.
     """
     while True:
-        file_name = (file + '-' + time.strftime("%Y%m%d-%H%M%S-") +
+        file_name = (file_name + '-' + time.strftime("%Y%m%d-%H%M%S-") +
                      generate_random_string(4))
         if ext:
             file_name += '.' + ext
-        file_name = os.path.join(dir, file_name)
+        file_name = os.path.join(directory, file_name)
         if not os.path.exists(file_name):
             break
 
     return file_name
 
 
-def format_str_for_message(str):
+def format_str_for_message(sr):
     """
     Format str so that it can be appended to a message.
     If str consists of one line, prefix it with a space.
@@ -1554,13 +1552,13 @@ def format_str_for_message(str):
     """
     lines = str.splitlines()
     num_lines = len(lines)
-    str = "\n".join(lines)
+    sr = "\n".join(lines)
     if num_lines == 0:
         return ""
     elif num_lines == 1:
-        return " " + str
+        return " " + sr
     else:
-        return "\n" + str
+        return "\n" + sr
 
 
 def wait_for(func, timeout, first=0.0, step=1.0, text=None):
@@ -1655,46 +1653,50 @@ def run_tests(parser, job):
     setup_flag = 1
     cleanup_flag = 2
     pass_list = []
-    for dict in parser.get_dicts():
+    for params_dict in parser.get_dicts():
         tmp_dict = {}
-        for key in dict:
+        for key in params_dict:
             if key.endswith("_equal"):
                 t_key = key.split("_equal")[0]
-                tmp_dict[t_key] = dict[key]
+                tmp_dict[t_key] = params_dict[key]
             elif key.endswith("_min"):
                 t_key = key.split("_min")[0]
                 if not d.has_key(t_key) or \
-                    cartesian_config.compare_string(dict[t_key], dict[key]) < 0:
-                    tmp_dict[t_key] = dict[key]
+                    cartesian_config.compare_string(params_dict[t_key],
+                                                    params_dict[key]) < 0:
+                    tmp_dict[t_key] = params_dict[key]
             elif key.endswith("_max"):
                 t_key = key.split("_max")[0]
                 if not d.has_key(t_key) or \
-                    cartesian_config.compare_string(dict[t_key], dict[key]) > 0:
-                    tmp_dict[t_key] = dict[key]
+                    cartesian_config.compare_string(params_dict[t_key],
+                                                    params_dict[key]) > 0:
+                    tmp_dict[t_key] = params_dict[key]
         for key in tmp_dict:
-            dict[key] = tmp_dict[key]
+            params_dict[key] = tmp_dict[key]
 
         if index == 0:
-            if dict.get("host_setup_flag", None) is not None:
-                flag = int(dict["host_setup_flag"])
-                dict["host_setup_flag"] = flag | setup_flag
+            if param_dict.get("host_setup_flag", None) is not None:
+                flag = int(param_dict["host_setup_flag"])
+                param_dict["host_setup_flag"] = flag | setup_flag
             else:
-                dict["host_setup_flag"] = setup_flag
+                param_dict["host_setup_flag"] = setup_flag
         if index == last_index:
-            if dict.get("host_setup_flag", None) is not None:
-                flag = int(dict["host_setup_flag"])
-                dict["host_setup_flag"] = flag | cleanup_flag
+            if param_dict.get("host_setup_flag", None) is not None:
+                flag = int(param_dict["host_setup_flag"])
+                param_dict["host_setup_flag"] = flag | cleanup_flag
             else:
-                dict["host_setup_flag"] = cleanup_flag
+                param_dict["host_setup_flag"] = cleanup_flag
         index += 1
 
         # Add kvm module status
-        dict["kvm_default"] = get_module_params(dict.get("sysfs_dir", "sys"), "kvm")
+        kvm_default = get_module_params(param_dict.get("sysfs_dir", "sys"),
+                                        "kvm")
+        param_dict["kvm_default"] = kvm_default
 
-        if dict.get("skip") == "yes":
+        if param_dict.get("skip") == "yes":
             continue
         dependencies_satisfied = True
-        for dep in dict.get("dep"):
+        for dep in param_dict.get("dep"):
             for test_name in status_dict.keys():
                 if not dep in test_name:
                     continue
@@ -1704,19 +1706,19 @@ def run_tests(parser, job):
                 if status_dict[test_name] not in ['GOOD', 'WARN']:
                     dependencies_satisfied = False
                     break
-        test_iterations = int(dict.get("iterations", 1))
-        test_tag = dict.get("shortname")
+        test_iterations = int(params_dict.get("iterations", 1))
+        test_tag = params_dict.get("shortname")
 
         if dependencies_satisfied:
             # Setting up profilers during test execution.
-            profilers = dict.get("profilers", "").split()
+            profilers = params_dict.get("profilers", "").split()
             for profiler in profilers:
-                job.profilers.add(profiler, **dict)
+                job.profilers.add(profiler, **params_dict)
             # We need only one execution, profiled, hence we're passing
             # the profile_only parameter to job.run_test().
             profile_only = bool(profilers) or None
-            current_status = job.run_test_detail(dict.get("vm_type"),
-                                                 params=dict,
+            current_status = job.run_test_detail(params_dict.get("vm_type"),
+                                                 params=params_dict,
                                                  tag=test_tag,
                                                  iterations=test_iterations,
                                                  profile_only=profile_only)
@@ -1724,15 +1726,15 @@ def run_tests(parser, job):
                 job.profilers.delete(profiler)
         else:
             # We will force the test to fail as TestNA during preprocessing
-            dict['dependency_failed'] = 'yes'
-            current_status = job.run_test_detail(dict.get("vm_type"),
-                                                 params=dict,
+            param_dict['dependency_failed'] = 'yes'
+            current_status = job.run_test_detail(param_dict.get("vm_type"),
+                                                 params=param_dict,
                                                  tag=test_tag,
                                                  iterations=test_iterations)
 
         if not current_status:
             failed = True
-        status_dict[dict.get("name")] = current_status
+        status_dict[param_dict.get("name")] = current_status
 
     return not failed
 
@@ -2926,7 +2928,7 @@ class KojiScratchPkgSpec(object):
                 (self.user, self.task, ", ".join(self.subpackages)))
 
 
-def umount(src, mount_point, type):
+def umount(src, mount_point, fstype):
     """
     Umount the src mounted in mount_point.
 
@@ -2935,7 +2937,7 @@ def umount(src, mount_point, type):
     @type: file system type
     """
 
-    mount_string = "%s %s %s" % (src, mount_point, type)
+    mount_string = "%s %s %s" % (src, mount_point, fstype)
     if mount_string in file("/etc/mtab").read():
         umount_cmd = "umount %s" % mount_point
         try:
@@ -2948,24 +2950,24 @@ def umount(src, mount_point, type):
         return True
 
 
-def mount(src, mount_point, type, perm="rw"):
+def mount(src, mount_point, fstype, perm="rw"):
     """
     Mount the src into mount_point of the host.
 
     @src: mount source
     @mount_point: mount point
-    @type: file system type
+    @fstype: file system type
     @perm: mount premission
     """
-    umount(src, mount_point, type)
-    mount_string = "%s %s %s %s" % (src, mount_point, type, perm)
+    umount(src, mount_point, fstype)
+    mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
 
     if mount_string in file("/etc/mtab").read():
         logging.debug("%s is already mounted in %s with %s",
                       src, mount_point, perm)
         return True
 
-    mount_cmd = "mount -t %s %s %s -o %s" % (type, src, mount_point, perm)
+    mount_cmd = "mount -t %s %s %s -o %s" % (fstype, src, mount_point, perm)
     try:
         utils.system(mount_cmd)
     except error.CmdError:
@@ -3764,11 +3766,13 @@ def install_host_kernel(job, params):
         logging.info('Installing host kernel through rpm')
 
         rpm_url = params.get('host_kernel_rpm_url')
-
-        dst = os.path.join("/tmp", os.path.basename(rpm_url))
+        k_basename = os.path.basename(rpm_url)
+        dst = os.path.join("/tmp", k_basename)
         k = utils.get_file(rpm_url, dst)
         host_kernel = job.kernel(k)
         host_kernel.install(install_vmlinux=False)
+        utils.write_keyval(job.resultdir,
+                           {'software_version_kernel': k_basename})
         host_kernel.boot()
 
     elif install_type in ['koji', 'brew']:
@@ -3797,6 +3801,9 @@ def install_host_kernel(job, params):
                              c.get_pkg_rpm_file_names(k)[0])
         host_kernel = job.kernel(k_rpm)
         host_kernel.install(install_vmlinux=False)
+        utils.write_keyval(job.resultdir,
+                           {'software_version_kernel':
+                            " ".join(c.get_pkg_rpm_file_names(k_deps))})
         host_kernel.boot()
 
     elif install_type == 'git':
@@ -3812,20 +3819,27 @@ def install_host_kernel(job, params):
         kernel_config = params.get('host_kernel_config', None)
 
         repodir = os.path.join("/tmp", 'kernel_src')
-        r = git.get_repo(uri=repo, branch=branch, destination_dir=repodir,
-                         commit=commit, base_uri=repo_base)
-        host_kernel = job.kernel(r)
+        r = git.GitRepoHelper(uri=repo, branch=branch, destination_dir=repodir,
+                              commit=commit, base_uri=repo_base)
+        r.execute()
+        host_kernel = job.kernel(r.destination_dir)
         if patch_list:
             host_kernel.patch(patch_list)
         if kernel_config:
             host_kernel.config(kernel_config)
         host_kernel.build()
         host_kernel.install()
+        git_repo_version = '%s:%s:%s' % (r.uri, r.branch, r.get_top_commit())
+        utils.write_keyval(job.resultdir,
+                           {'software_version_kernel': git_repo_version})
         host_kernel.boot()
 
     else:
         logging.info('Chose %s, using the current kernel for the host',
                      install_type)
+        k_version = utils.system_output('uname -r', ignore_status=True)
+        utils.write_keyval(job.resultdir,
+                           {'software_version_kernel': k_version})
 
 
 def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
@@ -3860,8 +3874,8 @@ def qemu_has_option(option, qemu_path="/usr/libexec/qemu-kvm"):
     @param option: Option need check.
     @param qemu_path: Path for qemu-kvm.
     """
-    help = commands.getoutput("%s -help" % qemu_path)
-    return bool(re.search(r"^-%s(\s|$)" % option, help, re.MULTILINE))
+    hlp = commands.getoutput("%s -help" % qemu_path)
+    return bool(re.search(r"^-%s(\s|$)" % option, hlp, re.MULTILINE))
 
 
 def bitlist_to_string(data):
@@ -3908,7 +3922,6 @@ def if_nametoindex(ifname):
 
     @param ifname: interface name
     """
-    index = 0
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16si", ifname, 0)
     r = fcntl.ioctl(ctrl_sock, SIOCGIFINDEX, ifr)
@@ -3974,7 +3987,7 @@ def add_to_bridge(ifname, brname):
         raise TAPNotExistError(ifname)
     ifr = struct.pack("16si", brname, index)
     try:
-        r = fcntl.ioctl(ctrl_sock, SIOCBRADDIF, ifr)
+        fcntl.ioctl(ctrl_sock, SIOCBRADDIF, ifr)
     except IOError, details:
         raise BRAddIfError(ifname, brname, details)
     ctrl_sock.close()
@@ -4033,8 +4046,8 @@ def get_module_params(sys_path, module_name):
     dir_params = os.path.join(sys_path, "module", module_name, "parameters")
     module_params = {}
     if os.path.isdir(dir_params):
-        for file in os.listdir(dir_params):
-            full_dir = os.path.join(dir_params, file)
+        for filename in os.listdir(dir_params):
+            full_dir = os.path.join(dir_params, filename)
             tmp = open(full_dir, 'r').read().strip()
             module_params[full_dir] = tmp
     else:
@@ -4331,7 +4344,7 @@ class NumaNode(object):
                         for n in range(start, end+1, 1):
                             _ += "%s " % str(n)
                         cpus = re.sub(cstr, _, cpus)
-                except IndexError, ValueError:
+                except (IndexError, ValueError):
                     logging.warn("The format of cpu list is not the same as"
                                  " expected.")
                     break_flag = False
@@ -4475,3 +4488,17 @@ def check_if_vm_vcpu_match(vcpu_desire, vm):
         return False
     logging.info("CPU quantity matched: %s" % vcpu_actual)
     return True
+
+
+def get_host_ip_address(params):
+    """
+    returns ip address of host specified in host_ip_addr parameter If provided
+    otherwise ip address on interface specified in netdst paramter is returned
+    @param params
+    """
+    host_ip = params.get('host_ip_addr', None)
+    if not host_ip:
+        host_ip = get_ip_address_by_interface(params.get('netdst'))
+        logging.warning("No IP address of host was provided, using IP address"
+                        " on %s interface", str(params.get('netdst')))
+    return host_ip

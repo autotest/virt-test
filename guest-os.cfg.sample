@@ -94,14 +94,6 @@ variants:
             # Change the config below to yes if you want to use syslog
             # to get anaconda logs (leads to verbose install logs)
             syslog_server_enabled = no
-        guest_s4, hibernate:
-            s4_support_chk_cmd = "dmesg -c && grep -q disk /sys/power/state"
-            s4_bg_program_setup_cmd = "cd /tmp/; nohup ping localhost"
-            s4_bg_program_chk_cmd = 'pgrep ping'
-            s4_bg_program_kill_cmd = 'pkill ping'
-            s4_log_chk_cmd = 'dmesg | grep -E "ACPI: Waking up from system sleep state S4"\|"ACPI: PCI interrupt for device .* disabled"'
-            s4_start_cmd = 'echo disk > /sys/power/state'
-            services_up_timeout = 30
 
         variants:
             - CustomGuestLinux:
@@ -486,7 +478,7 @@ variants:
                     kernel_params = "ks=cdrom nicdelay=60 console=ttyS0,115200 console=tty0"
                 variants:
                     - 3.9.i386:
-                        no setup autotest guest_s3 guest_s4 shutdown multi_disk
+                        no setup autotest linux_s3 guest_s4 shutdown multi_disk
                         no usb_multi_disk
                         image_name = rhel39-32
                         mem_chk_cmd = dmidecode | awk -F: '/Maximum Capacity/ {print $2}'
@@ -510,7 +502,7 @@ variants:
                             md5sum_1m_cd1 = 5f10c9417c7b8372b3456c1b5f3f9ed0
 
                     - 3.9.x86_64:
-                        no setup autotest guest_s3 guest_s4 shutdown multi_disk
+                        no setup autotest linux_s3 guest_s4 shutdown multi_disk
                         no usb_multi_disk
                         image_name = rhel39-64
                         mem_chk_cmd = dmidecode | awk -F: '/Maximum Capacity/ {print $2}'
@@ -1257,8 +1249,6 @@ variants:
                     # hold your autoyast file
                     #kernel_params = "autoyast=floppy console=ttyS0,115200 console=tty0"
                     kernel_params = "autoyast=device://scd0/autoinst.xml console=ttyS0,115200 console=tty0"
-                    # --- uncomment the below line for other SLES 10 distros only ---
-                    #kernel_params = "autoyast=device://hdb/autoinst.xml console=ttyS0,115200 console=tty0"
                     kernel = linux
                     initrd = initrd
                     wait_no_ack = yes
@@ -1267,6 +1257,7 @@ variants:
                    - 10.4.64:
                         image_name = sles10-64
                         unattended_install:
+                            kernel_params = "autoyast=device://hdb/autoinst.xml console=ttyS0,115200 console=tty0"
                             unattended_file = unattended/SLES-10.xml
                             #floppies = "fl"
                             #floppy_name = images/sles-10-64/autoyast.vfd
@@ -1275,13 +1266,14 @@ variants:
                             initrd = images/sles-10-64/initrd
                             boot_path = boot/x86_64/loader
                         unattended_install.cdrom:
-                            cdrom_cd1 = isos/linux/SLES-10-x86_64-DVD1.iso
+                            cdrom_cd1 = isos/linux/SLES-10-SP4-DVD-x86_64-GM-DVD1.iso
                             md5sum_cd1 = b07e59b7cba66b995f97eef42e28f5c3
                             md5sum_1m_cd1 = ac4963cf50b683972491a3fd1da64cc1
 
                    - 10.4.32:
                         image_name = sles10-64
                         unattended_install:
+                            kernel_params = "autoyast=device://hdb/autoinst.xml console=ttyS0,115200 console=tty0"
                             unattended_file = unattended/SLES-10.xml
                             #floppies = "fl"
                             #floppy_name = images/sles-10-32/autoyast.vfd
@@ -1290,7 +1282,7 @@ variants:
                             initrd = images/sles-10-32/initrd
                             boot_path = boot/i386/loader
                         unattended_install.cdrom:
-                            cdrom_cd1 = isos/linux/SLES-10-i386-DVD1.iso
+                            cdrom_cd1 = isos/linux/SLES-10-SP4-DVD-i386-GM-DVD1.iso
                             md5sum_cd1 = 277912f7503df68322820c955c8adce8
                             md5sum_1m_cd1 = 282453620102c7b9d7386fc623420b91
 
@@ -1463,7 +1455,7 @@ variants:
                             md5sum_1m_cd1 = 0d41f57e853ae85616c015e7a865eb67
 
             - DSL-4.2.5:
-                no setup dbench bonnie guest_s3
+                no setup dbench bonnie linux_s3
                 image_name = dsl-4.2.5
                 install:
                     steps = steps/DSL-4.2.5.steps
@@ -1559,20 +1551,12 @@ variants:
             time_command = "echo TIME: %date% %time%"
             time_filter_re = "(?<=TIME: \w\w\w ).{19}(?=\.\d\d)"
             time_format = "%m/%d/%Y %H:%M:%S"
-        guest_s3:
-            s3_support_chk_cmd = 'wevtutil cl system && powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
-            s3_start_cmd = "rundll32.exe PowrProf.dll,SetSuspendState 0,1,0"
-            s3_bg_program_setup_cmd = 'start /B ping -t localhost'
-            s3_bg_program_chk_cmd = 'tasklist | findstr /I /C:"ping.exe"'
-            s3_bg_program_kill_cmd = 'taskkill /IM ping.exe /F'
-            s3_log_chk_cmd = 'wevtutil qe system /f:text  | findstr /I /C:"The system has resumed from sleep" /C:"The system is entering sleep"'
-        guest_s4, hibernate:
-            s4_support_chk_cmd = powercfg /hibernate on
-            s4_bg_program_setup_cmd = 'start ping -t localhost'
-            s4_bg_program_chk_cmd = 'tasklist | find /I "ping.exe"'
-            s4_bg_program_kill_cmd = 'taskkill /IM ping.exe /F'
-            s4_start_cmd = 'rundll32.exe PowrProf.dll, SetSuspendState'
-            s4_log_chk_cmd = 'wevtutil qe system /f:text | findstr /I /C:"The system has resumed from sleep" /C:"The system is entering sleep"'
+        guest_s4:
+            check_s4_support_cmd = powercfg /hibernate on
+            test_s4_cmd = start ping -t localhost
+            check_s4_cmd = tasklist | find /I "ping.exe"
+            set_s4_cmd = rundll32.exe PowrProf.dll, SetSuspendState
+            kill_test_s4_cmd = taskkill /IM ping.exe /F
             services_up_timeout = 30
         nic_hotplug:
             reference_cmd = ipconfig /all
@@ -1677,13 +1661,6 @@ variants:
             - WinXP:
                 image_name = winXP
                 os_variant = winxp
-                guest_s3:
-                    s3_support_chk_cmd = 'powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
-                    s3_log_chk_cmd = 'echo "Since WinXP does not record ACPI event, Do nothing"'
-                guest_s4, hibernate:
-                    s4_support_chk_cmd = 'powercfg -h on'
-                    s4_log_chk_cmd = 'echo "Since WinXP does not record ACPI event, Do nothing"'
-
                 variants:
                     - 32:
                         image_name += -32
@@ -1769,12 +1746,6 @@ variants:
                 os_variant = win2k3
                 image_name = win2003
                 image_size = 20G
-                guest_s3:
-                    s3_support_chk_cmd = 'powercfg /h off  && powercfg -a | findstr /I /C:"The following sleep states are available on this system: Standby ( S3 )"'
-                    s3_log_chk_cmd = 'echo "Since WinXP does not record ACPI event, Do nothing"'
-                guest_s4, hibernate:
-                    s4_support_chk_cmd = 'powercfg -h on'
-                    s4_log_chk_cmd = 'echo "Since Win2003 does not record ACPI event, Do nothing"'
 
                 variants:
                     - 32:

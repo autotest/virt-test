@@ -7,7 +7,7 @@ langsupport --default=en_US.UTF-8 en_US.UTF-9
 keyboard us
 network --bootproto dhcp
 rootpw redhat
-firewall --disabled
+firewall --enabled --ssh
 selinux --enforcing
 timezone --utc America/New_York
 firstboot --disable

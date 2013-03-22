@@ -63,7 +63,7 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
     end_time = time.time() + timeout
     session = None
     if serial:
-        login_type = 'serial'
+        mode = 'serial'
         logging.info("Trying to log into guest %s using serial connection,"
                      " timeout %ds", vm.name, timeout)
         time.sleep(start)
@@ -75,7 +75,7 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
                 logging.debug(e)
             time.sleep(step)
     else:
-        login_type = 'remote'
+        mode = 'remote'
         logging.info("Trying to log into guest %s using remote connection,"
                      " timeout %ds", vm.name, timeout)
         time.sleep(start)
@@ -87,7 +87,7 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
                 logging.debug(e)
             time.sleep(step)
         if not session and vm.get_params().get("try_serial_login") == "yes":
-            login_type = "serial"
+            mode = "serial"
             logging.info("Remote login failed, trying to login '%s' with "
                          "serial, timeout %ds", vm.name, timeout)
             time.sleep(start)
@@ -1608,14 +1608,14 @@ def pin_vm_threads(vm, node):
         logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
 
 
-def service_setup(vm, session, dir):
+def service_setup(vm, session, directory):
 
     params = vm.get_params()
     rh_perf_envsetup_script = params.get("rh_perf_envsetup_script")
     rebooted = params.get("rebooted", "rebooted")
 
     if rh_perf_envsetup_script:
-        src = os.path.join(dir, rh_perf_envsetup_script)
+        src = os.path.join(directory, rh_perf_envsetup_script)
         vm.copy_files_to(src, "/tmp/rh_perf_envsetup.sh")
         logging.info("setup perf environment for host")
         commands.getoutput("bash %s host %s" % (src, rebooted))
@@ -1635,7 +1635,7 @@ def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
     """
     def thread_kill(cmd, p_file):
         fd = shelve.open(p_file)
-        s, o = commands.getstatusoutput("pstree -p %s" % fd["pid"])
+        o = commands.getoutput("pstree -p %s" % fd["pid"])
         tmp = re.split("\s+", cmd)[0]
         pid = re.findall("%s.(\d+)" % tmp, o)[0]
         s, o = commands.getstatusoutput("kill -9 %s" % pid)
@@ -1682,7 +1682,7 @@ def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
     vm.copy_files_from("%s_monitor" % guest_path, guest_monitor_result_file)
     return tag
 
-def aton(str):
+def aton(sr):
     """
     Transform a string to a number(include float and int). If the string is
     not in the form of number, just return false.
@@ -1691,10 +1691,10 @@ def aton(str):
     Return: float, int or False for failed transform
     """
     try:
-        return int(str)
+        return int(sr)
     except ValueError:
         try:
-            return float(str)
+            return float(sr)
         except ValueError:
             return False
 
@@ -1720,7 +1720,7 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
         if len(re.findall(ignore, eachLine)) == 0:
             if len(re.findall(column_mark, eachLine)) != 0 and not head_flag:
                 column = 0
-                empty, row, eachLine = re.split(row_head, eachLine)
+                _, row, eachLine = re.split(row_head, eachLine)
                 for i in re.split("\s+", eachLine):
                     if i:
                         result_dict[i] = {}
@@ -1729,7 +1729,7 @@ def summary_up_result(result_file, ignore, row_head, column_mark):
                 head_flag = True
             elif len(re.findall(column_mark, eachLine)) == 0:
                 column = 0
-                empty, row, eachLine = re.split(row_head, eachLine)
+                _, row, eachLine = re.split(row_head, eachLine)
                 row_flag = False
                 for i in row_list:
                     if row == i:

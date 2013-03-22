@@ -182,29 +182,3 @@
 				<SynchronousCommand wcm:action="add">
 					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat PROCESS_CHECK</CommandLine>
 					<Order>15</Order>
-				</SynchronousCommand>
-			</FirstLogonCommands>
-			<OOBE>
-				<HideEULAPage>true</HideEULAPage>
-				<NetworkLocation>Work</NetworkLocation>
-				<ProtectYourPC>1</ProtectYourPC>
-				<SkipUserOOBE>true</SkipUserOOBE>
-				<SkipMachineOOBE>true</SkipMachineOOBE>
-			</OOBE>
-		</component>
-		<component name="Microsoft-Windows-International-Core"
-			processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35"
-			language="neutral" versionScope="nonSxS"
-			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
-			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-			<InputLocale>0409:00000409</InputLocale>
-			<SystemLocale>en-us</SystemLocale>
-			<UILanguage>en-us</UILanguage>
-			<UILanguageFallback>en-us</UILanguageFallback>
-			<UserLocale>en-us</UserLocale>
-		</component>
-	</settings>
-	<cpi:offlineImage
-		cpi:source="wim:d:/os/vista/x64/sources/install.wim#Windows Vista ENTERPRISE"
-		xmlns:cpi="urn:schemas-microsoft-com:cpi" />
-</unattend>
