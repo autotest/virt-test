@@ -1042,6 +1042,34 @@ def detach_device(name, xml_file, extra="", **dargs):
         return False
 
 
+def update_device(domainarg=None, filearg=None,
+                  domain_opt=None, file_opt=None,
+                  flagstr="", **dargs):
+    """
+    Update device from an XML <file>.
+
+    @param: domainarg: Domain name (first pos. parameter)
+    @param: filearg: File name (second pos. parameter)
+    @param: domain_opt: Option to --domain parameter
+    @param: file_opt: Option to --file parameter
+    @param: flagstr: string of "--force, --persistent, etc."
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "update-device"
+    if domainarg is not None: # Allow testing of ""
+        cmd += " %s" % domainarg
+    if filearg is not None: # Allow testing of 0 and ""
+        cmd += " %s" % filearg
+    if domain_opt is not None: # Allow testing of --domain ""
+        cmd += " --domain %s" % domain_opt
+    if file_opt is not None: # Allow testing of --file ""
+        cmd += " --file %s" % file_opt
+    if len(flagstr) > 0:
+        cmd += " %s" % flagstr
+    return command(cmd, **dargs)
+
+
 def attach_disk(name, source, target, extra="", **dargs):
     """
     Attach a disk to VM.
