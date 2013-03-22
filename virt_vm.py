@@ -921,14 +921,14 @@ class BaseVM(object):
             return self.params.get("uuid", None)
 
 
-    def send_string(self, str):
+    def send_string(self, sr):
         """
         Send a string to the VM.
 
-        @param str: String, that must consist of alphanumeric characters only.
+        @param sr: String, that must consist of alphanumeric characters only.
                 Capital letters are allowed.
         """
-        for char in str:
+        for char in sr:
             if char.isupper():
                 self.send_key("shift-%s" % char.lower())
             else:
@@ -960,9 +960,7 @@ class BaseVM(object):
         try:
             if not cmd:
                 cmd = self.params.get("mem_chk_cmd")
-            if re_str is None:
-                re_str = self.params.get("mem_chk_re_str", "([0-9]+)")
-            mem_str = session.cmd(cmd, timeout)
+            mem_str = session.cmd(cmd)
             mem = re.findall(re_str, mem_str)
             mem_size = 0
             for m in mem:
@@ -1126,6 +1124,13 @@ class BaseVM(object):
         Throws a VMStatusError if before/after restore state is incorrect
 
         @param: path: path to file vm state was saved to
+        """
+        raise NotImplementedError
+
+    def needs_restart(self, name, params, basedir):
+        """
+        Based on virt preprocessing information, decide whether the VM needs
+        a restart.
         """
         raise NotImplementedError
 

@@ -6,7 +6,7 @@ lang en_US.UTF-8
 langsupport --default=en_US.UTF-8 en_US.UTF-9
 keyboard us
 network --bootproto dhcp
-rootpw 123456
+rootpw redhat
 firewall --enabled --ssh
 selinux --enforcing
 timezone --utc America/New_York

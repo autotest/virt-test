@@ -4,18 +4,29 @@
 variants:
     - @rtl8139:
         nic_model = rtl8139
+        no ethtool
+        jumbo:
+            mtu = 1500
     - e1000:
         nic_model = e1000
+        jumbo:
+            mtu = 16110
+        ethtool:
+            # gso gro lro is only supported by latest kernel
+            supported_features = "tx rx sg tso gso gro lro"
     - virtio_net:
         nic_model = virtio
         # You can add advanced attributes on nic_extra_params such as mrg_rxbuf
         #nic_extra_params =
         # You can add advanced attributes through netdev_extra_params
-        # such as sndbuf.
-        # you can comment out the following lines to disable the vhost
-        # support. (only available for tap.)
-        vhost = ""
-        netdev_extra_params = ""
+        # such as sndbuf, as an example, you can uncomment the
+        # following lines to enable the vhost support ( only available
+        # for tap )
+        #netdev_extra_params = "vhost=on"
+        jumbo:
+            mtu = 65520
+        ethtool:
+            supported_features = "tx sg tso gso"
         whql.submission.device.net:
             test_device = VirtIO Ethernet Adapter$
             # Device selection for the NDISTest client machine
@@ -42,8 +53,6 @@ variants:
         stress_boot: used_cpus = 10
         timedrift.with_load: used_cpus = 100
 
-# Blocks
-virtio-blk-pci_scsi = ""
 variants:
     - @ide:
         drive_format=ide
@@ -51,11 +60,6 @@ variants:
         drive_format=scsi
     - virtio_blk:
         drive_format=virtio
-        # For Block device based images(/dev/sdb), need to set scsi=off
-        # when using virtio_blk-pci. Bug 756677 .
-        Host_RHEL.6:
-            emulational_iscsi, iscsi:
-                virtio-blk-pci_scsi = "off"
         # Some older qemu might need image_boot=yes for virtio images to work.
         # Please uncomment the below if that is the case.
         #image_boot=yes
@@ -83,18 +87,6 @@ variants:
     - xenblk:
         # placeholder
 
-# Add virtio keyword in image_name parameter for virtio devices
-virtio_net, virtio_blk:
-    image_name += -virtio
-
-# We don't support SCSI/ahci/usb.stick/usb.cdrom/xenblk drive_format now
-no scsi
-no ahci
-no usb.stick
-no usb.cdrom
-no xenblk
-
-# Image formats
 variants:
     - @qcow2:
         image_format = qcow2
@@ -109,18 +101,6 @@ variants:
         no ioquit
         image_format = qed
 
-# We don't test vmdk image now, disable it directly.
-no vmdk
-
-# Platform
-32:
-    platform = 32
-64:
-    platform = 64
-PAE:
-    platform = PAE
-
-# Devices
 variants:
     - @no_pci_assignable:
         pci_assignable = no
@@ -134,54 +114,13 @@ variants:
         # Intel® 82576 Gigabit Ethernet Controller - igb
         # Neterion® X3100™ - vxge
         driver = igb
-        # vf_filter_re: Regex used to filter vf from lspci.
-        vf_filter_re = "Virtual Function"
-        # pf_filter_re: Regex used to filter pf from lspci. It will be used when device_name could filter the pf.
-        pf_filter_re = "82576 Gigabit Network"
         # Driver option to specify the maximum number of virtual functions
         # (on vxge the option is , for example, is max_config_dev)
         # the default below is for the igb driver
         driver_option = "max_vfs=7"
-        mac_ip_filter = "HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?inet addr:(.\d+\.\d+\.\d+\.\d+)"
-        mac_changeable = "yes"
-        sr-iov.sr_iov_negative.negative_max_vfs:
-            driver_option = "max_vfs=-1"
-        sr-iov.sr_iov_negative.more_than_max_vfs:
-            driver_option = "max_vfs=8"
+        # Number of devices that are going to be requested.
+        devices_requested = 7
 
-
-# Storage location
-variants:
-    - @local_stg:
-        use_storage = local_stg
-    - emulational_iscsi:
-        use_storage = emulational_iscsi
-    - iscsi:
-        use_storage = iscsi
-
-# Display and VGA
-variants:
-    - spice:
-        display = spice
-        vga = qxl
-    - @vnc:
-        display = vnc
-        Linux:
-            vga = cirrus
-        Windows:
-            vga = std
-            WinXP, Win2003:
-                vga = cirrus
-    - sdl:
-        display = sdl
-        vga = cirrus
-    - nographic:
-        display = nographic
-        vga =
-    # sdl here just for placeholder
-no sdl
-
-# Pages
 variants:
     - @smallpages:
     - hugepages:

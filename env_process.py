@@ -1,4 +1,4 @@
-import os, time, commands, re, logging, glob, threading, shutil, sys
+import os, time, commands, re, logging, glob, threading, shutil
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, kvm_monitor, ppm_utils, test_setup, virt_vm, kvm_vm
@@ -243,7 +243,6 @@ def process(test, params, env, image_func, vm_func, pre_flag=True):
     def _call_vm_func():
         for vm_name in params.objects("vms"):
             vm_params = params.object_params(vm_name)
-            vm = env.get_vm(vm_name)
             vm_func(test, vm_params, env, vm_name)
 
     def _call_image_func():
@@ -387,7 +386,7 @@ def preprocess(test, params, env):
         try:
             cmd_result = utils.run(kvm_ver_cmd)
             kvm_version = cmd_result.stdout.strip()
-        except error.CmdError, e:
+        except error.CmdError:
             kvm_version = "Unknown"
     else:
         # Get the KVM kernel module version and write it as a keyval
@@ -410,7 +409,7 @@ def preprocess(test, params, env):
         try:
             cmd_result = utils.run(kvm_userspace_ver_cmd)
             kvm_userspace_version = cmd_result.stdout.strip()
-        except error.CmdError, e:
+        except error.CmdError:
             kvm_userspace_version = "Unknown"
     else:
         qemu_path = utils_misc.get_path(test.bindir,
@@ -482,7 +481,6 @@ def preprocess(test, params, env):
         global _screendump_thread, _screendump_thread_termination_event
         _screendump_thread_termination_event = threading.Event()
         _screendump_thread = threading.Thread(target=_take_screendumps,
-                                              name='ScreenDump',
                                               args=(test, params, env))
         _screendump_thread.start()
 
