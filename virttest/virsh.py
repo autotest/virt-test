@@ -1042,6 +1042,47 @@ def detach_device(name, xml_file, extra="", **dargs):
         return False
 
 
+def attach_disk(name, source, target, extra="", **dargs):
+    """
+    Attach a disk to VM.
+
+    @param: name: name of guest
+    @param: source: source of disk device
+    @param: target: target of disk device
+    @param: extra: additional arguments to command
+    @param: dargs: standardized virsh function API keywords
+    @return: True operation was successful
+    """
+    cmd = "attach-disk --domain %s --source %s --target %s %s"\
+           % (name, source, target, extra)
+    dargs['ignore_status'] = False
+    try:
+        command(cmd, **dargs)
+        return True
+    except error.CmdError:
+        logging.error("Attaching disk to VM %s failed." % name)
+        return False
+
+
+def detach_disk(name, target, extra="", **dargs):
+    """
+    Detach a disk from VM.
+
+    @param: name: name of guest
+    @param: target: target of disk device
+    @param: dargs: standardized virsh function API keywords
+    @return: True operation was successful
+    """
+    cmd = "detach-disk --domain %s --target %s %s" % (name, target, extra)
+    dargs['ignore_status'] = False
+    try:
+        command(cmd, **dargs)
+        return True
+    except error.CmdError:
+        logging.error("Detaching disk from VM %s failed." % name)
+        return False
+
+
 def attach_interface(name, option="", **dargs):
     """
     Attach a NIC to VM.
