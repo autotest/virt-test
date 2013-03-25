@@ -2075,9 +2075,8 @@ class VM(virt_vm.BaseVM):
                                               "[9p proxy helper]",
                                               auto_close=False)
 
-            logging.info("Running qemu command (reformatted):")
-            for item in qemu_command.replace(" -", " \n    -").splitlines():
-                logging.info("%s", item)
+            logging.info("Running qemu command (reformatted):\n%s",
+                    qemu_command.replace(" -", " \\\n    -"))
             self.qemu_command = qemu_command
             self.process = aexpect.run_bg(qemu_command, None,
                                           logging.info, "[qemu output] ",
