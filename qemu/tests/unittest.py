@@ -17,13 +17,13 @@ def run_unittest(test, params, env):
     """
     unittest_dir = os.path.join(test.builddir, 'unittests')
     if not os.path.isdir(unittest_dir):
-        raise error.TestError("No unittest dir %s available (did you run the "
-                              "build test first?)" % unittest_dir)
+        raise error.TestNAError("No unittest dir %s available (did you run the "
+                                "build test first?)" % unittest_dir)
     os.chdir(unittest_dir)
     unittest_list = glob.glob('*.flat')
     if not unittest_list:
-        raise error.TestError("No unittest files available (did you run the "
-                              "build test first?)")
+        raise error.TestNAError("No unittest files available (did you run the "
+                                "build test first?)")
     logging.debug('Flat file list: %s', unittest_list)
 
     unittest_cfg = os.path.join(unittest_dir, 'unittests.cfg')
