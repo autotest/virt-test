@@ -1,0 +1,31 @@
+AUTHOR = "Cao, Chen <kcao@redhat.com>"
+NAME = "linpack"
+TIME = "MEDIUM"
+TEST_CLASS = "Hardware"
+TEST_CATEGORY = "Performance"
+TEST_TYPE = "client"
+DOC = """\
+Redhat internal linpack test certification.
+
+LINPACK is a software library for performing numerical linear
+algebra on digital computers.
+LINPACK makes use of the BLAS (Basic Linear Algebra Subprograms)
+libraries for performing basic vector and matrix operations.
+
+See: http://www.netlib.org/linpack/
+"""
+
+
+linpack_config="""
+[linpack]
+package_url = http://perf1.lab.bos.redhat.com/shak/rhts/rh-tests-performance-linpack-1.1-57.noarch.rpm
+package_md5 = 09dcf8a3d140d0eec949a27c47813973
+
+[rhts_test_env]
+beakerlib_url = http://download.devel.redhat.com/brewroot/packages/beakerlib/1.3/6/noarch/beakerlib-1.3-6.noarch.rpm
+beakerlib_md5 = 218fe0bae130cd11db7c00879f726f11
+rhts_test_env_url = http://download.devel.redhat.com/brewroot/packages/rhts/4.43/1/noarch/rhts-test-env-4.43-1.noarch.rpm
+rhts_test_env_md5 = 645d506b020545cbfabe90fd07ae7833
+"""
+
+job.run_test('rhts_linpack', config=linpack_config)
