@@ -140,7 +140,6 @@ class VM(virt_vm.BaseVM):
             self.device_id = []
             self.pci_devices = []
             self.uuid = None
-            self.only_pty = False
 
         self.spice_port = 8000
         self.name = name
@@ -493,8 +492,7 @@ class VM(virt_vm.BaseVM):
             if has_option(help_text, "serial"):
                 return "  --serial file,path=%s --serial pty" % filename
             else:
-                self.only_pty = True
-                return ""
+                return "" # FIXME: Add additional serial ports on old libvirt?
 
         def add_kernel_cmdline(help_text, cmdline):
             return " -append %s" % cmdline
@@ -804,6 +802,14 @@ class VM(virt_vm.BaseVM):
         return virt_install_cmd
 
 
+    def setup_serial_console(self):
+        self.serial_console = aexpect.ShellSession(
+            "virsh console %s" % self.name,
+            auto_close=False,
+            output_func=utils_misc.log_line,
+            output_params=("serial-%s.log" % self.name,))
+
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
                migration_mode=None, mac_source=None):
@@ -971,19 +977,7 @@ class VM(virt_vm.BaseVM):
                                       uri=self.connect_uri).stdout.strip()
 
             # Establish a session with the serial console
-            if self.only_pty == True:
-                self.serial_console = aexpect.ShellSession(
-                    "virsh console %s" % self.name,
-                    auto_close=False,
-                    output_func=utils_misc.log_line,
-                    output_params=("serial-%s.log" % name,))
-            else:
-                self.serial_console = aexpect.ShellSession(
-                    "tail -f %s" % self.get_serial_console_filename(),
-                    auto_close=False,
-                    output_func=utils_misc.log_line,
-                    output_params=("serial-%s.log" % name,))
-
+            self.setup_serial_console()
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
@@ -1300,6 +1294,8 @@ class VM(virt_vm.BaseVM):
                                                       "active after start")
             self.uuid = virsh.domuuid(self.name,
                                       uri=self.connect_uri).stdout.strip()
+            # Establish a session with the serial console
+            self.setup_serial_console()
         else:
             raise virt_vm.VMStartError(self.name, "libvirt domain failed "
                                                   "to start")
