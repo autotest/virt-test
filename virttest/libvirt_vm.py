@@ -944,7 +944,25 @@ class VM(virt_vm.BaseVM):
             logging.info("Running libvirt command (reformatted):")
             for item in install_command.replace(" -", " \n    -").splitlines():
                 logging.info("%s", item)
-            utils.run(install_command, verbose=False)
+            try:
+                utils.run(install_command, verbose=False)
+            except error.CmdError, details:
+                stderr = details.result_obj.stderr.strip()
+                # This is a common newcomer mistake, be more helpful...
+                if stderr.count('IDE CDROM must use'):
+                    testname = params.get('name', "")
+                    if testname.count('unattended_install.cdrom'):
+                        if not testname.count('http_ks'):
+                            raise error.TestNAError(
+                                            "Install command failed:\n%s "
+                                            "\n\nNote: Older versions of "
+                                            "libvirt don't work properly "
+                                            "with kickstart-on-cdrom "
+                                            "install.  Try using the "
+                                            "unattended_install.cdrom.http_ks"
+                                            " instead." % details.result_obj)
+                # some other problem happend, raise normally
+                raise
             # Wait for the domain to be created
             utils_misc.wait_for(func=self.is_alive, timeout=60,
                                 text=("waiting for domain %s to start" %
