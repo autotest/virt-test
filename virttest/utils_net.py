@@ -1560,17 +1560,25 @@ def get_linux_ifname(session, mac_address):
     def sys_method():
         try:
             interfaces = session.cmd('ls --color=never /sys/class/net')
-            interfaces = interfaces.strip()
-            for interface in interfaces.split(" "):
-                if interface:
-                    mac_address_interface = session.cmd("cat "
-                                        "/sys/class/net/%s/address" % interface)
+        except error.CmdError, e:
+            logging.debug("Error listing /sys/class/net: %s" % e)
+            return None
+
+        interfaces = interfaces.strip()
+        for interface in interfaces.split(" "):
+            if interface:
+                try:
+                    i_cmd = "cat /sys/class/net/%s/address" % interface
+                    mac_address_interface = session.cmd(i_cmd)
                     mac_address_interface = mac_address_interface.strip()
                     if mac_address_interface == mac_address:
                         return interface
-        except error.CmdError, e:
-            logging.debug(e)
-            return None
+                except aexpect.ShellCmdError:
+                    pass
+
+        # If after iterating through interfaces (or no interfaces found)
+        # no interface name was found, just return None
+        return None
 
     # Try ifconfig first
     i = ifconfig_method()
