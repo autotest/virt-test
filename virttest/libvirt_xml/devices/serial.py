@@ -32,7 +32,7 @@ class Serial(base.TypedDeviceBase):
         base.accessors.XMLAttribute('protocol_type', self, parent_xpath='/',
                                     tag_name='protocol', attribute='type')
         # SELinux (FIXME: do we need 'baselabel' or 'label' sub-element?)
-        base.accessors.XMLAttribute('source_seclabel', self, parent_xpath'/',
+        base.accessors.XMLAttribute('source_seclabel', self, parent_xpath='/',
                                     tag_name='source', attribute='seclabel')
 
         super(Serial, self).__init__(device_tag='serial', type_name=type_name,
@@ -43,7 +43,7 @@ class Serial(base.TypedDeviceBase):
     def nuke_source_paths(self):
         # Don't assume there's only one
         del_list = []
-        for source in self.xmltreefile.getiterator('source')
+        for source in self.xmltreefile.getiterator('source'):
             if source.get('path') is not None:
                 # Avoid deleting elements while iterating
                 del_list.append(source)
@@ -53,7 +53,7 @@ class Serial(base.TypedDeviceBase):
 
     # Helper for locating source tags w/ particular mode attribute
     def source_mode_element(self, mode):
-        for source in self.xmltreefile.getiterator('source')
+        for source in self.xmltreefile.getiterator('source'):
             if source.get('mode') == mode:
                 return source
         raise xcepts.LibvirtXMLError("No connect-%s source element found"
@@ -66,15 +66,14 @@ class Serial(base.TypedDeviceBase):
             address_class = librarian.get('address')
             return address_class.new_from_element(target_address)
         else:
-            raise xcepts.LibvirtXMLError("No address element found for serial "
-                                         "device: %s" % str(self))
+            return None
 
 
     def set_target_address(self, value):
         address_class = librarian.get('address')
         value_type = type(value)
         if not issubclass(value_type, address_class):
-            raise xcepts.LibvirtXMLError("Target address must be set from "
+            raise xcepts.LibvirtXMLError("Target address must be "
                                          "Address class instance");
         target = self.xmltreefile.find('target')
         if target is not None:
@@ -91,9 +90,12 @@ class Serial(base.TypedDeviceBase):
             pass # already doesn't exist
 
 
-    def get_source_connect(sef):
-        source_connect = self.source_mode_element('connect')
-        return dict(source_connect.items())
+    def get_source_connect(self):
+        try:
+            source_connect = self.source_mode_element('connect')
+            return dict(source_connect.items())
+        except xcepts.LibvirtXMLError:
+            return None
 
 
     def set_source_connect(self, value):
@@ -113,8 +115,11 @@ class Serial(base.TypedDeviceBase):
 
 
     def get_source_bind(self):
-        source_connect = self.source_mode_element('bind')
-        return dict(source_connect.items())
+        try:
+            source_connect = self.source_mode_element('bind')
+            return dict(source_connect.items())
+        except xcepts.LibvirtXMLError:
+            return None
 
 
     def set_source_bind(self, value):
