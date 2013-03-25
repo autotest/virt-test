@@ -59,16 +59,6 @@ class LibvirtXMLTestBase(unittest.TestCase):
                 "</domain>" % (name, LibvirtXMLTestBase._domuuid(None)))
 
 
-    # This must pass b/c address ADDR_ATTRS & Address.set_type_name requirements
-    def verify_address_conflicts(self, test_class):
-        for operation, slot in address.Address.slot_operations():
-            # only need to check slot name once
-            if operation == 'get_':
-                self.assertFalse(hasattr(test_class, slot))
-            # Check all accessor names
-            self.assertFalse(hasattr(test_class, operation + slot))
-
-
     def setUp(self):
         # cause all virsh commands to do nothing and return nothing
         # necessary so virsh module doesn't complain about missing virsh command
@@ -174,10 +164,6 @@ class TestLibvirtXML(LibvirtXMLTestBase):
         return libvirt_xml.LibvirtXML(self.dummy_virsh)
 
 
-    def test_verify_address_conflicts(self):
-        self.verify_address_conflicts(libvirt_xml.LibvirtXML)
-
-
     def test_uuid(self):
         lvxml = self._from_scratch()
         test_uuid = lvxml.uuid
@@ -254,10 +240,6 @@ class testNetworkXML(LibvirtXMLTestBase):
         return netxml
 
 
-    def test_verify_address_conflicts(self):
-        self.verify_address_conflicts(network_xml.NetworkXML)
-
-
     def test_getters(self):
         netxml = self._from_scratch()
         self.assertEqual(netxml.name, 'test1')
@@ -294,14 +276,6 @@ class testLibrarian(LibvirtXMLTestBase):
         Serial = librarian.get('serial')
         self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
         self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
-
-
-    def test_verify_address_conflicts(self):
-        for device_type in librarian.device_types:
-            # skip check address type
-            if device_type == 'address':
-                continue
-            self.verify_address_conflicts(librarian.get(device_type))
 
 
 class testSerialXML(LibvirtXMLTestBase):
@@ -362,24 +336,21 @@ class testSerialXML(LibvirtXMLTestBase):
 
 class testAddressXML(LibvirtXMLTestBase):
 
-    def test_dynamic_accessors(self):
-        addr_types = address.ADDR_ATTRS.keys()
-        # Reserve 'ccw' type for error testing
-        del addr_types[addr_types.index('ccw')]
-        for addr_type in addr_types:
-            addr = address.Address(self.dummy_virsh)
-            addr.type_name = addr_type
-            for prop in address.ADDR_ATTRS[addr_type]:
-                setattr(addr, prop, 'test_%s' % prop)
-                self.assertEqual(getattr(addr, prop), 'test_%s' % prop)
-            # Use unique ccw properties for error testing
-            self.assertRaises(xcepts.LibvirtXMLForbiddenError,
-                              setattr, addr, 'cssid', 'foobar')
-            self.assertRaises(xcepts.LibvirtXMLForbiddenError,
-                              addr.__setitem__, 'ssid', 'foobar')
-            # Should also match LibvirtXMLError
-            self.assertRaises(xcepts.LibvirtXMLError,
-                              addr.__setattr__, 'devno', 'foobar')
+    def test_required(self):
+        address = librarian.get('address')
+        self.assertRaises(xcepts.LibvirtXMLError,
+                          address.new_from_dict,
+                          {}, self.dummy_virsh)
+        # no type_name attribute
+        element = xml_utils.ElementTree.Element('address', {'foo':'bar'})
+        self.assertRaises(xcepts.LibvirtXMLError,
+                          address.new_from_element,
+                          element, self.dummy_virsh)
+        element.set('type', 'foobar')
+        new_address = address.new_from_element(element, self.dummy_virsh)
+        the_dict = {'type_name':'foobar', 'foo':'bar'}
+        another_address = address.new_from_dict(the_dict, self.dummy_virsh)
+        self.assertEqual(str(new_address), str(another_address))
 
 
 if __name__ == "__main__":
