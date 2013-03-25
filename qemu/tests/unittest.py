@@ -103,7 +103,7 @@ def run_unittest(test, params, env):
                 vm.resume()
                 testlog = vm.get_testlog_filename()
 
-                msg = ("Waiting for unittest %s to complete, timeout %s" %
+                msg = ("Waiting for unittest '%s' to complete, timeout %s" %
                        (t, timeout))
                 if os.path.isfile(testlog):
                     msg += (", output in %s" % testlog)
