@@ -1557,6 +1557,13 @@ def get_linux_ifname(session, mac_address):
         except IndexError:
             return None
 
+    def iplink_method():
+        try:
+            output = session.cmd("ip link | grep -B1 '%s' -i" % mac_address)
+            return re.findall("\d+:\s+(\w+):\s+.*", output, re.IGNORECASE)[0]
+        except (aexpect.ShellCmdError, IndexError):
+            return None
+
     def sys_method():
         try:
             interfaces = session.cmd('ls --color=never /sys/class/net')
@@ -1585,7 +1592,12 @@ def get_linux_ifname(session, mac_address):
     if i is not None:
         return i
 
-    # Then, look on /sys
+    # No luck, try ip link
+    i = iplink_method()
+    if i is not None:
+        return i
+
+    # No luck, look on /sys
     i = sys_method()
     if i is not None:
         return i
