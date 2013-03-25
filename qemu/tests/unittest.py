@@ -54,7 +54,7 @@ def run_unittest(test, params, env):
 
     timeout = int(params.get('unittest_timeout', 600))
 
-    extra_params_original = params['extra_params']
+    extra_params_original = params.get('extra_params')
 
     for t in test_list:
         logging.info('Running %s', t)
@@ -86,6 +86,8 @@ def run_unittest(test, params, env):
         extra_params = None
         if parser.has_option(t, 'extra_params'):
             extra_params = parser.get(t, 'extra_params')
+            if not params.get('extra_params'):
+                params['extra_params'] = ""
             params['extra_params'] += ' %s' % extra_params
 
         vm_name = params.get("main_vm")
