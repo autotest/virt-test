@@ -18,6 +18,7 @@
 shared/data
 qemu/env
 logs
+qemu/unittests
 qemu/cfg/base.cfg
 qemu/cfg/cdkeys.cfg
 qemu/cfg/guest-hw.cfg
