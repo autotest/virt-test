@@ -1,7 +1,7 @@
 import logging, os, glob, shutil
 from autotest.client.shared import logging_manager
 from autotest.client import utils
-import utils_misc, data_dir, asset
+import utils_misc, data_dir, asset, cartesian_config
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
@@ -217,17 +217,15 @@ def create_subtests_cfg(t_type):
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
             line = line.strip()
-            if not line.startswith("#"):
-                try:
-                    (key, value) = line.split("=")
-                    if key.strip() == 'type':
-                        value = value.strip()
-                        value = value.split(" ")
-                        for v in value:
-                            if v not in non_dropin_tests:
-                                non_dropin_tests.append(v)
-                except:
-                    pass
+            if line.startswith("type"):
+                cartesian_parser = cartesian_config.Parser()
+                cartesian_parser.parse_string(line)
+                td = cartesian_parser.get_dicts().next()
+                values = td['type'].split(" ")
+                for value in values:
+                    if t_type not in non_dropin_tests:
+                        non_dropin_tests.append(value)
+
         shared_file_name = os.path.basename(shared_file)
         shared_file_name = shared_file_name.split(".")[0]
         if shared_file_name in first_subtest[t_type]:
@@ -250,17 +248,15 @@ def create_subtests_cfg(t_type):
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
             line = line.strip()
-            if not line.startswith("#"):
-                try:
-                    (key, value) = line.split("=")
-                    if key.strip() == 'type':
-                        value = value.strip()
-                        value = value.split(" ")
-                        for v in value:
-                            if v not in non_dropin_tests:
-                                non_dropin_tests.append(v)
-                except:
-                    pass
+            if line.startswith("type"):
+                cartesian_parser = cartesian_config.Parser()
+                cartesian_parser.parse_string(line)
+                td = cartesian_parser.get_dicts().next()
+                values = td['type'].split(" ")
+                for value in values:
+                    if value not in non_dropin_tests:
+                        non_dropin_tests.append(value)
+
         shared_file_name = os.path.basename(shared_file)
         shared_file_name = shared_file_name.split(".")[0]
         if shared_file_name in first_subtest[t_type]:
