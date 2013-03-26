@@ -142,11 +142,15 @@ class ConstructorsTest(ModuleLoad):
 
 
     def test_VirshPersistent(self):
-        logging.disable(logging.INFO)
-        vp = self.virsh.VirshPersistent()
-        self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 1)
-        vp.close_session() # Make sure session gets cleaned up
-        self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 0)
+        test_virsh = self.virsh.Virsh()
+        if test_virsh['virsh_exec'] == '/bin/true':
+            return
+        else:
+            logging.disable(logging.INFO)
+            vp = self.virsh.VirshPersistent()
+            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 1)
+            vp.close_session() # Make sure session gets cleaned up
+            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 0)
 
 
     def TestVirshClosure(self):
