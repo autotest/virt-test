@@ -36,15 +36,7 @@ class VM(virt_vm.BaseVM):
 
     MIGRATION_PROTOS = ['tcp', 'unix', 'exec', 'fd']
 
-    #
-    # By default we inherit all timeouts from the base VM class
-    #
-    LOGIN_TIMEOUT = virt_vm.BaseVM.LOGIN_TIMEOUT
-    LOGIN_WAIT_TIMEOUT = virt_vm.BaseVM.LOGIN_WAIT_TIMEOUT
-    COPY_FILES_TIMEOUT = virt_vm.BaseVM.COPY_FILES_TIMEOUT
-    MIGRATE_TIMEOUT = virt_vm.BaseVM.MIGRATE_TIMEOUT
-    REBOOT_TIMEOUT = virt_vm.BaseVM.REBOOT_TIMEOUT
-    CREATE_TIMEOUT = virt_vm.BaseVM.CREATE_TIMEOUT
+    # By default we inherit all timeouts from the base VM class except...
     CLOSE_SESSION_TIMEOUT = 30
 
     def __init__(self, name, params, root_dir, address_cache, state=None):
@@ -1581,7 +1573,7 @@ class VM(virt_vm.BaseVM):
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
-               timeout=CREATE_TIMEOUT, migration_mode=None,
+               timeout=virt_vm.BaseVM.CREATE_TIMEOUT, migration_mode=None,
                migration_exec_cmd=None, migration_fd=None,
                mac_source=None):
         """
@@ -2571,7 +2563,7 @@ class VM(virt_vm.BaseVM):
 
 
     @error.context_aware
-    def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
+    def migrate(self, timeout=virt_vm.BaseVM.MIGRATE_TIMEOUT, protocol="tcp",
                 cancel_delay=None, offline=False, stable_check=False,
                 clean=True, save_path="/tmp", dest_host="localhost",
                 remote_port=None, not_wait_for_migration=False,
@@ -2791,7 +2783,7 @@ class VM(virt_vm.BaseVM):
 
     @error.context_aware
     def reboot(self, session=None, method="shell", nic_index=0,
-               timeout=REBOOT_TIMEOUT):
+               timeout=virt_vm.BaseVM.REBOOT_TIMEOUT):
         """
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
