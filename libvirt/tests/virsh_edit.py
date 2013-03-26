@@ -61,7 +61,7 @@ def run_virsh_edit(test, params, env):
         if not status :
             return status
         if params.get("paused_after_start_vm") == "yes":
-            virsh.resume(guest_name)
+            virsh.resume(guest_name, ignore_status=True)
             virsh.destroy(guest_name)
         elif params.get("start_vm") == "yes":
             virsh.destroy(guest_name)

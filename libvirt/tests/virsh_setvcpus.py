@@ -98,7 +98,7 @@ def run_virsh_setvcpus(test, params, env):
                 break
         status = virsh.setvcpus(dom_option, count_option, options, ignore_status=True).exit_status
         if pre_vm_state == "paused":
-            virsh.resume(vm_name)
+            virsh.resume(vm_name, ignore_status=True)
         if status_error == "no":
             if status == 0:
                 if pre_vm_state == "shut off":

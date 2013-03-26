@@ -1358,7 +1358,16 @@ class VM(virt_vm.BaseVM):
 
 
     def resume(self):
-        return virsh.resume(self.name, uri=self.connect_uri)
+        try:
+            virsh.resume(self.name, ignore_status=False, uri=self.connect_uri)
+            if self.is_alive():
+                logging.debug("Resumed VM %s", self.name)
+                return True
+            else:
+                return False
+        except error.CmdError, detail:
+            logging.error("Resume VM %s failed:\n%s", self.name, detail)
+            return False
 
 
     def save_to_file(self, path):
