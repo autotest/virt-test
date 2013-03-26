@@ -70,7 +70,7 @@ def launch_rv(client_vm, guest_vm, params):
     #If qemu_ticket is set, set the password of the VM using the qemu-monitor
     if qemu_ticket:
         guest_vm.monitor.cmd("set_password spice %s" % qemu_ticket)
-        logging.info("Sending to qemu monitor: set_password spice %s" 
+        logging.info("Sending to qemu monitor: set_password spice %s"
                      % qemu_ticket)
 
     client_session = client_vm.wait_for_login(
@@ -159,7 +159,7 @@ def launch_rv(client_vm, guest_vm, params):
         if test_type == "negative":
             logging.info("remote-viewer connection failed as expected")
         else:
-            raise error.TestFail("remote-viewer connection failed") 
+            raise error.TestFail("remote-viewer connection failed")
 
     #prevent from kill remote-viewer after test finish
     cmd = "disown -ar"
