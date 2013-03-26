@@ -29,7 +29,7 @@ def deploy_epel_repo(guest_session, params):
         if "i686" in arch:
             arch = "i386"
         else:
-            arch = arch[:-1] 
+            arch = arch[:-1]
         if "release 5" in guest_session.cmd("cat /etc/redhat-release"):
             cmd = ("yum -y localinstall http://download.fedoraproject.org/"
                    "pub/epel/5/%s/epel-release-5-4.noarch.rpm 2>&1" % arch)
