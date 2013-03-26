@@ -693,7 +693,7 @@ if __name__ == "__main__":
 
     if full_check:
         run_pylint.set_verbosity(False)
-        logging.info("Autotest full tree check")
+        logging.info("Virt Tests full tree check")
         logging.info("")
         for root, dirs, files in os.walk("."):
             for fl in files:
