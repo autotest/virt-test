@@ -812,19 +812,9 @@ def resume(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
-    dargs['ignore_status'] = False
-    try:
-        command("resume %s" % (name), **dargs)
-        if is_alive(name, **dargs):
-            logging.debug("Resumed VM %s", name)
-            return True
-        else:
-            return False
-    except error.CmdError, detail:
-        logging.error("Resume VM %s failed:\n%s", name, detail)
-        return False
+    return command("resume %s" % (name), **dargs)
 
 
 def dommemstat(name, extra="", **dargs):
