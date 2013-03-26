@@ -9,7 +9,7 @@ Requires: Two VMs - client and guest and remote-viewer session
 import logging, os
 from autotest.client.shared import error
 from virttest.aexpect import ShellCmdError
-from virttest import utils_misc, utils_spice
+from virttest import utils_misc, utils_spice, aexpect
 
 def deploy_epel_repo(guest_session, params):
     """
