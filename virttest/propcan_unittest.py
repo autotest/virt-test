@@ -14,6 +14,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_single_init(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo',)
         testcan = FooBar(foo='bar')
@@ -23,6 +25,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_double_init(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', 'bar')
         testcan = FooBar(foo='bar', bar='foo')
@@ -35,6 +39,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_slots_restrict(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo',)
         testcan = FooBar(foo='bar')
@@ -46,6 +52,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_mixed_init(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', 'bar')
         testcan = FooBar({'foo':'bar'})
@@ -60,6 +68,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_subclass_single_init_setter(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', )
             it_works = False
@@ -78,6 +88,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_subclass_single_init_getter(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', )
             it_works = False
@@ -99,6 +111,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_subclass_single_init_delter(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', )
             it_works = False
@@ -122,6 +136,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_subclass_no_mask_attributeerror(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', )
             def del_foo(self):
@@ -140,6 +156,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_dict_methods_1(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', 'bar')
         testcan = FooBar(foo='bar', bar='foo')
@@ -150,6 +168,8 @@ class TestPropCanBase(unittest.TestCase):
 
 
     def test_dict_methods_2(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCanBase):
             __slots__ = ('foo', 'bar')
         testcan = FooBar(foo='bar', bar='foo')
@@ -171,6 +191,8 @@ class TestPropCan(unittest.TestCase):
 
 
     def test_extranious_init(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCan):
             __slots__ = ('foo', )
         testcan = FooBar((('foo', 'bar'), ('bar', 'foo'),))
@@ -180,6 +202,8 @@ class TestPropCan(unittest.TestCase):
 
 
     def test_init_None_value(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCan):
             __slots__ = ('foo', )
         testcan = FooBar(foo=None)
@@ -189,6 +213,8 @@ class TestPropCan(unittest.TestCase):
 
 
     def test_compare(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCan):
             __slots__ = ('foo', 'bar')
         testcan = FooBar(foo=None, bar='foo')
@@ -204,6 +230,8 @@ class TestPropCan(unittest.TestCase):
 
 
     def test_odd_values(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCan):
             __slots__ = ('foo', 'bar', 'baz')
         testcan = FooBar()
@@ -217,6 +245,8 @@ class TestPropCan(unittest.TestCase):
 
 
     def test_printables(self):
+        # Pylint false negative
+        # pylint: disable=E1001
         class FooBar(propcan.PropCan):
             __slots__ = ('foo', 'bar', 'baz')
         testcan = FooBar()
