@@ -689,7 +689,7 @@ if __name__ == "__main__":
         vcs = None
 
     logging_manager.configure_logging(CheckPatchLoggingConfig(), verbose=debug)
-    ignore_list = ['common.py', ".svn", ".git", '.pyc', ".orig", ".rej", ".bak"]
+    ignore_list = ['common.py', ".svn", ".git", ".pyc", ".orig", ".rej", ".bak", ".so"]
 
     if full_check:
         failed_paths = []
