@@ -911,8 +911,9 @@ class MultihostMigration(object):
 
 
 class MultihostMigrationFd(MultihostMigration):
-    def __init__(self, test, params, env):
-        super(MultihostMigrationFd, self).__init__(test, params, env)
+    def __init__(self, test, params, env, preprocess_env=True):
+        super(MultihostMigrationFd, self).__init__(test, params, env,
+                                                   preprocess_env)
 
     def migrate_vms_src(self, mig_data):
         """
@@ -1071,8 +1072,9 @@ class MultihostMigrationFd(MultihostMigration):
 
 
 class MultihostMigrationExec(MultihostMigration):
-    def __init__(self, test, params, env):
-        super(MultihostMigrationExec, self).__init__(test, params, env)
+    def __init__(self, test, params, env, preprocess_env=True):
+        super(MultihostMigrationExec, self).__init__(test, params, env,
+                                                     preprocess_env)
 
 
     def post_migration(self, vm, cancel_delay, mig_offline, dsthost,
