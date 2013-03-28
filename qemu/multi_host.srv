@@ -97,7 +97,6 @@ def run(machines):
 
         params['hosts'] = ips
 
-        params['not_preprocess'] = "yes"
         for vm in params.get("vms").split():
             for nic in params.get('nics',"").split():
                 params['mac_%s_%s' % (nic, vm)] = generate_mac_address()
@@ -113,6 +112,7 @@ def run(machines):
         for host_id, machine in enumerate(machines[1:]):
             host = _hosts[machine]
             host.params = params.object_params("host%s" % (host_id + 2))
+            host.params['not_preprocess'] = "yes"
             host.params['clone_master'] = "no"
             host.params['hostid'] = machine
 
