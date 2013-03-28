@@ -1155,6 +1155,7 @@ def get_host_cpu_models():
     vendor = re.findall(vendor_re, cpu_info)[0]
     cpu_flags = re.findall(cpu_flags_re, cpu_info)
 
+    cpu_model = None
     cpu_support_model = []
     if cpu_flags:
         cpu_flags = _cpu_flags_sort(cpu_flags[0])
