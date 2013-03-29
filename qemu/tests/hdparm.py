@@ -32,7 +32,7 @@ def run_hdparm(test, params, env):
     def perform_read_timing(disk, timeout, num=5):
         results = 0
         for i in range(num):
-            cmd = params.get("device_cache_read_cmd") % disk
+            cmd = params["device_cache_read_cmd"] % disk
             (s, output) = session.cmd_status_output(cmd, timeout)
             if s != 0:
                 raise error.TestFail("Fail to perform device/cache read"
@@ -54,12 +54,12 @@ def run_hdparm(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     try:
         timeout = float(params.get("cmd_timeout", 60))
-        cmd = params.get("get_disk_cmd")
+        cmd = params["get_disk_cmd"]
         output = session.cmd(cmd)
         disk = output.strip()
 
         error.context("Setting hard disk to lower performance")
-        cmd = params.get("low_status_cmd") % disk
+        cmd = params["low_status_cmd"] % disk
         session.cmd(cmd, timeout)
 
         error.context("Checking hard disk keyval under lower performance "
@@ -70,7 +70,7 @@ def run_hdparm(test, params, env):
                      "settings: %.2f MB/sec" % low_result)
 
         error.context("Setting hard disk to higher performance")
-        cmd = params.get("high_status_cmd") % disk
+        cmd = params["high_status_cmd"] % disk
         session.cmd(cmd, timeout)
 
         error.context("Checking hard disk keyval under higher performance "

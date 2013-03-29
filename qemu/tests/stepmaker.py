@@ -336,12 +336,12 @@ class StepMaker(step_editor.StepMakerWindow):
 
 
 def run_stepmaker(test, params, env):
-    vm = env.get_vm(params.get("main_vm"))
+    vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     steps_filename = params.get("steps")
     if not steps_filename:
-        image_name = os.path.basename(params.get("image_name"))
+        image_name = os.path.basename(params["image_name"])
         steps_filename = 'steps/%s.steps' % image_name
 
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)

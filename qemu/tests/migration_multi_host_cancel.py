@@ -33,7 +33,7 @@ def run_migration_multi_host_cancel(test, params, env):
             self.vm_mem = int(params.get("mem", "512"))
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            self.vms = params.get("vms").split()
+            self.vms = params["vms"].split()
             self.id = {'src': self.srchost,
                        'dst': self.dsthost,
                        "type": "cancel_migration"}

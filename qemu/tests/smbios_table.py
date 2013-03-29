@@ -29,8 +29,8 @@ def run_smbios_table(test, params, env):
     extra_params = params.get("extra_params", "")
     params["extra_params"] = extra_params + smbios
 
-    logging.debug("Booting guest %s", params.get("main_vm"))
-    env_process.preprocess_vm(test, params, env, params.get("main_vm"))
+    logging.debug("Booting guest %s", params["main_vm"])
+    env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     vm.create()
     login_timeout = float(params.get("login_timeout", 360))

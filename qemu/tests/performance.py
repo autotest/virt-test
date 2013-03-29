@@ -20,11 +20,11 @@ def run_performance(test, params, env):
     vm.verify_alive()
 
     test_timeout = int(params.get("test_timeout", 240))
-    monitor_cmd = params.get("monitor_cmd")
+    monitor_cmd = params["monitor_cmd"]
     login_timeout = int(params.get("login_timeout", 360))
-    test_cmd = params.get("test_cmd")
+    test_cmd = params["test_cmd"]
     guest_path = params.get("result_path", "/tmp/guest_result")
-    test_src = params.get("test_src")
+    test_src = params["test_src"]
     test_patch = params.get("test_patch")
 
     # Prepare test environment in guest
@@ -170,8 +170,8 @@ def ffsb_sum(topdir, prefix, params, guest_ver, resultsdir):
 
     headstr = "threads|    IOPS|   Thro(MBps)|   Vcpu1|   Vcpu2|   Hostcpu|" \
               " MBps/Hostcpu%"
-    categories = params.get("categories").split('|')
-    threads = params.get("threads").split()
+    categories = params["categories"].split('|')
+    threads = params["threads"].split()
     kvm_ver = commands.getoutput(params.get('ver_cmd', "rpm -q qemu-kvm"))
 
     fd = open("%s/ffsb-result.RHS" % resultsdir, "w")

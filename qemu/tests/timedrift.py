@@ -59,14 +59,14 @@ def run_timedrift(test, params, env):
 
     # Collect test parameters:
     # Command to run to get the current time
-    time_command = params.get("time_command")
+    time_command = params["time_command"]
     # Filter which should match a string to be passed to time.strptime()
-    time_filter_re = params.get("time_filter_re")
+    time_filter_re = params["time_filter_re"]
     # Time format for time.strptime()
-    time_format = params.get("time_format")
-    guest_load_command = params.get("guest_load_command")
-    guest_load_stop_command = params.get("guest_load_stop_command")
-    host_load_command = params.get("host_load_command")
+    time_format = params["time_format"]
+    guest_load_command = params["guest_load_command"]
+    guest_load_stop_command = params["guest_load_stop_command"]
+    host_load_command = params["host_load_command"]
     guest_load_instances = int(params.get("guest_load_instances", "1"))
     host_load_instances = int(params.get("host_load_instances", "0"))
     # CPU affinity mask for taskset

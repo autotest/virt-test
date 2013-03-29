@@ -89,8 +89,8 @@ def run_sr_iov_hotplug(test, params, env):
 
     # Hot add a pci device
     def add_device(pci_num):
-        reference_cmd = params.get("reference_cmd")
-        find_pci_cmd = params.get("find_pci_cmd")
+        reference_cmd = params["reference_cmd"]
+        find_pci_cmd = params["find_pci_cmd"]
         info_pci_ref = vm.monitor.info("pci")
         reference = session.cmd_output(reference_cmd)
 
@@ -125,7 +125,7 @@ def run_sr_iov_hotplug(test, params, env):
                 raise error.TestFail("No new PCI device shown after executing "
                                      "monitor command: 'info pci'")
 
-            secs = int(params.get("wait_secs_for_hook_up"))
+            secs = int(params["wait_secs_for_hook_up"])
             if not utils_misc.wait_for(_new_shown, test_timeout, secs, 3):
                 raise error.TestFail("No new device shown in output of command "
                                      "executed inside the guest: %s" %
@@ -137,7 +137,7 @@ def run_sr_iov_hotplug(test, params, env):
 
             # Test the newly added device
             try:
-                session.cmd(params.get("pci_test_cmd") % (pci_num+1))
+                session.cmd(params["pci_test_cmd"] % (pci_num+1))
             except aexpect.ShellError, e:
                 raise error.TestFail("Check for sr-iov device failed after PCI "
                                      "hotplug. Output: %r" % e.output)
