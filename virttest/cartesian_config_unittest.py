@@ -31,6 +31,7 @@ class CartesianConfigTest(unittest.TestCase):
         p = cartesian_config.Parser(configpath)
         self._checkDictionaries(p, dumpdata)
 
+
     def _checkStringConfig(self, string, reference):
         p = cartesian_config.Parser()
         p.parse_string(string)
@@ -259,6 +260,221 @@ class CartesianConfigTest(unittest.TestCase):
                 """,
                 []
                 , True)
+
+
+    def testFilterExclude(self):
+        self._checkStringDump("""
+            variants name=tests:
+              - wait:
+                   run = "wait"
+                   variants:
+                     - long:
+                        time = short_time
+                     - short: long
+                        time = logn_time
+              - test2:
+                   run = "test1"
+
+            variants name=virt_system:
+              - @linux:
+              - windows:
+
+            variants name=host_os:
+              - linux:
+                   image = linux
+              - @windows:
+                   image = windows
+
+            only host_os>linux
+            exclude only host_os>linux
+            """,
+            [
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>linux.tests>wait.long',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.tests>wait.long',
+                 'tests': 'wait',
+                 'time': 'short_time',
+                 'virt_system': 'linux'},
+                {'dep': ['host_os>linux.virt_system>linux.tests>wait.long'],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>linux.tests>wait.short',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.tests>wait.short',
+                 'tests': 'wait',
+                 'time': 'logn_time',
+                 'virt_system': 'linux'},
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>linux.tests>test2',
+                 'run': 'test1',
+                 'shortname': 'host_os>linux.tests>test2',
+                 'tests': 'test2',
+                 'virt_system': 'linux'},
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>windows.tests>wait.long',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.virt_system>windows.tests>wait.long',
+                 'tests': 'wait',
+                 'time': 'short_time',
+                 'virt_system': 'windows'},
+                {'dep': ['host_os>linux.virt_system>windows.tests>wait.long'],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>windows.tests>wait.short',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.virt_system>windows.tests>wait.short',
+                 'tests': 'wait',
+                 'time': 'logn_time',
+                 'virt_system': 'windows'},
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>windows.tests>test2',
+                 'run': 'test1',
+                 'shortname': 'host_os>linux.virt_system>windows.tests>test2',
+                 'tests': 'test2',
+                 'virt_system': 'windows'},
+                {'dep': [],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>linux.tests>wait.long',
+                 'run': 'wait',
+                 'shortname': 'tests>wait.long',
+                 'tests': 'wait',
+                 'time': 'short_time',
+                 'virt_system': 'linux'},
+                {'dep': ['host_os>windows.virt_system>linux.tests>wait.long'],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>linux.tests>wait.short',
+                 'run': 'wait',
+                 'shortname': 'tests>wait.short',
+                 'tests': 'wait',
+                 'time': 'logn_time',
+                 'virt_system': 'linux'},
+                {'dep': [],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>linux.tests>test2',
+                 'run': 'test1',
+                 'shortname': 'tests>test2',
+                 'tests': 'test2',
+                 'virt_system': 'linux'},
+                {'dep': [],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>windows.tests>wait.long',
+                 'run': 'wait',
+                 'shortname': 'virt_system>windows.tests>wait.long',
+                 'tests': 'wait',
+                 'time': 'short_time',
+                 'virt_system': 'windows'},
+                {'dep': ['host_os>windows.virt_system>windows.tests>wait.long'],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>windows.tests>wait.short',
+                 'run': 'wait',
+                 'shortname': 'virt_system>windows.tests>wait.short',
+                 'tests': 'wait',
+                 'time': 'logn_time',
+                 'virt_system': 'windows'},
+                {'dep': [],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>windows.tests>test2',
+                 'run': 'test1',
+                 'shortname': 'virt_system>windows.tests>test2',
+                 'tests': 'test2',
+                 'virt_system': 'windows'},
+                ]
+            )
+
+        self._checkStringDump("""
+            variants name=tests:
+              - wait:
+                   run = "wait"
+                   variants:
+                     - long:
+                        time = short_time
+                     - short: long
+                        time = logn_time
+              - test2:
+                   run = "test1"
+
+            variants name=virt_system:
+              - @linux:
+              - windows:
+
+            variants name=host_os:
+              - linux:
+                   image = linux
+              - @windows:
+                   image = windows
+
+            only host_os>linux
+            """,
+            [
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>linux.tests>wait.long',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.tests>wait.long',
+                 'tests': 'wait',
+                 'time': 'short_time',
+                 'virt_system': 'linux'},
+                {'dep': ['host_os>linux.virt_system>linux.tests>wait.long'],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>linux.tests>wait.short',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.tests>wait.short',
+                 'tests': 'wait',
+                 'time': 'logn_time',
+                 'virt_system': 'linux'},
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>linux.tests>test2',
+                 'run': 'test1',
+                 'shortname': 'host_os>linux.tests>test2',
+                 'tests': 'test2',
+                 'virt_system': 'linux'},
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>windows.tests>wait.long',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.virt_system>windows.tests>wait.long',
+                 'tests': 'wait',
+                 'time': 'short_time',
+                 'virt_system': 'windows'},
+                {'dep': ['host_os>linux.virt_system>windows.tests>wait.long'],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>windows.tests>wait.short',
+                 'run': 'wait',
+                 'shortname': 'host_os>linux.virt_system>windows.tests>wait.short',
+                 'tests': 'wait',
+                 'time': 'logn_time',
+                 'virt_system': 'windows'},
+                {'dep': [],
+                 'host_os': 'linux',
+                 'image': 'linux',
+                 'name': 'host_os>linux.virt_system>windows.tests>test2',
+                 'run': 'test1',
+                 'shortname': 'host_os>linux.virt_system>windows.tests>test2',
+                 'tests': 'test2',
+                 'virt_system': 'windows'},
+                ]
+            )
 
 
     def testHugeTest1(self):
