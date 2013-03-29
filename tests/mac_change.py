@@ -2,7 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_misc, utils_net
 
-
+@error.context_aware
 def run_mac_change(test, params, env):
     """
     Change MAC address of guest.
@@ -15,6 +15,8 @@ def run_mac_change(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -30,17 +32,17 @@ def run_mac_change(test, params, env):
     logging.info("The initial MAC address is %s", old_mac)
     interface = utils_net.get_linux_ifname(session_serial, old_mac)
     # Start change MAC address
-    logging.info("Changing MAC address to %s", new_mac)
+    error.context("Changing MAC address to %s" %new_mac, logging.info)
     change_cmd = ("ifconfig %s down && ifconfig %s hw ether %s && "
-                  "ifconfig %s up" % (interface, interface, new_mac, interface))
+                 "ifconfig %s up" % (interface, interface, new_mac, interface))
     session_serial.cmd(change_cmd)
 
     # Verify whether MAC address was changed to the new one
-    logging.info("Verifying the new mac address")
+    error.context("Verifying the new mac address", logging.info)
     session_serial.cmd("ifconfig | grep -i %s" % new_mac)
 
     # Restart `dhclient' to regain IP for new mac address
-    logging.info("Restart the network to gain new IP")
+    error.context("Restart the network to gain new IP", logging.info)
     dhclient_cmd = "dhclient -r && dhclient %s" % interface
     session_serial.sendline(dhclient_cmd)
 
@@ -52,7 +54,7 @@ def run_mac_change(test, params, env):
     session.close()
 
     # Re-log into guest and check if session is responsive
-    logging.info("Re-log into the guest")
+    error.context("Re-log into the guest", logging.info)
     session = vm.wait_for_login(timeout=timeout)
     if not session.is_responsive():
         raise error.TestFail("The new session is not responsive.")
