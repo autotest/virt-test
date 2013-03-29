@@ -1520,7 +1520,11 @@ def run_file_transfer(test, params, env):
 
     finally:
         logging.info('Cleaning temp file on guest')
-        session.cmd("%s %s" % (clean_cmd, guest_path))
+        try:
+            session.cmd("%s %s" % (clean_cmd, guest_path))
+        except Exception, detail:
+            logging.warn("Could not remove temp files in guest: '%s'", detail)
+
         logging.info('Cleaning temp files on host')
         try:
             os.remove(host_path)
