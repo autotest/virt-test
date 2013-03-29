@@ -165,6 +165,102 @@ class CartesianConfigTest(unittest.TestCase):
                  'tests': 'test2',
                  'virt_system': 'windows'},
             ])
+
+
+    def testDefaults(self):
+        self._checkStringDump("""
+            variants name=tests:
+              - wait:
+                   run = "wait"
+                   variants:
+                     - long:
+                        time = short_time
+                     - short: long
+                        time = logn_time
+              - test2:
+                   run = "test1"
+            
+            variants name=virt_system, with_default:
+              - @linux:
+              - windows:
+            
+            variants name=host_os, with_default:
+              - linux:
+                   image = linux
+              - @windows:
+                   image = windows
+            """,
+            [
+                {'dep': [],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>linux.tests>wait.long',
+                 'run': 'wait',
+                 'shortname': 'tests>wait.long',
+                 'tests': 'wait',
+                 'time': 'short_time',
+                 'virt_system': 'linux'},
+                {'dep': ['host_os>windows.virt_system>linux.tests>wait.long'],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>linux.tests>wait.short',
+                 'run': 'wait',
+                 'shortname': 'tests>wait.short',
+                 'tests': 'wait',
+                 'time': 'logn_time',
+                 'virt_system': 'linux'},
+                {'dep': [],
+                 'host_os': 'windows',
+                 'image': 'windows',
+                 'name': 'host_os>windows.virt_system>linux.tests>test2',
+                 'run': 'test1',
+                 'shortname': 'tests>test2',
+                 'tests': 'test2',
+                 'virt_system': 'linux'},
+                ]
+            , True)
+
+
+    def testDefaultsExactlyOne(self):
+        with self.assertRaises(cartesian_config.ParserError):
+            self._checkStringDump("""
+                variants name=host_os, with_default:
+                  - @linux:
+                       image = linux
+                       variants with_default:
+                            - ubuntu:
+                            - @fedora:
+                  - @windows:
+                       image = windows
+                       variants:
+                            - @XP:
+                            - WIN7:
+                
+                only host_os>windows
+                """,
+                []
+                , True)
+
+        with self.assertRaises(cartesian_config.ParserError):
+            self._checkStringDump("""
+                variants name=host_os, with_default:
+                  - linux:
+                       image = linux
+                       variants with_default:
+                            - ubuntu:
+                            - @fedora:
+                  - windows:
+                       image = windows
+                       variants:
+                            - @XP:
+                            - WIN7:
+                
+                only host_os>windows
+                """,
+                []
+                , True)
+
+
     def testHugeTest1(self):
         self._checkConfigDump('testcfg.huge/test1.cfg',
                               'testcfg.huge/test1.cfg.repr.gz')
