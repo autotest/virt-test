@@ -90,7 +90,7 @@ def run_unittest(test, params, env):
                 params['extra_params'] = ""
             params['extra_params'] += ' %s' % extra_params
 
-        vm_name = params.get("main_vm")
+        vm_name = params["main_vm"]
         params['kernel'] = os.path.join(unittest_dir, flat_file)
 
         testlog_path = os.path.join(test.debugdir, "%s.log" % t)
@@ -98,7 +98,7 @@ def run_unittest(test, params, env):
         testlog = None
         try:
             try:
-                vm_name = params.get('main_vm')
+                vm_name = params['main_vm']
                 env_process.preprocess_vm(test, params, env, vm_name)
                 vm = env.get_vm(vm_name)
                 vm.create()

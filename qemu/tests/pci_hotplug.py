@@ -33,10 +33,10 @@ def run_pci_hotplug(test, params, env):
     info_pci_ref = vm.monitor.info("pci")
 
     # Get output of command as reference
-    reference = session.cmd_output(params.get("reference_cmd"))
+    reference = session.cmd_output(params["reference_cmd"])
 
-    tested_model = params.get("pci_model")
-    test_type = params.get("pci_type")
+    tested_model = params["pci_model"]
+    test_type = params["pci_type"]
     image_format = params.get("image_format_stg")
 
     # Probe qemu to verify what is the supported syntax for PCI hotplug
@@ -166,10 +166,10 @@ def run_pci_hotplug(test, params, env):
 
         # Define a helper function to compare the output
         def new_shown():
-            o = session.cmd_output(params.get("reference_cmd"))
+            o = session.cmd_output(params["reference_cmd"])
             return o != reference
 
-        secs = int(params.get("wait_secs_for_hook_up"))
+        secs = int(params["wait_secs_for_hook_up"])
         if not utils_misc.wait_for(new_shown, 30, secs, 3):
             raise error.TestFail("No new device shown in output of command "
                                  "executed inside the guest: %s" %
@@ -177,8 +177,8 @@ def run_pci_hotplug(test, params, env):
 
         # Define a helper function to catch PCI device string
         def find_pci():
-            o = session.cmd_output(params.get("find_pci_cmd"))
-            return params.get("match_string") in o
+            o = session.cmd_output(params["find_pci_cmd"])
+            return params["match_string"] in o
 
         if not utils_misc.wait_for(find_pci, 30, 3, 3):
             raise error.TestFail("PCI %s %s device not found in guest. "
@@ -188,7 +188,7 @@ def run_pci_hotplug(test, params, env):
 
         # Test the newly added device
         try:
-            session.cmd(params.get("pci_test_cmd"))
+            session.cmd(params["pci_test_cmd"])
         except aexpect.ShellError, e:
             raise error.TestFail("Check for %s device failed after PCI "
                                  "hotplug. Output: %r" % (test_type, e.output))

@@ -51,7 +51,7 @@ def run_migration(test, params, env):
         session = vm.wait_for_login(timeout=timeout)
 
         # Get the output of migration_test_command
-        test_command = params.get("migration_test_command")
+        test_command = params["migration_test_command"]
         reference_output = session.cmd_output(test_command)
 
         # Start some process in the background (and leave the session open)

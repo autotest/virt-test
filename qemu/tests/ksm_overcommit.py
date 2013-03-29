@@ -559,7 +559,7 @@ def run_ksm_overcommit(test, params, env):
 
     # As we don't know the number and memory amount of VMs in advance,
     # we need to specify and create them here
-    vm_name = params.get("main_vm")
+    vm_name = params["main_vm"]
     params['mem'] = mem
     params['vms'] = vm_name
     # Associate pidfile name

@@ -322,7 +322,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # Use the last opened session to send cmd.
         session = self._open_session_list[-1]
         try:
-            session.cmd(self.params.get("gagent_fs_test_cmd"))
+            session.cmd(self.params["gagent_fs_test_cmd"])
         except aexpect.ShellTimeoutError:
             logging.debug("FS freeze successfully.")
         else:
@@ -389,7 +389,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 
-        gagent_check_type = self.params.get("gagent_check_type")
+        gagent_check_type = self.params["gagent_check_type"]
         chk_type = "gagent_check_%s" % gagent_check_type
         if hasattr(self, chk_type):
             func = getattr(self, chk_type)

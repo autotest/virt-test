@@ -168,7 +168,7 @@ def run_kernel_install(test, params, env):
             raise error.TestFail("Could not login guest after install kernel")
 
     # Run Subtest in guest with new kernel
-    if params.has_key("sub_test"):
+    if "sub_test" in params:
         error.context("Run sub test in guest with new kernel")
         sub_test = params.get("sub_test")
         tag = params.get("sub_test_tag", "run")

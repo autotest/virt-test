@@ -28,14 +28,14 @@ def run_migration_multi_host_timedrift(test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            self.vms = params.get("vms").split()
+            self.vms = params["vms"].split()
             self.migrate_count = int(params.get("migrate_count", "1"))
             self.migration_timeout = int(params.get("migrate_timeout", "240"))
 
-            self.time_command = params.get("time_command")
-            self.time_filter_re = params.get("time_filter_re")
-            self.time_format = params.get("time_format")
-            self.create_file = params.get("create_file")
+            self.time_command = params["time_command"]
+            self.time_filter_re = params["time_filter_re"]
+            self.time_format = params["time_format"]
+            self.create_file = params["create_file"]
 
             self.diff_limit = float(params.get("time_diff_limit", "0.1"))
             self.start_ht = {}
