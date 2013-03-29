@@ -13,7 +13,9 @@ test_dir = os.path.dirname(sys.modules[__name__].__file__)
 test_dir = os.path.abspath(test_dir)
 base_dir = data_dir.get_data_dir()
 default_userspace_paths = ["/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
-check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+platform = utils_misc.get_hardware_platform()
+check_modules = platform == 'ppc64' and ["kvm"] or ["kvm",
+                         "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
 online_docs_url = "https://github.com/autotest/virt-test/wiki/GetStarted"
 interactive = True
 
