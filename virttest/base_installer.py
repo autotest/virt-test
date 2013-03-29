@@ -449,8 +449,9 @@ class NoopInstaller(BaseInstaller):
         @param params: Dict with test params.
         '''
         if params['vm_type'] == 'qemu':
-            params['module_list'] = ("kvm kvm-%s" %
-                                     utils_misc.get_cpu_vendor(verbose=False))
+            platform = utils_misc.get_hardware_platform()
+            params['module_list'] = platform == 'ppc64' and "kvm" or ("kvm " +
+                           "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False))
         super(NoopInstaller, self).__init__(mode, name, test, params)
 
 

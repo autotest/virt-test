@@ -569,7 +569,8 @@ def bootstrap_tests(options):
         test_dir = os.path.abspath(parent_config_dir)
 
     if options.type == 'qemu':
-        check_modules = ["kvm",
+        platform = utils_misc.get_hardware_platform()
+        check_modules = platform == 'ppc64' and ["kvm"] or ["kvm",
                          "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
     else:
         check_modules = None
