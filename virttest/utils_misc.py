@@ -14,6 +14,8 @@ import utils_koji, data_dir
 import platform
 ARCH = platform.machine()
 
+class UnsupportedCPU(error.TestError):
+    pass
 
 # TODO: remove this import when log_last_traceback is moved to autotest
 import traceback
@@ -1215,8 +1217,28 @@ def extract_qemu_cpu_models(qemu_cpu_help_text):
     @param qemu_cpu_help_text: text produced by <qemu> -cpu '?'
     @return: list of cpu models
     """
-    cpu_re = re.compile("x86\s+\[?([a-zA-Z0-9_-]+)\]?.*\n")
-    return cpu_re.findall(qemu_cpu_help_text)
+    def check_model_list(pattern):
+        cpu_re = re.compile(pattern)
+        qemu_cpu_model_list = cpu_re.findall(qemu_cpu_help_text)
+        if qemu_cpu_model_list:
+            return qemu_cpu_model_list
+        else:
+            return None
+
+    x86_pattern_list = "x86\s+\[?([a-zA-Z0-9_-]+)\]?.*\n"
+    ppc64_pattern_list = "PowerPC\s+\[?([a-zA-Z0-9_-]+\.?[0-9]?)\]?.*\n"
+
+    for pattern_list in [x86_pattern_list, ppc64_pattern_list]:
+        model_list = check_model_list(pattern_list)
+        if model_list is not None:
+            return model_list
+
+    e_msg = ("CPU models reported by qemu -cpu ? not supported by virt-tests. "
+             "Please work with us to add support for it")
+    logging.error(e_msg)
+    for line in qemu_cpu_help_text.splitlines():
+        logging.error(line)
+    raise UnsupportedCPU(e_msg)
 
 
 def get_qemu_cpu_models(qemu_binary):
