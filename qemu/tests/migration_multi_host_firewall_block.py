@@ -22,7 +22,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
     if mig_protocol == "exec":
         base_class = utils_test.MultihostMigrationExec
 
-    sub_type = params.get("sub_type")
+    sub_type = params["sub_type"]
 
 
     def wait_for_migration(vm, timeout):
@@ -271,5 +271,5 @@ def run_migration_multi_host_firewall_block(test, params, env):
     elif sub_type == "short_interrupt":
         mig = TestMultihostMigrationShortInterrupt(test, params, env)
     else:
-        raise error.TestNAError("Test sub_type must be defined.")
+        raise error.TestNAError("Unsupported sub_type = '%s'." % sub_type)
     mig.run()

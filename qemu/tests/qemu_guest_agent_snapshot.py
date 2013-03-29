@@ -10,7 +10,7 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheck):
     def _action_before_fsfreeze(self, *args):
         error.context("Create a file in guest.")
         session = self._get_session(self.params, None)
-        cmd = self.params.get("gagent_fs_test_cmd")
+        cmd = self.params["gagent_fs_test_cmd"]
         self._session_cmd_close(session, cmd)
 
 
@@ -26,7 +26,7 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheck):
                                              data_dir.get_data_dir())
         base_file = storage.get_image_filename(image_params,
                                                data_dir.get_data_dir())
-        snapshot_format = image_params.get("image_format")
+        snapshot_format = image_params["image_format"]
 
         self.vm.live_snapshot(base_file, sn_file, snapshot_format)
 
@@ -40,7 +40,7 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheck):
     def _action_after_fsthaw(self, *args):
         error.context("Check if the file created exists in the guest.")
         session = self._get_session(self.params, None)
-        cmd = self.params.get("gagent_fs_check_cmd")
+        cmd = self.params["gagent_fs_check_cmd"]
         s, _ = self._session_cmd_close(session, cmd)
         if bool(s):
             raise error.TestFail("The file created in guest is gone")

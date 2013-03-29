@@ -119,7 +119,7 @@ def run_cpuid(test, params, env):
         os.chdir(test_kernel_dir)
         utils.make("cpuid_dump_kernel.bin")
 
-        vm_name = params.get('main_vm')
+        vm_name = params['main_vm']
         params_b = params.copy()
         params_b["kernel"] = os.path.join(test_kernel_dir, "cpuid_dump_kernel.bin")
         params_b["cpu_model"] = cpu_model
@@ -211,10 +211,7 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             has_error = False
-            if params.get("vendor") is None:
-                raise error.TestNAError("'vendor' must be specified in config"
-                                        " for this test")
-            vendor = params.get("vendor")
+            vendor = params["vendor"]
 
             try:
                 out = get_guest_cpuid(self, cpu_model, "vendor=" + vendor)
@@ -223,11 +220,11 @@ def run_cpuid(test, params, env):
                 logging.debug("Guest's vendor[0]: " + guest_vendor0)
                 logging.debug("Guest's vendor[0x80000000]: " +
                               guest_vendor80000000)
-                if guest_vendor0 != params.get("vendor"):
+                if guest_vendor0 != vendor:
                     raise error.TestFail("Guest vendor[0] [%s], doesn't match "
                                          "required vendor [%s] for CPU [%s]" %
                                          (guest_vendor0, vendor, cpu_model))
-                if guest_vendor80000000 != params.get("vendor"):
+                if guest_vendor80000000 != vendor:
                     raise error.TestFail("Guest vendor[0x80000000] [%s], "
                                          "doesn't match required vendor "
                                          "[%s] for CPU [%s]" %
@@ -250,17 +247,14 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             has_error = False
-            if params.get("level") is None:
-                raise error.TestNAError("'level' must be specified in config"
-                                        " for this test")
+            level = params["level"]
             try:
-                out = get_guest_cpuid(self, cpu_model, "level=" +
-                                      params.get("level"))
+                out = get_guest_cpuid(self, cpu_model, "level=" + level)
                 guest_level = str(cpuid_to_level(out))
-                if guest_level != params.get("level"):
+                if guest_level != level:
                     raise error.TestFail("Guest's level [%s], doesn't match "
                                          "required level [%s]" %
-                                         (guest_level, params.get("level")))
+                                         (guest_level, level))
             except:
                 has_error = True
                 if xfail is False:
@@ -285,17 +279,14 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             has_error = False
-            if params.get("family") is None:
-                raise error.TestNAError("'family' must be specified in config"
-                                        " for this test")
+            family = params["family"]
             try:
-                out = get_guest_cpuid(self, cpu_model, "family=" +
-                                      params.get("family"))
+                out = get_guest_cpuid(self, cpu_model, "family=" + family)
                 guest_family = str(cpuid_to_family(out))
-                if guest_family != params.get("family"):
+                if guest_family != family:
                     raise error.TestFail("Guest's family [%s], doesn't match "
                                          "required family [%s]" %
-                                         (guest_family, params.get("family")))
+                                         (guest_family, family))
             except:
                 has_error = True
                 if xfail is False:
@@ -319,17 +310,14 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             has_error = False
-            if params.get("model") is None:
-                raise error.TestNAError("'model' must be specified in config"
-                                        " for this test")
+            model = params["model"]
             try:
-                out = get_guest_cpuid(self, cpu_model, "model=" +
-                                      params.get("model"))
+                out = get_guest_cpuid(self, cpu_model, "model=" + model)
                 guest_model = str(cpuid_to_model(out))
-                if guest_model != params.get("model"):
+                if guest_model != model:
                     raise error.TestFail("Guest's model [%s], doesn't match "
                                          "required model [%s]" %
-                                         (guest_model, params.get("model")))
+                                         (guest_model, model))
             except:
                 has_error = True
                 if xfail is False:
@@ -351,18 +339,14 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             has_error = False
-            if params.get("stepping") is None:
-                raise error.TestNAError("'stepping' must be specified in config"
-                                        " for this test")
+            stepping = params["stepping"]
             try:
-                out = get_guest_cpuid(self, cpu_model, "stepping=" +
-                                      params.get("stepping"))
+                out = get_guest_cpuid(self, cpu_model, "stepping=" + stepping)
                 guest_stepping = str(cpuid_to_stepping(out))
-                if guest_stepping != params.get("stepping"):
+                if guest_stepping != stepping:
                     raise error.TestFail("Guest's stepping [%s], doesn't match "
                                          "required stepping [%s]" %
-                                         (guest_stepping,
-                                          params.get("stepping")))
+                                         (guest_stepping, stepping))
             except:
                 has_error = True
                 if xfail is False:
@@ -382,10 +366,7 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             has_error = False
-            if params.get("xlevel") is None:
-                raise error.TestNAError("'xlevel' must be specified in config"
-                                        " for this test")
-            xlevel = params.get("xlevel")
+            xlevel = params["xlevel"]
             if params.get("expect_xlevel") is not None:
                 xlevel = params.get("expect_xlevel")
 
@@ -426,10 +407,7 @@ def run_cpuid(test, params, env):
         """
         def test(self):
             has_error = False
-            if params.get("model_id") is None:
-                raise error.TestNAError("'model_id' must be specified in config"
-                                        " for this test")
-            model_id = params.get("model_id")
+            model_id = params["model_id"]
 
             try:
                 out = get_guest_cpuid(self, cpu_model, "model_id='%s'" %
@@ -470,16 +448,14 @@ def run_cpuid(test, params, env):
             leaf = params.get("leaf","0x40000000")
             idx = params.get("index","0x00")
             regs = params.get("regs","ebx ecx edx").split()
-            if params.get("signature") is None:
-                raise error.TestNAError("'signature' must be specified in"
-                                        "config for this test")
+            signature = params["signature"]
             try:
                 out = get_guest_cpuid(self, cpu_model, flags)
-                signature = cpuid_regs_to_string(out, leaf, idx, regs)
-                if signature != params.get("signature"):
+                _signature = cpuid_regs_to_string(out, leaf, idx, regs)
+                if _signature != signature:
                     raise error.TestFail("Guest's signature [%s], doesn't"
                                          "match required signature [%s]" %
-                                         (signature, params.get("signature")))
+                                         (_signature, signature))
             except:
                 has_error = True
                 if xfail is False:
@@ -497,10 +473,7 @@ def run_cpuid(test, params, env):
             leaf = params.get("leaf","0x40000000")
             idx = params.get("index","0x00")
             reg = params.get("reg","eax")
-            if params.get("bits") is None:
-                raise error.TestNAError("'bits' must be specified in"
-                                        "config for this test")
-            bits = params.get("bits").split()
+            bits = params["bits"].split()
             try:
                 out = get_guest_cpuid(self, cpu_model, flags)
                 r = cpuid_regs_to_dic('%s %s' % (leaf, idx), out)[reg]
@@ -526,10 +499,7 @@ def run_cpuid(test, params, env):
             leaf = params.get("leaf")
             idx = params.get("index","0x00")
             reg = params.get("reg","eax")
-            if params.get("value") is None:
-                raise error.TestNAError("'value' must be specified in"
-                                        "config for this test")
-            val = int(params.get("value"))
+            val = int(params["value"])
             try:
                 out = get_guest_cpuid(self, cpu_model, flags)
                 r = cpuid_regs_to_dic('%s %s' % (leaf, idx), out)[reg]
@@ -546,7 +516,7 @@ def run_cpuid(test, params, env):
 
 
     # subtests runner
-    test_type = params.get("test_type")
+    test_type = params["test_type"]
     failed = []
     if test_type in locals():
         tests_group = locals()[test_type]

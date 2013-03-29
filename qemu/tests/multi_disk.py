@@ -184,14 +184,14 @@ def run_multi_disk(test, params, env):
     vm.create(timeout=max(10, stg_image_num), params=params)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    images = params.get("images").split()
+    images = params["images"].split()
     n_repeat = int(params.get("n_repeat", "1"))
     image_num = len(images)
-    file_system = params.get("file_system").split()
+    file_system = params["file_system"].split()
     fs_num = len(file_system)
     cmd_timeout = float(params.get("cmd_timeout", 360))
-    re_str = params.get("re_str")
-    black_list = params.get("black_list").split()
+    re_str = params["re_str"]
+    black_list = params["black_list"].split()
 
     error.context("verifying qtree vs. test params")
     err = 0
@@ -220,7 +220,7 @@ def run_multi_disk(test, params, env):
             cmd = params.get("pre_cmd")
             error.context("creating partition on test disk")
             session.cmd(cmd, timeout=cmd_timeout)
-        cmd = params.get("list_volume_command")
+        cmd = params["list_volume_command"]
         output = session.cmd_output(cmd, timeout=cmd_timeout)
         disks = re.findall(re_str, output)
         disks = map(string.strip, disks)
@@ -251,7 +251,7 @@ def run_multi_disk(test, params, env):
 
                 # Random select one file system from file_system
                 fs = file_system[index].strip()
-                cmd = params.get("format_command") % (fs, disk)
+                cmd = params["format_command"] % (fs, disk)
                 error.context("formatting test disk")
                 session.cmd(cmd, timeout=cmd_timeout)
                 if params.get("mount_command"):
@@ -262,13 +262,13 @@ def run_multi_disk(test, params, env):
                 disk = disk.strip()
 
                 logging.info("Performing I/O on disk: %s...", disk)
-                cmd_list = params.get("cmd_list").split()
+                cmd_list = params["cmd_list"].split()
                 for cmd_l in cmd_list:
                     if params.get(cmd_l):
                         cmd = params.get(cmd_l) % disk
                         session.cmd(cmd, timeout=cmd_timeout)
 
-                cmd = params.get("compare_command")
+                cmd = params["compare_command"]
                 output = session.cmd_output(cmd)
                 key_word = params.get("check_result_key_word")
                 if key_word and key_word in output:
@@ -287,7 +287,7 @@ def run_multi_disk(test, params, env):
                 disks.sort()
                 for disk in disks:
                     disk = disk.strip()
-                    cmd = params.get("umount_command") % (disk, disk)
+                    cmd = params["umount_command"] % (disk, disk)
                     error.context("unmounting test disk")
                     session.cmd(cmd)
     finally:

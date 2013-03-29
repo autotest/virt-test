@@ -76,7 +76,7 @@ def run_balloon_check(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     # Upper limit that we can raise the memory
-    vm_assigned_mem = int(params.get("mem"))
+    vm_assigned_mem = int(params["mem"])
 
     # Check memory size
     logging.info("Memory check")
@@ -108,7 +108,7 @@ def run_balloon_check(test, params, env):
     new_mem = int(random.uniform(vm_assigned_mem - vm_mem_free, vm_assigned_mem))
     fail += balloon_memory(new_mem, offset)
     # Run option test after evict memory
-    if params.has_key('sub_balloon_test_evict'):
+    if 'sub_balloon_test_evict' in params:
         balloon_test = params['sub_balloon_test_evict']
         utils_test.run_virt_sub_test(test, params, env, sub_type=balloon_test)
         if balloon_test == "shutdown" :
@@ -119,7 +119,7 @@ def run_balloon_check(test, params, env):
     fail += balloon_memory(vm_assigned_mem, offset)
 
     # Run sub test after enlarge memory
-    if params.has_key('sub_balloon_test_enlarge'):
+    if 'sub_balloon_test_enlarge' in params:
         balloon_test = params['sub_balloon_test_enlarge']
         utils_test.run_virt_sub_test(test, params, env, sub_type=balloon_test)
         if balloon_test == "shutdown" :

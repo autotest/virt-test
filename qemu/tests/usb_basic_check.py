@@ -26,7 +26,7 @@ def check_usb_device(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
-    deviceid_str = params.get("deviceid_str")
+    deviceid_str = params["deviceid_str"]
     vendor_id = params.get("vendor_id")
     product_id = params.get("product_id")
     vendor = params.get("vendor")
@@ -39,7 +39,7 @@ def check_usb_device(test, params, env):
         chk_list.append(product)
 
     error.context("Verify USB device in guest.")
-    o = session.cmd_output(params.get("chk_usb_info_cmd"))
+    o = session.cmd_output(params["chk_usb_info_cmd"])
     for item in chk_list:
         if not re.findall(item, o, re.I):
             raise error.TestFail("Could not find item '%s' in guest, "

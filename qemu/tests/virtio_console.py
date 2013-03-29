@@ -56,7 +56,7 @@ def run_virtio_console(test, params, env):
         @return: vm object matching the requirements.
         """
         # check the number of running VM's consoles
-        vm = env.get_vm(params.get("main_vm"))
+        vm = env.get_vm(params["main_vm"])
 
         if not vm:
             _no_serialports = -1
@@ -111,8 +111,8 @@ def run_virtio_console(test, params, env):
             else:
                 logging.warning("Recreating VM with more virtio ports.")
             env_process.preprocess_vm(test, params, env,
-                                            params.get("main_vm"))
-            vm = env.get_vm(params.get("main_vm"))
+                                            params["main_vm"])
+            vm = env.get_vm(params["main_vm"])
 
         vm.verify_kernel_crash()
         return vm
@@ -562,9 +562,7 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
         # PREPARE
-        test_params = params.get('virtio_console_params')
-        if not test_params:
-            raise error.TestFail('No virtio_console_params specified')
+        test_params = params['virtio_console_params']
         test_time = int(params.get('virtio_console_test_time', 60))
         no_serialports = 0
         no_consoles = 0
@@ -816,7 +814,7 @@ def run_virtio_console(test, params, env):
             oldport = vm.virtio_ports[0]
             portslen = len(vm.virtio_ports)
             vm.wait_for_login().sendline(set_s4_cmd)
-            suspend_timeout = 240 + int(params.get("smp")) * 60
+            suspend_timeout = 240 + int(params.get("smp", 1)) * 60
             if not utils_misc.wait_for(vm.is_dead, suspend_timeout, 2, 2):
                 raise error.TestFail("VM refuses to go down. Suspend failed.")
             time.sleep(intr_time)
@@ -870,7 +868,7 @@ def run_virtio_console(test, params, env):
         test_time = max(float(params.get('virtio_console_test_time', 10)), 1)
         intr_time = float(params.get('virtio_console_intr_time', 0))
         no_repeats = int(params.get('virtio_console_no_repeats', 1))
-        interruption = params.get('virtio_console_interruption')
+        interruption = params['virtio_console_interruption']
         is_serialport = (params.get('virtio_console_params') == 'serialport')
         buflen = int(params.get('virtio_console_buflen', 1))
         if is_serialport:
@@ -936,26 +934,13 @@ def run_virtio_console(test, params, env):
             interruption = _s3
             acceptable_loss = 2000
             session = vm.wait_for_login()
-            _check_support_cmd = params.get("check_s3_support_cmd")
-            set_s3_cmd = params.get('set_s3_cmd')
-            if not _check_support_cmd or not set_s3_cmd:
-                raise error.TestError("Suspend cmd '%s' or check cmd '%s' is "
-                                      "missing, bad configuration."
-                                      % (set_s3_cmd, _check_support_cmd))
-            ret = session.cmd_status(_check_support_cmd)
-            if ret:
+            set_s3_cmd = params['set_s3_cmd']
+            if session.cmd_status(params["check_s3_support_cmd"]):
                 raise error.TestNAError("Suspend to mem (S3) not supported.")
         elif interruption == 's4':
             interruption = _s4
             session = vm.wait_for_login()
-            _check_support_cmd = params.get("check_s4_support_cmd")
-            set_s4_cmd = params.get('set_s4_cmd')
-            if not _check_support_cmd or not set_s3_cmd:
-                raise error.TestError("Hibernate cmd '%s' or check cmd '%s' is"
-                                      " missing, bad configuration."
-                                      % (set_s3_cmd, _check_support_cmd))
-            ret = session.cmd_status(_check_support_cmd)
-            if ret:
+            if session.cmd_status(params["check_s4_support_cmd"]):
                 raise error.TestNAError("Suspend to disk (S4) not supported.")
             acceptable_loss = 99999999      # loss is set in S4 rutine
             send_resume_ev = threading.Event()
@@ -1074,7 +1059,7 @@ def run_virtio_console(test, params, env):
         del exit_event
         del threads[:]
 
-        cleanup(env.get_vm(params.get("main_vm")), guest_worker)
+        cleanup(env.get_vm(params["main_vm"]), guest_worker)
 
     @error.context_aware
     def _process_stats(stats, scale=1.0):
@@ -1103,9 +1088,7 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_console_test_time - default test_duration time
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        test_params = params.get('virtio_console_params')
-        if not test_params:
-            raise error.TestFail('No virtio_console_params specified')
+        test_params = params['virtio_console_params']
         test_time = int(params.get('virtio_console_test_time', 60))
         no_serialports = 0
         no_consoles = 0
@@ -1646,7 +1629,7 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_console_params - which type of virtio port to test
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        vm = env.get_vm(params.get("main_vm"))
+        vm = env.get_vm(params["main_vm"])
         use_serialport = params.get('virtio_console_params') == "serialport"
         if use_serialport:
             vm = get_vm_with_ports(no_serialports=1, strict=True)
@@ -1860,7 +1843,7 @@ def run_virtio_console(test, params, env):
         Start VM and check if it failed with the right error message.
         @param cfg: virtio_console_params - Expected error message.
         """
-        exp_error_message = params.get('virtio_console_params')
+        exp_error_message = params['virtio_console_params']
         env_process.preprocess(test, params, env)
         vm = env.get_vm(params["main_vm"])
         try:
@@ -1885,7 +1868,7 @@ def run_virtio_console(test, params, env):
         when you use the old image with a new guest_worker version.
         @note: The script name might differ!
         """
-        vm = env.get_vm(params.get("main_vm"))
+        vm = env.get_vm(params["main_vm"])
         session = vm.wait_for_login()
         out = session.cmd_output("echo on")
         if "on" in out:     # Linux
