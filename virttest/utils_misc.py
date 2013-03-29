@@ -11,6 +11,10 @@ from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
 import utils_koji, data_dir
 
+import platform
+ARCH = platform.machine()
+
+
 # TODO: remove this import when log_last_traceback is moved to autotest
 import traceback
 
@@ -600,6 +604,8 @@ def get_cpu_vendor(cpu_flags=[], verbose=True):
         vendor = 'intel'
     elif 'svm' in cpu_flags:
         vendor = 'amd'
+    elif ARCH == 'ppc64':
+        vendor = 'ibm'
     else:
         vendor = 'unknown'
 
@@ -1153,6 +1159,9 @@ def get_host_cpu_models():
         for i in pattern_list[1:]:
             pattern += r".+(\b%s\b)" % i
         return pattern
+
+    if ARCH == 'ppc64':
+        return 'POWER7'
 
     vendor_re = "vendor_id\s+:\s+(\w+)"
     cpu_flags_re = "flags\s+:\s+([\w\s]+)\n"
