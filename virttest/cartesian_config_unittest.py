@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import unittest, logging, os
 import gzip
 import cartesian_config
@@ -38,13 +37,11 @@ class CartesianConfigTest(unittest.TestCase):
         self._checkDictionaries(p, reference)
 
 
-    def _checkStringDump(self, string, dump):
-        p = cartesian_config.Parser()
+    def _checkStringDump(self, string, dump, defaults=False):
+        p = cartesian_config.Parser(defaults=defaults)
         p.parse_string(string)
 
-        dumpdata = None
-        exec "dumpdata = " + dump
-        self._checkDictionaries(p, dumpdata)
+        self._checkDictionaries(p, dump)
 
 
     def testSimpleVariant(self):
@@ -75,17 +72,18 @@ class CartesianConfigTest(unittest.TestCase):
                         no unknown_qemu
                 - testB:
             """,
-            """[
-{'dep': [],
- 'name': 'testA.kvm.unknown_qemu',
- 'shortname': 'testA.kvm.unknown_qemu'},
-{'dep': [],
- 'name': 'testB.kvm.unknown_qemu',
- 'shortname': 'testB.kvm.unknown_qemu'},
-{'dep': [],
- 'name': 'testB.nokvm.unknown_qemu',
- 'shortname': 'testB.nokvm.unknown_qemu'},
-]""")
+            [
+                {'dep': [],
+                 'name': 'testA.kvm.unknown_qemu',
+                 'shortname': 'testA.kvm.unknown_qemu'},
+                {'dep': [],
+                 'name': 'testB.kvm.unknown_qemu',
+                 'shortname': 'testB.kvm.unknown_qemu'},
+                {'dep': [],
+                 'name': 'testB.nokvm.unknown_qemu',
+                 'shortname': 'testB.nokvm.unknown_qemu'},
+            ]
+            )
 
 
     def testHugeTest1(self):
