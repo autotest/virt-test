@@ -1711,3 +1711,18 @@ def cpu_stats(name, options, **dargs):
         cmd += " %s" % options
 
     return command(cmd, **dargs)
+
+def change_media(name, device, options, **dargs):
+    """
+    Change media of CD or floppy drive.
+
+    @param: name: VM's name.
+    @param: path: Fully-qualified path or target of disk device
+    @param: options: command change_media options.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "change-media %s %s " % (name, device)
+    if options:
+        cmd += " %s " % options
+    return command(cmd, **dargs)
