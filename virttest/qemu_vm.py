@@ -1733,10 +1733,19 @@ class VM(virt_vm.BaseVM):
             # Make qemu command
             try:
                 qemu_command = self.make_create_command()
-            except Exception, create_error:
+            except Exception:
                 for nic in self.virtnet:
                     self._nic_tap_remove_helper(nic)
-                raise create_error
+                # TODO: log_last_traceback is being moved into autotest.
+                # use autotest.client.shared.base_utils when it's completed.
+                if 'log_last_traceback' in utils.__dict__:
+                    utils.log_last_traceback('Fail to create qemu command:')
+                else:
+                    utils_misc.log_last_traceback('Fail to create qemu'
+                                                  'command:')
+                raise virt_vm.VMStartError(self.name, 'Error occured while '
+                                           'executing make_create_command(). '
+                                           'Check the log for traceback.')
 
             # Add migration parameters if required
             if migration_mode == "tcp":
