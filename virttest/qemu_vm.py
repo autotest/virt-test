@@ -2977,7 +2977,9 @@ class VM(virt_vm.BaseVM):
             error.context()
 
         try:
-            if self.params["display"] == "spice":
+            if (self.params["display"] == "spice" and
+                not (protocol == "exec" and migration_exec_cmd == "gzip")):
+
                 host_ip = utils_net.get_host_ip_address(self.params)
                 dest_port = clone.spice_options['spice_port']
                 if self.params["spice_ssl"] == "yes":
