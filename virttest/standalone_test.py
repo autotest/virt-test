@@ -2,7 +2,7 @@ import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage, cartesian_config
+import storage, cartesian_config, arch
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -569,9 +569,7 @@ def bootstrap_tests(options):
         test_dir = os.path.abspath(parent_config_dir)
 
     if options.type == 'qemu':
-        platform = utils_misc.get_hardware_platform()
-        check_modules = platform == 'ppc64' and ["kvm"] or ["kvm",
-                         "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+        check_modules = arch.get_kvm_module_list()
     else:
         check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
