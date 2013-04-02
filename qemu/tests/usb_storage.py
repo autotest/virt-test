@@ -73,7 +73,7 @@ def run_usb_storage(test, params, env):
         blksizes = [ "4K", "16K", "64K", "256K" ]
 
         output = session.cmd("fdisk -l")
-        if params.get("fdisk_string") not in output:
+        if params["fdisk_string"] not in output:
             for line in output.splitlines():
                 logging.debug(line)
             raise error.TestFail("Could not detect the usb device on"
@@ -82,7 +82,7 @@ def run_usb_storage(test, params, env):
         error.context("Formatting USB disk")
         devname = session.cmd("ls /dev/disk/by-path/* | grep usb").strip()
         session.cmd("yes | mkfs %s" % devname,
-                    timeout=int(params.get("format_timeout")))
+                    timeout=int(params["format_timeout"]))
 
         error.context("Mounting USB disk")
         session.cmd("mount %s /mnt" % devname)

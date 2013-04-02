@@ -20,10 +20,10 @@ def run_block_mirror(test, params, env):
     image_orig = "%s.%s" % (image_name, image_format)
     image_mirror = utils_misc.get_path(data_dir.get_data_dir(),
                                        "%s-mirror.%s" % (image_name, image_format))
-    drive_format = params.get("drive_format")
+    drive_format = params["drive_format"]
     block_mirror_cmd = params.get("block_mirror_cmd", "drive-mirror")
     device_id = "None"
-    qemu_img = params.get("qemu_img_binary")
+    qemu_img = params["qemu_img_binary"]
 
 
     def check_block_jobs_info():
@@ -102,7 +102,7 @@ def run_block_mirror(test, params, env):
 
     try:
         # Setup phase
-        vm_name = params.get('main_vm')
+        vm_name = params['main_vm']
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.create()

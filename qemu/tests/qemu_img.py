@@ -16,7 +16,7 @@ def run_qemu_img(test, params, env):
     cmd = utils_misc.get_path(test.bindir, params.get("qemu_img_binary"))
     if not os.path.exists(cmd):
         raise error.TestError("Binary of 'qemu-img' not found")
-    image_format = params.get("image_format")
+    image_format = params["image_format"]
     image_size = params.get("image_size", "10G")
     image_name = storage.get_image_filename(params, data_dir.get_data_dir())
 
@@ -50,9 +50,9 @@ def run_qemu_img(test, params, env):
         @param cmd: qemu-img base command.
         """
         test_image = utils_misc.get_path(data_dir.get_data_dir(),
-                                         params.get("image_name_dd"))
+                                         params["image_name_dd"])
         print "test_image = %s" % test_image
-        create_image_cmd = params.get("create_image_cmd")
+        create_image_cmd = params["create_image_cmd"]
         create_image_cmd = create_image_cmd % test_image
         print "create_image_cmd = %s" % create_image_cmd
         utils.system(create_image_cmd)
@@ -60,7 +60,7 @@ def run_qemu_img(test, params, env):
         if not s:
             raise error.TestFail("Check image '%s' failed with error: %s" %
                                                            (test_image, o))
-        for fmt in params.get("supported_image_formats").split():
+        for fmt in params["supported_image_formats"].split():
             output_image = test_image + ".%s" % fmt
             _convert(cmd, fmt, test_image, output_image)
             s, o = _check(cmd, output_image)
@@ -104,11 +104,11 @@ def run_qemu_img(test, params, env):
 
         @param cmd: qemu-img base command.
         """
-        image_large = params.get("image_name_large")
+        image_large = params["image_name_large"]
         img = utils_misc.get_path(data_dir.get_data_dir(), image_large)
         img += '.' + image_format
         _create(cmd, img_name=img, fmt=image_format,
-               img_size=params.get("image_size_large"))
+               img_size=params["image_size_large"])
         os.remove(img)
 
 
@@ -145,11 +145,11 @@ def run_qemu_img(test, params, env):
 
         @param cmd: qemu-img base command.
         """
-        dest_img_fmt = params.get("dest_image_format")
+        dest_img_fmt = params["dest_image_format"]
         output_filename = "%s.converted_%s" % (image_name, dest_img_fmt)
 
         _convert(cmd, dest_img_fmt, image_name, output_filename,
-                image_format, params.get("compressed"), params.get("encrypted"))
+                image_format, params["compressed"], params["encrypted"])
 
         if dest_img_fmt == "qcow2":
             s, o = _check(cmd, output_filename)
@@ -287,7 +287,7 @@ def run_qemu_img(test, params, env):
                          params.get('image_name'))
 
             # Start a new VM, using backing file as its harddisk
-            vm_name = params.get('main_vm')
+            vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
             vm.create()
@@ -315,7 +315,7 @@ def run_qemu_img(test, params, env):
 
             # Second, Start a new VM, using image_name as its harddisk
             # Here, the commit_testfile should not exist
-            vm_name = params.get('main_vm')
+            vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
             vm.create()
@@ -341,7 +341,7 @@ def run_qemu_img(test, params, env):
                 raise error.TestFail("Could not commit the backing file")
 
             # Start a new VM, using image_name as its harddisk
-            vm_name = params.get('main_vm')
+            vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
             vm.create()
@@ -400,13 +400,13 @@ def run_qemu_img(test, params, env):
             raise error.TestNAError("Current kvm user space version does not"
                                     " support 'rebase' subcommand")
         sn_fmt = params.get("snapshot_format", "qcow2")
-        sn1 = params.get("image_name_snapshot1")
+        sn1 = params["image_name_snapshot1"]
         sn1 = utils_misc.get_path(data_dir.get_data_dir(), sn1) + ".%s" % sn_fmt
         base_img = storage.get_image_filename(params, data_dir.get_data_dir())
         _create(cmd, sn1, sn_fmt, base_img=base_img, base_img_fmt=image_format)
 
         # Create snapshot2 based on snapshot1
-        sn2 = params.get("image_name_snapshot2")
+        sn2 = params["image_name_snapshot2"]
         sn2 = utils_misc.get_path(data_dir.get_data_dir(), sn2) + ".%s" % sn_fmt
         _create(cmd, sn2, sn_fmt, base_img=sn1, base_img_fmt=sn_fmt)
 
@@ -435,5 +435,5 @@ def run_qemu_img(test, params, env):
 
 
     # Here starts test
-    subcommand = params.get("subcommand")
+    subcommand = params["subcommand"]
     eval("%s_test(cmd)" % subcommand)

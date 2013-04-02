@@ -5,6 +5,14 @@ class Params(UserDict.IterableUserDict):
     """
     A dict-like object passed to every test.
     """
+    def __getitem__(self, key):
+        """ overrides the error messages of missing params[$key] """
+        try:
+            return UserDict.IterableUserDict.__getitem__(self, key)
+        except KeyError:
+            raise KeyError("Required variable '%s' is missing in Cartesian"
+                           "Config, check the cfg files." % key)
+
     def objects(self, key):
         """
         Return the names of objects defined using a given key.

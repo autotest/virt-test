@@ -33,11 +33,11 @@ def run_time_manage(test, params, env):
 
     # Collect test parameters
     login_timeout = float(params.get("login_timeout", 240))
-    host_load_command = params.get("host_load_command")
-    host_load_kill_command = params.get("host_load_kill_command")
-    time_command = params.get("time_command")
-    time_filter_re = params.get("time_filter_re")
-    time_format = params.get("time_format")
+    host_load_command = params["host_load_command"]
+    host_load_kill_command = params["host_load_kill_command"]
+    time_command = params["time_command"]
+    time_filter_re = params["time_filter_re"]
+    time_format = params["time_format"]
 
     # Intialize the variables
     itr = 0
@@ -58,7 +58,7 @@ def run_time_manage(test, params, env):
                                              timeout=0.5))
     # Boot the VMs
     try:
-        while num <= int(params.get("max_vms")):
+        while num <= int(params["max_vms"]):
             # Clone vm according to the first one
             vm_name = "vm%d" % num
             vmnames.append(vm_name)
@@ -74,10 +74,10 @@ def run_time_manage(test, params, env):
             # Check whether all previous shell sessions are responsive
             error.context("checking responsiveness of the booted guest")
             for se in sessions:
-                se.cmd(params.get("alive_test_cmd"))
+                se.cmd(params["alive_test_cmd"])
             num += 1
 
-        while itr <= int(params.get("max_itrs")):
+        while itr <= int(params["max_itrs"]):
             for vmid,se in enumerate(sessions):
                 # Get the respective vm object
                 vmname = "vm%d" % (vmid +1)
@@ -88,7 +88,7 @@ def run_time_manage(test, params, env):
                 # Remember the current changed session
                 sessions[vmid] = se
                 error.context("checking responsiveness of guest")
-                se.cmd(params.get("alive_test_cmd"))
+                se.cmd(params["alive_test_cmd"])
                 if itr == 0:
                     (ht0, gt0) = utils_test.get_time(se, time_command,
                                                    time_filter_re, time_format)
@@ -98,7 +98,7 @@ def run_time_manage(test, params, env):
                                                    time_filter_re, time_format)
                     curr_time.append((ht1, gt1))
             if itr != 0:
-                for i in range(int(params.get("max_vms"))):
+                for i in range(int(params["max_vms"])):
                     hdelta = curr_time[i][0] - prev_time[i][0]
                     gdelta = curr_time[i][1] - prev_time[i][1]
                     drift = "%.2f" % (100.0 * (hdelta - gdelta) / hdelta)

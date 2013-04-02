@@ -57,7 +57,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
 
     shell_client = params.get("shell_client", "ssh")
     shell_port = int(params.get("shell_port", "22"))
-    shell_prompt = params.get("shell_prompt")
+    shell_prompt = params["shell_prompt"]
 
     #Path where file is stored on guest.
     guest_path = params.get("guest_path", "/tmp/file")

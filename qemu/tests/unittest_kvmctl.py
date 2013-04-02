@@ -13,7 +13,7 @@ def run_unittest_kvmctl(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    case = params.get("case")
+    case = params["case"]
     srcdir = params.get("srcdir", test.srcdir)
     unit_dir = os.path.join(srcdir, "kvm_userspace", "kvm", "user")
     if not os.path.isdir(unit_dir):
