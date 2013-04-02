@@ -10,7 +10,7 @@ class CartesianConfigTest(unittest.TestCase):
         result = list(parser.get_dicts())
         # as the dictionary list is very large, test each item individually:
         self.assertEquals(len(result), len(reference))
-        for resdict,refdict in zip(result, reference):
+        for resdict, refdict in zip(result, reference):
             # checking the dict name first should make some errors more visible
             self.assertEquals(resdict.get('name'), refdict.get('name'))
             self.assertEquals(resdict, refdict)
@@ -98,17 +98,17 @@ class CartesianConfigTest(unittest.TestCase):
                         time = logn_time
               - test2:
                    run = "test1"
-            
+
             variants name=virt_system:
               - @linux:
               - windows:
-            
+
             variants name=host_os:
               - linux:
                    image = linux
               - windows:
                    image = windows
-            
+
             only host_os>linux
             """,
             [
@@ -179,11 +179,11 @@ class CartesianConfigTest(unittest.TestCase):
                         time = logn_time
               - test2:
                    run = "test1"
-            
+
             variants name=virt_system, with_default:
               - @linux:
               - windows:
-            
+
             variants name=host_os, with_default:
               - linux:
                    image = linux
@@ -235,7 +235,7 @@ class CartesianConfigTest(unittest.TestCase):
                        variants:
                             - @XP:
                             - WIN7:
-                
+
                 only host_os>windows
                 """,
                 []
@@ -254,7 +254,7 @@ class CartesianConfigTest(unittest.TestCase):
                        variants:
                             - @XP:
                             - WIN7:
-                
+
                 only host_os>windows
                 """,
                 []
