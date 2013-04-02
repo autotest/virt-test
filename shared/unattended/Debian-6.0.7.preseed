@@ -25,7 +25,10 @@ d-i passwd/make-user boolean false
 d-i passwd/root-password password 12345678
 d-i passwd/root-password-again password 12345678
 
-d-i apt-setup/use_mirror boolean false
+d-i mirror/country string manual
+d-i mirror/http/hostname string http.us.debian.org
+d-i mirror/http/directory string /debian
+d-i mirror/http/proxy string
 
 tasksel tasksel/first multiselect standard
 
