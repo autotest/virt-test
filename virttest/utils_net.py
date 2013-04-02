@@ -1,45 +1,9 @@
-import platform, openvswitch, re, os, socket, fcntl, struct, logging, random
+import openvswitch, re, os, socket, fcntl, struct, logging, random
 import shelve, commands
 from autotest.client import utils
 from autotest.client.shared import error
-import propcan, utils_misc
+import propcan, utils_misc, arch
 
-
-ARCH = platform.machine()
-if ARCH == "ppc64":
-    # From include/linux/sockios.h
-    SIOCSIFHWADDR  = 0x8924
-    SIOCGIFHWADDR  = 0x8927
-    SIOCSIFFLAGS   = 0x8914
-    SIOCGIFINDEX   = 0x8933
-    SIOCBRADDIF    = 0x89a2
-    SIOCBRDELIF    = 0x89a3
-    # From linux/include/linux/if_tun.h
-    TUNSETIFF      = 0x800454ca
-    TUNGETIFF      = 0x400454d2
-    TUNGETFEATURES = 0x400454cf
-    IFF_TAP        = 0x2
-    IFF_NO_PI      = 0x1000
-    IFF_VNET_HDR   = 0x4000
-    # From linux/include/linux/if.h
-    IFF_UP = 0x1
-else:
-    # From include/linux/sockios.h
-    SIOCSIFHWADDR = 0x8924
-    SIOCGIFHWADDR = 0x8927
-    SIOCSIFFLAGS  = 0x8914
-    SIOCGIFINDEX  = 0x8933
-    SIOCBRADDIF   = 0x89a2
-    SIOCBRDELIF   = 0x89a3
-    # From linux/include/linux/if_tun.h
-    TUNSETIFF = 0x400454ca
-    TUNGETIFF = 0x800454d2
-    TUNGETFEATURES = 0x800454cf
-    IFF_TAP = 0x0002
-    IFF_NO_PI = 0x1000
-    IFF_VNET_HDR = 0x4000
-    # From linux/include/linux/if.h
-    IFF_UP = 0x1
 
 class NetError(Exception):
     pass
@@ -283,7 +247,7 @@ class Bridge(object):
         @param brname: Name of the bridge
         """
         try:
-            self._br_ioctl(SIOCBRADDIF, brname, ifname)
+            self._br_ioctl(arch.SIOCBRADDIF, brname, ifname)
         except IOError, details:
             raise BRAddIfError(ifname, brname, details)
 
@@ -296,7 +260,7 @@ class Bridge(object):
         @param brname: Name of the bridge
         """
         try:
-            self._br_ioctl(SIOCBRDELIF, brname, ifname)
+            self._br_ioctl(arch.SIOCBRDELIF, brname, ifname)
         except IOError, details:
             raise BRDelIfError(ifname, brname, details)
 
@@ -335,7 +299,7 @@ def if_nametoindex(ifname):
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16si", ifname, 0)
-    r = fcntl.ioctl(ctrl_sock, SIOCGIFINDEX, ifr)
+    r = fcntl.ioctl(ctrl_sock, arch.SIOCGIFINDEX, ifr)
     index = struct.unpack("16si", r)[1]
     ctrl_sock.close()
     return index
@@ -349,12 +313,12 @@ def vnet_hdr_probe(tapfd):
     """
     u = struct.pack("I", 0)
     try:
-        r = fcntl.ioctl(tapfd, TUNGETFEATURES, u)
+        r = fcntl.ioctl(tapfd, arch.TUNGETFEATURES, u)
     except OverflowError:
         logging.debug("Fail to get tun features!")
         return False
     flags = struct.unpack("I", r)[0]
-    if flags & IFF_VNET_HDR:
+    if flags & arch.IFF_VNET_HDR:
         return True
     else:
         return False
@@ -372,13 +336,13 @@ def open_tap(devname, ifname, vnet_hdr=True):
         tapfd = os.open(devname, os.O_RDWR)
     except OSError, e:
         raise TAPModuleError(devname, "open", e)
-    flags = IFF_TAP | IFF_NO_PI
+    flags = arch.IFF_TAP | arch.IFF_NO_PI
     if vnet_hdr and vnet_hdr_probe(tapfd):
-        flags |= IFF_VNET_HDR
+        flags |= arch.IFF_VNET_HDR
 
     ifr = struct.pack("16sh", ifname, flags)
     try:
-        r = fcntl.ioctl(tapfd, TUNSETIFF, ifr)
+        r = fcntl.ioctl(tapfd, arch.TUNSETIFF, ifr)
     except IOError, details:
         raise TAPCreationError(ifname, details)
     ifname = struct.unpack("16sh", r)[0].strip("\x00")
@@ -664,9 +628,9 @@ def bring_up_ifname(ifname):
     @param ifname: Name of the interface
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
-    ifr = struct.pack("16sh", ifname, IFF_UP)
+    ifr = struct.pack("16sh", ifname, arch.IFF_UP)
     try:
-        fcntl.ioctl(ctrl_sock, SIOCSIFFLAGS, ifr)
+        fcntl.ioctl(ctrl_sock, arch.SIOCSIFFLAGS, ifr)
     except IOError:
         raise TAPBringUpError(ifname)
     ctrl_sock.close()
@@ -681,7 +645,7 @@ def bring_down_ifname(ifname):
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16sh", ifname, 0)
     try:
-        fcntl.ioctl(ctrl_sock, SIOCSIFFLAGS, ifr)
+        fcntl.ioctl(ctrl_sock, arch.SIOCSIFFLAGS, ifr)
     except IOError:
         raise TAPBringUpError(ifname)
     ctrl_sock.close()
@@ -698,7 +662,7 @@ def if_set_macaddress(ifname, mac):
 
     ifr = struct.pack("256s", ifname)
     try:
-        mac_dev = fcntl.ioctl(ctrl_sock, SIOCGIFHWADDR, ifr)[18:24]
+        mac_dev = fcntl.ioctl(ctrl_sock, arch.SIOCGIFHWADDR, ifr)[18:24]
         mac_dev = ":".join(["%02x" % ord(m) for m in mac_dev])
     except IOError, e:
         raise HwAddrGetError(ifname)
@@ -709,7 +673,7 @@ def if_set_macaddress(ifname, mac):
     ifr = struct.pack("16sH14s", ifname, 1,
                       "".join([chr(int(m, 16)) for m in mac.split(":")]))
     try:
-        fcntl.ioctl(ctrl_sock, SIOCSIFHWADDR, ifr)
+        fcntl.ioctl(ctrl_sock, arch.SIOCSIFHWADDR, ifr)
     except IOError, e:
         logging.info(e)
         raise HwAddrSetError(ifname, mac)
