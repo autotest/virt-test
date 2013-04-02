@@ -9,7 +9,7 @@ custom logic for each virtualization hypervisor/software.
 import os, logging
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import build_helper, utils_misc, utils_koji, yumrepo
+import build_helper, utils_misc, utils_koji, yumrepo, arch
 
 
 class NoModuleError(Exception):
@@ -449,9 +449,7 @@ class NoopInstaller(BaseInstaller):
         @param params: Dict with test params.
         '''
         if params['vm_type'] == 'qemu':
-            platform = utils_misc.get_hardware_platform()
-            params['module_list'] = platform == 'ppc64' and "kvm" or ("kvm " +
-                           "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False))
+            params['module_list'] = arch.get_kvm_module_list()
         super(NoopInstaller, self).__init__(mode, name, test, params)
 
 
