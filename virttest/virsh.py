@@ -1370,6 +1370,30 @@ def net_undefine(network, extra="", **dargs):
     return command("net-undefine %s %s" % (network, extra), **dargs)
 
 
+def net_name(net_uuid, extra="", **dargs):
+    """
+    Get network name on host.
+
+    @param: net_uuid: network UUID.
+    @param: extra: extra parameters to pass to command.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-name %s %s" % (net_uuid, extra), **dargs)
+
+
+def net_uuid(network, extra="", **dargs):
+    """
+    Get network UUID on host.
+
+    @param: network: name/parameter for network option/argument
+    @param: extra: extra parameters to pass to command.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-uuid %s %s" % (network, extra), **dargs)
+
+
 def net_autostart(network, extra="", **dargs):
     """
     Set/unset a network to autostart on host boot
