@@ -1228,17 +1228,23 @@ def detach_interface(name, option="", **dargs):
     return command(cmd, **dargs)
 
 
-def net_dumpxml(net_name="", extra="", **dargs):
+def net_dumpxml(net_name, extra="", to_file="", **dargs):
     """
     Dump XML from network named net_name.
 
     @param: net_name: Name of a network
-    @param: extra: extra parameters to pass to command
+    @param: extra: Extra parameters to pass to command
+    @param: to_file: Send result to a file
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
     cmd = "net-dumpxml %s %s" % (net_name, extra)
-    return command(cmd, **dargs)
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    return result
 
 
 def net_create(xml_file, extra="", **dargs):
