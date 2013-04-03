@@ -1726,3 +1726,14 @@ def change_media(name, device, options, **dargs):
     if options:
         cmd += " %s " % options
     return command(cmd, **dargs)
+
+
+def cpu_compare(xml_file, **dargs):
+    """
+    Compare host CPU with a CPU described by an XML file
+
+    @param xml_file: file containing an XML CPU description.
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    return command("cpu-compare %s" % xml_file, **dargs)
