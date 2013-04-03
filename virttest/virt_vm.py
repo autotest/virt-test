@@ -936,7 +936,7 @@ class BaseVM(object):
         # Try to get a login prompt
         self.serial_console.sendline()
 
-        remote._remote_login(self.serial_console, username, password,
+        remote.handle_prompts(self.serial_console, username, password,
                                   prompt, timeout)
         return self.serial_console
 
