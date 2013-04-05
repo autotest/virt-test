@@ -2,7 +2,7 @@ import logging, time, os, sys, re
 from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client.shared.syncdata import SyncData
-from virttest import data_dir, env_process, utils_test
+from virttest import data_dir, env_process, utils_test, aexpect
 
 
 @error.context_aware
@@ -223,25 +223,28 @@ def run_floppy(test, params, env):
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
 
-                session.cmd("rm -f %s" % (os.path.join(self.mount_dir,
-                                                       filename)))
-                session.cmd("rm -f %s" % (check_copy_path))
+                if self.mount_dir:
+                    session.cmd("rm -f %s" % (os.path.join(self.mount_dir,
+                                                           filename)))
+                    session.cmd("rm -f %s" % (check_copy_path))
                 # If mount_dir specified, treat guest as a Linux OS
                 # Some Linux distribution does not load floppy at boot
                 # and Windows needs time to load and init floppy driver
                 error.context("Prepare floppy for writing.")
                 if self.mount_dir:
                     lsmod = session.cmd("lsmod")
-                if not 'floppy' in lsmod:
-                    session.cmd("modprobe floppy")
+                    if not 'floppy' in lsmod:
+                        session.cmd("modprobe floppy")
                 else:
                     time.sleep(20)
 
                 session.cmd(format_floppy_cmd)
 
                 error.context("Mount and copy data")
-                session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
-                                             self.mount_dir), timeout=30)
+                if self.mount_dir:
+                    session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
+                                                         self.mount_dir),
+                                                         timeout=30)
 
                 error.context("File copying test")
 
@@ -255,7 +258,7 @@ def run_floppy(test, params, env):
 
             self.mig.migrate_wait([self.vms[0]], self.srchost, self.dsthost)
 
-            if not self.is_src:  # Starts in source
+            if not self.is_src:  # Starts in destination
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
                 error.context("Wait for copy finishing.")
@@ -299,6 +302,126 @@ def run_floppy(test, params, env):
 
         def clean(self):
             super(test_multihost_write, self).clean()
+
+
+    class test_multihost_eject(Multihost):
+        def test(self):
+            super(test_multihost_eject, self).test()
+            self.mount_dir = params.get("mount_dir", None)
+            format_floppy_cmd = params["format_floppy_cmd"]
+            floppy = params["floppy_name"]
+            second_floppy = params["second_floppy_name"]
+            if os.path.abspath(floppy):
+                floppy = os.path.join(data_dir.get_data_dir(), floppy)
+            if os.path.abspath(second_floppy):
+                second_floppy = os.path.join(data_dir.get_data_dir(),
+                                             second_floppy)
+            if not self.is_src:
+                self.floppy = create_floppy(params)
+
+            pid = None
+            sync_id = {'src': self.srchost,
+                  'dst': self.dsthost,
+                  "type": "file_trasfer"}
+            filename = "orig"
+
+            if self.is_src:  # Starts in source
+                vm = env.get_vm(self.vms[0])
+                session = vm.wait_for_login(timeout=login_timeout)
+
+                if self.mount_dir:   # If linux
+                    session.cmd("rm -f %s" % (os.path.join(self.mount_dir,
+                                                           filename)))
+                # If mount_dir specified, treat guest as a Linux OS
+                # Some Linux distribution does not load floppy at boot
+                # and Windows needs time to load and init floppy driver
+                error.context("Prepare floppy for writing.")
+                if self.mount_dir:   # If linux
+                    lsmod = session.cmd("lsmod")
+                    if not 'floppy' in lsmod:
+                        session.cmd("modprobe floppy")
+                else:
+                    time.sleep(20)
+
+                if not floppy in vm.monitor.info("block"):
+                    raise error.TestFail("Wrong floppy image is placed in vm.")
+
+                try:
+                    session.cmd(format_floppy_cmd)
+                except aexpect.ShellCmdError, e:
+                    if e.status == 1:
+                        logging.error("Failed first access to floppy."
+                                      " Try a workaround make command again.")
+                        session.cmd(format_floppy_cmd)
+
+                error.context("Check floppy")
+                if self.mount_dir:   # If linux
+                    session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
+                                                 self.mount_dir), timeout=30)
+                    session.cmd("umount %s" % (self.mount_dir), timeout=30)
+
+                written = None
+                if self.mount_dir:
+                    filepath = os.path.join(self.mount_dir, "test.txt")
+                    session.cmd("echo 'test' > %s" % (filepath))
+                    output = session.cmd("cat %s" % (filepath))
+                    written = "test\n"
+                else:   # Windows version.
+                    filepath = "A:\\test.txt"
+                    session.cmd("echo test > %s" % (filepath))
+                    output = session.cmd("type %s" % (filepath))
+                    written = "test \n\n"
+                if output != written:
+                    raise error.TestFail("Data read from the floppy differs"
+                                         "from the data written to it."
+                                         " EXPECTED: %s GOT: %s" %
+                                              (repr(written), repr(output)))
+
+                error.context("Change floppy.")
+                vm.monitor.cmd("eject floppy0")
+                vm.monitor.cmd("change floppy %s" % (second_floppy))
+                session.cmd(format_floppy_cmd)
+
+                error.context("Mount and copy data")
+                if self.mount_dir:   # If linux
+                    session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
+                                                 self.mount_dir), timeout=30)
+
+                if not second_floppy in vm.monitor.info("block"):
+                    raise error.TestFail("Wrong floppy image is placed in vm.")
+
+            sync = SyncData(self.mig.master_id(), self.mig.hostid,
+                            self.mig.hosts, sync_id, self.mig.sync_server)
+
+            pid = sync.sync(pid, timeout=floppy_prepare_timeout)[self.srchost]
+
+            self.mig.migrate_wait([self.vms[0]], self.srchost, self.dsthost)
+
+            if not self.is_src:  # Starts in destination
+                vm = env.get_vm(self.vms[0])
+                session = vm.wait_for_login(timeout=login_timeout)
+                written = None
+                if self.mount_dir:
+                    filepath = os.path.join(self.mount_dir, "test.txt")
+                    session.cmd("echo 'test' > %s" % (filepath))
+                    output = session.cmd("cat %s" % (filepath))
+                    written = "test\n"
+                else:   # Windows version.
+                    filepath = "A:\\test.txt"
+                    session.cmd("echo test > %s" % (filepath))
+                    output = session.cmd("type %s" % (filepath))
+                    written = "test \n\n"
+                if output != written:
+                    raise error.TestFail("Data read from the floppy differs"
+                                         "from the data written to it."
+                                         " EXPECTED: %s GOT: %s" %
+                                              (repr(written), repr(output)))
+
+            self.mig._hosts_barrier(self.mig.hosts, self.mig.hosts,
+                                    'finish_floppy_test', login_timeout)
+
+        def clean(self):
+            super(test_multihost_eject, self).clean()
 
 
     test_type = params.get("test_type", "test_singlehost")
