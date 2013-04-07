@@ -367,6 +367,7 @@ class GuestWorker(object):
         match, tmp = self._cmd("print 'PASS: nothing'", 10, ('^PASS: nothing',
                                                              '^FAIL:'))
         if match is not 0:
+            logging.error("Python is stuck/FAILed after read-out:\n%s", tmp)
             try:
                 self.session.close()
                 self.session = utils_test.wait_for_login(self.vm)
