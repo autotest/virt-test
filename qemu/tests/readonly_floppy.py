@@ -1,6 +1,8 @@
 import logging, time, re
 from autotest.client.shared import error
 
+
+@error.context_aware
 def run_readonly_floppy(test, params, env):
     """
     KVM readonly_floppy test:
@@ -19,6 +21,8 @@ def run_readonly_floppy(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
+
+    error.context("Boot up guest with floppies", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -48,20 +52,25 @@ def run_readonly_floppy(test, params, env):
                            params.get("format_floppy1_cmd")]
 
         for floppy_index in range(floppy_count):
+            error.context("Format the %s floppy disk" % floppy_index,
+                           logging.info)
             s, o = session.get_command_status_output(
              format_cmd_list[floppy_index],
-             timeout=float(params.get("format_floppy_timeout",60)))
+             timeout = float(params.get("format_floppy_timeout", 60)))
             if s == 0:
                 raise error.TestError("Floppy disk %s is not readonly and"
                        " it's formatted successfully" %floppy_index )
-            found = re.search('(Read-only)|(protected)',o)
+            error.context("Check the %s floppy is readonly" % floppy_index,
+                           logging.info)
+            found = re.search('(Read-only)|(protected)', o)
             logging.debug("Output of format command: %s" % o)
             if not found:
                 raise error.TestError("Floppy disk %s cannot be formatted"
                  " for reasons other than readonly" %floppy_index )
             else:
                 logging.info("Floppy disk %s is Read-only and cannot be"
-                             " formatted" %floppy_index)
+                             " formatted" % floppy_index)
 
     finally:
-        session.close()
+        if session:
+            session.close()
