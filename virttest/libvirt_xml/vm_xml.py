@@ -197,5 +197,25 @@ class VMXML(VMXMLBase):
         return None
 
 
+    def get_numa_params(self, vm_name):
+        """
+        Return VM's numa setting from XML definition
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        xmltreefile = vmxml.dict_get('xml')
+        numa_params = {}
+        try:
+            numa = xmltreefile.find('numatune')
+            try:
+                numa_params['mode'] = numa.find('memory').get('mode')
+                numa_params['nodeset'] = numa.find('memory').get('nodeset')
+            except:
+                logging.error("Can't find <memory> element")
+        except:
+            logging.error("Can't find <numatune> element")
+
+        return numa_params
+
+
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)
