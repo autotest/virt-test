@@ -1767,3 +1767,22 @@ def cpu_compare(xml_file, **dargs):
     @return: CmdResult instance
     """
     return command("cpu-compare %s" % xml_file, **dargs)
+
+
+def numatune(name, mode=None, nodeset=None, options=None, **dargs):
+    """
+    Set or get a domain's numa parameters
+    @param name: name of domain
+    @param options: options may be live, config and current
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "numatune %s" % name
+    if options:
+        cmd += " --%s" % options
+    if mode:
+        cmd += " --mode %s" % mode
+    if nodeset:
+        cmd += " --nodeset %s" % nodeset
+
+    return command(cmd, **dargs)
