@@ -11,7 +11,7 @@ def run_virsh_cpu_compare(test, params, env):
     Compare host CPU with a CPU described by an XML file.
     1.Get all parameters from configuration.
     2.Prepare temp file saves of CPU infomation.
-    3.Perform virsh net-compare operation.
+    3.Perform virsh cpu-compare operation.
     4.Confirm the result.
     """
     def get_cpu_xml(mode, tmp_file):
