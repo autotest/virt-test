@@ -3,6 +3,7 @@ from autotest.client.shared import error
 from virttest import utils_test, utils_misc
 
 
+@error.context_aware
 def run_change_media(test, params, env):
     """
     change a removable media:
@@ -74,6 +75,7 @@ def run_change_media(test, params, env):
     if check_block_locked(device_name):
         raise error.TestFail("device is locked by default.")
 
+    error.context("mount cdrom to make status to locked", logging.info)
     cdrom = utils_test.get_readable_cdroms(params, session)[0]
     mount_cmd = params.get("cd_mount_cmd") % cdrom
     (s, o) = session.cmd_status_output(mount_cmd, timeout=360)
@@ -84,6 +86,7 @@ def run_change_media(test, params, env):
         raise error.TestFail("device is not locked after mount it in guest.")
 
 
+    error.context("Change media of cdrom", logging.info)
     new_img_name = params.get("new_img_name")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                                 new_img_name)
@@ -92,6 +95,7 @@ def run_change_media(test, params, env):
         raise error.TestFail("Device is not locked")
 
     if qmp_used:
+        error.context("Force change media in qmp monitor", logging.info)
         change_insert_cmd = "change device=%s,target=%s,force=True" %\
                                                (device_name, new_img_name)
         output = change_block(change_insert_cmd)
@@ -102,6 +106,7 @@ def run_change_media(test, params, env):
     if orig_img_name not in str(blocks_info):
         raise error.TestFail("Locked device %s is changed!" % orig_img_name)
 
+    error.context("Change no-removable device", logging.info)
     device_name = vm.get_block({"removable": False})
     if device_name is None:
         raise error.TestError("does not realized removable device")
@@ -112,4 +117,5 @@ def run_change_media(test, params, env):
         raise error.TestFail("Could remove non-removable device!")
     umount_cmd = params.get("cd_umount_cmd")
     session.cmd(umount_cmd, timeout=360)
-    session.close()
+    if session:
+        session.close()
