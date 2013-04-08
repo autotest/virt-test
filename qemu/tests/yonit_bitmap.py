@@ -4,6 +4,7 @@ from virttest import utils_misc
 from tests import guest_test
 
 
+@error.context_aware
 def run_yonit_bitmap(test, params, env):
     """
     Run yonit bitmap benchmark in Windows guests, especially win7 32bit,
@@ -39,7 +40,9 @@ def run_yonit_bitmap(test, params, env):
     # We set the test_timeout of the background guest_test much bigger than
     # that of this test to make sure that the background benchmark is still
     # running while the the foreground detecting is on going.
+    error.context("run benchmark test in background", logging.info)
     params["test_timeout"] = test_timeout * 2 + sec_per_day
+    logging.info("set test timeout to %ss", params["test_timeout"])
     pid = guest_test.run_guest_test_background(test, params, env,
                                                      "yonit_bitmap_benchmark")
     if pid < 0:
@@ -56,6 +59,8 @@ def run_yonit_bitmap(test, params, env):
         return True
 
 
+    error.context("Watching Yonit bitmap benchmark is running until timeout",
+                   logging.info)
     try:
         # Start detecting whether the benchmark is started a few mins
         # after the background test launched, as the downloading
