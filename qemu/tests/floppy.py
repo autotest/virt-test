@@ -28,6 +28,7 @@ def run_floppy(test, params, env):
 
 
     master_floppy(params)
+    error.context("Boot up guest with a floppy", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.create()
 
@@ -43,9 +44,10 @@ def run_floppy(test, params, env):
         if not 'floppy' in lsmod:
             session.cmd("modprobe floppy")
     else:
+        logging.info("sleep 20s, wait floppy ready to use")
         time.sleep(20)
 
-    error.context("Formating floppy disk before using it")
+    error.context("Formating floppy disk before using it", logging.info)
     format_cmd = params.get("format_floppy_cmd")
     session.cmd(format_cmd, timeout=120)
     logging.info("Floppy disk formatted successfully")
@@ -60,7 +62,7 @@ def run_floppy(test, params, env):
     session.cmd(params.get("test_floppy_cmd"))
 
     try:
-        error.context("Copying file to the floppy")
+        error.context("Copying file to the floppy", logging.info)
         md5_cmd = params.get("md5_cmd")
         if md5_cmd:
             md5_source = session.cmd("%s %s" % (params.get("md5_cmd"),
@@ -75,9 +77,11 @@ def run_floppy(test, params, env):
 
         session.cmd("%s %s %s" % (params.get("copy_cmd"), source_file,
                     dest_file))
-        logging.info("Succeed to copy file '%s' into floppy disk" % source_file)
+        logging.info("Succeed to copy file '%s' into floppy disk",
+                      source_file)
 
-        error.context("Checking if the file is unchanged after copy")
+        error.context("Checking if the file is unchanged after copy",
+                      logging.info)
         if md5_cmd:
             md5_dest = session.cmd("%s %s" % (params.get("md5_cmd"),
                                               dest_file))
@@ -97,4 +101,5 @@ def run_floppy(test, params, env):
         session.cmd(clean_cmd)
         if dest_dir:
             session.cmd("umount %s" % dest_dir)
-        session.close()
+        if session:
+            session.close()
