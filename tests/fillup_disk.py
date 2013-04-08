@@ -1,13 +1,16 @@
 import logging
 from autotest.client.shared import error
 
+
+@error.context_aware
 def run_fillup_disk(test, params, env):
     """
-    Fillup guest disk (root mount point) using dd if=/dev/zero,
-    and then clean up (rm the big file). The main purpose of this case is to
-    expand the qcow2 file to its max size.
-
+    Fileup disk test:
+    Purpose to expand the qcow2 file to its max size.
     Suggest to test rebooting vm after this test.
+    1). Fillup guest disk (root mount point) using dd if=/dev/zero.
+    2). Clean up big files in guest with rm command.
+
 
     @param test: QEMU test object
     @param params: Dictionary with the test parameters
@@ -26,7 +29,7 @@ def run_fillup_disk(test, params, env):
     number = 0
 
     try:
-        logging.info("Start filling the disk in %s" % fill_dir)
+        error.context("Start filling the disk in %s" % fill_dir, logging.info)
         cmd = params.get("fillup_cmd")
         while not filled:
             # As we want to test the backing file, so bypass the cache
@@ -40,7 +43,7 @@ def run_fillup_disk(test, params, env):
                 raise error.TestFail("Command dd failed to execute: %s" % o)
             number += 1
     finally:
-        logging.info("Cleaning the temporary files...")
+        error.context("Cleaning the temporary files...", logging.info)
         while number >= 0:
             cmd = "rm -f /%s/fillup.%d" % (fill_dir, number)
             logging.debug(cmd)
@@ -51,5 +54,7 @@ def run_fillup_disk(test, params, env):
                                      "guest may be unresponsive or "
                                      "command timeout" % (number, o))
             number -= 1
-        session.close()
-        session2.close()
+        if session:
+            session.close()
+        if session2:
+            session2.close()
