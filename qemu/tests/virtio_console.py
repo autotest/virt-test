@@ -649,12 +649,20 @@ def run_virtio_console(test, params, env):
 
             err = ""
             end_time = time.time() + test_time
+            no_threads = len(threads)
+            transfered = [0] * no_threads
             while end_time > time.time():
                 if not vm.is_alive():
-                    err += "main_thread(vmdead), "
-                for thread in threads:
-                    if not thread.isAlive():
-                        err += "main_thread(th%s died), " % thread
+                    err += "main(vmdied), "
+                _transfered = []
+                for i in xrange(no_threads):
+                    if not threads[i].isAlive():
+                        err += "main(th%s died), " % threads[i]
+                    _transfered.append(threads[i].idx)
+                if (_transfered == transfered and
+                            transfered != [0] * no_threads):
+                    err += "main(no_data), "
+                transfered = _transfered
                 if err:
                     logging.error("Error occured while executing loopback "
                                   "(%d out of %ds)",
