@@ -649,12 +649,20 @@ def run_virtio_console(test, params, env):
 
             err = ""
             end_time = time.time() + test_time
+            no_threads = len(threads)
+            transfered = [0] * no_threads
             while end_time > time.time():
                 if not vm.is_alive():
-                    err += "main_thread(vmdead), "
-                for thread in threads:
-                    if not thread.isAlive():
-                        err += "main_thread(th%s died), " % thread
+                    err += "main(vmdied), "
+                _transfered = []
+                for i in xrange(no_threads):
+                    if not threads[i].isAlive():
+                        err += "main(th%s died), " % threads[i]
+                    _transfered.append(threads[i].idx)
+                if (_transfered == transfered and
+                            transfered != [0] * no_threads):
+                    err += "main(no_data), "
+                transfered = _transfered
                 if err:
                     logging.error("Error occured while executing loopback "
                                   "(%d out of %ds)",
@@ -674,7 +682,7 @@ def run_virtio_console(test, params, env):
                 vm.destroy()
                 break
             if threads[0].ret_code:
-                err += "%s, " % thread
+                err += "%s, " % threads[0]
             tmp = "%d data sent; " % threads[0].idx
             for thread in threads[1:]:
                 logging.debug('Joining %s', thread)
@@ -1329,7 +1337,7 @@ def run_virtio_console(test, params, env):
                 threads[i].migrate_event.set()
 
             # OS is sometime a bit dizzy. DL=30
-            #guest_worker.reconnect(vm, timeout=30)
+            # guest_worker.reconnect(vm, timeout=30)
 
             i = 0
             while i < 6:
