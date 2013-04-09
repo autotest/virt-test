@@ -815,6 +815,17 @@ def edit(options, **dargs):
     return command("edit %s" % options, **dargs)
 
 
+def domjobabort(vm_name, **dargs):
+    """
+    Aborts the currently running domain job.
+
+    @param vm_name: VM's name, id or uuid.
+    @param dargs: standardized virsh function API keywords
+    @return: result from command
+    """
+    return command("domjobabort %s" % vm_name, **dargs)
+
+
 def domxml_from_native(format, file, options=None, **dargs):
     """
     Convert native guest configuration format to domain XML format.
