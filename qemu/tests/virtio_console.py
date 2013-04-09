@@ -682,7 +682,7 @@ def run_virtio_console(test, params, env):
                 vm.destroy()
                 break
             if threads[0].ret_code:
-                err += "%s, " % thread
+                err += "%s, " % threads[0]
             tmp = "%d data sent; " % threads[0].idx
             for thread in threads[1:]:
                 logging.debug('Joining %s', thread)
@@ -1337,7 +1337,7 @@ def run_virtio_console(test, params, env):
                 threads[i].migrate_event.set()
 
             # OS is sometime a bit dizzy. DL=30
-            #guest_worker.reconnect(vm, timeout=30)
+            # guest_worker.reconnect(vm, timeout=30)
 
             i = 0
             while i < 6:
