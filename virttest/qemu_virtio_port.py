@@ -371,9 +371,10 @@ class GuestWorker(object):
             try:
                 self.session.close()
                 self.session = utils_test.wait_for_login(self.vm)
-                self.cmd("killall -9 python "
-                         "&& echo -n PASS: python killed"
-                         "|| echo -n PASS: python was already dead", 10)
+                if self.os_linux:   # On windows it dies with the connection
+                    self.cmd("killall -9 python "
+                             "&& echo -n PASS: python killed"
+                             "|| echo -n PASS: python was already dead", 10)
                 self._execute_worker()
                 self._init_guest()
             except Exception, inst:
@@ -398,10 +399,11 @@ class GuestWorker(object):
 
                 match, tmp = self._cmd("guest_exit()", 10, ('^FAIL:',
                                             '^PASS: virtio_guest finished'))
-                if match is not 0:
+                self.session.close()
+                self.session = utils_test.wait_for_login(self.vm)
+                # On windows it dies with the connection
+                if match is not 0 and self.os_linux:
                     logging.debug(tmp)
-                    self.session.close()
-                    self.session = utils_test.wait_for_login(self.vm)
                     self.cmd("killall -9 python "
                              "&& echo -n PASS: python killed"
                              "|| echo -n PASS: python was already dead", 10)
@@ -425,15 +427,16 @@ class GuestWorker(object):
         # Quit worker
         if self.session and self.vm and self.vm.is_alive():
             match, tmp = self._cmd("guest_exit()", 10)
-            if match is not 0:
-                logging.warn('guest_worker stuck during cleanup,'
-                             ' killing python...')
-                self.session.close()
+            self.session.close()
+            # On windows it dies with the connection
+            if match is not 0 and self.os_linux:
+                logging.warn('guest_worker stuck during cleanup:\n%s\n,'
+                             ' killing python...', tmp)
                 self.session = utils_test.wait_for_login(self.vm)
                 self.cmd("killall -9 python "
                          "&& echo -n PASS: python killed"
                          "|| echo -n PASS: python was already dead", 10)
-            self.session.close()
+                self.session.close()
         self.session = None
         self.vm = None
 
