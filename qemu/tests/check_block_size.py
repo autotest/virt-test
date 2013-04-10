@@ -18,6 +18,7 @@ def run_check_block_size(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
+    error.context("Install guest with a new image", logging.info)
     if params.get("need_install") == "yes":
         unattended_install.run_unattended_install(test, params, env)
 
@@ -40,33 +41,34 @@ def run_check_block_size(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
-    # Get virtio block devices in guest.
-    dev_list = session.cmd_output(params.get("get_dev_list_cmd", '')).split()
-    if dev_list:
-        expect_phyciscal = int(params.get("physical_block_size_stg", 0))
-        expect_logical = int(params.get("logical_block_size_stg", 0))
-
-        #FIXME: seems we don't have a method to check which virtio
-        # device matches device file in guest. So we just check the
-        # last device file in guest. Hope it will work correctly.
-        # Yep, we need improvement here.
-        cmd = params.get("chk_phy_blk_cmd") % dev_list[-1]
-        error.context("Checking physical block size with cmd '%s'" % cmd)
-        out_physical = int(session.cmd_output(cmd))
-        logging.debug("Physical block size in guest: %s, expect: %s" % \
-                      (out_physical, expect_phyciscal))
-
-        cmd = params.get("chk_log_blk_cmd") % dev_list[-1]
-        error.context("Checking logical block size with cmd '%s'" % cmd)
-        out_logical = int(session.cmd_output(cmd))
-        logging.debug("Logical block size in guest: %s, expect: %s" % \
-                      (out_logical, expect_logical))
-
-        session.close()
-        if (out_physical != expect_phyciscal) or \
-           (out_logical != expect_logical):
-            raise error.TestFail("Physical/Logical block size in guest"
-                                 " doesn't match with qemu parameter.")
-    else:
-        session.close()
-        raise error.TestError("Could not find any virtio block device.")
+    try:
+        # Get virtio block devices in guest.
+        cmd = params.get("get_dev_list_cmd", '')
+        dev_list = session.cmd_output(cmd).split()
+        if dev_list:
+            expect_phyciscal = int(params.get("physical_block_size_stg", 0))
+            expect_logical = int(params.get("logical_block_size_stg", 0))
+            #FIXME: seems we don't have a method to check which virtio
+            # device matches device file in guest. So we just check the
+            # last device file in guest. Hope it will work correctly.
+            # Yep, we need improvement here.
+            error.context("Verify physical/Logical block size", logging.info)
+            cmd = params.get("chk_phy_blk_cmd") % dev_list[-1]
+            logging.debug("Physical block size get via '%s'" % cmd)
+            out_physical = int(session.cmd_output(cmd))
+            cmd = params.get("chk_log_blk_cmd") % dev_list[-1]
+            logging.debug("Logical block size get via '%s'" % cmd)
+            out_logical = int(session.cmd_output(cmd))
+            if (out_physical != expect_phyciscal) or \
+               (out_logical != expect_logical):
+                msg = "Block size in guest doesn't match with qemu parameter"
+                msg += "Physical block size in guest: %s" % out_physical
+                msg += "expect: %s" % expect_phyciscal
+                msg += "\nLogical block size in guest: %s," % out_logical
+                msg += "expect: %s" % expect_logical
+                raise error.TestFail(msg)
+        else:
+            raise error.TestError("Could not find any virtio block device.")
+    finally:
+        if session:
+            session.close()
