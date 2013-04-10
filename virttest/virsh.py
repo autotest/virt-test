@@ -1622,3 +1622,14 @@ def cpu_stats(name, options, **dargs):
         cmd += " %s" % options
 
     return command(cmd, **dargs)
+
+def connect(uri="", options="", **dargs):
+    """
+    Run a connect command to the uri.
+
+    @param uri: target uri connect to.
+    @param: options: options to pass to connect command
+    @return: CmdResult object.
+    """
+    return command("connect %s %s" % (uri, options), **dargs)
+    
