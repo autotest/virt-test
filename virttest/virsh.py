@@ -117,7 +117,7 @@ class VirshSession(aexpect.ShellSession):
     ERROR_REGEX_LIST = ['error:\s*.+$', '.*failed.*']
 
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
-                 prompt=r"virsh\s*\#\s*"):
+                 prompt=r"virsh\s*[\#\>]\s*"):
         """
         Initialize virsh session server, or client if id set.
 
@@ -1622,3 +1622,14 @@ def cpu_stats(name, options, **dargs):
         cmd += " %s" % options
 
     return command(cmd, **dargs)
+
+def connect(uri="", options="", **dargs):
+    """
+    Run a connect command to the uri.
+
+    @param uri: target uri connect to.
+    @param: options: options to pass to connect command
+    @return: CmdResult object.
+    """
+    return command("connect %s %s" % (uri, options), **dargs)
+    
