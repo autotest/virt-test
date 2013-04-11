@@ -912,7 +912,7 @@ class PciAssignable(object):
         requested_pci_ids = []
 
         # Setup all devices specified for assignment to guest
-        for pci_id in pci_ids:
+        for pci_id in self.pci_ids:
             full_id = utils_misc.get_full_pci_id(pci_id)
             if not full_id:
                 continue
