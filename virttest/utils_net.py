@@ -1,9 +1,15 @@
 import openvswitch, re, os, socket, fcntl, struct, logging, random
+import ctypes, math, time
 import shelve, commands
-from autotest.client import utils
+from autotest.client import utils, os_dep
 from autotest.client.shared import error
 import propcan, utils_misc, arch
 
+SYSFS_NET_PATH = "/sys/class/net"
+PROCFS_NET_PATH = "/proc/net/dev"
+#globals
+sock = None
+sockfd =None
 
 class NetError(Exception):
     pass
@@ -173,6 +179,296 @@ class VMNetError(NetError):
 class DbNoLockError(NetError):
     def __str__(self):
         return "Attempt made to access database with improper locking"
+
+
+def warp_init_del(func):
+    def new_func(*args, **argkw):
+        globals()["sock"] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        globals()["sockfd"] = globals()["sock"].fileno()
+        try:
+            return func(*args, **argkw)
+        finally:
+            globals()["sock"].close()
+            globals()["sock"] = None
+            globals()["sockfd"] = None
+    return  new_func
+
+
+class Interface(object):
+    ''' Class representing a Linux network device. '''
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return "<%s %s at 0x%x>" % (self.__class__.__name__,
+                                    self.name, id(self))
+
+    @warp_init_del
+    def up(self):
+        '''
+        Bring up the bridge interface. Equivalent to ifconfig [iface] up.
+        '''
+
+        # Get existing device flags
+        ifreq = struct.pack('16sh', self.name, 0)
+        flags = struct.unpack('16sh',
+                              fcntl.ioctl(sockfd, arch.SIOCGIFFLAGS, ifreq))[1]
+
+        # Set new flags
+        flags = flags | arch.IFF_UP
+        ifreq = struct.pack('16sh', self.name, flags)
+        fcntl.ioctl(sockfd, arch.SIOCSIFFLAGS, ifreq)
+
+    @warp_init_del
+    def down(self):
+        '''
+        Bring up the bridge interface. Equivalent to ifconfig [iface] down.
+        '''
+
+        # Get existing device flags
+        ifreq = struct.pack('16sh', self.name, 0)
+        flags = struct.unpack('16sh',
+                              fcntl.ioctl(sockfd, arch.SIOCGIFFLAGS, ifreq))[1]
+
+        # Set new flags
+        flags = flags & ~arch.IFF_UP
+        ifreq = struct.pack('16sh', self.name, flags)
+        fcntl.ioctl(sockfd, arch.SIOCSIFFLAGS, ifreq)
+
+    @warp_init_del
+    def is_up(self):
+        '''
+        Return True if the interface is up, False otherwise.
+        '''
+        # Get existing device flags
+        ifreq = struct.pack('16sh', self.name, 0)
+        flags = struct.unpack('16sh',
+                              fcntl.ioctl(sockfd, arch.SIOCGIFFLAGS, ifreq))[1]
+
+        # Set new flags
+        if flags & arch.IFF_UP:
+            return True
+        else:
+            return False
+
+    @warp_init_del
+    def get_mac(self):
+        '''
+        Obtain the device's mac address.
+        '''
+        ifreq = struct.pack('16sH14s', self.name, socket.AF_UNIX, '\x00'*14)
+        res = fcntl.ioctl(sockfd, arch.SIOCGIFHWADDR, ifreq)
+        address = struct.unpack('16sH14s', res)[2]
+        mac = struct.unpack('6B8x', address)
+
+        return ":".join(['%02X' % i for i in mac])
+
+    @warp_init_del
+    def set_mac(self, newmac):
+        '''
+        Set the device's mac address. Device must be down for this to
+        succeed.
+        '''
+        macbytes = [int(i, 16) for i in newmac.split(':')]
+        ifreq = struct.pack('16sH6B8x', self.name, socket.AF_UNIX, *macbytes)
+        fcntl.ioctl(sockfd, arch.SIOCSIFHWADDR, ifreq)
+
+    @warp_init_del
+    def get_ip(self):
+        """
+        Get ip address of this interface
+        """
+        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00'*14)
+        try:
+            res = fcntl.ioctl(sockfd, arch.SIOCGIFADDR, ifreq)
+        except IOError:
+            return None
+        ip = struct.unpack('16sH2x4s8x', res)[2]
+
+        return socket.inet_ntoa(ip)
+
+    @warp_init_del
+    def set_ip(self, newip):
+        """
+        Set the ip address of the interface
+        """
+        ipbytes = socket.inet_aton(newip)
+        ifreq = struct.pack('16sH2s4s8s', self.name,
+                            socket.AF_INET, '\x00'*2, ipbytes, '\x00'*8)
+        fcntl.ioctl(sockfd, arch.SIOCSIFADDR, ifreq)
+
+    @warp_init_del
+    def get_netmask(self):
+        """
+        Get ip network netmask
+        """
+        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00'*14)
+        try:
+            res = fcntl.ioctl(sockfd, arch.SIOCGIFNETMASK, ifreq)
+        except IOError:
+            return 0
+        netmask = socket.ntohl(struct.unpack('16sH2xI8x', res)[2])
+
+        return 32 - int(math.log(ctypes.c_uint32(~netmask).value + 1, 2))
+
+    @warp_init_del
+    def set_netmask(self, netmask):
+        """
+        Set netmask
+        """
+        netmask = ctypes.c_uint32(~((2 ** (32 - netmask)) - 1)).value
+        nmbytes = socket.htonl(netmask)
+        ifreq = struct.pack('16sH2si8s', self.name,
+                            socket.AF_INET, '\x00'*2, nmbytes, '\x00'*8)
+        fcntl.ioctl(sockfd, arch.SIOCSIFNETMASK, ifreq)
+
+    @warp_init_del
+    def get_index(self):
+        '''
+        Convert an interface name to an index value.
+        '''
+        ifreq = struct.pack('16si', self.name, 0)
+        res = fcntl.ioctl(sockfd, arch.SIOCGIFINDEX, ifreq)
+        return struct.unpack("16si", res)[1]
+
+    @warp_init_del
+    def get_stats(self):
+        """
+        Get the status information of the Interface
+        """
+        spl_re = re.compile("\s+")
+
+        fp = open(PROCFS_NET_PATH)
+        # Skip headers
+        fp.readline()
+        fp.readline()
+        while True:
+            data = fp.readline()
+            if not data:
+                return None
+
+            name, stats_str = data.split(":")
+            if name.strip() != self.name:
+                continue
+
+            stats = [int(a) for a in spl_re.split(stats_str.strip())]
+            break
+
+        titles = ["rx_bytes", "rx_packets", "rx_errs", "rx_drop", "rx_fifo",
+                  "rx_frame", "rx_compressed", "rx_multicast", "tx_bytes",
+                  "tx_packets", "tx_errs", "tx_drop", "tx_fifo", "tx_colls",
+                  "tx_carrier", "tx_compressed"]
+        return dict(zip(titles, stats))
+
+    def is_brport(self):
+        """
+        Check Whether this Interface is a bridge port_to_br
+        """
+        path = os.path.join(SYSFS_NET_PATH, self.name)
+        if os.path.exists(os.path.join(path, "brport")):
+            return True
+        else:
+            return False
+
+
+class Macvtap(Interface):
+    """
+    class of macvtap, base Interface
+    """
+    def __init__(self, tapname=None):
+        if tapname == None:
+            self.tapname = "macvtap" + utils_misc.generate_random_id()
+        else:
+            self.tapname = tapname
+        Interface.__init__(self, self.tapname)
+
+
+    def get_tapname(self):
+        return self.tapname
+
+
+    def get_device(self):
+        return "/dev/tap%s" %  self.get_index()
+
+
+    def ip_link_ctl(self, params, ignore_status=False):
+        return utils.run(os_dep.command("ip"), timeout=10,
+                         ignore_status=ignore_status, verbose=False,
+                         args=params)
+
+
+    def create(self, device, mode="vepa"):
+        """
+        Create a macvtap device, only when the device does not exist.
+
+        @param device: Macvtap device to be created.
+        @param mode: Creation mode.
+        """
+        path = os.path.join(SYSFS_NET_PATH, self.tapname)
+        if os.path.exists(path):
+            return
+
+        self.ip_link_ctl(["link", "add", "link", device, "name",
+                          self.tapname,"type", "macvtap", "mode", mode])
+
+
+    def delete(self):
+        path = os.path.join(SYSFS_NET_PATH, self.tapname)
+        if os.path.exists(path):
+            self.ip_link_ctl(["link", "delete", self.tapname])
+
+
+    def open(self):
+        device = self.get_device()
+        try:
+            return os.open(device, os.O_RDWR)
+        except OSError, e:
+            raise TAPModuleError(device, "open", e)
+
+
+def add_nic_macvtap(nic, base_interface=None):
+    """
+    Add a macvtap nic, if you not have a macvtap switch in you env, run
+    this type case you need at least two nic on you host
+    If you not assign the base_interface will use the first physical interface
+    which is not a brport and up to create macvtap
+    """
+    tap_base_device = None
+
+    (dev_int, _) = get_sorted_net_if()
+    if not dev_int:
+        raise TAPCreationError("Cannot get a physical interface on the host")
+
+    if base_interface:
+        if not base_interface in dev_int:
+            err_msg = "Macvtap must created base on a physical interface"
+            raise TAPCreationError(err_msg)
+        base_inter = Interface(base_interface)
+        if (not base_inter.is_brport()) and base_inter.is_up():
+            tap_base_device = base_interface
+    else:
+        for interface in dev_int:
+            base_inter = Interface(interface)
+            if base_inter.is_brport():
+                continue
+            if base_inter.is_up():
+                tap_base_device = interface
+                break
+
+    if not tap_base_device:
+        err_msg = ("Could not find a valid physical interface to create "
+                   "macvtap, make sure the interface is up and it does not "
+                   "belong to any bridge.")
+        raise TAPCreationError(nic.ifname, err_msg)
+
+    tap = Macvtap(nic.ifname)
+    tap.create(tap_base_device)
+    tap.set_mac(nic.mac)
+    nic.tapfd = tap.open()
+    time.sleep(3)
+    tap.up()
+
 
 
 class Bridge(object):
@@ -384,7 +680,9 @@ def local_runner_status(cmd, timeout=None):
 
 def get_net_if(runner=None):
     """
-    @param output: Output form ip link command.
+    @param runner: command runner.
+    @param div_phy_virt: if set true, will return a tuple division real
+                         physical interface and virtual interface
     @return: List of network interfaces.
     """
     if runner is None:
@@ -392,6 +690,26 @@ def get_net_if(runner=None):
     cmd = "ip link"
     result = runner(cmd)
     return re.findall("^\d+: (\S+?)[@:].*$", result, re.MULTILINE)
+
+
+def get_sorted_net_if():
+    """
+    Get all network interfaces, but sort them among physical and virtual if.
+
+    @return: Tuple (physical interfaces, virtual interfaces)
+    """
+    all_interfaces = get_net_if()
+    phy_interfaces = []
+    vir_interfaces = []
+    for d in all_interfaces:
+        path = os.path.join(SYSFS_NET_PATH, d)
+        if not os.path.isdir(path):
+            continue
+        if not os.path.exists(os.path.join(path, "device")):
+            vir_interfaces.append(d)
+        else:
+            phy_interfaces.append(d)
+    return (phy_interfaces, vir_interfaces)
 
 
 def get_net_if_addrs(if_name, runner=None):
@@ -678,6 +996,7 @@ def if_set_macaddress(ifname, mac):
         logging.info(e)
         raise HwAddrSetError(ifname, mac)
     ctrl_sock.close()
+
 
 class VirtIface(propcan.PropCan):
     """
@@ -1477,12 +1796,11 @@ def get_ip_address_by_interface(ifname):
     by using socket.inet_ntoa().
 
     """
-    SIOCGIFADDR = 0x8915 # Get interface address <bits/ioctls.h>
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         return socket.inet_ntoa(fcntl.ioctl(
                     mysocket.fileno(),
-                    SIOCGIFADDR,
+                    arch.SIOCGIFADDR,
                     struct.pack('256s', ifname[:15]) # ifname to binary IFNAMSIZ == 16
                 )[20:24])
     except IOError:
