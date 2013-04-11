@@ -2,7 +2,7 @@ import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
-import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
+import libvirt_vm, video_maker, utils_misc, storage, qemu_storage, utils_net
 import remote, data_dir
 
 

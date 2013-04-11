@@ -1,6 +1,6 @@
 import logging, re
 from autotest.client.shared import error
-from virttest.tests import unattended_install
+from tests import unattended_install
 from virttest import virt_vm
 
 

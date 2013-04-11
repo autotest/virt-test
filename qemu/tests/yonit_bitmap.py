@@ -1,7 +1,7 @@
-import logging, time, random, signal
+import logging, signal
 from autotest.client.shared import error
 from virttest import utils_misc
-from virttest.tests import guest_test
+from tests import guest_test
 
 
 def run_yonit_bitmap(test, params, env):

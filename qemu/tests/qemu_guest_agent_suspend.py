@@ -1,8 +1,8 @@
 import logging
 from autotest.client.shared import error
 from virttest import guest_agent
-from virttest.tests.guest_suspend import GuestSuspendBaseTest
-from autotest.client.tests.kvm.tests.qemu_guest_agent import QemuGuestAgentTest
+from qemu.tests.guest_suspend import GuestSuspendBaseTest
+from qemu.tests.qemu_guest_agent import QemuGuestAgentTest
 
 
 class SuspendViaGA(GuestSuspendBaseTest):
