@@ -1,5 +1,5 @@
 import platform, openvswitch, re, os, socket, fcntl, struct, logging, random
-import shelve, commands
+import shelve, commands, time
 from autotest.client import utils
 from autotest.client.shared import error
 import propcan, utils_misc

@@ -5,11 +5,12 @@ Virtualization test utility functions.
 """
 
 import time, string, random, socket, os, signal, re, logging, commands
-import fcntl, sys, inspect, tarfile, shutil
+import fcntl, sys, inspect, tarfile, shutil, getpass
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
-from autotest.client.shared import git, cartesian_config
-import openvswitch, data_dir, utils_koji, propcan
+from autotest.client.shared import git
+import cartesian_config
+import data_dir, utils_koji
 
 
 def lock_file(filename, mode=fcntl.LOCK_EX):

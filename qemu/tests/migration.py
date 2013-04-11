@@ -25,7 +25,7 @@ def run_migration(test, params, env):
 
         @param type: type of stress test.
         """
-        from virttest.tests import guest_autotest
+        from qemu.tests import guest_autotest
 
         timeout = 0
 

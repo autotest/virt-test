@@ -5,7 +5,7 @@ Utility classes and functions to handle Virtual Machine creation using qemu.
 """
 
 import time, os, logging, fcntl, re, commands
-from autotest.client.shared import error, cartesian_config
+from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
 import qemu_virtio_port, remote, data_dir, utils_net
@@ -2505,7 +2505,7 @@ class VM(virt_vm.BaseVM):
         If no QMP monitor exist, return None.
         """
         for m in self.monitors:
-            if isinstance(m, kvm_monitor.QMPMonitor):
+            if isinstance(m, qemu_monitor.QMPMonitor):
                 return m
         return None
 

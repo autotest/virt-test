@@ -987,7 +987,7 @@ def run_unattended_install(test, params, env):
                 vm.monitor.quit()
             except Exception, e:
                 logging.warn(e)
-            from virttest.tests import image_copy
+            from tests import image_copy
             error.context("Copy image from NFS Server")
             image_copy.run_image_copy(test, params, env)
 

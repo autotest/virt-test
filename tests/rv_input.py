@@ -298,7 +298,7 @@ def run_rv_input(test, params, env):
     # Verify that gnome is now running on the guest
     try:
         guest_session.cmd("ps aux | grep -v grep | grep gnome-session")
-    except aexpect.ShellCmdError:
+    except ShellCmdError:
         raise error.TestWarn("gnome-session was probably not corretly started")
 
     guest_session.cmd("export DISPLAY=:0.0")

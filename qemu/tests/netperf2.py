@@ -1,5 +1,5 @@
 import logging, commands
-from virttest.tests import guest_autotest
+from qemu.tests import guest_autotest
 
 
 def run_netperf2(test, params, env):
