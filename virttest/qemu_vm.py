@@ -29,24 +29,6 @@ class ImageUnbootableError(virt_vm.VMError):
         return ("VM '%s' can't bootup from image" % self.name)
 
 
-class QemuSegFaultError(virt_vm.VMError):
-    def __init__(self, crash_message):
-        virt_vm.VMError.__init__(self, crash_message)
-        self.crash_message = crash_message
-
-    def __str__(self):
-        return ("Qemu crashed: %s" % self.crash_message)
-
-
-class ImageUnbootableError(virt_vm.VMError):
-    def __init__(self, name):
-        virt_vm.VMError.__init__(self, name)
-        self.name = name
-
-    def __str__(self):
-        return ("VM '%s' can't bootup from image" % self.name)
-
-
 class VM(virt_vm.BaseVM):
     """
     This class handles all basic VM operations.
