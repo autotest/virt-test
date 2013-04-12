@@ -6,9 +6,9 @@ cgroup autotest test (on KVM guest)
 import logging, os, re, time
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest.utils_cgroup import Cgroup
-from virttest.utils_cgroup import CgroupModules
-from virttest.utils_cgroup import get_load_per_cpu
+from autotest.client.tests.cgroup.cgroup_common import Cgroup
+from autotest.client.tests.cgroup.cgroup_common import CgroupModules
+from autotest.client.tests.cgroup.cgroup_common import get_load_per_cpu
 from virttest.env_process import preprocess
 from virttest import qemu_monitor
 from virttest.aexpect import ExpectTimeoutError
@@ -189,12 +189,15 @@ def run_cgroup(test, params, env):
             out = []
             # Initiate dd loop on all VMs (2 sessions per VM)
             dd_cmd = get_dd_cmd(direction, blocksize="100K")
+            test_times = int(params.get("test_times", 10))
             for i in range(no_vms):
                 sessions[i * 2].sendline(dd_cmd)
             time.sleep(test_time)
-            for i in range(no_vms):
+            for j in range(test_times) :
+                for i in range(no_vms):
                 # Force stats in case no dd cmd finished
-                sessions[i * 2 + 1].sendline(stat_cmd)
+                    sessions[i * 2 + 1].sendline(stat_cmd)
+                time.sleep(5)
             for i in range(no_vms):
                 out.append(sessions[i * 2].read_until_output_matches(
                                                                 [re_dd])[1])
@@ -216,7 +219,8 @@ def run_cgroup(test, params, env):
                 for _ in  re.findall(re_dd, out[i])[1:-1]:
                     data += int(_[0])
                     duration += float(_[1])
-                out[i] = int(data / duration)
+                if ( duration != 0 ):
+                    out[i] = int(data / duration)
 
             # normalize each output according to cgroup_weights
             # Calculate the averages from medians / weights
@@ -260,8 +264,10 @@ def run_cgroup(test, params, env):
         error.context("Prepare VMs")
         # Prepare enough VMs each with 1 disk for testing
         no_vms = len(weights)
+        if no_vms > 1:
+            params["image_snapshot"]='yes'
         param_add_vms(no_vms)
-        param_add_file_disks("1M")
+        param_add_file_disks("10G")
         preprocess(test, params, env)
 
         vms = []
@@ -377,6 +383,7 @@ def run_cgroup(test, params, env):
             dd_cmd = get_dd_cmd(direction)
             limit = float(params.get('cgroup_limit_%s' % direction,
                                      params.get('cgroup_limit', 0.1)))
+            test_times = int(params.get("test_times", 10))
             # every scenario have list of results [[][][]]
             out = []
             # every VM have one output []
@@ -394,8 +401,12 @@ def run_cgroup(test, params, env):
                 time.sleep(test_time)
                 # Read stats
                 for i in range(no_vms):
+                    sessions[i * 2].sendline(dd_cmd)
+                for k  in range(test_times) :
+                    for i in range(no_vms):
                     # Force stats in case no dd cmd finished
-                    sessions[i * 2 + 1].sendline(stat_cmd)
+                        sessions[i * 2 + 1].sendline(stat_cmd)
+                    time.sleep(5)
                 for i in range(no_vms):
                     out[i].append(sessions[i * 2].read_until_output_matches(
                                                                 [re_dd])[1])
@@ -428,7 +439,8 @@ def run_cgroup(test, params, env):
                     for _ in  re.findall(re_dd, out[i][j]):
                         data += int(_[0])
                         duration += float(_[1])
-                    output.append(['PASS', j, 'vm%d' % i, speeds[i][j],
+                    if( duration != 0 ):
+                        output.append(['PASS', j, 'vm%d' % i, speeds[i][j],
                                    int(data / duration)])
                     # Don't meassure unlimited speeds
                     if (speeds[i][j] == 0):
@@ -484,6 +496,8 @@ def run_cgroup(test, params, env):
         error.context("Prepare VMs")
         # create enough of VMs with scsi_debug attached disks
         no_vms = len(speeds)
+        if no_vms > 1:
+            params["image_snapshot"]='yes'
         param_add_vms(no_vms)
         param_add_scsi_disks()
         preprocess(test, params, env)
@@ -601,7 +615,7 @@ def run_cgroup(test, params, env):
         timeout = 1.5 * int(params.get("login_timeout", 360))
         # First one
         vms.append(env.get_all_vms()[0])
-        cpu_pids = vms[0].get_vcpu_pids()
+        cpu_pids = vms[0].get_vcpu_pids(params)
         smp = len(cpu_pids)
         cgroup.mk_cgroup()
         cgroup.set_property("cpu.cfs_period_us", 100000, 0)
@@ -619,6 +633,7 @@ def run_cgroup(test, params, env):
 
         # Clone the first one with different 'smp' setting
         _params = params
+        _params["image_snapshot"]='yes'
         i = 1
         while vm_cpus < 2 * host_cpus:
             vm_name = "clone%d" % i
@@ -632,7 +647,7 @@ def run_cgroup(test, params, env):
             # Total quota is for ALL vCPUs
             cgroup.set_property("cpu.cfs_quota_us", 50000 * smp, -1)
             assign_vm_into_cgroup(vms[-1], cgroup, -1)
-            cpu_pids = vms[-1].get_vcpu_pids()
+            cpu_pids = vms[-1].get_vcpu_pids(params)
             for j in range(smp):
                 cgroup.mk_cgroup(pwd)
                 cgroup.set_property("cpu.cfs_period_us", 100000, -1)
@@ -768,6 +783,8 @@ def run_cgroup(test, params, env):
         no_threads = no_vms * vm_cpus
         sessions = []
         serials = []
+        if no_vms > 1:
+            params["image_snapshot"]='yes'
         modules = CgroupModules()
         if (modules.init(['cpu']) != 1):
             raise error.TestFail("Can't mount cpu cgroup modules")
@@ -803,9 +820,9 @@ def run_cgroup(test, params, env):
             for vm in vms:
                 f_stats.append(open("/proc/%d/stat" % vm.get_pid(), 'r'))
 
-            time_init = 2
+            time_init = 30
             # there are 6 tests
-            time_test = max(int(params.get("cgroup_test_time", 60)) / 6, 5)
+            time_test = max(int(params.get("cgroup_test_time", 60)) / 2, 30)
             thread_count = 0    # actual thread number
             stats = []
             cmd = "renice -n 10 $$; "       # new ssh login should pass
@@ -847,10 +864,11 @@ def run_cgroup(test, params, env):
             # I.
             i = 0
             # only first #host_cpus guests were running
-            dist = distance(min(stats[i][:host_cpus]),
-                            max(stats[i][:host_cpus]))
+            avg_load = sum(stats[i])/len(stats[i])
+            dist =max( distance(min(stats[i][:host_cpus]),avg_load),
+                       distance(max(stats[i][:host_cpus]),avg_load))
             # less vms, lower limit. Maximal limit is 0.2
-            if dist > min(0.10 + 0.01 * len(vms), 0.2):
+            if dist > min(0.20 + 0.01 * len(vms), 0.2):
                 err += "1, "
                 logging.error("1st part's limits broken. Utilisation should be"
                               " equal. stats = %s, distance = %s", stats[i],
@@ -859,9 +877,11 @@ def run_cgroup(test, params, env):
                 logging.info("1st part's distance = %s", dist)
             # II.
             i += 1
-            dist = distance(min(stats[i]), max(stats[i]))
+            avg_load = sum(stats[i])/len(stats[i])
+            dist =max( distance(min(stats[i][:host_cpus]),avg_load),
+                       distance(max(stats[i][:host_cpus]),avg_load))
             if host_cpus % no_speeds == 0 and no_speeds <= host_cpus:
-                if dist > min(0.10 + 0.01 * len(vms), 0.2):
+                if dist > min(0.20 + 0.01 * len(vms), 0.2):
                     err += "2, "
                     logging.error("2nd part's limits broken, Utilisation "
                                   "should be equal. stats = %s, distance = %s",
@@ -958,7 +978,7 @@ def run_cgroup(test, params, env):
                 cpusets.append([cpuset for _ in range(no_cpus + 1)])
             # __OO
             if no_cpus > vm_cpus:
-                cpuset = '%d-%d' % (no_cpus - vm_cpus - 1, no_cpus - 1)
+                cpuset = '%d-%d' % (no_cpus - vm_cpus, no_cpus - 1)
                 cpusets.append([cpuset for _ in range(no_cpus + 1)])
             # O___
             cpusets.append(['0' for _ in range(no_cpus + 1)])
@@ -989,7 +1009,6 @@ def run_cgroup(test, params, env):
                 verify.append([0 for _ in range(no_cpus)])
                 # For every vcpu (skip main_thread, it doesn't consume much)
                 for vcpu in cpuset[1:]:
-                    vcpu.split(',')
                     # Get all usable CPUs for this vcpu
                     for vcpu_pin in vcpu.split(','):
                         _ = vcpu_pin.split('-')
@@ -1114,8 +1133,9 @@ def run_cgroup(test, params, env):
             cgroup.set_property('cpuset.mems', all_mems, i)
             if i == 0:
                 assign_vm_into_cgroup(vm, cgroup, 0)
-            elif i <= vm_cpus:
-                cgroup.set_cgroup(vcpus[i - 1], i)
+            else:
+                for pid in vcpus :
+                    cgroup.set_cgroup(int(pid), i)
 
         timeout = int(params.get("login_timeout", 360))
         sessions = []
@@ -1132,7 +1152,7 @@ def run_cgroup(test, params, env):
             error.context("Test")
             for i in range(len(cpusets)):
                 cpuset = cpusets[i]
-                logging.debug("testing: %s", cpuset)
+                logging.debug("testing cpuset is: %s", cpuset)
                 # setup scenario
                 for i in range(len(cpuset)):
                     cgroup.set_property('cpuset.cpus', cpuset[i], i)
@@ -1157,7 +1177,7 @@ def run_cgroup(test, params, env):
             for i in range(len(stats)):
                 matrix.append(['%d' % i])
                 for j in range(len(stats[i])):
-                    if ((stats[i][j] < (verify[i][j] - limit)) or
+                    if ((stats[i][j] < (verify[i][j] - 2 * limit)) or
                             (stats[i][j] > (verify[i][j] + limit))):
                         err += "%d(%d), " % (i, j)
                         matrix[-1].append("%3d ! %d" % (verify[i][j],
@@ -1178,6 +1198,9 @@ def run_cgroup(test, params, env):
             serial.cmd("rm -f /tmp/cgroup-cpu-lock")
             del(cgroup)
             del(modules)
+            for session in sessions:
+                session.close()
+            vm.destroy()
 
         error.context("Results")
         if err:
@@ -1210,7 +1233,7 @@ def run_cgroup(test, params, env):
         vm = env.get_all_vms()[0]
         serial = vm.wait_for_serial_login(timeout=timeout)
         vm_cpus = int(params.get('smp', 1))
-        all_cpus = cgroup.get_property("cpuset.cpus")[0]
+        all_cpus = cgroup.get_property("/cpuset.cpus")[0]
         if all_cpus == "0":
             raise error.TestFail("This test needs at least 2 CPUs on "
                                  "host, cpuset=%s" % all_cpus)
@@ -1225,15 +1248,13 @@ def run_cgroup(test, params, env):
             second2last_cpu = "1-%s" % last_cpu
 
         # Comments are for vm_cpus=2, no_cpus=4, _SC_CLK_TCK=100
-        cgroup.mk_cgroup()  # oooo
-        cgroup.set_property('cpuset.cpus', all_cpus, 0)
-        cgroup.set_property('cpuset.mems', 0, 0)
-        cgroup.mk_cgroup()  # O___
-        cgroup.set_property('cpuset.cpus', 0, 1)
-        cgroup.set_property('cpuset.mems', 0, 1)
-        cgroup.mk_cgroup()  # _OO_
-        cgroup.set_property('cpuset.cpus', second2last_cpu, 2)
-        cgroup.set_property('cpuset.mems', 0, 2)
+        for i in range(last_cpu) :
+            cgroup.mk_cgroup()
+            if i == 0:
+                cgroup.set_property('cpuset.cpus', all_cpus, 0)
+            else:
+                cgroup.set_property('cpuset.cpus', i-1, i)
+            cgroup.set_property('cpuset.mems', 0, i)
         assign_vm_into_cgroup(vm, cgroup, 0)
 
         error.context("Test")
@@ -1253,7 +1274,7 @@ def run_cgroup(test, params, env):
             i = 0
             t_stop = time.time() + test_time  # run for $test_time seconds
             while time.time() < t_stop:
-                assign_vm_into_cgroup(vm, cgroup, i % 3)
+                assign_vm_into_cgroup(vm, cgroup, i % last_cpu)
                 i += 1
 
             error.context("Verification")
@@ -1707,11 +1728,10 @@ def run_cgroup(test, params, env):
             serial.sendline("rm -f /tmp/freeze-lock")
 
             for session in sessions:
-                session.cmd("true")
                 session.close()
 
             del(modules)
-
+            vm.destroy()
         if err:
             raise error.TestFail(err)
         else:
@@ -1889,6 +1909,8 @@ def run_cgroup(test, params, env):
             error.context("Cleanup")
             del(cgroup)
             del(modules)
+            session.close()
+            vm.destroy()
 
         error.context("Results")
         if err:
@@ -1947,13 +1969,15 @@ def run_cgroup(test, params, env):
                          "processes might occur.")
             sessions[0].sendline('dd if=/dev/zero of=/dev/null bs=%dM '
                                  'iflag=fullblock' % size)
+            time.sleep(2)
 
             i = 0
-            sessions[1].cmd('killall -SIGUSR1 dd ; true')
+            sessions[1].cmd('killall -SIGUSR1 dd')
             t_stop = time.time() + test_time
             while time.time() < t_stop:
                 i += 1
                 assign_vm_into_cgroup(vm, cgroup, i % 2)
+            time.sleep(2)
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(
@@ -1989,6 +2013,7 @@ def run_cgroup(test, params, env):
 
             del(cgroup)
             del(modules)
+            vm.destroy()
 
         if err:
             logging.error(err)

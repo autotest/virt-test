@@ -5,7 +5,7 @@ def run_perf_kvm(test, params, env):
     """
     run perf tool to get kvm events info
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

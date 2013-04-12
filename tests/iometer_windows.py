@@ -16,7 +16,7 @@ def run_iometer_windows(test, params, env):
     3) Execute the Iometer test contained in the winutils.iso
     4) Copy result to host
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

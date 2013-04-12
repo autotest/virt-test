@@ -11,7 +11,7 @@ def run_iozone_windows(test, params, env):
     3) Get results
     4) Postprocess it with the IOzone postprocessing module
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

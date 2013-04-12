@@ -9,7 +9,7 @@ def run_fillup_disk(test, params, env):
 
     Suggest to test rebooting vm after this test.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

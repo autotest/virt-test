@@ -8,7 +8,7 @@ def run_guest_s4(test, params, env):
     """
     Suspend guest to disk, supports both Linux & Windows OSes.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

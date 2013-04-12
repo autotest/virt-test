@@ -24,7 +24,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
 
     There are some variants of test no stress, cpu_memory, disk, all.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

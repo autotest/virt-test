@@ -1,6 +1,6 @@
 import logging, time
 from autotest.client.shared import error
-from virttest import utils_test,virt_vm
+from virttest import utils_test, virt_vm, utils_net
 
 
 @error.context_aware
@@ -20,7 +20,7 @@ def run_migration_after_nichotplug(test, params, env):
     10) Ping guest's new ip from host.
     11) Re-enabling the primary link.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -64,8 +64,8 @@ def run_migration_after_nichotplug(test, params, env):
     # Most modern Linux guests run NetworkManager, and thus do not need this.
     if run_dhclient == "yes" and guest_is_not_windows:
         session_serial = vm.wait_for_serial_login(timeout=timeout)
-        ifname = utils_test.get_linux_ifname(session, nic_mac)
-        utils_test.restart_guest_network(session_serial, ifname)
+        ifname = utils_net.get_linux_ifname(session, nic_mac)
+        utils_net.restart_guest_network(session_serial, ifname)
         # Guest need to take quite a long time to set the ip addr, sleep a
         # while to wait for guest done.
         time.sleep(60)

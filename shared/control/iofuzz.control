@@ -1,0 +1,23 @@
+TIME="SHORT"
+AUTHOR = "Jason Wang <jasowang@redhat.com>"
+DOC = """
+iofuzz is used to test the stability of the hardware and could also be used to 
+test the virtual I/O device in virtualization environment. It generates random
+data and send them as the command to I/O device through /dev/port.
+
+Using iofuzz is dangerous, it may damage your hardware. Please do not use this
+in production environment.
+"""
+NAME = 'iofuzz'
+TEST_CLASS = 'hardware'
+TEST_CATEGORY = 'Functional'
+TEST_TYPE = 'client'
+
+exlist = ["8139", "vga", "keyboard", "ide"]
+job.run_test('iofuzz', tag = "readseq", count = 100, exlist = exlist,
+             type = "sequential")
+job.run_test('iofuzz', tag = "zero", count = 100, exlist = exlist,
+             type = "zero_fill")
+job.run_test('iofuzz', tag = "iofuzz", count = 100, exlist = exlist,
+             type = "iofuzz")
+

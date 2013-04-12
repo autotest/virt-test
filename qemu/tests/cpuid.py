@@ -11,7 +11,7 @@ def run_cpuid(test, params, env):
     """
     Boot guest with different cpu_models and cpu flags and check if guest works correctly.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

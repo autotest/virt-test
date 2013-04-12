@@ -1,6 +1,6 @@
 import logging, time, glob, os, re
 from autotest.client.shared import error
-import utils_misc, utils_net, remote, utils_test
+import utils_misc, utils_net, remote, utils_net
 
 
 class VMError(Exception):
@@ -973,7 +973,13 @@ class BaseVM(object):
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
-                return self.serial_login(internal_timeout)
+                session = self.serial_login(internal_timeout)
+                if restart_network:
+                    try:
+                        utils_net.restart_guest_network(session)
+                    except Exception:
+                        pass
+                return session
             except remote.LoginError, e:
                 self.verify_alive()
                 e = str(e)

@@ -8,7 +8,7 @@ import time, os, logging, fcntl, re, commands
 from autotest.client.shared import error, cartesian_config
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
-import kvm_virtio_port, remote, utils_test, data_dir, utils_net
+import qemu_virtio_port, remote, data_dir, utils_net
 
 
 class QemuSegFaultError(virt_vm.VMError):
@@ -93,10 +93,13 @@ class VM(virt_vm.BaseVM):
             self.vhost_threads = []
 
 
+        self.init_pci_addr = int(params.get("init_pci_addr", 4))
         self.name = name
         self.params = params
         self.root_dir = root_dir
         self.address_cache = address_cache
+        self.index_in_use = {}
+
         # This usb_dev_dict member stores usb controller and device info,
         # It's dict, each key is an id of usb controller,
         # and key's value is a list, contains usb devices' ids which
@@ -319,30 +322,28 @@ class VM(virt_vm.BaseVM):
             return ""
 
 
-        def _add_option(option, value):
+        def get_free_pci_addr(pci_addr=None):
             """
-            Add option to qemu parameters.
-            """
-            if isinstance(value, bool):
-                if value:
-                    opt_str = "on"
-                else:
-                    opt_str = "off"
-                return ",%s=%s" % (option, opt_str)
-            elif isinstance(value, str):
-                # "EMPTY_STRING" and "NO_EQUAL_STRING" is used for testing
-                # illegal foramt of option.
-                # "EMPTY_STRING": set option as a empty string "".
-                # "NO_EQUAL_STRING": set option as a option string only,
-                #                    even without "=".
-                #       (In most case, qemu-kvm should recognize it as "<null>")
-                if value == "NO_EQUAL_STRING":
-                    return ",%s" % option
-                if value == "EMPTY_STRING":
-                    value = '""'
-                return ",%s=%s" % (option, str(value))
-            return ""
+            return *hex* format free pci addr.
 
+            @param pci_addr: *decimal* formated, desired pci_add
+            """
+            if pci_addr is None:
+                pci_addr = self.init_pci_addr
+                while True:
+                    # actually when pci_addr > 20? errors may happen
+                    if pci_addr > 31:
+                        raise virt_vm.VMPCIOutOfRangeError(self.name, 31)
+                    if pci_addr in self.pci_addr_list:
+                        pci_addr += 1
+                    else:
+                        self.pci_addr_list.append(pci_addr)
+                        return hex(pci_addr)
+            elif int(pci_addr) in self.pci_addr_list:
+                raise virt_vm.VMPCISlotInUseError(self.name, pci_addr)
+            else:
+                self.pci_addr_list.append(int(pci_addr))
+                return hex(int(pci_addr))
         def get_free_usb_port(dev, controller_type):
             # Find an available USB port.
             bus = None
@@ -570,7 +571,7 @@ class VM(virt_vm.BaseVM):
                       opt_io_size=None,physical_block_size=None,
                       logical_block_size=None, readonly=None, scsiid=None,
                       lun=None, imgfmt="raw", aio=None, media="disk",
-                      ide_bus=None, ide_unit=None, vdisk=None, scsi_disk=None,
+                      ide_bus=None, ide_unit=None, vdisk=0, scsi_disk=None,
                       pci_addr=None, scsi=None, x_data_plane=None,
                       blk_extra_params=None):
 
@@ -600,6 +601,8 @@ class VM(virt_vm.BaseVM):
             if ",aio=" not in help_text:
                 aio = None
 
+            print "Before dev part !!!!!!!!!!!!!"
+
             dev = ""
             if not re.search("boot=on\|off", help_text, re.MULTILINE):
                 if boot in ['yes', 'on', True]:
@@ -611,7 +614,7 @@ class VM(virt_vm.BaseVM):
                 dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
                 fmt = "none"
                 index = None
-            if fmt == "virtio":
+            elif fmt == "virtio":
                 if has_option(help_text, "device"):
                     name = "virtio%s" % index
                     dev += " -device virtio-blk-pci"
@@ -619,7 +622,7 @@ class VM(virt_vm.BaseVM):
                     fmt = "none"
                     dev += _add_option("bootindex", bootindex)
                 index = None
-            if fmt in ['usb1', 'usb2', 'usb3']:
+            elif fmt in ['usb1', 'usb2', 'usb3']:
                 tmp = index or utils_misc.generate_random_id()
                 blkdev_id = "%s.%s" % (fmt, tmp)
                 dev += " -device usb-storage"
@@ -1387,7 +1390,7 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_drive(help_text,
                     storage.get_image_filename(image_params,
                                                data_dir.get_data_dir()),
-                    image_params.get("drive_index"),
+                    index,
                     image_params.get("drive_format"),
                     image_params.get("drive_cache"),
                     image_params.get("drive_werror"),
@@ -1407,7 +1410,14 @@ class VM(virt_vm.BaseVM):
                     image_params.get("logical_block_size"),
                     image_params.get("image_readonly"),
                     image_params.get("drive_scsiid"),
-                    image_params.get("drive_lun"))
+                    image_params.get("drive_lun"),
+                    image_params.get("image_format"),
+                    image_params.get("image_aio", "native"),
+                    "disk", ide_bus, ide_unit, vdisk, scsi_disk,
+                    image_params.get("drive_pci_addr"),
+                    scsi=image_params.get("virtio-blk-pci_scsi"),
+                    x_data_plane=image_params.get("x-data-plane"),
+                    blk_extra_params=image_params.get("blk_extra_params"))
 
         # Networking
         redirs = []
@@ -1447,10 +1457,11 @@ class VM(virt_vm.BaseVM):
                 downscript = nic_params.get("nic_downscript")
                 tftp = nic_params.get("tftp")
                 vhost = nic_params.get("vhost")
+                script_dir = os.path.join(data_dir.get_root_dir(), "shared")
                 if script:
-                    script = utils_misc.get_path(self.virt_dir, script)
+                    script = utils_misc.get_path(script_dir, script)
                 if downscript:
-                    downscript = utils_misc.get_path(self.virt_dir, downscript)
+                    downscript = utils_misc.get_path(script_dir, downscript)
                 # setup nic parameters as needed
                 nic = vm.add_nic(**dict(nic)) # add_netdev if netdev_id not set
                 # gather set values or None if unset
@@ -1927,6 +1938,7 @@ class VM(virt_vm.BaseVM):
         name = self.name
         params = self.params
         root_dir = self.root_dir
+        self.init_pci_addr = int(params.get("init_pci_addr", 4))
 
         # Verify the md5sum of the ISO images
         for cdrom in params.objects("cdroms"):
@@ -3235,6 +3247,9 @@ class VM(virt_vm.BaseVM):
                                                 "(monitor '%s')" % m.name)
         else:
             raise virt_vm.VMRebootError("Unknown reboot method: %s" % method)
+
+        if self.params.get("mac_changeable") == "yes":
+            utils_net.update_mac_ip_address(self, self.params)
 
         error.context("logging in after reboot", logging.info)
         return self.wait_for_login(nic_index, timeout=timeout)

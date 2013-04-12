@@ -219,7 +219,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Test steps:
         1) Send "guest-sync" command in the host side.
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -253,7 +253,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Shutdown guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -267,7 +267,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Reboot guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -286,7 +286,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Halt guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -351,7 +351,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         3) Check the FS is frozen from both guest agent side and guest os side.
         4) Thaw the FS.
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -406,7 +406,7 @@ def run_qemu_guest_agent(test, params, env):
     2) Install qemu-guest-agent package in guest.
     3) Run some basic test for qemu guest agent.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environmen.
     """

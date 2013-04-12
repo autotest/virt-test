@@ -19,10 +19,12 @@ def run_multi_vms_file_transfer(test, params, env):
     8) Compare copied file's md5 with original file.
     9) Repeat step 5-8
 
-    @param test: KVM test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+
+
     def md5_check(session, orig_md5):
         msg = "Compare copied file's md5 with original file."
         error.context(msg, logging.info)
@@ -36,6 +38,7 @@ def run_multi_vms_file_transfer(test, params, env):
             msg = "File changed after transfer host -> VM1. Original md5 value"
             msg += " is %s. Current md5 value is %s" % (orig_md5, new_md5)
             raise error.TestFail(msg)
+
 
     vm1 = env.get_vm(params["main_vm"])
     vm1.verify_alive()
@@ -54,21 +57,20 @@ def run_multi_vms_file_transfer(test, params, env):
         raise error.TestError("Please set file_transfer_port, username,"
                                " password paramters for guest")
     tmp_dir = params.get("tmp_dir", "/tmp/")
-    repeat_time = int(params.get("repeat_time", "10"))
+    repeat_time = int(params.get("repeat_time", "20"))
     clean_cmd = params.get("clean_cmd", "rm -f")
     filesize = int(params.get("filesize", 4000))
-    count = int(filesize / 10)
-    if count == 0:
-        count = 1
 
     host_path = os.path.join(tmp_dir, "tmp-%s" %
                              utils_misc.generate_random_string(8))
-    cmd = "dd if=/dev/zero of=%s bs=10M count=%d" % (host_path, count)
+    dd_cmd = "dd if=/dev/zero of=%s bs=1M count=%d oflag=direct"
+    dd_cmd = params.get("dd_cmd", dd_cmd)
+    dd_cmd = dd_cmd % (host_path, filesize)
     guest_path = (tmp_dir + "file_transfer-%s" %
                   utils_misc.generate_random_string(8))
     try:
         error.context("Creating %dMB file on host" % filesize, logging.info)
-        utils.run(cmd)
+        utils.run(dd_cmd)
         orig_md5 = utils.hash_file(host_path, method="md5")
         error.context("Transfering file host -> VM1, timeout: %ss" % \
                        transfer_timeout, logging.info)
@@ -80,47 +82,36 @@ def run_multi_vms_file_transfer(test, params, env):
                      "estimated throughput: %.2fMB/s", throughput)
         md5_check(session_vm1, orig_md5)
 
-        ip_vm1 = vm1.get_address()
-        ip_vm2 = vm2.get_address()
+        src_vm = vm1
+        dst_vm = vm2
         for i in range(repeat_time):
-            log_vm1 = os.path.join(test.debugdir, "remote_scp_to_vm1_%s.log" %i)
-            log_vm2 = os.path.join(test.debugdir, "remote_scp_to_vm2_%s.log" %i)
+            log_file = "scp_%s_to_%s_%s.log" % (src_vm.name, dst_vm.name, i)
+            log_f = os.path.join(test.debugdir, log_file)
 
-            msg = "Transfering file VM1 -> VM2, timeout: %ss." % transfer_timeout
-            msg += " Repeat: %s/%s" % (i + 1, repeat_time)
+            msg = "Transfering file %s -> %s, timeout: %ss." % (src_vm.name,
+                                                dst_vm.name, transfer_timeout)
+            msg += " Repeat:%s/%s" % (i + 1, repeat_time)
             error.context(msg, logging.info)
             t_begin = time.time()
-            s = remote.scp_between_remotes(src=ip_vm1, dst=ip_vm2, port=port,
+            src_ip = src_vm.get_address()
+            dst_ip = dst_vm.get_address()
+            remote.scp_between_remotes(src=src_ip, dst=dst_ip, port=port,
                                        s_passwd=password, d_passwd=password,
                                        s_name=username, d_name=username,
                                        s_path=guest_path, d_path=guest_path,
                                        timeout=transfer_timeout,
-                                       log_filename=log_vm1)
+                                       log_filename=log_f)
             t_end = time.time()
             throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer VM1 -> VM2 succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-            md5_check(session_vm2, orig_md5)
-            session_vm1.cmd("rm -rf %s" % guest_path)
-
-            msg = "Transfering file VM2 -> VM1, timeout: %ss." % transfer_timeout
-            msg += " Repeat: %s/%s" % (i + 1, repeat_time)
-
-            error.context(msg,  logging.info)
-            t_begin = time.time()
-            remote.scp_between_remotes(src=ip_vm2, dst=ip_vm1, port=port,
-                                       s_passwd=password, d_passwd=password,
-                                       s_name=username, d_name=username,
-                                       s_path=guest_path, d_path=guest_path,
-                                       timeout=transfer_timeout,
-                                       log_filename=log_vm1)
-            t_end = time.time()
-            throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer VM2 -> VM1 succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-            md5_check(session_vm1, orig_md5)
-            session_vm2.cmd("%s %s" % (clean_cmd, guest_path))
-
+            msg = "File transfer %s -> %s succeed, " % (src_vm.name,
+                                                         dst_vm.name)
+            msg += "estimated throughput: %.2fMB/s" % throughput
+            logging.info(msg)
+            session_dst = dst_vm.wait_for_login(timeout=login_timeout)
+            md5_check(session_dst, orig_md5)
+            tmp_vm = dst_vm
+            dst_vm = src_vm
+            src_vm = tmp_vm
     finally:
         try:
             session_vm1.cmd("%s %s" % (clean_cmd, guest_path))

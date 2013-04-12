@@ -12,7 +12,7 @@ def run_migration_multi_host_timedrift(test, params, env):
     Migration execution progress is described in documentation
     for migrate method in class MultihostMigration.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

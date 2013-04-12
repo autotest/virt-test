@@ -18,7 +18,7 @@ def run_set_link(test, params, env):
        6.3) Copy this file from guest to host.
        6.4) Check if file transfers ended good.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

@@ -12,7 +12,7 @@ def run_kdump(test, params, env):
        each vcpu, or only trigger one crash with nmi interrupt and
        check vmcore.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

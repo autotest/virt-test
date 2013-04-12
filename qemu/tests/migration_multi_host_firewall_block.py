@@ -1,7 +1,7 @@
 import logging, os, time
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, remote, virt_vm, utils_misc, kvm_monitor
+from virttest import utils_test, remote, virt_vm, utils_misc, qemu_monitor
 
 
 @error.context_aware
@@ -11,7 +11,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
 
     Tests multi-host migration with network problem on destination side.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -126,7 +126,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
                 stat = []
                 for vm in mig_data.vms:
                     stat.append(vm.monitor.get_status())
-            except kvm_monitor.MonitorProtocolError, kvm_monitor.QMPCmdError:
+            except qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError:
                 logging.debug("Guest %s not working" % (vm))
 
 
@@ -164,9 +164,9 @@ def run_migration_multi_host_firewall_block(test, params, env):
                     if utils_test.guest_active(vm):
                         raise error.TestFail("Guest can't be active after"
                                              " interrupted migration.")
-                except (kvm_monitor.MonitorProtocolError,
-                        kvm_monitor.MonitorLockError,
-                        kvm_monitor.QMPCmdError):
+                except (qemu_monitor.MonitorProtocolError,
+                        qemu_monitor.MonitorLockError,
+                        qemu_monitor.QMPCmdError):
                     pass
 
 
@@ -243,7 +243,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             try:
                 for vm in mig_data.vms:
                     vm.monitor.get_status()
-            except kvm_monitor.MonitorProtocolError, kvm_monitor.QMPCmdError:
+            except qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError:
                 logging.debug("Guest %s not working" % (vm))
 
 

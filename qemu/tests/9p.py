@@ -7,7 +7,7 @@ def run_9p(test, params, env):
     """
     Run an autotest test inside a guest.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -21,7 +21,7 @@ def run_9p(test, params, env):
     if mount_dir is None:
         logging.info("User Variable for mount dir is not set")
     else:
-        session.cmd("mkdir -p %s" % mount_dir)
+        mkdir = session.get_command_output("mkdir -p %s" % mount_dir)
 
         mount_option = " trans=virtio"
 

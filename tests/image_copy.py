@@ -12,7 +12,7 @@ def run_image_copy(test, params, env):
     2) Check the existence of source image
     3) If it exists, copy the image from NFS
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

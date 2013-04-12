@@ -13,7 +13,7 @@ def run_migration_multi_host_cancel(test, params, env):
     described in documentation for migrate method in class MultihostMigration.
     This test allows migrate only one machine at once.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

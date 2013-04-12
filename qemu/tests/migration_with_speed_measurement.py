@@ -17,7 +17,7 @@ def run_migration_with_speed_measurement(test, params, env):
     5) Kill off both VMs.
     6) Print statistic of migration.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

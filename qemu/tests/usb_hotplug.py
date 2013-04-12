@@ -7,7 +7,7 @@ def run_usb_hotplug(test, params, env):
     """
     Test usb hotplug
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

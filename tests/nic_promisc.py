@@ -1,5 +1,5 @@
 from autotest.client import utils
-from virttest import utils_test
+from virttest import utils_test, utils_net
 
 
 def run_nic_promisc(test, params, env):
@@ -19,7 +19,7 @@ def run_nic_promisc(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session_serial = vm.wait_for_serial_login(timeout=timeout)
 
-    ethname = utils_test.get_linux_ifname(session_serial,
+    ethname = utils_net.get_linux_ifname(session_serial,
                                               vm.get_mac_address(0))
 
     try:

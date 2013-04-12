@@ -27,7 +27,7 @@ def run_lvm(test, params, env):
     3) Create a logical volume on the VG
     5) `fsck' to check the partition that LV locates
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

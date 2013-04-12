@@ -5,7 +5,7 @@ import errno
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
-from virttest import kvm_monitor, syslog_server
+from virttest import qemu_monitor, syslog_server
 from virttest import http_server, data_dir, utils_net
 
 
@@ -436,10 +436,75 @@ class UnattendedInstallConfig(object):
         self.syslog_server_port = int(params.get('syslog_server_port', 5140))
         self.syslog_server_tcp = params.get('syslog_server_proto',
                                             'tcp') == 'tcp'
-
         self.vm = vm
 
 
+    @error.context_aware
+    def get_driver_hardware_id(self, driver, run_cmd=True):
+        """
+        Get windows driver's hardware id from inf files.
+
+        @param dirver: Configurable driver name.
+        @param run_cmd:  Use hardware id in windows cmd command or not.
+        @param return: Windows driver's hardware id
+        """
+        if not os.path.exists(self.cdrom_mount_point):
+            os.mkdir(self.cdrom_mount_point)
+        if not os.path.exists(self.floppy_mount_point):
+            os.mkdir(self.floppy_mount_point)
+        if not os.path.ismount(self.cdrom_mount_point):
+            utils.system("mount %s %s -o loop" % (self.cdrom_virtio,
+                                         self.cdrom_mount_point), timeout=60)
+        if not os.path.ismount(self.floppy_mount_point):
+            utils.system("mount %s %s -o loop" % (self.virtio_floppy,
+                                        self.floppy_mount_point), timeout=60)
+        drivers_d = []
+        driver_link = None
+        if self.driver_in_floppy is not None:
+            driver_in_floppy = self.driver_in_floppy
+            drivers_d = driver_in_floppy.split()
+        else:
+            drivers_d.append('qxl.inf')
+        for driver_d in drivers_d:
+            if driver_d in driver:
+                driver_link = os.path.join(self.floppy_mount_point, driver)
+        if driver_link is None:
+            driver_link = os.path.join(self.cdrom_mount_point, driver)
+        try:
+            txt = open(driver_link, "r").read()
+            hwid = re.findall(self.re_hardware_id, txt)[-1].rstrip()
+            if run_cmd:
+                hwid = '^&'.join(hwid.split('&'))
+            return hwid
+        except Exception, e:
+            logging.error("Fail to get hardware id with exception: %s" % e)
+
+
+    @error.context_aware
+    def update_driver_hardware_id(self, driver):
+        """
+        Update driver string with the hardware id get from inf files
+
+        @driver: driver string
+        @return new driver string
+        """
+        if 'hwid' in driver:
+            if 'hwidcmd' in driver:
+                run_cmd = True
+            else:
+                run_cmd = False
+            if self.re_driver_match is not None:
+                d_str = self.re_driver_match
+            else:
+                d_str = "(\S+)\s*hwid"
+            d_link = re.findall(d_str, driver)[0].split(":")[1]
+            d_link = "/".join(d_link.split("\\\\")[1:])
+            hwid = self.get_driver_hardware_id(d_link, run_cmd)
+            driver = driver.replace("hwidcmd", hwid.strip())
+        return driver
+
+
+    @error.context_aware
     def answer_kickstart(self, answer_path):
         """
         Replace KVM_TEST_CDKEY (in the unattended file) with the cdkey
@@ -1098,7 +1163,7 @@ def run_unattended_install(test, params, env):
                 vm.monitor.quit()
             except Exception, e:
                 logging.warn(e)
-            from autotest.client.virt.tests import image_copy
+            from virttest.tests import image_copy
             error.context("Copy image from NFS Server")
             image_copy.run_image_copy(test, params, env)
 
