@@ -1254,8 +1254,8 @@ class VM(virt_vm.BaseVM):
         # Add the VM's name
         qemu_cmd += add_name(help_text, name)
         # no automagic devices please
-        defaults = params.get("defaults", "no")
-        if has_option(help_text, "nodefaults") and defaults != "yes":
+        use_nodefaults = params.get("use_nodefaults", "yes")
+        if has_option(help_text, "use_nodefaults") and use_nodefaults != "no":
             qemu_cmd += " -nodefaults"
         # Add monitors
         for monitor_name in params.objects("monitors"):
