@@ -355,7 +355,12 @@ class FileChecker(object):
         self.corrective_actions = []
 
         self.indent_exceptions = []
-        self.check_exceptions = ['qemu/tests/stepmaker.py']
+        version = sys.version_info[0:2]
+        self.check_exceptions = []
+        if version < (2, 5):
+            self.check_exceptions = ['qemu/tests/stepmaker.py',
+                                     'virttest/step_editor.py',
+                                     'shared/scripts/cb.py']
 
         if self.is_python:
             logging.debug("Checking file %s", self.path)
