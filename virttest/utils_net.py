@@ -610,6 +610,23 @@ def if_nametoindex(ifname):
     ctrl_sock.close()
     return index
 
+def vnet_mq_probe(tapfd):
+    """
+    Check if the IFF_MULTI_QUEUE is support by tun.
+
+    @param tapfd: the file descriptor of /dev/net/tun
+    """
+    u = struct.pack("I", 0)
+    try:
+        r = fcntl.ioctl(tapfd, arch.TUNGETFEATURES, u)
+    except OverflowError:
+        logging.debug("Fail to get tun features!")
+        return False
+    flags = struct.unpack("I", r)[0]
+    if flags & arch.IFF_MULTI_QUEUE:
+        return True
+    else:
+        return False
 
 def vnet_hdr_probe(tapfd):
     """
@@ -630,29 +647,44 @@ def vnet_hdr_probe(tapfd):
         return False
 
 
-def open_tap(devname, ifname, vnet_hdr=True):
+def open_tap(devname, ifname, queues=1, vnet_hdr=True):
     """
-    Open a tap device and returns its file descriptor which is used by
-    fd=<fd> parameter of qemu-kvm.
+    Open a tap device and returns its file descriptors which are used by
+    fds=<fd1:fd2:..> parameter of qemu
 
+    For single queue, only returns one file descriptor, it's used by
+    fd=<fd> legacy parameter of qemu
+
+    @param devname: TUN device path
     @param ifname: TAP interface name
+    @param queues: Queue number
     @param vnet_hdr: Whether enable the vnet header
     """
-    try:
-        tapfd = os.open(devname, os.O_RDWR)
-    except OSError, e:
-        raise TAPModuleError(devname, "open", e)
-    flags = arch.IFF_TAP | arch.IFF_NO_PI
-    if vnet_hdr and vnet_hdr_probe(tapfd):
-        flags |= arch.IFF_VNET_HDR
+    tapfds = []
 
-    ifr = struct.pack("16sh", ifname, flags)
-    try:
-        r = fcntl.ioctl(tapfd, arch.TUNSETIFF, ifr)
-    except IOError, details:
-        raise TAPCreationError(ifname, details)
+    for i in range(int(queues)):
+        try:
+            tapfds.append(str(os.open(devname, os.O_RDWR)))
+        except OSError, e:
+            raise TAPModuleError(devname, "open", e)
 
-    return tapfd
+        flags = arch.IFF_TAP | arch.IFF_NO_PI
+
+        if vnet_mq_probe(int(tapfds[i])):
+            flags |= arch.IFF_MULTI_QUEUE
+        elif (int(queues) > 1):
+            raise TAPCreationError(ifname, "Host doesn't support MULTI_QUEUE")
+
+        if vnet_hdr and vnet_hdr_probe(int(tapfds[i])):
+            flags |= arch.IFF_VNET_HDR
+
+        ifr = struct.pack("16sh", ifname, flags)
+        try:
+            r = fcntl.ioctl(int(tapfds[i]), arch.TUNSETIFF, ifr)
+        except IOError, details:
+            raise TAPCreationError(ifname, details)
+
+    return ':'.join(tapfds)
 
 
 def is_virtual_network_dev(dev_name):
@@ -1138,10 +1170,10 @@ class QemuIface(VirtIface):
     """
     Networking information specific to Qemu
     """
-    __slots__ = VirtIface.__slots__ + ['vlan', 'device_id', 'ifname', 'tapfd',
-                                       'tapfd_id', 'netdev_id', 'tftp',
+    __slots__ = VirtIface.__slots__ + ['vlan', 'device_id', 'ifname', 'tapfds',
+                                       'tapfd_ids', 'netdev_id', 'tftp',
                                        'romfile', 'nic_extra_params',
-                                       'netdev_extra_params']
+                                       'netdev_extra_params', 'queues']
 
 
 class VMNet(list):
