@@ -41,7 +41,7 @@ def run_kdump(test, params, env):
 
         if crash_cmd == "nmi":
             session.cmd("echo 1 > /proc/sys/kernel/unknown_nmi_panic")
-            vm.monitor.cmd('nmi')
+            vm.monitor.nmi()
         else:
             logging.info("Triggering crash on vcpu %d ...", vcpu)
             session.sendline("taskset -c %d %s" % (vcpu, crash_cmd))
