@@ -60,7 +60,7 @@ def run_balloon_check(test, params, env):
         try:
             output = vm.monitor.info("balloon")
             ballooned_mem = int(re.findall("\d+", str(output))[0])
-            if params.get("monitor_type") == "qmp":
+            if params["monitor_type"] == "qmp":
                  ballooned_mem *= 1024 ** -2
         except qemu_monitor.MonitorError, e:
             logging.error(e)
@@ -78,7 +78,7 @@ def run_balloon_check(test, params, env):
                  size.
         """
         try:
-            if params.get("os_type") == "windows":
+            if params["os_type"] == "windows":
             # In Windows guest we get the free memory for memory compare
                 memory = session.cmd_output(free_mem_cmd)
                 memory = int(re.findall("\d+", memory)[0])
@@ -106,7 +106,7 @@ def run_balloon_check(test, params, env):
         gmem = get_memory_status()
         if (abs(mmem - ori_mmem) != ballooned_mem
            or (abs(gmem - ori_gmem) < ratio * ballooned_mem)):
-            if params.get("os_type") == "windows":
+            if params["os_type"] == "windows":
                 error_report(step, ori_mmem - ballooned_mem, mmem, None,
                              abs(gmem - ori_gmem), ori_mmem)
             else:
@@ -123,7 +123,7 @@ def run_balloon_check(test, params, env):
         """
         error.context("Change VM memory to %s" % new_mem, logging.info)
         compare_mem = new_mem
-        if params.get("monitor_type") == "qmp":
+        if params["monitor_type"] == "qmp":
             new_mem = new_mem * 1024 * 1024
         # This should be replaced by proper monitor method call
         vm.monitor.send_args_cmd("balloon value=%s" % new_mem)
@@ -136,7 +136,7 @@ def run_balloon_check(test, params, env):
                                  " value during %ss" % balloon_timeout)
 
 
-    free_mem_cmd = params.get("free_mem_cmd")
+    free_mem_cmd = params["free_mem_cmd"]
     ratio = float(params.get("ratio", 0.5))
     vm = env.get_vm(params["main_vm"])
     error.context("Boot a guest", logging.info)
@@ -178,13 +178,16 @@ def run_balloon_check(test, params, env):
     memory_check("after evict memory", ballooned_mem,
                  monitor_boot_mem, guest_boot_mem, ratio)
 
-    if 'sub_balloon_test_evict' in params:
+    if (params.get("run_evict_sub_test", "no") == "yes"
+        and 'sub_balloon_test_evict' in params):
         error.context("Run optional test after evicting memory", logging.info)
         balloon_test = params['sub_balloon_test_evict']
         utils_test.run_virt_sub_test(test, params, env, sub_type=balloon_test)
         if balloon_test == "shutdown" :
             logging.info("Guest shutdown normally after balloon")
             return
+        if params.get("session_need_update", "no") == "yes":
+            session = vm.wait_for_login(timeout=timeout)
         if params.get("qemu_quit_after_sub_case", "no") == "yes":
             ballooned_mem = 0
         memory_check("after subtest when evicting memory", ballooned_mem,
@@ -201,7 +204,8 @@ def run_balloon_check(test, params, env):
     memory_check("after enlarge memory", ballooned_mem,
                  monitor_boot_mem, guest_boot_mem, ratio)
 
-    if 'sub_balloon_test_enlarge' in params:
+    if (params.get("run_enlarge_sub_test", "no") == "yes"
+        and 'sub_balloon_test_enlarge' in params):
         error.context("Run optional test after enlarging memory",
                       logging.info)
         balloon_test = params['sub_balloon_test_enlarge']
@@ -209,6 +213,8 @@ def run_balloon_check(test, params, env):
         if balloon_test == "shutdown" :
             logging.info("Guest shutdown normally after balloon")
             return
+        if params.get("session_need_update", "no") == "yes":
+            session = vm.wait_for_login(timeout=timeout)
         if params.get("qemu_quit_after_sub_case", "no") == "yes":
             ballooned_mem = 0
         memory_check("after subtest when enlarging memory", ballooned_mem,
