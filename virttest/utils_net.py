@@ -651,7 +651,7 @@ def open_tap(devname, ifname, vnet_hdr=True):
         r = fcntl.ioctl(tapfd, arch.TUNSETIFF, ifr)
     except IOError, details:
         raise TAPCreationError(ifname, details)
-    ifname = struct.unpack("16sh", r)[0].strip("\x00")
+
     return tapfd
 
 
