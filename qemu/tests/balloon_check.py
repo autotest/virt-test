@@ -178,13 +178,16 @@ def run_balloon_check(test, params, env):
     memory_check("after evict memory", ballooned_mem,
                  monitor_boot_mem, guest_boot_mem, ratio)
 
-    if params.has_key('sub_balloon_test_evict'):
+    if (params.get("run_evict_sub_test", "no") == "yes"
+        and params.has_key('sub_balloon_test_evict')):
         error.context("Run optional test after evicting memory", logging.info)
         balloon_test = params['sub_balloon_test_evict']
         utils_test.run_virt_sub_test(test, params, env, sub_type=balloon_test)
         if balloon_test == "shutdown" :
             logging.info("Guest shutdown normally after balloon")
             return
+        if params.get("session_need_update", "no") == "yes":
+            session = vm.wait_for_login(timeout=timeout)
         if params.get("qemu_quit_after_sub_case", "no") == "yes":
             ballooned_mem = 0
         memory_check("after subtest when evicting memory", ballooned_mem,
@@ -201,7 +204,8 @@ def run_balloon_check(test, params, env):
     memory_check("after enlarge memory", ballooned_mem,
                  monitor_boot_mem, guest_boot_mem, ratio)
 
-    if params.has_key('sub_balloon_test_enlarge'):
+    if (params.get("run_enlarge_sub_test", "no") == "yes"
+        and params.has_key('sub_balloon_test_enlarge')):
         error.context("Run optional test after enlarging memory",
                       logging.info)
         balloon_test = params['sub_balloon_test_enlarge']
@@ -209,6 +213,8 @@ def run_balloon_check(test, params, env):
         if balloon_test == "shutdown" :
             logging.info("Guest shutdown normally after balloon")
             return
+        if params.get("session_need_update", "no") == "yes":
+            session = vm.wait_for_login(timeout=timeout)
         if params.get("qemu_quit_after_sub_case", "no") == "yes":
             ballooned_mem = 0
         memory_check("after subtest when enlarging memory", ballooned_mem,
