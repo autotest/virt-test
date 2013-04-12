@@ -431,7 +431,12 @@ class FileChecker(object):
 
         path = self._get_checked_filename()
 
-        if run_pylint.check_file(path):
+        try:
+            if run_pylint.check_file(path):
+                success = False
+        except Exception, details:
+            logging.error("Pylint exception while verifying %s, details: %s",
+                          path, details)
             success = False
 
         return success
