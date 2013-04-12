@@ -62,7 +62,7 @@ def run_qemu_guest_agent_snapshot(test, params, env):
     5) Check if the created exists in the guest.
     6) Reboot and shutdown guest.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environmen.
     """

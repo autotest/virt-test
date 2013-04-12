@@ -5,7 +5,7 @@ import errno
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
-from virttest import kvm_monitor, syslog_server
+from virttest import qemu_monitor, syslog_server
 from virttest import http_server, data_dir, utils_net
 
 
@@ -283,16 +283,6 @@ class UnattendedInstallConfig(object):
             hwid = self.get_driver_hardware_id(d_link, run_cmd)
             driver = driver.replace("hwidcmd", hwid.strip())
         return driver
-
-
-
-
-
-
-
-
-
-
 
 
     @error.context_aware
@@ -997,7 +987,7 @@ def run_unattended_install(test, params, env):
                 vm.monitor.quit()
             except Exception, e:
                 logging.warn(e)
-            from autotest.client.virt.tests import image_copy
+            from virttest.tests import image_copy
             error.context("Copy image from NFS Server")
             image_copy.run_image_copy(test, params, env)
 

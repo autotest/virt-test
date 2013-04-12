@@ -1228,48 +1228,6 @@ class NumaNode(object):
             logging.info("    %s: %s" % (i, self.dict[i]))
 
 
-def standard_value(value_str, standard_unit="M", base="1024"):
-    """
-    return the value based on the standard unit given
-
-    @param value_str: a string include the data and unit
-    @param standard_unit: the unit of the result based
-    @param base: the base between two adjacent unit. Normally could be 1024
-                 or 1000
-    """
-    def _get_unit_index(unit_list, unit_value):
-        for i in unit_list:
-            stand_unit = re.findall("[\s\d](%s)" % i, str(unit_value), re.I)
-            if stand_unit:
-                return unit_list.index(stand_unit[0].upper())
-        return -1
-
-    unit_list = ['B', 'K', 'M', 'G', 'T']
-    try:
-        data = float(re.findall("[\d\.]+",value_str)[0])
-    except IndexError:
-        logging.warn("The format is not right. Please check %s"
-                     " has both data and unit." % value_str)
-        return ""
-
-    unit_index = _get_unit_index(unit_list, value_str)
-    stand_index = _get_unit_index(unit_list, " %s" % standard_unit)
-
-    if unit_index < 0 or stand_index < 0:
-        logging.warn("Unknown unit. Please check your value '%s' and standard"
-                     " unit '%s'" % (value_str, standard_unit))
-        return ""
-
-    if unit_index > stand_index:
-        multiple = float(base)
-    else:
-        multiple = float(1) / float(base)
-
-    for i in range(abs(unit_index - stand_index)):
-        data *= multiple
-
-    return str(data)
-
 def check_if_vm_vcpu_match(vcpu_desire, vm):
     """
     This checks whether the VM vCPU quantity matches
@@ -1585,3 +1543,15 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
         data *= multiple
 
     return str(data)
+
+
+def verify_running_as_root():
+    """
+    Verifies whether we're running under UID 0 (root).
+
+    @raise: error.TestNAError
+    """
+    if os.getuid() != 0:
+        raise error.TestNAError("This test requires root privileges "
+                                "(currently running with user %s)" %
+                                getpass.getuser())

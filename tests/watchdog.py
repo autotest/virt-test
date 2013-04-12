@@ -10,7 +10,7 @@ def run_watchdog(test, params, env):
     Test Step:
         1. see every function step
     Params:
-        @param test: kvm test object.
+        @param test: QEMU test object.
         @param params: Dictionary with test parameters.
         @param env: Dictionary with the test environment.
     """

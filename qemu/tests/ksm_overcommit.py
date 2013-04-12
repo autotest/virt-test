@@ -41,7 +41,7 @@ def run_ksm_overcommit(test, params, env):
     Every worker has unique random key so we are able to verify the filled
     values.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
 

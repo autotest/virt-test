@@ -33,7 +33,7 @@ def run_yum_update(test, params, env):
     Runs yum update and yum update kernel on the remote host (yum enabled
     hosts only).
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

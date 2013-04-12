@@ -1,5 +1,5 @@
 import logging, time
-from virttest import utils_test, aexpect
+from virttest import utils_test, aexpect, utils_net
 from autotest.client.shared import error, utils
 
 
@@ -30,9 +30,8 @@ def run_nic_bonding(test, params, env):
     session_serial.cmd(modprobe_cmd)
 
     session_serial.cmd("ifconfig bond0 up")
-    ifnames = [utils_test.get_linux_ifname(session_serial,
-                                               vm.get_mac_address(vlan))
-               for vlan, nic in enumerate(vm.virtnet)]
+    ifnames = [utils_net.get_linux_ifname(session_serial, nic["mac"])
+               for nic in vm.virtnet]
     setup_cmd = "ifenslave bond0 " + " ".join(ifnames)
     session_serial.cmd(setup_cmd)
     #do a pgrep to check if dhclient has already been running
@@ -59,8 +58,8 @@ def run_nic_bonding(test, params, env):
         try:
             transfer_thread.start()
             while transfer_thread.isAlive():
-                for vlan, nic in enumerate(vm.virtnet):
-                    device_id = vm.get_peer(vm.netdev_id[vlan])
+                for nic in vm.virtnet:
+                    device_id = nic['device_id']
                     if not device_id:
                         raise error.TestError("Could not find peer device for"
                                               " nic device %s" % nic)

@@ -6,7 +6,7 @@ def run_autotest_control(test, params, env):
     """
     Run an autotest test inside a guest.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

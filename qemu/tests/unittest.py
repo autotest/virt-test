@@ -11,7 +11,7 @@ def run_unittest(test, params, env):
     3) If qemu exited with code = 0, the unittest passed. Otherwise, it failed
     4) Collect all logs generated
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment
     """

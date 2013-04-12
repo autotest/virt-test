@@ -1,7 +1,7 @@
 import logging, re
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, utils_misc, remote, aexpect
+from virttest import utils_net, utils_misc, remote, aexpect
 
 
 def run_ethtool(test, params, env):
@@ -107,7 +107,7 @@ def run_ethtool(test, params, env):
         failure = (False, "Failed to create file using dd, cmd: %s" % dd_cmd)
 
         logging.info("Creating file in source host, cmd: %s", dd_cmd)
-        ethname = utils_test.get_linux_ifname(session,
+        ethname = utils_net.get_linux_ifname(session,
                                                   vm.get_mac_address(0))
         tcpdump_cmd = "tcpdump -lep -i %s -s 0 tcp -vv port ssh" % ethname
         if src == "guest":
@@ -201,7 +201,7 @@ def run_ethtool(test, params, env):
     feature_status = {}
     filename = "/tmp/ethtool.dd"
     guest_ip = vm.get_address()
-    ethname = utils_test.get_linux_ifname(session, vm.get_mac_address(0))
+    ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
 
     supported_features = params.get("supported_features")
     if supported_features:

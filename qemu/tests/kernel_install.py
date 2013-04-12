@@ -18,7 +18,7 @@ def run_kernel_install(test, params, env):
     7) Do sub tests in guest with new kernel (optional)
     8) Restore grub and reboot guest (optional)
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

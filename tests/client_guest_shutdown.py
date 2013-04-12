@@ -13,7 +13,7 @@ def run_client_guest_shutdown(test, params, env):
        monitor command (depending on the value of shutdown_method)
     3) Wait until the guest is down
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment
     """

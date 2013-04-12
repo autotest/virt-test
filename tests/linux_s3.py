@@ -6,7 +6,7 @@ def run_linux_s3(test, params, env):
     """
     Suspend a guest Linux OS to memory.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

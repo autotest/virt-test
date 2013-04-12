@@ -3,7 +3,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
 import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
-import remote, data_dir, utils_test
+import remote, data_dir
 
 
 try:
@@ -43,7 +43,7 @@ def preprocess_image(test, params, image_name):
             create_image = True
 
         if params.get("backup_image_before_testing", "no") == "yes":
-            image = kvm_storage.QemuImg(params, test.bindir, image_name)
+            image = qemu_storage.QemuImg(params, test.bindir, image_name)
             image.backup_image(params, test.bindir, "backup", True)
         if create_image:
             image = qemu_storage.QemuImg(params, base_dir, image_name)
@@ -106,7 +106,7 @@ def preprocess_vm(test, params, env, name):
             # Update mac and IP info for assigned device
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
-                utils_test.update_mac_ip_address(vm, params)
+                utils_net.update_mac_ip_address(vm, params)
     else:
         # Don't start the VM, just update its params
         vm.params = params
@@ -302,7 +302,7 @@ def preprocess(test, params, env):
     # does and the test suite is running as a regular user, we shall just
     # throw a TestNAError exception, which will skip the test.
     if params.get('requires_root', 'no') == 'yes':
-        utils_test.verify_running_as_root()
+        utils_misc.verify_running_as_root()
 
     port = params.get('shell_port')
     prompt = params.get('shell_prompt')

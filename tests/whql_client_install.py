@@ -18,7 +18,7 @@ def run_whql_client_install(test, params, env):
        (normally DTMLLUAdminUser)
     9) Reboot again
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

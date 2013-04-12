@@ -1,6 +1,6 @@
 import logging, os
 from autotest.client.shared import error
-from autotest.client.virt import utils_test
+from virttest import utils_test
 
 
 @error.context_aware
@@ -9,7 +9,7 @@ def run_clock_getres(test, params, env):
     Verify if guests using kvm-clock as the time source have a sane clock
     resolution.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

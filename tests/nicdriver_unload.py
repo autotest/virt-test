@@ -1,6 +1,6 @@
 import logging, os, time
 from autotest.client import utils
-from virttest import utils_test
+from virttest import utils_test, utils_net
 
 
 def run_nicdriver_unload(test, params, env):
@@ -22,7 +22,7 @@ def run_nicdriver_unload(test, params, env):
     vm.verify_alive()
     session_serial = vm.wait_for_serial_login(timeout=timeout)
 
-    ethname = utils_test.get_linux_ifname(session_serial,
+    ethname = utils_net.get_linux_ifname(session_serial,
                                                vm.get_mac_address(0))
 
     # get ethernet driver from '/sys' directory.

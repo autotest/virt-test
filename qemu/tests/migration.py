@@ -1,6 +1,6 @@
 import logging, time, types
 from autotest.client.shared import error
-from virttest import utils_misc
+from virttest import utils_misc, utils_test
 
 
 def run_migration(test, params, env):
@@ -15,10 +15,83 @@ def run_migration(test, params, env):
     4) Compare the output of a reference command executed on the source with
             the output of the same command on the destination machine.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
+    def guest_stress_start(guest_stress_test):
+        """
+        Start a stress test in guest, Could be 'iozone', 'dd', 'stress'
+
+        @param type: type of stress test.
+        """
+        from virttest.tests import guest_autotest
+
+        timeout = 0
+
+        if guest_stress_test == "autotest":
+            test_type = params.get("test_type")
+            func = guest_autotest.run_guest_autotest
+            new_params = params.copy()
+            new_params["test_control_file"] = "%s.control" % test_type
+
+            args = (test, new_params, env)
+            timeout = 60
+        elif guest_stress_test == "dd":
+            vm = env.get_vm(env, params.get("main_vm"))
+            vm.verify_alive()
+            session = vm.wait_for_login(timeout=login_timeout)
+            func = session.cmd_output
+            args = ("for((;;)) do dd if=/dev/zero of=/tmp/test bs=5M "
+                    "count=100; rm -f /tmp/test; done",
+                    login_timeout, logging.info)
+
+        logging.info("Start %s test in guest", guest_stress_test)
+        bg = utils_test.BackgroundTest(func, args)
+        params["guest_stress_test_pid"] = bg
+        bg.start()
+        if timeout:
+            logging.info("sleep %ds waiting guest test start.", timeout)
+            time.sleep(timeout)
+        if not bg.is_alive():
+            raise error.TestFail("Failed to start guest test!")
+
+    def guest_stress_deamon():
+        """
+        This deamon will keep watch the status of stress in guest. If the stress
+        program is finished before migration this will restart it.
+        """
+        while True:
+            bg = params.get("guest_stress_test_pid")
+            action = params.get("action")
+            if action == "run":
+                logging.debug("Check if guest stress is still running")
+                guest_stress_test = params.get("guest_stress_test")
+                if bg and not bg.is_alive():
+                    logging.debug("Stress process finished, restart it")
+                    guest_stress_start(guest_stress_test)
+                    time.sleep(30)
+                else:
+                    logging.debug("Stress still on")
+            else:
+                if bg and bg.is_alive():
+                    try:
+                        stress_stop_cmd = params.get("stress_stop_cmd")
+                        vm = env.get_vm(env, params.get("main_vm"))
+                        vm.verify_alive()
+                        session = vm.wait_for_login()
+                        if stress_stop_cmd:
+                            logging.warn("Killing background stress process "
+                                         "with cmd '%s', you would see some "
+                                         "error message in client test result,"
+                                         "it's harmless.", stress_stop_cmd)
+                            session.cmd(stress_stop_cmd)
+                        bg.join(10)
+                    except Exception:
+                        pass
+                break
+            time.sleep(10)
+
     def get_functions(func_names, locals_dict):
         """
         Find sub function(s) in this function with the given name(s).
@@ -42,6 +115,7 @@ def run_migration(test, params, env):
     offline = params.get("offline", "no") == "yes"
     check = params.get("vmstate_check", "no") == "yes"
     living_guest_os = params.get("migration_living_guest", "yes") == "yes"
+    deamon_thread = None
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -73,9 +147,26 @@ def run_migration(test, params, env):
             for func in pre_migrate:
                 func()
 
+            # Start stress test in guest.
+            guest_stress_test = params.get("guest_stress_test")
+            if guest_stress_test:
+                guest_stress_start(guest_stress_test)
+                params["action"] = "run"
+                deamon_thread = utils_test.BackgroundTest(guest_stress_deamon, ())
+                deamon_thread.start()
+
             # Migrate the VM
-            vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline,
-                       check)
+            ping_pong = params.get("ping_pong", 1)
+            for i in xrange(int(ping_pong)):
+                if i % 2 == 0:
+                    logging.info("Round %s ping..." % str(i / 2))
+                else:
+                    logging.info("Round %s pong..." % str(i / 2))
+                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                           offline, check)
+
+            # Set deamon thread action to stop after migrate
+            params["action"] = "stop"
 
             # run some functions after migrate finish.
             post_migrate = get_functions(params.get("post_migrate"), locals())
@@ -109,6 +200,10 @@ def run_migration(test, params, env):
             # Kill the background process
             if session2 and session2.is_alive():
                 session2.cmd_output(params.get("migration_bg_kill_command", ""))
+            if deamon_thread is not None:
+                # Set deamon thread action to stop after migrate
+                params["action"] = "stop"
+                deamon_thread.join()
 
         session2.close()
         session.close()

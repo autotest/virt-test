@@ -15,7 +15,7 @@ def run_ntttcp(test, params, env):
     2) Start NTttcp in server/client side
     3) Get test results
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

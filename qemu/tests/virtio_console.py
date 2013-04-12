@@ -34,7 +34,7 @@ def run_virtio_console(test, params, env):
     Every test has it's own cfg parameters, please see the actual test's
     docstring for details.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment
     @raise error.TestNAError: if function with test_$testname is not present

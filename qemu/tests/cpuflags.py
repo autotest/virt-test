@@ -10,7 +10,7 @@ def run_cpuflags(test, params, env):
     """
     Boot guest with different cpu flags and check if guest works correctly.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
