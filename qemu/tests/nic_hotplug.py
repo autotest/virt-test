@@ -49,7 +49,8 @@ def run_nic_hotplug(test, params, env):
     error.context("Add network devices through monitor cmd", logging.info)
     nic_name = 'hotadded'
     nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name,
-                              netdst=netdst, nettype=nettype)
+                              netdst=netdst, nettype=nettype,
+                              queues=params.get('queues'))
 
     # Only run dhclient if explicitly set and guest is not running Windows.
     # Most modern Linux guests run NetworkManager, and thus do not need this.
