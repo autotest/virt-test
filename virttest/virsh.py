@@ -117,7 +117,7 @@ class VirshSession(aexpect.ShellSession):
     ERROR_REGEX_LIST = ['error:\s*.+$', '.*failed.*']
 
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
-                 prompt=r"virsh\s*\#\s*", remote_ip=None,
+                 prompt=r"virsh\s*[\#\>]\s*", remote_ip=None,
                  remote_user=None, remote_pwd=None):
         """
         Initialize virsh session server, or client if id set.
