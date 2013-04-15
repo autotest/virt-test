@@ -28,6 +28,7 @@ def run_ping(test, params, env):
                 raise error.TestFail("Loss ratio is %s" % ratio)
 
 
+    strict_check = params.get("strict_check", "no") == "yes"
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))

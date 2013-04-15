@@ -207,4 +207,3 @@ def run_flag_check(test, params, env):
                              "expected flags:\n %s\n"
                              "guest flags:\n %s\n"
             % (missing_flags, unexpect_flags, expected_flags, guest_flags))
-

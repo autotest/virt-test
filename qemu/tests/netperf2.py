@@ -19,7 +19,7 @@ def run_netperf2(test, params, env):
     session1 = server_vm.wait_for_login(timeout=login_timeout)
 
     client_vm = env.get_vm(params.get("client_vm"))
-    client_vm.verify_alive() 
+    client_vm.verify_alive()
     session2 = client_vm.wait_for_login(timeout=login_timeout)
 
 

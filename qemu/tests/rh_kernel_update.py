@@ -48,7 +48,7 @@ def run_rh_kernel_update(test, params, env):
             rpm_src = utils_misc.get_path(test.bindir, url)
         vm.copy_files_to(rpm_src, "/tmp/%s" % rpm_name)
         install_rpm_from_brew(session, "/tmp/%s" % rpm_name, upgrade)
-        
+
 
     def get_kernel_rpm_link():
         method = params.get("method", "link")
@@ -300,4 +300,3 @@ def run_rh_kernel_update(test, params, env):
             if s != 0:
                 logging.error(o)
             raise error.TestFail(e)
-

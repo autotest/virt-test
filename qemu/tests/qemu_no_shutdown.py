@@ -11,7 +11,7 @@ def run_qemu_no_shutdown(test, params, env):
     3. Wait for guest OS to shutdown down and issue power off to the VM
     4. Run 'system_reset' qemu monitor command
     5. Run 'cont' qemu monitor command
-    6. Wait for guest OS to boot up 
+    6. Wait for guest OS to boot up
     7. Repeat step 2-6 for 5 times.
 
     @param test: QEMU test object
@@ -38,7 +38,7 @@ def run_qemu_no_shutdown(test, params, env):
         # Wait for the session to become unresponsive and close it
         if not utils_misc.wait_for(lambda: not session.is_responsive(),
                                     timeout, 0, 1):
-           raise error.TestFail("Oops,Guest refuses to go down!")
+            raise error.TestFail("Oops,Guest refuses to go down!")
         session.close()
         # Check the qemu id is not change
         if vm.get_pid() != qemu_process_id:

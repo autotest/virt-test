@@ -57,4 +57,3 @@ def run_nx(test, params, env):
         else:
             logging.info('NX is disabled, and this TC passed.')
     session.close()
-

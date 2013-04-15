@@ -574,8 +574,6 @@ class VM(virt_vm.BaseVM):
             if ",aio=" not in help_text:
                 aio = None
 
-            print "Before dev part !!!!!!!!!!!!!"
-
             dev = ""
             if not re.search("boot=on\|off", help_text, re.MULTILINE):
                 if boot in ['yes', 'on', True]:
@@ -586,14 +584,6 @@ class VM(virt_vm.BaseVM):
                 blkdev_id = tmp
                 dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
                 fmt = "none"
-                index = None
-            elif fmt == "virtio":
-                if has_option(help_text, "device"):
-                    name = "virtio%s" % index
-                    dev += " -device virtio-blk-pci"
-                    dev += _add_option("drive", name)
-                    fmt = "none"
-                    dev += _add_option("bootindex", bootindex)
                 index = None
             elif fmt in ['usb1', 'usb2', 'usb3']:
                 tmp = index or utils_misc.generate_random_id()

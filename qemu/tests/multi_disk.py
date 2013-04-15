@@ -214,7 +214,7 @@ def run_multi_disk(test, params, env):
         (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
         err += tmp1 + tmp2
         err += disks.generate_params()
-        err += disks.check_disk_params(params, vm.root_dir)
+        err += disks.check_disk_params(params)
         (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(
                                         session.cmd_output('cat /proc/scsi/scsi'))
         err += tmp1 + tmp2
@@ -246,7 +246,7 @@ def run_multi_disk(test, params, env):
         (s, output) = session.cmd_status_output(cmd, timeout=cmd_timeout)
         if s != 0:
             raise error.TestFail("List volume command hd with cmd '%s'.\n"
-                                 "Output is: %s\n" % (hmd, output))
+                                 "Output is: %s\n" % (cmd, output))
 
         disks = re.findall(re_str, output)
         disks.sort()
@@ -271,16 +271,16 @@ def run_multi_disk(test, params, env):
     except Exception:
         _do_post_cmd(session)
         raise
- 
+
     try:
         for i in range(n_repeat):
             logging.info("iterations: %s", (i + 1))
             for disk in disks:
                 disk = disk.strip()
- 
+
                 logging.info("Format disk: %s...", disk)
                 index = random.randint(0, fs_num - 1)
- 
+
                 # Random select one file system from file_system
                 fs = file_system[index].strip()
                 cmd = params.get("format_command") % (fs, disk)
@@ -289,10 +289,10 @@ def run_multi_disk(test, params, env):
                 if params.get("mount_command"):
                     cmd = params.get("mount_command") % (disk, disk, disk)
                     session.cmd(cmd, timeout=cmd_timeout)
- 
+
             for disk in disks:
                 disk = disk.strip()
- 
+
                 error.context("Performing I/O on disk: %s..." % disk,
                               logging.info)
                 cmd_list = params.get("cmd_list").split()
@@ -300,7 +300,7 @@ def run_multi_disk(test, params, env):
                     if params.get(cmd_l):
                         cmd = params.get(cmd_l) % disk
                         session.cmd(cmd, timeout=cmd_timeout)
- 
+
                 cmd = params.get("compare_command")
                 output = session.cmd_output(cmd)
                 key_word = params.get("check_result_key_word")
@@ -312,7 +312,7 @@ def run_multi_disk(test, params, env):
                 else:
                     raise error.TestError("Param check_result_key_word was not "
                                           "specified! Please check your config")
- 
+
             if params.get("umount_command"):
                 cmd = params.get("show_mount_cmd")
                 output = session.cmd_output(cmd)

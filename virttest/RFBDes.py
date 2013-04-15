@@ -2,7 +2,7 @@ from virttest import utils_misc
 
 class Des(object):
     """
-    Base Data Encryption Standard class. 
+    Base Data Encryption Standard class.
     For details, please refer to:
     http://en.wikipedia.org/wiki/Data_Encryption_Standard
     """
@@ -228,7 +228,7 @@ class Des(object):
         # operation. Sixteen 48-bit subkeys are derived from the main key.
         self.R = list(map(lambda x, y: x ^ y, self.R, K))
 
-        # The block is divided into eight 6-bit pieces 
+        # The block is divided into eight 6-bit pieces
         B = [self.R[:6], self.R[6:12], self.R[12:18], self.R[18:24],
              self.R[24:30], self.R[30:36], self.R[36:42], self.R[42:]]
 
@@ -254,16 +254,16 @@ class Des(object):
         # Permutation:
         # Bn are rearranged according to a fixed permutation, the P-box.
         self.R = self.get_sub_list(self.P, Bn)
- 
+
 
     def des_crypt(self, data, crypt_type=0):
         """
         Crypt the block of data through DES bit-manipulation
- 
+
         @param data: data need to crypt.
         @param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
         """
-        # Get new block by using Ip. 
+        # Get new block by using Ip.
         block = self.get_sub_list(self.IP, data)
         self.L = block[:32]
         self.R = block[32:]
@@ -315,4 +315,3 @@ class Des(object):
 
         # Return the full encrypted/decrypted string
         return ''.join(result)
-

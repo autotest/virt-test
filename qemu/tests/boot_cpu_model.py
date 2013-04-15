@@ -12,7 +12,7 @@ def run_boot_cpu_model(test, params, env):
 
     @param test: QEMU test object
     @param params: Dictionary with the test parameters
-    
+
     """
     host_flags = utils_misc.get_cpu_flags()
     cpu_vendor = utils_misc.get_cpu_vendor(host_flags)

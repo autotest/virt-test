@@ -27,7 +27,7 @@ def run_rhevonly_commands_check(test, params, env):
         else:
             cmds = vm.monitor.cmd("query-commands")
             if cmds:
-                supported_cmds = [n["name"] for n in cmds if 
+                supported_cmds = [n["name"] for n in cmds if
                                   n.has_key("name")]
         error.context("Verify black commands is inavaliable in monitor",
                       logging.info)

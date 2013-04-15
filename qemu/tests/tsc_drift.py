@@ -19,7 +19,7 @@ def run_tsc_drift(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    
+
     drift_threshold = float(params.get("drift_threshold"))
     interval = float(params.get("interval"))
     cpu_chk_cmd = params.get("cpu_chk_cmd")
@@ -64,7 +64,7 @@ def run_tsc_drift(test, params, env):
     vm.copy_files_to(tsc_freq_path,'/tmp/get_tsc.c')
     if session.get_command_status("gcc /tmp/get_tsc.c") != 0:
         raise error.TestError("Fail to compile program on guest")
-    
+
     s, guest_ncpu = session.get_command_status_output(cpu_chk_cmd)
     if s != 0:
         raise error.TestError("Fail to get cpu number of guest")
@@ -79,13 +79,13 @@ def run_tsc_drift(test, params, env):
         logging.info("Guest TSC delta for vcpu %s is %s" % (i, delta))
         if delta < 0:
             logging.error("Guest TSC for vcpu %s warps %s" % (i, delta))
-                    
+
         ratio = 100 * (delta - host_freq) / host_freq
         logging.info("TSC drift ratio for vcpu %s is %s" % (i, ratio))
         if abs(ratio) > drift_threshold:
             logging.error("TSC drift found for vcpu %s ratio %s" % (i, ratio))
             success = False
-            
+
     if not success:
         raise error.TestFail("TSC drift found for the guest, please check the "
                              "log for details")

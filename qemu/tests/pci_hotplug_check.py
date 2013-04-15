@@ -261,7 +261,7 @@ def run_pci_hotplug_check(test, params, env):
     mark_cmd = params.get("mark_cmd")
     offset = params.get("offset")
     confirm_cmd = params.get("confirm_cmd")
-    
+
     pci_info = []
     # Add block device into guest
     for pci_num in xrange(pci_num_range):

@@ -64,4 +64,3 @@ def run_vhost_with_cgroup(test, params, env):
     if vhost_pid not in cgroup.get_property("/tasks"):
         raise error.TestError("Oops, vhost process attach to cgroup FAILED!")
     logging.info("Vhost process attach to cgroup successfully")
-

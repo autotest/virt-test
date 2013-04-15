@@ -22,15 +22,15 @@ def run_block_resize(test, params, env):
         output = session.cmd_output(block_cmd)
         block_size = re.findall(block_pattern, output)
         if block_size:
-             if not re.search("[a-zA-Z]", block_size[0]):
-                 return int(block_size[0])
-             else:
-                 return float(utils_misc.normalize_data_size(block_size[0],
-                                                        standard_unit="B"))
+            if not re.search("[a-zA-Z]", block_size[0]):
+                return int(block_size[0])
+            else:
+                return float(utils_misc.normalize_data_size(block_size[0],
+                                                         order_magnitude="B"))
         else:
-             raise error.TestError("Can not find the block size for the"
-                                   " deivce. The output of command"
-                                   " is: %s" % output)
+            raise error.TestError("Can not find the block size for the"
+                                  " deivce. The output of command"
+                                  " is: %s" % output)
 
 
     error.context("Check image size in guest", logging.info)
@@ -43,7 +43,7 @@ def run_block_resize(test, params, env):
     data_image_params = params.object_params(data_image)
     data_image_size = data_image_params.get("image_size")
     data_image_size = float(utils_misc.normalize_data_size(data_image_size,
-                                                standard_unit="B"))
+                                                         order_magnitude="B"))
     data_image_filename = storage.get_image_filename(data_image_params,
                                                      test.bindir)
     data_image_dev = vm.get_block({'file': data_image_filename})

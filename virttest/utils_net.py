@@ -2,7 +2,7 @@ import platform, openvswitch, re, os, socket, fcntl, struct, logging, random
 import shelve, commands, time
 from autotest.client import utils
 from autotest.client.shared import error
-import propcan, utils_misc
+import propcan, utils_misc, aexpect
 
 
 ARCH = platform.machine()

@@ -2195,7 +2195,7 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
     Return: Windows driver's hardware id
     """
     if not os.path.exists(mount_point):
-        os.mkdir(_mount_point)
+        os.mkdir(mount_point)
 
     if not os.path.ismount(mount_point):
         utils.system("mount %s %s -o loop" % (storage_path, mount_point),
@@ -2204,7 +2204,7 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
     try:
         txt_file = open(driver_link, "r")
         txt = txt_file.read()
-        hwid = re.findall(re_hardware_id, txt)[-1].rstrip()
+        hwid = re.findall(re_hw_id, txt)[-1].rstrip()
         if run_cmd:
             hwid = '^&'.join(hwid.split('&'))
         txt_file.close()

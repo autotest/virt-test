@@ -654,6 +654,10 @@ class StepMakerWindow(object):
         self.clear_state()
 
         for line in sr.splitlines():
+            words = line.split()
+            if not words:
+                continue
+
             if line.startswith("#") \
                     and not self.entry_comment.get_text() \
                     and not line.startswith("# Sending keys:") \

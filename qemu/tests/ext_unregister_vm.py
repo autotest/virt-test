@@ -68,4 +68,3 @@ def run_ext_unregister_vm(test, params, env):
             asvr_session.close()
 
     logging.debug("Unregistration PASSED!")
-

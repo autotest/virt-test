@@ -9,7 +9,7 @@ class GUEST_RUNNER:
         Set the global paramter for thread clean up
         """
         self.kill_thread_flag = False
-        
+
     def monitor_thread(self, m_cmd, p_file, r_path):
         """
         Record the parent process id and start the monitor process
@@ -57,7 +57,7 @@ class GUEST_RUNNER:
                                    pid_file, r_path))
         test_runner = threading.Thread(target=self.test_thread, args=(m_cmd,
                                        t_cmd, pid_file))
- 
+
         monitor.start()
         test_runner.start()
         monitor.join(timeout)

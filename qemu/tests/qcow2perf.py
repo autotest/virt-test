@@ -24,7 +24,7 @@ def run_qcow2perf(test, params, env):
     op_type = params.get("op_type")
     new_base = params.get("new_base")
     writecmd = params.get("writecmd")
-    iocmd = params.get("iocmd") 
+    iocmd = params.get("iocmd")
     opcmd = params.get("opcmd")
     io_options = params.get("io_options", "n")
     cache_mode = params.get("cache_mode")
@@ -53,7 +53,7 @@ def run_qcow2perf(test, params, env):
 
     if op_type != "writeoffset1":
         offset = 0
-        writecmd0 = writecmd % (write_round,offset,interval_size, 
+        writecmd0 = writecmd % (write_round,offset,interval_size,
                       write_unit,interval_size,write_unit)
         iocmd0 = iocmd % (writecmd0, io_options, snapshot_file)
         logging.info("writecmd-offset-0: %s", writecmd0)

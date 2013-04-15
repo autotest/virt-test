@@ -62,7 +62,7 @@ def run_virtual_nic_private(test, params, env):
         interface_name = utils_net.get_linux_ifname(sessions[2],
                                                      vm.get_mac_address())
 
-	tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
+        tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
                                      interface_name)
         t = utils.InterruptedThread(data_mon, (sessions[2], tcpdump_cmd,
                                                mon_process_timeout))

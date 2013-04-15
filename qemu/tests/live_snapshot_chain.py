@@ -112,7 +112,7 @@ def run_live_snapshot_chain(test, params, env):
             vm.destroy()
             vm.create(params=image_params)
             vm.verify_alive()
- 
+
             session = vm.wait_for_login(timeout=timeout)
             if image_params.get("file_create"):
                 for file in md5_value[image]:

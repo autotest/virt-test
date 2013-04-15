@@ -38,7 +38,7 @@ def run_ipi_x2apic(test, params, env):
         params["smp"] = 2
         logging.warn("This case need at least 2 vcpu, but only 1 specified in"
                      " configuration. So change the vcpu to 2.")
-    vm_name = params.get("main_vm") 
+    vm_name = params.get("main_vm")
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -63,7 +63,7 @@ def run_ipi_x2apic(test, params, env):
         o = e
     re_str = "[0-9]*\.[0-9]+"
     val1 = get_re_average(o,re_str)
-    session.close() 
+    session.close()
     vm.destroy()
     params["enable_x2apic"] = "no"
     env_process.preprocess_vm(test, params, env, vm_name)

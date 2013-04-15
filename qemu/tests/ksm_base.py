@@ -63,8 +63,8 @@ def run_ksm_base(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
-    
-    try: 
+
+    try:
         logging.info("Start to prepare env in host")
         # Check ksm module status
         ksm_module = params.get("ksm_module")
@@ -74,8 +74,8 @@ def run_ksm_base(test, params, env):
             if module_status == 256:
                 s, o = commands.getstatusoutput("modprobe %s" % ksm_module)
                 if s != 0:
-                    raise error.TestError("Can not insert ksm module in host") 
-            
+                    raise error.TestError("Can not insert ksm module in host")
+
         # Prepare env for KSM
         s, ksmtuned_id = commands.getstatusoutput("ps -C ksmtuned -o pid=")
         if ksmtuned_id:
@@ -88,15 +88,15 @@ def run_ksm_base(test, params, env):
             s, o = commands.getstatusoutput(setup_cmd)
             if s != 0:
                 raise error.TestError("Can not setup KSM: %s" % o)
-        
-        #prepare work in guest 
+
+        #prepare work in guest
         logging.info("Turn off swap in guest")
         s, o = session.cmd_status_output("swapoff -a")
         script_file_path = "%s/scripts/ksm_overcommit_guest.py" % test.virtdir
         vm.copy_files_to(script_file_path, "/tmp")
         test_type = params.get("test_type")
         shared_mem = params.get("shared_mem")
-        fill_timeout = int(shared_mem) / 10 
+        fill_timeout = int(shared_mem) / 10
         query_cmd = params.get("query_cmd")
         query_regex = params.get("query_regex")
         random_bits = params.get("random_bits")
@@ -116,7 +116,7 @@ def run_ksm_base(test, params, env):
         s, sharing_page_1 = commands.getstatusoutput(query_cmd)
         if query_regex:
             sharing_page_1 = re.findall(query_regex, sharing_page_1)[0]
- 
+
         split = params.get("split")
         if split == "yes":
             if test_type == "negative":
@@ -140,20 +140,20 @@ def run_ksm_base(test, params, env):
                     sharing_page[index] = utils_test.aton(data) * 1024
                 else:
                     sharing_page[index] = utils_test.aton(data)
- 
+
         fail_type = 0
         if test_type == "disable":
             if int(sharing_page[0]) != 0 and int(sharing_page[1]) != 0:
-                fail_type += 1 
+                fail_type += 1
         else:
             if int(sharing_page[0]) >= int(sharing_page[1]):
                 fail_type += 2
             if int(sharing_page[1]) <= int(sharing_page[2]):
                 fail_type += 4
-       
-        fail = ["Sharing page increased abnormal", 
+
+        fail = ["Sharing page increased abnormal",
                 "Sharing page didn't increase", "Sharing page didn't split"]
- 
+
         if fail_type != 0:
             turns = 0
             while (fail_type > 0):
@@ -170,8 +170,8 @@ def run_ksm_base(test, params, env):
                 logging.info("unload ksm module")
                 s, o = commands.getstatusoutput("modprobe -r %s" % ksm_module)
         if ksmtuned_id:
-           logging.info("Restart ksmtuned in host")
-           os.system("/bin/bash /usr/sbin/ksmtuned")
+            logging.info("Restart ksmtuned in host")
+            os.system("/bin/bash /usr/sbin/ksmtuned")
         if int(re.findall("\d+", status)[0]) == 0:
             logging.info("Reset the ksm env in host")
             if re.findall("ksmctl", setup_cmd):

@@ -174,4 +174,3 @@ def run_ext_test(test, params, env):
             asvr_session.close()
 
     logging.debug("Finished good.")
-
