@@ -1,7 +1,7 @@
 import re, logging, commands, shelve
 from autotest.client.shared import error, utils
 from virttest import storage, utils_misc, utils_test
-from virttest import env_process, data_dir
+from virttest import env_process, data_dir, qemu_storage
 
 def run_qemu_disk_img(test, params, env):
     """
@@ -168,41 +168,45 @@ def run_qemu_disk_img(test, params, env):
         img_filename = storage.get_image_filename(params, data_dir.get_data_dir())
         image_format = params.get("image_format")
         _check_file(img_filename, file_orig, file_create=file_base)
+        img_tag = params.get("image_convert")
+        convert_params = params.object_params(img_tag)
+        qemu_img = qemu_storage.QemuImg(convert_params, test.bindir, img_tag)
 
         # Create snapshot if needed
-        snapshot_name = params.get("name_snapshot")
-        snapshot_format = params.get("snapshot_format", "qcow2")
-        if snapshot_name:
-            params['image_name'] = snapshot_name
-            params['image_format'] = snapshot_format
-
-            snapshot_filename = storage.get_image_filename(params, data_dir.get_data_dir())
-            utils_test.create_image(cmd, snapshot_filename,
-            snapshot_format, base_img=img_filename, base_fmt=image_format)
-
-            # Boot snapshot,create big file and check it.
+        image_chain = params.get("image_chain")
+        make_snapshot = len(re.split(r"\s+", image_chain)) > 1
+        if make_snapshot:
+            sn_params = {"create_with_dd": "no"}
+            qemu_img.base_image_filename = img_filename
+            qemu_img.base_format = image_format
+            qemu_img.create(sn_params)
+            snapshot_filename = qemu_img.image_filename
             file_sn = params.get("file_sn1")
             file_orig = file_sn,
             file_operate.append(file_sn)
             img_filename = snapshot_filename
+            # update test params to make guest boot from snapshot image
+            params.update(convert_params)
             _check_file(snapshot_filename, file_orig, file_create=file_sn)
+            trash.append(snapshot_filename)
 
         # Convert image
-        image_name = params.get("image_name")
-        image_format = params.get("image_format")
-        convert_format = params.get("convert_format")
+        image_name = convert_params.get("image_name")
+        image_format = convert_params.get("image_format")
+        convert_format = convert_params.get("convert_format")
         convert_name = "%s.%s_to_%s" % (image_name, image_format,
                                         convert_format)
-        params['image_name'] = convert_name
-        params['image_format'] = convert_format
-        convert_filename = storage.get_image_filename(params, data_dir.get_data_dir())
-        utils_test.convert_image(cmd, img_filename, image_format,
-                       convert_filename, convert_format)
+        convert_params['image_name_%s' % img_tag] = convert_name
+        convert_params['image_format_%s' % img_tag] = convert_format
+        qemu_img.convert(convert_params, test.bindir)
 
-        # Boot converted image, check wheather files are changed
+        # update test params to make guest boot from converted image
+        params.update(convert_params.object_params(img_tag))
+        convert_filename = storage.get_image_filename(params, test.bindir)
         check_result = _check_file(convert_filename, file_operate)
-
         _compare_file(file_operate, check_result)
+        trash.append(convert_filename)
+
 
     def commit_test():
         """
@@ -419,5 +423,10 @@ def run_qemu_disk_img(test, params, env):
         params["image_name"] = image_name
         params["image_format"] = image_format
 
+    trash = []
     subcommand = params.get("subcommand")
-    eval("%s_test()" % subcommand)
+    try:
+        eval("%s_test()" % subcommand)
+    finally:
+        for tmp in trash:
+           utils.run("rm -f %s" % tmp)
