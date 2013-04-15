@@ -88,4 +88,3 @@ def wait_autotest_background(pid):
     if status != 0:
         return False
     return True
-

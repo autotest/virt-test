@@ -23,7 +23,7 @@ def run_cluster_size_check(test, params, env):
         try:
             value = int(size)
         except ValueError:
-            unit = size[-1] 
+            unit = size[-1]
             value = int(size[:-1])
             if unit.upper() == "G":
                 value = value * 1073741824
@@ -44,7 +44,7 @@ def run_cluster_size_check(test, params, env):
         image_name = params.get("images")
         image_params = params.object_params(image_name)
         image = qemu_storage.QemuImg(image_params, test.bindir, image_name)
-        
+
         image.create(image_params)
         output = image.info()
         error.context("Check the cluster size from output", logging.info)

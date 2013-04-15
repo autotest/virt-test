@@ -45,7 +45,7 @@ def run_hotplug_vcpu(test, params, env):
             error.context("hot-pluging vCPU %s" % vcpu, logging.info)
             output = vm.monitor.send_args_cmd(hotplug_cmd % vcpu)
         except Exception:
-            raise error.TestError("the last output from monitor is : %"
+            raise error.TestError("the last output from monitor is : %s"
                                   % output)
     # Windows is a little bit lazy that needs more secs to recognize.
     error.context("hotplugging finished, let's wait a few sec and"

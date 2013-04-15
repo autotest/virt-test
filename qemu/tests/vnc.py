@@ -11,13 +11,13 @@ def run_vnc(test, params, env):
        and 3.8.
     2) Connection could be setup with password enable.
     3) Change and __com.redhat_set_password monitor command could work.
- 
+
     This case will do following step:
     1) Start VN with VNC password enable.
     2) Handshaking after vnc password set by change.
     3) Handshaking after vnc password set by __com.redhat_set_password.
     4) Handshaking again after vnc password timeout.
- 
+
     @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environmen.
@@ -102,7 +102,7 @@ def run_vnc(test, params, env):
 
     port = vm.get_vnc_port()
     passwd_cmd = params.get("change_passwd_cmd",
-             "__com.redhat_set_password protocol=vnc,password=%s,expiration=%s") 
+             "__com.redhat_set_password protocol=vnc,password=%s,expiration=%s")
     rfb_version_list = params.get("rfb_version").strip().split(" ")
     for rfb_version in rfb_version_list:
         pass_len = random.SystemRandom().randint(1, 8)

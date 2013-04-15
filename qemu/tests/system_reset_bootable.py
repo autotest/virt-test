@@ -1,7 +1,7 @@
 import logging, time, random
 from autotest.client.shared import error
- 
- 
+
+
 @error.context_aware
 def run_system_reset_bootable(test, params, env):
     """

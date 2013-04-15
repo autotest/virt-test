@@ -56,4 +56,3 @@ if s != 0:
     sys.exit(-1)
 
 print "We are doing good! PASSED."
-

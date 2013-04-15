@@ -65,9 +65,9 @@ def run_boot_order_check(test, params, env):
     pci_list = str(pci_info).split("\n")
 
     for i in xrange(1, 4):
-       get_nic_device_addr(params.get("device_id_nic%s" % str(i)),
-                           params.get("bootindex_nic%s" % str(i)),
-                           list_nic_addr)
+        get_nic_device_addr(params.get("device_id_nic%s" % str(i)),
+                            params.get("bootindex_nic%s" % str(i)),
+                            list_nic_addr)
 
     list_nic_addr.sort(cmp = lambda x,y: cmp(x[1], y[1]))
 

@@ -66,7 +66,7 @@ ONBOOT=yes
         cmd = "echo '%s' > %s" % (eth_config, eth_config_path)
         s, o = session.get_command_status_output(cmd)
         if s != 0:
-            raise error.TestError("Failed to create ether config file %s: %s\n"
+            raise error.TestError("Failed to create ether config file: %s\n"
                                   "Reason is: %s" % (eth_config_path, o))
 
     # Reboot and check the configurations.

@@ -17,7 +17,7 @@ def run_cpuinfo_query(test, params, env):
     qcmd = params.get("query_cmd")
     if qcmd is None:
         raise error.TestError("query cmd is missing,"
-                              "pls check query_cmd in config file")    
+                              "pls check query_cmd in config file")
     cmd = qemu_binary + qcmd
     output = utils.system_output(cmd)
 
@@ -28,5 +28,5 @@ def run_cpuinfo_query(test, params, env):
         if not cpuinfo in output:
             missing.append(cpuinfo)
     if missing:
-        raise error.TestFail("%s is missing in the output\n %s" % 
+        raise error.TestFail("%s is missing in the output\n %s" %
                             (", ".join(missing), output))

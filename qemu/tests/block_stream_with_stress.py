@@ -33,7 +33,7 @@ def run_block_stream_with_stress(test, params, env):
         job = vm.monitor.query_block_job(device_id)
         if job:
             processed = float(job["offset"]) / job["len"] * 100
-            logging.debug("%s, rocessed: %%.2f" % (job["type"], processed))
+            logging.debug("%s, rocessed: %.2f" % (job["type"], processed))
             return False
         logging.info("block stream job done")
         return True

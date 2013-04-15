@@ -38,11 +38,11 @@ def run_kernbench(test, params, env):
             raise error.TestError("Host do not support EPT."
                                   " Please ignore this case.")
         elif 'ept' in flags and "no" in need_ept:
-             cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=0"
-             utils.system(cmd, timeout=100)
+            cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=0"
+            utils.system(cmd, timeout=100)
         elif 'ept' in flags and "yes" in need_ept:
-             cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=1"
-             utils.system(cmd, timeout=100)
+            cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=1"
+            utils.system(cmd, timeout=100)
 
     def install_gcc():
         logging.info("Update gcc to request version....")
@@ -61,9 +61,9 @@ def run_kernbench(test, params, env):
             if gcc in gcc_link:
                 cmd = "rpm -e %s && rpm -ivh %s" % (gcc, gcc_link)
             else:
-                 cmd = "rpm -ivh %s --nodeps; rpm -ivh %s --nodeps; rpm -ivh"\
-                       " %s --nodeps; rpm -ivh %s --nodeps" % (libgomp_link,
-                                              libgcc_link, cpp_link, gcc_link)
+                cmd = "rpm -ivh %s --nodeps; rpm -ivh %s --nodeps; rpm -ivh"\
+                      " %s --nodeps; rpm -ivh %s --nodeps" % (libgomp_link,
+                                             libgcc_link, cpp_link, gcc_link)
         (s, o) = cmd_status_output(cmd)
         if s:
             logging.debug("Fail to install gcc.output:%s" % o)
@@ -137,4 +137,3 @@ def run_kernbench(test, params, env):
             cmd_status_output(params.get("post_cmd"), timeout=cmd_timeout)
         if session:
             session.close()
-

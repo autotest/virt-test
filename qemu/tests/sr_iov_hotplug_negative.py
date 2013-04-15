@@ -80,7 +80,7 @@ def run_sr_iov_hotplug_negative(test, params, env):
             pci_add_cmd = make_pci_add_cmd(pa_pci_ids[0], pci_model, pci_addr)
         elif cmd_type == "device_add":
             pci_add_cmd = make_device_add_cmd(pa_pci_ids[0], pci_model,
-			                      pci_addr)
+                                              pci_addr)
         try:
             msg = "Adding pci device with command '%s'" % pci_add_cmd
             error.context(msg, logging.info)

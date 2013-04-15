@@ -8,7 +8,7 @@ def speed2byte(speed):
     convert speed to Bytes/s
     """
     if str(speed).isdigit():
-       speed = "%sB" % speed
+        speed = "%sB" % speed
     speed = utils_misc.normalize_data_size(speed, "B")
     return int(float(speed))
 
@@ -187,7 +187,7 @@ class BlockCopy(object):
         params = self.parser_test_args()
         timeout = params["login_timeout"]
 
-        if boot_check: 
+        if boot_check:
             session = self.get_session()
             return self.vm.reboot(session=session, timeout=timeout, method=method)
         if method == "system_reset":
@@ -280,7 +280,7 @@ class BlockCopy(object):
                 backing_file = matched.group(1)
         if backing_file:
             backing_file = os.path.abspath(backing_file)
-            if not es.path.exists(backing_file):
+            if not os.path.exists(backing_file):
                 raise error.TestError("backingfile(%s) not exists")
         return backing_file
 

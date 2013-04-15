@@ -118,7 +118,7 @@ def run_multi_nics(test, params, env):
         cmd = params.get("net_check_cmd")
         s, o = i.get_command_status_output(cmd)
         if s != 0:
-           raise error.TestError("Can not get ip from guest")
+            raise error.TestError("Can not get ip from guest")
         for ip in re.findall(ip_filter, o, re.S):
             ip_list.append(ip + (i,))
     # verify nic config
@@ -141,4 +141,3 @@ def run_multi_nics(test, params, env):
         for dst_ip in ip_list[src_ip_index:]:
             ping(ip_list[src_ip_index], dst_ip, strict_check, flood_minutes)
             file_transfer(ip_list[src_ip_index], dst_ip)
-

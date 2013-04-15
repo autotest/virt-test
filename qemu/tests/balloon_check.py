@@ -45,12 +45,12 @@ def run_balloon_check(test, params, env):
         @return: Number of failures occurred during operation.
         """
         if params.get("os_type") == "windows":
-           free_mem = session.cmd_output(free_mem_cmd)
-           free_mem = re.findall("\d+", free_mem)[0]
-           if params.get("monitor_type") == "qmp":
-               free_mem = int(free_mem) * 1024
-           else:
-               free_mem = int(free_mem) / 1024
+            free_mem = session.cmd_output(free_mem_cmd)
+            free_mem = re.findall("\d+", free_mem)[0]
+            if params.get("monitor_type") == "qmp":
+                free_mem = int(free_mem) * 1024
+            else:
+                free_mem = int(free_mem) / 1024
 
         fail = 0
         error.context("Check ballooned memory in monitor before balloon")

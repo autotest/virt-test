@@ -65,8 +65,8 @@ def run_check_block_size(test, params, env):
         session.close()
         if (out_physical != expect_phyciscal) or \
            (out_logical != expect_logical):
-               raise error.TestFail("Physical/Logical block size in guest"
-                                    " doesn't match with qemu parameter.")
+            raise error.TestFail("Physical/Logical block size in guest"
+                                 " doesn't match with qemu parameter.")
     else:
         session.close()
         raise error.TestError("Could not find any virtio block device.")

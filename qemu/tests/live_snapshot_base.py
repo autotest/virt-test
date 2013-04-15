@@ -32,7 +32,7 @@ def run_live_snapshot_base(test, params, env):
     tmp_name = utils_misc.generate_random_string(5)
     src = dst = "/tmp/%s" % tmp_name
     if params.get("os_type") != "linux":
-         dst = "c:\\users\\public\\%s" % tmp_name
+        dst = "c:\\users\\public\\%s" % tmp_name
 
     try:
         error.context("create file on host, copy it to guest", logging.info)

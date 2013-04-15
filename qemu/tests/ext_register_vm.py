@@ -90,4 +90,3 @@ def run_ext_register_vm(test, params, env):
                 s.close()
 
     logging.debug("Finished good.")
-

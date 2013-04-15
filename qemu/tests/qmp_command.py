@@ -114,12 +114,12 @@ def run_qmp_command(test, params, env):
                                 msg += "%s or %s is not in QMP command output" \
                                        % (cmp_str, cmp_str_b)
                                 raise error.TestFail(msg)
-		        elif qmp_cmd == "query-balloon":
-			    if int(value) * 1024 * 1024 != qmp_o[key] and\
-			    value not in str(qmp_o[key]):
-			        msg += "%s is not in QMP command output" % value
-			        raise error.TestFail(msg)
- 
+                        elif qmp_cmd == "query-balloon":
+                            if int(value) * 1024 * 1024 != qmp_o[key] and\
+                            value not in str(qmp_o[key]):
+                                msg += "%s is not in QMP command output" % value
+                                raise error.TestFail(msg)
+
                         else:
                             if value not in str(qmp_o[i][key]) and\
                                str(bool(int(value))) not in str(qmp_o[i][key]):
@@ -141,7 +141,7 @@ def run_qmp_command(test, params, env):
                         str_o = qmp_o
                     if param.rstrip() not in str(str_o):
                         msg += "Key value is %s" % param.rstrip()
-                        raise error.TestFail(msg) 
+                        raise error.TestFail(msg)
             return True
         elif result_check == "m_format_q":
             match_flag = True

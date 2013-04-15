@@ -2,7 +2,7 @@ import logging, time, re
 from autotest.client.shared import error
 
 def run_readonly_floppy(test, params, env):
-    """ 
+    """
     KVM readonly_floppy test:
     1) pre_command on the host to generate the floppy media
        : "dd if=images/fd1.img bs=512 count=2880
@@ -27,7 +27,7 @@ def run_readonly_floppy(test, params, env):
 
     sleep = params.get("sleep")
     # if it is a windows OS,wait for 20 seconds until the floppies
-    # are ready for testing 
+    # are ready for testing
     if sleep:
         logging.info("Windows system being tested,sleep for 20"
         " seconds until floppies are ready to be use")
@@ -36,7 +36,7 @@ def run_readonly_floppy(test, params, env):
     # if it is a linux OS,load the floppy module
         if not sleep:
             logging.info("Loading the floppy module...")
-            status = session.get_command_status("modprobe floppy")            
+            status = session.get_command_status("modprobe floppy")
             logging.info("Sleep 5 seconds after loading the floppy module")
             time.sleep(5)
             if status:
@@ -52,7 +52,7 @@ def run_readonly_floppy(test, params, env):
              format_cmd_list[floppy_index],
              timeout=float(params.get("format_floppy_timeout",60)))
             if s == 0:
-                raise error.TestError("Floppy disk %s is not readonly and" 
+                raise error.TestError("Floppy disk %s is not readonly and"
                        " it's formatted successfully" %floppy_index )
             found = re.search('(Read-only)|(protected)',o)
             logging.debug("Output of format command: %s" % o)
@@ -65,4 +65,3 @@ def run_readonly_floppy(test, params, env):
 
     finally:
         session.close()
-

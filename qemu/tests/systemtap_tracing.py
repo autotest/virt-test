@@ -54,8 +54,8 @@ def run_systemtap_tracing(test, params, env):
                 if cmd_type == "monitor" :
                     vm.monitor.send_args_cmd(cmd_exec)
                 elif cmd_type == "bash" :
-                     guest_session = vm.wait_for_login(timeout = timeout)
-                     guest_session.cmd(cmd_exec)
+                    guest_session = vm.wait_for_login(timeout = timeout)
+                    guest_session.cmd(cmd_exec)
 
     error.context("Get the output of stap script", logging.info)
     stap_log_file =  utils_misc.get_path(test.profdir, "systemtap.log")
