@@ -88,13 +88,15 @@ class LibguestfsBase(propcan.PropCanBase):
     Base class of libguestfs tools.
     """
 
-    __slots__ = ('ignore_status', 'debug', 'timeout')
+    __slots__ = ('ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec')
 
     def __init__(self, *args, **dargs):
         init_dict = dict(*args, **dargs)
         init_dict['ignore_status'] = init_dict.get('ignore_status', True)
         init_dict['debug'] = init_dict.get('debug', False)
         init_dict['timeout'] = init_dict.get('timeout', 60)
+        init_dict['uri'] = init_dict.get('uri', None)
+        init_dict['lgf_exec'] = init_dict.get('lgf_exec', '/bin/true')
         super(LibguestfsBase, self).__init__(init_dict)
 
 
@@ -124,6 +126,20 @@ class LibguestfsBase(propcan.PropCanBase):
             if current_setting and not desired_setting:
                 self.dict_set('debug', False)
                 logging.debug("Libguestfs debugging disabled")
+
+
+    def get_uri(self):
+        """
+        Accessor method for 'uri' property that must exist
+        """
+        # self.get() would call get_uri() recursivly
+        try:
+            return self.dict_get('uri')
+        except KeyError:
+            return None
+
+
+##### libguestfs module functions follow #####
 
 
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
