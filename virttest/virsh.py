@@ -1838,3 +1838,50 @@ def ttyconsole(name, **dargs):
     @return: CmdResult instance
     """
     return command("ttyconsole %s" % name, **dargs)
+
+
+def blockcopy(name, path, dest, options, **dargs):
+    """
+    Start a block copy operation.
+
+    @param name: name of domain
+    @param path: fully-qualified path or target of disk
+    @param dest: path of the copy to create
+    @param options: options of blockcopy
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "blockcopy %s %s %s" % (name, path, dest)
+    if options:
+        cmd += " %s" % options
+    return command(cmd, **dargs)
+
+
+def blockpull(name, path, options, **dargs):
+    """
+    Populate a disk from its backing image.
+    @param name: name of domain
+    @param path: fully-qualified path or target of disk
+    @param options: options of blockpull
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "blockpull %s %s" % (name, path)
+    if options:
+        cmd += " %s" % options
+    return command(cmd, **dargs)
+
+
+def blockjob(name, path, options, **dargs):
+    """
+    Manage active block operations
+    @param name: name of domain
+    @param path: fully-qualified path or target of disk
+    @param options: options of blockjob
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "blockjob %s %s" % (name, path)
+    if options:
+        cmd += " %s" % options
+    return command(cmd, **dargs)
