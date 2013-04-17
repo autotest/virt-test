@@ -1,7 +1,7 @@
 import logging, time
-from autotest.client.virt import utils_misc
+from virttest import utils_misc
 from autotest.client.shared import error
-from autotest.client.tests.kvm.tests import block_copy
+from qemu.tests import block_copy
 
 
 class BlockStream(block_copy.BlockCopy):

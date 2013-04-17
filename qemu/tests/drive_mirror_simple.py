@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from autotest.client.tests.kvm.tests import drive_mirror
+from qemu.tests import drive_mirror
 
 class BlockMirrorSimple(drive_mirror.BlockMirror):
 

@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error, utils
-from autotest.client.tests.kvm.tests import blk_stream
+from qemu.tests import blk_stream
 
 class BlockStreamReboot(blk_stream.BlockStream):
 

@@ -1,6 +1,6 @@
 import time, random, logging
 from autotest.client.shared import error, utils
-from autotest.client.tests.kvm.tests import drive_mirror
+from qemu.tests import drive_mirror
 
 class BlockMirrorReboot(drive_mirror.BlockMirror):
 

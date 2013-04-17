@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from autotest.client.tests.kvm.tests import blk_stream
+from qemu.tests import blk_stream
 
 class BlockStreamSimple(blk_stream.BlockStream):
 

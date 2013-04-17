@@ -1,6 +1,6 @@
 import re, logging
 from autotest.client.shared import error
-from autotest.client.virt import utils_misc, utils_test, aexpect, storage
+from virttest import utils_misc, utils_test, aexpect, storage
 
 
 @error.context_aware
