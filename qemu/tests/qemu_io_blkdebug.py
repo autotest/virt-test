@@ -33,7 +33,7 @@ def run_qemu_io_blkdebug(test, params, env):
 
     error.context("Create image", logging.info)
     image_io = QemuImg(params.object_params(image), test.bindir, image)
-    image_name = image_io.create(params.object_params(image))
+    image_name, _ = image_io.create(params.object_params(image))
 
     template_name =  utils_misc.get_path(test.virtdir, blkdebug_default)
     template = ConfigParser.ConfigParser()
