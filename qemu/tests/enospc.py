@@ -69,7 +69,7 @@ class EnospcConfig(object):
     def cleanup(self):
         error.context("performing enospc cleanup")
         if os.path.islink(self.lvtest_device):
-            utils.run("fuser -k %s" % self.lvtest_device)
+            utils.run("fuser -k %s" % self.lvtest_device, ignore_status=True)
             time.sleep(2)
         l_result = utils.run("lvdisplay")
         # Let's remove all volumes inside the volume group created
