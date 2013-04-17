@@ -1,5 +1,5 @@
 import logging, commands
-from qemu.tests import guest_autotest
+from qemu.tests import autotest_control
 
 
 def run_netperf2(test, params, env):
@@ -45,7 +45,7 @@ job.run_test('netperf2',
 
     # Setup netserver on server_vm
     logging.info("Setting up server vm")
-    guest_autotest.run_guest_autotest_background(test, params, env,
+    autotest_control.run_autotest_control_background(test, params, env,
                                            test_name = "netperf2",
                         test_control_file = "/tmp/control.server")
 
@@ -53,4 +53,4 @@ job.run_test('netperf2',
     logging.info("Setting up client vm")
     params['test_control_file'] = '/tmp/control.client'
     params['main_vm'] = params.get("client_vm")
-    guest_autotest.run_guest_autotest(test, params, env)
+    autotest_control.run_autotest_control(test, params, env)

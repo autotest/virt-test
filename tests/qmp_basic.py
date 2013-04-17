@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from autotest.client.virt import qemu_monitor
+from virttest import qemu_monitor
 
 
 def run_qmp_basic(test, params, env):

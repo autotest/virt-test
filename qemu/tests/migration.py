@@ -25,13 +25,13 @@ def run_migration(test, params, env):
 
         @param type: type of stress test.
         """
-        from qemu.tests import guest_autotest
+        from tests import autotest_control
 
         timeout = 0
 
         if guest_stress_test == "autotest":
             test_type = params.get("test_type")
-            func = guest_autotest.run_guest_autotest
+            func = autotest_control.run_autotest_control
             new_params = params.copy()
             new_params["test_control_file"] = "%s.control" % test_type
 

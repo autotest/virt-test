@@ -1,7 +1,7 @@
 import logging, time, re
 from autotest.client import utils
 from autotest.client.shared import error
-from autotest.client.virt import  remote, utils_misc
+from virttest import  remote, utils_misc
 
 @error.context_aware
 def run_virtual_nic_send_buffer(test, params, env):

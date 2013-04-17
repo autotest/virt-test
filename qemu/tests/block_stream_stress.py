@@ -1,7 +1,7 @@
 import time, logging
 from autotest.client.shared import error
-from autotest.client.virt import utils_misc
-from autotest.client.tests.kvm.tests import blk_stream
+from virttest import utils_misc
+from qemu.tests import blk_stream
 
 class BlockStreamStress(blk_stream.BlockStream):
 

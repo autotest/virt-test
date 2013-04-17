@@ -32,7 +32,7 @@ def run_kexec(test, params, env):
                                  "Output got from x86info:\n%s" % o)
 
     def install_new_kernel():
-        from autotest.client.tests.kvm.tests import rh_kernel_update
+        from qemu.tests import rh_kernel_update
         try:
             rh_kernel_update.run_rh_kernel_update(test, params, env)
         except Exception:
