@@ -31,11 +31,13 @@ class QemuImg(storage.QemuImg):
                                  params.get("qemu_img_binary","qemu-img"))
 
 
-    def create(self, params):
+    def create(self, params, ignore_errors=False):
         """
         Create an image using qemu_img or dd.
 
         @param params: Dictionary containing the test parameters.
+        @param ignore_errors: Whether to ignore errors on the image creation
+                cmd.
 
         @note: params should contain:
                image_name -- the name of the image file, without extension
@@ -51,6 +53,9 @@ class QemuImg(storage.QemuImg):
                values: on and off. Default is "off"
                preallocated(optional) -- if preallocation when create image,
                allowed values: off, metadata. Default is "off"
+
+        @return: tuple (path to the image created, utils.CmdResult object
+                containing the result of the creation command).
         """
         if params.get("create_with_dd") == "yes" and self.image_format == "raw":
             # maps K,M,G,T => (count, bs)
@@ -95,21 +100,12 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
-        check_output = params.get("check_output") == "yes"
-        try:
-            result = utils.run(qemu_img_cmd, verbose=False)
-        except error.CmdError, e:
-            logging.error("Could not create image, failed with error message:"
-                            "%s", str(e))
-            if not check_output:
-                result = None
-            else:
-                result = str(e)
-        if not check_output:
-            result = self.image_filename
+        cmd_result = utils.run(qemu_img_cmd, verbose=False, ignore_status=True)
+        if cmd_result.exit_status != 0 and not ignore_errors:
+            raise error.TestError("Failed to create image %s" %
+                                  self.image_filename)
 
-        return result
-
+        return self.image_filename, cmd_result
 
 
     def convert(self, params, root_dir):
