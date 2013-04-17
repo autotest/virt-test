@@ -1,5 +1,6 @@
 /*
- *  Test clock resolution for KVM guests that have kvm-clock as clock source
+ *  Test clock resolution for KVM guests that have kvm-clock or timebase
+ *  as clock source
  *
  *  Copyright (c) 2010 Red Hat, Inc
  *  Author: Lucas Meneghel Rodrigues <lmr@redhat.com>
@@ -38,7 +39,11 @@ int main(void) {
 		sscanf(line, "%s", &clocksource);
 	}
 	fclose(fr);
+#if defined(__powerpc64__)
+	if (!strncmp(clocksource, "timebase", strlen("timebase"))) {
+#else
 	if (!strncmp(clocksource, "kvm-clock", strlen("kvm-clock"))) {
+#endif
 		if (clock_return == 0) {
 			if (res.tv_sec > 1 || res.tv_nsec > 100) {
 				printf("FAIL: clock_getres returned bad clock resolution\n");
