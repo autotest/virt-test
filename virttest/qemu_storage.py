@@ -100,6 +100,24 @@ class QemuImg(storage.QemuImg):
 
             qemu_img_cmd += " %s" % self.size
 
+        image_dirname = os.path.dirname(self.image_filename)
+        if not os.path.isdir(image_dirname):
+            e_msg = ("Parent directory of the image file %s does "
+                     "not exist" % self.image_filename)
+            logging.error(e_msg)
+            logging.error("This usually means a serious setup error.")
+            logging.error("Please verify if your data dir contains the "
+                          "expected directory structure")
+            logging.error("Backing data dir: %s",
+                          data_dir.get_backing_data_dir())
+            logging.error("Directory structure:")
+            for root, _, _ in os.walk(data_dir.get_backing_data_dir()):
+                logging.error(root)
+
+            logging.warning("We'll try to proceed by creating the dir. "
+                            "Other errors may ensue")
+            os.makedirs(image_dirname)
+
         cmd_result = utils.run(qemu_img_cmd, verbose=False, ignore_status=True)
         if cmd_result.exit_status != 0 and not ignore_errors:
             raise error.TestError("Failed to create image %s" %
