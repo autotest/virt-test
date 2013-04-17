@@ -45,8 +45,8 @@ def preprocess_image(test, params, image_name):
 
         if create_image:
             image = qemu_storage.QemuImg(params, base_dir, image_name)
-            if not image.create(params):
-                raise error.TestError("Could not create image")
+            image.create(params)
+
 
 def preprocess_vm(test, params, env, name):
     """
