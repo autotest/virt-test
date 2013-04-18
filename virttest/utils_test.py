@@ -22,7 +22,7 @@ More specifically:
 """
 
 import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl
-import threading, shelve, getpass, socket
+import threading, shelve, getpass, socket, glob
 from Queue import Queue
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
@@ -1551,8 +1551,13 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         NOTE: This function depends on the results copied to host by
               get_results() function, so call get_results() first.
         """
-        status_path = os.path.join(outputdir,
-                                   "guest_autotest_results/*/status")
+        base_dir = os.path.join(outputdir, "guest_autotest_results")
+        status_paths = glob.glob(os.path.join(base_dir, "*/status"))
+        # for control files that do not use job.run_test()
+        status_no_job = os.path.join(base_dir, "status")
+        if os.path.exists(status_no_job):
+            status_paths.append(status_no_job)
+        status_path = " ".join(status_paths)
 
         try:
             output = utils.system_output("cat %s" % status_path)
