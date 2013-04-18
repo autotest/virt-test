@@ -9,6 +9,7 @@ import fcntl, sys, inspect, tarfile, shutil
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
+import cartesian_config
 import utils_koji, data_dir
 
 import platform
@@ -396,8 +397,27 @@ def run_tests(parser, job):
 
     @return: True, if all tests ran passed, False if any of them failed.
     """
+    prepare_case = ['unattended_install', 'rh_kernel_update',
+                    'disable_win_update']
     last_index = -1
+    pass_list = []
+    offset = 0
     for i, d in enumerate(parser.get_dicts()):
+        if d.has_key("prepare_case"):
+            prepare_case = d["prepare_case"]
+        if d.get("case_type") == "prepare":
+            case_mark = ""
+            for case in prepare_case:
+                if case in d["name"]:
+                    img_name = d['image_name'] + '-' + d['image_format']
+                    case_mark = "%s-%s" % (case, img_name)
+            if case_mark:
+                if case_mark in pass_list:
+                    offset += 1
+                    continue
+                else:
+                    pass_list.append(case_mark)
+        i -= offset
         logging.info("Test %4d:  %s" % (i + 1, d["shortname"]))
         last_index += 1
 
@@ -413,7 +433,28 @@ def run_tests(parser, job):
     index = 0
     setup_flag = 1
     cleanup_flag = 2
+    pass_list = []
     for param_dict in parser.get_dicts():
+        tmp_dict = {}
+        for key in param_dict:
+            if key.endswith("_equal"):
+                t_key = key.split("_equal")[0]
+                tmp_dict[t_key] = param_dict[key]
+            elif key.endswith("_min"):
+                t_key = key.split("_min")[0]
+                if not param_dict.has_key(t_key) or \
+                    cartesian_config.compare_string(param_dict[t_key],
+                                                    param_dict[key]) < 0:
+                    tmp_dict[t_key] = param_dict[key]
+            elif key.endswith("_max"):
+                t_key = key.split("_max")[0]
+                if not param_dict.has_key(t_key) or \
+                    cartesian_config.compare_string(param_dict[t_key],
+                                                    param_dict[key]) > 0:
+                    tmp_dict[t_key] = param_dict[key]
+        for key in tmp_dict:
+            param_dict[key] = tmp_dict[key]
+
         if index == 0:
             if param_dict.get("host_setup_flag", None) is not None:
                 flag = int(param_dict["host_setup_flag"])
