@@ -447,7 +447,7 @@ class VirtTestApp(object):
             else:
                 _restore_stdout()
                 print("Option %s is not in the list %s, aborting..." %
-                      SUPPORTED_DISK_BUSES)
+                      (self.options.disk_bus, SUPPORTED_DISK_BUSES))
                 sys.exit(1)
         else:
             logging.info("Config provided, ignoring --disk-bus option")
