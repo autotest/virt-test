@@ -90,7 +90,7 @@ class VM(virt_vm.BaseVM):
         self.logs = {}
         self.logsessions = {}
         self.driver_type = 'kvm'
-        self.params['driver_type_'+self.name] = self.driver_type
+        self.params['driver_type_' + self.name] = self.driver_type
         # virtnet init depends on vm_type/driver_type being set w/in params
         super(VM, self).__init__(name, params)
         # un-overwrite instance attribute, virtnet db lookups depend on this
@@ -581,8 +581,8 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("drive", name)
                 index = None
             if fmt == "floppy":
-                drivelist = ['driveA','driveB']
-                name ="fdc0-0-%s" % index
+                drivelist = ['driveA', 'driveB']
+                name = "fdc0-0-%s" % index
                 fmt = "none"
                 dev += " -global"
                 dev += _add_option("isa-fdc.%s" % drivelist[index], name,
@@ -665,7 +665,7 @@ class VM(virt_vm.BaseVM):
             return cmd
 
         def add_floppy(help_text, filename, index):
-            cmd_list = [" -fda '%s'"," -fdb '%s'"]
+            cmd_list = [" -fda '%s'", " -fdb '%s'"]
             return cmd_list[index] % filename
 
 
@@ -1370,7 +1370,7 @@ class VM(virt_vm.BaseVM):
                 floppy_readonly = floppy_readonly == "yes"
                 floppy = utils_misc.get_path(data_dir.get_data_dir(),
                                              floppy_params.get("floppy_name"))
-                if has_option(help_text,"global"):
+                if has_option(help_text, "global"):
                     qemu_cmd += add_drive(help_text, floppy,
                                           fmt="floppy",
                                           index=index,
@@ -1692,10 +1692,10 @@ class VM(virt_vm.BaseVM):
                         self.pci_assignable = test_setup.PciAssignable(
                            driver=params.get("driver"),
                            driver_option=params.get("driver_option"),
-                           host_set_flag = params.get("host_setup_flag"),
-                           kvm_params = params.get("kvm_default"),
-                           vf_filter_re = params.get("vf_filter_re"),
-                           pf_filter_re = params.get("pf_filter_re"))
+                           host_set_flag=params.get("host_setup_flag"),
+                           kvm_params=params.get("kvm_default"),
+                           vf_filter_re=params.get("vf_filter_re"),
+                           pf_filter_re=params.get("pf_filter_re"))
                     # Virtual Functions (VF) assignable devices
                     if pa_type == "vf":
                         self.pci_assignable.add_device(device_type=pa_type)
@@ -1781,7 +1781,7 @@ class VM(virt_vm.BaseVM):
             if p9_fs_driver == "proxy":
                 proxy_helper_name = params.get("9p_proxy_binary",
                                                "virtfs-proxy-helper")
-                proxy_helper_cmd =  utils_misc.get_path(root_dir,
+                proxy_helper_cmd = utils_misc.get_path(root_dir,
                                                         proxy_helper_name)
                 if not proxy_helper_cmd:
                     raise virt_vm.VMConfigMissingError(self.name,
@@ -2100,7 +2100,7 @@ class VM(virt_vm.BaseVM):
                 pass
 
         if free_mac_addresses:
-            for nic_index in xrange(0,len(self.virtnet)):
+            for nic_index in xrange(0, len(self.virtnet)):
                 self.free_mac_address(nic_index)
 
         for nic in self.virtnet:
@@ -2323,7 +2323,7 @@ class VM(virt_vm.BaseVM):
         return self.virtnet[nic_name]
 
     @error.context_aware
-    def hotunplug_nic(self,nic_index_or_name):
+    def hotunplug_nic(self, nic_index_or_name):
         """
         Convenience method wrapper for del/deactivate nic and netdev.
         """
@@ -2498,7 +2498,7 @@ class VM(virt_vm.BaseVM):
             logging.info("waiting for the guest to finish the unplug")
             if not utils_misc.wait_for(lambda: nic.nic_name not in
                                        self.monitor.info("qtree"),
-                                       wait, 5 ,1):
+                                       wait, 5 , 1):
                 raise virt_vm.VMDelNicError("Device is not unplugged by "
                                             "guest, please check whether the "
                                             "hotplug module was loaded in "
@@ -2648,7 +2648,7 @@ class VM(virt_vm.BaseVM):
         mig_fd_name = None
 
         if protocol == "fd":
-            #Check if descriptors aren't None for local migration.
+            # Check if descriptors aren't None for local migration.
             if local and (fd_dst is None or fd_src is None):
                 (fd_dst, fd_src) = os.pipe()
 
@@ -2677,7 +2677,7 @@ class VM(virt_vm.BaseVM):
                 if self.params["spice_ssl"] == "yes":
                     dest_tls_port = clone.spice_options["spice_tls_port"]
                     cert_subj = clone.spice_options["spice_x509_server_subj"]
-                    cert_subj = "\"%s\"" % cert_subj.replace('/',',')[1:]
+                    cert_subj = "\"%s\"" % cert_subj.replace('/', ',')[1:]
                 else:
                     dest_tls_port = ""
                     cert_subj = ""
@@ -2904,7 +2904,7 @@ class VM(virt_vm.BaseVM):
         """
         self.verify_status('paused') # Throws exception if not
         # Set high speed 1TB/S
-        self.monitor.migrate_set_speed(2<<39)
+        self.monitor.migrate_set_speed(2 << 39)
         self.monitor.migrate_set_downtime(self.MIGRATE_TIMEOUT)
         logging.debug("Saving VM %s to %s" % (self.name, path))
         # Can only check status if background migration
@@ -2915,7 +2915,7 @@ class VM(virt_vm.BaseVM):
             self.MIGRATE_TIMEOUT, 2, 2,
             "Waiting for save to %s to complete" % path)
         # Restore the speed and downtime to default values
-        self.monitor.migrate_set_speed(32<<20)
+        self.monitor.migrate_set_speed(32 << 20)
         self.monitor.migrate_set_downtime(0.03)
         # Base class defines VM must be off after a save
         self.monitor.cmd("system_reset")
@@ -2926,11 +2926,11 @@ class VM(virt_vm.BaseVM):
         Override BaseVM restore_from_file method
         """
         self.verify_status('paused') # Throws exception if not
-        logging.debug("Restoring VM %s from %s" % (self.name,path))
+        logging.debug("Restoring VM %s from %s" % (self.name, path))
         # Rely on create() in incoming migration mode to do the 'right thing'
         self.create(name=self.name, params=self.params, root_dir=self.root_dir,
                     timeout=self.MIGRATE_TIMEOUT, migration_mode="exec",
-                    migration_exec_cmd="cat "+path, mac_source=self)
+                    migration_exec_cmd="cat " + path, mac_source=self)
         self.verify_status('running') # Throws exception if not
 
 
