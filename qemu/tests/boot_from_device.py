@@ -24,11 +24,10 @@ def run_boot_from_device(test, params, env):
         """
 
         logging.info("creating test cdrom")
-        cdrom_cd1 = params.get("cdrom_cd1")
-        if not os.path.isabs(cdrom_cd1):
-            cdrom_cd1 = utils_misc.get_path(test.bindir, cdrom_cd1)
+        cdrom_test = params.get("cdrom_test")
+        cdrom_test = utils_misc.get_path(test.bindir, cdrom_test)
         utils.run("dd if=/dev/urandom of=test bs=10M count=1")
-        utils.run("mkisofs -o %s test" % cdrom_cd1)
+        utils.run("mkisofs -o %s test" % cdrom_test)
         utils.run("rm -f test")
 
 
@@ -38,8 +37,8 @@ def run_boot_from_device(test, params, env):
         """
 
         logging.info("cleaning up temp cdrom images")
-        cdrom_cd1 = utils_misc.get_path(test.bindir, params.get("cdrom_cd1"))
-        os.remove(cdrom_cd1)
+        cdrom_test = utils_misc.get_path(test.bindir, params.get("cdrom_test"))
+        os.remove(cdrom_test)
 
 
     def preprocess_remote_storage():
