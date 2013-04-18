@@ -4,16 +4,24 @@ from autotest.client import utils
 from virttest import utils_net, utils_misc, remote, aexpect
 
 
+@error.context_aware
 def run_ethtool(test, params, env):
     """
     Test offload functions of ethernet device using ethtool
 
     1) Log into a guest.
-    2) Initialize the callback of sub functions.
-    3) Enable/disable sub function of NIC.
+    2) Saving ethtool configuration.
+    3) Enable sub function of NIC.
     4) Execute callback function.
-    5) Check the return value.
-    6) Restore original configuration.
+    5) Disable sub function of NIC.
+    6) Run callback function again.
+    7) Run file transfer test.
+       7.1) Creating file in source host.
+       7.2) Listening network traffic with tcpdump command.
+       7.3) Transfer file.
+       7.4) Comparing md5sum of the files on guest and host.
+    8) Repeat step 3 - 7.
+    9) Restore original configuration.
 
     @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
@@ -49,7 +57,9 @@ def run_ethtool(test, params, env):
         @param f_type: Offload type name
         @param status: New status will be changed to
         """
-        logging.info("(%s) %s: set status %s", ethname, f_type, status)
+        txt = "Set ethernet device offload status."
+        txt += " (%s) %s: set status %s" % (ethname, f_type, status)
+        error.context(txt, logging.info)
         if status not in ["off", "on"]:
             return False
         cmd = "ethtool -K %s %s %s" % (ethname, f_type, status)
@@ -68,19 +78,20 @@ def run_ethtool(test, params, env):
 
 
     def ethtool_save_params():
-        logging.info("Saving ethtool configuration")
+        error.context("Saving ethtool configuration", logging.info)
         for i in supported_features:
             feature_status[i] = ethtool_get(i)
 
 
     def ethtool_restore_params():
-        logging.info("Restoring ethtool configuration")
+        error.context("Restoring ethtool configuration", logging.info)
         for i in supported_features:
             ethtool_set(i, feature_status[i])
 
 
     def compare_md5sum(name):
-        logging.info("Comparing md5sum of the files on guest and host")
+        txt = "Comparing md5sum of the files on guest and host"
+        error.context(txt, logging.info)
         host_result = utils.hash_file(name, method="md5")
         try:
             o = session.cmd_output("md5sum %s" % name)
@@ -103,10 +114,9 @@ def run_ethtool(test, params, env):
         session2.cmd_output("rm -rf %s" % filename)
         dd_cmd = ("dd if=/dev/urandom of=%s bs=1M count=%s" %
                   (filename, params.get("filesize")))
-
         failure = (False, "Failed to create file using dd, cmd: %s" % dd_cmd)
-
-        logging.info("Creating file in source host, cmd: %s", dd_cmd)
+        txt = "Creating file in source host, cmd: %s" % dd_cmd
+        error.context(txt, logging.info)
         ethname = utils_net.get_linux_ifname(session,
                                                   vm.get_mac_address(0))
         tcpdump_cmd = "tcpdump -lep -i %s -s 0 tcp -vv port ssh" % ethname
@@ -127,18 +137,20 @@ def run_ethtool(test, params, env):
 
         # only capture the new tcp port after offload setup
         original_tcp_ports = re.findall("tcp.*:(\d+).*%s" % guest_ip,
-                                       utils.system_output("/bin/netstat -nap"))
+                                      utils.system_output("/bin/netstat -nap"))
 
         for i in original_tcp_ports:
             tcpdump_cmd += " and not port %s" % i
 
-        logging.debug("Listening traffic using command: %s", tcpdump_cmd)
+        txt = "Listening traffic using command: %s" % tcpdump_cmd
+        error.context(txt, logging.info)
         session2.sendline(tcpdump_cmd)
         if not utils_misc.wait_for(
-                           lambda:session.cmd_status("pgrep tcpdump") == 0, 30):
+                          lambda:session.cmd_status("pgrep tcpdump") == 0, 30):
             return (False, "Tcpdump process wasn't launched")
 
-        logging.info("Transfering file %s from %s", filename, src)
+        txt = "Transfering file %s from %s" % (filename, src)
+        error.context(txt, logging.info)
         try:
             copy_files_func(filename, filename)
         except remote.SCPError, e:
@@ -176,7 +188,7 @@ def run_ethtool(test, params, env):
         if not s:
             logging.error(o)
             return False
-        logging.info("Check if contained large frame")
+        error.context("Check if contained large frame", logging.info)
         # MTU: default IPv4 MTU is 1500 Bytes, ethernet header is 14 Bytes
         return (status == "on") ^ (len([i for i in re.findall(
                                    "length (\d*):", o) if int(i) > mtu]) == 0)
@@ -192,15 +204,18 @@ def run_ethtool(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    error.context("Log into a guest.", logging.info)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
     # Let's just error the test if we identify that there's no ethtool installed
+    error.context("Check whether ethtool installed in guest.")
     session.cmd("ethtool -h")
     session2 = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     mtu = 1514
     feature_status = {}
     filename = "/tmp/ethtool.dd"
     guest_ip = vm.get_address()
+    error.context("Try to get ethernet device name in guest.")
     ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
 
     supported_features = params.get("supported_features")
@@ -236,7 +251,8 @@ def run_ethtool(test, params, env):
                     e_msg = "Failed to enable %s" % i
                     logging.error(e_msg)
                     failed_tests.append(e_msg)
-
+            txt = "Run callback function %s" % callback.func_name
+            error.context(txt, logging.info)
             if not callback(status="on"):
                 e_msg = "Callback failed after enabling %s" % f_type
                 logging.error(e_msg)
@@ -246,7 +262,8 @@ def run_ethtool(test, params, env):
                 e_msg = "Failed to disable %s" % f_type
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
-
+            txt = "Run callback function %s" % callback.func_name
+            error.context(txt, logging.info)
             if not callback(status="off"):
                 e_msg = "Callback failed after disabling %s" % f_type
                 logging.error(e_msg)
