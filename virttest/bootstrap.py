@@ -6,7 +6,7 @@ import utils_misc, data_dir, asset, cartesian_config
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
 recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
-                        'libvirt': [('virsh',), ('virt-install',)],
+                        'libvirt': [('virsh',), ('virt-install',), ('fakeroot',)],
                         'openvswitch': [],
                         'v2v': [],
                         'libguestfs': [('perl',)]}
