@@ -118,6 +118,7 @@ class Test(object):
 
         # Report the parameters we've received and write them as keyvals
         logging.info("Starting test %s", self.tag)
+        logging.info(utils_misc.record_git_head())
         logging.debug("Test parameters:")
         keys = params.keys()
         keys.sort()
@@ -699,6 +700,7 @@ def run_tests(parser, options):
     logging.info("Starting test job at %s", time.strftime('%Y-%m-%d %H:%M:%S'))
     logging.info("")
 
+    logging.info(utils_misc.record_git_head())
     logging.debug("Cleaning up previous job tmp files")
     d = parser.get_dicts().next()
     env_filename = os.path.join(data_dir.get_root_dir(),

@@ -1463,3 +1463,20 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
         data *= multiple
 
     return str(data)
+
+
+def record_git_head():
+    try:
+        cmd = "git status > /dev/null 2>&1"
+        if utils.system(cmd, ignore_status=True, verbose=False) != 0:
+            return ""
+
+        git_show_cmd = "git show --summary --pretty='%H'"
+        git_head = utils.system_output(git_show_cmd, ignore_status=True,
+                                       verbose=False)
+        git_head = git_head.split("\n")
+        return "This virt-test is based on git commit '%s'" % git_head[0]
+    except Exception:
+        pass
+
+    return ""

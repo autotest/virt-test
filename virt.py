@@ -52,6 +52,7 @@ class virt(test.test):
             raise error.TestNAError("Test dependency failed")
 
         # Report the parameters we've received and write them as keyvals
+        logging.info(utils_misc.record_git_head())
         logging.debug("Test parameters:")
         keys = params.keys()
         keys.sort()
