@@ -819,7 +819,7 @@ class VM(virt_vm.BaseVM):
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
-               migration_mode=None, mac_source=None):
+               migration_mode=None, mac_source=None, autoconsole=True):
         """
         Start the VM by running a qemu command.
         All parameters are optional. If name, params or root_dir are not
@@ -984,7 +984,8 @@ class VM(virt_vm.BaseVM):
                                       uri=self.connect_uri).stdout.strip()
 
             # Establish a session with the serial console
-            self.setup_serial_console()
+            if autoconsole:
+                self.setup_serial_console()
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
@@ -1267,7 +1268,7 @@ class VM(virt_vm.BaseVM):
         return virsh.screenshot(self.name, filename, uri=self.connect_uri)
 
 
-    def start(self):
+    def start(self, autoconsole=True):
         """
         Starts this VM.
         """
@@ -1302,7 +1303,8 @@ class VM(virt_vm.BaseVM):
             self.uuid = virsh.domuuid(self.name,
                                       uri=self.connect_uri).stdout.strip()
             # Establish a session with the serial console
-            self.setup_serial_console()
+            if autoconsole:
+                self.setup_serial_console()
         else:
             raise virt_vm.VMStartError(self.name, "libvirt domain failed "
                                                   "to start")
