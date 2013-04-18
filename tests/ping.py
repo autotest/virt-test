@@ -122,7 +122,7 @@ def run_ping(test, params, env):
                     error.context("Ping with packet size %s" % size,
                                   logging.info)
                     status, output = session.cmd_status_output(cmd % size,
-                                                               timeout=20)
+                                                               timeout=60)
                     _get_loss_ratio(output)
 
                     if status != 0:
