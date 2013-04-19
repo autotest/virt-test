@@ -19,7 +19,7 @@ def run_nx(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
     #
-    exploit_file = os.path.join(test.bindir, 'tests_rsc/x64_sc_rdo.c')
+    exploit_file = os.path.join(test.virtdir, 'deps/x64_sc_rdo.c')
     dst_dir = '/tmp'
 
     vm.copy_files_to(exploit_file, dst_dir)

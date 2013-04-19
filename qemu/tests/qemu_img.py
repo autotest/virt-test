@@ -1,6 +1,6 @@
 import re, os, logging, commands
 from autotest.client.shared import utils, error
-from virttest import utils_misc, env_process, storage
+from virttest import utils_misc, env_process, storage, data_dir
 
 
 @error.context_aware
@@ -14,12 +14,13 @@ def run_qemu_img(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-    cmd = utils_misc.get_path(test.bindir, params.get("qemu_img_binary"))
+    cmd = utils_misc.get_path(test.bindir,
+                              "qemu/%s" % params.get("qemu_img_binary"))
     if not os.path.exists(cmd):
         raise error.TestError("Binary of 'qemu-img' not found")
     image_format = params.get("image_format")
     image_size = params.get("image_size", "10G")
-    image_name = storage.get_image_filename(params, test.bindir)
+    image_name = storage.get_image_filename(params, data_dir.get_data_dir())
 
 
     def _check(cmd, img):
@@ -455,7 +456,7 @@ def run_qemu_img(test, params, env):
         sn_fmt = params.get("snapshot_format", "qcow2")
         sn1 = params.get("image_name_snapshot1")
         sn1 = utils_misc.get_path(test.bindir, sn1) + ".%s" % sn_fmt
-        base_img = storage.get_image_filename(params, test.bindir)
+        base_img = storage.get_image_filename(params, data_dir.get_data_dir())
         _create(cmd, sn1, sn_fmt, base_img=base_img, base_img_fmt=image_format)
 
         # Create snapshot2 based on snapshot1

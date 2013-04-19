@@ -1,5 +1,5 @@
 import logging, commands
-from qemu.tests import autotest_control
+from tests import autotest_control
 
 
 def run_netperf2(test, params, env):

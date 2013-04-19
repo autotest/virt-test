@@ -8,7 +8,7 @@ KVM cdrom test
 import logging, re, time, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, aexpect, qemu_monitor
+from virttest import utils_misc, aexpect, qemu_monitor, data_dir
 
 
 @error.context_aware
@@ -317,7 +317,7 @@ def run_cdrom(test, params, env):
     # Test main body start.
     iso_image_orig = params.get("cdrom_cd1")
     if iso_image_orig and not os.path.isabs(iso_image_orig):
-        iso_image_orig = os.path.join(test.bindir, iso_image_orig)
+        iso_image_orig = os.path.join(data_dir.get_data_dir(), iso_image_orig)
     iso_image_dir = os.path.dirname(iso_image_orig)
     if (not params.get("not_insert_at_start")
         or params.get("not_insert_at_start") == "no"):

@@ -980,14 +980,14 @@ def run_unattended_install(test, params, env):
     @error.context_aware
     def copy_images():
         error.base_context("Copy image from NFS after installation failure")
-        image_copy = params.get("image_copy_on_error", "yes")
-        if "yes" in image_copy:
+        image_copy_on_error = params.get("image_copy_on_error", "yes")
+        if "yes" in image_copy_on_error:
             try:
                 error.context("Quit qemu-kvm before copying guest image")
                 vm.monitor.quit()
             except Exception, e:
                 logging.warn(e)
-            import image_copy
+            from tests import image_copy
             error.context("Copy image from NFS Server")
             image_copy.run_image_copy(test, params, env)
 
