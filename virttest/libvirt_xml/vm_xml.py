@@ -208,6 +208,20 @@ class VMXML(VMXMLBase):
         return None
 
 
+    @staticmethod
+    def get_disk_count(vm_name):
+        """
+        Get count of VM's disks.
+
+        @param: vm_name: Name of defined vm.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        disks = vmxml.get_disk_all()
+        if disks != None:
+            return len(disks)
+        return 0
+
+
     def get_numa_params(self, vm_name):
         """
         Return VM's numa setting from XML definition
