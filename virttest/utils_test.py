@@ -489,7 +489,7 @@ class MultihostMigration(object):
 
         self.mig_timeout = int(params.get("mig_timeout"))
         # Port used to communicate info between source and destination
-        self.regain_ip_cmd = params.get("regain_ip_cmd", "dhclient")
+        self.regain_ip_cmd = params.get("regain_ip_cmd", None)
 
         self.vm_lock = threading.Lock()
 
@@ -696,12 +696,13 @@ class MultihostMigration(object):
 
         logging.info("Logging into migrated guest after migration...")
         for vm in mig_data.vms:
-            session_serial = vm.wait_for_serial_login(timeout=
-                                                      self.login_timeout)
-            #There is sometime happen that system sends some message on
-            #serial console and IP renew command block test. Because
-            #there must be added "sleep" in IP renew command.
-            session_serial.cmd(self.regain_ip_cmd)
+            if not self.regain_ip_cmd is None:
+                session_serial = vm.wait_for_serial_login(timeout=
+                                                          self.login_timeout)
+                #There is sometime happen that system sends some message on
+                #serial console and IP renew command block test. Because
+                #there must be added "sleep" in IP renew command.
+                session_serial.cmd(self.regain_ip_cmd)
             vm.wait_for_login(timeout=self.login_timeout)
 
 
