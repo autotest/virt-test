@@ -10,7 +10,6 @@ from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
 import qemu_virtio_port, remote, data_dir, utils_net
 
-
 class QemuSegFaultError(virt_vm.VMError):
     def __init__(self, crash_message):
         virt_vm.VMError.__init__(self, crash_message)
@@ -634,9 +633,7 @@ class VM(virt_vm.BaseVM):
                     hostfwd=[], netdev_id=None, netdev_extra_params=None,
                     tapfd=None):
             mode = None
-            if nettype == 'bridge':
-                mode = 'tap'
-            elif nettype == 'network':
+            if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
             elif nettype == 'user':
                 mode = 'user'
@@ -1556,20 +1553,29 @@ class VM(virt_vm.BaseVM):
 
 
     def _nic_tap_add_helper(self, nic):
-        nic.tapfd = str(utils_net.open_tap("/dev/net/tun", nic.ifname,
-                                           vnet_hdr=True))
-        logging.debug("Adding VM %s NIC ifname %s to bridge %s", self.name,
-                      nic.ifname, nic.netdst)
-        if nic.nettype == 'bridge':
-            utils_net.add_to_bridge(nic.ifname, nic.netdst)
-        utils_net.bring_up_ifname(nic.ifname)
+        if nic.nettype == 'macvtap':
+            logging.info("Adding macvtap ifname: %s" , nic.ifname)
+            utils_net.add_nic_macvtap(nic)
+        else:
+            nic.tapfd = str(utils_net.open_tap("/dev/net/tun", nic.ifname,
+                                               vnet_hdr=True))
+            logging.debug("Adding VM %s NIC ifname %s to bridge %s",
+                          self.name, nic.ifname, nic.netdst)
+            if nic.nettype == 'bridge':
+                utils_net.add_to_bridge(nic.ifname, nic.netdst)
+            utils_net.bring_up_ifname(nic.ifname)
 
 
     def _nic_tap_remove_helper(self, nic):
-        logging.debug("Removing VM %s NIC ifname %s from bridge %s", self.name,
-                      nic.ifname, nic.netdst)
         try:
-            os.close(int(nic.tapfd))
+            if nic.nettype == 'macvtap':
+                logging.info("Remove macvtap ifname %s", nic.ifname)
+                tap = utils_net.Macvtap(nic.ifname)
+                tap.delete()
+            else:
+                logging.debug("Removing VM %s NIC ifname %s from bridge %s",
+                             self.name, nic.ifname, nic.netdst)
+                os.close(int(nic.tapfd))
         except TypeError:
             pass
 
@@ -1703,7 +1709,7 @@ class VM(virt_vm.BaseVM):
                         logging.debug("Copying mac for nic %s from VM %s"
                                        % (nic.nic_name, mac_source.name))
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
-                    if nic.nettype == 'bridge' or nic.nettype == 'network':
+                    if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
                     elif nic.nettype == 'user':
                         logging.info("Assuming dependencies met for "
@@ -2149,6 +2155,10 @@ class VM(virt_vm.BaseVM):
                           self.process.get_pid())
 
         finally:
+            for nic in self.virtnet:
+                if nic.nettype == 'macvtap':
+                    tap = utils_net.Macvtap(nic.ifname)
+                    tap.delete()
             self._cleanup(free_mac_addresses)
 
 
@@ -2324,7 +2334,7 @@ class VM(virt_vm.BaseVM):
         nic.set_if_none('netdev_id', utils_misc.generate_random_id())
         nic.set_if_none('ifname', self.virtnet.generate_ifname(nic_index))
         nic.set_if_none('nettype', 'bridge')
-        if nic.nettype == 'bridge': # implies tap
+        if nic.nettype in ['bridge', 'macvtap']: # implies tap
             # destination is required, hard-code reasonable default if unset
             # nic.set_if_none('netdst', 'virbr0')
             # tapfd allocated/set in activate because requires system resources
@@ -2406,6 +2416,8 @@ class VM(virt_vm.BaseVM):
             # assume this will puke if netdst unset
             if not nic.netdst is None:
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)
+        elif nic.nettype == 'macvtap':
+            pass
         elif nic.nettype == 'user':
             attach_cmd += " user,id=%s" % nic.device_id
         else: # unsupported nettype
