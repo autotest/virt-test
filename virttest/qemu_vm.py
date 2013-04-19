@@ -295,37 +295,6 @@ class VM(virt_vm.BaseVM):
                 return fmt % (option, str(value))
             return ""
 
-
-        def get_free_usb_port(dev, controller_type):
-            # Find an available USB port.
-            bus = None
-            port = None
-            controller = None
-
-            for usb in params.objects("usbs"):
-                usb_params = params.object_params(usb)
-                usb_type = usb_params.get("usb_type")
-                usb_dev = self.usb_dev_dict.get(usb)
-
-                if usb_type.find(controller_type) != -1:
-                    controller = usb
-                    max_port = int(usb_params.get("usb_max_port", 6))
-                    if len(usb_dev) < max_port:
-                        bus = "%s.0" % usb
-                        self.usb_dev_dict[usb].append(dev)
-                        # Usb port starts from 1, so add 1 directly here.
-                        port = self.usb_dev_dict[usb].index(dev) + 1
-                        break
-
-            if controller is None:
-                raise virt_vm.VMUSBControllerMissingError(self.name,
-                                                          controller_type)
-            elif bus is None:
-                raise virt_vm.VMUSBControllerPortFullError(self.name)
-
-            return (bus, str(port))
-
-
         # Wrappers for all supported qemu command line parameters.
         # This is meant to allow support for multiple qemu versions.
         # Each of these functions receives the output of 'qemu -help'
@@ -938,60 +907,6 @@ class VM(virt_vm.BaseVM):
                 cmd = ""
             return cmd
 
-        def add_usb(help_text, usb_id, usb_type):
-            if not has_option(help_text, "device"):
-                # Okay, for the archaic qemu which has not device parameter,
-                # just return a usb uhci controller.
-                # If choose this kind of usb controller, it has no name/id,
-                # and only can be created once, so give it a special name.
-                self.usb_dev_dict["OLDVERSION_usb0"] = []
-                return " -usb"
-
-            if not has_device(device_help, usb_type):
-                raise error.TestNAError("usb controller %s not available" % usb_type)
-
-            cmd = " -device %s" % usb_type
-            cmd += _add_option("id", usb_id)
-
-            if usb_type == "ich9-usb-ehci1":
-                common = ",multifunction=on,masterbus=%s.0" % usb_id
-                uhci1 = " -device ich9-usb-uhci1,addr=1d.0,firstport=0"
-                uhci2 = " -device ich9-usb-uhci2,addr=1d.1,firstport=2"
-                uhci3 = " -device ich9-usb-uhci3,addr=1d.2,firstport=4"
-                cmd += ",addr=1d.7,multifunction=on"
-                cmd += uhci1 + common
-                cmd += uhci2 + common
-                cmd += uhci3 + common
-
-            # register this usb controller.
-            self.usb_dev_dict[usb_id] = []
-            return cmd
-
-        def add_usbdevice(help_text, usb_dev, usb_type, controller_type,
-                          bus=None, port=None):
-            """
-            This function is used to add usb device except for usb storage.
-            """
-
-            if not has_device(device_help, usb_type):
-                raise error.TestNAError("usb device %s not available" % usb_type)
-
-            cmd = ""
-            if has_option(help_text, "device"):
-                cmd = " -device %s" % usb_type
-                cmd += _add_option("id", "usb-%s" % usb_dev)
-                cmd += _add_option("bus", bus)
-                cmd += _add_option("port", port)
-            else:
-                if "tablet" in usb_type:
-                    cmd = " -usbdevice %s" % usb_type
-                else:
-                    logging.error("This version of host only support"
-                                  " tablet device")
-
-            return cmd
-
-
         def add_sga(help_text):
             if not has_option(help_text, "device"):
                 return ""
@@ -1166,10 +1081,9 @@ class VM(virt_vm.BaseVM):
         # Add USB controllers
         for usb_name in params.objects("usbs"):
             usb_params = params.object_params(usb_name)
-            cmd = add_usb(help_text, usb_name, usb_params.get("usb_type"))
-            # FIXME: Not every controller is plugged into PCI
-            devices.insert(StrDev('USBC-%s' % usb_name,
-                                  parent_bus={'type': 'pci'}, cmdline=cmd))
+            devs = devices.usbc_by_params(usb_name, usb_params)
+            for _ in devs:
+                devices.insert(_)
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
@@ -1182,12 +1096,8 @@ class VM(virt_vm.BaseVM):
 
             bus = None
             port = None
-            if image_params.get("drive_format") == "usb1":
-                bus, port = get_free_usb_port(image_name, "uhci")
-            if image_params.get("drive_format") == "usb2":
-                bus, port = get_free_usb_port(image_name, "ehci")
-            if image_params.get("drive_format") == "usb3":
-                bus, port = get_free_usb_port(image_name, "xhci")
+            # FIXME: Skip USB bus/port assignement, handle it in following
+            # patch together with new way of image handling
             if image_params.get("drive_format").startswith("scsi-"):
                 try:
                     bus = int(image_params.get("drive_bus", 0))
@@ -1360,12 +1270,8 @@ class VM(virt_vm.BaseVM):
             iso = cdrom_params.get("cdrom")
             bus = None
             port = None
-            if cd_format == "usb1":
-                bus, port = get_free_usb_port(image_name, "uhci")
-            if cd_format == "usb2":
-                bus, port = get_free_usb_port(image_name, "ehci")
-            if cd_format == "usb3":
-                bus, port = get_free_usb_port(image_name, "xhci")
+            # FIXME: Skip USB bus/port assignement, handle it in following
+            # patch together with new way of image handling
             if cd_format == "ahci" and not have_ahci:
                 devices.insert(StrDev('ahci', parent_bus={'type': 'pci'},
                                       cmdline=" -device ahci,id=ahci"))
@@ -1434,23 +1340,9 @@ class VM(virt_vm.BaseVM):
                 devices.insert(StrDev('fd-%s' % floppy_name, cmdline=cmd))
 
         # Add usb devices
-        for usb_dev in params.objects("usb_devices"):
-            usb_dev_params = params.object_params(usb_dev)
-            usb_type = usb_dev_params.get("usb_type")
-            controller_type = usb_dev_params.get("usb_controller")
-
-            usb_controller_list = self.usb_dev_dict.keys()
-            if (len(usb_controller_list) == 1 and
-                "OLDVERSION_usb0" in usb_controller_list):
-                # old version of qemu-kvm doesn't support bus and port option.
-                bus = None
-                port = None
-            else:
-                bus, port = get_free_usb_port(usb_dev, controller_type)
-
-            cmd = add_usbdevice(help_text, usb_dev, usb_type, controller_type,
-                                bus, port)
-            devices.insert(StrDev('usb-%s' % usb_dev, cmdline=cmd))
+        for usb_name in params.objects("usb_devices"):
+            _ = devices.usb_by_params(usb_name, params.object_params(usb_name))
+            devices.insert(_)
 
         tftp = params.get("tftp")
         if tftp:

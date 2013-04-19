@@ -12,11 +12,25 @@ import re
 # Autotest imports
 from autotest.client.shared import error
 from qemu_monitor import QMPMonitor
+import virt_vm
 
 
 class DeviceError(Exception):
     """ General device exception """
     pass
+
+
+class DeviceInsertError(DeviceError):
+    """ Fail to insert device """
+    def __init__(self, device, reason, vmdev):
+        self.device = device
+        self.reason = reason
+        self.vmdev = vmdev
+
+    def __str__(self):
+        return ("Failed to insert device:\n%s\nBecause:\n%s\nList of VM"
+                "devices:\n%s\n%s" % (self.device.str_long(), self.reason,
+                                      self.vmdev, self.vmdev.str_bus_long()))
 
 
 class JoinedIterators(object):
@@ -265,6 +279,65 @@ class QStringDevice(QBaseDevice):
         except KeyError, details:
             raise KeyError("Param %s required for readconfig is not present in"
                            " %s" % (details, self.str_long()))
+
+
+class QCustomDevice(QBaseDevice):
+    """
+    Representation of the '-$option $param1=$value1,$param2...' qemu object.
+    This representation handles only cmdline and readconfig outputs.
+    """
+    def __init__(self, dev_type, params=None, aobject=None,
+                 parent_bus=None, child_bus=None):
+        """
+        @param dev_type: The desired -$option parameter (device, chardev, ..)
+        """
+        super(QCustomDevice, self).__init__(dev_type, params, aobject,
+                                            parent_bus, child_bus)
+
+    def cmdline(self):
+        """ @return: cmdline command to define this device """
+        out = "-%s " % self.type
+        for key, value in self.params.iteritems():
+            out += "%s=%s," % (key, value)
+        if out[-1] == ',':
+            out = out[:-1]
+        return out
+
+    def readconfig(self):
+        """ @return: readconfig-like config of this device """
+        out = "[%s" % self.type
+        if self.get_qid():
+            out += ' "%s"' % self.get_qid()
+        out += "]\n"
+        for key, value in self.params.iteritems():
+            if key == "id":
+                continue
+            out += '  %s = "%s"\n' % (key, value)
+        return out
+
+
+class QDevice(QCustomDevice):
+    """
+    Representation of the '-device' qemu object. It supports all methods.
+    @note: Use driver format in full form - 'driver' = '...' (usb-ehci, ide-hd)
+    """
+    def __init__(self, params=None, aobject=None, parent_bus=None,
+                 child_bus=None):
+        super(QDevice, self).__init__("device", params, aobject, parent_bus,
+                                      child_bus)
+
+    def _get_alternative_name(self):
+        """ @return: alternative object name """
+        if self.params.get('driver'):
+            return self.params.get('driver')
+
+    def hotplug_hmp(self):
+        """ @return: the hotplug monitor command """
+        return "device_add %s" % _convert_args(self.params)
+
+    def hotplug_qmp(self):
+        """ @return: the hotplug monitor command """
+        return "device_add", self.params
 
 
 ##############################################################################
@@ -796,6 +869,43 @@ class QPCIBus(QDenseBus):
         super(QPCIBus, self)._update_device_props(device, addr)
 
 
+class QUSBBus(QDenseBus):
+    """
+    USB bus representation. (bus&port, hubs are not supported)
+    """
+    def __init__(self, length, busid, bus_type, aobject=None):
+        """
+        Bus type have to be generalized and parsed from original bus type:
+        (usb-ehci == ehci, ich9-usb-uhci1 == uhci, ...)
+        """
+        # There are various usb devices for the same bus type, use only portion
+        for bus in ('uhci', 'ehci', 'ohci', 'xhci'):
+            if bus in bus_type:
+                bus_type = bus
+                break
+        # Usb ports are counted from 1 so the lenght have to be +1
+        super(QUSBBus, self).__init__('bus', [['port'], [length + 1]], busid,
+                                      bus_type, aobject)
+
+    def _set_first_addr(self, addr_pattern):
+        """ First addr is not 0 but 1 """
+        use_reserved = True
+        if addr_pattern is None:
+            addr_pattern = [None] * len(self.addr_lengths)
+        # set first usable addr
+        last_addr = addr_pattern[:]
+        if None in last_addr:  # Address is not fully specified
+            use_reserved = False    # Use only free address
+            for i in xrange(len(last_addr)):
+                if last_addr[i] is None:
+                    last_addr[i] = 1
+        return last_addr, use_reserved
+
+    def _update_device_props(self, device, addr):
+        """ Always set -drive property, it's mandatory """
+        self._set_device_props(device, addr)
+
+
 ###############################################################################
 # Device container (device representation of VM)
 # This class represents VM by storing all devices and their connections (buses)
@@ -1106,6 +1216,7 @@ class DevContainer(object):
                 bus.remove(device)
             for bus in _added_buses:
                 self.__buses.remove(bus)
+
         err = ""
         _used_buses = []
         _added_buses = []
@@ -1120,12 +1231,12 @@ class DevContainer(object):
                 continue
             buses = self.get_buses(parent_bus)
             if not buses:
+                err += "ParentBus(%s): No matching bus\n" % parent_bus
                 if force:
-                    err += "ParentBus(%s): No matching bus\n" % parent_bus
                     continue
                 else:
                     clean()
-                    raise DeviceError(device, err, self)
+                    raise DeviceInsertError(device, err, self)
             bus_returns = []
             for bus in buses:   # 2
                 bus_returns.append(bus.insert(device, self.strict_mode, False))
@@ -1136,7 +1247,8 @@ class DevContainer(object):
                 continue
             elif not force:
                 clean()
-                raise DeviceError(device, err, self)
+                raise DeviceInsertError(device, "ParentBus(%s): No free "
+                                        "matching bus\n" % parent_bus, self)
             if None in bus_returns:  # 3a
                 _err = buses[bus_returns.index(None)].insert(device,
                                                     self.strict_mode, True)
@@ -1158,11 +1270,10 @@ class DevContainer(object):
             _added_buses.append(bus)
         # 5
         if device.get_qid() and self.get_by_qid(device.get_qid()):
+            err += "Devices qid %s already used in VM\n" % device.get_qid()
             if not force:
                 clean()
-                raise DeviceError(device, err, self)
-            else:
-                err += "Devices qid %s already used in VM\n" % device.get_qid()
+                raise DeviceInsertError(device, err, self)
         device.set_aid(self.__create_unique_aid(device.get_qid()))
         self.__devices.append(device)
         if err:
@@ -1327,3 +1438,111 @@ class DevContainer(object):
                 devices = machine_i440FX(False)
         return devices
 
+    # USB Controller related methods
+    def usbc_by_variables(self, usb_id, usb_type, multifunction=False,
+                          masterbus=None, firstport=None, freq=None,
+                          max_ports=None, pci_addr=None):
+        """
+        Creates usb-controller devices by variables
+        @param usb_id: Usb bus name
+        @param usb_type: Usb bus type
+        @param multifunction: Is the bus multifunction
+        @param masterbus: Is this bus master?
+        @param firstport: Offset of the first port
+        @param freq: Bus frequency
+        @param max_ports: How many ports this bus have [6]
+        @param pci_addr: Desired PCI address
+        @return: List of QDev devices
+        """
+        if max_ports is None:
+            max_ports = 6
+        if not self.has_option("device"):
+            # Okay, for the archaic qemu which has not device parameter,
+            # just return a usb uhci controller.
+            # If choose this kind of usb controller, it has no name/id,
+            # and only can be created once, so give it a special name.
+            usb = QStringDevice("oldusb", cmdline="-usb",
+                                child_bus=QUSBBus(2, 'usb.0', 'uhci', usb_id))
+            return [usb]
+
+        if not self.has_device(usb_type):
+            raise virt_vm.VMDeviceNotSupportedError(self.vmname,
+                                                    usb_type)
+
+        usb = QDevice({}, usb_id, {'type': 'pci'},
+                      QUSBBus(max_ports, '%s.0' % usb_id, usb_type, usb_id))
+        new_usbs = [usb]    # each usb dev might compound of multiple devs
+        # TODO: Add 'bus' property (it was not in the original version)
+        usb.set_param('driver', usb_type)
+        usb.set_param('id', usb_id)
+        usb.set_param('masterbus', masterbus)
+        usb.set_param('multifunction', multifunction)
+        usb.set_param('firstport', firstport)
+        usb.set_param('freq', freq)
+        usb.set_param('addr', pci_addr)
+
+        if usb_type == "ich9-usb-ehci1":
+            # this slot is composed in PCI so it won't go to internal repr
+            usb.parent_bus = ()
+            usb.set_param('addr', '1d.7')
+            usb.set_param('multifunction', 'on')
+            for i in xrange(3):
+                new_usbs.append(QDevice({}, usb_id))
+                new_usbs[-1].set_param('id', '%s.%d' % (usb_id, i))
+                new_usbs[-1].set_param('multifunction', 'on')
+                new_usbs[-1].set_param('masterbus', '%s.0' % usb_id)
+                new_usbs[-1].set_param('driver', 'ich9-usb-uhci%d' % (i + 1))
+                new_usbs[-1].set_param('addr', '1d.%d' % i)
+                new_usbs[-1].set_param('firstport', 2 * i)
+        return new_usbs
+
+    def usbc_by_params(self, usb_name, params):
+        """
+        Wrapper for creating usb bus from autotest usb params.
+        @param usb_name: Name of the usb bus
+        @param params: USB params (params.object_params(usb_name))
+        @return: List of QDev devices
+        """
+        return self.usbc_by_variables(usb_name,
+                                      params.get('usb_type'),
+                                      params.get('multifunction'),
+                                      params.get('masterbus'),
+                                      params.get('firstport'),
+                                      params.get('freq'),
+                                      params.get('max_ports'),
+                                      params.get('pci_addr'))
+
+    # USB Device related methods
+    def usb_by_variables(self, usb_name, usb_type, controller_type):
+        """
+        Creates usb-devices by variables.
+        @param usb_name: usb name
+        @param usb_type: usb type (usb-tablet, usb-serial, ...)
+        @param controller_type: type of the controller (uhci, ehci, xhci, ...)
+        @return: QDev device
+        """
+        if self.has_option('device'):
+            device = QDevice(aobject=usb_name)
+            device.set_param('driver', usb_type)
+            device.set_param('id', 'usb-%s' % usb_name)
+            device.parent_bus += ({'type': controller_type},)
+        else:
+            if "tablet" in usb_type:
+                device = QStringDevice('usb-%s' % usb_name,
+                                       cmdline='-usbdevice %s' % usb_name)
+            else:
+                device = QStringDevice('missing-usb-%s' % usb_name)
+                logging.error("This qemu supports only tablet device; ignoring"
+                              " %s", usb_name)
+        return device
+
+    def usb_by_params(self, usb_name, params):
+        """
+        Wrapper for creating usb devices from autotest params.
+        @param usb_name: Name of the usb
+        @param params: USB device's params
+        @return: QDev device
+        """
+        usb_type = params.get("usb_type")
+        controller_type = params.get("usb_controller")
+        return self.usb_by_variables(usb_name, usb_type, controller_type)
