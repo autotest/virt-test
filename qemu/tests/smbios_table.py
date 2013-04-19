@@ -54,6 +54,7 @@ def run_smbios_table(test, params, env):
     failures = []
     for m_type in support_machine_types:
         params["machine_type"] = m_type
+        params["start_vm"] = "yes"
 
         error.context("Boot the vm using -M option:'-M %s',smbios para:'%s' "
                        % (m_type, smbios), logging.info)

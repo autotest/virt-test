@@ -1,4 +1,4 @@
-import os
+import os, logging, sys
 from virttest import utils_test
 
 

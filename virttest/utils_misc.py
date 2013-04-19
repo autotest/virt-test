@@ -623,9 +623,9 @@ def get_cpu_vendor(cpu_flags=[], verbose=True):
         cpu_flags = get_cpu_flags()
 
     if 'vmx' in cpu_flags:
-        vendor = 'GenuineIntel'
+        vendor = 'intel'
     elif 'svm' in cpu_flags:
-        vendor = 'AuthenticAMD'
+        vendor = 'amd'
     else:
         vendor = 'unknown'
 
