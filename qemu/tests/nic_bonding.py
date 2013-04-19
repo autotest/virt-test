@@ -60,7 +60,7 @@ def run_nic_bonding(test, params, env):
             transfer_thread.start()
             while transfer_thread.isAlive():
                 for vlan, nic in enumerate(vm.virtnet):
-                    device_id = vm.get_peer(vm.netdev_id[vlan])
+                    device_id = nic.device_id
                     if not device_id:
                         raise error.TestError("Could not find peer device for"
                                               " nic device %s" % nic)
