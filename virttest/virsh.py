@@ -1169,17 +1169,11 @@ def attach_disk(name, source, target, extra="", **dargs):
     @param: target: target of disk device
     @param: extra: additional arguments to command
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object
     """
     cmd = "attach-disk --domain %s --source %s --target %s %s"\
            % (name, source, target, extra)
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError:
-        logging.error("Attaching disk to VM %s failed." % name)
-        return False
+    return command(cmd, **dargs)
 
 
 def detach_disk(name, target, extra="", **dargs):
@@ -1189,16 +1183,10 @@ def detach_disk(name, target, extra="", **dargs):
     @param: name: name of guest
     @param: target: target of disk device
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object 
     """
     cmd = "detach-disk --domain %s --target %s %s" % (name, target, extra)
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError:
-        logging.error("Detaching disk from VM %s failed." % name)
-        return False
+    return command(cmd, **dargs)
 
 
 def attach_interface(name, option="", **dargs):
