@@ -1472,6 +1472,145 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
         logging.error("Failed to create pool: %s.", detail)
         return False
 
+def pool_list(option="", extra="", **dargs):
+    """
+    Prints the pool information of Host
+
+    @param: option: options given to command
+    --all - gives all pool details, including inactive
+    --inactive - gives only inactive pool details
+    --details - Gives the complete details about the pools
+    @param: extra: to provide extra options(to enter invalid options)
+    """
+
+    cmd = "pool-list %s %s" % (option, extra)
+    return command(cmd, **dargs)
+
+
+def pool_define_as(name, pool_type, target, extra="", **dargs):
+    """
+    Define the pool from the arguments
+
+    @param: name: Name of the pool to be defined
+    @param: typ: Type of the pool to be defined
+    dir - file system directory
+    disk - Physical Disk Device
+    fs - Pre-formatted Block Device
+    netfs - Network Exported Directory
+    iscsi - iSCSI Target
+    logical - LVM Volume Group
+    mpath - Multipath Device Enumerater
+    scsi - SCSI Host Adapter
+    @param: target: libvirt uri to send guest to
+    @param: extra: Free-form string of options
+    @param: dargs: standardized virsh function API keywords
+    @return: True if pool define command was successful
+    """
+
+    if not name:
+        logging.error("Please give a pool name")
+        return False
+
+    types = [ 'dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical' ]
+
+    if pool_type and pool_type not in types:
+        logging.error("Only support pool types: %s." % types)
+    elif not pool_type:
+        pool_type = types[0]
+
+    logging.info("Define %s type pool %s" % (pool_type, name))
+    cmd = "pool-define-as --name %s --type %s --target %s %s" \
+          % (name, pool_type, target, extra)
+    dargs['ignore_status'] = False
+    return command(cmd, **dargs)
+
+
+def pool_start(name, extra="", **dargs):
+    """
+    Start the defined pool
+    @param: name: Name of the pool to be started
+    @param: extra: Free-form string of options
+    @param: dargs: standardized virsh function API keywords
+    @return: True if pool start command was successful
+    """
+
+    cmd = "pool-start %s %s" % (name, extra)
+    return command(cmd, **dargs)
+
+
+def pool_autostart(name, extra="", **dargs):
+    """
+    Mark for autostart of a pool
+    @param: name: Name of the pool to be mark for autostart
+    @param: extra: Free-form string of options
+    @param: dargs: standardized virsh function API keywords
+    @return: True if pool autostart command was successful
+    """
+
+    cmd = "pool-autostart %s %s" % (name, extra)
+
+    dargs['ignore_status'] = False
+    return command(cmd, **dargs)
+
+
+def pool_undefine(name, extra="", **dargs):
+    """
+    Undefine the given pool
+
+    @param: name: Name of the pool to be undefined
+    @param: extra: Free-form string of options
+    @param: dargs: standardized virsh function API keywords
+    @return: True if pool undefine command was successful
+    """
+
+    cmd = "pool-undefine %s %s" % (name, extra)
+    return command(cmd, **dargs)
+
+
+def vol_create_as(vol_name, pool_name, capacity, allocation, frmt, \
+                      extra="", **dargs):
+    """
+    To create the volumes on different available pool
+
+    @param: name: Name of the volume to be created
+    @param: pool_name: Name of the pool to be used
+    @param: capacity: Size of the volume
+    @param: allocaltion: Size of the volume to be pre-allocated
+    @param: frmt: volume formats(e.g. raw, qed, qcow2)
+    @param: extra: Free-form string of options
+    @param: dargs: standardized virsh function API keywords
+    @return: True if pool undefine command was successful
+    """
+
+    cmd = "vol-create-as --pool %s  %s --capacity %s" % (pool_name, vol_name, capacity)
+
+    if allocation:
+        cmd += " --allocation %s" % (allocation)
+    if format:
+        cmd += " --format %s" % (frmt)
+    if extra:
+        cmd += " %s" % (extra)
+
+    return command(cmd, **dargs)
+
+
+def vol_list(pool_name, extra="", **dargs):
+    """
+    List the volumes for a given pool
+    """
+
+    cmd = "vol-list %s %s" % (pool_name, extra)
+    return command(cmd, **dargs)
+
+
+def vol_delete(vol_name, pool_name, extra="", **dargs):
+    """
+    Delete a given volume
+    """
+
+    cmd = "vol-delete %s %s %s" % (vol_name, pool_name, extra)
+    return command(cmd, **dargs)
+
 
 def capabilities(option='', **dargs):
     """
