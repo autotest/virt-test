@@ -301,3 +301,29 @@ class VMXML(VMXMLBase):
 
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)
+
+    def get_net_all(self):
+        """
+        Return VM's net from XML definition, None if not set
+        """
+        xmltreefile = self.dict_get('xml')
+        net_nodes = xmltreefile.find('devices').findall('interface')
+        nets = {}
+        for node in net_nodes:
+            dev = node.find('target').get('dev')
+            nets[dev] = node
+        return nets
+
+
+    @staticmethod
+    def get_net_dev(vm_name):
+        """
+        Get net device of a defined VM's nets.
+
+        @param: vm_name: Name of defined vm.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        nets = vmxml.get_net_all()
+        if nets != None:
+            return nets.keys()
+        return None

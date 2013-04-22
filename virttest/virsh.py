@@ -1826,3 +1826,36 @@ def ttyconsole(name, **dargs):
     @return: CmdResult instance
     """
     return command("ttyconsole %s" % name, **dargs)
+
+def domif_setlink(name, interface, state, options, **dargs):
+    """
+    Set network interface stats for a running domain.
+
+    @param: name: Name of domain
+    @param: interface: interface device
+    @param: state: new state of the device  up or down
+    @param: options: command options.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    cmd = "domif-setlink %s %s %s " % (name, interface, state)
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
+
+def domif_getlink(name, interface, options, **dargs):
+    """
+    Get network interface stats for a running domain.
+
+    @param: name: Name of domain
+    @param: interface: interface device
+    @param: options: command options.
+    @param: dargs: standardized virsh function API keywords
+    @return: domif state
+    """
+    cmd = "domif-getlink %s %s " % (name, interface)
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
