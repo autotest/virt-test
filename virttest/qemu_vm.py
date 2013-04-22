@@ -2166,6 +2166,10 @@ class VM(virt_vm.BaseVM):
                           self.process.get_pid())
 
         finally:
+            for nic in self.virtnet:
+                if nic.nettype == 'macvtap':
+                    tap = utils_net.Macvtap(nic.ifname)
+                    tap.delete()
             self._cleanup(free_mac_addresses)
 
 

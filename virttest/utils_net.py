@@ -908,6 +908,7 @@ def add_to_bridge(ifname, brname, ovs=None):
         ovs.add_port(brname, ifname)
 
 
+
 @__init_openvswitch
 def del_from_bridge(ifname, brname, ovs=None):
     """
