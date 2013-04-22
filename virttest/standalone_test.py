@@ -2,7 +2,7 @@ import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage, cartesian_config, arch
+import storage, cartesian_config, arch, funcatexit
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -197,8 +197,14 @@ class Test(object):
                         finally:
                             env.save()
                     test_passed = True
+                    error_message = funcatexit.run_exitfuncs(env, t_type)
+                    if error_message:
+                        logging.error(error_message)
 
                 except Exception, e:
+                    error_message = funcatexit.run_exitfuncs(env, t_type)
+                    if error_message:
+                        logging.error(error_message)
                     try:
                         env_process.postprocess_on_error(self, params, env)
                     finally:
