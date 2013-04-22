@@ -26,7 +26,7 @@ def run_numa_opts(test, params, env):
         params["smp"] = smp_override
 
     # we start the VM manually because of the mem/smp workaround above:
-    vm = env.get_vm(params.get("main_vm"))
+    vm = env.get_vm(params["main_vm"])
     vm.create(params=params)
 
     numa = vm.monitors[0].info_numa()

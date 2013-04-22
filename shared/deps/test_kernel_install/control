@@ -1,6 +1,6 @@
 AUTHOR = 'ypu@redhat.com'
 TIME = 'LONG'
-NAME = 'Kernel install'
+NAME = 'Kernel install (virt-tests)'
 TEST_TYPE = 'client'
 TEST_CLASS = 'Kernel'
 TEST_CATEGORY = 'Functional'

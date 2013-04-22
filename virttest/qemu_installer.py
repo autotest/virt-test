@@ -24,8 +24,8 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
     # We'll look for one of these binaries when linking the QEMU binary
     # to the test directory
     #
-    ACCEPTABLE_QEMU_BIN_NAMES = ['qemu-kvm',
-                                 'qemu-system-x86_64']
+    qemu_system = 'qemu-system-' + utils.system_output('uname -i')
+    ACCEPTABLE_QEMU_BIN_NAMES = ['qemu-kvm', qemu_system]
 
     #
     # The default names for the binaries

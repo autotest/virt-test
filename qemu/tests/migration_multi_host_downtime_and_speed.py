@@ -29,7 +29,7 @@ def run_migration_multi_host_downtime_and_speed(test, params, env):
             self.vm_mem = int(params.get("mem", "512"))
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            self.vms = params.get("vms").split()
+            self.vms = params["vms"].split()
 
             self.sub_type = self.params.get("sub_type", None)
             self.max_downtime = int(self.params.get("max_mig_downtime", "10"))

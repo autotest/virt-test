@@ -94,7 +94,7 @@ def run_cpu_hotplug(test, params, env):
     control_path = os.path.join(test.virtdir, "autotest_control",
                                 "cpu_hotplug.control")
 
-    timeout = int(params.get("cpu_hotplug_timeout"), 300)
+    timeout = int(params.get("cpu_hotplug_timeout", 300))
     error.context("running cpu_hotplug autotest after cpu addition")
     utils_test.run_autotest(vm, session, control_path, timeout,
                                  test.outputdir, params)

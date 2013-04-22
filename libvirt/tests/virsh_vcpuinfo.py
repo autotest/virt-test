@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import virsh, remote, libvirt_vm
+from virttest import virsh, libvirt_vm
 
 def run_virsh_vcpuinfo(test, params, env):
     """
@@ -29,29 +29,37 @@ def run_virsh_vcpuinfo(test, params, env):
         """
         Test remote case.
         """
+
         remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
         remote_pwd = params.get("remote_pwd", None)
-        local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
-        if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
-            raise error.TestNAError("Remote test defaults not changed")
+        # Verify vm.connect_uri was modified from the default for this test.
+        if not virsh.VirshConnectBack.kosher_args(remote_ip, vm.connect_uri):
+            raise error.TestNAError("The connect_uri parameter '%s' does "
+                                    "not point at fully-qualified host "
+                                    "from perspective of remote support "
+                                    "system at '%s'." % (vm.connect_uri,
+                                                         remote_ip))
+
         status = 0
         output = ""
         err = ""
         try:
-            remote_uri = libvirt_vm.complete_uri(local_ip)
-            session = remote.remote_login("ssh", remote_ip, "22", "root",
-                                          remote_pwd, "#")
-            session.cmd_output('LANG=C')
-            command = "virsh -c %s vcpuinfo %s" % (remote_uri, vm_name)
-            status, output = session.cmd_status_output(command,
-                                                       internal_timeout=5)
-            session.close()
+            vcback = virsh.VirshConnectBack(remote_ip=remote_ip,
+                                            remote_pwd=remote_pwd,
+                                            uri=vm.connect_uri,
+                                            debug=True,
+                                            ignore_status=True)
+            cmdresult = vcback.vcpuinfo(vm_name)
+            status = cmdresult.exit_status
+            output = cmdresult.stdout
+            vcback.close_session()
             if status != 0:
                 err = output
         except error.CmdError:
             status = 1
             output = ""
             err = "remote test failed"
+        # Maintain result format conformance with local test
         return status, output, err
 
 
@@ -67,6 +75,7 @@ def run_virsh_vcpuinfo(test, params, env):
         vm_ref = "%s %s" % (vm_name, params.get("vcpuinfo_extra"))
 
     if vm_ref == "remote":
+        # Keep status_error check conditions (below) simple
         status, output, err = remote_case(params, vm_name)
     else:
         result = virsh.vcpuinfo(vm_ref)

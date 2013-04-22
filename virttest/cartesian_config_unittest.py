@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import unittest, logging, os
 import gzip
 import cartesian_config
@@ -84,8 +85,7 @@ class CartesianConfigTest(unittest.TestCase):
 {'dep': [],
  'name': 'testB.nokvm.unknown_qemu',
  'shortname': 'testB.nokvm.unknown_qemu'},
-]
-            """)
+]""")
 
 
     def testHugeTest1(self):

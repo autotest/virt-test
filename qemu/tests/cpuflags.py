@@ -989,7 +989,7 @@ def run_cpuflags(test, params, env):
             for fdel in flags.host_unsupported_flags:
                 cpuf_model += ",-" + str(fdel)
 
-            smp = int(params.get("smp"))
+            smp = int(params["smp"])
             disable_cpus = map(lambda cpu: int(cpu),
                                         params.get("disable_cpus", "").split())
 

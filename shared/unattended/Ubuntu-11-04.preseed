@@ -6,15 +6,15 @@ d-i console-tools/archs select at
 d-i console-keymaps-at/keymap select us
 
 d-i netcfg/choose_interface select auto
-d-i netcfg/get_hostname string unassigned-hostname
-d-i netcfg/get_domain string unassigned-domain
+d-i netcfg/get_hostname string autotest-ubuntu-guest
+netcfg/get_hostname string virt-tests
 d-i netcfg/wireless_wep string
 
 d-i clock-setup/utc boolean true
 d-i time/zone string US/Eastern
 
 d-i partman-auto/method string regular
-d-i partman-auto/choose_recipe select home
+d-i partman-auto/choose_recipe select atomic
 d-i partman/confirm_write_new_label boolean true
 d-i partman/choose_partition select finish
 d-i partman/confirm boolean true
@@ -25,7 +25,8 @@ d-i passwd/make-user boolean false
 d-i passwd/root-password password 12345678
 d-i passwd/root-password-again password 12345678
 
-d-i apt-setup/use_mirror boolean false
+d-i mirror/http/mirror select us.archive.ubuntu.com
+d-i mirror/udeb/components multiselect main, restricted, universe, multiverse
 
 tasksel tasksel/first multiselect standard
 

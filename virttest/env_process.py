@@ -26,7 +26,8 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
-    base_dir = data_dir.get_data_dir()
+    base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+
     if params.get("storage_type") == "iscsi":
         iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         params["image_name"] = iscsidev.setup()
@@ -44,8 +45,8 @@ def preprocess_image(test, params, image_name):
 
         if create_image:
             image = qemu_storage.QemuImg(params, base_dir, image_name)
-            if not image.create(params):
-                raise error.TestError("Could not create image")
+            image.create(params)
+
 
 def preprocess_vm(test, params, env, name):
     """
@@ -321,7 +322,7 @@ def preprocess(test, params, env):
                 login_cmd,
                 output_func=_update_address_cache,
                 output_params=(env["address_cache"],))
-            remote._remote_login(env["tcpdump"], username, password, prompt)
+            remote.handle_prompts(env["tcpdump"], username, password, prompt)
             env["tcpdump"].sendline(cmd)
         else:
             env["tcpdump"] = aexpect.Tail(
@@ -501,7 +502,7 @@ def postprocess(test, params, env):
                 continue
             try:
                 # Test may be fast, guest could still be booting
-                session = vm.wait_for_login(timeout=120)
+                session = vm.wait_for_login(timeout=vm.LOGIN_WAIT_TIMEOUT)
                 session.close()
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.warn(e)

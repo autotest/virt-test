@@ -911,8 +911,9 @@ class MultihostMigration(object):
 
 
 class MultihostMigrationFd(MultihostMigration):
-    def __init__(self, test, params, env):
-        super(MultihostMigrationFd, self).__init__(test, params, env)
+    def __init__(self, test, params, env, preprocess_env=True):
+        super(MultihostMigrationFd, self).__init__(test, params, env,
+                                                   preprocess_env)
 
     def migrate_vms_src(self, mig_data):
         """
@@ -1071,8 +1072,9 @@ class MultihostMigrationFd(MultihostMigration):
 
 
 class MultihostMigrationExec(MultihostMigration):
-    def __init__(self, test, params, env):
-        super(MultihostMigrationExec, self).__init__(test, params, env)
+    def __init__(self, test, params, env, preprocess_env=True):
+        super(MultihostMigrationExec, self).__init__(test, params, env,
+                                                     preprocess_env)
 
 
     def post_migration(self, vm, cancel_delay, mig_offline, dsthost,
@@ -1869,27 +1871,47 @@ def get_linux_ifname(session, mac_address):
         except IndexError:
             return None
 
+    def iplink_method():
+        try:
+            output = session.cmd("ip link | grep -B1 '%s' -i" % mac_address)
+            return re.findall("\d+:\s+(\w+):\s+.*", output, re.IGNORECASE)[0]
+        except (aexpect.ShellCmdError, IndexError):
+            return None
+
     def sys_method():
         try:
             interfaces = session.cmd('ls --color=never /sys/class/net')
-            interfaces = interfaces.strip()
-            for interface in interfaces.split(" "):
-                if interface:
-                    mac_address_interface = session.cmd("cat "
-                                        "/sys/class/net/%s/address" % interface)
+        except error.CmdError, e:
+            logging.debug("Error listing /sys/class/net: %s" % e)
+            return None
+
+        interfaces = interfaces.strip()
+        for interface in interfaces.split(" "):
+            if interface:
+                try:
+                    i_cmd = "cat /sys/class/net/%s/address" % interface
+                    mac_address_interface = session.cmd(i_cmd)
                     mac_address_interface = mac_address_interface.strip()
                     if mac_address_interface == mac_address:
                         return interface
-        except error.CmdError, e:
-            logging.debug(e)
-            return None
+                except aexpect.ShellCmdError:
+                    pass
+
+        # If after iterating through interfaces (or no interfaces found)
+        # no interface name was found, just return None
+        return None
 
     # Try ifconfig first
     i = ifconfig_method()
     if i is not None:
         return i
 
-    # Then, look on /sys
+    # No luck, try ip link
+    i = iplink_method()
+    if i is not None:
+        return i
+
+    # No luck, look on /sys
     i = sys_method()
     if i is not None:
         return i

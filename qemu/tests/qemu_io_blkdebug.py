@@ -22,10 +22,10 @@ def run_qemu_io_blkdebug(test, params, env):
     tmp_dir = params.get("tmp_dir", "/tmp")
     blkdebug_cfg = utils_misc.get_path(tmp_dir, params.get("blkdebug_cfg",
                                                             "blkdebug.cfg"))
-    err_command = params.get("err_command")
-    err_event = params.get("err_event")
-    errn_list = re.split("\s+", params.get("errn_list").strip())
-    re_std_msg = params.get("re_std_msg")
+    err_command = params["err_command"]
+    err_event = params["err_event"]
+    errn_list = re.split("\s+", params["errn_list"].strip())
+    re_std_msg = params["re_std_msg"]
     test_timeout = int(params.get("test_timeout", "60"))
     pre_err_commands = params.get("pre_err_commands")
     image = params.get("images")
@@ -33,7 +33,7 @@ def run_qemu_io_blkdebug(test, params, env):
 
     error.context("Create image", logging.info)
     image_io = QemuImg(params.object_params(image), test.bindir, image)
-    image_name = image_io.create(params.object_params(image))
+    image_name, _ = image_io.create(params.object_params(image))
 
     template_name =  utils_misc.get_path(test.virtdir, blkdebug_default)
     template = ConfigParser.ConfigParser()

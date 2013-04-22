@@ -17,13 +17,13 @@ def run_unittest(test, params, env):
     """
     unittest_dir = os.path.join(test.builddir, 'unittests')
     if not os.path.isdir(unittest_dir):
-        raise error.TestError("No unittest dir %s available (did you run the "
-                              "build test first?)" % unittest_dir)
+        raise error.TestNAError("No unittest dir %s available (did you run the "
+                                "build test first?)" % unittest_dir)
     os.chdir(unittest_dir)
     unittest_list = glob.glob('*.flat')
     if not unittest_list:
-        raise error.TestError("No unittest files available (did you run the "
-                              "build test first?)")
+        raise error.TestNAError("No unittest files available (did you run the "
+                                "build test first?)")
     logging.debug('Flat file list: %s', unittest_list)
 
     unittest_cfg = os.path.join(unittest_dir, 'unittests.cfg')
@@ -54,7 +54,7 @@ def run_unittest(test, params, env):
 
     timeout = int(params.get('unittest_timeout', 600))
 
-    extra_params_original = params['extra_params']
+    extra_params_original = params.get('extra_params')
 
     for t in test_list:
         logging.info('Running %s', t)
@@ -86,9 +86,11 @@ def run_unittest(test, params, env):
         extra_params = None
         if parser.has_option(t, 'extra_params'):
             extra_params = parser.get(t, 'extra_params')
+            if not params.get('extra_params'):
+                params['extra_params'] = ""
             params['extra_params'] += ' %s' % extra_params
 
-        vm_name = params.get("main_vm")
+        vm_name = params["main_vm"]
         params['kernel'] = os.path.join(unittest_dir, flat_file)
 
         testlog_path = os.path.join(test.debugdir, "%s.log" % t)
@@ -96,14 +98,14 @@ def run_unittest(test, params, env):
         testlog = None
         try:
             try:
-                vm_name = params.get('main_vm')
+                vm_name = params['main_vm']
                 env_process.preprocess_vm(test, params, env, vm_name)
                 vm = env.get_vm(vm_name)
                 vm.create()
                 vm.resume()
                 testlog = vm.get_testlog_filename()
 
-                msg = ("Waiting for unittest %s to complete, timeout %s" %
+                msg = ("Waiting for unittest '%s' to complete, timeout %s" %
                        (t, timeout))
                 if os.path.isfile(testlog):
                     msg += (", output in %s" % testlog)

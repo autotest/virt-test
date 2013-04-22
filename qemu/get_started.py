@@ -6,14 +6,15 @@ Program to help setup kvm test environment
 """
 import os, sys, logging
 import common
-from virttest import utils_misc, data_dir, bootstrap
+from virttest import utils_misc, data_dir, bootstrap, arch
 
 test_name = "qemu"
 test_dir = os.path.dirname(sys.modules[__name__].__file__)
 test_dir = os.path.abspath(test_dir)
 base_dir = data_dir.get_data_dir()
 default_userspace_paths = ["/usr/bin/qemu-kvm", "/usr/bin/qemu-img"]
-check_modules = ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+
+check_modules = arch.get_kvm_module_list()
 online_docs_url = "https://github.com/autotest/virt-test/wiki/GetStarted"
 interactive = True
 

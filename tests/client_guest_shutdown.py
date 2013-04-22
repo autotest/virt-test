@@ -17,7 +17,7 @@ def run_client_guest_shutdown(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment
     """
-    client_vm = env.get_vm(params["client_vm"]) 
+    client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()

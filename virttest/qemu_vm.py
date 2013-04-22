@@ -36,15 +36,7 @@ class VM(virt_vm.BaseVM):
 
     MIGRATION_PROTOS = ['tcp', 'unix', 'exec', 'fd']
 
-    #
-    # By default we inherit all timeouts from the base VM class
-    #
-    LOGIN_TIMEOUT = virt_vm.BaseVM.LOGIN_TIMEOUT
-    LOGIN_WAIT_TIMEOUT = virt_vm.BaseVM.LOGIN_WAIT_TIMEOUT
-    COPY_FILES_TIMEOUT = virt_vm.BaseVM.COPY_FILES_TIMEOUT
-    MIGRATE_TIMEOUT = virt_vm.BaseVM.MIGRATE_TIMEOUT
-    REBOOT_TIMEOUT = virt_vm.BaseVM.REBOOT_TIMEOUT
-    CREATE_TIMEOUT = virt_vm.BaseVM.CREATE_TIMEOUT
+    # By default we inherit all timeouts from the base VM class except...
     CLOSE_SESSION_TIMEOUT = 30
 
     def __init__(self, name, params, root_dir, address_cache, state=None):
@@ -654,7 +646,7 @@ class VM(virt_vm.BaseVM):
             if has_option(help_text, "netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if netdev_extra_params:
-                    cmd += ",%s" % netdev_extra_params
+                    cmd += "%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
             if mode == "tap" and tapfd:
@@ -1161,14 +1153,17 @@ class VM(virt_vm.BaseVM):
                     raise virt_vm.VMError("cfg: drive_bus have to be an "
                                           "integer. (%s)" % image_name)
                 for i in range(len(virtio_scsi_pcis), bus + 1):
-                    hba = params.get("scsi_hba", "virtio-scsi-pci");
+                    hba = params.get("scsi_hba", "virtio-scsi-pci")
                     qemu_cmd += " -device %s,id=virtio_scsi_pci%d" % (hba, i)
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
+
+            base_dir = image_params.get("images_base_dir",
+                                        data_dir.get_data_dir())
 
             shared_dir = os.path.join(self.root_dir, "shared")
             qemu_cmd += add_drive(help_text,
                     storage.get_image_filename(image_params,
-                                               data_dir.get_data_dir()),
+                                               base_dir),
                     image_params.get("drive_index"),
                     image_params.get("drive_format"),
                     image_params.get("drive_cache"),
@@ -1581,7 +1576,7 @@ class VM(virt_vm.BaseVM):
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
-               timeout=CREATE_TIMEOUT, migration_mode=None,
+               timeout=virt_vm.BaseVM.CREATE_TIMEOUT, migration_mode=None,
                migration_exec_cmd=None, migration_fd=None,
                mac_source=None):
         """
@@ -1738,10 +1733,19 @@ class VM(virt_vm.BaseVM):
             # Make qemu command
             try:
                 qemu_command = self.make_create_command()
-            except Exception, create_error:
+            except Exception:
                 for nic in self.virtnet:
                     self._nic_tap_remove_helper(nic)
-                raise create_error
+                # TODO: log_last_traceback is being moved into autotest.
+                # use autotest.client.shared.base_utils when it's completed.
+                if 'log_last_traceback' in utils.__dict__:
+                    utils.log_last_traceback('Fail to create qemu command:')
+                else:
+                    utils_misc.log_last_traceback('Fail to create qemu'
+                                                  'command:')
+                raise virt_vm.VMStartError(self.name, 'Error occured while '
+                                           'executing make_create_command(). '
+                                           'Check the log for traceback.')
 
             # Add migration parameters if required
             if migration_mode == "tcp":
@@ -1768,11 +1772,13 @@ class VM(virt_vm.BaseVM):
                 proxy_helper_cmd =  utils_misc.get_path(root_dir,
                                                         proxy_helper_name)
                 if not proxy_helper_cmd:
-                    raise virt_vm.VMCreateError("Proxy command not specified")
+                    raise virt_vm.VMConfigMissingError(self.name,
+                                                       "9p_proxy_binary")
 
                 p9_export_dir = params.get("9p_export_dir")
                 if not p9_export_dir:
-                    raise virt_vm.VMCreateError("Export dir not specified")
+                    raise virt_vm.VMConfigMissingError(self.name,
+                                                       "9p_export_dir")
 
                 proxy_helper_cmd += " -p " + p9_export_dir
                 proxy_helper_cmd += " -u 0 -g 0"
@@ -1783,14 +1789,15 @@ class VM(virt_vm.BaseVM):
                 logging.info("Running Proxy Helper:\n%s", proxy_helper_cmd)
                 self.process = aexpect.run_bg(proxy_helper_cmd, None,
                                               logging.info,
-                                              "[9p proxy helper]")
+                                              "[9p proxy helper]",
+                                              auto_close=False)
 
-            logging.info("Running qemu command (reformatted):")
-            for item in qemu_command.replace(" -", " \n    -").splitlines():
-                logging.info("%s", item)
+            logging.info("Running qemu command (reformatted):\n%s",
+                    qemu_command.replace(" -", " \\\n    -"))
             self.qemu_command = qemu_command
             self.process = aexpect.run_bg(qemu_command, None,
-                                          logging.info, "[qemu output] ")
+                                          logging.info, "[qemu output] ",
+                                          auto_close=False)
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
@@ -1847,6 +1854,7 @@ class VM(virt_vm.BaseVM):
                         logging.warn(e)
                         time.sleep(1)
                 else:
+                    e = qemu_monitor.MonitorConnectError(monitor_name)
                     self.destroy()
                     raise e
                 # Add this monitor to the list
@@ -2567,7 +2575,7 @@ class VM(virt_vm.BaseVM):
 
 
     @error.context_aware
-    def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
+    def migrate(self, timeout=virt_vm.BaseVM.MIGRATE_TIMEOUT, protocol="tcp",
                 cancel_delay=None, offline=False, stable_check=False,
                 clean=True, save_path="/tmp", dest_host="localhost",
                 remote_port=None, not_wait_for_migration=False,
@@ -2704,7 +2712,10 @@ class VM(virt_vm.BaseVM):
                 uri = "unix:%s" % clone.migration_file
             elif protocol == "exec":
                 if local:
-                    uri = '"exec:nc localhost %s"' % clone.migration_port
+                    if not migration_exec_cmd_src:
+                        uri = '"exec:nc localhost %s"' % clone.migration_port
+                    else:
+                        uri = '"exec:%s"' % (migration_exec_cmd_src)
                 else:
                     uri = '"exec:%s"' % (migration_exec_cmd_src)
             elif protocol == "fd":
@@ -2784,7 +2795,7 @@ class VM(virt_vm.BaseVM):
 
     @error.context_aware
     def reboot(self, session=None, method="shell", nic_index=0,
-               timeout=REBOOT_TIMEOUT):
+               timeout=virt_vm.BaseVM.REBOOT_TIMEOUT):
         """
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.

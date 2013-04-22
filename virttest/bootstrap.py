@@ -1,12 +1,12 @@
 import logging, os, glob, shutil
-from autotest.client.shared import logging_manager
+from autotest.client.shared import logging_manager, error
 from autotest.client import utils
-import utils_misc, data_dir, asset
+import utils_misc, data_dir, asset, cartesian_config
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
 recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
-                        'libvirt': [('virsh',), ('virt-install',)],
+                        'libvirt': [('virsh',), ('virt-install',), ('fakeroot',)],
                         'openvswitch': [],
                         'v2v': [],
                         'libguestfs': [('perl',)]}
@@ -217,17 +217,15 @@ def create_subtests_cfg(t_type):
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
             line = line.strip()
-            if not line.startswith("#"):
-                try:
-                    (key, value) = line.split("=")
-                    if key.strip() == 'type':
-                        value = value.strip()
-                        value = value.split(" ")
-                        for v in value:
-                            if v not in non_dropin_tests:
-                                non_dropin_tests.append(v)
-                except:
-                    pass
+            if line.startswith("type"):
+                cartesian_parser = cartesian_config.Parser()
+                cartesian_parser.parse_string(line)
+                td = cartesian_parser.get_dicts().next()
+                values = td['type'].split(" ")
+                for value in values:
+                    if t_type not in non_dropin_tests:
+                        non_dropin_tests.append(value)
+
         shared_file_name = os.path.basename(shared_file)
         shared_file_name = shared_file_name.split(".")[0]
         if shared_file_name in first_subtest[t_type]:
@@ -250,17 +248,15 @@ def create_subtests_cfg(t_type):
         shared_file_obj = open(shared_file, 'r')
         for line in shared_file_obj.readlines():
             line = line.strip()
-            if not line.startswith("#"):
-                try:
-                    (key, value) = line.split("=")
-                    if key.strip() == 'type':
-                        value = value.strip()
-                        value = value.split(" ")
-                        for v in value:
-                            if v not in non_dropin_tests:
-                                non_dropin_tests.append(v)
-                except:
-                    pass
+            if line.startswith("type"):
+                cartesian_parser = cartesian_config.Parser()
+                cartesian_parser.parse_string(line)
+                td = cartesian_parser.get_dicts().next()
+                values = td['type'].split(" ")
+                for value in values:
+                    if value not in non_dropin_tests:
+                        non_dropin_tests.append(value)
+
         shared_file_name = os.path.basename(shared_file)
         shared_file_name = shared_file_name.split(".")[0]
         if shared_file_name in first_subtest[t_type]:
@@ -308,6 +304,11 @@ def create_subtests_cfg(t_type):
 
 def create_config_files(test_dir, shared_dir, interactive, step=None,
                         force_update=False):
+    def is_file_tracked(fl):
+        tracked_result = utils.run("git ls-files %s --error-unmatch" % fl,
+                                   ignore_status=True, verbose=False)
+        return (tracked_result.exit_status == 0)
+
     if step is None:
         step = 0
     logging.info("")
@@ -316,6 +317,7 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     config_file_list = data_dir.SubdirGlobList(os.path.join(test_dir, "cfg"),
                                                "*.cfg",
                                                config_filter)
+    config_file_list = [cf for cf in config_file_list if is_file_tracked(cf)]
     config_file_list_shared = glob.glob(os.path.join(shared_dir, "cfg",
                                                      "*.cfg"))
 
@@ -323,16 +325,14 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     # subtest.cfg.sample, this file takes precedence over the shared
     # subtest.cfg.sample. So, yank this file from the cfg file list.
 
-    idx = 0
+    config_file_list_shared_keep = []
     for cf in config_file_list_shared:
         basename = os.path.basename(cf)
         target = os.path.join(test_dir, "cfg", basename)
-        if target in config_file_list:
-            config_file_list_shared.pop(idx)
-        idx += 1
+        if target not in config_file_list:
+            config_file_list_shared_keep.append(cf)
 
-    config_file_list += config_file_list_shared
-
+    config_file_list += config_file_list_shared_keep
     for config_file in config_file_list:
         src_file = config_file
         dst_file = os.path.join(test_dir, "cfg", os.path.basename(config_file))
@@ -340,8 +340,8 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
             logging.debug("Creating config file %s from sample", dst_file)
             shutil.copyfile(src_file, dst_file)
         else:
-            diff_result = utils.run("diff -Naur %s %s" % (dst_file, src_file),
-                                    ignore_status=True, verbose=False)
+            diff_cmd = "diff -Naur %s %s" % (dst_file, src_file)
+            diff_result = utils.run(diff_cmd, ignore_status=True, verbose=False)
             if diff_result.exit_status != 0:
                 logging.info("%s result:\n %s",
                               diff_result.command, diff_result.stdout)

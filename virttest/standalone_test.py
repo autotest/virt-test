@@ -2,7 +2,7 @@ import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage, cartesian_config
+import storage, cartesian_config, arch
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -534,7 +534,8 @@ def print_guest_list(options):
     pipe.write("\n\n")
     for params in get_guest_name_parser(options).get_dicts():
         index += 1
-        image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+        base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+        image_name = storage.get_image_filename(params, base_dir)
         shortname = params['shortname']
         if os.path.isfile(image_name):
             out = (bcolors.blue + str(index) + bcolors.end + " " +
@@ -568,8 +569,7 @@ def bootstrap_tests(options):
         test_dir = os.path.abspath(parent_config_dir)
 
     if options.type == 'qemu':
-        check_modules = ["kvm",
-                         "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
+        check_modules = arch.get_kvm_module_list()
     else:
         check_modules = None
     online_docs_url = "https://github.com/autotest/virt-test/wiki"
@@ -655,8 +655,10 @@ def _job_report(job_elapsed_time, n_tests, n_tests_skipped, n_tests_failed):
     logging.info("Job total elapsed time: %.2f s", job_elapsed_time)
 
     n_tests_passed = n_tests - n_tests_skipped - n_tests_failed
-    success_rate = ((float(n_tests_passed) /
-                     float(n_tests - n_tests_skipped)) * 100)
+    success_rate = 0
+    if (n_tests - n_tests_skipped > 0):
+        success_rate = ((float(n_tests_passed) /
+                         float(n_tests - n_tests_skipped)) * 100)
 
     print_header("TESTS PASSED: %d" % n_tests_passed)
     print_header("TESTS FAILED: %d" % n_tests_failed)

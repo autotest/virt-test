@@ -24,11 +24,11 @@ def run_timedrift_with_reboot(test, params, env):
 
     # Collect test parameters:
     # Command to run to get the current time
-    time_command = params.get("time_command")
+    time_command = params["time_command"]
     # Filter which should match a string to be passed to time.strptime()
-    time_filter_re = params.get("time_filter_re")
+    time_filter_re = params["time_filter_re"]
     # Time format for time.strptime()
-    time_format = params.get("time_format")
+    time_format = params["time_format"]
     drift_threshold = float(params.get("drift_threshold", "10"))
     drift_threshold_single = float(params.get("drift_threshold_single", "3"))
     reboot_iterations = int(params.get("reboot_iterations", 1))
@@ -47,7 +47,7 @@ def run_timedrift_with_reboot(test, params, env):
             # Run current iteration
             logging.info("Rebooting: iteration %d of %d...",
                          (i + 1), reboot_iterations)
-            session = vm.reboot(session)
+            session = vm.reboot(session, timeout=timeout)
             # Get time after current iteration
             (ht1_, gt1_) = utils_test.get_time(session, time_command,
                                                    time_filter_re, time_format)

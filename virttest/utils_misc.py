@@ -11,6 +11,37 @@ from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
 import utils_koji, data_dir
 
+import platform
+ARCH = platform.machine()
+
+class UnsupportedCPU(error.TestError):
+    pass
+
+# TODO: remove this import when log_last_traceback is moved to autotest
+import traceback
+
+# TODO: this function is being moved into autotest. For compatibility
+# reasons keep it here too but new code should use the one from base_utils.
+def log_last_traceback(msg=None, log=logging.error):
+    """
+    @warning: This function is being moved into autotest and your code should
+              use autotest.client.shared.base_utils function instead.
+    Writes last traceback into specified log.
+    @param msg: Override the default message. ["Original traceback"]
+    @param log: Where to log the traceback [logging.error]
+    """
+    if not log:
+        log = logging.error
+    if msg:
+        log(msg)
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    if not exc_traceback:
+        log('Requested log_last_traceback but no exception was raised.')
+        return
+    log("Original " +
+        "".join(traceback.format_exception(exc_type, exc_value,
+                                           exc_traceback)))
+
 
 def lock_file(filename, mode=fcntl.LOCK_EX):
     f = open(filename, "w")
@@ -575,6 +606,8 @@ def get_cpu_vendor(cpu_flags=[], verbose=True):
         vendor = 'intel'
     elif 'svm' in cpu_flags:
         vendor = 'amd'
+    elif ARCH == 'ppc64':
+        vendor = 'ibm'
     else:
         vendor = 'unknown'
 
@@ -1129,6 +1162,9 @@ def get_host_cpu_models():
             pattern += r".+(\b%s\b)" % i
         return pattern
 
+    if ARCH == 'ppc64':
+        return 'POWER7'
+
     vendor_re = "vendor_id\s+:\s+(\w+)"
     cpu_flags_re = "flags\s+:\s+([\w\s]+)\n"
 
@@ -1155,6 +1191,7 @@ def get_host_cpu_models():
     vendor = re.findall(vendor_re, cpu_info)[0]
     cpu_flags = re.findall(cpu_flags_re, cpu_info)
 
+    cpu_model = None
     cpu_support_model = []
     if cpu_flags:
         cpu_flags = _cpu_flags_sort(cpu_flags[0])
@@ -1180,8 +1217,28 @@ def extract_qemu_cpu_models(qemu_cpu_help_text):
     @param qemu_cpu_help_text: text produced by <qemu> -cpu '?'
     @return: list of cpu models
     """
-    cpu_re = re.compile("x86\s+\[?([a-zA-Z0-9_-]+)\]?.*\n")
-    return cpu_re.findall(qemu_cpu_help_text)
+    def check_model_list(pattern):
+        cpu_re = re.compile(pattern)
+        qemu_cpu_model_list = cpu_re.findall(qemu_cpu_help_text)
+        if qemu_cpu_model_list:
+            return qemu_cpu_model_list
+        else:
+            return None
+
+    x86_pattern_list = "x86\s+\[?([a-zA-Z0-9_-]+)\]?.*\n"
+    ppc64_pattern_list = "PowerPC\s+\[?([a-zA-Z0-9_-]+\.?[0-9]?)\]?.*\n"
+
+    for pattern_list in [x86_pattern_list, ppc64_pattern_list]:
+        model_list = check_model_list(pattern_list)
+        if model_list is not None:
+            return model_list
+
+    e_msg = ("CPU models reported by qemu -cpu ? not supported by virt-tests. "
+             "Please work with us to add support for it")
+    logging.error(e_msg)
+    for line in qemu_cpu_help_text.splitlines():
+        logging.error(line)
+    raise UnsupportedCPU(e_msg)
 
 
 def get_qemu_cpu_models(qemu_binary):

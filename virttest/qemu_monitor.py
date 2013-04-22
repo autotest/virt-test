@@ -19,7 +19,13 @@ class MonitorError(Exception):
 
 
 class MonitorConnectError(MonitorError):
-    pass
+    def __init__(self, monitor_name):
+        MonitorError.__init__(self)
+        self.monitor_name = monitor_name
+
+
+    def __str__(self):
+        return "Could not connect to monitor '%s'" % self.monitor_name
 
 
 class MonitorSocketError(MonitorError):
@@ -691,6 +697,13 @@ class HumanMonitor(Monitor):
         return self.cmd("getfd %s" % name, fd=fd)
 
 
+    def nmi(self):
+        """
+        Inject a NMI on all guest's CPUs.
+        """
+        return self.cmd("nmi")
+
+
 class QMPMonitor(Monitor):
     """
     Wraps QMP monitor commands.
@@ -1329,3 +1342,10 @@ class QMPMonitor(Monitor):
         """
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
+
+
+    def nmi(self):
+        """
+        Inject a NMI on all guest's CPUs.
+        """
+        return self.cmd("inject-nmi")

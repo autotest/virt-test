@@ -28,7 +28,7 @@ def run_virsh_managedsave(test, params, env):
             raise error.TestFail("virsh list output invalid")
         virsh.start(guest_name)
         if params.get("paused_after_start_vm") == "yes":
-            virsh.resume(guest_name)
+            virsh.resume(guest_name, ignore_status=True)
         #This time vm should be in the list
         ret = virsh.dom_list()
         if  not re.search(guest_name, ret.stdout):

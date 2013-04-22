@@ -121,7 +121,7 @@ def run_cgroup(test, params, env):
         """
         if utils.system("lsmod | grep scsi_debug", ignore_status=True):
             utils.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
-        for name in params.get('vms').split(' '):
+        for name in params['vms'].split(' '):
             disk_name = prefix + name
             utils.system("echo 1 >/sys/bus/pseudo/drivers/scsi_debug/add_host")
             time.sleep(1)   # Wait for device init
@@ -144,7 +144,7 @@ def run_cgroup(test, params, env):
         @param size: Disk size (1M)
         @param prefix: adds prefix to drive name
         """
-        for name in params.get('vms').split(' '):
+        for name in params['vms'].split(' '):
             vm_disks = params.get('images_%s' % name,
                                params.get('images', 'image1'))
             disk_name = prefix + name
@@ -587,7 +587,7 @@ def run_cgroup(test, params, env):
             raise error.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)
-        host_cpus = open('/proc/cpuinfo').read().count('model name')
+        host_cpus = open('/proc/cpuinfo').read().count('processor')
 
         # Create first VM
         params['smp'] = 1
@@ -755,7 +755,7 @@ def run_cgroup(test, params, env):
             raise error.TestError("Incorrect configuration: param "
                         "cgroup_speeds have to be list-like string '[1, 2]'")
 
-        host_cpus = open('/proc/cpuinfo').read().count('model name')
+        host_cpus = open('/proc/cpuinfo').read().count('processor')
         # when smp <= 0 use smp = no_host_cpus
         vm_cpus = int(params.get('smp', 0))     # cpus per VM
         # Use smp = no_host_cpu

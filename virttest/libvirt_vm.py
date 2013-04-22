@@ -71,7 +71,7 @@ def service_libvirtd_control(action):
             return False
     elif action == "status":
         cmd_result = utils.run("service libvirtd status", ignore_status=True)
-        if re.search("pid", cmd_result.stdout.strip()):
+        if re.search("running", cmd_result.stdout.strip()):
             logging.info("Libvirtd service is running")
             return True
         else:
@@ -90,7 +90,10 @@ def normalize_connect_uri(connect_uri):
     if connect_uri == 'default':
         return None
     else: # Validate and canonicalize uri early to catch problems
-        return virsh.canonical_uri(uri=connect_uri)
+        result = virsh.canonical_uri(uri=connect_uri)
+        if not result:
+            raise ValueError("Normalizing connect_uri %s failed" % connect_uri)
+        return result
 
 
 def complete_uri(ip_address):
@@ -140,7 +143,6 @@ class VM(virt_vm.BaseVM):
             self.device_id = []
             self.pci_devices = []
             self.uuid = None
-            self.only_pty = False
 
         self.spice_port = 8000
         self.name = name
@@ -493,8 +495,7 @@ class VM(virt_vm.BaseVM):
             if has_option(help_text, "serial"):
                 return "  --serial file,path=%s --serial pty" % filename
             else:
-                self.only_pty = True
-                return ""
+                return "" # FIXME: Add additional serial ports on old libvirt?
 
         def add_kernel_cmdline(help_text, cmdline):
             return " -append %s" % cmdline
@@ -694,8 +695,12 @@ class VM(virt_vm.BaseVM):
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
+
+            base_dir = image_params.get("images_base_dir",
+                                        data_dir.get_data_dir())
+
             filename = storage.get_image_filename(image_params,
-                                                  data_dir.get_data_dir())
+                                                  base_dir)
             if image_params.get("use_storage_pool") == "yes":
                 filename = None
                 virt_install_cmd += add_drive(help_text,
@@ -802,6 +807,14 @@ class VM(virt_vm.BaseVM):
         virt_install_cmd += " --noautoconsole"
 
         return virt_install_cmd
+
+
+    def setup_serial_console(self):
+        self.serial_console = aexpect.ShellSession(
+            "virsh console %s" % self.name,
+            auto_close=False,
+            output_func=utils_misc.log_line,
+            output_params=("serial-%s.log" % self.name,))
 
 
     @error.context_aware
@@ -944,7 +957,25 @@ class VM(virt_vm.BaseVM):
             logging.info("Running libvirt command (reformatted):")
             for item in install_command.replace(" -", " \n    -").splitlines():
                 logging.info("%s", item)
-            utils.run(install_command, verbose=False)
+            try:
+                utils.run(install_command, verbose=False)
+            except error.CmdError, details:
+                stderr = details.result_obj.stderr.strip()
+                # This is a common newcomer mistake, be more helpful...
+                if stderr.count('IDE CDROM must use'):
+                    testname = params.get('name', "")
+                    if testname.count('unattended_install.cdrom'):
+                        if not testname.count('http_ks'):
+                            raise error.TestNAError(
+                                            "Install command failed:\n%s "
+                                            "\n\nNote: Older versions of "
+                                            "libvirt don't work properly "
+                                            "with kickstart-on-cdrom "
+                                            "install.  Try using the "
+                                            "unattended_install.cdrom.http_ks"
+                                            " instead." % details.result_obj)
+                # some other problem happend, raise normally
+                raise
             # Wait for the domain to be created
             utils_misc.wait_for(func=self.is_alive, timeout=60,
                                 text=("waiting for domain %s to start" %
@@ -953,19 +984,7 @@ class VM(virt_vm.BaseVM):
                                       uri=self.connect_uri).stdout.strip()
 
             # Establish a session with the serial console
-            if self.only_pty == True:
-                self.serial_console = aexpect.ShellSession(
-                    "virsh console %s" % self.name,
-                    auto_close=False,
-                    output_func=utils_misc.log_line,
-                    output_params=("serial-%s.log" % name,))
-            else:
-                self.serial_console = aexpect.ShellSession(
-                    "tail -f %s" % self.get_serial_console_filename(),
-                    auto_close=False,
-                    output_func=utils_misc.log_line,
-                    output_params=("serial-%s.log" % name,))
-
+            self.setup_serial_console()
         finally:
             fcntl.lockf(lockfile, fcntl.LOCK_UN)
             lockfile.close()
@@ -1282,6 +1301,8 @@ class VM(virt_vm.BaseVM):
                                                       "active after start")
             self.uuid = virsh.domuuid(self.name,
                                       uri=self.connect_uri).stdout.strip()
+            # Establish a session with the serial console
+            self.setup_serial_console()
         else:
             raise virt_vm.VMStartError(self.name, "libvirt domain failed "
                                                   "to start")
@@ -1340,7 +1361,16 @@ class VM(virt_vm.BaseVM):
 
 
     def resume(self):
-        return virsh.resume(self.name, uri=self.connect_uri)
+        try:
+            virsh.resume(self.name, ignore_status=False, uri=self.connect_uri)
+            if self.is_alive():
+                logging.debug("Resumed VM %s", self.name)
+                return True
+            else:
+                return False
+        except error.CmdError, detail:
+            logging.error("Resume VM %s failed:\n%s", self.name, detail)
+            return False
 
 
     def save_to_file(self, path):
@@ -1458,3 +1488,12 @@ class VM(virt_vm.BaseVM):
             if details['device'] == "disk":
                 disk_devices[target] = details
         return disk_devices
+
+
+    def get_max_mem(self):
+        """
+        Get vm's maximum memory(kilobytes).
+        """
+        dominfo_dict = self.dominfo()
+        max_mem = dominfo_dict['Max memory'].split(' ')[0] # strip off 'kb'
+        return int(max_mem)

@@ -56,7 +56,7 @@ def run_virtio_console(test, params, env):
         @return: vm object matching the requirements.
         """
         # check the number of running VM's consoles
-        vm = env.get_vm(params.get("main_vm"))
+        vm = env.get_vm(params["main_vm"])
 
         if not vm:
             _no_serialports = -1
@@ -111,8 +111,8 @@ def run_virtio_console(test, params, env):
             else:
                 logging.warning("Recreating VM with more virtio ports.")
             env_process.preprocess_vm(test, params, env,
-                                            params.get("main_vm"))
-            vm = env.get_vm(params.get("main_vm"))
+                                            params["main_vm"])
+            vm = env.get_vm(params["main_vm"])
 
         vm.verify_kernel_crash()
         return vm
@@ -562,9 +562,7 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
         # PREPARE
-        test_params = params.get('virtio_console_params')
-        if not test_params:
-            raise error.TestFail('No virtio_console_params specified')
+        test_params = params['virtio_console_params']
         test_time = int(params.get('virtio_console_test_time', 60))
         no_serialports = 0
         no_consoles = 0
@@ -651,12 +649,20 @@ def run_virtio_console(test, params, env):
 
             err = ""
             end_time = time.time() + test_time
+            no_threads = len(threads)
+            transfered = [0] * no_threads
             while end_time > time.time():
                 if not vm.is_alive():
-                    err += "main_thread(vmdead), "
-                for thread in threads:
-                    if not thread.isAlive():
-                        err += "main_thread(th%s died), " % thread
+                    err += "main(vmdied), "
+                _transfered = []
+                for i in xrange(no_threads):
+                    if not threads[i].isAlive():
+                        err += "main(th%s died), " % threads[i]
+                    _transfered.append(threads[i].idx)
+                if (_transfered == transfered and
+                            transfered != [0] * no_threads):
+                    err += "main(no_data), "
+                transfered = _transfered
                 if err:
                     logging.error("Error occured while executing loopback "
                                   "(%d out of %ds)",
@@ -676,7 +682,7 @@ def run_virtio_console(test, params, env):
                 vm.destroy()
                 break
             if threads[0].ret_code:
-                err += "%s, " % thread
+                err += "%s, " % threads[0]
             tmp = "%d data sent; " % threads[0].idx
             for thread in threads[1:]:
                 logging.debug('Joining %s', thread)
@@ -698,6 +704,7 @@ def run_virtio_console(test, params, env):
 
             for thread in threads:
                 if thread.isAlive():
+                    vm.destroy()
                     del exit_event
                     del threads[:]
                     raise error.TestError("Not all threads finished.")
@@ -807,6 +814,7 @@ def run_virtio_console(test, params, env):
                    sufficient, we take it as the initial data loss is over.
                    Than we set the allowed loss to 0.
             """
+            set_s4_cmd = params['set_s4_cmd']
             _loss = threads[1].sendidx
             _count = threads[1].idx
             # Prepare, hibernate and wake the machine
@@ -815,7 +823,7 @@ def run_virtio_console(test, params, env):
             oldport = vm.virtio_ports[0]
             portslen = len(vm.virtio_ports)
             vm.wait_for_login().sendline(set_s4_cmd)
-            suspend_timeout = 240 + int(params.get("smp")) * 60
+            suspend_timeout = 240 + int(params.get("smp", 1)) * 60
             if not utils_misc.wait_for(vm.is_dead, suspend_timeout, 2, 2):
                 raise error.TestFail("VM refuses to go down. Suspend failed.")
             time.sleep(intr_time)
@@ -869,7 +877,7 @@ def run_virtio_console(test, params, env):
         test_time = max(float(params.get('virtio_console_test_time', 10)), 1)
         intr_time = float(params.get('virtio_console_intr_time', 0))
         no_repeats = int(params.get('virtio_console_no_repeats', 1))
-        interruption = params.get('virtio_console_interruption')
+        interruption = params['virtio_console_interruption']
         is_serialport = (params.get('virtio_console_params') == 'serialport')
         buflen = int(params.get('virtio_console_buflen', 1))
         if is_serialport:
@@ -935,17 +943,14 @@ def run_virtio_console(test, params, env):
             interruption = _s3
             acceptable_loss = 2000
             session = vm.wait_for_login()
-            ret = session.cmd_status(params.get("check_s3_support_cmd"))
-            if ret:
+            set_s3_cmd = params['set_s3_cmd']
+            if session.cmd_status(params["check_s3_support_cmd"]):
                 raise error.TestNAError("Suspend to mem (S3) not supported.")
-            set_s3_cmd = params.get('set_s3_cmd')
         elif interruption == 's4':
             interruption = _s4
             session = vm.wait_for_login()
-            ret = session.cmd_status(params.get("check_s4_support_cmd"))
-            if ret:
+            if session.cmd_status(params["check_s4_support_cmd"]):
                 raise error.TestNAError("Suspend to disk (S4) not supported.")
-            set_s4_cmd = params.get('set_s4_cmd')
             acceptable_loss = 99999999      # loss is set in S4 rutine
             send_resume_ev = threading.Event()
             recv_resume_ev = threading.Event()
@@ -1018,7 +1023,13 @@ def run_virtio_console(test, params, env):
         error.context("Stopping loopback", logging.info)
         exit_event.set()
         workaround_unfinished_threads = False
-        for thread in threads:
+        threads[0].join(5)
+        if threads[0].isAlive():
+            workaround_unfinished_threads = True
+            logging.error('Send thread stuck, destroing the VM and '
+                    'stopping loopback test to prevent autotest freeze.')
+            vm.destroy()
+        for thread in threads[1:]:
             logging.debug('Joining %s', thread)
             thread.join(5)
             if thread.isAlive():
@@ -1047,6 +1058,7 @@ def run_virtio_console(test, params, env):
 
         for thread in threads:
             if thread.isAlive():
+                vm.destroy()
                 del exit_event
                 del threads[:]
                 raise error.TestError("Not all threads finished.")
@@ -1056,7 +1068,7 @@ def run_virtio_console(test, params, env):
         del exit_event
         del threads[:]
 
-        cleanup(env.get_vm(params.get("main_vm")), guest_worker)
+        cleanup(env.get_vm(params["main_vm"]), guest_worker)
 
     @error.context_aware
     def _process_stats(stats, scale=1.0):
@@ -1085,9 +1097,7 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_console_test_time - default test_duration time
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        test_params = params.get('virtio_console_params')
-        if not test_params:
-            raise error.TestFail('No virtio_console_params specified')
+        test_params = params['virtio_console_params']
         test_time = int(params.get('virtio_console_test_time', 60))
         no_serialports = 0
         no_consoles = 0
@@ -1327,7 +1337,7 @@ def run_virtio_console(test, params, env):
                 threads[i].migrate_event.set()
 
             # OS is sometime a bit dizzy. DL=30
-            #guest_worker.reconnect(vm, timeout=30)
+            # guest_worker.reconnect(vm, timeout=30)
 
             i = 0
             while i < 6:
@@ -1371,7 +1381,9 @@ def run_virtio_console(test, params, env):
         threads[0].join(5)
         if threads[0].isAlive():
             workaround_unfinished_threads = True
-            logging.debug("Unable to destroy the thread %s", threads[0])
+            logging.error('Send thread stuck, destroing the VM and '
+                    'stopping loopback test to prevent autotest freeze.')
+            vm.destroy()
         tmp = "%d data sent; " % threads[0].idx
         err = ""
 
@@ -1395,6 +1407,7 @@ def run_virtio_console(test, params, env):
 
         for thread in threads:
             if thread.isAlive():
+                vm.destroy()
                 del exit_event
                 del threads[:]
                 raise error.TestError("Not all threads finished.")
@@ -1625,7 +1638,7 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_console_params - which type of virtio port to test
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        vm = env.get_vm(params.get("main_vm"))
+        vm = env.get_vm(params["main_vm"])
         use_serialport = params.get('virtio_console_params') == "serialport"
         if use_serialport:
             vm = get_vm_with_ports(no_serialports=1, strict=True)
@@ -1781,7 +1794,7 @@ def run_virtio_console(test, params, env):
         try:
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
-                      timeout=360)
+                      timeout=720)
         except Exception, details:
             for proces in process:
                 proces.terminate()
@@ -1825,7 +1838,7 @@ def run_virtio_console(test, params, env):
         try:
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
-                      timeout=360)
+                      timeout=720)
         except Exception, details:
             raise error.TestFail("Fail to reboot VM:\n%s" % details)
 
@@ -1839,7 +1852,7 @@ def run_virtio_console(test, params, env):
         Start VM and check if it failed with the right error message.
         @param cfg: virtio_console_params - Expected error message.
         """
-        exp_error_message = params.get('virtio_console_params')
+        exp_error_message = params['virtio_console_params']
         env_process.preprocess(test, params, env)
         vm = env.get_vm(params["main_vm"])
         try:
@@ -1864,7 +1877,7 @@ def run_virtio_console(test, params, env):
         when you use the old image with a new guest_worker version.
         @note: The script name might differ!
         """
-        vm = env.get_vm(params.get("main_vm"))
+        vm = env.get_vm(params["main_vm"])
         session = vm.wait_for_login()
         out = session.cmd_output("echo on")
         if "on" in out:     # Linux

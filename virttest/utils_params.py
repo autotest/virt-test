@@ -1,10 +1,25 @@
 import UserDict
+from autotest.client.shared import error
+
+
+class ParamNotFound(error.TestNAError):
+    pass
 
 
 class Params(UserDict.IterableUserDict):
     """
     A dict-like object passed to every test.
     """
+    def __getitem__(self, key):
+        """ overrides the error messages of missing params[$key] """
+        try:
+            return UserDict.IterableUserDict.__getitem__(self, key)
+        except KeyError:
+            raise ParamNotFound("Mandatory parameter '%s' is missing. "
+                                "Check your cfg files for typos/mistakes" %
+                                key)
+
+
     def objects(self, key):
         """
         Return the names of objects defined using a given key.

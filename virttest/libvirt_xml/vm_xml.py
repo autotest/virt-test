@@ -5,7 +5,7 @@ http://libvirt.org/formatdomain.html
 
 import logging
 from autotest.client.shared import error
-from virttest import virsh
+from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 
 class VMXMLBase(base.LibvirtXMLBase):
@@ -33,7 +33,8 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
-                                                 'uuid', 'vcpu')
+                                                 'uuid', 'vcpu', 'max_mem',
+                                                 'current_mem')
 
 
     def __init__(self, virsh_instance=virsh):
@@ -58,6 +59,16 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='vcpu')
+        accessors.XMLElementInt(property_name="max_mem",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='memory')
+        accessors.XMLElementInt(property_name="current_mem",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='currentMemory')
         super(VMXMLBase, self).__init__(virsh_instance)
 
 
@@ -196,6 +207,83 @@ class VMXML(VMXMLBase):
             return disks.keys()
         return None
 
+
+    def get_numa_params(self, vm_name):
+        """
+        Return VM's numa setting from XML definition
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        xmltreefile = vmxml.dict_get('xml')
+        numa_params = {}
+        try:
+            numa = xmltreefile.find('numatune')
+            try:
+                numa_params['mode'] = numa.find('memory').get('mode')
+                numa_params['nodeset'] = numa.find('memory').get('nodeset')
+            except:
+                logging.error("Can't find <memory> element")
+        except:
+            logging.error("Can't find <numatune> element")
+
+        return numa_params
+
+
+    def get_primary_serial(self):
+        """
+        Get a dict with primary serial features.
+        """
+        xmltreefile = self.dict_get('xml')
+        primary_serial = xmltreefile.find('devices').find('serial')
+        serial_features = {}
+        serial_type = primary_serial.get('type')
+        serial_port = primary_serial.find('target').get('port')
+        # Support node here for more features
+        serial_features['serial'] = primary_serial
+        # Necessary features
+        serial_features['type'] = serial_type
+        serial_features['port'] = serial_port
+        return serial_features
+
+
+    @staticmethod
+    def set_primary_serial(vm_name, type, port, path=None):
+        """
+        Set primary serial's features of vm_name.
+
+        @param vm_name: Name of defined vm to set primary serial.
+        @param type: the type of serial:pty,file...
+        @param port: the port of serial
+        @param path: the path of serial, it is not necessary for pty
+        # TODO: More features
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        xmltreefile = vmxml.dict_get('xml')
+        try:
+            serial = vmxml.get_primary_serial()['serial']
+        except AttributeError:
+            logging.debug("Can not find any serial, now create one.")
+            # Create serial tree, default is pty
+            serial = xml_utils.ElementTree.SubElement(
+                                xmltreefile.find('devices'),
+                                'serial', {'type': 'pty'})
+            # Create elements of serial target, default port is 0
+            xml_utils.ElementTree.SubElement(serial, 'target', {'port': '0'})
+
+        serial.set('type', type)
+        serial.find('target').set('port', port)
+        # path may not be exist.
+        if path is not None:
+            serial.find('source').set('path', path)
+        else:
+            try:
+                source = serial.find('source')
+                serial.remove(source)
+            except AssertionError:
+                pass # Element not found, already removed.
+        xmltreefile.write()
+        vmxml.set_xml(xmltreefile.name)
+        vmxml.undefine()
+        vmxml.define()
 
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)

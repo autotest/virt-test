@@ -27,7 +27,6 @@ def run_nmi_bsod_catch(test, params, env):
     nmi_cmd = params.get("nmi_cmd")
     del_dump_cmd = params.get("del_dump_cmd")
     analyze_cmd = params.get("analyze_cmd")
-    dump_path = params.get("dump_path")
 
     if del_dump_cmd:
         session.sendline(del_dump_cmd)
@@ -75,7 +74,7 @@ def run_nmi_bsod_catch(test, params, env):
         if analyze_cmd:
             error.context("Analyze dump file in guest")
             try:
-                vm.copy_files_from(dump_path, ".", timeout=100)
+                vm.copy_files_from(params["dump_path"], ".", timeout=100)
             except Exception:
                 pass
             s, o = session.cmd_status_output(analyze_cmd, timeout=1200)
