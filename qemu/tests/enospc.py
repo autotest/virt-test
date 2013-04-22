@@ -1,7 +1,7 @@
 import logging, time, re, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import virt_vm, utils_misc, qemu_storage
+from virttest import virt_vm, utils_misc, qemu_storage, data_dir
 
 
 class EnospcConfig(object):
@@ -25,7 +25,8 @@ class EnospcConfig(object):
         self.vgtest_name = params["vgtest_name"]
         self.lvtest_name = params["lvtest_name"]
         self.lvtest_device = "/dev/%s/%s" % (self.vgtest_name, self.lvtest_name)
-        image_dir = os.path.dirname(params["image_name"])
+        image_dir = os.path.join(data_dir.get_data_dir(),
+                                 os.path.dirname(params["image_name"]))
         self.qcow_file_path = os.path.join(image_dir, 'enospc.qcow2')
         try:
             getattr(self, 'loopback')
