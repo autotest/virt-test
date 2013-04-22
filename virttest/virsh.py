@@ -2020,7 +2020,6 @@ def ttyconsole(name, **dargs):
     """
     return command("ttyconsole %s" % name, **dargs)
 
-
 def nodedev_dumpxml(name, options="", to_file=None, **dargs):
     """
     Do dumpxml for node device.
@@ -2040,7 +2039,6 @@ def nodedev_dumpxml(name, options="", to_file=None, **dargs):
 
     return result
 
-
 def connect(connect_uri="", options="", **dargs):
     """
     Run a connect command to the uri.
@@ -2050,3 +2048,36 @@ def connect(connect_uri="", options="", **dargs):
     @return: CmdResult object.
     """
     return command("connect %s %s" % (connect_uri, options), **dargs)
+
+def domif_setlink(name, interface, state, options, **dargs):
+    """
+    Set network interface stats for a running domain.
+
+    @param: name: Name of domain
+    @param: interface: interface device
+    @param: state: new state of the device  up or down
+    @param: options: command options.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    cmd = "domif-setlink %s %s %s " % (name, interface, state)
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
+
+def domif_getlink(name, interface, options, **dargs):
+    """
+    Get network interface stats for a running domain.
+
+    @param: name: Name of domain
+    @param: interface: interface device
+    @param: options: command options.
+    @param: dargs: standardized virsh function API keywords
+    @return: domif state
+    """
+    cmd = "domif-getlink %s %s " % (name, interface)
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
