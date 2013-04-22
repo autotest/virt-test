@@ -48,7 +48,7 @@ def run_time_manage(test, params, env):
     curr_time = []
     timedrift = []
     totaldrift = []
-    vmnames =["vm1"]
+    vmnames =["virt-tests-vm1"]
 
     # Run some load on the host
     logging.info("Starting load on host.")
@@ -60,7 +60,7 @@ def run_time_manage(test, params, env):
     try:
         while num <= int(params["max_vms"]):
             # Clone vm according to the first one
-            vm_name = "vm%d" % num
+            vm_name = "virt-tests-vm%d" % num
             vmnames.append(vm_name)
             vm_params = vm.params.copy()
             curr_vm = vm.clone(vm_name, vm_params)
@@ -80,7 +80,7 @@ def run_time_manage(test, params, env):
         while itr <= int(params["max_itrs"]):
             for vmid,se in enumerate(sessions):
                 # Get the respective vm object
-                vmname = "vm%d" % (vmid +1)
+                vmname = "virt-tests-vm%d" % (vmid +1)
                 vm = env.get_vm(vmname)
                 # Run current iteration
                 logging.info("Rebooting:vm%d iteration %d " % ((vmid + 1), itr))
