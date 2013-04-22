@@ -863,8 +863,7 @@ class VM(virt_vm.BaseVM):
         vga = params.get("vga")
         if vga:
             if vga != 'none':
-                devices.insert(StrDev('VGA-%s' % vga, {'addr': 2},
-                                      cmdline=add_vga(vga),
+                devices.insert(StrDev('VGA-%s' % vga, cmdline=add_vga(vga),
                                       parent_bus={'type': 'pci'}))
             else:
                 devices.insert(StrDev('VGA-none', cmdline=add_vga(vga)))
@@ -875,8 +874,7 @@ class VM(virt_vm.BaseVM):
                 devices.insert(StrDev('qxl',
                                 cmdline=add_qxl(qxl_dev_nr, qxl_dev_memory)))
         elif params.get('defaults', 'no') != 'no':  # by default add cirrus
-            devices.insert(StrDev('VGA-cirrus', {'addr': 2},
-                                  cmdline=add_vga(vga),
+            devices.insert(StrDev('VGA-cirrus', cmdline=add_vga(vga),
                                   parent_bus={'type': 'pci'}))
 
         # FIXME: Find the way to enumerate autocreated hbas (part 1/2)

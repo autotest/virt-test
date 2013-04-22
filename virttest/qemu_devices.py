@@ -1393,6 +1393,8 @@ class DevContainer(object):
         """ Are the VM representation alike? """
         if len(qdev2) != len(self):
             return False
+        if qdev2.get_state() != self.get_state():
+            return False
         for dev in self:
             if dev not in qdev2:
                 return False
@@ -1402,11 +1404,11 @@ class DevContainer(object):
         """ Are the VM representation different? """
         return not self.__eq__(qdev2)
 
-    def _set_dirty(self):
+    def set_dirty(self):
         """ Mark representation as dirty (not synchronized with VM) """
         self.__state += 1
 
-    def _set_clean(self):
+    def set_clean(self):
         """ Mark representation as clean (synchronized with VM) """
         self.__state -= 1
 
@@ -1622,6 +1624,40 @@ class DevContainer(object):
         if err:
             return ("Errors occured while adding device %s into %s:\n%s"
                     % (device, self, err))
+
+    def hotplug(self, device, monitor, verify=True, force=False):
+        """
+        @return: output of the monitor.cmd() or True/False if device
+                 supports automatic verification and verify=True
+        """
+        self.set_dirty()
+        try:
+            out = self.insert(device, force)
+            if out is not None:
+                logging.error('According to qemu_devices hotplug of %s'
+                              'is impossible (%s).\n Forcing', device, out)
+        except DeviceError, exc:
+            self.set_clean()  # qdev remains consistent
+            raise DeviceError('According to qemu_device hotplug of '
+                              '%s is impossible (%s).' % (device, exc))
+        out = device.hotplug(monitor)
+
+        if verify:
+            out = device.verify_hotplug(out, monitor)
+            if out is True:
+                self.set_clean()
+
+        return out
+
+    def hotplug_verified(self):
+        """
+        This function should be used after you verify, that hotplug was
+        successfull. For each hotplug call, hotplug_verified have to be
+        executed in order to mark VM as clear.
+        @warning: If you can't verify, that hotplug was successful, don't
+                  use this function! You could screw-up following tests.
+        """
+        self.set_clean()
 
     def list_missing_named_buses(self, bus_pattern, bus_type, bus_count):
         """
