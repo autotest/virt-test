@@ -1163,7 +1163,7 @@ def get_host_cpu_models():
         return pattern
 
     if ARCH == 'ppc64':
-        return 'POWER7'
+        return ['POWER7']
 
     vendor_re = "vendor_id\s+:\s+(\w+)"
     cpu_flags_re = "flags\s+:\s+([\w\s]+)\n"
