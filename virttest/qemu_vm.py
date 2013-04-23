@@ -25,7 +25,8 @@ class ImageUnbootableError(virt_vm.VMError):
         self.name = name
 
     def __str__(self):
-        return ("VM '%s' can't bootup from image" % self.name)
+        return ("VM '%s' can't bootup from image,"
+                " check your boot disk image file." % self.name)
 
 
 class VM(virt_vm.BaseVM):
