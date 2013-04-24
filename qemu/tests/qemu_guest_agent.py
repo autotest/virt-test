@@ -375,8 +375,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self._action_before_fsthaw(test, params, env)
             error.context("Thaw the FS.")
             self.gagent.fsthaw()
-            self._action_after_fsthaw(test, params, env)
-        finally:
+        except Exception:
             # Thaw fs finally, avoid problem in following cases.
             try:
                 self.gagent.fsthaw(check_status=False)
@@ -384,6 +383,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 # Ignore exception for this thaw action.
                 logging.warn("Finally failed to thaw guest fs,"
                              " detail: '%s'", detail)
+            raise
+
+        # Finally, do something after thaw.
+        self._action_after_fsthaw(test, params, env)
 
 
     def run_once(self, test, params, env):
