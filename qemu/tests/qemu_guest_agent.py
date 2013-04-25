@@ -274,7 +274,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_REBOOT)
         # XXX: This way of checking if VM is rebooted can only work with
         # Linux guest, is there any way to check windows guest reboot?
-        pattern = "machine restart"
+        pattern = params["gagent_guest_reboot_pattern"]
         error.context("Verify serial output has '%s'" % pattern)
         rebooted = self.__gagent_check_serial_output(pattern)
         if not rebooted:
@@ -293,7 +293,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_HALT)
         # XXX: This way of checking if VM is halted can only work with
         # Linux guest, is there any way to check windows guest halt?
-        pattern = "System halted"
+        pattern = params["gagent_guest_shutdown_pattern"]
         error.context("Verify serial output has '%s'" % pattern)
         halted = self.__gagent_check_serial_output(pattern)
         if not halted:
