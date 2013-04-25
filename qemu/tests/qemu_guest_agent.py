@@ -113,9 +113,10 @@ class QemuGuestAgentTest(BaseVirtTest):
         error.context("Try to install 'qemu-guest-agent' package.",
                       logging.info)
         session = self._get_session(params, vm)
-        s, _ = self._session_cmd_close(session, gagent_install_cmd)
+        s, o = self._session_cmd_close(session, gagent_install_cmd)
         if bool(s):
-            raise error.TestError("Could not install qemu-guest-agent package")
+            raise error.TestFail("Could not install qemu-guest-agent package"
+                                  " in VM '%s', detail: '%s'" %(vm.name, o))
 
 
     @error.context_aware
@@ -130,10 +131,10 @@ class QemuGuestAgentTest(BaseVirtTest):
 
         error.context("Try to start 'qemu-guest-agent'.", logging.info)
         session = self._get_session(params, vm)
-        s, _ = self._session_cmd_close(session, gagent_start_cmd)
+        s, o = self._session_cmd_close(session, gagent_start_cmd)
         if bool(s):
-            raise error.TestError("Could not start qemu-guest-agent in VM '%s'",
-                                  vm.name)
+            raise error.TestFail("Could not start qemu-guest-agent in VM"
+                                  " '%s', detail: '%s'" % (vm.name, o))
 
 
     @error.context_aware
