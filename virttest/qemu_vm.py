@@ -90,7 +90,7 @@ class VM(virt_vm.BaseVM):
         self.usb_dev_dict = {}
         self.logs = {}
         self.logsessions = {}
-        self.driver_type = 'kvm'
+        self.driver_type = 'qemu'
         self.params['driver_type_'+self.name] = self.driver_type
         # virtnet init depends on vm_type/driver_type being set w/in params
         super(VM, self).__init__(name, params)
