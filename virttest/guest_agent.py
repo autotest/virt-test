@@ -106,6 +106,10 @@ class QemuAgent(Monitor):
     RESPONSE_TIMEOUT = 20
     PROMPT_TIMEOUT = 20
 
+    SERIAL_TYPE_VIRTIO = "virtio"
+    SERIAL_TYPE_ISA = "isa"
+    SUPPORTED_SERIAL_TYPE = [SERIAL_TYPE_VIRTIO, SERIAL_TYPE_ISA]
+
     SHUTDOWN_MODE_POWERDOWN = "powerdown"
     SHUTDOWN_MODE_REBOOT = "reboot"
     SHUTDOWN_MODE_HALT = "halt"
@@ -140,7 +144,7 @@ class QemuAgent(Monitor):
                 suppress_exceptions is False
         """
         try:
-            if serial_type not in ["virtio", "isa"]:
+            if serial_type not in self.SUPPORTED_SERIAL_TYPE:
                 raise VAgentNotSupportedSerialError("Not supported serial type"
                                                     "'%s'" % serial_type)
 
