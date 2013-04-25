@@ -118,8 +118,8 @@ class QemuAgent(Monitor):
     FSFREEZE_STATUS_THAWED = "thawed"
 
 
-    def __init__(self, vm, name, serial_type, get_supported_cmds=False,
-                 suppress_exceptions=False):
+    def __init__(self, vm, name, serial_type, serial_filename,
+                 get_supported_cmds=False, suppress_exceptions=False):
         """
         Connect to the guest agent socket, Also make sure the json
         module is available.
@@ -128,6 +128,7 @@ class QemuAgent(Monitor):
         @param name: Guest agent identifier.
         @param serial_type: Specific which serial type (firtio or isa) guest
                 agent will use.
+        @param serial_filename: Guest agent socket filename.
         @param get_supported_cmds: Try to get supported cmd list when initiation.
         @param suppress_exceptions: If True, ignore VAgentError exception.
 
@@ -139,15 +140,11 @@ class QemuAgent(Monitor):
                 suppress_exceptions is False
         """
         try:
-            if serial_type == "virtio":
-                filename = vm.get_virtio_port_filename(name)
-            elif serial_type == "isa":
-                filename = vm.get_serial_console_filename(name)
-            else:
+            if serial_type not in ["virtio", "isa"]:
                 raise VAgentNotSupportedSerialError("Not supported serial type"
                                                     "'%s'" % serial_type)
 
-            Monitor.__init__(self, name, filename)
+            Monitor.__init__(self, name, serial_filename)
             # Make sure json is available
             try:
                 json
