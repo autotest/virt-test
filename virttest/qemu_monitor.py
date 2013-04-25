@@ -112,7 +112,7 @@ def create_monitor(vm, monitor_name, monitor_params):
             monitor_creator = HumanMonitor
 
     monitor_filename = get_monitor_filename(vm, monitor_name)
-    monitor = monitor_creator(monitor_name, monitor_filename)
+    monitor = monitor_creator(vm, monitor_name, monitor_filename)
     monitor.verify_responsive()
 
     return monitor
@@ -149,14 +149,17 @@ class Monitor:
     DATA_AVAILABLE_TIMEOUT = 0
     CONNECT_TIMEOUT = 30
 
-    def __init__(self, name, filename):
+    def __init__(self, vm, name, filename):
         """
         Initialize the instance.
 
+        @param vm: The VM which this monitor belongs to.
         @param name: Monitor identifier (a string)
         @param filename: Monitor socket filename
+
         @raise MonitorConnectError: Raised if the connection fails
         """
+        self.vm = vm
         self.name = name
         self.filename = filename
         self._lock = threading.RLock()
@@ -195,7 +198,7 @@ class Monitor:
     def __getinitargs__(self):
         # Save some information when pickling -- will be passed to the
         # constructor upon unpickling
-        return self.name, self.filename, True
+        return self.vm, self.name, self.filename, True
 
 
     def _close_sock(self):
@@ -368,12 +371,14 @@ class HumanMonitor(Monitor):
     PROMPT_TIMEOUT = 60
     CMD_TIMEOUT = 60
 
-    def __init__(self, name, filename, suppress_exceptions=False):
+    def __init__(self, vm, name, filename, suppress_exceptions=False):
         """
         Connect to the monitor socket and find the (qemu) prompt.
 
+        @param vm: The VM which this monitor belongs to.
         @param name: Monitor identifier (a string)
         @param filename: Monitor socket filename
+
         @raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
         @raise MonitorProtocolError: Raised if the initial (qemu) prompt isn't
@@ -382,7 +387,7 @@ class HumanMonitor(Monitor):
                 docstring.
         """
         try:
-            Monitor.__init__(self, name, filename)
+            Monitor.__init__(self, vm, name, filename)
 
             self.protocol = "human"
 
@@ -781,13 +786,15 @@ class QMPMonitor(Monitor):
     RESPONSE_TIMEOUT = 60
     PROMPT_TIMEOUT = 60
 
-    def __init__(self, name, filename, suppress_exceptions=False):
+    def __init__(self, vm, name, filename, suppress_exceptions=False):
         """
         Connect to the monitor socket, read the greeting message and issue the
         qmp_capabilities command.  Also make sure the json module is available.
 
+        @param vm: The VM which this monitor belongs to.
         @param name: Monitor identifier (a string)
         @param filename: Monitor socket filename
+
         @raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
         @raise MonitorProtocolError: Raised if the no QMP greeting message is
@@ -798,7 +805,7 @@ class QMPMonitor(Monitor):
                 fails.  See cmd()'s docstring.
         """
         try:
-            Monitor.__init__(self, name, filename)
+            Monitor.__init__(self, vm, name, filename)
 
             self.protocol = "qmp"
             self._greeting = None
