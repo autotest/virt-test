@@ -1799,6 +1799,17 @@ def cpu_compare(xml_file, **dargs):
     return command("cpu-compare %s" % xml_file, **dargs)
 
 
+def cpu_baseline(xml_file, **dargs):
+    """
+    Compute baseline CPU for a set of given CPUs.
+
+    @param xml_file: file containing an XML CPU description.
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    return command("cpu-baseline %s" % xml_file, **dargs)
+
+
 def numatune(name, mode=None, nodeset=None, options=None, **dargs):
     """
     Set or get a domain's numa parameters
