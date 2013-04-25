@@ -522,8 +522,17 @@ def postprocess(test, params, env):
     # Kill all aexpect tail threads
     aexpect.kill_tail_threads()
 
-    # Terminate tcpdump if no VMs are alive
     living_vms = [vm for vm in env.get_all_vms() if vm.is_alive()]
+    # Close all monitor socket connections of living vm.
+    for vm in living_vms:
+        if hasattr(vm, "monitors"):
+            for m in vm.monitors:
+                try:
+                    m.close()
+                except Exception:
+                    pass
+
+    # Terminate tcpdump if no VMs are alive
     if not living_vms and "tcpdump" in env:
         env["tcpdump"].close()
         del env["tcpdump"]
