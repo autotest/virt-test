@@ -134,7 +134,8 @@ class virt(test.test):
                     test_passed = True
                     error_message = funcatexit.run_exitfuncs(env, t_type)
                     if error_message:
-                        logging.error(error_message)
+                        raise error.TestWarn("funcatexit failed with: %s"
+                                             % error_message)
 
                 except Exception, e:
                     error_message = funcatexit.run_exitfuncs(env, t_type)
