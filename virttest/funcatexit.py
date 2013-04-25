@@ -6,7 +6,9 @@ up functions. The basic idea is like atexit from python libs.
 
 __all__ = ["register", "run_exitfuncs", "unregister"]
 
+from autotest.client.shared import error
 import traceback
+
 
 def run_exitfuncs(env, test_type):
     """
@@ -43,6 +45,19 @@ def register(env, test_type, func, *targs, **kargs):
     param targs: optional arguments to pass to func
     param kargs: optional keyword arguments to pass to func
     """
+    # Check for unpickable arguments
+    for arg in targs:
+        if hasattr(arg, '__slots__') and not hasattr(arg, '__getstate__'):
+            raise error.TestError("Trying to register exitfunction '%s' with "
+                                  "unpickable targument '%s'. Please contact "
+                                  "the test developer to fix it."
+                                  % (func, arg))
+    for key, arg in kargs.iteritems():
+        if hasattr(arg, '__slots__') and not hasattr(arg, '__getstate__'):
+            raise error.TestError("Trying to register exitfunction '%s' with "
+                                  "unpickable kargument '%s=%s'. Please "
+                                  "contact the test developer to fix it."
+                                  % (func, key, arg))
     exithandlers = "exithandlers__%s" % test_type
     if not env.data.get(exithandlers):
         env.data[exithandlers] = []
