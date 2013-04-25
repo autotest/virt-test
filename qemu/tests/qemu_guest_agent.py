@@ -147,8 +147,16 @@ class QemuGuestAgentTest(BaseVirtTest):
 
         gagent_serial_type = args[0]
         gagent_name = args[1]
+
+        if gagent_serial_type == guest_agent.QemuAgent.SERIAL_TYPE_VIRTIO:
+            filename = vm.get_virtio_port_filename(gagent_name)
+        elif gagent_serial_type == guest_agent.QemuAgent.SERIAL_TYPE_ISA:
+            filename = vm.get_serial_console_filename(gagent_name)
+        else:
+            raise guest_agent.VAgentNotSupportedError("Not supported serial"
+                                                      " type")
         gagent = guest_agent.QemuAgent(vm, gagent_name, gagent_serial_type,
-                                       get_supported_cmds=True)
+                                       filename, get_supported_cmds=True)
         self.gagent = gagent
 
         return self.gagent
