@@ -46,6 +46,11 @@ def register(env, test_type, func, *targs, **kargs):
     param kargs: optional keyword arguments to pass to func
     """
     # Check for unpickable arguments
+    if func.func_name not in func.__globals__:
+        raise error.TestError("Trying to register function '%s', which is not "
+                              "declared at module scope (not in globals). "
+                              "Please contact the test developer to fix it."
+                              % func)
     for arg in targs:
         if hasattr(arg, '__slots__') and not hasattr(arg, '__getstate__'):
             raise error.TestError("Trying to register exitfunction '%s' with "
