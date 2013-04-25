@@ -538,7 +538,7 @@ class BaseVM(object):
         """
         nic = self.virtnet[index]
         # TODO: Determine port redirection in use w/o checking nettype
-        if nic.nettype != 'bridge':
+        if nic.nettype not in ['bridge', 'macvtap']:
             return "localhost"
         if not nic.has_key('mac') and self.params.get('vm_type') == 'libvirt':
             # Look it up from xml
@@ -603,7 +603,8 @@ class BaseVM(object):
         @raise VMPortNotRedirectedError: If an unredirected port is requested
                 in user mode
         """
-        if self.virtnet[nic_index].nettype == "bridge":
+        nic_nettype = self.virtnet[nic_index].nettype
+        if nic_nettype in ["bridge", "macvtap"]:
             return port
         else:
             try:
