@@ -503,18 +503,16 @@ class QemuAgent(Monitor):
                  'suspend' is unsupported.
         @raise VAgentSuspendUnknownModeError: Raise if mode is not supported.
         """
+        error.context("Suspend guest '%s' to '%s'" % (self.vm.name, mode))
+
         if not mode in [self.SUSPEND_MODE_DISK, self.SUSPEND_MODE_RAM,
                         self.SUSPEND_MODE_HYBRID]:
-            raise VAgentSuspendUnknownModeError("Not supported suspend mode '%s'" %
-                                          mode)
+            raise VAgentSuspendUnknownModeError("Not supported suspend"
+                                                " mode '%s'" % mode)
 
-        error.context("Suspend guest '%s' to '%s'" % (self.vm.name, mode))
         cmd = "guest-suspend-%s" % mode
         if not self._has_command(cmd):
             return False
-
-        # verify QEMU monitor has 'system_wakeup' command.
-        self.vm.monitor.verify_supported_cmd("system_wakeup")
 
         # First, sync with guest.
         self.sync()
