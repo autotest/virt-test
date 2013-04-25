@@ -64,10 +64,10 @@ class VAgentCmdError(VAgentError):
 class VAgentSyncError(VAgentError):
     def __init__(self, vm_name):
         VAgentError.__init__(self)
-        self.vm = vm_name
+        self.vm_name = vm_name
 
     def __str__(self):
-        return "Could not sync with guest agent in vm '%s'" % self.vm
+        return "Could not sync with guest agent in vm '%s'" % self.vm_name
 
 
 class VAgentSuspendError(VAgentError):
@@ -84,16 +84,16 @@ class VAgentSuspendUnknownModeError(VAgentSuspendError):
 
 
 class VAgentFreezeStatusError(VAgentError):
-    def __init__(self, vm, status, expected):
+    def __init__(self, vm_name, status, expected):
         VAgentError.__init__(self)
-        self.vm = vm
+        self.vm_name = vm_name
         self.status = status
         self.expected = expected
 
 
     def __str__(self):
         return ("Unexpected guest FS status '%s' (expected '%s') in vm "
-                "'%s'" % (self.status, self.expected, self.vm))
+                "'%s'" % (self.status, self.expected, self.vm_name))
 
 
 class QemuAgent(Monitor):
@@ -540,7 +540,7 @@ class QemuAgent(Monitor):
         """
         status = self.get_fsfreeze_status()
         if status != expected:
-            raise VAgentFreezeStatusError(self.vm, status, expected)
+            raise VAgentFreezeStatusError(self.vm.name, status, expected)
 
 
     @error.context_aware
