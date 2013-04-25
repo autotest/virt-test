@@ -45,10 +45,6 @@ class VAgentNotSupportedError(VAgentError):
     pass
 
 
-class VAgentNotSupportedSerialError(VAgentNotSupportedError):
-    pass
-
-
 class VAgentCmdError(VAgentError):
     def __init__(self, cmd, args, data):
         VAgentError.__init__(self, cmd, args, data)
@@ -138,15 +134,15 @@ class QemuAgent(Monitor):
 
         @raise VAgentConnectError: Raised if the connection fails and
                 suppress_exceptions is False
-        @raise VAgentNotSupportedSerialError: Raised if the serial type is
+        @raise VAgentNotSupportedError: Raised if the serial type is
                 neither 'virtio' nor 'isa' and suppress_exceptions is False
         @raise VAgentNotSupportedError: Raised if json isn't available and
                 suppress_exceptions is False
         """
         try:
             if serial_type not in self.SUPPORTED_SERIAL_TYPE:
-                raise VAgentNotSupportedSerialError("Not supported serial type"
-                                                    "'%s'" % serial_type)
+                raise VAgentNotSupportedError("Not supported serial type: "
+                                              "'%s'" % serial_type)
 
             Monitor.__init__(self, name, serial_filename)
             # Make sure json is available
