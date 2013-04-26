@@ -1,9 +1,9 @@
 import logging, commands, random
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, utils_test
+from virttest import utils_misc, utils_test, utils_net
 
-
+@error.context_aware
 def run_jumbo(test, params, env):
     """
     Test the RX jumbo frame function of vnics:
@@ -23,12 +23,16 @@ def run_jumbo(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    timeout = int(params.get("login_timeout", 360))
+    mtu = params.get("mtu", "1500")
+    max_icmp_pkt_size = int(mtu) - 28
+    flood_time = params.get("flood_time", "300")
+    os_type = params.get("os_type")
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
-    mtu = params.get("mtu", "1500")
-    flood_time = params.get("flood_time", "300")
-    max_icmp_pkt_size = int(mtu) - 28
+    session = vm.wait_for_login(timeout=timeout)
+    session_serial = vm.wait_for_serial_login(timeout=timeout)
 
     ifname = vm.get_ifname(0)
     ip = vm.get_address(0)
@@ -36,19 +40,39 @@ def run_jumbo(test, params, env):
         raise error.TestError("Could not get the IP address")
 
     try:
+        error.context("Changing the MTU of guest", logging.info)
         # Environment preparation
-        ethname = utils_test.get_linux_ifname(session, vm.get_mac_address(0))
+        mac = vm.get_mac_address(0)
+        if os_type == "linux":
+            ethname = utils_test.get_linux_ifname(session, mac)
+            guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname , mtu)
+        else:
+            connection_id = utils_net.get_windows_nic_attribute(session,
+                                                             "macaddress",
+                                                             mac,
+                                                             "netconnectionid")
 
-        logging.info("Changing the MTU of guest ...")
-        guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname , mtu)
+            index = utils_net.get_windows_nic_attribute(session,
+                                                         "netconnectionid",
+                                                         connection_id,
+                                                         "index")
+            reg_set_mtu_pattern = params.get("reg_mtu_cmd")
+            mtu_key_word = params.get("mtu_key", "MTU")
+            reg_set_mtu = reg_set_mtu_pattern % (int(index), mtu_key_word,
+                                                 int(mtu))
+            guest_mtu_cmd = "%s " % reg_set_mtu
+
         session.cmd(guest_mtu_cmd)
+        if os_type == "windows":
+            utils_net.restart_windows_guest_network(session_serial,
+                                                    connection_id)
 
-        logging.info("Chaning the MTU of host tap ...")
+        error.context("Chaning the MTU of host tap ...", logging.info)
         host_mtu_cmd = "ifconfig %s mtu %s" % (ifname, mtu)
         utils.run(host_mtu_cmd)
 
-        logging.info("Add a temporary static ARP entry ...")
-        arp_add_cmd = "arp -s %s %s -i %s" % (ip, vm.get_mac_address(0), ifname)
+        error.context("Add a temporary static ARP entry ...", logging.info)
+        arp_add_cmd = "arp -s %s %s -i %s" % (ip, mac, ifname)
         utils.run(arp_add_cmd)
 
         def is_mtu_ok():
@@ -112,6 +136,7 @@ def run_jumbo(test, params, env):
                                   "seconds" % wait_mtu_ok)
 
         # Functional Test
+        error.context("Checking whether MTU change is ok", logging.info)
         verify_mtu()
         large_frame_ping()
         size_increase_ping()
@@ -122,6 +147,7 @@ def run_jumbo(test, params, env):
 
     finally:
         # Environment clean
-        session.close()
+        if session:
+            session.close()
         logging.info("Removing the temporary ARP entry")
         utils.run("arp -d %s -i %s" % (ip, ifname))
