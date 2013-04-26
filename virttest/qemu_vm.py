@@ -1049,7 +1049,7 @@ class VM(virt_vm.BaseVM):
                 if vendor_id:
                     cmd += ",vendor=\"%s\"" % vendor_id
                 if flags:
-                    cmd += ",%s" % flags
+                    cmd += "%s" % flags
                 if family is not None:
                     cmd += ",family=%s" % family
                 return cmd
