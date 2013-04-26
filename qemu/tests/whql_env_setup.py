@@ -3,6 +3,7 @@ from autotest.client.shared import error
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import env_process
+from virttest import data_dir
 from autotest.client import utils
 
 
@@ -36,7 +37,7 @@ def run_whql_env_setup(test, params, env):
 
     # Make iso for src
     cdrom_whql = params.get("cdrom_whql")
-    cdrom_whql = utils_misc.get_path(test.bindir, cdrom_whql)
+    cdrom_whql = utils_misc.get_path(data_dir.get_data_dir(), cdrom_whql)
     cdrom_whql_dir = os.path.split(cdrom_whql)[0]
     if not os.path.exists(cdrom_whql_dir):
         os.makedirs(cdrom_whql_dir)

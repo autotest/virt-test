@@ -46,8 +46,8 @@ def run_smbios_table(test, params, env):
     if  params.get("traversal_machine_emulated", "no") == "no" :
         support_machine_types.append(params.get("machine_type"))
     else:
-        qemu_binary = utils_misc.get_path(test.bindir, params.get("qemu_binary",
-                                                                  "qemu"))
+        qemu_binary = utils_misc.get_path(test.bindir,
+                                         "qemu/%s" % params.get("qemu_binary", "qemu"))
         tmp = utils_misc.get_support_machine_type(qemu_binary)
         (support_machine_types, expect_system_versions) = tmp
 

@@ -1,6 +1,6 @@
 import logging
 from autotest.client import utils
-from virttest import utils_misc, storage
+from virttest import utils_misc, storage, data_dir
 from autotest.client.shared import error
 
 @error.context_aware
@@ -24,10 +24,10 @@ def run_live_snapshot_base(test, params, env):
 
     dd_timeout = params.get("dd_timeoout", 600)
     copy_timeout = params.get("copy_timeoout", 600)
-    base_file = storage.get_image_filename(params, test.bindir)
+    base_file = storage.get_image_filename(params, data_dir.get_data_dir())
     device = vm.get_block({"file": base_file})
     snapshot_file = "images/%s" % params.get("snapshot_name")
-    snapshot_file = utils_misc.get_path(test.bindir, snapshot_file)
+    snapshot_file = utils_misc.get_path(data_dir.get_data_dir(), snapshot_file)
     snapshot_format = params.get("snapshot_format", "qcow2")
     tmp_name = utils_misc.generate_random_string(5)
     src = dst = "/tmp/%s" % tmp_name

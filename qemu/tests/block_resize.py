@@ -1,6 +1,6 @@
 import logging, re
 from autotest.client.shared import error
-from virttest import qemu_monitor, utils_misc, storage
+from virttest import qemu_monitor, utils_misc, storage, data_dir
 
 
 @error.context_aware
@@ -45,7 +45,7 @@ def run_block_resize(test, params, env):
     data_image_size = float(utils_misc.normalize_data_size(data_image_size,
                                                          order_magnitude="B"))
     data_image_filename = storage.get_image_filename(data_image_params,
-                                                     test.bindir)
+                                                     data_dir.get_data_dir())
     data_image_dev = vm.get_block({'file': data_image_filename})
 
     block_size_cmd = params.get("block_size_cmd")

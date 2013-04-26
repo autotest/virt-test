@@ -1,6 +1,6 @@
 import re, logging, time, random
 from autotest.client.shared import error
-from virttest import utils_misc, virt_vm, aexpect, storage
+from virttest import utils_misc, virt_vm, aexpect, storage, data_dir
 from virttest import utils_test
 
 @error.context_aware
@@ -47,7 +47,7 @@ def run_pci_hotplug_check(test, params, env):
     # Select an image file
     def find_image(pci_num):
         image_params = params.object_params("%s" % img_list[pci_num + 1])
-        o = storage.get_image_filename(image_params,test.bindir)
+        o = storage.get_image_filename(image_params,data_dir.get_data_dir())
         return o
 
     def pci_add_block(pci_num, pci_id=None):

@@ -1,7 +1,7 @@
 import os, logging
 from autotest.client.shared import error
 from virttest import utils_test
-from virttest import storage, utils_misc
+from virttest import storage, utils_misc, data_dir
 
 @error.context_aware
 def run_block_stream_with_stress(test, params, env):
@@ -20,7 +20,7 @@ def run_block_stream_with_stress(test, params, env):
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
-    image_filename = storage.get_image_filename(params, test.bindir)
+    image_filename = storage.get_image_filename(params, data_dir.get_data_dir())
     device_id = vm.get_block({"file": image_filename})
     snapshot_file = os.path.splitext(image_filename)[0] + "-snp"
     sub_test = params.get("pre_test")

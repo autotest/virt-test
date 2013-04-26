@@ -1,5 +1,7 @@
 import logging, os
 from autotest.client.shared import error
+from virttest import data_dir
+
 
 def run_kexec(test, params, env):
     """
@@ -20,7 +22,7 @@ def run_kexec(test, params, env):
     cmd_timeout = int(params.get("cmd_timeout", 360))
 
     def check_x2apic_flag():
-        x86info_link = os.path.join(test.bindir, "tests_rsc/x86info*")
+        x86info_link = os.path.join(data_dir.get_data_dir(), "tests_rsc/x86info*")
         vm.copy_files_to(x86info_link, "/root/x86info.tar")
 
         setup_x86info_cmd = "tar -xvf x86info.tar && cd x86info && make"
