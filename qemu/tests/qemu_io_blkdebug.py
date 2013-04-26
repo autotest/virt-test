@@ -1,6 +1,6 @@
 import re, logging, ConfigParser
 from autotest.client.shared import error
-from virttest import qemu_io
+from virttest import qemu_io, data_dir
 from virttest import utils_misc
 from virttest.qemu_storage import QemuImg
 from autotest.client import utils
@@ -35,7 +35,7 @@ def run_qemu_io_blkdebug(test, params, env):
     del_snapshot = params.get("del_snapshot", "no") == "yes"
 
     error.context("Create image", logging.info)
-    image_io = QemuImg(params.object_params(image), test.bindir, image)
+    image_io = QemuImg(params.object_params(image), data_dir.get_data_dir(), image)
     image_name = image_io.create(params.object_params(image))
 
     template_name =  utils_misc.get_path(test.virtdir, blkdebug_default)
@@ -59,7 +59,7 @@ def run_qemu_io_blkdebug(test, params, env):
                 blkdebug.close()
 
         error.context("Create image", logging.info)
-        image_io = QemuImg(params.object_params(image), test.bindir, image)
+        image_io = QemuImg(params.object_params(image), data_dir.get_data_dir(), image)
         image_name = image_io.create(params.object_params(image))
 
         error.context("Operate in qemu-io to trigger the error", logging.info)
@@ -93,7 +93,7 @@ def run_qemu_io_blkdebug(test, params, env):
         image_io.remove()
         if pre_snapshot and not del_snapshot:
             params_sn = params.object_params(image_sn)
-            image_snapshot = QemuImg(params_sn, test.bindir, image_sn)
+            image_snapshot = QemuImg(params_sn, data_dir.get_data_dir(), image_sn)
             image_snapshot.remove()
 
         error.context("Get error message from command perror", logging.info)

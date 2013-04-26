@@ -1,7 +1,7 @@
 import re, logging, commands, shelve
 from autotest.client.shared import error, utils
 from virttest import storage, utils_misc, utils_test
-from virttest import env_process
+from virttest import env_process, data_dir
 
 def run_qemu_disk_img(test, params, env):
     """
@@ -16,7 +16,8 @@ def run_qemu_disk_img(test, params, env):
     """
     file_operate = []
     result = shelve.open("check_result")
-    cmd = utils_misc.get_path(test.bindir, params.get("qemu_img_binary"))
+    cmd = utils_misc.get_path(test.bindir,
+                             "qemu/%s" % params.get("qemu_img_binary"))
 
     def _check_file(img_name, file_check, file_create=None):
         """
@@ -164,7 +165,7 @@ def run_qemu_disk_img(test, params, env):
         file_orig = file_base,
         file_operate.append(file_base)
 
-        img_filename = storage.get_image_filename(params, test.bindir)
+        img_filename = storage.get_image_filename(params, data_dir.get_data_dir())
         image_format = params.get("image_format")
         _check_file(img_filename, file_orig, file_create=file_base)
 
@@ -175,7 +176,7 @@ def run_qemu_disk_img(test, params, env):
             params['image_name'] = snapshot_name
             params['image_format'] = snapshot_format
 
-            snapshot_filename = storage.get_image_filename(params, test.bindir)
+            snapshot_filename = storage.get_image_filename(params, data_dir.get_data_dir())
             utils_test.create_image(cmd, snapshot_filename,
             snapshot_format, base_img=img_filename, base_fmt=image_format)
 
@@ -194,7 +195,7 @@ def run_qemu_disk_img(test, params, env):
                                         convert_format)
         params['image_name'] = convert_name
         params['image_format'] = convert_format
-        convert_filename = storage.get_image_filename(params, test.bindir)
+        convert_filename = storage.get_image_filename(params, data_dir.get_data_dir())
         utils_test.convert_image(cmd, img_filename, image_format,
                        convert_filename, convert_format)
 
@@ -219,7 +220,7 @@ def run_qemu_disk_img(test, params, env):
         file_orig = file_sn,
         file_operate.append(file_sn)
 
-        base_filename = storage.get_image_filename(params, test.bindir)
+        base_filename = storage.get_image_filename(params, data_dir.get_data_dir())
         base_name = params.get("image_name")
         base_format = params.get("image_format")
         snapshot_name = params.get("name_snapshot")
@@ -227,7 +228,7 @@ def run_qemu_disk_img(test, params, env):
         params['image_name'] = snapshot_name
         params['image_format'] = snapshot_format
 
-        snapshot_filename = storage.get_image_filename(params, test.bindir)
+        snapshot_filename = storage.get_image_filename(params, data_dir.get_data_dir())
         utils_test.create_image(cmd, snapshot_filename, snapshot_format,
                                     base_img=base_filename)
         _check_file(snapshot_filename, file_orig, file_create=file_sn)
@@ -254,7 +255,7 @@ def run_qemu_disk_img(test, params, env):
         snapshot_format = params.get("snapshot_format", "qcow2")
         params['image_name'] = name
         params['image_format'] = snapshot_format
-        sn_filename = storage.get_image_filename(params, test.bindir)
+        sn_filename = storage.get_image_filename(params, data_dir.get_data_dir())
         utils_test.create_image(cmd, sn_filename, snapshot_format,
                                      base_img=base_img)
 
@@ -313,7 +314,7 @@ def run_qemu_disk_img(test, params, env):
 
         image_format = params.get("image_format")
         image_name = params.get("image_name")
-        img_filename = storage.get_image_filename(params, test.bindir)
+        img_filename = storage.get_image_filename(params, data_dir.get_data_dir())
         _check_file(img_filename, file_orig, file_create=file_base)
 
         snapshot_format = params.get("snapshot_format", "qcow2")
@@ -382,7 +383,7 @@ def run_qemu_disk_img(test, params, env):
             params['image_name'] = new_disk
             params['image_format'] = image_format
             image_size = params.get("image_size")
-            new_filename = storage.get_image_filename(params, test.bindir)
+            new_filename = storage.get_image_filename(params, data_dir.get_data_dir())
             utils_test.create_image(cmd, new_filename, image_format,
                                         img_size = image_size)
 

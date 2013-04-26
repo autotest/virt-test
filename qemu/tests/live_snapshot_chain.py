@@ -1,5 +1,5 @@
 from virttest import utils_misc, utils_test, storage
-from virttest import qemu_storage
+from virttest import qemu_storage, data_dir
 from autotest.client.shared import error
 import re,logging, time
 
@@ -67,11 +67,11 @@ def run_live_snapshot_chain(test, params, env):
             session.cmd(dir_create_cmd % file_dir)
         if index > 0:
             snapshot_file = storage.get_image_filename(image_params,
-                                                       test.bindir)
+                                                       data_dir.get_data_dir())
             base_image = get_base_image(snapshot_chain, image)
             base_image_params = params.object_params(base_image)
             base_file = storage.get_image_filename(base_image_params,
-                                                   test.bindir)
+                                                   data_dir.get_data_dir())
             snapshot_format = image_params.get("image_format")
 
             error.context("Do pre snapshot operates", logging.info)
@@ -132,8 +132,8 @@ def run_live_snapshot_chain(test, params, env):
                     error_message += "Now: %s" % files_check
                     raise error.TestFail(error_message)
             if image_params.get("image_check"):
-                image = qemu_storage.QemuImg(image_params, test.bindir, image)
-                image.check_image(image_params, test.bindir)
+                image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(), image)
+                image.check_image(image_params, data_dir.get_data_dir())
             session.close()
 
     error.context("Remove snapshot images", logging.info)
@@ -143,5 +143,5 @@ def run_live_snapshot_chain(test, params, env):
         for index, image in enumerate(snapshot_chain):
             image_params = params.object_params(image)
             if index != 0:
-                image = qemu_storage.QemuImg(image_params, test.bindir, image)
+                image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(), image)
                 image.remove()

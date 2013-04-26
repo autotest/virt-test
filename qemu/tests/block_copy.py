@@ -1,6 +1,6 @@
 import os, re, logging
 from autotest.client.shared import error, utils
-from virttest import utils_misc, storage
+from virttest import utils_misc, storage, data_dir
 
 
 def speed2byte(speed):
@@ -57,7 +57,7 @@ class BlockCopy(object):
         """
         according configuration get target device ID;
         """
-        root_dir = self.test.bindir
+        root_dir = data_dir.get_data_dir()
         params = self.parser_test_args()
         image_file = storage.get_image_filename(params, root_dir)
         device = self.vm.get_block({"file": image_file})

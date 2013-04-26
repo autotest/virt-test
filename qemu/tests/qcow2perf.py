@@ -1,6 +1,6 @@
 import re, logging, time
 from autotest.client.shared import error
-from virttest import qemu_io
+from virttest import qemu_io, data_dir
 from virttest.qemu_storage import QemuImg
 from autotest.client import utils
 
@@ -28,7 +28,7 @@ def run_qcow2perf(test, params, env):
     opcmd = params.get("opcmd")
     io_options = params.get("io_options", "n")
     cache_mode = params.get("cache_mode")
-    image_dir = test.bindir
+    image_dir = data_dir.get_data_dir()
 
     if not re.match("\d+", interval_size[-1]):
         write_unit = interval_size[-1]

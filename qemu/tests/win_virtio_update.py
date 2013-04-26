@@ -3,6 +3,7 @@ import time, sys, re, logging, os
 from autotest.client.shared import error, utils
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import data_dir
 from virttest import env_process
 
 
@@ -86,7 +87,7 @@ def run_win_virtio_update(test, params, env):
                                        "\s+\w:(.[^\s]+)\s+hwidcmd")
             driver_path = re.findall(pattern_drive, driver_install_cmd)[0]
             driver_path = "/".join(driver_path.split("\\\\")[1:])
-            storage_path = utils_misc.get_path(test.bindir, storage_path)
+            storage_path = utils_misc.get_path(data_dir.get_data_dir(), storage_path)
             hw_id = utils_test.get_driver_hardware_id(driver_path,
                                                    mount_point=mount_point,
                                                  storage_path=storage_path,
@@ -106,7 +107,7 @@ def run_win_virtio_update(test, params, env):
         if params.get("check_info") == "yes":
             mount_point = params.get("virtio_mount_point",
                                      "/tmp/virtio_win")
-            iso_path = utils_misc.get_path(test.bindir,
+            iso_path = utils_misc.get_path(data_dir.get_data_dir(),
                                            params.get("cdrom_virtio"))
             utils.system("mount -o loop %s %s" % (iso_path, mount_point))
             pattern_driver = params_driver.get("pattern_driver")

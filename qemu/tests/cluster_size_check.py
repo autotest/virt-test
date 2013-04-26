@@ -3,7 +3,7 @@ import re
 import logging
 
 from autotest.client.shared import error
-from virttest import qemu_storage
+from virttest import qemu_storage, data_dir
 
 @error.context_aware
 def run_cluster_size_check(test, params, env):
@@ -43,7 +43,7 @@ def run_cluster_size_check(test, params, env):
         fail_log = ""
         image_name = params.get("images")
         image_params = params.object_params(image_name)
-        image = qemu_storage.QemuImg(image_params, test.bindir, image_name)
+        image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(), image_name)
 
         image.create(image_params)
         output = image.info()

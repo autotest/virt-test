@@ -1,5 +1,5 @@
 import logging
-from virttest import storage
+from virttest import storage, data_dir
 from autotest.client.shared import error, utils
 import drive_mirror_stress
 
@@ -23,7 +23,7 @@ class BlockMirrorPowerdown(drive_mirror_stress.BlockMirrorStress):
         """
         params = self.params.object_params(self.tag)
         target_image = params.get("target_image")
-        image_file = storage.get_image_filename(params, self.test.bindir)
+        image_file = storage.get_image_filename(params, data_dir.get_data_dir())
         self.params["image_file"] = image_file
         cmd = "mv -f %s %s-bak && " % (image_file, image_file)
         cmd += "ln -sf %s %s " % (target_image, image_file)

@@ -43,8 +43,8 @@ def preprocess_image(test, params, image_name):
             create_image = True
 
         if params.get("backup_image_before_testing", "no") == "yes":
-            image = qemu_storage.QemuImg(params, test.bindir, image_name)
-            image.backup_image(params, test.bindir, "backup", True)
+            image = qemu_storage.QemuImg(params, data_dir.get_data_dir(), image_name)
+            image.backup_image(params, data_dir.get_data_dir(), "backup", True)
         if create_image:
             image = qemu_storage.QemuImg(params, base_dir, image_name)
             if not image.create(params):
@@ -155,7 +155,7 @@ def postprocess_image(test, params, image_name):
                         image.remove()
                 raise e
         if params.get("restore_image_after_testing", "no") == "yes":
-            image.backup_image(params, test.bindir, "restore", True)
+            image.backup_image(params, data_dir.get_data_dir(), "restore", True)
         if params.get("remove_image") == "yes":
             if clone_master is None:
                 image.remove()
@@ -644,7 +644,7 @@ def _take_screendumps(test, params, env):
     global _screendump_thread_termination_event
     temp_dir = test.debugdir
     if params.get("screendump_temp_dir"):
-        temp_dir = utils_misc.get_path(test.bindir,
+        temp_dir = utils_misc.get_path(data_dir.get_data_dir(),
                                       params.get("screendump_temp_dir"))
         try:
             os.makedirs(temp_dir)

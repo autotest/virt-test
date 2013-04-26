@@ -1,7 +1,7 @@
 import logging, re, os
 from autotest.client import utils
 from virttest import utils_misc
-from autotest.client.shared import error, iscsi
+from autotest.client.shared import error, iscsi, data_dir
 
 
 @error.context_aware
@@ -25,7 +25,7 @@ def run_boot_from_device(test, params, env):
 
         logging.info("creating test cdrom")
         cdrom_test = params.get("cdrom_test")
-        cdrom_test = utils_misc.get_path(test.bindir, cdrom_test)
+        cdrom_test = utils_misc.get_path(data_dir.get_data_dir(), cdrom_test)
         utils.run("dd if=/dev/urandom of=test bs=10M count=1")
         utils.run("mkisofs -o %s test" % cdrom_test)
         utils.run("rm -f test")
@@ -37,7 +37,7 @@ def run_boot_from_device(test, params, env):
         """
 
         logging.info("cleaning up temp cdrom images")
-        cdrom_test = utils_misc.get_path(test.bindir, params.get("cdrom_test"))
+        cdrom_test = utils_misc.get_path(data_dir.get_data_dir(), params.get("cdrom_test"))
         os.remove(cdrom_test)
 
 

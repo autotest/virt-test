@@ -2,7 +2,7 @@ import os, re, logging
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import storage
-from virttest import utils_misc
+from virttest import utils_misc, data_dir
 
 @error.context_aware
 def run_block_stream_drop_backingfile(test, params, env):
@@ -26,7 +26,7 @@ def run_block_stream_drop_backingfile(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     alive_check_cmd = params.get("alive_check_cmd", "dir")
-    image_file = storage.get_image_filename(params, test.bindir)
+    image_file = storage.get_image_filename(params, data_dir.get_data_dir())
     image_dir = os.path.dirname(image_file)
     qemu_img = params.get("qemu_img_binary", "qemu-img")
     speed = int(params.get("limited_speed", 0))

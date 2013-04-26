@@ -1,6 +1,6 @@
 import logging, time
 from autotest.client.shared import error
-from virttest import qemu_monitor, qemu_storage
+from virttest import qemu_monitor, qemu_storage, data_dir
 
 
 def run_boot_savevm_kvm(test, params, env):
@@ -23,7 +23,7 @@ def run_boot_savevm_kvm(test, params, env):
         floppy_params = {"image_format": params.get("floppy_format", "qcow2"),
                          "image_size": params.get("floppy_size", "1.4M"),
                          "image_name": params.get("fl_name", "images/test")}
-        floppy = qemu_storage.QemuImg(floppy_params, test.bindir, "fl")
+        floppy = qemu_storage.QemuImg(floppy_params, data_dir.get_data_dir(), "fl")
         floppy.create(floppy_params)
         floppy_orig_info = floppy.snapshot_list()
         vm.create(params=params)
