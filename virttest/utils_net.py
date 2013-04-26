@@ -1821,132 +1821,69 @@ def get_host_ip_address(params):
     return host_ip
 
 
-def get_linux_ifname(session, mac_address):
+def get_windows_nic_attribute(session, key, value, target, timeout=240):
     """
-    Get the interface name through the mac address.
+    Get the windows nic attribute using wmic. All the support key you can
+    using wmic to have a check.
 
     @param session: session to the virtual machine
-    @mac_address: the macaddress of nic
+    @param key: the key supported by wmic
+    @param value: the value of the key
+    @param target: which nic attribute you want to get.
 
-    @raise error.TestError in case it was not possible to determine the
-            interface name.
     """
-    def ifconfig_method():
-        try:
-            output = session.cmd("ifconfig -a")
-            return re.findall("(\w+)\s+Link.*%s" % mac_address, output,
-                              re.IGNORECASE)[0]
-        except IndexError:
-            return None
-
-    def iplink_method():
-        try:
-            output = session.cmd("ip link | grep -B1 '%s' -i" % mac_address)
-            return re.findall("\d+:\s+(\w+):\s+.*", output, re.IGNORECASE)[0]
-        except (aexpect.ShellCmdError, IndexError):
-            return None
-
-    def sys_method():
-        try:
-            interfaces = session.cmd('ls --color=never /sys/class/net')
-        except error.CmdError, e:
-            logging.debug("Error listing /sys/class/net: %s" % e)
-            return None
-
-        interfaces = interfaces.strip()
-        for interface in interfaces.split(" "):
-            if interface:
-                try:
-                    i_cmd = "cat /sys/class/net/%s/address" % interface
-                    mac_address_interface = session.cmd(i_cmd)
-                    mac_address_interface = mac_address_interface.strip()
-                    if mac_address_interface == mac_address:
-                        return interface
-                except aexpect.ShellCmdError:
-                    pass
-
-        # If after iterating through interfaces (or no interfaces found)
-        # no interface name was found, just return None
-        return None
-
-    # Try ifconfig first
-    i = ifconfig_method()
-    if i is not None:
-        return i
-
-    # No luck, try ip link
-    i = iplink_method()
-    if i is not None:
-        return i
-
-    # No luck, look on /sys
-    i = sys_method()
-    if i is not None:
-        return i
-
-    # If we came empty handed, let's raise an error
-    raise error.TestError("Failed to determine interface name with "
-                          "mac %s" % mac_address)
+    cmd = 'wmic nic where %s="%s" get %s' % (key, value, target)
+    o = session.cmd(cmd, timeout=timeout).strip()
+    if not o :
+        raise error.TestError("Get guest nic attribute %s failed!" % target)
+    return o.splitlines()[-1]
 
 
-def restart_guest_network(session, nic_name=None):
+def set_win_guest_nic_status(session, connection_id, status, timeout=240):
     """
-    Restart guest's network via serial console.
+    Set windows guest nic ENABLED/DISABLED
+
+    @param  session : session to virtual machine
+    @param  connection_id : windows guest nic netconnectionid
+    @param  status : set nic ENABLED/DISABLED
+    """
+    cmd = 'netsh interface set interface name="%s" admin=%s'
+    session.cmd(cmd % (connection_id, status), timeout=timeout)
+
+
+def disable_windows_guest_network(session, connection_id, timeout=240):
+    return set_win_guest_nic_status(session, connection_id,
+                                    "DISABLED", timeout)
+
+
+def enable_windows_guest_network(session, connection_id, timeout=240):
+    return set_win_guest_nic_status(session, connection_id,
+                                    "ENABLED", timeout)
+
+
+def restart_windows_guest_network(session, connection_id, timeout=240):
+    """
+    Restart guest's network via serial console. winxp can not work
 
     @param session: session to virtual machine
-    @nic_name: nic card name in guest to restart
+    @param connection_id: windows nic connectionid,it means connection name, you Can
+                    get connection id string via wmic
     """
-    if_list = []
-    if not nic_name:
-        # initiate all interfaces on guest.
-        o = session.cmd_output("ip link")
-        if_list = re.findall(r"\d+: (eth\d+):", o)
-    else:
-        if_list.append(nic_name)
-
-    if if_list:
-        session.sendline("killall dhclient && "
-                         "dhclient %s &" % ' '.join(if_list))
+    disable_windows_guest_network(session, connection_id, timeout=timeout)
+    enable_windows_guest_network(session, connection_id, timeout=timeout)
 
 
-def update_mac_ip_address(vm, params, timeout=None):
+def restart_windows_guest_network_by_key(session, key, value, timeout=240):
     """
-    Get mac and ip address from guest then update the mac pool and
-    address cache
+    Restart the guest network by nic Attribute like mac, interfaceindex
+    Winxp can not work
 
-    @param vm: VM object
-    @param params: Dictionary with the test parameters.
+    @param session: session to virtual machine
+    @param key: the key supported by wmic nic
+    @param value: the value of the key
     """
-    network_query = params.get("network_query", "ifconfig")
-    restart_network = params.get("restart_network", "service network restart")
-    mac_ip_filter = params.get("mac_ip_filter")
-    if timeout is None:
-        timeout = int(params.get("login_timeout"))
-    session = vm.wait_for_serial_login(timeout=360)
-    end_time = time.time() + timeout
-    macs_ips = []
-    i = 0
-    while time.time() < end_time:
-        try:
-            if i % 3 == 0:
-                session.cmd(restart_network)
-            o = session.cmd_status_output(network_query)[1]
-            macs_ips = re.findall(mac_ip_filter, o)
-            # Get nics number
-        except Exception, e:
-            logging.warn(e)
-        nics =  params.get("nics")
-        nic_minimum = len(re.split("\s+", nics.strip()))
-        if len(macs_ips) == nic_minimum:
-            break
-        i += 1
-        time.sleep(5)
-    if len(macs_ips) < nic_minimum:
-        logging.warn("Not all nics get ip address")
-
-    for (mac, ip) in macs_ips:
-        vlan = macs_ips.index((mac, ip))
-        if "-" in mac:
-            mac = mac.replace("-", ".")
-        vm.address_cache[mac.lower()] = ip
-        vm.virtnet.set_mac_address(vlan, mac)
+    connection_id = get_windows_nic_attribute(session, key, value,
+                                              "netconnectionid", timeout)
+    if not  connection_id:
+        raise error.TestError("Get nic connection name failed")
+    restart_windows_guest_network(session, connection_id, timeout)
