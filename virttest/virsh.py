@@ -117,7 +117,7 @@ class VirshSession(aexpect.ShellSession):
     ERROR_REGEX_LIST = ['error:\s*.+$', '.*failed.*']
 
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
-                 prompt=r"virsh\s*\#\s*", remote_ip=None,
+                 prompt=r"virsh\s*[\#\>]\s*", remote_ip=None,
                  remote_user=None, remote_pwd=None):
         """
         Initialize virsh session server, or client if id set.
@@ -1826,3 +1826,14 @@ def ttyconsole(name, **dargs):
     @return: CmdResult instance
     """
     return command("ttyconsole %s" % name, **dargs)
+
+
+def connect(uri="", options="", **dargs):
+    """
+    Run a connect command to the uri.
+
+    @param uri: target uri connect to.
+    @param: options: options to pass to connect command
+    @return: CmdResult object.
+    """
+    return command("connect %s %s" % (uri, options), **dargs)
