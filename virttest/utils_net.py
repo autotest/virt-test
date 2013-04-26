@@ -1819,3 +1819,71 @@ def get_host_ip_address(params):
         logging.warning("No IP address of host was provided, using IP address"
                         " on %s interface", str(params.get('netdst')))
     return host_ip
+
+
+def get_windows_nic_attribute(session, key, value, target, timeout=240):
+    """
+    Get the windows nic attribute using wmic. All the support key you can
+    using wmic to have a check.
+
+    @param session: session to the virtual machine
+    @param key: the key supported by wmic
+    @param value: the value of the key
+    @param target: which nic attribute you want to get.
+
+    """
+    cmd = 'wmic nic where %s="%s" get %s' % (key, value, target)
+    o = session.cmd(cmd, timeout=timeout).strip()
+    if not o :
+        raise error.TestError("Get guest nic attribute %s failed!" % target)
+    return o.splitlines()[-1]
+
+
+def set_win_guest_nic_status(session, connection_id, status, timeout=240):
+    """
+    Set windows guest nic ENABLED/DISABLED
+
+    @param  session : session to virtual machine
+    @param  connection_id : windows guest nic netconnectionid
+    @param  status : set nic ENABLED/DISABLED
+    """
+    cmd = 'netsh interface set interface name="%s" admin=%s'
+    session.cmd(cmd % (connection_id, status), timeout=timeout)
+
+
+def disable_windows_guest_network(session, connection_id, timeout=240):
+    return set_win_guest_nic_status(session, connection_id,
+                                    "DISABLED", timeout)
+
+
+def enable_windows_guest_network(session, connection_id, timeout=240):
+    return set_win_guest_nic_status(session, connection_id,
+                                    "ENABLED", timeout)
+
+
+def restart_windows_guest_network(session, connection_id, timeout=240):
+    """
+    Restart guest's network via serial console. winxp can not work
+
+    @param session: session to virtual machine
+    @param connection_id: windows nic connectionid,it means connection name, you Can
+                    get connection id string via wmic
+    """
+    disable_windows_guest_network(session, connection_id, timeout=timeout)
+    enable_windows_guest_network(session, connection_id, timeout=timeout)
+
+
+def restart_windows_guest_network_by_key(session, key, value, timeout=240):
+    """
+    Restart the guest network by nic Attribute like mac, interfaceindex
+    Winxp can not work
+
+    @param session: session to virtual machine
+    @param key: the key supported by wmic nic
+    @param value: the value of the key
+    """
+    connection_id = get_windows_nic_attribute(session, key, value,
+                                              "netconnectionid", timeout)
+    if not  connection_id:
+        raise error.TestError("Get nic connection name failed")
+    restart_windows_guest_network(session, connection_id, timeout)
