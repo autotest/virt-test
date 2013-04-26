@@ -629,7 +629,7 @@ class UnattendedInstallConfig(object):
             self.preseed_initrd()
 
         if self.params.get("vm_type") == "libvirt":
-            if self.vm.driver_type == 'kvm':
+            if self.vm.driver_type == 'qemu':
                 # Virtinstall command needs files "vmlinuz" and "initrd.img"
                 os.chdir(self.image_path)
                 base_kernel = os.path.basename(self.kernel)
