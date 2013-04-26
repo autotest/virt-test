@@ -697,6 +697,13 @@ class HumanMonitor(Monitor):
         return self.cmd("getfd %s" % name, fd=fd)
 
 
+    def nmi(self):
+        """
+        Inject a NMI on all guest's CPUs.
+        """
+        return self.cmd("nmi")
+
+
 class QMPMonitor(Monitor):
     """
     Wraps QMP monitor commands.
@@ -1335,3 +1342,10 @@ class QMPMonitor(Monitor):
         """
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
+
+
+    def nmi(self):
+        """
+        Inject a NMI on all guest's CPUs.
+        """
+        return self.cmd("inject-nmi")

@@ -587,7 +587,7 @@ def run_cgroup(test, params, env):
             raise error.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)
-        host_cpus = open('/proc/cpuinfo').read().count('model name')
+        host_cpus = open('/proc/cpuinfo').read().count('processor')
 
         # Create first VM
         params['smp'] = 1
@@ -755,7 +755,7 @@ def run_cgroup(test, params, env):
             raise error.TestError("Incorrect configuration: param "
                         "cgroup_speeds have to be list-like string '[1, 2]'")
 
-        host_cpus = open('/proc/cpuinfo').read().count('model name')
+        host_cpus = open('/proc/cpuinfo').read().count('processor')
         # when smp <= 0 use smp = no_host_cpus
         vm_cpus = int(params.get('smp', 0))     # cpus per VM
         # Use smp = no_host_cpu

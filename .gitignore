@@ -56,3 +56,4 @@ libguestfs/cfg/machines.cfg
 libguestfs/cfg/subtests.cfg
 libguestfs/cfg/virtio-win.cfg
 tmp
+.*.swp
