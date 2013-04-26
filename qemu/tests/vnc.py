@@ -1,7 +1,7 @@
-import logging, time, os, commands, re, socket, struct, random
+import logging, time, socket, struct, random
 from autotest.client.shared import error
 from virttest import utils_misc
-from autotest.client.tests.kvm.RFBDes import Des
+from virttest.RFBDes import Des
 
 def run_vnc(test, params, env):
     """
