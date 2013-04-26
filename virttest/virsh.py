@@ -1740,6 +1740,18 @@ def snapshot_delete(name, snapshot, **dargs):
     return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
 
 
+def domblkinfo(vm_name, device, **dargs):
+    """
+    Get block device size info for a domain.
+
+    @param: vm_name: VM's name or id,uuid.
+    @param: device: device of VM.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("domblkinfo %s %s" % (vm_name, device), **dargs)
+
+
 def domblklist(name, options=None, **dargs):
     """
     Get domain devices.
