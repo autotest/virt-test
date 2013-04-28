@@ -1,7 +1,7 @@
 import logging, re, os
 from autotest.client import utils
-from virttest import utils_misc
-from autotest.client.shared import error, iscsi, data_dir
+from virttest import utils_misc, data_dir
+from autotest.client.shared import error, iscsi
 
 
 @error.context_aware
