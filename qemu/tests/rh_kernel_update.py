@@ -2,15 +2,26 @@ import logging, re, time, os
 from autotest.client.shared import error, utils
 from virttest import utils_misc
 
+@error.context_aware
 def run_rh_kernel_update(test, params, env):
     """
     Update kernel from brewweb link(For internal usage):
-    1) boot the vm
-    2) verify the version of guest kernel
-    3) use rpm -ivh to install the kernel
-    4) check the grub configuration
-    5) reboot the guest
-    6) check the version of guest kernel
+    1) Boot the vm
+    2) Get latest kernel package link from brew
+    3) Verify the version of guest kernel
+    4) Compare guest kernel version and brew's
+    5) Backup grub.cfg file
+    6) Install guest kernel firmware (Optional)
+    7) Install guest kernel
+    8) Backup grub.cfg after installing new kernel
+    9) Installing virtio driver (Optional)
+    10) Backup initrd file
+    11) Update initrd file
+    12) Make the new installed kernel as default
+    13) Backup grup.cfg after setting new kernel as default
+    14) Update the guest kernel cmdline (Optional)
+    15) Reboot guest after updating kernel
+    16) Verifying the virtio drivers (Optional)
 
     @param test: QEMU test object
     @param params: Dictionary with the test parameters
@@ -60,6 +71,7 @@ def run_rh_kernel_update(test, params, env):
                     params.get("kernel_rpm"),
                     params.get("firmware_rpm"))
 
+        error.context("Get latest kernel package link from brew", logging.info)
         # fetch the newest packages from brew
         # FIXME: really brain dead method to fetch the kernel version
         #        kernel_vesion = re... + hint from configuration file
@@ -110,6 +122,7 @@ def run_rh_kernel_update(test, params, env):
 
 
     def get_guest_kernel_version():
+        error.context("Verify the version of guest kernel", logging.info)
         s, o = session.cmd_status_output("uname -r")
         return o.strip()
 
@@ -129,6 +142,7 @@ def run_rh_kernel_update(test, params, env):
 
 
     def compare_kernel_version(kernel_version, guest_version):
+        error.context("Compare guest kernel version and brew's", logging.info)
         # return True: when kernel_version <= guest_version
         if guest_version == kernel_version:
             logging.info("The kernel version is matched %s" % guest_version)
@@ -180,7 +194,7 @@ def run_rh_kernel_update(test, params, env):
     count = 0
 
     try:
-        # backup grub.cfg file
+        error.context("Backup grub.cfg file")
         s, o = session.cmd_status_output(cp_grubcf_cmd)
         if s != 0:
             logging.error(o)
@@ -189,7 +203,6 @@ def run_rh_kernel_update(test, params, env):
 
         # judge if need to install a new kernel
         ifupdatekernel = True
-        logging.info("Verifying the version of guest kernel ...")
         guest_version = get_guest_kernel_version()
         if compare_kernel_version(kernel_version, guest_version):
             ifupdatekernel = False
@@ -206,13 +219,15 @@ def run_rh_kernel_update(test, params, env):
                 rpm_install_func = copy_and_install_rpm
 
             if firmware_rpm:
-                logging.info("Installing guest kernel firmware ...")
+                error.context("Install guest kernel firmware", logging.info)
                 rpm_install_func(session, firmware_rpm, upgrade=True)
-            logging.info("Installing guest kernel ...")
+            error.context("Install guest kernel", logging.info)
             status = rpm_install_func(session, kernel_rpm)
             if status:
                 count = 2
-            # back grub.cfg after install a new kernel
+
+            error.context("Backup grub.cfg after installing new kernel",
+                          logging.info)
             s, o = session.cmd_status_output(cp_grubcf_cmd)
             if s != 0:
                 msg = ("Fail to backup the grub.cfg after updating kernel,"
@@ -224,7 +239,7 @@ def run_rh_kernel_update(test, params, env):
         kernel_path = "/boot/vmlinuz-%s" % kernel_version
 
         if install_virtio == "yes":
-            logging.info("Installing virtio driver ...")
+            error.context("Installing virtio driver", logging.info)
 
             initrd_prob_cmd = "grubby --info=%s" % kernel_path
             s, o = session.cmd_status_output(initrd_prob_cmd)
@@ -248,12 +263,13 @@ def run_rh_kernel_update(test, params, env):
             restore_initrd_cmd = "/bin/cp %s-bk %s" % (initrd_path,
                                                        initrd_path)
 
-            # backup initrd file
+            error.context("Backup initrd file")
             s, o = session.cmd_status_output(cp_initrd_cmd, timeout=200)
             if s != 0:
                 logging.error("Failed to backup guest initrd,"
                               " guest output: '%s'", o)
-            # update initrd file
+
+            error.context("Update initrd file", logging.info)
             s, o = session.cmd_status_output(mkinitrd_cmd, timeout=200)
             if s != 0:
                 msg = "Failed to install virtio driver, guest output '%s'" % o
@@ -264,7 +280,8 @@ def run_rh_kernel_update(test, params, env):
 
         # make sure the newly installed kernel as default
         if ifupdatekernel:
-            logging.info("Make the new installed kernel as default ...")
+            error.context("Make the new installed kernel as default",
+                          logging.info)
             make_def_cmd = "grubby --set-default=%s " % kernel_path
             s, o = session.cmd_status_output(make_def_cmd)
             if s != 0:
@@ -274,16 +291,16 @@ def run_rh_kernel_update(test, params, env):
                 raise error.TestError(msg)
 
             count = 4
+            error.context("Backup grup.cfg after setting new kernel as default")
             s, o = session.cmd_status_output(cp_grubcf_cmd)
             if s != 0:
-                msg = ("Fail to backup the grub.cfg after setting new"
-                       " installed kernel as default, guest output: '%s'" % o)
+                msg = ("Fail to backup the grub.cfg, guest output: '%s'" % o)
                 logging.error(msg)
                 raise error.TestError(msg)
 
         # remove or add the required arguments
 
-        logging.info("Update the kernel cmdline ...")
+        error.context("Update the guest kernel cmdline", logging.info)
         remove_args_list = ["--remove-args=%s " % arg for arg in args_removed]
         update_kernel_cmd = "grubby --update-kernel=%s " % kernel_path
         update_kernel_cmd += "".join(remove_args_list)
@@ -297,11 +314,10 @@ def run_rh_kernel_update(test, params, env):
         count = 5
 
         # reboot guest
-        logging.info("Rebooting ...")
+        error.context("Reboot guest after updating kernel", logging.info)
         time.sleep(int(params.get("sleep_before_reset", 10)))
         session = vm.reboot(session, 'shell', timeout=login_timeout)
         # check if the guest can bootup normally after kernel update
-        logging.info("Verifying the guest kernel version ...")
         guest_version = get_guest_kernel_version()
         if guest_version != kernel_version:
             raise error.TestFail("Fail to verify the guest kernel, \n"
@@ -310,7 +326,7 @@ def run_rh_kernel_update(test, params, env):
                                  (kernel_version, guest_version))
 
         if verify_virtio == "yes":
-            logging.info("Verifying the virtio drivers ...")
+            error.context("Verifying the virtio drivers", logging.info)
             if not is_virtio_driver_installed():
                 raise error.TestFail("Fail to verify the installation of"
                                      " virtio drivers")
