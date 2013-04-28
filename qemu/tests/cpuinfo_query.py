@@ -1,4 +1,4 @@
-import logging
+import logging, os
 from autotest.client.shared import error, utils
 from virttest import utils_misc
 
@@ -10,9 +10,9 @@ def run_cpuinfo_query(test, params, env):
     2). check the expected info is inclued in the cmd output.
     3). raise error if defined info is missing.
     """
-    qemu_binary = utils_misc.get_path(test.bindir,
+    qemu_binary = utils_misc.get_path(os.path.join(test.bindir,
+                                      params.get("vm_type")),
                                       params.get("qemu_binary", "qemu"))
-
     error.context("run query cmd")
     qcmd = params.get("query_cmd")
     if qcmd is None:
