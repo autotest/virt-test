@@ -179,9 +179,7 @@ def run_rh_kernel_update(test, params, env):
     args_removed = params.get("args_removed", "").split()
     args_added = params.get("args_added", "").split()
     restore_initrd_cmd = ""
-    virtio_drivers = ["virtio", "virtio_ring", "virtio_pci", "virtio_net",
-                      "virtio_blk"]
-
+    virtio_drivers = params.get("virtio_drivers_list", "").split()
     kernel_version, kernel_rpm, firmware_rpm = get_kernel_rpm_link()
 
     logging.info("Kernel version:  %s" % kernel_version)
