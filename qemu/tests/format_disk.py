@@ -2,14 +2,17 @@ import logging, re
 from autotest.client.shared import error
 from virttest import utils_misc
 
+@error.context_aware
 def run_format_disk(test, params, env):
     """
     Format guest disk:
     1) Boot guest with second disk
-    2) Log into guest
-    3) Sent sequence commands which format disk1 and mount it to guest
-    4) Write some random str into one file within guest disk1 and read it,
-       make sure all right.
+    2) Login to the guest
+    3) Get disk list in guest
+    4) Create partition on disk
+    5) Format the disk
+    6) Mount the disk
+    7) Read in the file to see whether content is changed
 
     @param test: QEMU test object
     @param params: Dictionary with the test parameters
@@ -18,48 +21,54 @@ def run_format_disk(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
+    error.context("Login to the guest", logging.info)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     cmd_timeout = int(params.get("cmd_timeout", 360))
 
     # Create a partition on disk
     create_partition_cmd = params.get("create_partition_cmd")
     if create_partition_cmd:
-        if (params.get("os_type") == 'windows'
-            and re.findall("diskpart", create_partition_cmd, re.I)):
+        has_dispart = re.findall("diskpart", create_partition_cmd, re.I)
+        if (params.get("os_type") == 'windows' and has_dispart):
+            error.context("Get disk list in guest")
             list_disk_cmd = params.get("list_disk_cmd")
             s, o = session.cmd_status_output(list_disk_cmd,
                                                      timeout=cmd_timeout)
             for i in re.findall("Disk*.(\d+)\s+Offline",o):
+                error.content("Set disk '%s' to online status" % i,
+                              logging.info)
                 set_online_cmd = params.get("set_online_cmd") % i
                 s, o = session.cmd_status_output(set_online_cmd,
                                                      timeout=cmd_timeout)
                 if s !=0:
                     raise error.TestFail("Can not set disk online %s" % o)
 
+        error.context("Create partition on disk", logging.info)
         s, o = session.cmd_status_output(create_partition_cmd,
                                                  timeout=cmd_timeout)
         if s != 0:
             raise error.TestFail("Failed to create partition with error: %s" % o)
         logging.info("Output of command of create partition on disk: %s" % o)
 
-    # Format the disk
     format_cmd = params.get("format_cmd")
     if format_cmd:
+        error.context("Format the disk with cmd '%s'" % format_cmd,
+                      logging.info)
         s, o = session.cmd_status_output(format_cmd,
                                                  timeout=cmd_timeout)
         if s != 0:
             raise error.TestFail("Failed to format with error: %s" % o)
         logging.info("Output of format disk command: %s" % o)
 
-    # Mount the disk
     mount_cmd = params.get("mount_cmd")
     if mount_cmd:
+        error.context("Mount the disk with cmd '%s'" % mount_cmd, logging.info)
         s, o = session.cmd_status_output(mount_cmd, timeout=cmd_timeout)
         if s != 0:
             raise error.TestFail("Failed to mount with error: %s" % o)
         logging.info("Output of mount disk command: %s" % o)
 
-    # Write some random string to test file
+    error.content("Write some random string to test file", logging.info)
     testfile_name = params.get("testfile_name")
     ranstr = utils_misc.generate_random_string(100)
 
@@ -69,7 +78,8 @@ def run_format_disk(test, params, env):
     if s != 0:
         raise error.TestFail("Write to file error: %s" % o)
 
-    # Read in the file to see whether content is changed
+    error.context("Read in the file to see whether content is changed",
+                  logging.info)
     readfile_cmd = params.get("readfile_cmd")
     rfilecmd = readfile_cmd + " " + testfile_name
     s, o = session.cmd_status_output(rfilecmd, timeout=cmd_timeout)
