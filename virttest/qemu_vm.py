@@ -2959,11 +2959,8 @@ class VM(virt_vm.BaseVM):
             os.close(fd_src)
 
         clone = self.clone()
-
-        # Check migration exec cmd first, to support migrate with
-        # gzip command.
-        migration_exec_cmd = clone.params.get("migration_exec_cmd")
-        if local and migration_exec_cmd != "gzip":
+        if (local and not (migration_exec_cmd_src
+                           and "gzip" in migration_exec_cmd_src)):
             error.context("creating destination VM")
             if stable_check:
                 # Pause the dest vm after creation
@@ -2977,9 +2974,7 @@ class VM(virt_vm.BaseVM):
             error.context()
 
         try:
-            if (self.params["display"] == "spice" and
-                not (protocol == "exec" and migration_exec_cmd == "gzip")):
-
+            if self.params["display"] == "spice":
                 host_ip = utils_net.get_host_ip_address(self.params)
                 dest_port = clone.spice_options['spice_port']
                 if self.params["spice_ssl"] == "yes":
@@ -3049,16 +3044,6 @@ class VM(virt_vm.BaseVM):
                         uri = '"exec:nc localhost %s"' % clone.migration_port
                     else:
                         uri = '"exec:%s"' % (migration_exec_cmd_src)
-                elif migration_exec_cmd == "gzip":
-
-                    # Exec with gzip is a little different from other migrate
-                    # methods - first we ask the monitor the migration, then
-                    # the vm state is dumped to a compressed file, then we
-                    # start the dest vm with -incoming pointing to it.
-                    clone.exec_file = "/tmp/exec-%s.gz" % \
-                                utils_misc.generate_random_string(8)
-                    exec_cmd = "gzip -c -d %s" % clone.exec_file
-                    uri = '"exec:gzip -c > %s"' % clone.exec_file
                 else:
                     uri = '"exec:%s"' % (migration_exec_cmd_src)
             elif protocol == "fd":
@@ -3069,8 +3054,23 @@ class VM(virt_vm.BaseVM):
 
             logging.info("Migrating to %s", uri)
             self.monitor.migrate(uri)
+
             if not_wait_for_migration:
                 return clone
+
+            if (local and (migration_exec_cmd_src
+                           and "gzip" in migration_exec_cmd_src)):
+                error.context("creating destination VM")
+                if stable_check:
+                    # Pause the dest vm after creation
+                    extra_params = clone.params.get("extra_params", "") + " -S"
+                    clone.params["extra_params"] = extra_params
+                clone.create(migration_mode=protocol, mac_source=self,
+                             migration_fd=fd_dst,
+                             migration_exec_cmd=migration_exec_cmd_dst)
+                if fd_dst:
+                    os.close(fd_dst)
+                error.context()
 
             if cancel_delay:
                 time.sleep(cancel_delay)
@@ -3082,12 +3082,6 @@ class VM(virt_vm.BaseVM):
                 return
 
             self.wait_for_migration(timeout)
-
-            if protocol == "exec" and migration_exec_cmd == "gzip":
-                error.context("creating destination VM")
-                clone.create(migration_mode=protocol,
-                             migration_exec_cmd=exec_cmd, mac_source=self)
-                error.context()
 
             self.verify_alive()
 
@@ -3125,8 +3119,7 @@ class VM(virt_vm.BaseVM):
                     md5_save1 = utils.hash_file(save1)
                     md5_save2 = utils.hash_file(save2)
                     if md5_save1 != md5_save2:
-                        raise virt_vm.VMMigrateStateMismatchError(md5_save1,
-                                                                  md5_save2)
+                        raise virt_vm.VMMigrateStateMismatchError()
                 finally:
                     if clean:
                         if os.path.isfile(save1):
@@ -3141,12 +3134,6 @@ class VM(virt_vm.BaseVM):
                 if self.is_alive():
                     self.monitor.cmd("cont")
                 clone.destroy(gracefully=False)
-                if protocol == "exec" and migration_exec_cmd == "gzip":
-                    try:
-                        logging.info("Removing migration file %s", clone.exec_file)
-                        os.remove(self.exec_file)
-                    except Exception:
-                        pass
 
 
     @error.context_aware
