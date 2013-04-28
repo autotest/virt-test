@@ -1614,8 +1614,11 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         """
         logging.debug("Trying to copy autotest results from guest")
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
-        if not os.path.exists(guest_results_dir):
+        try:
             os.mkdir(guest_results_dir)
+        except OSError, detail:
+            if detail.errno != errno.EEXIST:
+                raise
         vm.copy_files_from("%s/results/default/*" % base_results_dir,
                            guest_results_dir)
 
