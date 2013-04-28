@@ -31,7 +31,7 @@ def run_ethtool(test, params, env):
         find a way to get it installed using yum/apt-get/
         whatever
     """
-    def ethtool_get(f_type):
+    def ethtool_get(session, f_type):
         feature_pattern = {
             'tx':  'tx.*checksumming',
             'rx':  'rx.*checksumming',
@@ -50,7 +50,7 @@ def run_ethtool(test, params, env):
             logging.debug("(%s) %s: failed to get status", ethname, f_type)
 
 
-    def ethtool_set(f_type, status):
+    def ethtool_set(session, f_type, status):
         """
         Set ethernet device offload status
 
@@ -63,30 +63,30 @@ def run_ethtool(test, params, env):
         if status not in ["off", "on"]:
             return False
         cmd = "ethtool -K %s %s %s" % (ethname, f_type, status)
-        if ethtool_get(f_type) != status:
+        if ethtool_get(session, f_type) != status:
             try:
                 session.cmd(cmd)
                 return True
             except aexpect.ShellCmdError, e:
                 logging.error(e)
                 return False
-        if ethtool_get(f_type) != status:
+        if ethtool_get(session, f_type) != status:
             logging.error("(%s) %s: set status %s failed", ethname, f_type,
                           status)
             return False
         return True
 
 
-    def ethtool_save_params():
+    def ethtool_save_params(session):
         error.context("Saving ethtool configuration", logging.info)
         for i in supported_features:
-            feature_status[i] = ethtool_get(i)
+            feature_status[i] = ethtool_get(session, i)
 
 
-    def ethtool_restore_params():
+    def ethtool_restore_params(session):
         error.context("Restoring ethtool configuration", logging.info)
         for i in supported_features:
-            ethtool_set(i, feature_status[i])
+            ethtool_set(session, i, feature_status[i])
 
 
     def compare_md5sum(name):
@@ -234,20 +234,20 @@ def run_ethtool(test, params, env):
         "gro": (ro_callback, ("rx",), ("lro",)),
         "lro": (rx_callback, (), ("gro",)),
         }
-    ethtool_save_params()
+    ethtool_save_params(session)
     failed_tests = []
     try:
         for f_type in supported_features:
             callback = test_matrix[f_type][0]
 
             for i in test_matrix[f_type][2]:
-                if not ethtool_set(i, "off"):
+                if not ethtool_set(session, i, "off"):
                     e_msg = "Failed to disable %s" % i
                     logging.error(e_msg)
                     failed_tests.append(e_msg)
 
             for i in [f for f in test_matrix[f_type][1]] + [f_type]:
-                if not ethtool_set(i, "on"):
+                if not ethtool_set(session, i, "on"):
                     e_msg = "Failed to enable %s" % i
                     logging.error(e_msg)
                     failed_tests.append(e_msg)
@@ -258,7 +258,7 @@ def run_ethtool(test, params, env):
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
 
-            if not ethtool_set(f_type, "off"):
+            if not ethtool_set(session, f_type, "off"):
                 e_msg = "Failed to disable %s" % f_type
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
@@ -273,6 +273,6 @@ def run_ethtool(test, params, env):
             raise error.TestFail("Failed tests: %s" % failed_tests)
 
     finally:
-        ethtool_restore_params()
+        ethtool_restore_params(session)
         session.close()
         session2.close()
