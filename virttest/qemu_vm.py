@@ -673,7 +673,6 @@ class VM(virt_vm.BaseVM):
             # Only add boot=on/off if necessary (deprecated in newer qemu)
             if boot != "unused":
                 cmd += _add_option("boot", boot, bool)
-            cmd += _add_option("id", name)
             cmd += _add_option("readonly", readonly, bool)
             cmd += _add_option("format", imgfmt)
             cmd += _add_option("aio", aio)
@@ -1396,6 +1395,17 @@ class VM(virt_vm.BaseVM):
                     scsi=image_params.get("virtio-blk-pci_scsi"),
                     x_data_plane=image_params.get("x-data-plane"),
                     blk_extra_params=image_params.get("blk_extra_params"))
+
+            # increase the bus and unit no for ide device
+            format = image_params.get("drive_format")
+            if format == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            elif format == "virtio":
+                vdisk += 1
+            elif format.startswith("scsi-"):
+                scsi_disk += 1
 
         # Networking
         redirs = []
