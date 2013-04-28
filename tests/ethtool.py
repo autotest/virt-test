@@ -1,4 +1,4 @@
-import logging, re
+import logging, re, time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_net, utils_misc, remote, aexpect
@@ -23,6 +23,24 @@ def run_ethtool(test, params, env):
         find a way to get it installed using yum/apt-get/
         whatever
     """
+    def send_cmd_safe(session, cmd):
+        logging.debug("Sending command: %s", cmd)
+        session.sendline(cmd)
+        output = ""
+        got_prompt = False
+        start_time = time.time()
+        # Wait for shell prompt until timeout.
+        while ((time.time() - start_time) < login_timeout and not got_prompt):
+            time.sleep(0.2)
+            session.sendline()
+            try:
+                output += session.read_up_to_prompt()
+                got_prompt = True
+            except aexpect.ExpectTimeoutError:
+                pass
+        return output
+
+
     def ethtool_get(f_type):
         feature_pattern = {
             'tx':  'tx.*checksumming',
@@ -52,18 +70,21 @@ def run_ethtool(test, params, env):
         logging.info("(%s) %s: set status %s", ethname, f_type, status)
         if status not in ["off", "on"]:
             return False
+
+        if ethtool_get(session, f_type) == status:
+            return True
+
+        err_msg = "(%s) %s: set status %s failed" % (ethname, f_type, status)
         cmd = "ethtool -K %s %s %s" % (ethname, f_type, status)
-        if ethtool_get(f_type) != status:
-            try:
-                session.cmd(cmd)
-                return True
-            except aexpect.ShellCmdError, e:
-                logging.error(e)
-                return False
-        if ethtool_get(f_type) != status:
-            logging.error("(%s) %s: set status %s failed", ethname, f_type,
-                          status)
-            return False
+        try:
+            send_cmd_safe(session, cmd)
+        except aexpect.ShellCmdError, e:
+            logging.error("%s, detail: %s", err_msg, e)
+
+        if ethtool_get(session, f_type) == status:
+            return True
+
+        logging.error(err_msg)
         return True
 
 
@@ -191,11 +212,12 @@ def run_ethtool(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    login_timeout = int(params.get("login_timeout", 360))
+    session = vm.wait_for_login(timeout=login_timeout)
 
     # Let's just error the test if we identify that there's no ethtool installed
     session.cmd("ethtool -h")
-    session2 = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    session2 = vm.wait_for_login(timeout=login_timeout)
     mtu = 1514
     feature_status = {}
     filename = "/tmp/ethtool.dd"
