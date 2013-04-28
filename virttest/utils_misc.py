@@ -664,9 +664,9 @@ def get_cpu_model():
             pattern += r".+(\b%s\b)" % i
         return pattern
 
-    cpu_types = {"AuthenticAMD": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
+    cpu_types = {"amd": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
                                   "Opteron_G2", "Opteron_G1"],
-                 "GenuineIntel": ["Haswell", "SandyBridge", "Westmere",
+                 "intel": ["Haswell", "SandyBridge", "Westmere",
                                   "Nehalem", "Penryn", "Conroe"]}
     cpu_type_re = {"Opteron_G5":
                    "f16c,fma,tbm",
