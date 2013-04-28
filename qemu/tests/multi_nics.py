@@ -1,6 +1,6 @@
 import logging, time, re
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc, remote
+from virttest import utils_test, remote, utils_net
 
 
 @error.context_aware
@@ -109,6 +109,7 @@ def run_multi_nics(test, params, env):
                                    log_filename=log_filename,
                                    timeout=transfer_timeout)
         error.context("Compare original file and transferred file.",
+                                                        logging.info)
 
         cmd = "diff /tmp/1 /tmp/3"
         s, o = session.get_command_status_output(cmd)
@@ -122,11 +123,10 @@ def run_multi_nics(test, params, env):
     session_list = []
     vms = re.split("\s+", params.get("vms"))
     timeout = float(params.get("login_timeout", 360))
-    mac_ip_filter = "(eth\d+).*?HWaddr (.\w+:\w+:\w+:\w+:\w+:\w+)\s+?"
-    mac_ip_filter += "inet addr:(.\d+\.\d+\.\d+\.\d+)"
-    mac_ip_filter = params.get("mac_ip_filter", mac_ip_filter)
+    mac_ip_filter = "(eth\d+).*?%s.*?%s" % (params.get("mac_filter"),
+                                            params.get("ip_filter"))
     strict_check = params.get("strick_check")
-    host_ip = utils_misc.get_ip_address_by_interface(params.get("netdst"))
+    host_ip = utils_net.get_ip_address_by_interface(params.get("netdst"))
     host_ip = params.get("srchost", host_ip)
     flood_minutes = float(params.get("flood_minutes"))
     for vm_name in vms:
