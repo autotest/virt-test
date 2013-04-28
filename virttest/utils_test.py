@@ -22,7 +22,7 @@ More specifically:
 """
 
 import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl
-import threading, shelve, getpass, socket
+import threading, shelve, socket
 from Queue import Queue
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
@@ -1450,6 +1450,7 @@ def domstat_cgroup_cpuacct_percpu(domain, qemu_path="/libvirt/qemu/"):
                               percpu_act_file)
 
 
+@error.context_aware
 def run_file_transfer(test, params, env):
     """
     Transfer a file back and forth between host and guest.
@@ -1468,6 +1469,7 @@ def run_file_transfer(test, params, env):
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
 
+    error.context("Login to guest", logging.info)
     session = vm.wait_for_login(timeout=login_timeout)
 
     dir_name = test.tmpdir
@@ -1488,31 +1490,33 @@ def run_file_transfer(test, params, env):
                   utils_misc.generate_random_string(8))
 
     try:
-        logging.info("Creating %dMB file on host", filesize)
+        error.context("Creating %dMB file on host" % filesize, logging.info)
         utils.run(cmd)
 
-        if transfer_type == "remote":
-            logging.info("Transfering file host -> guest, timeout: %ss",
-                         transfer_timeout)
-            t_begin = time.time()
-            vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
-            t_end = time.time()
-            throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer host -> guest succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-
-            logging.info("Transfering file guest -> host, timeout: %ss",
-                         transfer_timeout)
-            t_begin = time.time()
-            vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
-            t_end = time.time()
-            throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer guest -> host succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-        else:
+        if transfer_type != "remote":
             raise error.TestError("Unknown test file transfer mode %s" %
                                   transfer_type)
 
+        error.context("Transfering file host -> guest,"
+                      " timeout: %ss" % transfer_timeout, logging.info)
+        t_begin = time.time()
+        vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
+        t_end = time.time()
+        throughput = filesize / (t_end - t_begin)
+        logging.info("File transfer host -> guest succeed, "
+                     "estimated throughput: %.2fMB/s", throughput)
+
+        error.context("Transfering file guest -> host,"
+                      " timeout: %ss" % transfer_timeout, logging.info)
+        t_begin = time.time()
+        vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
+        t_end = time.time()
+        throughput = filesize / (t_end - t_begin)
+        logging.info("File transfer guest -> host succeed, "
+                     "estimated throughput: %.2fMB/s", throughput)
+
+        error.context("Compare md5sum between original file and"
+                      " transfered file", logging.info)
         if (utils.hash_file(host_path, method="md5") !=
             utils.hash_file(host_path2, method="md5")):
             raise error.TestFail("File changed after transfer host -> guest "
