@@ -133,7 +133,8 @@ def run_ethtool(test, params, env):
         @param src: Source host of transfer file
         @return: Tuple (status, error msg/tcpdump result)
         """
-        session2.cmd_output("rm -rf %s" % filename)
+        sess = vm.wait_for_login(timeout=login_timeout)
+        session.cmd_output("rm -rf %s" % filename)
         dd_cmd = ("dd if=/dev/urandom of=%s bs=1M count=%s" %
                   (filename, params.get("filesize")))
         failure = (False, "Failed to create file using dd, cmd: %s" % dd_cmd)
@@ -146,7 +147,7 @@ def run_ethtool(test, params, env):
             tcpdump_cmd += " and src %s" % guest_ip
             copy_files_func = vm.copy_files_from
             try:
-                session.cmd_output(dd_cmd, timeout=360)
+                sess.cmd_output(dd_cmd, timeout=360)
             except aexpect.ShellCmdError, e:
                 return failure
         else:
@@ -166,7 +167,7 @@ def run_ethtool(test, params, env):
 
         txt = "Listening traffic using command: %s" % tcpdump_cmd
         error.context(txt, logging.info)
-        session2.sendline(tcpdump_cmd)
+        sess.sendline(tcpdump_cmd)
         if not utils_misc.wait_for(
                           lambda:session.cmd_status("pgrep tcpdump") == 0, 30):
             return (False, "Tcpdump process wasn't launched")
@@ -180,7 +181,7 @@ def run_ethtool(test, params, env):
 
         session.cmd("killall tcpdump")
         try:
-            tcpdump_string = session2.read_up_to_prompt(timeout=60)
+            tcpdump_string = sess.read_up_to_prompt(timeout=60)
         except aexpect.ExpectError:
             return (False, "Failed to read tcpdump's output")
 
@@ -233,7 +234,6 @@ def run_ethtool(test, params, env):
     # Let's just error the test if we identify that there's no ethtool installed
     error.context("Check whether ethtool installed in guest.")
     session.cmd("ethtool -h")
-    session2 = vm.wait_for_login(timeout=login_timeout)
     mtu = 1514
     feature_status = {}
     filename = "/tmp/ethtool.dd"
@@ -296,6 +296,15 @@ def run_ethtool(test, params, env):
             raise error.TestFail("Failed tests: %s" % failed_tests)
 
     finally:
-        ethtool_restore_params(session)
-        session.close()
-        session2.close()
+        try:
+            if session:
+                session.close()
+        except Exception, detail:
+            logging.error("Fail to close session: '%s'", detail)
+
+        try:
+            session = vm.wait_for_serial_login(timeout=login_timeout)
+            ethtool_restore_params(session)
+        except Exception, detail:
+            logging.warn("Could not restore parameter of"
+                         " eth card: '%s'", detail)
