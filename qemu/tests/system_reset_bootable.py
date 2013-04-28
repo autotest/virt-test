@@ -38,17 +38,18 @@ def run_system_reset_bootable(test, params, env):
     logging.info("Wait for %d seconds before reset" % wait_time)
     time.sleep(wait_time)
 
-    for _ in range(reset_times):
+    for i in range(reset_times):
+        error.context("Reset guest system for %s times" % i, logging.info)
+
         vm.monitor.cmd("system_reset")
 
-        if params.get("fixed_interval", "yes") == "yes":
-            interval_tmp = interval
-        else:
+        interval_tmp = interval
+        if params.get("fixed_interval", "yes") != "yes":
             interval_tmp = random.randint(0, interval)
 
-        logging.info("Reset the system by monitor cmd"
-                     " after %ss" % interval_tmp)
+        logging.debug("Reset the system by monitor cmd"
+                     " after %ssecs" % interval_tmp)
         time.sleep(interval_tmp)
 
-    logging.info("Try to login guest after reset")
-    session = vm.wait_for_login(timeout=timeout)
+    error.context("Try to login guest after reset", logging.info)
+    vm.wait_for_login(timeout=timeout)
