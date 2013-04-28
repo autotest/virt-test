@@ -1,17 +1,24 @@
 import logging
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 from virttest import utils_test
 
 
+@error.context_aware
 def run_stop_continue(test, params, env):
     """
     Suspend a running Virtual Machine and verify its state.
 
     1) Boot the vm
-    2) Suspend the vm through stop command
-    3) Verify the state through info status command
-    4) Check is the ssh session to guest is still responsive,
-       if succeed, fail the test.
+    2) Do preparation operation (Optional)
+    3) Start a background process (Optional)
+    4) Stop the VM
+    5) Verify the status of VM is 'paused'
+    6) Verify the session has no response
+    7) Resume the VM
+    8) Verify the status of VM is 'running'
+    9) Re-login the guest
+    10) Do check operation (Optional)
+    11) Do clean operation (Optional)
 
     @param test: Kvm test object
     @param params: Dictionary with the test parameters
@@ -19,56 +26,64 @@ def run_stop_continue(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    timeout = float(params.get("login_timeout", 240))
-    session = vm.wait_for_login(timeout=timeout)
+    login_timeout = float(params.get("login_timeout", 240))
+    session = vm.wait_for_login(timeout=login_timeout)
     session_bg = None
 
+    start_bg_process = params.get("start_bg_process")
     try:
-        if params.get("prepare_op"):
+        prepare_op = params.get("prepare_op")
+        if prepare_op:
+            error.context("Do preparation operation: '%s'" % prepare_op,
+                          logging.info)
             op_timeout = float(params.get("prepare_op_timeout", 60))
-            session.cmd(params.get("prepare_op"), timeout=op_timeout)
+            session.cmd(prepare_op, timeout=op_timeout)
 
-        if params.get("start_bg_process"):
+        if start_bg_process:
+            bg_cmd = params.get("bg_cmd")
+            error.context("Start a background process: '%s'" % bg_cmd,
+                          logging.info)
             session_bg = vm.wait_for_login(timeout=login_timeout)
             bg_cmd_timeout = float(params.get("bg_cmd_timeout", 240))
-
             args = (bg_cmd, bg_cmd_timeout)
+
             bg = utils_test.BackgroundTest(session_bg.cmd, args)
             bg.start()
 
-        logging.info("Stop the VM")
+        error.base_context("Stop the VM", logging.info)
         vm.pause()
-        logging.info("Verifying the status of VM is 'paused'")
+        error.context("Verify the status of VM is 'paused'", logging.info)
         vm.verify_status("paused")
 
-        logging.info("Check the session is responsive")
+        error.context("Verify the session has no response", logging.info)
         if session.is_responsive():
-            raise error.TestFail("Session is still responsive after stop")
+            msg = "Session is still responsive after stop"
+            logging.error(msg)
+            raise error.TestFail(msg)
 
-        logging.info("Try to resume the guest")
+        error.base_context("Resume the VM", logging.info)
         vm.resume()
-        logging.info("Verifying the status of VM is 'running'")
+        error.context("Verify the status of VM is 'running'", logging.info)
         vm.verify_status("running")
 
-        logging.info("Try to re-log into guest")
-        session = vm.wait_for_login(timeout=timeout)
+        error.context("Re-login the guest", logging.info)
+        session = vm.wait_for_login(timeout=login_timeout)
 
-        if params.get("start_bg_process"):
+        if start_bg_process:
             if bg:
                 bg.join()
 
-        if params.get("check_op"):
+        check_op = params.get("check_op")
+        if check_op:
+            error.context("Do check operation: '%s'" % check_op, logging.info)
             op_timeout = float(params.get("check_op_timeout", 60))
-            s, o = session.cmd_status_output(params.get("check_op"),
-                                             timeout=op_timeout)
+            s, o = session.cmd_status_output(check_op, timeout=op_timeout)
             if s != 0:
                 raise error.TestFail("Something wrong after stop continue, "
                                      "check command report: %s" % o)
     finally:
-        if params.get("clean_op"):
+        clean_op = params.get("clean_op")
+        if clean_op:
+            error.context("Do clean operation: '%s'" % clean_op, logging.info)
             op_timeout = float(params.get("clean_op_timeout", 60))
-            session.cmd(params.get("clean_op"),  timeout=op_timeout)
-        session.close()
-        if params.get("start_bg_process"):
-            if session_bg:
-                session_bg.close()
+            session.cmd(clean_op, timeout=op_timeout)
