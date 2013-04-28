@@ -17,8 +17,7 @@ class EnospcConfig(object):
         self.tmpdir = test.tmpdir
         self.qemu_img_binary = params['qemu_img_binary']
         if not os.path.isfile(self.qemu_img_binary):
-            self.qemu_img_binary = os.path.join(root_dir,
-                                                self.qemu_img_binary)
+            self.qemu_img_binary = utils_misc.get_qemu_img_binary(params)
         self.raw_file_path = os.path.join(self.tmpdir, 'enospc.raw')
         # Here we're trying to choose fairly explanatory names so it's less
         # likely that we run in conflict with other devices in the system
