@@ -18,22 +18,23 @@ def run_system_reset_bootable(test, params, env):
     @param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
-    reset_times = int(params.get("reset_times",20))
-    interval = int(params.get("reset_interval",10))
+    reset_times = int(params.get("reset_times", 20))
+    interval = int(params.get("reset_interval", 10))
     wait_time = int(params.get("wait_time_for_reset",60))
 
     if params.get("get_boot_time") == "yes":
-        error.context("Check guest boot up time.", logging.info)
-        session = vm.wait_for_login(timeout=timeout)
+        error.context("Check guest boot up time", logging.info)
+        vm.create()
+        vm.wait_for_login(timeout=timeout)
         bootup_time = time.time() - vm.start_time
         if params.get("reset_during_boot") == "yes":
             interval = int(bootup_time)
             wait_time = random.randint(0, int(bootup_time))
         vm.destroy()
-        vm.create()
 
+    error.context("Boot the guest", logging.info)
+    vm.create()
     logging.info("Wait for %d seconds before reset" % wait_time)
     time.sleep(wait_time)
 
