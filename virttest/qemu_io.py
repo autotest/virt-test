@@ -1,4 +1,4 @@
-import re, logging
+import re, logging, os
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, aexpect
@@ -30,7 +30,8 @@ class QemuIO(object):
         self.prompt=prompt
         self.blkdebug_cfg=blkdebug_cfg
 
-        self.qemu_io_cmd = utils_misc.get_path(test.bindir,
+        self.qemu_io_cmd = utils_misc.get_path(os.path.join(test.bindir,
+                                               params.get("vm_type")),
                                                params.get("qemu_io_binary",
                                                           "qemu-io"))
         self.io_options = io_options
