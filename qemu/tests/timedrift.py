@@ -54,8 +54,16 @@ def run_timedrift(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=timeout)
+
+    boot_option_added = params.get("boot_option_added")
+    boot_option_removed = params.get("boot_option_removed")
+    if boot_option_added or boot_option_removed:
+        utils_test.update_boot_option(vm,
+                                           args_removed=boot_option_removed,
+                                           args_added=boot_option_added)
+
+    login_timeout = int(params.get("login_timeout", 360))
+    session = vm.wait_for_login(timeout=login_timeout)
 
     # Collect test parameters:
     # Command to run to get the current time
@@ -76,7 +84,8 @@ def run_timedrift(test, params, env):
     drift_threshold = float(params.get("drift_threshold", "200"))
     drift_threshold_after_rest = float(params.get("drift_threshold_after_rest",
                                                   "200"))
-
+    test_duration = float(params.get("test_duration", "60"))
+    interval_gettime = float(params.get("interval_gettime", "20"))
     guest_load_sessions = []
     host_load_sessions = []
 
@@ -101,9 +110,9 @@ def run_timedrift(test, params, env):
             # Get time before load
             # (ht stands for host time, gt stands for guest time)
             (ht0, gt0) = utils_test.get_time(session,
-                                             time_command,
-                                             time_filter_re,
-                                             time_format)
+                                                 time_command,
+                                                 time_filter_re,
+                                                 time_format)
 
             # Run some load on the guest
             for load_session in guest_load_sessions:
@@ -112,32 +121,35 @@ def run_timedrift(test, params, env):
             # Run some load on the host
             logging.info("Starting load on host...")
             for i in range(host_load_instances):
-                load_cmd = aexpect.run_bg(host_load_command,
-                                          output_func=logging.debug,
-                                          output_prefix="(host load %d) " % i,
-                                          timeout=0.5)
-                host_load_sessions.append(load_cmd)
+                host_load_sessions.append(
+                    aexpect.run_bg(host_load_command,
+                                   output_func=logging.debug,
+                                   output_prefix="(host load %d) " % i,
+                                   timeout=0.5))
                 # Set the CPU affinity of the load process
-                pid = load_cmd.get_pid()
+                pid = host_load_sessions[-1].get_pid()
                 set_cpu_affinity(pid, cpu_mask)
 
             # Sleep for a while (during load)
             logging.info("Sleeping for %s seconds...", load_duration)
             time.sleep(load_duration)
 
-            # Get time delta after load
-            (ht1, gt1) = utils_test.get_time(session,
-                                             time_command,
-                                             time_filter_re,
-                                             time_format)
+            start_time = time.time()
+            while (time.time() - start_time) < test_duration:
+                # Get time delta after load
+                (ht1, gt1) = utils_test.get_time(session,
+                                                     time_command,
+                                                     time_filter_re,
+                                                     time_format)
 
-            # Report results
-            host_delta = ht1 - ht0
-            guest_delta = gt1 - gt0
-            drift = 100.0 * (host_delta - guest_delta) / host_delta
-            logging.info("Host duration: %.2f", host_delta)
-            logging.info("Guest duration: %.2f", guest_delta)
-            logging.info("Drift: %.2f%%", drift)
+                # Report results
+                host_delta = ht1 - ht0
+                guest_delta = gt1 - gt0
+                drift = 100.0 * (host_delta - guest_delta) / host_delta
+                logging.info("Host duration: %.2f", host_delta)
+                logging.info("Guest duration: %.2f", guest_delta)
+                logging.info("Drift: %.2f%%", drift)
+                time.sleep(interval_gettime)
 
         finally:
             logging.info("Cleaning up...")
@@ -158,12 +170,16 @@ def run_timedrift(test, params, env):
 
         # Get time after rest
         (ht2, gt2) = utils_test.get_time(session,
-                                         time_command,
-                                         time_filter_re,
-                                         time_format)
-
+                                             time_command,
+                                             time_filter_re,
+                                             time_format)
     finally:
         session.close()
+        # remove flags add for this test.
+        if boot_option_added or boot_option_removed:
+            utils_test.update_boot_option(vm,
+                                                args_removed=boot_option_added,
+                                                args_added=boot_option_removed)
 
     # Report results
     host_delta_total = ht2 - ht0

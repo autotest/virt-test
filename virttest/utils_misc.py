@@ -5,11 +5,12 @@ Virtualization test utility functions.
 """
 
 import time, string, random, socket, os, signal, re, logging, commands
-import fcntl, sys, inspect, tarfile, shutil
+import fcntl, sys, inspect, tarfile, shutil, getpass
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
-import utils_koji, data_dir
+import cartesian_config
+import data_dir, utils_koji
 
 import platform
 ARCH = platform.machine()
@@ -396,8 +397,27 @@ def run_tests(parser, job):
 
     @return: True, if all tests ran passed, False if any of them failed.
     """
+    prepare_case = ['unattended_install', 'rh_kernel_update',
+                    'disable_win_update']
     last_index = -1
+    pass_list = []
+    offset = 0
     for i, d in enumerate(parser.get_dicts()):
+        if d.has_key("prepare_case"):
+            prepare_case = d["prepare_case"]
+        if d.get("case_type") == "prepare":
+            case_mark = ""
+            for case in prepare_case:
+                if case in d["name"]:
+                    img_name = d['image_name'] + '-' + d['image_format']
+                    case_mark = "%s-%s" % (case, img_name)
+            if case_mark:
+                if case_mark in pass_list:
+                    offset += 1
+                    continue
+                else:
+                    pass_list.append(case_mark)
+        i -= offset
         logging.info("Test %4d:  %s" % (i + 1, d["shortname"]))
         last_index += 1
 
@@ -413,7 +433,28 @@ def run_tests(parser, job):
     index = 0
     setup_flag = 1
     cleanup_flag = 2
+    pass_list = []
     for param_dict in parser.get_dicts():
+        tmp_dict = {}
+        for key in param_dict:
+            if key.endswith("_equal"):
+                t_key = key.split("_equal")[0]
+                tmp_dict[t_key] = param_dict[key]
+            elif key.endswith("_min"):
+                t_key = key.split("_min")[0]
+                if not d.has_key(t_key) or \
+                    cartesian_config.compare_string(param_dict[t_key],
+                                                    param_dict[key]) < 0:
+                    tmp_dict[t_key] = param_dict[key]
+            elif key.endswith("_max"):
+                t_key = key.split("_max")[0]
+                if not d.has_key(t_key) or \
+                    cartesian_config.compare_string(param_dict[t_key],
+                                                    param_dict[key]) > 0:
+                    tmp_dict[t_key] = param_dict[key]
+        for key in tmp_dict:
+            param_dict[key] = tmp_dict[key]
+
         if index == 0:
             if param_dict.get("host_setup_flag", None) is not None:
                 flag = int(param_dict["host_setup_flag"])
@@ -429,7 +470,9 @@ def run_tests(parser, job):
         index += 1
 
         # Add kvm module status
-        param_dict["kvm_default"] = get_module_params(param_dict.get("sysfs_dir", "sys"), "kvm")
+        kvm_default = get_module_params(param_dict.get("sysfs_dir", "sys"),
+                                        "kvm")
+        param_dict["kvm_default"] = kvm_default
 
         if param_dict.get("skip") == "yes":
             continue
@@ -451,11 +494,11 @@ def run_tests(parser, job):
             # Setting up profilers during test execution.
             profilers = param_dict.get("profilers", "").split()
             for profiler in profilers:
-                job.profilers.add(profiler)
+                job.profilers.add(profiler, **param_dict)
             # We need only one execution, profiled, hence we're passing
             # the profile_only parameter to job.run_test().
             profile_only = bool(profilers) or None
-            test_timeout = int(param_dict.get("test_timeout", 14400))
+            test_timeout = int(param_dict.get("job_timeout", 14400))
             current_status = job.run_test_detail("virt",
                                                  params=param_dict,
                                                  tag=test_tag,
@@ -560,10 +603,23 @@ kvm_map_flags_to_test = {
 
 
 kvm_map_flags_aliases = {
-            'sse4.1'              :'sse4_1',
-            'sse4.2'              :'sse4_2',
-            'pclmulqdq'           :'pclmuldq',
-            'tsc_deadline_timer'  :'tsc-deadline'
+           'sse4_1'              :'sse4.1',
+           'sse4_2'              :'sse4.2',
+           'pclmuldq'            :'pclmulqdq',
+           'sse3'                :'pni',
+           'ffxsr'               :'fxsr_opt',
+           'xd'                  :'nx',
+           'i64'                 :'lm',
+           'psn'                 :'pn',
+           'clfsh'               :'clflush',
+           'dts'                 :'ds',
+           'htt'                 :'ht',
+           'CMPXCHG8B'           :'cx8',
+           'Page1GB'             :'pdpe1gb',
+           'LahfSahf'            :'lahf_lm',
+           'ExtApicSpace'        :'extapic',
+           'AltMovCr8'           :'cr8_legacy',
+           'cr8legacy'           :'cr8_legacy'
             }
 
 
@@ -614,6 +670,74 @@ def get_cpu_vendor(cpu_flags=[], verbose=True):
     if verbose:
         logging.debug("Detected CPU vendor as '%s'", vendor)
     return vendor
+
+
+def get_support_machine_type(qemu_binary="/usr/libexec/qemu-kvm"):
+    """
+    Get the machine type the host support,return a list of machine type
+    """
+    o = utils.system_output("%s -M ?" % qemu_binary)
+    s = re.findall("(\S*)\s*RHEL\s", o)
+    c = re.findall("(RHEL.*PC)", o)
+    return (s, c)
+
+
+def get_cpu_model():
+    """
+    Get cpu model from host cpuinfo
+    """
+    def _make_up_pattern(flags):
+        """
+        Update the check pattern to a certain order and format
+        """
+        pattern_list = re.split(",", flags.strip())
+        pattern_list.sort()
+        pattern = r"(\b%s\b)" % pattern_list[0]
+        for i in pattern_list[1:]:
+            pattern += r".+(\b%s\b)" % i
+        return pattern
+
+    cpu_types = {"amd": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
+                                  "Opteron_G2", "Opteron_G1"],
+                 "intel": ["Haswell", "SandyBridge", "Westmere",
+                                  "Nehalem", "Penryn", "Conroe"]}
+    cpu_type_re = {"Opteron_G5":
+                   "f16c,fma,tbm",
+                   "Opteron_G4":
+                   "avx,xsave,aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3,sse4a",
+                   "Opteron_G3": "cx16,sse4a",
+                   "Opteron_G2": "cx16",
+                   "Opteron_G1": "",
+                   "Haswell":
+                   "fsgsbase,bmi1,hle,avx2,smep,bmi2,erms,invpcid,rtm",
+                   "SandyBridge":
+                   "avx,xsave,aes,sse4_2|sse4.2,sse4.1|sse4_1,cx16,ssse3",
+                   "Westmere": "aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
+                   "Nehalem": "sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
+                   "Penryn": "sse4.1|sse4_1,cx16,ssse3",
+                   "Conroe": "ssse3"}
+
+    flags = get_cpu_flags()
+    flags.sort()
+    cpu_flags = " ".join(flags)
+    vendor = get_cpu_vendor(flags)
+
+    cpu_model = ""
+    if cpu_flags:
+        for cpu_type in cpu_types.get(vendor):
+            pattern = _make_up_pattern(cpu_type_re.get(cpu_type))
+            if re.findall(pattern, cpu_flags):
+                cpu_model = cpu_type
+                break
+    else:
+        logging.warn("Can not get cpu flags from cpuinfo")
+
+    if cpu_model:
+        cpu_type_list = cpu_types.get(vendor)
+        cpu_support_model = cpu_type_list[cpu_type_list.index(cpu_model):]
+        cpu_model = ",".join(cpu_support_model)
+
+    return cpu_model
 
 
 def get_archive_tarball_name(source_dir, tarball_name, compression):
@@ -1138,6 +1262,20 @@ class NumaNode(object):
             logging.info("    %s: %s" % (i, self.dict[i]))
 
 
+def check_if_vm_vcpu_match(vcpu_desire, vm):
+    """
+    This checks whether the VM vCPU quantity matches
+    the value desired.
+    """
+    vcpu_actual = vm.get_cpu_count()
+    if vcpu_desire != vcpu_actual:
+        logging.debug("CPU quantity mismatched !!! guest said it got %s "
+          "but we assigned %s" % (vcpu_actual, vcpu_desire))
+        return False
+    logging.info("CPU quantity matched: %s" % vcpu_actual)
+    return True
+
+
 def get_host_cpu_models():
     """
     Get cpu model from host cpuinfo
@@ -1463,3 +1601,15 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
         data *= multiple
 
     return str(data)
+
+
+def verify_running_as_root():
+    """
+    Verifies whether we're running under UID 0 (root).
+
+    @raise: error.TestNAError
+    """
+    if os.getuid() != 0:
+        raise error.TestNAError("This test requires root privileges "
+                                "(currently running with user %s)" %
+                                getpass.getuser())

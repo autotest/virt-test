@@ -31,6 +31,7 @@ class QemuImg(storage.QemuImg):
                                  params.get("qemu_img_binary","qemu-img"))
 
 
+    @error.context_aware
     def create(self, params, ignore_errors=False):
         """
         Create an image using qemu_img or dd.
@@ -38,7 +39,6 @@ class QemuImg(storage.QemuImg):
         @param params: Dictionary containing the test parameters.
         @param ignore_errors: Whether to ignore errors on the image creation
                 cmd.
-
         @note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
@@ -126,12 +126,15 @@ class QemuImg(storage.QemuImg):
         return self.image_filename, cmd_result
 
 
-    def convert(self, params, root_dir):
+    def convert(self, params, root_dir, cache_mode=None):
         """
         Convert image
 
         @param params: dictionary containing the test parameters
         @param root_dir: dir for save the convert image
+        @param cache_mode: the cache mode used to write the output disk image,
+            the valid options are: 'none', 'writeback' (default),
+            'writethrough', 'directsync' and 'unsafe'.
 
         @note: params should contain:
             convert_image_tag -- the image name of the convert image
@@ -161,6 +164,8 @@ class QemuImg(storage.QemuImg):
         if self.image_format:
             cmd += " -f %s" % self.image_format
         cmd += " -O %s" % convert_format
+        if cache_mode:
+            cmd += " -t %s" % cache_mode
         cmd += " %s %s" % (self.image_filename, convert_image_filename)
 
         logging.info("Convert image %s from %s to %s", self.image_filename,
@@ -171,11 +176,14 @@ class QemuImg(storage.QemuImg):
         return convert_image_tag
 
 
-    def rebase(self, params):
+    def rebase(self, params, cache_mode=None):
         """
         Rebase image
 
         @param params: dictionary containing the test parameters
+        @param cache_mode: the cache mode used to write the output disk image,
+            the valid options are: 'none', 'writeback' (default),
+            'writethrough', 'directsync' and 'unsafe'.
 
         @note: params should contain:
             cmd -- qemu-img cmd
@@ -194,6 +202,8 @@ class QemuImg(storage.QemuImg):
         cmd += " rebase"
         if self.image_format:
             cmd += " -f %s" % self.image_format
+        if cache_mode:
+            cmd += " -t %s" % cache_mode
         if rebase_mode == "unsafe":
             cmd += " -u"
         if self.base_tag:
@@ -211,12 +221,18 @@ class QemuImg(storage.QemuImg):
 
 
 
-    def commit(self):
+    def commit(self, params={}, cache_mode=None):
         """
         Commit image to it's base file
+
+        @param cache_mode: the cache mode used to write the output disk image,
+            the valid options are: 'none', 'writeback' (default),
+            'writethrough', 'directsync' and 'unsafe'.
         """
         cmd = self.image_cmd
         cmd += " commit"
+        if cache_mode:
+            cmd += " -t %s" % cache_mode
         cmd += " -f %s %s" % (self.image_format, self.image_filename)
         logging.info("Commit snapshot %s" % self.image_filename)
         utils.system(cmd)
@@ -267,6 +283,16 @@ class QemuImg(storage.QemuImg):
             cmd += " %s" % self.image_filename
 
         utils.system_output(cmd)
+
+
+    def snapshot_list(self):
+        """
+        List all snapshots in the given image
+        """
+        cmd = self.image_cmd
+        cmd += " snapshot -l %s" % self.image_filename
+
+        return utils.system_output(cmd)
 
 
     def remove(self):

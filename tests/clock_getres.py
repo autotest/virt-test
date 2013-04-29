@@ -1,13 +1,15 @@
 import logging, os
 from autotest.client.shared import error
+from virttest import utils_test
 
 
+@error.context_aware
 def run_clock_getres(test, params, env):
     """
     Verify if guests using kvm-clock as the time source have a sane clock
     resolution.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -28,4 +30,8 @@ def run_clock_getres(test, params, env):
     session.cmd("gcc -lrt -o %s %s" % (bin_name, dest_name))
     session.cmd(bin_name)
     logging.info("PASS: Guest reported appropriate clock resolution")
-    logging.info("Guest's dmesg:\n%s", session.cmd_output("dmesg").strip())
+    sub_test = params.get("sub_test")
+    if sub_test:
+        error.context("Run sub test '%s' after checking"
+                      " clock resolution" % sub_test, logging.info)
+        utils_test.run_virt_sub_test(test, params, env, sub_test)

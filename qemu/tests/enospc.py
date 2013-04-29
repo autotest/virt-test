@@ -1,7 +1,7 @@
 import logging, time, re, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import virt_vm, utils_misc, qemu_storage
+from virttest import virt_vm, utils_misc, qemu_storage, data_dir
 
 
 class EnospcConfig(object):
@@ -17,8 +17,9 @@ class EnospcConfig(object):
         self.tmpdir = test.tmpdir
         self.qemu_img_binary = params['qemu_img_binary']
         if not os.path.isfile(self.qemu_img_binary):
-            self.qemu_img_binary = os.path.join(root_dir,
-                                                self.qemu_img_binary)
+            self.qemu_img_binary = utils_misc.get_path(os.path.join(root_dir,
+                                                       params["vm_type"]),
+                                                       self.qemu_img_binary)
         self.raw_file_path = os.path.join(self.tmpdir, 'enospc.raw')
         # Here we're trying to choose fairly explanatory names so it's less
         # likely that we run in conflict with other devices in the system
@@ -26,6 +27,7 @@ class EnospcConfig(object):
         self.lvtest_name = params["lvtest_name"]
         self.lvtest_device = "/dev/%s/%s" % (self.vgtest_name, self.lvtest_name)
         image_dir = os.path.dirname(params["image_name"])
+        image_dir = os.path.join(data_dir.get_data_dir(), image_dir)
         self.qcow_file_path = os.path.join(image_dir, 'enospc.qcow2')
         try:
             getattr(self, 'loopback')
@@ -62,7 +64,10 @@ class EnospcConfig(object):
             # expects this device to have
             os.symlink(self.lvtest_device, self.qcow_file_path)
         except Exception:
-            self.cleanup()
+            try:
+                self.cleanup()
+            except Exception, e:
+                logging.warn(e)
             raise
 
     @error.context_aware
@@ -96,6 +101,7 @@ class EnospcConfig(object):
             os.remove(self.raw_file_path)
 
 
+@error.context_aware
 def run_enospc(test, params, env):
     """
     ENOSPC test
@@ -111,8 +117,11 @@ def run_enospc(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    error.context("Create a virtual disk on lvm")
     enospc_config = EnospcConfig(test, params)
     enospc_config.setup()
+
+    error.context("Boot up guest with two disks")
     vm = env.get_vm(params["main_vm"])
     vm.create()
     login_timeout = int(params.get("login_timeout", 360))
@@ -132,6 +141,8 @@ def run_enospc(test, params, env):
         devname = "/dev/sdb"
     cmd = params["background_cmd"]
     cmd %= devname
+
+    error.context("Continually write data to second disk")
     logging.info("Sending background cmd '%s'", cmd)
     session_serial.sendline(cmd)
 
@@ -141,20 +152,22 @@ def run_enospc(test, params, env):
     while i < iterations:
         if vm.monitor.verify_status("paused"):
             pause_n += 1
-            logging.info("Checking all images in use by the VM")
+            error.context("Checking all images in use by the VM")
             for image_name in vm.params.objects("images"):
                 image_params = vm.params.object_params(image_name)
                 try:
-                    image = qemu_storage.QemuImg(image_params, test.bindir,
+                    image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(),
                                                image_name)
-                    image.check_image(image_params, test.bindir)
+                    image.check_image(image_params, data_dir.get_data_dir())
                 except (virt_vm.VMError, error.TestWarn), e:
                     logging.error(e)
-            logging.info("Guest paused, extending Logical Volume size")
+            error.context("Guest paused, extending Logical Volume size")
             try:
                 utils.run("lvextend -L +200M %s" % logical_volume)
             except error.CmdError, e:
                 logging.debug(e.result_obj.stdout)
+
+            error.context("Continue paused guest", logging.info)
             vm.resume()
         elif not vm.monitor.verify_status("running"):
             status = str(vm.monitor.info("status"))
@@ -169,4 +182,9 @@ def run_enospc(test, params, env):
                      pause_n, iterations)
 
     logging.info("Final %s", str(vm.monitor.info("status")))
-    enospc_config.cleanup()
+    # Shutdown guest before remove the image on LVM.
+    vm.destroy(gracefully=vm.monitor.verify_status("running"))
+    try:
+        enospc_config.cleanup()
+    except Exception, e:
+        logging.warn(e)

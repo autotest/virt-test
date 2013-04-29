@@ -16,7 +16,7 @@ def run_migration_with_file_transfer(test, params, env):
     5) Transfer file from guest back to host.
     6) Repeatedly migrate VM and wait until transfer's finished.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -34,6 +34,7 @@ def run_migration_with_file_transfer(test, params, env):
     guest_path = params.get("guest_path", "/tmp/file")
     file_size = params.get("file_size", "500")
     transfer_timeout = int(params.get("transfer_timeout", "240"))
+    migrate_between_vhost_novhost = params.get("migrate_between_vhost_novhost")
 
     try:
         utils.run("dd if=/dev/urandom of=%s bs=1M count=%s" % (host_path,
@@ -45,6 +46,12 @@ def run_migration_with_file_transfer(test, params, env):
                 while bg.isAlive():
                     logging.info("File transfer not ended, starting a round of "
                                  "migration...")
+                    if migrate_between_vhost_novhost == "yes":
+                        vhost_status = vm.params.get("vhost")
+                        if vhost_status == "vhost=on":
+                            vm.params["vhost"] = "vhost=off"
+                        elif vhost_status == "vhost=off":
+                            vm.params["vhost"] = "vhost=on"
                     vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay)
             except Exception:
                 # If something bad happened in the main thread, ignore

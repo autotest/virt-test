@@ -363,7 +363,7 @@ def scp_to_remote(host, port, username, password, local_path, remote_path,
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
                "-o PreferredAuthentications=password -r %s "
-               "-P %s %s %s@%s:%s" %
+               "-P %s %s %s@\[%s\]:%s" %
                (limit, port, local_path, username, host, remote_path))
     password_list = []
     password_list.append(password)
@@ -391,7 +391,7 @@ def scp_from_remote(host, port, username, password, remote_path, local_path,
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null "
                "-o PreferredAuthentications=password -r %s "
-               "-P %s %s@%s:%s %s" %
+               "-P %s %s@\[%s\]:%s %s" %
                (limit, port, username, host, remote_path, local_path))
     password_list = []
     password_list.append(password)
@@ -421,12 +421,55 @@ def scp_between_remotes(src, dst, port, s_passwd, d_passwd, s_name, d_name,
 
     command = ("scp -v -o UserKnownHostsFile=/dev/null -o "
                "PreferredAuthentications=password -r %s -P %s"
-               " %s@%s:%s %s@%s:%s" %
+               " %s@\[%s\]:%s %s@\[%s\]:%s" %
                (limit, port, s_name, src, s_path, d_name, dst, d_path))
     password_list = []
     password_list.append(s_passwd)
     password_list.append(d_passwd)
     return remote_scp(command, password_list, log_filename, timeout)
+
+
+def nc_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
+                            s_name, d_name, s_path, d_path,
+                            c_type="ssh", c_prompt="\n",
+                            d_port="8888", d_protocol="udp", timeout=10,
+                            check_sum=True):
+    """
+    Copy files from a remote host (guest) to another remote host (guest) using
+    netcat.
+
+    @param src/dst: Hostname or IP address of src and dst
+    @param s_name/d_name: Username (if required)
+    @param s_passwd/d_passwd: Password (if required)
+    @param s_path/d_path: Path on the remote machine where we are copying
+    @param c_type: Login method to remote host(guest).
+    @param c_prompt : command line prompt of remote host(guest)
+    @param d_port:  the port data transfer
+    @param d_protocol : nc protocol use (tcp or udp)
+    @param timeout: If a connection and stdin are idle for more than timeout
+                    seconds, then the connection is silently closed.
+
+    @return: True on success and False on failure.
+    """
+    s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
+    d_session = remote_login(c_type, dst, s_port, d_name, d_passwd, c_prompt)
+
+    s_session.cmd("iptables -F")
+    d_session.cmd("iptables -F")
+
+    logging.info("Transfer data using netcat from %s to %s" % (src, dst))
+    cmd = "nc"
+    if d_protocol == "udp":
+        cmd += " -u"
+        cmd += " -w %s" % timeout
+    s_session.sendline("%s -l %s < %s" % (cmd, d_port, s_path))
+    d_session.sendline("echo a | %s %s %s > %s" % (cmd, src, d_port, d_path))
+
+    if check_sum:
+        if (s_session.cmd("md5sum %s" % s_path).split()[0] !=
+            d_session.cmd("md5sum %s" % d_path).split()[0]):
+            return False
+    return True
 
 
 def copy_files_to(address, client, username, password, port, local_path,

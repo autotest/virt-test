@@ -9,7 +9,7 @@ class VMCreateSuccess(Exception):
 
 def run_negative_create(test, params, env):
     """
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     @raise VMCreateSuccess: in case that vm.create() passed

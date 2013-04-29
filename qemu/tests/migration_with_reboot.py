@@ -12,7 +12,7 @@ def run_migration_with_reboot(test, params, env):
     5) Kill off the source VM.
     6) Log into the destination VM after the migration is finished.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

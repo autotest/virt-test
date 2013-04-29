@@ -51,7 +51,10 @@ def run_trans_hugepage(test, params, env):
     if not os.path.ismount(debugfs_path):
         if not os.path.isdir(debugfs_path):
             os.makedirs(debugfs_path)
-        utils.run("mount -t debugfs none %s" % debugfs_path)
+        try:
+            utils.run("mount -t debugfs none %s" % debugfs_path)
+        except Exception:
+            debugfs_flag = 0
 
     vm = utils_test.get_living_vm(env, params.get("main_vm"))
     session = utils_test.wait_for_login(vm, timeout=login_timeout)

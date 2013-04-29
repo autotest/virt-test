@@ -17,5 +17,3 @@ reg add "HKLM\Software\Policies\Microsoft\Windows NT\Reliability" /v "ShutdownRe
 
 rem Just in case reg.exe is missing (e.g. Windows 2000):
 regedit /s %~dp0\rss.reg
-
-start /B C:\rss.exe

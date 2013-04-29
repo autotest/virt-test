@@ -87,7 +87,7 @@ def run_netperf(test, params, env):
         netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
         for i in params.get("netperf_files").split():
             remote.scp_to_remote(ip, shell_port, username, password,
-                                     "%s/%s" % (netperf_dir, i), "/tmp/")
+                                 "%s/%s" % (netperf_dir, i), "/tmp/")
         ssh_cmd(session, params.get("setup_cmd"))
 
         agent_path =  os.path.join(test.virtdir, "scripts/netperf_agent.py")
@@ -140,8 +140,6 @@ def run_netperf(test, params, env):
     if len(params.get("nics", "").split()) > 1:
         server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
         server_ctl_ip = vm.get_address(1)
-
-
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
@@ -255,12 +253,16 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
-    test.write_test_keyval({ 'kvm-userspace-ver': commands.getoutput(ver_cmd) })
-    test.write_test_keyval({ 'guest-kernel-ver': ssh_cmd(server_ctl, guest_ver_cmd) })
+    test.write_test_keyval({ 'kvm-userspace-ver': \
+                                        commands.getoutput(ver_cmd).strip() })
+    test.write_test_keyval({ 'guest-kernel-ver': ssh_cmd(server_ctl,
+                                                     guest_ver_cmd).strip() })
     test.write_test_keyval({ 'session-length': l })
 
-    fd.write('### kvm-userspace-ver : %s\n' % commands.getoutput(ver_cmd) )
-    fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl, guest_ver_cmd) )
+    fd.write('### kvm-userspace-ver : %s\n' % \
+                                         commands.getoutput(ver_cmd).strip() )
+    fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl,
+                                                      guest_ver_cmd).strip() )
     fd.write('### kvm_version : %s\n' % os.uname()[2] )
     fd.write('### session-length : %s\n' % l )
 

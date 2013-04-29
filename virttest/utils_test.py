@@ -22,7 +22,7 @@ More specifically:
 """
 
 import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl
-import threading, shelve, getpass, socket
+import threading, shelve, socket
 from Queue import Queue
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
@@ -97,9 +97,21 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             time.sleep(step)
+        if not session and vm.get_params().get("try_serial_login") == "yes":
+            mode = "serial"
+            logging.info("Remote login failed, trying to login '%s' with "
+                         "serial, timeout %ds", vm.name, timeout)
+            time.sleep(start)
+            while time.time() < end_time:
+                try:
+                    session = vm.serial_login()
+                    break
+                except remote.LoginError, e:
+                    logging.debug(e)
+                time.sleep(step)
     if not session:
         raise error.TestFail("Could not log into guest %s using %s connection" %
-                             (vm.name, mode))
+                             (vm.name, type))
     logging.info("Logged into guest %s using %s connection", vm.name, mode)
     return session
 
@@ -220,11 +232,15 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             case of multi-host migration.
     """
     def mig_finished():
-        o = vm.monitor.info("migrate")
-        if isinstance(o, str):
-            return "status: active" not in o
-        else:
-            return o.get("status") != "active"
+        try:
+            o = vm.monitor.info("migrate")
+            logging.debug("%s", o)
+            if isinstance(o, str):
+                return "status: active" not in o
+            else:
+                return o.get("status") != "active"
+        except Exception:
+            pass
 
     def mig_succeeded():
         o = vm.monitor.info("migrate")
@@ -270,7 +286,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
         try:
             if mig_protocol == "tcp":
                 if dest_host == 'localhost':
-                    uri = "tcp:0:%d" % dest_vm.migration_port
+                    uri = "tcp:localhost:%d" % dest_vm.migration_port
                 else:
                     uri = 'tcp:%s:%d' % (dest_host, mig_port)
             elif mig_protocol == "unix":
@@ -332,7 +348,8 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
     elif mig_failed():
         raise error.TestFail("Migration failed")
     else:
-        raise error.TestFail("Migration ended with unknown status")
+        status = vm.monitor.info("migrate")
+        raise error.TestFail("Migration end with stauts: %s" % status)
 
     if dest_host == 'localhost':
         if dest_vm.monitor.verify_status("paused"):
@@ -1325,6 +1342,62 @@ def get_time(session, time_command, time_filter_re, time_format):
     return (host_time, guest_time)
 
 
+def dump_command_output(session, command, file, timeout=30.0,
+                        internal_timeout=1.0, print_func=None):
+    """
+    @param session: a saved communication between host and guest.
+    @param command: will running in guest side.
+    @param file: redirect command output to the specify file
+    @param timeout: the duration (in seconds) to wait until a match is found.
+    @param internal_timeout: the timeout to pass to read_nonblocking.
+    @param print_func: a function to be used to print the data being read.
+    @return: Command output(string).
+    """
+
+    (status, output) = session.get_command_status_output(command, timeout,
+                                                internal_timeout, print_func)
+    if status != 0:
+        raise error.TestError("Failed to run command %s in guest." % command)
+    try:
+        f = open(file, "w")
+    except IOError:
+        raise error.TestError("Failed to open file opject: %s" % file)
+    f.write(output)
+    f.close()
+
+
+def fix_atest_cmd(atest_basedir, cmd, ip):
+    """
+    fixes the command "autotest/cli/atest" for the external server tests.
+
+    e.g.
+    1. adding -w autotest server argument;
+    2. adding autotest/cli/atest prefix/basedir;
+    and etc..
+
+    @param atest_basedir: base dir of autotest/cli/atest
+    @param cmd: command to fix.
+    @param ip: ip of the autotest server to add to the command.
+    """
+    cmd = os.path.join(atest_basedir, cmd)
+    return ''.join([cmd, " -w ", ip])
+
+
+def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
+    """
+    @param ip: IP address of the server.
+    @param port: the port for remote session.
+    @param usrname: user name for remote login.
+    @param passwd: password.
+    @param prompt: shell/session prompt for the connection.
+    """
+    session = remote.remote_login("ssh", ip, port, usrname, passwd, prompt)
+    if not session:
+        raise error.TestError("Failed to login to the autotest server.")
+
+    return session
+
+
 def get_memory_info(lvms):
     """
     Get memory information from host and guests in format:
@@ -1379,6 +1452,7 @@ def domstat_cgroup_cpuacct_percpu(domain, qemu_path="/libvirt/qemu/"):
                               percpu_act_file)
 
 
+@error.context_aware
 def run_file_transfer(test, params, env):
     """
     Transfer a file back and forth between host and guest.
@@ -1397,6 +1471,7 @@ def run_file_transfer(test, params, env):
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
 
+    error.context("Login to guest", logging.info)
     session = vm.wait_for_login(timeout=login_timeout)
 
     dir_name = test.tmpdir
@@ -1417,31 +1492,33 @@ def run_file_transfer(test, params, env):
                   utils_misc.generate_random_string(8))
 
     try:
-        logging.info("Creating %dMB file on host", filesize)
+        error.context("Creating %dMB file on host" % filesize, logging.info)
         utils.run(cmd)
 
-        if transfer_type == "remote":
-            logging.info("Transfering file host -> guest, timeout: %ss",
-                         transfer_timeout)
-            t_begin = time.time()
-            vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
-            t_end = time.time()
-            throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer host -> guest succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-
-            logging.info("Transfering file guest -> host, timeout: %ss",
-                         transfer_timeout)
-            t_begin = time.time()
-            vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
-            t_end = time.time()
-            throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer guest -> host succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-        else:
+        if transfer_type != "remote":
             raise error.TestError("Unknown test file transfer mode %s" %
                                   transfer_type)
 
+        error.context("Transfering file host -> guest,"
+                      " timeout: %ss" % transfer_timeout, logging.info)
+        t_begin = time.time()
+        vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
+        t_end = time.time()
+        throughput = filesize / (t_end - t_begin)
+        logging.info("File transfer host -> guest succeed, "
+                     "estimated throughput: %.2fMB/s", throughput)
+
+        error.context("Transfering file guest -> host,"
+                      " timeout: %ss" % transfer_timeout, logging.info)
+        t_begin = time.time()
+        vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
+        t_end = time.time()
+        throughput = filesize / (t_end - t_begin)
+        logging.info("File transfer guest -> host succeed, "
+                     "estimated throughput: %.2fMB/s", throughput)
+
+        error.context("Compare md5sum between original file and"
+                      " transfered file", logging.info)
         if (utils.hash_file(host_path, method="md5") !=
             utils.hash_file(host_path2, method="md5")):
             raise error.TestFail("File changed after transfer host -> guest "
@@ -1449,7 +1526,11 @@ def run_file_transfer(test, params, env):
 
     finally:
         logging.info('Cleaning temp file on guest')
-        session.cmd("%s %s" % (clean_cmd, guest_path))
+        try:
+            session.cmd("%s %s" % (clean_cmd, guest_path))
+        except Exception, detail:
+            logging.warn("Could not remove temp files in guest: '%s'", detail)
+
         logging.info('Cleaning temp files on host')
         try:
             os.remove(host_path)
@@ -1539,8 +1620,11 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         """
         logging.debug("Trying to copy autotest results from guest")
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
-        if not os.path.exists(guest_results_dir):
+        try:
             os.mkdir(guest_results_dir)
+        except OSError, detail:
+            if detail.errno != errno.EEXIST:
+                raise
         vm.copy_files_from("%s/results/default/*" % base_results_dir,
                            guest_results_dir)
 
@@ -1853,94 +1937,6 @@ def ping(dest=None, count=None, interval=None, interface=None,
     return raw_ping(command, timeout, session, output_func)
 
 
-def get_linux_ifname(session, mac_address):
-    """
-    Get the interface name through the mac address.
-
-    @param session: session to the virtual machine
-    @mac_address: the macaddress of nic
-
-    @raise error.TestError in case it was not possible to determine the
-            interface name.
-    """
-    def ifconfig_method():
-        try:
-            output = session.cmd("ifconfig -a")
-            return re.findall("(\w+)\s+Link.*%s" % mac_address, output,
-                              re.IGNORECASE)[0]
-        except IndexError:
-            return None
-
-    def iplink_method():
-        try:
-            output = session.cmd("ip link | grep -B1 '%s' -i" % mac_address)
-            return re.findall("\d+:\s+(\w+):\s+.*", output, re.IGNORECASE)[0]
-        except (aexpect.ShellCmdError, IndexError):
-            return None
-
-    def sys_method():
-        try:
-            interfaces = session.cmd('ls --color=never /sys/class/net')
-        except error.CmdError, e:
-            logging.debug("Error listing /sys/class/net: %s" % e)
-            return None
-
-        interfaces = interfaces.strip()
-        for interface in interfaces.split(" "):
-            if interface:
-                try:
-                    i_cmd = "cat /sys/class/net/%s/address" % interface
-                    mac_address_interface = session.cmd(i_cmd)
-                    mac_address_interface = mac_address_interface.strip()
-                    if mac_address_interface == mac_address:
-                        return interface
-                except aexpect.ShellCmdError:
-                    pass
-
-        # If after iterating through interfaces (or no interfaces found)
-        # no interface name was found, just return None
-        return None
-
-    # Try ifconfig first
-    i = ifconfig_method()
-    if i is not None:
-        return i
-
-    # No luck, try ip link
-    i = iplink_method()
-    if i is not None:
-        return i
-
-    # No luck, look on /sys
-    i = sys_method()
-    if i is not None:
-        return i
-
-    # If we came empty handed, let's raise an error
-    raise error.TestError("Failed to determine interface name with "
-                          "mac %s" % mac_address)
-
-
-def restart_guest_network(session, nic_name=None):
-    """
-    Restart guest's network via serial console.
-
-    @param session: session to virtual machine
-    @nic_name: nic card name in guest to restart
-    """
-    if_list = []
-    if not nic_name:
-        # initiate all interfaces on guest.
-        o = session.cmd_output("ip link")
-        if_list = re.findall(r"\d+: (eth\d+):", o)
-    else:
-        if_list.append(nic_name)
-
-    if if_list:
-        session.sendline("killall dhclient && "
-                         "dhclient %s &" % ' '.join(if_list))
-
-
 def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     Call another test script in one test script.
@@ -1977,45 +1973,31 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     run_func(test, params, env)
 
 
-def update_mac_ip_address(vm, params, timeout=None):
+def get_readable_cdroms(params, session):
     """
-    Get mac and ip address from guest then update the mac pool and
-    address cache
+    Get the cdrom list which contain media in guest.
 
-    @param vm: VM object
     @param params: Dictionary with the test parameters.
+    @param session: A shell session on the VM provided.
     """
-    network_query = params.get("network_query", "ifconfig")
-    restart_network = params.get("restart_network", "service network restart")
-    mac_ip_filter = params.get("mac_ip_filter")
-    if timeout is None:
-        timeout = int(params.get("login_timeout"))
-    session = vm.wait_for_serial_login(timeout=360)
-    end_time = time.time() + timeout
-    macs_ips = []
-    i = 0
-    while time.time() < end_time:
-        try:
-            if i % 3 == 0:
-                session.cmd(restart_network)
-            o = session.cmd_status_output(network_query)[1]
-            macs_ips = re.findall(mac_ip_filter, o)
-            # Get nics number
-        except Exception, e:
-            logging.warn(e)
-        nics =  params.get("nics")
-        nic_minimum = len(re.split("\s+", nics.strip()))
-        if len(macs_ips) == nic_minimum:
-            break
-        i += 1
-        time.sleep(5)
-    if len(macs_ips) < nic_minimum:
-        logging.warn("Not all nics get ip address")
+    get_cdrom_cmd = params.get("cdrom_get_cdrom_cmd")
+    check_cdrom_patttern = params.get("cdrom_check_cdrom_pattern")
+    o = session.get_command_output(get_cdrom_cmd)
+    cdrom_list = re.findall(check_cdrom_patttern, o)
+    logging.debug("Found cdroms on guest: %s" % cdrom_list)
 
-    for (mac, ip) in macs_ips:
-        vlan = macs_ips.index((mac, ip))
-        vm.address_cache[mac.lower()] = ip
-        vm.virtnet.set_mac_address(vlan, mac)
+    readable_cdroms = []
+    test_cmd = params.get("cdrom_test_cmd")
+    for d in cdrom_list:
+        s, o = session.cmd_status_output(test_cmd % d)
+        if s == 0:
+            readable_cdroms.append(d)
+            break
+
+    if readable_cdroms:
+        return readable_cdroms
+
+    raise error.TestFail("Could not find a cdrom device contain media.")
 
 
 def pin_vm_threads(vm, node):
@@ -2207,13 +2189,263 @@ def find_substring(string, pattern1, pattern2=None):
     return ret[0]
 
 
-def verify_running_as_root():
+def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
+                           storage_path="/tmp/prewhql.iso",
+                           re_hw_id="(PCI.{14,50})\r\n", run_cmd=True):
     """
-    Verifies whether we're running under UID 0 (root).
+    Get windows driver's hardware id from inf files.
 
-    @raise: error.TestNAError
+    @param dirver: Configurable driver name.
+    @param mount_point: Mount point for the driver storage
+    @param storage_path: The path of the virtio driver storage
+    @param re_hw_id: the pattern for getting hardware id from inf files
+    @param run_cmd:  Use hardware id in windows cmd command or not
+
+    Return: Windows driver's hardware id
     """
-    if os.getuid() != 0:
-        raise error.TestNAError("This test requires root privileges "
-                                "(currently running with user %s)" %
-                                getpass.getuser())
+    if not os.path.exists(mount_point):
+        os.mkdir(mount_point)
+
+    if not os.path.ismount(mount_point):
+        utils.system("mount %s %s -o loop" % (storage_path, mount_point),
+                     timeout=60)
+    driver_link = os.path.join(mount_point, driver_path)
+    try:
+        txt_file = open(driver_link, "r")
+        txt = txt_file.read()
+        hwid = re.findall(re_hw_id, txt)[-1].rstrip()
+        if run_cmd:
+            hwid = '^&'.join(hwid.split('&'))
+        txt_file.close()
+        utils.system("umount %s" % mount_point)
+        return hwid
+    except Exception, e:
+        logging.error("Fail to get hardware id with exception: %s" % e)
+        utils.system("umount %s" % mount_point)
+        return ""
+
+
+class BackgroundTest(object):
+    """
+    This class would run a test in background through a dedicated thread.
+    """
+
+    def __init__(self, func, params, kwargs={}):
+        """
+        Initialize the object and set a few attributes.
+        """
+        self.thread = threading.Thread(target=self.launch,
+                                       args=(func, params, kwargs))
+        self.exception = None
+
+
+    def launch(self, func, params, kwargs):
+        """
+        Catch and record the exception.
+        """
+        try:
+            func(*params, **kwargs)
+        except Exception, e:
+            self.exception = e
+
+
+    def start(self):
+        """
+        Run func(params) in a dedicated thread
+        """
+        self.thread.start()
+
+
+    def join(self):
+        """
+        Wait for the join of thread and raise its exception if any.
+        """
+        self.thread.join()
+        if self.exception:
+            raise self.exception
+
+
+    def is_alive(self):
+        """
+        Check whether the test is still alive.
+        """
+        return self.thread.isAlive()
+
+
+class GuestSuspend(object):
+    """
+    Suspend guest, supports both Linux and Windows.
+
+    """
+    SUSPEND_TYPE_MEM = "mem"
+    SUSPEND_TYPE_DISK = "disk"
+
+
+    def __init__(self, params, vm):
+        if not params or not vm:
+            raise error.TestError("Missing 'params' or 'vm' parameters")
+
+        self._open_session_list = []
+        self.vm = vm
+        self.params = params
+        self.login_timeout = float(self.params.get("login_timeout", 360))
+        self.services_up_timeout = float(self.params.get("services_up_timeout",
+                                                         30))
+        self.os_type = self.params.get("os_type")
+
+
+    def _get_session(self):
+        self.vm.verify_alive()
+        session = self.vm.wait_for_login(timeout=self.login_timeout)
+        return session
+
+
+    def _session_cmd_close(self, session, cmd):
+        try:
+            return session.cmd_status_output(cmd)
+        finally:
+            try:
+                session.close()
+            except Exception:
+                pass
+
+
+    def _cleanup_open_session(self):
+        try:
+            for s in self._open_session_list:
+                if s:
+                    s.close()
+        except Exception:
+            pass
+
+
+    @error.context_aware
+    def setup_bg_program(self, **args):
+        """
+        Start up a program as a flag in guest.
+        """
+        suspend_bg_program_setup_cmd = args.get("suspend_bg_program_setup_cmd")
+
+        error.context("Run a background program as a flag", logging.info)
+        session = self._get_session()
+        self._open_session_list.append(session)
+
+        logging.debug("Waiting all services in guest are fully started.")
+        time.sleep(self.services_up_timeout)
+
+        session.sendline(suspend_bg_program_setup_cmd)
+
+
+    @error.context_aware
+    def check_bg_program(self, **args):
+        """
+        Make sure the background program is running as expected
+        """
+        suspend_bg_program_chk_cmd = args.get("suspend_bg_program_chk_cmd")
+
+        error.context("Verify background program is running", logging.info)
+        session = self._get_session()
+        s, _ = self._session_cmd_close(session, suspend_bg_program_chk_cmd)
+        if s:
+            raise error.TestFail("Background program is dead. Suspend failed.")
+
+
+    @error.context_aware
+    def kill_bg_program(self, **args):
+        error.context("Kill background program after resume")
+        suspend_bg_program_kill_cmd = args.get("suspend_bg_program_kill_cmd")
+
+        try:
+            session = self._get_session()
+            self._session_cmd_close(session, suspend_bg_program_kill_cmd)
+        except Exception, e:
+            logging.warn("Could not stop background program: '%s'", e)
+            pass
+
+
+    @error.context_aware
+    def _check_guest_suspend_log(self, **args):
+        error.context("Check whether guest supports suspend",
+                      logging.info)
+        suspend_support_chk_cmd = args.get("suspend_support_chk_cmd")
+
+        session = self._get_session()
+        s, o = self._session_cmd_close(session, suspend_support_chk_cmd)
+
+        return s, o
+
+
+    def verfiy_guest_support_suspend(self, **args):
+        s, _ = self._check_guest_suspend_log(**args)
+        if s:
+            raise error.TestError("Guest doesn't support suspend.")
+
+
+    @error.context_aware
+    def start_suspend(self, **args):
+        error.context("Start suspend", logging.info)
+        suspend_start_cmd = args.get("suspend_start_cmd")
+
+        session = self._get_session()
+        self._open_session_list.append(session)
+
+        # Suspend to disk
+        session.sendline(suspend_start_cmd)
+
+
+    @error.context_aware
+    def verify_guest_down(self, **args):
+        # Make sure the VM goes down
+        error.context("Wait for guest goes down after suspend")
+        suspend_timeout = 240 + int(self.params.get("smp")) * 60
+        if not utils_misc.wait_for(self.vm.is_dead, suspend_timeout, 2, 2):
+            raise error.TestFail("VM refuses to go down. Suspend failed.")
+
+
+    @error.context_aware
+    def resume_guest_mem(self, **args):
+        error.context("Resume suspended VM from memory")
+        self.vm.monitor.system_wakeup()
+
+
+    @error.context_aware
+    def resume_guest_disk(self, **args):
+        error.context("Resume suspended VM from disk")
+        # Update vm's params dict with our params member.
+        self.vm.params = self.params
+        self.vm.create()
+
+
+    @error.context_aware
+    def verify_guest_up(self, **args):
+        error.context("Verify guest system log", logging.info)
+        suspend_log_chk_cmd = args.get("suspend_log_chk_cmd")
+
+        session = self._get_session()
+        s, _ = self._session_cmd_close(session, suspend_log_chk_cmd)
+        if s:
+            raise error.TestError("Could not find suspend log.")
+
+
+    @error.context_aware
+    def action_before_suspend(self, **args):
+        error.context("Actions before suspend")
+        pass
+
+
+    @error.context_aware
+    def action_during_suspend(self, **args):
+        error.context("Sleep a while before resuming guest", logging.info)
+
+        time.sleep(10)
+        if self.os_type == "windows":
+            # Due to WinXP/2003 won't suspend immediately after issue S3 cmd,
+            # delay 10~60 secs here, maybe there's a bug in windows os.
+            logging.info("WinXP/2003 need more time to suspend, sleep 50s.")
+            time.sleep(50)
+
+
+    @error.context_aware
+    def action_after_suspend(self, **args):
+        error.context("Actions after suspend")
+        pass
