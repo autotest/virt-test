@@ -63,7 +63,7 @@ def run_virsh_attach_detach_disk(test, params, env):
         """
         Add acpiphp module if VM's os type is rhle5.*
 
-        @param: vm. VM guest. 
+        @param: vm. VM guest.
         @param: os_type. VM's operation system type.
         @return: True if operate successfully.
         """

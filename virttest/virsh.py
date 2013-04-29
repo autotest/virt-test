@@ -1183,7 +1183,7 @@ def detach_disk(name, target, extra="", **dargs):
     @param: name: name of guest
     @param: target: target of disk device
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object 
+    @return: CmdResult object
     """
     cmd = "detach-disk --domain %s --target %s %s" % (name, target, extra)
     return command(cmd, **dargs)
