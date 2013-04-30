@@ -15,7 +15,7 @@ def run_ntttcp(test, params, env):
     2) Start NTttcp in server/client side
     3) Get test results
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -24,7 +24,7 @@ def run_ntttcp(test, params, env):
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
     platform = "x86"
-    if params.get("platform") == "64":
+    if params.get("platform") == "x86_64":
         platform = "x64"
     buffers = params.get("buffers").split()
     buf_num = params.get("buf_num", 200000)

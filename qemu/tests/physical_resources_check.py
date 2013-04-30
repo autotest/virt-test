@@ -1,6 +1,6 @@
-import re, string, logging
+import re, string, logging, random
 from autotest.client.shared import error
-from virttest import qemu_monitor, storage, data_dir
+from virttest import qemu_monitor, storage, utils_misc, env_process, data_dir
 
 
 def run_physical_resources_check(test, params, env):
@@ -76,7 +76,7 @@ def run_physical_resources_check(test, params, env):
         f_fail = []
         if verify_cmd:
             actual = session.cmd_output(verify_cmd)
-            if not string.upper(expect) in actual:
+            if not re.findall(expect, actual):
                 fail_log =  "%s mismatch:\n" % name
                 fail_log += "    Assigned to VM: %s\n" % string.upper(expect)
                 fail_log += "    Reported by OS: %s" % actual
@@ -96,8 +96,8 @@ def run_physical_resources_check(test, params, env):
         @return a list that contains fail report.
         """
         f_fail = []
-        chk_str = params["mem_chk_re_str"]
-        chk_cmd = params.get("cpu_%s_chk_cmd" % chk_type)
+        chk_str = params.get("mem_chk_re_str", "\s(\d+)")
+        chk_cmd = params["cpu_%s_chk_cmd" % chk_type]
         if chk_cmd is None:
             fail_log = "Unknown cpu number checking type: '%s'" % chk_type
             logging.error(fail_log)
@@ -131,7 +131,50 @@ def run_physical_resources_check(test, params, env):
         return f_fail
 
 
-    vm = env.get_vm(params["main_vm"])
+    def verify_machineType():
+        f_fail = []
+        pattern = params["mtype_pattern"]
+        cmd = params["check_machine_type_cmd"]
+        s, o = session.cmd_status_output(cmd)
+        if s != 0:
+            raise error.TestError("Failed to get machine type from vm")
+
+        expect_mtype = re.findall(pattern, params['machine_type'])
+        actual_mtype = re.findall(pattern, o)
+        try:
+            if actual_mtype[0] != expect_mtype[0]:
+                fail_log =  "Machine type mismatch:\n"
+                fail_log += "    Assigned to VM: %s \n" % expect_mtype[0]
+                fail_log += "    Reported by OS: %s" % actual_mtype[0]
+                f_fail.append(fail_log)
+                logging.error(fail_log)
+            else:
+                logging.info("MachineType check pass. Expected: %s, Actual: %s" %
+                            (expect_mtype[0], actual_mtype[0]))
+            return f_fail
+        except IndexError, e:
+            fail_log = "Failed to get machine type, pls check script: %s" % e
+            f_fail.append(fail_log)
+            logging.error(fail_log)
+            return f_fail
+
+    if params.get("catch_serial_cmd") is not None:
+        length = int(params.get("length", "20"))
+        id_leng = random.randint(0, length)
+        drive_serial = ""
+        convert_str = "!\"#$%&\'()*+./:;<=>?@[\\]^`{|}~"
+        drive_serial = utils_misc.generate_random_string(id_leng,
+                                      ignore_str=",", convert_str=convert_str)
+
+        params["drive_serial"] = drive_serial
+
+        vm = "vm1"
+        vm_params = params.object_params(vm)
+        env_process.preprocess_vm(test, vm_params, env, vm)
+        vm = env.get_vm(vm)
+    else:
+        vm = env.get_vm(params["main_vm"])
+
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     chk_timeout = int(params.get("chk_timeout", 240))
@@ -228,7 +271,7 @@ def run_physical_resources_check(test, params, env):
 
     logging.info("UUID check")
     if vm.get_uuid():
-        f_fail = verify_device(vm.get_uuid(), "UUID",
+        f_fail = verify_device(string.upper(vm.get_uuid()), "UUID",
                                params.get("catch_uuid_cmd"))
         n_fail.extend(f_fail)
 
@@ -248,6 +291,10 @@ def run_physical_resources_check(test, params, env):
             fail_log += "    VirtIO driver check output: '%s'" % chk_output
             n_fail.append(fail_log)
             logging.error(fail_log)
+
+    logging.info("Machine Type Check")
+    f_fail = verify_machineType()
+    n_fail.extend(f_fail)
 
     if n_fail:
         session.close()

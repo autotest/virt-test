@@ -13,7 +13,7 @@ def run_stress_boot(test, params, env):
        and all booted vms respond to shell commands
     3) go on until cannot create VM anymore or cannot allocate memory for VM
 
-    @param test:   kvm test object
+    @param test:   QEMU test object
     @param params: Dictionary with the test parameters
     @param env:    Dictionary with test environment.
     """

@@ -1,4 +1,4 @@
-import os
+import os, logging
 from autotest.client.shared import error
 
 
@@ -27,7 +27,7 @@ def run_lvm(test, params, env):
     3) Create a logical volume on the VG
     5) `fsck' to check the partition that LV locates
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -44,16 +44,18 @@ def run_lvm(test, params, env):
     timeout = params.get("lvm_timeout", "600")
 
     try:
-        error.context("adding physical volumes %s" % disks)
+        error.context("adding physical volumes %s" % disks, logging.info)
         session.cmd("pvcreate %s" % disks)
 
-        error.context("creating a volume group out of %s" % disks)
+        error.context("creating a volume group out of %s" % disks,
+                       logging.info)
         session.cmd("vgcreate %s %s" % (vg_name, disks))
 
         error.context("activating volume group %s" % vg_name)
         session.cmd("vgchange -ay %s" % vg_name)
 
-        error.context("creating logical volume on volume group %s" % vg_name)
+        error.context("creating logical volume on volume group %s" % vg_name,
+                      logging.info)
         session.cmd("lvcreate -L2000 -n %s %s" % (lv_name, vg_name))
 
         error.context("creating ext3 filesystem on logical volume %s" % lv_name)
@@ -64,7 +66,7 @@ def run_lvm(test, params, env):
         umount_lv(lv_path, session)
 
         error.context("checking ext3 filesystem made on logical volume %s" %
-                      lv_name)
+                      lv_name, logging.info)
         session.cmd("fsck %s" % lv_path, timeout=int(timeout))
 
         if clean == "no":

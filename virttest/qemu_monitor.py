@@ -375,6 +375,7 @@ class HumanMonitor(Monitor):
 
         try:
             try:
+                logging.debug("Send command: %s" % cmd)
                 self._socket.sendall(cmd + "\n")
                 self._log_lines(cmd)
             except socket.error, e:
@@ -523,9 +524,8 @@ class HumanMonitor(Monitor):
         @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
                 found after sending the command
         """
-        cmd_output = ""
+        cmd_output = []
         for cmdline in cmdlines.split(";"):
-            logging.info(cmdline)
             if not convert:
                 return self.cmd(cmdline, timeout)
             if "=" in cmdline:
@@ -535,7 +535,9 @@ class HumanMonitor(Monitor):
                     command += " " + arg.split("=")[-1]
             else:
                 command = cmdline
-            cmd_output += self.cmd(command, timeout)
+            cmd_output.append(self.cmd(command, timeout))
+        if len(cmd_output) == 1:
+            return cmd_output[0]
         return cmd_output
 
 
@@ -610,6 +612,141 @@ class HumanMonitor(Monitor):
         """
         cmd = ("snapshot_blkdev %s %s %s" %
                (device, snapshot_file, snapshot_format))
+        return self.cmd(cmd)
+
+
+    def block_stream(self, device, speed=None, base=None):
+        """
+        Start block-stream job;
+
+        @param device: device ID
+        @param speed: int type, lmited speed(B/s)
+        @param base: base file
+
+        @return: The command's output
+        """
+        cmd = "block-stream %s" % device
+        if speed is not None:
+            cmd = "%s %sB" % (cmd, speed)
+        if base:
+            cmd = "%s %s" % (cmd, base)
+        return self.cmd(cmd)
+
+
+    def set_block_job_speed(self, device, speed=0):
+        """
+        Set limited speed for runnig job on the device
+
+        @param device: device ID
+        @param speed: int type, limited speed(B/s)
+
+        @return: The command's output
+        """
+        cmd = "block-job-set-speed %s %sB" % (device, speed)
+        return self.cmd(cmd)
+
+
+    def cancel_block_job(self, device):
+        """
+        Cancel running block stream/mirror job on the device
+
+        @param device: device ID
+
+        @return: The command's output
+        """
+        return self.send_args_cmd("block-job-cancel %s" % device)
+
+
+    def query_block_job(self, device):
+        """
+        Get block job status on the device
+
+        @param device: device ID
+
+        @return: dict about job info, return empty dict if no active job
+        """
+        job = dict()
+        output = str(self.info("block-jobs"))
+        for line in output.split("\n"):
+            if "No" in re.match("\w+",output).group(0):
+                continue
+            if device in line:
+                if "Streaming" in re.match("\w+", output).group(0):
+                    job["type"] = "stream"
+                else:
+                    job["type"] = "mirror"
+                job["device"] = device
+                job["offset"] = int(re.findall("\d+", output)[-3])
+                job["len"] = int(re.findall("\d+", output)[-2])
+                job["speed"] = int(re.findall("\d+", output)[-1])
+                break
+        return job
+
+
+    def get_backingfile(self, device):
+        """
+        Return "backing_file" path of the device
+
+        @param device: device ID
+
+        @return: string, backing_file path
+        """
+        backing_file = None
+        block_info = self.query("block")
+        try:
+            pattern = "%s:.*backing_file=([\w./]*)" % device
+            backing_file = re.search(pattern, block_info, re.M).group(1)
+        except Exception:
+            pass
+        return backing_file
+
+
+    def block_mirror(self, device, target, speed, sync, format, mode,
+            cmd="__com.redhat_drive-mirror"):
+        """
+        Start mirror type block device copy job
+
+        @param device: device ID
+        @param target: target image
+        @param speed: limited speed, unit is B/s
+        @param sync: full copy to target image(unsupport in human monitor)
+        @param mode: target image create mode, 'absolute-paths' or 'existing'
+        @param format: target image format
+        @param cmd: block mirror command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = " ".join([device, target, format])
+        if cmd.startswith("__com.redhat"):
+            if mode == "existing":
+                args = "-n %s" % args
+            if sync == "full":
+                args ="-f %s" % args
+        else:
+            if speed:
+                args = "%s %sB" % (args, speed)
+        cmd = "%s %s" % (cmd, args)
+        return self.cmd(cmd)
+
+
+    def block_reopen(self, device, new_image_file, image_format,
+            cmd="__com.redhat_drive-reopen"):
+        """
+        Reopen new target image
+
+        @param device: device ID
+        @param new_image_file: new image file name
+        @param image_format: new image file format
+        @param cmd: image reopen command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = device
+        if cmd.startswith("__com.redhat"):
+            args += " ".join([new_image_file, image_format])
+        cmd = "%s %s" % (cmd, args)
         return self.cmd(cmd)
 
 
@@ -695,6 +832,29 @@ class HumanMonitor(Monitor):
         @return: The command's output
         """
         return self.cmd("getfd %s" % name, fd=fd)
+
+
+    def system_wakeup(self):
+        """
+        Wakeup suspended guest.
+        """
+        cmd = "system_wakeup"
+        self.verify_supported_cmd(cmd)
+        return self.cmd(cmd)
+
+
+    def block_resize(self, device, size):
+        """
+        Resize the block device size
+
+        @param device: Block device name
+        @param size: Block device size need to set to. To keep the same with
+                     qmp monitor will use bytes as unit for the block size
+        @return: Command output
+        """
+        size = int(size) / 1024 / 1024
+        cmd = "block_resize device=%s,size=%s" % (device, size)
+        return self.send_args_cmd(cmd)
 
 
     def nmi(self):
@@ -945,6 +1105,7 @@ class QMPMonitor(Monitor):
             # Send command
             q_id = utils_misc.generate_random_string(8)
             cmdobj = self._build_cmd(cmd, args, q_id)
+            logging.debug("Send command: %s" % cmdobj)
             if fd is not None:
                 if self._passfd is None:
                     self._passfd = passfd_setup.import_passfd()
@@ -1198,7 +1359,10 @@ class QMPMonitor(Monitor):
                     except:
                         logging.debug("Fail to create args, please check cmd")
                 cmd_output.append(self.cmd(command, args, timeout=timeout))
+        if len(cmd_output) == 1:
+            return cmd_output[0]
         return cmd_output
+
 
     def quit(self):
         """
@@ -1331,6 +1495,138 @@ class QMPMonitor(Monitor):
         return self.cmd("blockdev-snapshot-sync", args)
 
 
+    def block_stream(self, device, speed=None, base=None):
+        """
+        Start block-stream job;
+
+        @param device: device ID
+        @param speed: int type, limited speed(B/s)
+        @param base: base file
+
+        @return: The command's output
+        """
+        args = {"device": device}
+        if speed is not None:
+            args["speed"] = speed
+        if base:
+            args["base"] = base
+        return self.cmd("block-stream", args)
+
+
+    def set_block_job_speed(self, device, speed=0):
+        """
+        Set limited speed for runnig job on the device
+
+        @param device: device ID
+        @param speed: int type, limited speed(B/s)
+
+        @return: The command's output
+        """
+        args = {"device": device,
+                "speed": speed}
+        return self.cmd("block-job-set-speed", args)
+
+
+    def cancel_block_job(self, device):
+        """
+        Cancel running block stream/mirror job on the device
+
+        @param device: device ID
+
+        @return: The command's output
+        """
+        args = {"device": device}
+        return self.cmd("block-job-cancel", args)
+
+
+    def query_block_job(self, device):
+        """
+        Get block job status on the device
+
+        @param device: device ID
+
+        @return: dict about job info, return empty dict if no active job
+        """
+        job = dict()
+        output = str(self.info("block-jobs"))
+        try:
+            job = filter(lambda x: x.get("device") == device,
+                         eval(output))[0]
+        except Exception:
+            pass
+        return job
+
+
+    def get_backingfile(self, device):
+        """
+        Return "backing_file" path of the device
+
+        @param device: device ID
+
+        @return: string, backing_file path
+        """
+        backing_file = None
+        block_info = self.query("block")
+        try:
+            image_info = filter(lambda x:x["device"] == device, block_info)[0]
+            backing_file = image_info["inserted"].get("backing_file")
+        except Exception:
+            pass
+        return backing_file
+
+
+    def block_mirror(self, device, target, speed, sync, format, mode,
+            cmd="__com.redhat_drive-mirror"):
+        """
+        Start mirror type block device copy job
+
+        @param device: device ID
+        @param target: target image
+        @param speed: limited speed, unit is B/s
+        @param sync: what parts of the disk image should be copied to the
+                     destination;
+        @param mode: 'absolute-paths' or 'existing'
+        @param format: target image format
+        @param cmd: block mirror command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = {"device": device,
+                "target": target}
+        if cmd.startswith("__com.redhat"):
+            args["full"] = sync
+        else:
+            args["sync"] = sync
+        if mode:
+            args["mode"] = mode
+        if format:
+            args["format"] = format
+        if speed:
+            args["speed"] = speed
+        return self.cmd(cmd, args)
+
+
+    def block_reopen(self, device, new_image_file, image_format,
+            cmd="__com.redhat_drive-reopen"):
+        """
+        Reopen new target image;
+
+        @param device: device ID
+        @param new_image_file: new image file name
+        @param image_format: new image file format
+        @param cmd: image reopen command
+
+        @return: the command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = {"device": device}
+        if cmd.startswith("__com.redhat"):
+            args["new-image-file"] = new_image_file
+            args["format"] = image_format
+        return self.cmd(cmd, args)
+
+
     def getfd(self, fd, name):
         """
         Receives a file descriptor
@@ -1342,6 +1638,26 @@ class QMPMonitor(Monitor):
         """
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
+
+    def system_wakeup(self):
+        """
+        Wakeup suspended guest.
+        """
+        cmd = "system_wakeup"
+        self.verify_supported_cmd(cmd)
+        return self.cmd(cmd)
+
+
+    def block_resize(self, device, size):
+        """
+        Resize the block device size
+
+        @param device: Block device name
+        @param size: Block device size need to set to. Unit is bytes.
+        @return: Command output
+        """
+        cmd = "block_resize device=%s,size=%s" % (device, size)
+        return self.send_args_cmd(cmd)
 
 
     def nmi(self):

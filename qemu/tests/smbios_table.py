@@ -1,67 +1,98 @@
 import logging
 from autotest.client.shared import utils, error
-from virttest import env_process
+from virttest import env_process, utils_misc
 
 
 @error.context_aware
 def run_smbios_table(test, params, env):
     """
     Check smbios table :
-    1) Boot a guest with smbios options
-    2) verify if host bios options have been emulated
+    1) Get the smbios table from config file,if there is no config option in
+       config file, the script will generate the config parameters automately.
+    2) Boot a guest with smbios options and/or -M option
+    3) Verify if bios options have been emulated correctly.
 
     @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    vendor_cmd = "dmidecode --type 0 | grep Vendor | awk '{print $2}'"
-    date_cmd = "dmidecode --type 0 | grep Date | awk '{print $3}'"
-    version_cmd = "dmidecode --type 0 | grep Version | awk '{print $2}'"
-
-    error.context("getting smbios table on host")
-    host_vendor = utils.system_output(vendor_cmd)
-    host_date = utils.system_output(date_cmd)
-    host_version = utils.system_output(version_cmd)
-
-    smbios = (" -smbios type=0,vendor=%s,version=%s,date=%s" %
-              (host_vendor, host_version, host_date))
-
-    extra_params = params.get("extra_params", "")
-    params["extra_params"] = extra_params + smbios
-
-    logging.debug("Booting guest %s", params["main_vm"])
-    env_process.preprocess_vm(test, params, env, params["main_vm"])
-    vm = env.get_vm(params["main_vm"])
-    vm.create()
+    smbios_type = params["smbios_type"]
+    dmidecode_exp = params["dmidecode_exp"]
     login_timeout = float(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=login_timeout)
 
-    error.context("getting smbios table on guest")
-    guest_vendor = session.cmd(vendor_cmd).strip()
-    guest_date = session.cmd(date_cmd).strip()
-    guest_version = session.cmd(version_cmd).strip()
+    smbios = ""
+    if params.get("smbios_type_disable", "no") == "no" :
+        #set the smbios para, if you have settd the para in config file,
+        #the para will get them from the config file, else the script will
+        #generate default para automately.
+        for sm_type in smbios_type.split():
+            if sm_type == "Bios":
+                smbios_type_number = 0
+            elif sm_type == "System":
+                smbios_type_number = 1
+            smbios += " -smbios type=%s" % smbios_type_number
+            dmidecode_key = params.object_params(sm_type).get("dmikeyword")
+            dmidecode_key = dmidecode_key.split()
+            for key in dmidecode_key :
+                cmd = (dmidecode_exp % (smbios_type_number, key))
+                default_key_para = utils.system_output(cmd).strip()
+                smbios_key_para_set = params.object_params(sm_type).get(key,
+                                                              default_key_para)
+                smbios += ",%s='%s'" % (key.lower(), smbios_key_para_set)
+
+        params["extra_params"] += smbios
+
+    support_machine_types = []
+    if  params.get("traversal_machine_emulated", "no") == "no" :
+        support_machine_types.append(params["machine_type"])
+    else:
+        qemu_binary = utils_misc.get_path(test.bindir,
+                                         "qemu/%s" % params.get("qemu_binary", "qemu"))
+        tmp = utils_misc.get_support_machine_type(qemu_binary)
+        (support_machine_types, expect_system_versions) = tmp
 
     failures = []
+    for m_type in support_machine_types:
+        params["machine_type"] = m_type
+        params["start_vm"] = "yes"
 
-    if host_vendor != guest_vendor:
-        e_msg = ("Vendor str mismatch -> host: %s guest: %s" %
-                 (guest_vendor, host_vendor))
-        logging.error(e_msg)
-        failures.append(e_msg)
+        error.context("Boot the vm using -M option:'-M %s',smbios para:'%s' "
+                       % (m_type, smbios), logging.info)
+        env_process.preprocess_vm(test, params, env, params["main_vm"])
+        vm1 = env.get_vm(params["main_vm"])
+        session = vm1.wait_for_login(timeout = login_timeout)
 
-    if host_date != guest_date:
-        e_msg = ("Date str mismatch -> host: %s guest: %s" %
-                 (guest_date, host_date))
-        logging.error(e_msg)
-        failures.append(e_msg)
+        error.context("Check smbios info on guest is setted as expected")
 
-    if host_version != guest_version:
-        e_msg = ("Version str mismatch -> host: %s guest: %s" %
-                 (guest_version, host_version))
-        logging.error(e_msg)
-        failures.append(e_msg)
+        for sm_type in smbios_type.split():
+            if sm_type == "Bios":
+                smbios_type_number = 0
+            elif sm_type == "System":
+                smbios_type_number = 1
+            dmidecode_key = params.object_params(sm_type).get("dmikeyword")
+            dmidecode_key = dmidecode_key.split()
+            for key in dmidecode_key :
+                cmd = (dmidecode_exp % (smbios_type_number, key))
+                smbios_get_para = session.cmd(cmd).strip()
+                if params.get("smbios_type_disable", "no") == "no" :
+                    default_key_para = utils.system_output(cmd).strip()
+                    smbios_set_para = params.object_params(sm_type).get(key,
+                                                               default_key_para)
+                else:
+                    key_index = support_machine_types.index(m_type)
+                    smbios_set_para = expect_system_versions[key_index]
+
+                if (smbios_get_para != smbios_set_para ):
+                    e_msg = ("%s.%s mismatch, Set '%s' but guest is : '%s'"
+                             % (sm_type, key, smbios_set_para,
+                                smbios_get_para))
+                    failures.append(e_msg)
+
+        session.close()
+        if  params.get("traversal_machine_emulated", "no") == "yes" :
+            vm1.destroy(gracefully=False)
 
     error.context("")
     if failures:
-        raise error.TestFail("smbios table test reported %s failures:\n%s" %
-                             (len(failures), "\n".join(failures)))
+        raise error.TestFail("FAIL:smbios table test reported %s failures:\n%s"
+                             % (len(failures), "\n".join(failures)))

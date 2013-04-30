@@ -1,4 +1,4 @@
-import time
+import time, logging
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -12,7 +12,7 @@ def run_boot(test, params, env):
     4) Wait until the guest is up again
     5) Log into the guest to verify it's up again
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -27,9 +27,13 @@ def run_boot(test, params, env):
         utils_test.service_setup(vm, session, test.virtdir)
 
     if params.get("reboot_method"):
-        error.context("Reboot guest.")
+        error.context("Reboot guest.", logging.info)
         if params["reboot_method"] == "system_reset":
             time.sleep(int(params.get("sleep_before_reset", 10)))
-        session = vm.reboot(session, params["reboot_method"], 0, timeout)
-
-    session.close()
+        try:
+            # Reboot the VM
+            for i in range(int(params.get("reboot_count", 1))):
+                session = vm.reboot(session, params["reboot_method"], 0,
+                                                                timeout)
+        finally:
+            session.close()

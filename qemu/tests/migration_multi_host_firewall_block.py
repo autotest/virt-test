@@ -11,7 +11,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
 
     Tests multi-host migration with network problem on destination side.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """

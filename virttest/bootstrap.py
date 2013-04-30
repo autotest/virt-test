@@ -133,7 +133,7 @@ def get_directory_structure(rootdir, guest_file):
                              (4 * (indent + number_variants - 1) * " "))
             number_variants += 1
         elif indent < previous_indent:
-            number_variants -= 1
+            number_variants = indent
         indent += number_variants
         try:
             base_folder = folders[-1]

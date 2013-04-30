@@ -11,7 +11,7 @@ def run_nmi_watchdog(test, params, env):
     2) Add 'watchdog=1' to boot option
     2) Check if guest's NMI counter augment after injecting nmi
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

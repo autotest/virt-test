@@ -1,6 +1,6 @@
 import logging, time, glob, os, re
 from autotest.client.shared import error
-import utils_misc, utils_net, remote
+import utils_misc, utils_net, remote, utils_net
 
 
 class VMError(Exception):
@@ -233,11 +233,14 @@ class VMMigrateProtoUnsupportedError(VMMigrateError):
 
 
 class VMMigrateStateMismatchError(VMMigrateError):
-    def __init__(self):
-        VMMigrateError.__init__(self)
+    def __init__(self, src_hash, dst_hash):
+        VMMigrateError.__init__(self, src_hash, dst_hash)
+        self.src_hash = src_hash
+        self.dst_hash = dst_hash
 
     def __str__(self):
-        return ("Mismatch of VM state before and after migration")
+        return ("Mismatch of VM state before and after migration (%s != %s)" %
+                (self.src_hash, self.dst_hash))
 
 
 class VMRebootError(VMError):
@@ -818,6 +821,7 @@ class BaseVM(object):
 
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
                        internal_timeout=LOGIN_TIMEOUT,
+                       serial=False, restart_network=False,
                        username=None, password=None):
         """
         Make multiple attempts to log into the guest via SSH/Telnet/Netcat.
@@ -825,6 +829,9 @@ class BaseVM(object):
         @param nic_index: The index of the NIC to connect to.
         @param timeout: Time (seconds) to keep trying to log in.
         @param internal_timeout: Timeout to pass to login().
+        @param serial: Whether to use a serial connection when remote login
+                (ssh, rss) failed.
+        @param restart_network: Whether to try to restart guest's network.
         @return: A ShellSession object.
         """
         error_messages = []
@@ -842,9 +849,16 @@ class BaseVM(object):
                     logging.debug(e)
                     error_messages.append(e)
             time.sleep(2)
-        # Timeout expired; try one more time but don't catch exceptions
-        return self.login(nic_index, internal_timeout,
-                          username, password)
+
+        # Timeout expired
+        if serial or restart_network:
+            # Try to login via serila console
+            return self.wait_for_serial_login(timeout, internal_timeout,
+                                              restart_network)
+        else:
+            # Timeout expired; try one more time but don't catch exceptions
+            return self.login(nic_index, internal_timeout,
+                              username, password)
 
 
     @error.context_aware
@@ -944,12 +958,14 @@ class BaseVM(object):
 
     def wait_for_serial_login(self, timeout=LOGIN_WAIT_TIMEOUT,
                               internal_timeout=LOGIN_TIMEOUT,
+                              restart_network=False,
                               username=None, password=None):
         """
         Make multiple attempts to log into the guest via serial console.
 
         @param timeout: Time (seconds) to keep trying to log in.
         @param internal_timeout: Timeout to pass to serial_login().
+        @param restart_network: Whether try to restart guest's network.
         @return: A ShellSession object.
         """
         error_messages = []
@@ -958,7 +974,13 @@ class BaseVM(object):
         end_time = time.time() + timeout
         while time.time() < end_time:
             try:
-                return self.serial_login(internal_timeout)
+                session = self.serial_login(internal_timeout)
+                if restart_network:
+                    try:
+                        utils_net.restart_guest_network(session)
+                    except Exception:
+                        pass
+                return session
             except remote.LoginError, e:
                 self.verify_alive()
                 e = str(e)
@@ -986,7 +1008,7 @@ class BaseVM(object):
         """
         Send a string to the VM.
 
-        @param str: String, that must consist of alphanumeric characters only.
+        @param sr: String, that must consist of alphanumeric characters only.
                 Capital letters are allowed.
         """
         for char in sr:
@@ -1007,7 +1029,7 @@ class BaseVM(object):
             session.close()
 
 
-    def get_memory_size(self, cmd=None):
+    def get_memory_size(self, cmd=None, timeout=60, re_str=None):
         """
         Get bootup memory size of the VM.
 
@@ -1015,11 +1037,13 @@ class BaseVM(object):
                 self.params.get("mem_chk_cmd") will be used.
         """
         session = self.login()
+        if re_str is None:
+            re_str = self.params.get("mem_chk_re_str", "([0-9]+)")
         try:
             if not cmd:
                 cmd = self.params.get("mem_chk_cmd")
             mem_str = session.cmd(cmd)
-            mem = re.findall("([0-9]+)", mem_str)
+            mem = re.findall(re_str, mem_str)
             mem_size = 0
             for m in mem:
                 mem_size += int(m)
@@ -1073,6 +1097,7 @@ class BaseVM(object):
         @param: nic_index_or_name: name or index number for existing NIC
         """
         raise NotImplementedError
+
 
     def deactivate_nic(self, nic_index_or_name):
         """

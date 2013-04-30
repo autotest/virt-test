@@ -134,7 +134,7 @@ def run_nfs_corrupt(test, params, env):
     6) Accept NFS connection on host and continue VM by monitor command
     7) Check if VM status is 'running'
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """

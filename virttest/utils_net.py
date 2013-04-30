@@ -3,13 +3,15 @@ import ctypes, math, time
 import shelve, commands
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import propcan, utils_misc, arch
+import propcan, utils_misc, aexpect, arch
+
 
 SYSFS_NET_PATH = "/sys/class/net"
 PROCFS_NET_PATH = "/proc/net/dev"
 #globals
 sock = None
 sockfd =None
+
 
 class NetError(Exception):
     pass
@@ -1819,3 +1821,134 @@ def get_host_ip_address(params):
         logging.warning("No IP address of host was provided, using IP address"
                         " on %s interface", str(params.get('netdst')))
     return host_ip
+
+
+def get_linux_ifname(session, mac_address):
+    """
+    Get the interface name through the mac address.
+
+    @param session: session to the virtual machine
+    @mac_address: the macaddress of nic
+
+    @raise error.TestError in case it was not possible to determine the
+            interface name.
+    """
+    def ifconfig_method():
+        try:
+            output = session.cmd("ifconfig -a")
+            return re.findall("(\w+)\s+Link.*%s" % mac_address, output,
+                              re.IGNORECASE)[0]
+        except IndexError:
+            return None
+
+    def iplink_method():
+        try:
+            output = session.cmd("ip link | grep -B1 '%s' -i" % mac_address)
+            return re.findall("\d+:\s+(\w+):\s+.*", output, re.IGNORECASE)[0]
+        except (aexpect.ShellCmdError, IndexError):
+            return None
+
+    def sys_method():
+        try:
+            interfaces = session.cmd('ls --color=never /sys/class/net')
+        except error.CmdError, e:
+            logging.debug("Error listing /sys/class/net: %s" % e)
+            return None
+
+        interfaces = interfaces.strip()
+        for interface in interfaces.split(" "):
+            if interface:
+                try:
+                    i_cmd = "cat /sys/class/net/%s/address" % interface
+                    mac_address_interface = session.cmd(i_cmd)
+                    mac_address_interface = mac_address_interface.strip()
+                    if mac_address_interface == mac_address:
+                        return interface
+                except aexpect.ShellCmdError:
+                    pass
+
+        # If after iterating through interfaces (or no interfaces found)
+        # no interface name was found, just return None
+        return None
+
+    # Try ifconfig first
+    i = ifconfig_method()
+    if i is not None:
+        return i
+
+    # No luck, try ip link
+    i = iplink_method()
+    if i is not None:
+        return i
+
+    # No luck, look on /sys
+    i = sys_method()
+    if i is not None:
+        return i
+
+    # If we came empty handed, let's raise an error
+    raise error.TestError("Failed to determine interface name with "
+                          "mac %s" % mac_address)
+
+
+def restart_guest_network(session, nic_name=None):
+    """
+    Restart guest's network via serial console.
+
+    @param session: session to virtual machine
+    @nic_name: nic card name in guest to restart
+    """
+    if_list = []
+    if not nic_name:
+        # initiate all interfaces on guest.
+        o = session.cmd_output("ip link")
+        if_list = re.findall(r"\d+: (eth\d+):", o)
+    else:
+        if_list.append(nic_name)
+
+    if if_list:
+        session.sendline("killall dhclient && "
+                         "dhclient %s &" % ' '.join(if_list))
+
+
+def update_mac_ip_address(vm, params, timeout=None):
+    """
+    Get mac and ip address from guest then update the mac pool and
+    address cache
+
+    @param vm: VM object
+    @param params: Dictionary with the test parameters.
+    """
+    network_query = params.get("network_query", "ifconfig")
+    restart_network = params.get("restart_network", "service network restart")
+    mac_ip_filter = params.get("mac_ip_filter")
+    if timeout is None:
+        timeout = int(params.get("login_timeout"))
+    session = vm.wait_for_serial_login(timeout=360)
+    end_time = time.time() + timeout
+    macs_ips = []
+    i = 0
+    while time.time() < end_time:
+        try:
+            if i % 3 == 0:
+                session.cmd(restart_network)
+            o = session.cmd_status_output(network_query)[1]
+            macs_ips = re.findall(mac_ip_filter, o)
+            # Get nics number
+        except Exception, e:
+            logging.warn(e)
+        nics = params.get("nics")
+        nic_minimum = len(re.split("\s+", nics.strip()))
+        if len(macs_ips) == nic_minimum:
+            break
+        i += 1
+        time.sleep(5)
+    if len(macs_ips) < nic_minimum:
+        logging.warn("Not all nics get ip address")
+
+    for (mac, ip) in macs_ips:
+        vlan = macs_ips.index((mac, ip))
+        if "-" in mac:
+            mac = mac.replace("-", ".")
+        vm.address_cache[mac.lower()] = ip
+        vm.virtnet.set_mac_address(vlan, mac)

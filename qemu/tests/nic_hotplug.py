@@ -1,85 +1,146 @@
-import logging
+import logging, time
 from autotest.client.shared import error
-from virttest import utils_test, virt_vm
-
-
+from virttest import utils_test, virt_vm, aexpect, utils_misc, utils_net
+@error.context_aware
 def run_nic_hotplug(test, params, env):
     """
     Test hotplug of NIC devices
 
     1) Boot up guest with one nic
-    2) Add a host network device through monitor cmd and check if it's added
-    3) Add nic device through monitor cmd and check if it's added
-    4) Check if new interface gets ip address
-    5) Disable primary link of guest
-    6) Ping guest new ip from host
-    7) Delete nic device and netdev
-    8) Re-enable primary link of guest
+    2) Backup udev file
+    3) Add a host network device through monitor cmd and check if it's added
+    4) Add nic device through monitor cmd and check if it's added
+    5) Check if new interface gets ip address
+    6) Disable primary link of guest
+    7) Ping guest's new ip from host
+    8) Ping guest's new ip address after guest pause/resume
+    9) Delete nic device and netdev
+    10) Re-enable primary link of guest
 
-    BEWARE OF THE NETWORK BRIDGE DEVICE USED FOR THIS TEST ("nettype=bridge"
-    and "netdst=<bridgename>" param).  The KVM autotest default bridge virbr0,
-    leveraging libvirt, works fine for the purpose of this test. When using
-    other bridges, the timeouts which usually happen when the bridge
-    topology changes (that is, devices get added and removed) may cause random
-    failures.
+    BEWARE OF THE NETWORK BRIDGE DEVICE USED FOR THIS TEST ("bridge" param).
+    The KVM autotest default bridge virbr0, leveraging libvirt, works fine
+    for the purpose of this test. When using other bridges, the timeouts
+    which usually happen when the bridge topology changes (that is, devices
+    get added and removed) may cause random failures.
 
     @param test:   QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env:    Dictionary with test environment.
     """
-    vm = utils_test.get_living_vm(env, params["main_vm"])
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
+
     login_timeout = int(params.get("login_timeout", 360))
+    guest_delay = int(params.get("guest_delay", 20))
     pci_model = params.get("pci_model", "rtl8139")
     run_dhclient = params.get("run_dhclient", "no")
+    guest_is_not_windows = (params["os_type"] != 'windows')
 
-    nettype = params.get("nettype", "bridge")
-    netdst = params.get("netdst", "virbr0")
-    guest_is_not_windows = "Win" not in params.get("guest_name", "")
+    session = vm.wait_for_login(timeout=login_timeout)
 
-    session = utils_test.wait_for_login(vm, timeout=login_timeout)
+    udev_rules_path = "/etc/udev/rules.d/70-persistent-net.rules"
+    udev_rules_bkp_path = "/tmp/70-persistent-net.rules"
 
-    if guest_is_not_windows:
-        # Modprobe the module if specified in config file
-        module = params.get("modprobe_module")
-        if module:
-            session.get_command_output("modprobe %s" % module)
+    def guest_path_isfile(session, path):
+        try:
+            session.cmd("test -f %s" % path)
+        except aexpect.ShellError:
+            return False
+        return True
+
+    def _backup_udev_file():
+        if (guest_is_not_windows
+            and guest_path_isfile(session, udev_rules_path)):
+            error.context("Backup udev file.", logging.info)
+            session.cmd("/bin/cp  %s %s" % (udev_rules_path, udev_rules_bkp_path))
+
+    def _restore_udev_file():
+        # Attempt to put back udev network naming rules, even if the command to
+        # disable the rules failed. We may be undoing what was done in a
+        # previous (failed) test that never reached this point.
+        try:
+            if vm.serial_console:
+                sess = vm.serial_console
+            else:
+                sess = vm.wait_for_serial_login(timeout=login_timeout)
+            if (guest_is_not_windows
+                and guest_path_isfile(sess, udev_rules_bkp_path)):
+                sess.cmd("/bin/cp %s %s" % (udev_rules_bkp_path,
+                                          udev_rules_path))
+        except Exception, e:
+            logging.warn("Could not restore udev file: '%s'", e)
+
+
+    _backup_udev_file()
+
+    # Modprobe the module if specified in config file
+    module = params["modprobe_module"]
+    if guest_is_not_windows and module:
+        session.cmd("modprobe %s" % module)
 
     # hot-add the nic
+    error.context("Add network devices through monitor cmd", logging.info)
     nic_name = 'hotadded'
-    nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name,
-                              netdst=netdst, nettype=nettype)
+    nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name)
+    nic_mac = nic_info['mac']
 
     # Only run dhclient if explicitly set and guest is not running Windows.
     # Most modern Linux guests run NetworkManager, and thus do not need this.
     if run_dhclient == "yes" and guest_is_not_windows:
         session_serial = vm.wait_for_serial_login(timeout=login_timeout)
-        ifname = utils_test.get_linux_ifname(session, nic_info['mac'])
-        session_serial.cmd("dhclient %s &" % ifname)
+        ifname = utils_net.get_linux_ifname(session, nic_mac)
+        utils_net.restart_guest_network(session_serial, ifname)
+        # Guest need to take quite a long time to set the ip addr, sleep a
+        # while to wait for guest done.
+        time.sleep(60)
 
-    logging.info("Shutting down the primary link(s)")
+    error.context("Disable the primary link of guest", logging.info)
+    # Close existed session first.
+    session.close()
     for nic in vm.virtnet:
-        if not (nic.nic_name == nic_name):
+        if nic.nic_name == nic_name:
+            continue
+        else:
             vm.set_link(nic.device_id, up=False)
 
     try:
-        logging.info("Waiting for new nic's ip address acquisition...")
+        error.context("Check if new interface gets ip address", logging.info)
         try:
             ip = vm.wait_for_get_address(nic_name)
         except virt_vm.VMIPAddressMissingError:
             raise error.TestFail("Could not get or verify ip address of nic")
         logging.info("Got the ip address of new nic: %s", ip)
+    except Exception:
+        try:
+            vm.hotunplug_nic(nic_name)
+        except Exception, e:
+            logging.warn("Fail to delete nic card from guest: '%s'", e)
+        _restore_udev_file()
+        raise
 
-        logging.info("Ping test the new nic ...")
-        s, o = utils_test.ping(ip, 100)
+    try:
+        error.context("Ping guest's new ip from host", logging.info)
+        s, _ = utils_test.ping(ip, 10, timeout=15)
         if s != 0:
-            logging.error(o)
+            logging.error(_)
             raise error.TestFail("New nic failed ping test")
-
-        logging.info("Detaching the previously attached nic from vm")
-        vm.hotunplug_nic(nic_name)
-
+        error.context("Ping guest's new ip after pasue/resume", logging.info)
+        vm.pause()
+        vm.resume()
+        s, _ = utils_test.ping(ip, 10, timeout=15)
+        if s != 0:
+            logging.error(_)
+            raise error.TestFail("Ping new nic ip addr failed after stop/cont")
     finally:
-        logging.info("Re-enabling the primary link(s)")
-        for nic in vm.virtnet:
-            if not (nic.nic_name == nic_name):
-                vm.set_link(nic.device_id, up=True)
+        try:
+            error.context("Delete nic device and netdev from guest",
+                          logging.info)
+            vm.hotunplug_nic(nic_name)
+        finally:
+            error.context("Re-enabling the primary link of guest", logging.info)
+            for nic in vm.virtnet:
+                if nic.nic_name == nic_name:
+                    continue
+                else:
+                    vm.set_link(nic.device_id, up=True)
+            _restore_udev_file()

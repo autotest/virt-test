@@ -1,7 +1,7 @@
-import re, os, logging, time
+import re, os, logging, commands, string, time
 from autotest.client.shared import utils, error
-from virttest import qemu_monitor, env_process
-from virttest import data_dir
+from virttest import qemu_monitor, utils_misc, virt_vm, aexpect
+from virttest import env_process
 
 @error.context_aware
 def run_block_stream(test, params, env):
@@ -17,10 +17,9 @@ def run_block_stream(test, params, env):
     7) TODO(extra): Block job completion can be check in QMP
     """
     image_format = params["image_format"]
-    image_name = params.get("image_name", "image")
-    image_name = os.path.join(data_dir.get_data_dir(), image_name)
+    image_name = params["image_name", "image"]
     drive_format = params["drive_format"]
-    backing_file_name = "%s_bak" % (image_name)
+    backing_file_name = "%s_bak" % (image_name]
     qemu_img = params["qemu_img_binary"]
     block_stream_cmd = "block-stream"
 
@@ -70,7 +69,6 @@ def run_block_stream(test, params, env):
         vm_name = params['main_vm']
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
-        vm.create()
         timeout = int(params.get("login_timeout", 360))
         session = vm.wait_for_login(timeout=timeout)
 
