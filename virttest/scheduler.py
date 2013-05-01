@@ -125,6 +125,7 @@ class scheduler:
                     test = self.tests[test_index]
                     status = int(eval(msg[2]))
                     test_status[test_index] = ("fail", "pass")[status]
+
                     # If the test failed, mark all dependent tests as "failed" too
                     if not status:
                         for i, other_test in enumerate(self.tests):

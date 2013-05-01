@@ -18,7 +18,7 @@ def run_whql_client_install(test, params, env):
        (normally DTMLLUAdminUser)
     9) Reboot again
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -40,8 +40,8 @@ def run_whql_client_install(test, params, env):
                                             "deps/whql_delete_machine_15.exe")
     dsso_delete_machine_binary = utils_misc.get_path(test.bindir,
                                                     dsso_delete_machine_binary)
-    install_timeout = float(params.get("install_timeout", 600))
-    install_cmd = params.get("install_cmd")
+    install_timeout = float(params.get("whql_install_timeout", 600))
+    install_cmd = params.get("whql_install_cmd")
     wtt_services = params.get("wtt_services")
 
     # Stop WTT service(s) on client

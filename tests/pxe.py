@@ -2,13 +2,14 @@ import logging
 from autotest.client.shared import error
 from virttest import aexpect
 
+@error.context_aware
 def run_pxe(test, params, env):
     """
     PXE test:
 
-    1) Snoop the tftp packet in the tap device.
-    2) Wait for some seconds.
-    3) Check whether we could capture TFTP packets.
+    1) Login to guest
+    2) Try to boot from PXE
+    3) Analyzing the tcpdump result
 
     @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
@@ -16,13 +17,14 @@ def run_pxe(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    error.context("Login to guest", logging.info)
     timeout = int(params.get("pxe_timeout", 60))
 
-    logging.info("Try to boot from PXE")
+    error.context("Try to boot from PXE", logging.info)
     output = aexpect.run_fg("tcpdump -nli %s" % vm.get_ifname(),
                                    logging.debug, "(pxe capture) ", timeout)[1]
 
-    logging.info("Analyzing the tcpdump result...")
+    error.context("Analyzing the tcpdump result", logging.info)
     if not "tftp" in output:
         raise error.TestFail("Couldn't find any TFTP packets after %s seconds" %
                              timeout)

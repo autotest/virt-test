@@ -11,7 +11,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
 
     Tests multi-host migration with network problem on destination side.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -22,7 +22,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
     if mig_protocol == "exec":
         base_class = utils_test.MultihostMigrationExec
 
-    sub_type = params["sub_type"]
+    sub_type = params.get("sub_type")
 
 
     def wait_for_migration(vm, timeout):
@@ -271,5 +271,5 @@ def run_migration_multi_host_firewall_block(test, params, env):
     elif sub_type == "short_interrupt":
         mig = TestMultihostMigrationShortInterrupt(test, params, env)
     else:
-        raise error.TestNAError("Unsupported sub_type = '%s'." % sub_type)
+        raise error.TestNAError("Test sub_type must be defined.")
     mig.run()

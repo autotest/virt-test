@@ -41,7 +41,6 @@ def netperf_record(results, filter_list, header=False, base="12", fbase="2"):
     if header:
         for key in key_list:
             record += "%s|" % format_result(key, base=base, fbase=fbase)
-        record = record.rstrip("|")
         record += "\n"
     for key in key_list:
         record += "%s|" % format_result(results[key], base=base, fbase=fbase)
@@ -86,9 +85,9 @@ def run_netperf(test, params, env):
 
         netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
         for i in params.get("netperf_files").split():
-            remote.scp_to_remote(ip, shell_port, username, password,
+            virt_utils.scp_to_remote(ip, shell_port, username, password,
                                      "%s/%s" % (netperf_dir, i), "/tmp/")
-        ssh_cmd(session, params.get("setup_cmd"))
+        ssh_cmd(session, ip, params.get("setup_cmd"))
 
         agent_path =  os.path.join(test.virtdir, "scripts/netperf_agent.py")
         remote.scp_to_remote(ip, shell_port, username, password,
@@ -96,9 +95,9 @@ def run_netperf(test, params, env):
 
     def _pin_vm_threads(vm, node):
         if node:
-            if not isinstance(node, utils_misc.NumaNode):
-                node = utils_misc.NumaNode(int(node))
-            utils_test.pin_vm_threads(vm, node)
+            if not isinstance(node, virt_utils.NumaNode):
+                node = virt_utils.NumaNode(int(node))
+            virt_test_utils.pin_vm_threads(vm, node)
 
         return node
 
@@ -122,6 +121,8 @@ def run_netperf(test, params, env):
 
     if params.get("rh_perf_envsetup_script"):
         utils_test.service_setup(vm, session, test.virtdir)
+    server = vm.get_address()
+    server_ctl = vm.get_address(1)
     session.close()
 
     server_ip = vm.get_address()
@@ -141,12 +142,13 @@ def run_netperf(test, params, env):
         server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
         server_ctl_ip = vm.get_address(1)
 
-
-
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
-    numa_node = _pin_vm_threads(vm, params.get("numa_node"))
+    if params.get('numa_node'):
+        numa_node = int(params.get('numa_node'))
+        node = utils_misc.NumaNode(numa_node)
+        utils_test.pin_vm_threads(vm, node)
 
     host = params.get("host", "localhost")
     host_ip = host
@@ -160,7 +162,7 @@ def run_netperf(test, params, env):
                                      params_host.get("shell_prompt"))
 
     client = params.get("client", "localhost")
-    client_ip = client
+    clinet_ip = client
     clients = []
     # client session 1 for control, session 2 for data communication
     for i in range(2):
@@ -186,11 +188,20 @@ def run_netperf(test, params, env):
         vm2.verify_alive()
         session2 = vm2.wait_for_login(timeout=login_timeout)
         if params.get("rh_perf_envsetup_script"):
-            utils_test.service_setup(vm2, session2, test.virtdir)
+            virt_test_utils.service_setup(vm2, session2, test.virtdir)
         client = vm2.wait_for_login(timeout=login_timeout)
         client_ip = vm2.get_address()
         session2.close()
-        _pin_vm_threads(vm2, numa_node)
+        if params.get('numa_node'):
+            utils_test.pin_vm_threads(vm2, node)
+
+    if params.get("client"):
+        client = params["client"]
+    if params.get("host"):
+        host = params["host"]
+    else:
+        cmd = "ifconfig %s|awk 'NR==2 {print $2}'|awk -F: '{print $2}'"
+        host = commands.getoutput(cmd % params["netdst"])
 
     error.context("Prepare env of server/client/host", logging.info)
     prepare_list = set([server_ctl, client, host])
@@ -222,8 +233,7 @@ def run_netperf(test, params, env):
                protocols=params.get('protocols'),
                ver_cmd=params.get('ver_cmd', "rpm -q qemu-kvm"),
                netserver_port=params.get('netserver_port', "12865"),
-               params=params, server_cyg=server_cyg, test=test)
-
+               params=params, server_cyg=server_cyg)
 
 @error.context_aware
 def start_test(server, server_ctl, host, clients, resultsdir, l=60,
@@ -231,7 +241,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
                protocols="TCP_STREAM TCP_MAERTS TCP_RR", ver_cmd=None,
-               netserver_port=None, params={}, server_cyg=None, test=None):
+               netserver_port=None, params={}, server_cyg=None):
     """
     Start to test with different kind of configurations
 
@@ -255,12 +265,16 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
-    test.write_test_keyval({ 'kvm-userspace-ver': commands.getoutput(ver_cmd) })
-    test.write_test_keyval({ 'guest-kernel-ver': ssh_cmd(server_ctl, guest_ver_cmd) })
+    test.write_test_keyval({ 'kvm-userspace-ver': \
+                                        commands.getoutput(ver_cmd).strip() })
+    test.write_test_keyval({ 'guest-kernel-ver': ssh_cmd(server_ctl,
+                                                     guest_ver_cmd).strip() })
     test.write_test_keyval({ 'session-length': l })
 
-    fd.write('### kvm-userspace-ver : %s\n' % commands.getoutput(ver_cmd) )
-    fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl, guest_ver_cmd) )
+    fd.write('### kvm-userspace-ver : %s\n' % \
+                                         commands.getoutput(ver_cmd).strip() )
+    fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl,
+                                                      guest_ver_cmd).strip() )
     fd.write('### kvm_version : %s\n' % os.uname()[2] )
     fd.write('### session-length : %s\n' % l )
 
@@ -268,12 +282,12 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     record_list = ['size', 'sessions', 'throughput', 'trans.rate', 'CPU',
                    'thr_per_CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
                    're_pkts', 'rx_intr', 'tx_intr', 'io_exit', 'irq_inj',
-                   'tpkt_per_exit', 'rpkt_per_irq']
+                   'tpkt/exit', 'rpkt/irq']
     base = params.get("format_base", "12")
     fbase = params.get("format_fbase", "2")
 
     output = ssh_cmd(host, "mpstat 1 1 |grep CPU")
-    mpstat_head = re.findall("CPU\s+.*", output)[0].split()
+    mpstat_head = re.findall("CPU.*", output)[0].split()
     mpstat_key = params.get("mpstat_key", "%idle")
     if mpstat_key in mpstat_head:
         mpstat_index = mpstat_head.index(mpstat_key) + 1
@@ -315,9 +329,9 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
                 if ret.get('rx_pkts') and ret.get('irq_inj'):
-                    ret['tpkt_per_exit'] = float(ret['rx_pkts']) / float(ret['irq_inj'])
+                    ret['tpkt/exit'] = float(ret['rx_pkts']) / float(ret['irq_inj'])
                 if ret.get('tx_pkts') and ret.get('io_exit'):
-                    ret['rpkt_per_irq'] = float(ret['tx_pkts']) / float(ret['io_exit'])
+                    ret['rpkt/irq'] = float(ret['tx_pkts']) / float(ret['io_exit'])
                 ret['size'] = int(i)
                 ret['sessions'] = int(j)
                 if protocol == "TCP_RR":
@@ -410,7 +424,6 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
         ncpu = re.findall("\d+", ncpu)[0]
 
-
     def count_interrupt(name):
         """
         @param name: the name of interrupt, such as "virtio0-input"
@@ -455,11 +468,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
 
         io_exit = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/io_exits"))
         irq_inj = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
-        state_list.append('io_exit')
-        state_list.append(io_exit)
-        state_list.append('irq_inj')
-        state_list.append(irq_inj)
-        return state_list
+        return [nrx, ntx, nrxb, ntxb, nre, nrx_intr, ntx_intr, io_exit, irq_inj]
 
 
     def netperf_thread(i, numa_enable, client_s):

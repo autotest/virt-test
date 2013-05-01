@@ -219,7 +219,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Test steps:
         1) Send "guest-sync" command in the host side.
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -253,7 +253,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Shutdown guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -267,7 +267,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Reboot guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -286,7 +286,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Halt guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -322,7 +322,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # Use the last opened session to send cmd.
         session = self._open_session_list[-1]
         try:
-            session.cmd(self.params["gagent_fs_test_cmd"])
+            session.cmd(self.params.get("gagent_fs_test_cmd"))
         except aexpect.ShellTimeoutError:
             logging.debug("FS freeze successfully.")
         else:
@@ -351,7 +351,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         3) Check the FS is frozen from both guest agent side and guest os side.
         4) Thaw the FS.
 
-        @param test: kvm test object
+        @param test: QEMU test object
         @param params: Dictionary with the test parameters
         @param env: Dictionary with test environmen.
         """
@@ -389,7 +389,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 
-        gagent_check_type = self.params["gagent_check_type"]
+        gagent_check_type = self.params.get("gagent_check_type")
         chk_type = "gagent_check_%s" % gagent_check_type
         if hasattr(self, chk_type):
             func = getattr(self, chk_type)
@@ -406,7 +406,7 @@ def run_qemu_guest_agent(test, params, env):
     2) Install qemu-guest-agent package in guest.
     3) Run some basic test for qemu guest agent.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environmen.
     """

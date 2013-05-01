@@ -18,11 +18,11 @@ def run_set_link(test, params, env):
        6.3) Copy this file from guest to host.
        6.4) Check if file transfers ended good.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-    vm = utils_test.get_living_vm(env, params["main_vm"])
+    vm = utils_test.get_living_vm(env, params.get("main_vm"))
     timeout = float(params.get("login_timeout", 360))
     # Waiting for guest boot up.
     session = vm.wait_for_login(timeout=timeout)

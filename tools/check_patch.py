@@ -255,11 +255,23 @@ class GitBackend(object):
 
 
     def is_file_tracked(self, fl):
+        stdout = None
         try:
-            utils.run("git ls-files %s --error-unmatch" % fl,
-                      verbose=False)
-            return True
+            cmdresult = utils.run("git status --porcelain %s" % fl,
+                                  verbose=False)
+            stdout = cmdresult.stdout
         except error.CmdError:
+            return False
+
+        if stdout is not None:
+            if stdout:
+                if stdout.startswith("??"):
+                    return False
+                else:
+                    return True
+            else:
+                return True
+        else:
             return False
 
 
@@ -320,7 +332,7 @@ class FileChecker(object):
     Picks up a given file and performs various checks, looking after problems
     and eventually suggesting solutions.
     """
-    def __init__(self, path=None, vcs=None, confirm=False):
+    def __init__(self, path, vcs=None, confirm=False):
         """
         Class constructor, sets the path attribute.
 
@@ -329,10 +341,6 @@ class FileChecker(object):
         @param confirm: Whether to answer yes to all questions asked without
                 prompting the user.
         """
-        if path is not None:
-            self.set_path(path=path, vcs=vcs, confirm=confirm)
-
-    def set_path(self, path, vcs=None, confirm=False):
         self.path = path
         self.vcs = vcs
         self.confirm = confirm
@@ -355,12 +363,7 @@ class FileChecker(object):
         self.corrective_actions = []
 
         self.indent_exceptions = []
-        version = sys.version_info[0:2]
-        self.check_exceptions = []
-        if version < (2, 5):
-            self.check_exceptions = ['qemu/tests/stepmaker.py',
-                                     'virttest/step_editor.py',
-                                     'shared/scripts/cb.py']
+        self.check_exceptions = ['qemu/tests/stepmaker.py']
 
         if self.is_python:
             logging.debug("Checking file %s", self.path)
@@ -436,12 +439,7 @@ class FileChecker(object):
 
         path = self._get_checked_filename()
 
-        try:
-            if run_pylint.check_file(path):
-                success = False
-        except Exception, details:
-            logging.error("Pylint exception while verifying %s, details: %s",
-                          path, details)
+        if run_pylint.check_file(path):
             success = False
 
         return success
@@ -577,28 +575,23 @@ class PatchChecker(object):
         Gets a patch file from patchwork and puts it under the cwd so it can
         be applied.
 
-        @param id: Patchwork patch id. It can be a string with comma separated
-                github ids.
+        @param id: Patchwork patch id.
         """
-        collection = os.path.join(self.base_dir, 'patchwork-%s.patch' %
-                                  utils.generate_random_string(4))
-        collection_rw = open(collection, 'w')
+        patch_url = "http://%s/patch/%s/mbox/" % (self.pwhost, pw_id)
+        patch_dest = os.path.join(self.base_dir, 'patchwork-%s.patch' % pw_id)
+        patch = utils.get_file(patch_url, patch_dest)
+        # Patchwork sometimes puts garbage on the path, such as long
+        # sequences of underscores (_______). Get rid of those.
+        patch_ro = open(patch, 'r')
+        patch_contents = patch_ro.readlines()
+        patch_ro.close()
+        patch_rw = open(patch, 'w')
+        for line in patch_contents:
+            if not line.startswith("___"):
+                patch_rw.write(line)
+        patch_rw.close()
+        return patch
 
-        for i in pw_id.split(","):
-            patch_url = "http://%s/patch/%s/mbox/" % (self.pwhost, i)
-            patch_dest = os.path.join(self.base_dir, 'patchwork-%s.patch' % i)
-            patch = utils.get_file(patch_url, patch_dest)
-            # Patchwork sometimes puts garbage on the path, such as long
-            # sequences of underscores (_______). Get rid of those.
-            patch_ro = open(patch, 'r')
-            patch_contents = patch_ro.readlines()
-            patch_ro.close()
-            for line in patch_contents:
-                if not line.startswith("___"):
-                    collection_rw.write(line)
-        collection_rw.close()
-
-        return collection
 
     def _fetch_from_github(self, gh_id):
         """
@@ -696,42 +689,29 @@ if __name__ == "__main__":
         vcs = None
 
     logging_manager.configure_logging(CheckPatchLoggingConfig(), verbose=debug)
-    extension_blacklist = ["common.py", ".svn", ".git", ".pyc", ".orig", ".rej",
-                           ".bak", ".so", ".cfg", ".ks", ".preseed", ".steps", ".c",
-                           ".xml", ".sif", ".cs", ".ini", ".exe", "logs", "shared/data"]
-    dir_blacklist = [".svn", ".git", "data", "logs"]
+    ignore_list = ['common.py', ".svn", ".git", ".pyc", ".orig", ".rej", ".bak", ".so"]
 
     if full_check:
         failed_paths = []
         run_pylint.set_verbosity(False)
         logging.info("Virt Tests full tree check")
         logging.info("")
-        file_checker = FileChecker()
         for root, dirs, files in os.walk("."):
-            dirs[:] = [d for d in dirs if d not in dir_blacklist]
-
-            t_files = []
-            for f in files:
-                add = True
-                for extension in extension_blacklist:
-                    if f.endswith(extension):
-                        add = False
-                if add:
-                    t_files.append(f)
-            files = t_files
-
-            for f in files:
+            for fl in files:
                 check = True
-                path = os.path.join(root, f)
+                path = os.path.join(root, fl)
+                for pattern in ignore_list:
+                    if re.search(pattern, path):
+                        check = False
                 if check:
                     if vcs is not None:
                         if not vcs.is_file_tracked(fl=path):
                             check = False
                 if check:
-                    file_checker.set_path(path=path, vcs=vcs, confirm=confirm)
+                    file_checker = FileChecker(path=path, vcs=vcs,
+                                               confirm=confirm)
                     if not file_checker.report(skip_unittest=True):
                         failed_paths.append(path)
-
         if failed_paths:
             logging.error("Full tree check found files with problems:")
             for fp in failed_paths:
@@ -749,7 +729,7 @@ if __name__ == "__main__":
             patch_checker = PatchChecker(patch=local_patch, vcs=vcs,
                                          confirm=confirm)
         elif pw_id:
-            logging.info("Checking patchwork patch IDs %s", pw_id)
+            logging.info("Checking patchwork patch #%s", pw_id)
             logging.info("")
             patch_checker = PatchChecker(patchwork_id=pw_id, pwhost=pwhost,
                                          vcs=vcs,

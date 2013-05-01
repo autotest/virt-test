@@ -481,13 +481,9 @@ class QtreeDisksContainer(object):
         for name in params.objects('images'):
             current = None
             image_params = params.object_params(name)
-
-            base_dir = image_params.get("images_base_dir",
-                                        data_dir.get_data_dir())
-
             image_name = os.path.realpath(
                         storage.get_image_filename(image_params,
-                                                   base_dir))
+                                                   data_dir.get_data_dir()))
             for (qname, disk) in disks.iteritems():
                 if disk.get('image_name') == image_name:
                     current = disk

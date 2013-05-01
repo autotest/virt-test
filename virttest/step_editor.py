@@ -658,11 +658,10 @@ class StepMakerWindow(object):
             if not words:
                 continue
 
-            if (line.startswith("#") and not
-                self.entry_comment.get_text() and not
-                line.startswith("# Sending keys:") and not
-                line.startswith("# ----")):
-
+            if line.startswith("#") \
+                    and not self.entry_comment.get_text() \
+                    and not line.startswith("# Sending keys:") \
+                    and not line.startswith("# ----"):
                 self.entry_comment.set_text(line.strip("#").strip())
 
             elif words[0] == "step":

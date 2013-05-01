@@ -90,10 +90,7 @@ def normalize_connect_uri(connect_uri):
     if connect_uri == 'default':
         return None
     else: # Validate and canonicalize uri early to catch problems
-        result = virsh.canonical_uri(uri=connect_uri)
-        if not result:
-            raise ValueError("Normalizing connect_uri %s failed" % connect_uri)
-        return result
+        return virsh.canonical_uri(uri=connect_uri)
 
 
 def complete_uri(ip_address):
@@ -695,12 +692,8 @@ class VM(virt_vm.BaseVM):
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
-
-            base_dir = image_params.get("images_base_dir",
-                                        data_dir.get_data_dir())
-
             filename = storage.get_image_filename(image_params,
-                                                  base_dir)
+                                                  data_dir.get_data_dir())
             if image_params.get("use_storage_pool") == "yes":
                 filename = None
                 virt_install_cmd += add_drive(help_text,
@@ -1488,12 +1481,3 @@ class VM(virt_vm.BaseVM):
             if details['device'] == "disk":
                 disk_devices[target] = details
         return disk_devices
-
-
-    def get_max_mem(self):
-        """
-        Get vm's maximum memory(kilobytes).
-        """
-        dominfo_dict = self.dominfo()
-        max_mem = dominfo_dict['Max memory'].split(' ')[0] # strip off 'kb'
-        return int(max_mem)

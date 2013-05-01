@@ -1,5 +1,6 @@
-import logging, os
+import logging, os, re
 from autotest.client import utils
+from autotest.client.shared import error
 from virttest import postprocess_iozone
 
 
@@ -11,10 +12,24 @@ def run_iozone_windows(test, params, env):
     3) Get results
     4) Postprocess it with the IOzone postprocessing module
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
+    def get_drive(session):
+        """
+        return WIN_UTILS drive letter;
+        """
+        cmd = "wmic datafile where \"FileName='software_install_64' and "
+        cmd += "extension='bat'\" get drive"
+        info = session.cmd(cmd, timeout=600)
+        device = re.search(r'(\w):', info, re.M)
+        if not device:
+                raise error.TestError("WIN_UTILS drive not found...")
+        device = device.group(1)
+        return device.upper()
+
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -24,7 +39,8 @@ def run_iozone_windows(test, params, env):
     analysisdir = os.path.join(test.resultsdir, 'analysis_%s' % test.iteration)
 
     # Run IOzone and record its results
-    c = params.get("iozone_cmd")
+    drive_letter = get_drive(session)
+    c = params.get("iozone_cmd") % drive_letter
     t = int(params.get("iozone_timeout"))
     logging.info("Running IOzone command on guest, timeout %ss", t)
     results = session.cmd_output(cmd=c, timeout=t)

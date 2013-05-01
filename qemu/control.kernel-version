@@ -91,7 +91,6 @@ utils.system(update_config)
 parser = cartesian_config.Parser()
 
 parser.parse_file(os.path.join(qemu_test_dir, "cfg", "tests-example.cfg"))
-parser.parse_file(os.path.join(qemu_test_dir, "cfg", "host-kernel.cfg"))
 
 host_kernel_ver_str = ""
 host_kernel_ver_file = "/tmp/host_kernel_version"

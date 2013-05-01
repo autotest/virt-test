@@ -17,7 +17,7 @@ def run_iofuzz(test, params, env):
     is then rebooted. The test fails if we detect the qemu process to terminate
     while executing the process.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """

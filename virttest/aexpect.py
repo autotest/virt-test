@@ -295,7 +295,7 @@ def run_bg(command, termination_func=None, output_func=None, output_prefix="",
     @param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
 
-    @return: A Expect object.
+    @return: A Tail object.
     """
     process = Expect(command=command,
                    termination_func=termination_func,
@@ -815,6 +815,7 @@ class Tail(Spawn):
             while True:
                 global _thread_kill_requested
                 if _thread_kill_requested:
+                    _thread_kill_requested = False
                     return
                 try:
                     # See if there's any data to read from the pipe

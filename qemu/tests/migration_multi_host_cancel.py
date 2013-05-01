@@ -13,7 +13,7 @@ def run_migration_multi_host_cancel(test, params, env):
     described in documentation for migrate method in class MultihostMigration.
     This test allows migrate only one machine at once.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -33,7 +33,7 @@ def run_migration_multi_host_cancel(test, params, env):
             self.vm_mem = int(params.get("mem", "512"))
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            self.vms = params["vms"].split()
+            self.vms = params.get("vms").split()
             self.id = {'src': self.srchost,
                        'dst': self.dsthost,
                        "type": "cancel_migration"}

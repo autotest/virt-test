@@ -51,7 +51,7 @@ class VAgentNotSupportedSerialError(VAgentNotSupportedError):
 
 class VAgentCmdError(VAgentError):
     def __init__(self, cmd, args, data):
-        VAgentError.__init__(self, cmd, args, data)
+        VAgentError.__init__(self)
         self.cmd = cmd
         self.args = args
         self.data = data

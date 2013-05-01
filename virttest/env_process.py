@@ -2,8 +2,8 @@ import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
-import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
-import remote, data_dir, utils_test
+import libvirt_vm, video_maker, utils_misc, storage, qemu_storage, utils_net
+import remote, data_dir
 
 
 try:
@@ -26,8 +26,7 @@ def preprocess_image(test, params, image_name):
     @param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
-    base_dir = params.get("images_base_dir", data_dir.get_data_dir())
-
+    base_dir = data_dir.get_data_dir()
     if params.get("storage_type") == "iscsi":
         iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
         params["image_name"] = iscsidev.setup()
@@ -43,10 +42,13 @@ def preprocess_image(test, params, image_name):
               os.path.exists(image_filename)):
             create_image = True
 
+        if params.get("backup_image_before_testing", "no") == "yes":
+            image = qemu_storage.QemuImg(params, data_dir.get_data_dir(), image_name)
+            image.backup_image(params, data_dir.get_data_dir(), "backup", True)
         if create_image:
             image = qemu_storage.QemuImg(params, base_dir, image_name)
-            image.create(params)
-
+            if not image.create(params):
+                raise error.TestError("Could not create image")
 
 def preprocess_vm(test, params, env, name):
     """
@@ -104,7 +106,7 @@ def preprocess_vm(test, params, env, name):
             # Update mac and IP info for assigned device
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
-                utils_test.update_mac_ip_address(vm, params)
+                utils_net.update_mac_ip_address(vm, params)
     else:
         # Don't start the VM, just update its params
         vm.params = params
@@ -152,6 +154,8 @@ def postprocess_image(test, params, image_name):
                     if image_name in cl_images.split():
                         image.remove()
                 raise e
+        if params.get("restore_image_after_testing", "no") == "yes":
+            image.backup_image(params, data_dir.get_data_dir(), "restore", True)
         if params.get("remove_image") == "yes":
             if clone_master is None:
                 image.remove()
@@ -231,8 +235,7 @@ def process_command(test, params, env, command, command_timeout,
         else:
             raise
 
-
-def process(test, params, env, image_func, vm_func, vm_first=False):
+def process(test, params, env, image_func, vm_func, pre_flag=True):
     """
     Pre- or post-process VMs and images according to the instructions in params.
     Call image_func for each image listed in params and vm_func for each VM.
@@ -282,6 +285,31 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
     if vm_first:
         _call_image_func()
 
+    if not vm_first:
+        _call_image_func()
+
+    _call_vm_func()
+
+    if vm_first:
+        _call_image_func()
+
+    def _call_image_func():
+        # Get list of images
+        for image_name in params.objects("images"):
+            image_params = params.object_params(image_name)
+            # Call image_func for each image
+            image_func(test, image_params)
+
+    if pre_flag:
+        _call_image_func()
+        pre_flag = False
+    else:
+        pre_flag = True
+
+    _call_vm_func()
+
+    if pre_flag:
+        _call_image_func()
 
 @error.context_aware
 def preprocess(test, params, env):
@@ -298,13 +326,26 @@ def preprocess(test, params, env):
     # does and the test suite is running as a regular user, we shall just
     # throw a TestNAError exception, which will skip the test.
     if params.get('requires_root', 'no') == 'yes':
-        utils_test.verify_running_as_root()
+        utils_misc.verify_running_as_root()
 
     port = params.get('shell_port')
     prompt = params.get('shell_prompt')
     address = params.get('ovirt_node_address')
     username = params.get('ovirt_node_user')
     password = params.get('ovirt_node_password')
+
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        nic_params = params.object_params(nic)
+        if nic_params.get('netdst') == 'private':
+            setup_pb = True
+            params_pb = nic_params
+            params['netdst_%s' % nic] = nic_params.get("priv_brname", 'atbr0')
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig(params_pb)
+        brcfg.setup()
+
 
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
@@ -322,7 +363,7 @@ def preprocess(test, params, env):
                 login_cmd,
                 output_func=_update_address_cache,
                 output_params=(env["address_cache"],))
-            remote.handle_prompts(env["tcpdump"], username, password, prompt)
+            remote._remote_login(env["tcpdump"], username, password, prompt)
             env["tcpdump"].sendline(cmd)
         else:
             env["tcpdump"] = aexpect.Tail(
@@ -413,6 +454,24 @@ def preprocess(test, params, env):
                         int(params.get("pre_command_timeout", "600")),
                         params.get("pre_command_noncritical") == "yes")
 
+    # Generate iscsi related paramters
+    use_storage = params.get("use_storage")
+    if (use_storage == "iscsi" or use_storage == "emulational_iscsi"):
+        images = re.split("/s+", params.get("images"))
+        if len(images) > params.get("iscsi_number"):
+            raise error.TestError("Don't have enough iscsi storage")
+        device = params.get("iscsi_dev")
+        if use_storage == "iscsi":
+            count = 1
+            for i in images:
+                params["image_name_%s" % i] = "%s%s" % (device, count)
+                params["image_format_%s" % i] = "qcow2"
+                count += 1
+        else:
+            # Emulational_iscsi uses the whole disk as image,
+            # no need to get the count like Real_iscsi.
+            params["image_name"] = device
+
     #Clone master image from vms.
     base_dir = data_dir.get_data_dir()
     if params.get("master_images_clone"):
@@ -440,7 +499,6 @@ def preprocess(test, params, env):
                                               args=(test, params, env))
         _screendump_thread.start()
 
-
 @error.context_aware
 def postprocess(test, params, env):
     """
@@ -453,7 +511,8 @@ def postprocess(test, params, env):
     error.context("postprocessing")
 
     # Postprocess all VMs and images
-    process(test, params, env, postprocess_image, postprocess_vm, vm_first=True)
+    process(test, params, env, postprocess_image, postprocess_vm,
+            pre_flag=False)
 
     # Terminate the screendump thread
     global _screendump_thread, _screendump_thread_termination_event
@@ -544,6 +603,18 @@ def postprocess(test, params, env):
                         int(params.get("post_command_timeout", "600")),
                         params.get("post_command_noncritical") == "yes")
 
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        if params.get('netdst_%s' % nic) == 'private':
+            setup_pb = True
+            break
+    else:
+        setup_pb = params.get("netdst") == 'private'
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig()
+        brcfg.cleanup()
+
 
 def postprocess_on_error(test, params, env):
     """
@@ -616,7 +687,7 @@ def _take_screendumps(test, params, env):
     global _screendump_thread_termination_event
     temp_dir = test.debugdir
     if params.get("screendump_temp_dir"):
-        temp_dir = utils_misc.get_path(test.bindir,
+        temp_dir = utils_misc.get_path(data_dir.get_data_dir(),
                                       params.get("screendump_temp_dir"))
         try:
             os.makedirs(temp_dir)

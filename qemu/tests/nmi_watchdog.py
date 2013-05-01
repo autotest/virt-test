@@ -11,7 +11,7 @@ def run_nmi_watchdog(test, params, env):
     2) Add 'watchdog=1' to boot option
     2) Check if guest's NMI counter augment after injecting nmi
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -19,9 +19,9 @@ def run_nmi_watchdog(test, params, env):
     vm.verify_alive()
     timeout=int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
-    get_nmi_cmd = params["get_nmi_cmd"]
+    get_nmi_cmd= params.get("get_nmi_cmd")
     kernel_version = session.get_command_output("uname -r").strip()
-    nmi_watchdog_type = int(params["nmi_watchdog_type"])
+    nmi_watchdog_type = int(params.get("nmi_watchdog_type"))
     update_kernel_cmd = ("grubby --update-kernel=/boot/vmlinuz-%s "
                          "--args='nmi_watchdog=%d'" %
                          (kernel_version, nmi_watchdog_type))
@@ -33,7 +33,7 @@ def run_nmi_watchdog(test, params, env):
     session = vm.reboot(session, method='shell', timeout=timeout)
     try:
         error.context("Getting guest's number of vcpus")
-        guest_cpu_num = session.cmd(params["cpu_chk_cmd"])
+        guest_cpu_num = session.cmd(params.get("cpu_chk_cmd"))
 
         error.context("Getting guest's NMI counter")
         output = session.cmd(get_nmi_cmd)

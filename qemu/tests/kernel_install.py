@@ -18,7 +18,7 @@ def run_kernel_install(test, params, env):
     7) Do sub tests in guest with new kernel (optional)
     8) Restore grub and reboot guest (optional)
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -168,7 +168,7 @@ def run_kernel_install(test, params, env):
             raise error.TestFail("Could not login guest after install kernel")
 
     # Run Subtest in guest with new kernel
-    if "sub_test" in params:
+    if params.has_key("sub_test"):
         error.context("Run sub test in guest with new kernel")
         sub_test = params.get("sub_test")
         tag = params.get("sub_test_tag", "run")

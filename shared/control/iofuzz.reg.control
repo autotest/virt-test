@@ -1,0 +1,13 @@
+TIME="SHORT"
+AUTHOR = "Jason Wang <jasowang@redhat.com>"
+DOC = """ Just use iofuzz to do the regression test for 553216
+kvm: cat /dev/port in the guest cause the host hang.
+"""
+NAME = 'iofuzz'
+TEST_CLASS = 'hardware'
+TEST_CATEGORY = 'Functional'
+TEST_TYPE = 'client'
+
+job.run_test('iofuzz', tag = "readseq", count = 100, exlist = [],
+             type = "sequential")
+

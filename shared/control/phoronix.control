@@ -1,0 +1,15 @@
+NAME = 'Phoronix Test Suite'
+AUTHOR = 'Cao, Chen <kcao@redhat.com>'
+TIME = 'MEDIUM'
+TEST_CLASS = 'General'
+TEST_CATEGORY = 'Benchmark'
+TEST_TYPE = 'client'
+
+DOC = """
+The Phoronix Test Suite is the most comprehensive testing and
+benchmarking platform available that provides an extensible
+framework for which new tests can be easily added.
+"""
+
+job.run_test('phoronix', tests='apache')
+

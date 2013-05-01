@@ -1,12 +1,12 @@
 import logging, os, glob, shutil
-from autotest.client.shared import logging_manager, error
+from autotest.client.shared import logging_manager
 from autotest.client import utils
 import utils_misc, data_dir, asset, cartesian_config
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
 recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
-                        'libvirt': [('virsh',), ('virt-install',), ('fakeroot',)],
+                        'libvirt': [('virsh',), ('virt-install',)],
                         'openvswitch': [],
                         'v2v': [],
                         'libguestfs': [('perl',)]}
@@ -133,7 +133,7 @@ def get_directory_structure(rootdir, guest_file):
                              (4 * (indent + number_variants - 1) * " "))
             number_variants += 1
         elif indent < previous_indent:
-            number_variants -= 1
+            number_variants = indent
         indent += number_variants
         try:
             base_folder = folders[-1]
@@ -304,11 +304,6 @@ def create_subtests_cfg(t_type):
 
 def create_config_files(test_dir, shared_dir, interactive, step=None,
                         force_update=False):
-    def is_file_tracked(fl):
-        tracked_result = utils.run("git ls-files %s --error-unmatch" % fl,
-                                   ignore_status=True, verbose=False)
-        return (tracked_result.exit_status == 0)
-
     if step is None:
         step = 0
     logging.info("")
@@ -317,7 +312,6 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
     config_file_list = data_dir.SubdirGlobList(os.path.join(test_dir, "cfg"),
                                                "*.cfg",
                                                config_filter)
-    config_file_list = [cf for cf in config_file_list if is_file_tracked(cf)]
     config_file_list_shared = glob.glob(os.path.join(shared_dir, "cfg",
                                                      "*.cfg"))
 
@@ -340,8 +334,8 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
             logging.debug("Creating config file %s from sample", dst_file)
             shutil.copyfile(src_file, dst_file)
         else:
-            diff_cmd = "diff -Naur %s %s" % (dst_file, src_file)
-            diff_result = utils.run(diff_cmd, ignore_status=True, verbose=False)
+            diff_result = utils.run("diff -Naur %s %s" % (dst_file, src_file),
+                                    ignore_status=True, verbose=False)
             if diff_result.exit_status != 0:
                 logging.info("%s result:\n %s",
                               diff_result.command, diff_result.stdout)

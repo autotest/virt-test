@@ -2,7 +2,7 @@ import os, sys, logging, imp, Queue
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, utils_params, utils_env, env_process
-from virttest import data_dir, bootstrap, funcatexit
+from virttest import data_dir, bootstrap
 
 
 class virt(test.test):
@@ -102,6 +102,27 @@ class virt(test.test):
                     t_types = params.get("type").split()
                     test_modules = []
                     for t_type in t_types:
+                        for d in [subtest_dir_test, subtest_dir_common]:
+                            module_path = os.path.join(d, "%s.py" % t_type)
+                            if os.path.isfile(module_path):
+                                subtest_dir = d
+                                break
+                        if subtest_dir is None:
+                            msg = "Could not find test file %s.py "\
+                                  "on either %s or %s directory" % \
+                                  (t_type, subtest_dir_test,
+                                   subtest_dir_common)
+                            raise error.TestError(msg)
+                        # Load the test module
+                        f, p, d = imp.find_module(t_type, [subtest_dir])
+                        test_modules[t_type] = imp.load_module(t_type, f, p, d)
+                        f.close()
+
+                    # Get the test routine corresponding to the specified
+                    # test type
+                    t_types = params.get("type").split()
+                    test_modules = {}
+                    for t_type in t_types:
                         for d in subtest_dirs:
                             module_path = os.path.join(d, "%s.py" % t_type)
                             if os.path.isfile(module_path):
@@ -132,15 +153,8 @@ class virt(test.test):
                         finally:
                             env.save()
                     test_passed = True
-                    error_message = funcatexit.run_exitfuncs(env, t_type)
-                    if error_message:
-                        raise error.TestWarn("funcatexit failed with: %s"
-                                             % error_message)
 
                 except Exception, e:
-                    error_message = funcatexit.run_exitfuncs(env, t_type)
-                    if error_message:
-                        logging.error(error_message)
                     logging.error("Test failed: %s: %s",
                                   e.__class__.__name__, e)
                     try:

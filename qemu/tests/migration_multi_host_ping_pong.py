@@ -24,7 +24,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
 
     There are some variants of test no stress, cpu_memory, disk, all.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -40,8 +40,8 @@ def run_migration_multi_host_ping_pong(test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            self.vms = params["vms"].split()
-            self.vm = params["vms"].split()[0]
+            self.vms = params.get("vms").split()
+            self.vm = params.get("vms").split()[0]
 
             self.install_path = params.get("cpuflags_install_path", "/tmp")
             self.stress_memory = int(params.get("stress_memory", "128"))

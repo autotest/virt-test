@@ -10,7 +10,7 @@ def run_cpuflags(test, params, env):
     """
     Boot guest with different cpu flags and check if guest works correctly.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
@@ -989,7 +989,7 @@ def run_cpuflags(test, params, env):
             for fdel in flags.host_unsupported_flags:
                 cpuf_model += ",-" + str(fdel)
 
-            smp = int(params["smp"])
+            smp = int(params.get("smp"))
             disable_cpus = map(lambda cpu: int(cpu),
                                         params.get("disable_cpus", "").split())
 

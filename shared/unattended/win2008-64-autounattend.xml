@@ -36,7 +36,7 @@
 					<InstallFrom>
 						<MetaData wcm:action="add">
 							<Key>/IMAGE/INDEX</Key>
-							<Value>1</Value>
+							<Value>5</Value>
 						</MetaData>
 					</InstallFrom>
 					<InstallTo>
@@ -114,6 +114,13 @@
 			<UILanguage>en-US</UILanguage>
 			<UserLocale>en-US</UserLocale>
 		</component>
+		<component name="Microsoft-Windows-Shell-Setup"
+			processorArchitecture="x86" publicKeyToken="31bf3856ad364e35"
+			language="neutral" versionScope="nonSxS"
+			xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+			<ProductKey>KVM_TEST_CDKEY</ProductKey>
+		</component>
 	</settings>
 	<settings pass="oobeSystem">
 		<component name="Microsoft-Windows-Shell-Setup"
@@ -172,6 +179,30 @@
 				<SynchronousCommand wcm:action="add">
 					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat PROCESS_CHECK</CommandLine>
 					<Order>9</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_BALLOON_INSTALLER</CommandLine>
+					<Order>10</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_QXL_INSTALLER</CommandLine>
+					<Order>11</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setuprss.bat</CommandLine>
+					<Order>12</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setupsp.bat</CommandLine>
+					<Order>13</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_64.bat</CommandLine>
+					<Order>15</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat PROCESS_CHECK</CommandLine>
+					<Order>16</Order>
 				</SynchronousCommand>
 			</FirstLogonCommands>
 			<OOBE>

@@ -7,13 +7,13 @@ def run_usb_hotplug(test, params, env):
     """
     Test usb hotplug
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
 
-    device = params["usb_type_testdev"]
-    product = params["product"]
+    device = params.get("usb_type_testdev")
+    product = params.get("product")
 
     # compose strings
     monitor_add  = "device_add %s" % device

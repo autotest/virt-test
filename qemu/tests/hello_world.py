@@ -77,9 +77,8 @@ def run_hello_world(test, params, env):
     if host_cmd_output != 'Hello, world!':
         raise error.TestFail("Unexpected output from guest")
 
-    # An example of getting a required parameter from the config file
-    error.context("Get a required parameter from the config file",
-                  logging.info)
-    sleep_time = int(params["sleep_time"])
+    # One more example of getting a parameter from the config file
+    error.context("Get a parameter from the config file", logging.info)
+    sleep_time = int(params.get("sleep_time"))
     logging.info("Sleep for '%d' seconds", sleep_time)
     time.sleep(sleep_time)

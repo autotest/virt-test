@@ -367,14 +367,12 @@ class GuestWorker(object):
         match, tmp = self._cmd("print 'PASS: nothing'", 10, ('^PASS: nothing',
                                                              '^FAIL:'))
         if match is not 0:
-            logging.error("Python is stuck/FAILed after read-out:\n%s", tmp)
             try:
                 self.session.close()
                 self.session = utils_test.wait_for_login(self.vm)
-                if self.os_linux:   # On windows it dies with the connection
-                    self.cmd("killall -9 python "
-                             "&& echo -n PASS: python killed"
-                             "|| echo -n PASS: python was already dead", 10)
+                self.cmd("killall -9 python "
+                         "&& echo -n PASS: python killed"
+                         "|| echo -n PASS: python was already dead", 10)
                 self._execute_worker()
                 self._init_guest()
             except Exception, inst:
@@ -399,11 +397,10 @@ class GuestWorker(object):
 
                 match, tmp = self._cmd("guest_exit()", 10, ('^FAIL:',
                                             '^PASS: virtio_guest finished'))
-                self.session.close()
-                self.session = utils_test.wait_for_login(self.vm)
-                # On windows it dies with the connection
-                if match is not 0 and self.os_linux:
+                if match is not 0:
                     logging.debug(tmp)
+                    self.session.close()
+                    self.session = utils_test.wait_for_login(self.vm)
                     self.cmd("killall -9 python "
                              "&& echo -n PASS: python killed"
                              "|| echo -n PASS: python was already dead", 10)
@@ -427,16 +424,15 @@ class GuestWorker(object):
         # Quit worker
         if self.session and self.vm and self.vm.is_alive():
             match, tmp = self._cmd("guest_exit()", 10)
-            self.session.close()
-            # On windows it dies with the connection
-            if match is not 0 and self.os_linux:
-                logging.warn('guest_worker stuck during cleanup:\n%s\n,'
-                             ' killing python...', tmp)
+            if match is not 0:
+                logging.warn('guest_worker stuck during cleanup,'
+                             ' killing python...')
+                self.session.close()
                 self.session = utils_test.wait_for_login(self.vm)
                 self.cmd("killall -9 python "
                          "&& echo -n PASS: python killed"
                          "|| echo -n PASS: python was already dead", 10)
-                self.session.close()
+            self.session.close()
         self.session = None
         self.vm = None
 
@@ -809,6 +805,7 @@ class ThRecvCheck(Thread):
         logging.debug("ThRecvCheck %s: exit(%d)", self.getName(),
                       self.idx)
         self.ret_code = 0
+
 
     def run_debug(self):
         """

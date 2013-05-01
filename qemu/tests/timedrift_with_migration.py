@@ -19,16 +19,24 @@ def run_timedrift_with_migration(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+
+    boot_option_added = params.get("boot_option_added")
+    boot_option_removed = params.get("boot_option_removed")
+    if boot_option_added or boot_option_removed:
+        utils_test.update_boot_option(vm,
+                                           args_removed=boot_option_removed,
+                                           args_added=boot_option_added)
+
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
     # Collect test parameters:
     # Command to run to get the current time
-    time_command = params["time_command"]
+    time_command = params.get("time_command")
     # Filter which should match a string to be passed to time.strptime()
-    time_filter_re = params["time_filter_re"]
+    time_filter_re = params.get("time_filter_re")
     # Time format for time.strptime()
-    time_format = params["time_format"]
+    time_format = params.get("time_format")
     drift_threshold = float(params.get("drift_threshold", "10"))
     drift_threshold_single = float(params.get("drift_threshold_single", "3"))
     migration_iterations = int(params.get("migration_iterations", 1))
@@ -78,6 +86,11 @@ def run_timedrift_with_migration(test, params, env):
     finally:
         if session:
             session.close()
+        # remove flags add for this test.
+        if boot_option_added or boot_option_removed:
+            utils_test.update_boot_option(vm,
+                                                args_removed=boot_option_added,
+                                                args_added=boot_option_removed)
 
     # Report results
     host_delta = ht1 - ht0

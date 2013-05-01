@@ -36,7 +36,7 @@
 					<InstallFrom>
 						<MetaData wcm:action="add">
 							<Key>/IMAGE/INDEX</Key>
-							<Value>1</Value>
+							<Value>3</Value>
 						</MetaData>
 					</InstallFrom>
 					<InstallTo>
@@ -172,6 +172,34 @@
 				<SynchronousCommand wcm:action="add">
 					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat PROCESS_CHECK</CommandLine>
 					<Order>9</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c netsh interface ip set address "Local Area Connection" dhcp</CommandLine>
+					<Order>10</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_BALLOON_INSTALLER</CommandLine>
+					<Order>11</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c KVM_TEST_VIRTIO_QXL_INSTALLER</CommandLine>
+					<Order>12</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c E:\setuprss.bat</CommandLine>
+					<Order>13</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c E:\software_install_64.bat</CommandLine>
+					<Order>14</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat PROCESS_CHECK</CommandLine>
+					<Order>15</Order>
+				</SynchronousCommand>
+				<SynchronousCommand wcm:action="add">
+					<CommandLine>%WINDIR%\System32\cmd /c A:\finish.bat pnputil</CommandLine>
+					<Order>15</Order>
 				</SynchronousCommand>
 			</FirstLogonCommands>
 			<OOBE>
