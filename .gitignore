@@ -57,3 +57,4 @@ libguestfs/cfg/subtests.cfg
 libguestfs/cfg/virtio-win.cfg
 tmp
 .*.swp
+RELEASE-VERSION
