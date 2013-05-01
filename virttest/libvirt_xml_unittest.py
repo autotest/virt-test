@@ -2,7 +2,7 @@
 
 import unittest
 import common
-from virttest import xml_utils, virsh
+from virttest import xml_utils, virsh, utils_misc
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
 from virttest.libvirt_xml import libvirt_xml
 from virttest.libvirt_xml.devices import librarian
@@ -298,6 +298,23 @@ class testLibrarian(LibvirtXMLTestBase):
         Serial = librarian.get('serial')
         self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
         self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
+
+
+class testCharacterXML(LibvirtXMLTestBase):
+
+    def test_arbitrart_attributes(self):
+        parallel = librarian.get('parallel')(virsh_instance = self.dummy_virsh)
+        serial = librarian.get('serial')(virsh_instance = self.dummy_virsh)
+        channel = librarian.get('channel')(virsh_instance = self.dummy_virsh)
+        console = librarian.get('console')(virsh_instance = self.dummy_virsh)
+        for chardev in (parallel, serial, channel, console):
+            attribute1 = utils_misc.generate_random_string(10)
+            value1 = utils_misc.generate_random_string(10)
+            attribute2 = utils_misc.generate_random_string(10)
+            value2 = utils_misc.generate_random_string(10)
+            chardev.add_source(**{attribute1:value1, attribute2:value2})
+            chardev.add_target(**{attribute1:value1, attribute2:value2})
+            self.assertEqual(chardev.sources, chardev.targets)
 
 
 class testSerialXML(LibvirtXMLTestBase):
