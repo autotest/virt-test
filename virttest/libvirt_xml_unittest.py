@@ -309,16 +309,15 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(serial.device_tag, 'serial')
         self.assertEqual(serial.type_name, 'pty')
         self.assertEqual(serial.virsh, self.dummy_virsh)
-        serial.source_path = '/dev/null'
-        # Test dict-like access also
-        serial['target_port'] = "-1"
+        serial.add_source(path='/dev/null')
+        serial.add_target(port="-1")
         return serial
 
 
     def test_getters(self):
         serial = self._from_scratch()
-        self.assertEqual(serial.source_path, '/dev/null')
-        self.assertEqual(serial.target_port, '-1')
+        self.assertEqual(serial.sources[0]['path'], '/dev/null')
+        self.assertEqual(serial.targets[0]['port'], '-1')
 
 
     def test_from_element(self):
@@ -326,9 +325,10 @@ class testSerialXML(LibvirtXMLTestBase):
         serial1 = self._from_scratch()
         serial2 = librarian.get('Serial').new_from_element(element)
         self.assertEqual(serial1, serial2)
-        serial2.target_port = '0'
+        # Can't in-place modify the dictionary since it's virtual
+        serial2.update_target(0, port="0")
         self.assertTrue(serial1 != serial2)
-        serial1['target_port'] = '0'
+        serial1.targets = [{'port':'0'}]
         self.assertEqual(serial1, serial2)
 
 
@@ -350,30 +350,27 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(serial1.type_name, 'pty')
         self.assertEqual(serial2.type_name, 'pty')
         self.assertFalse(serial1 == serial2)
-        self.assertRaises(xcepts.LibvirtXMLError, getattr, serial1, 'source_path')
+        self.assertEqual(serial1.sources, [])
         # mix up access style
-        serial1['source_path'] = serial2['source_path']
+        serial1.add_source(**serial2.sources[0])
         self.assertFalse(serial1 == serial2)
-        serial1.target_port = "1"
+        serial1.update_target(0, port="1")
         self.assertEqual(serial1, serial2)
         # Exercize bind mode
         self.assertEqual(serial3.type_name, 'tcp')
-        self.assertEqual(serial3.source_bind, None)
-        self.assertEqual(serial3.source_connect, {'host':'1.2.3.4',
-                                                  'service':'2445'})
+        source_connect = serial3.sources[0]
+        self.assertEqual(source_connect, {'mode':"connect", 'host':'1.2.3.4',
+                                          'service':'2445'})
         self.assertEqual(serial3.protocol_type, 'raw')
-        self.assertEqual(serial3.target_port, '2')
+        self.assertEqual(serial3.targets[0]['port'], '2')
         # Exercize udp type
         self.assertEqual(serial4.type_name, 'udp')
-        self.assertEqual(serial4.source_bind['host'], "1.2.3.4")
-        self.assertEqual(serial4.source_connect['host'], "4.3.2.1")
-        self.assertEqual(serial4.source_bind['service'], '2445')
-        self.assertEqual(serial4.source_connect['service'], '5442')
-        # Test convert to regular device-backed serial
-        serial4.source_path = '/foo/bar'
-        self.assertEqual(serial4.source_path, '/foo/bar')
-        self.assertEqual(serial4.source_bind, None)
-        self.assertEqual(serial4.source_connect, None)
+        source_bind = serial4.sources[0]
+        source_connect = serial4.sources[1]
+        self.assertEqual(source_bind['host'], "1.2.3.4")
+        self.assertEqual(source_connect['host'], "4.3.2.1")
+        self.assertEqual(source_bind['service'], '2445')
+        self.assertEqual(source_connect['service'], '5442')
 
 
 class testAddressXML(LibvirtXMLTestBase):
