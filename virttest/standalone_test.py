@@ -2,7 +2,7 @@ import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage, cartesian_config, arch, funcatexit
+import storage, cartesian_config, arch, funcatexit, version
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -115,6 +115,8 @@ class Test(object):
         if params.get("dependency_failed") == 'yes':
             raise error.TestNAError("Test dependency failed")
 
+        # Report virt test version
+        logging.info(version.get_pretty_version_info())
         # Report the parameters we've received and write them as keyvals
         logging.info("Starting test %s", self.tag)
         logging.debug("Test parameters:")
@@ -703,6 +705,9 @@ def run_tests(parser, options):
     last_index = -1
 
     logging.info("Starting test job at %s", time.strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info("")
+
+    logging.info(version.get_pretty_version_info())
     logging.info("")
 
     logging.debug("Cleaning up previous job tmp files")
