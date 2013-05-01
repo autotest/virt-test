@@ -2,7 +2,7 @@ import os, sys, logging, imp, Queue
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, utils_params, utils_env, env_process
-from virttest import data_dir, bootstrap, funcatexit
+from virttest import data_dir, bootstrap, funcatexit, version
 
 
 class virt(test.test):
@@ -51,6 +51,8 @@ class virt(test.test):
         if params.get("dependency_failed") == 'yes':
             raise error.TestNAError("Test dependency failed")
 
+        # Report virt test version
+        logging.info(version.get_pretty_version_info())
         # Report the parameters we've received and write them as keyvals
         logging.debug("Test parameters:")
         keys = params.keys()
