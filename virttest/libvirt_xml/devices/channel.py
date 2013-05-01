@@ -11,6 +11,6 @@ class Channel(CharacterBase):
 
     __slots__ = CharacterBase.__slots__
 
-    def __init__(self, type_name='unix', virsh_instance=ase.virsh):
-        super(Serial, self).__init__(device_tag='channel', type_name=type_name,
-                                     virsh_instance=virsh_instance)
+    def __init__(self, type_name='unix', virsh_instance=base.virsh):
+        super(Channel, self).__init__(device_tag='channel', type_name=type_name,
+                                      virsh_instance=virsh_instance)
