@@ -1839,41 +1839,14 @@ class VM(virt_vm.BaseVM):
             self.monitors = []
             for monitor_name in params.objects("monitors"):
                 monitor_params = params.object_params(monitor_name)
-                # Wait for monitor connection to succeed
-                end_time = time.time() + timeout
-                while time.time() < end_time:
-                    try:
-                        if monitor_params.get("monitor_type") == "qmp":
-                            if utils_misc.qemu_has_option("qmp",
-                                                          self.qemu_binary):
-                                # Add a QMP monitor
-                                monitor = qemu_monitor.QMPMonitor(
-                                    monitor_name,
-                                    qemu_monitor.get_monitor_filename(self,
-                                                                monitor_name))
-                            else:
-                                logging.warn("qmp monitor is unsupported, "
-                                             "using human monitor instead.")
-                                # Add a "human" monitor
-                                monitor = qemu_monitor.HumanMonitor(
-                                    monitor_name,
-                                    qemu_monitor.get_monitor_filename(self,
-                                                                monitor_name))
-                        else:
-                            # Add a "human" monitor
-                            monitor = qemu_monitor.HumanMonitor(
-                                monitor_name,
-                                qemu_monitor.get_monitor_filename(self,
-                                                                  monitor_name))
-                        monitor.verify_responsive()
-                        break
-                    except qemu_monitor.MonitorError, e:
-                        logging.warn(e)
-                        time.sleep(1)
-                else:
-                    e = qemu_monitor.MonitorConnectError(monitor_name)
+                try:
+                    monitor = qemu_monitor.wait_for_create_monitor(self,
+                                        monitor_name, monitor_params, timeout)
+                except qemu_monitor.MonitorConnectError, detail:
+                    logging.error(detail)
                     self.destroy()
-                    raise e
+                    raise
+
                 # Add this monitor to the list
                 self.monitors += [monitor]
 
