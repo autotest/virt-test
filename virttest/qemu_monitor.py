@@ -94,6 +94,52 @@ def get_monitor_filenames(vm):
     return [get_monitor_filename(vm, m) for m in vm.params.objects("monitors")]
 
 
+def create_monitor(vm, monitor_name, monitor_params):
+    """
+    Create monitor object and connect to the monitor socket.
+
+    @param vm: The VM object which has the monitor.
+    @param monitor_name: The name of this monitor object.
+    @param monitor_params: The dict for creating this monitor object.
+    """
+    monitor_creator = HumanMonitor
+    if monitor_params.get("monitor_type") == "qmp":
+        monitor_creator = QMPMonitor
+        if not utils_misc.qemu_has_option("qmp", vm.qemu_binary):
+            # Add a "human" monitor on non-qmp version of qemu.
+            logging.warn("QMP monitor is unsupported by this version of qemu,"
+                         " creating human monitor instead.")
+            monitor_creator = HumanMonitor
+
+    monitor_filename = get_monitor_filename(vm, monitor_name)
+    monitor = monitor_creator(monitor_name, monitor_filename)
+    monitor.verify_responsive()
+
+    return monitor
+
+
+def wait_for_create_monitor(vm, monitor_name, monitor_params, timeout):
+    """
+    Wait for the progress of creating monitor object. This function will
+    retry to create the Monitor object until timeout.
+
+    @param vm: The VM object which has the monitor.
+    @param monitor_name: The name of this monitor object.
+    @param monitor_params: The dict for creating this monitor object.
+    @param timeout: Time to wait for creating this monitor object.
+    """
+    # Wait for monitor connection to succeed
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        try:
+            return create_monitor(vm, monitor_name, monitor_params)
+        except MonitorError, e:
+            logging.warn(e)
+            time.sleep(1)
+    else:
+        raise MonitorConnectError(monitor_name)
+
+
 class Monitor:
     """
     Common code for monitor classes.
