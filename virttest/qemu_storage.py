@@ -78,6 +78,7 @@ class QemuImg(storage.QemuImg):
             image_cluster_size = params.get("image_cluster_size", None)
             preallocated = params.get("preallocated", "off")
             encrypted = params.get("encrypted", "off")
+            image_extra_params = params.get("image_extra_params", "")
 
             qemu_img_cmd += " -o "
             if preallocated != "off":
@@ -88,6 +89,9 @@ class QemuImg(storage.QemuImg):
 
             if image_cluster_size is not None:
                 qemu_img_cmd += "cluster_size=%s," % image_cluster_size
+
+            if image_extra_params:
+                qemu_img_cmd += "%s," % image_extra_params
             qemu_img_cmd = qemu_img_cmd.rstrip(" -o")
             qemu_img_cmd = qemu_img_cmd.rstrip(",")
 
