@@ -1075,7 +1075,8 @@ class VM(virt_vm.BaseVM):
         # Add monitors
         for monitor_name in params.objects("monitors"):
             monitor_params = params.object_params(monitor_name)
-            monitor_filename = vm.get_monitor_filename(monitor_name)
+            monitor_filename = qemu_monitor.get_monitor_filename(vm,
+                                                                 monitor_name)
             if monitor_params.get("monitor_type") == "qmp":
                 qemu_cmd += add_qmp_monitor(help_text, monitor_name,
                                             monitor_filename)
@@ -1848,19 +1849,22 @@ class VM(virt_vm.BaseVM):
                                 # Add a QMP monitor
                                 monitor = qemu_monitor.QMPMonitor(
                                     monitor_name,
-                                    self.get_monitor_filename(monitor_name))
+                                    qemu_monitor.get_monitor_filename(self,
+                                                                monitor_name))
                             else:
                                 logging.warn("qmp monitor is unsupported, "
                                              "using human monitor instead.")
                                 # Add a "human" monitor
                                 monitor = qemu_monitor.HumanMonitor(
                                     monitor_name,
-                                    self.get_monitor_filename(monitor_name))
+                                    qemu_monitor.get_monitor_filename(self,
+                                                                monitor_name))
                         else:
                             # Add a "human" monitor
                             monitor = qemu_monitor.HumanMonitor(
                                 monitor_name,
-                                self.get_monitor_filename(monitor_name))
+                                qemu_monitor.get_monitor_filename(self,
+                                                                  monitor_name))
                         monitor.verify_responsive()
                         break
                     except qemu_monitor.MonitorError, e:
@@ -2083,7 +2087,7 @@ class VM(virt_vm.BaseVM):
 
         # Generate the tmp file which should be deleted.
         file_list = [self.get_testlog_filename()]
-        file_list += self.get_monitor_filenames()
+        file_list += qemu_monitor.get_monitor_filenames(self)
         file_list += self.get_virtio_port_filenames()
         file_list += self.get_serial_console_filenames()
         file_list += self.logs.values()
@@ -2189,22 +2193,6 @@ class VM(virt_vm.BaseVM):
                 return m
         if self.monitors and not self.params.get("main_monitor"):
             return self.monitors[0]
-
-
-    def get_monitor_filename(self, monitor_name):
-        """
-        Return the filename corresponding to a given monitor name.
-        """
-        return "/tmp/monitor-%s-%s" % (monitor_name, self.instance)
-
-
-    def get_monitor_filenames(self):
-        """
-        Return a list of all monitor filenames (as specified in the VM's
-        params).
-        """
-        return [self.get_monitor_filename(m) for m in
-                self.params.objects("monitors")]
 
 
     def get_peer(self, netid):
