@@ -73,6 +73,27 @@ class QMPCmdError(MonitorError):
                 "error message: %r)" % (self.cmd, self.qmp_args, self.data))
 
 
+def get_monitor_filename(vm, monitor_name):
+    """
+    Return the filename corresponding to a given monitor name.
+
+    @param vm: The VM object which has the monitor.
+    @param monitor_name: The monitor name.
+    @return: The string of socket file name for qemu monitor.
+    """
+    return "/tmp/monitor-%s-%s" % (monitor_name, vm.instance)
+
+
+def get_monitor_filenames(vm):
+    """
+    Return a list of all monitor filenames (as specified in the VM's
+    params).
+
+    @param vm: The VM object which has the monitors.
+    """
+    return [get_monitor_filename(vm, m) for m in vm.params.objects("monitors")]
+
+
 class Monitor:
     """
     Common code for monitor classes.
