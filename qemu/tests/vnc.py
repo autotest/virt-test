@@ -108,10 +108,11 @@ def run_vnc(test, params, env):
              "__com.redhat_set_password protocol=vnc,password=%s,expiration=%s")
     rfb_version_list = params.get("rfb_version").strip().split(" ")
     for rfb_version in rfb_version_list:
-        pass_len = random.SystemRandom().randint(1, 8)
-        password = utils_misc.generate_random_string(pass_len)
+        rand = random.SystemRandom()
+        rand.seed()
+        password = utils_misc.generate_random_string(rand.randint(1, 8))
         logging.info("Set VNC password to: %s" % password)
-        timeout = random.SystemRandom().randint(10, 100)
+        timeout = rand.randint(10, 100)
         logging.info("VNC password timeout is: %s" % timeout)
         vm.monitor.send_args_cmd(passwd_cmd % (password, timeout))
 
