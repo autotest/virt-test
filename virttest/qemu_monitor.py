@@ -293,6 +293,14 @@ class Monitor:
         return self.parse_info_numa(r)
 
 
+    def close(self):
+        """
+        Close the connection to the monitor and its log file.
+        """
+        self._close_sock()
+        utils_misc.close_log_file(self.log_file)
+
+
 class HumanMonitor(Monitor):
     """
     Wraps "human monitor" commands.
