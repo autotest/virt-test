@@ -3,7 +3,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
 import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
-import remote, data_dir, utils_test
+import remote, data_dir, utils_test, utils_net
 
 
 try:
@@ -104,7 +104,7 @@ def preprocess_vm(test, params, env, name):
             # Update mac and IP info for assigned device
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
-                utils_test.update_mac_ip_address(vm, params)
+                utils_net.update_mac_ip_address(vm, params)
     else:
         # Don't start the VM, just update its params
         vm.params = params

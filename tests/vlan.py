@@ -1,6 +1,6 @@
 import logging, time, re
 from autotest.client.shared import error
-from virttest import utils_misc, utils_test, aexpect
+from virttest import utils_misc, utils_test, aexpect, utils_net
 
 
 def run_vlan(test, params, env):
@@ -87,7 +87,7 @@ def run_vlan(test, params, env):
             raise error.TestError("Could not log into guest(vm%d)" % i)
         logging.info("Logged in")
 
-        ifname.append(utils_test.get_linux_ifname(session[i],
+        ifname.append(utils_net.get_linux_ifname(session[i],
                       vm[i].get_mac_address()))
         #get guest ip
         vm_ip.append(vm[i].get_address())
