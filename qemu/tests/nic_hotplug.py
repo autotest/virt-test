@@ -53,7 +53,7 @@ def run_nic_hotplug(test, params, env):
     # Most modern Linux guests run NetworkManager, and thus do not need this.
     if run_dhclient == "yes" and guest_is_not_windows:
         session_serial = vm.wait_for_serial_login(timeout=login_timeout)
-        ifname = utils_test.get_linux_ifname(session, nic_info['mac'])
+        ifname = utils_net.get_linux_ifname(session, nic_info['mac'])
         session_serial.cmd("dhclient %s &" % ifname)
 
     logging.info("Shutting down the primary link(s)")
