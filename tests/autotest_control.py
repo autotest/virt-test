@@ -22,4 +22,4 @@ def run_autotest_control(test, params, env):
     outputdir = test.outputdir
 
     utils_test.run_autotest(vm, session, control_path, timeout, outputdir,
-                                 params)
+                            params)
