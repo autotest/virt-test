@@ -470,7 +470,8 @@ def run_tests(parser, job):
         index += 1
 
         # Add kvm module status
-        param_dict["kvm_default"] = get_module_params(param_dict.get("sysfs_dir", "sys"), "kvm")
+        sysfs_dir = param_dict.get("sysfs_dir", "sys")
+        param_dict["kvm_default"] = get_module_params(sysfs_dir, 'kvm')
 
         if param_dict.get("skip") == "yes":
             continue
@@ -492,7 +493,7 @@ def run_tests(parser, job):
             # Setting up profilers during test execution.
             profilers = param_dict.get("profilers", "").split()
             for profiler in profilers:
-                job.profilers.add(profiler)
+                job.profilers.add(profiler, **param_dict)
             # We need only one execution, profiled, hence we're passing
             # the profile_only parameter to job.run_test().
             profile_only = bool(profilers) or None
