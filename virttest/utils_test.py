@@ -2089,3 +2089,182 @@ def verify_running_as_root():
         raise error.TestNAError("This test requires root privileges "
                                 "(currently running with user %s)" %
                                 getpass.getuser())
+
+
+class GuestSuspend(object):
+    """
+    Suspend guest, supports both Linux and Windows.
+
+    """
+    SUSPEND_TYPE_MEM = "mem"
+    SUSPEND_TYPE_DISK = "disk"
+
+
+    def __init__(self, params, vm):
+        if not params or not vm:
+            raise error.TestError("Missing 'params' or 'vm' parameters")
+
+        self._open_session_list = []
+        self.vm = vm
+        self.params = params
+        self.login_timeout = float(self.params.get("login_timeout", 360))
+        self.services_up_timeout = float(self.params.get("services_up_timeout",
+                                                         30))
+        self.os_type = self.params.get("os_type")
+
+
+    def _get_session(self):
+        self.vm.verify_alive()
+        session = self.vm.wait_for_login(timeout=self.login_timeout)
+        return session
+
+
+    def _session_cmd_close(self, session, cmd):
+        try:
+            return session.cmd_status_output(cmd)
+        finally:
+            try:
+                session.close()
+            except Exception:
+                pass
+
+
+    def _cleanup_open_session(self):
+        try:
+            for s in self._open_session_list:
+                if s:
+                    s.close()
+        except Exception:
+            pass
+
+
+    @error.context_aware
+    def setup_bg_program(self, **args):
+        """
+        Start up a program as a flag in guest.
+        """
+        suspend_bg_program_setup_cmd = args.get("suspend_bg_program_setup_cmd")
+
+        error.context("Run a background program as a flag", logging.info)
+        session = self._get_session()
+        self._open_session_list.append(session)
+
+        logging.debug("Waiting all services in guest are fully started.")
+        time.sleep(self.services_up_timeout)
+
+        session.sendline(suspend_bg_program_setup_cmd)
+
+
+    @error.context_aware
+    def check_bg_program(self, **args):
+        """
+        Make sure the background program is running as expected
+        """
+        suspend_bg_program_chk_cmd = args.get("suspend_bg_program_chk_cmd")
+
+        error.context("Verify background program is running", logging.info)
+        session = self._get_session()
+        s, _ = self._session_cmd_close(session, suspend_bg_program_chk_cmd)
+        if s:
+            raise error.TestFail("Background program is dead. Suspend failed.")
+
+
+    @error.context_aware
+    def kill_bg_program(self, **args):
+        error.context("Kill background program after resume")
+        suspend_bg_program_kill_cmd = args.get("suspend_bg_program_kill_cmd")
+
+        try:
+            session = self._get_session()
+            self._session_cmd_close(session, suspend_bg_program_kill_cmd)
+        except Exception, e:
+            logging.warn("Could not stop background program: '%s'", e)
+            pass
+
+
+    @error.context_aware
+    def _check_guest_suspend_log(self, **args):
+        error.context("Check whether guest supports suspend",
+                      logging.info)
+        suspend_support_chk_cmd = args.get("suspend_support_chk_cmd")
+
+        session = self._get_session()
+        s, o = self._session_cmd_close(session, suspend_support_chk_cmd)
+
+        return s, o
+
+
+    def verfiy_guest_support_suspend(self, **args):
+        s, _ = self._check_guest_suspend_log(**args)
+        if s:
+            raise error.TestError("Guest doesn't support suspend.")
+
+
+    @error.context_aware
+    def start_suspend(self, **args):
+        error.context("Start suspend", logging.info)
+        suspend_start_cmd = args.get("suspend_start_cmd")
+
+        session = self._get_session()
+        self._open_session_list.append(session)
+
+        # Suspend to disk
+        session.sendline(suspend_start_cmd)
+
+
+    @error.context_aware
+    def verify_guest_down(self, **args):
+        # Make sure the VM goes down
+        error.context("Wait for guest goes down after suspend")
+        suspend_timeout = 240 + int(self.params.get("smp")) * 60
+        if not utils_misc.wait_for(self.vm.is_dead, suspend_timeout, 2, 2):
+            raise error.TestFail("VM refuses to go down. Suspend failed.")
+
+
+    @error.context_aware
+    def resume_guest_mem(self, **args):
+        error.context("Resume suspended VM from memory")
+        self.vm.monitor.system_wakeup()
+
+
+    @error.context_aware
+    def resume_guest_disk(self, **args):
+        error.context("Resume suspended VM from disk")
+        # Update vm's params dict with our params member.
+        self.vm.params = self.params
+        self.vm.create()
+
+
+    @error.context_aware
+    def verify_guest_up(self, **args):
+        error.context("Verify guest system log", logging.info)
+        suspend_log_chk_cmd = args.get("suspend_log_chk_cmd")
+
+        session = self._get_session()
+        s, _ = self._session_cmd_close(session, suspend_log_chk_cmd)
+        if s:
+            raise error.TestError("Could not find suspend log.")
+
+
+    @error.context_aware
+    def action_before_suspend(self, **args):
+        error.context("Actions before suspend")
+        pass
+
+
+    @error.context_aware
+    def action_during_suspend(self, **args):
+        error.context("Sleep a while before resuming guest", logging.info)
+
+        time.sleep(10)
+        if self.os_type == "windows":
+            # Due to WinXP/2003 won't suspend immediately after issue S3 cmd,
+            # delay 10~60 secs here, maybe there's a bug in windows os.
+            logging.info("WinXP/2003 need more time to suspend, sleep 50s.")
+            time.sleep(50)
+
+
+    @error.context_aware
+    def action_after_suspend(self, **args):
+        error.context("Actions after suspend")
+        pass
