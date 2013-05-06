@@ -193,24 +193,25 @@ def run_multi_disk(test, params, env):
     re_str = params["re_str"]
     black_list = params["black_list"].split()
 
-    error.context("verifying qtree vs. test params")
-    err = 0
-    qtree = qemu_qtree.QtreeContainer()
-    qtree.parse_info_qtree(vm.monitor.info('qtree'))
-    disks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
-    (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
-    err += tmp1 + tmp2
-    err += disks.generate_params()
-    err += disks.check_disk_params(params)
-    (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(
+    if "qtree" in str(vm.monitor.send_args_cmd("help")):
+        error.context("verifying qtree vs. test params")
+        err = 0
+        qtree = qemu_qtree.QtreeContainer()
+        qtree.parse_info_qtree(vm.monitor.info('qtree'))
+        disks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
+        (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
+        err += tmp1 + tmp2
+        err += disks.generate_params()
+        err += disks.check_disk_params(params)
+        (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(
                                     session.cmd_output('cat /proc/scsi/scsi'))
-    err += tmp1 + tmp2
+        err += tmp1 + tmp2
 
-    if err:
-        raise error.TestFail("%s errors occurred while verifying qtree vs. "
-                             "params" % err)
-    if params.get('multi_disk_only_qtree') == 'yes':
-        return
+        if err:
+            raise error.TestFail("%s errors occurred while verifying"
+                                 " qtree vs. params" % err)
+        if params.get('multi_disk_only_qtree') == 'yes':
+            return
 
     try:
         if params.get("clean_cmd"):
