@@ -1717,6 +1717,8 @@ class VM(virt_vm.BaseVM):
                         logging.debug("Copying mac for nic %s from VM %s"
                                        % (nic.nic_name, mac_source.name))
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
+                    if nic.ifname in utils_net.get_net_if():
+                        self.virtnet.generate_ifname(nic.nic_name)
                     if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
                     elif nic.nettype == 'user':
