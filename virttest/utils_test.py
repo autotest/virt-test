@@ -287,7 +287,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
         try:
             if mig_protocol == "tcp":
                 if dest_host == 'localhost':
-                    uri = "tcp:0:%d" % dest_vm.migration_port
+                    uri = "tcp:localhost:%d" % dest_vm.migration_port
                 else:
                     uri = 'tcp:%s:%d' % (dest_host, mig_port)
             elif mig_protocol == "unix":
