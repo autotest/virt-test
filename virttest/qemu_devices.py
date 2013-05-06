@@ -120,13 +120,26 @@ class QBaseDevice(object):
         if parent_bus is None:
             parent_bus = ()
         self.parent_bus = parent_bus   # list of buses into which this dev fits
+        self.child_bus = []            # list of buses which this dev provides
         if child_bus is None:
-            child_bus = ()
-        self.child_bus = child_bus     # list of buses which this dev provides
+            child_bus = []
+        elif not isinstance(child_bus, (list, tuple)):
+            self.add_child_bus(child_bus)
+        else:
+            for bus in child_bus:
+                self.add_child_bus(bus)
         self.params = OrderedDict()    # various device params (id, name, ...)
         if params:
             for key, value in params.iteritems():
                 self.set_param(key, value)
+
+    def add_child_bus(self, bus):
+        self.child_bus.append(bus)
+        bus.set_device(self)
+
+    def rm_child_bus(self, bus):
+        self.child_bus.remove(bus)
+        bus.set_device(None)
 
     def set_param(self, option, value, option_type=None):
         """
@@ -560,6 +573,7 @@ class QSparseBus(object):
         self.bus_item = bus_item            # bus param name
         self.addr_items = addr_spec[0]      # [names][lengths]
         self.addr_lengths = addr_spec[1]
+        self.__device = None       # Device, where this bus belongs to.
 
     def __str__(self):
         """ default string representation """
@@ -683,6 +697,12 @@ class QSparseBus(object):
                 out = out[:-3]
             out += '\n'
         return out
+
+    def set_device(self, device):
+        self.__device = device
+
+    def get_device(self):
+        return self.__device
 
     def _increment_addr(self, addr, last_addr=None):
         """
@@ -1633,10 +1653,6 @@ class DevContainer(object):
                 err += "ParentBus(%s): %s\n" % (parent_bus, _err)
                 continue
         # 4
-        if device.child_bus is not None and not isinstance(device.child_bus,
-                                                           (list, tuple)):
-            # it have to be list of parent buses
-            device.child_bus = (device.child_bus,)
         for bus in device.child_bus:
             self.__buses.insert(0, bus)
             _added_buses.append(bus)
