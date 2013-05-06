@@ -54,6 +54,13 @@ class DeviceHotplugError(DeviceInsertError):
         self.issue = "hotplug"
 
 
+class DeviceUnplugError(DeviceHotplugError):
+    """ Fail to unplug device """
+    def __init__(self, device, reason, vmdev):
+        super(DeviceUnplugError, self).__init__(device, reason, vmdev)
+        self.issue = "unplug"
+
+
 class JoinedIterators(object):
     """ iterator over multiple iterable objects """
     def __init__(self, iters):
@@ -267,6 +274,13 @@ class QBaseDevice(object):
         """@param aid: new autotest id for this device"""
         self.aid = aid
 
+    def get_children(self):
+        """ @return: List of all childrens (recursive) """
+        childrens = []
+        for bus in self.child_bus:
+            childrens.extend(bus)
+        return childrens
+
     def cmdline(self):
         """ @return: cmdline command to define this device """
         raise NotImplementedError
@@ -290,12 +304,46 @@ class QBaseDevice(object):
         """ @return: tuple(hotplug qemu command, arguments)"""
         raise DeviceError("Hotplug is not supported by this device %s", self)
 
-    def verify_hotplug(self, out, monitor):
+    def unplug_hook(self):
+        """ Modification prior to unplug can be made here """
+        pass
+
+    def unplug_unhook(self):
+        """ Roll back the modification made before unplug """
+        pass
+
+    def unplug(self, monitor):
+        """ @return: the output of monitor.cmd() unplug command """
+        if isinstance(monitor, QMPMonitor):
+            try:
+                cmd, args = self.unplug_qmp()
+                return monitor.cmd(cmd, args)
+            except DeviceError:     # qmp command not supported
+                return monitor.human_monitor_cmd(self.unplug_hmp())
+        else:
+            return monitor.cmd(self.unplug_hmp())
+
+    def unplug_hmp(self):
+        """ @return: the unplug monitor command """
+        raise DeviceError("Unplug is not supported by this device %s", self)
+
+    def unplug_qmp(self):
+        """ @return: tuple(unplug qemu command, arguments)"""
+        raise DeviceError("Unplug is not supported by this device %s", self)
+
+    def verify_hotplug(self, out, monitor):     # pylint: disable=W0613,R0201
         """
         @param out: Output of the hotplug command
         @param monitor: Monitor used for hotplug
         @return: True when successful, False when unsuccessful, string/None
                  when can't decide.
+        """
+        return out
+
+    def verify_unplug(self, out, monitor):      # pylint: disable=W0613,R0201
+        """
+        @param out: Output of the unplug command
+        @param monitor: Monitor used for unplug
         """
         return out
 
@@ -388,6 +436,7 @@ class QDevice(QCustomDevice):
                  child_bus=None):
         super(QDevice, self).__init__("device", params, aobject, parent_bus,
                                       child_bus)
+        self.hook_drive_bus = None
 
     def _get_alternative_name(self):
         """ @return: alternative object name """
@@ -1702,6 +1751,34 @@ class DevContainer(object):
 
         if verify:
             out = device.verify_hotplug(out, monitor)
+            if out is True:
+                self.set_clean()
+
+        return out
+
+    def unplug(self, device, monitor, verify=True):
+        """
+        @return: output of the monitor.cmd() or True/False if device
+                 supports automatic verification and verify=True
+                 In case you use step_by_step it returns list of returns.
+        """
+        device = self[device]
+        self.set_dirty()
+        device.unplug_hook()
+        # Remove all devices, which are removed together with this dev
+        try:
+            self.remove(device, True)
+        except KeyError, exc:
+            device.unplug_unhook()
+            raise DeviceUnplugError(device, exc, self)
+        except DeviceError, exc:
+            device.unplug_unhook()
+            raise DeviceUnplugError(device, exc, self)
+
+        out = device.unplug(monitor)
+
+        if verify:
+            out = device.verify_unplug(out, monitor)
             if out is True:
                 self.set_clean()
 
