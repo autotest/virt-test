@@ -458,6 +458,12 @@ class PrivateBridgeConfig(object):
                 self._bring_bridge_down()
                 self._remove_bridge()
                 raise
+            # Fix me the physical_nic always down after setup
+            # Need manually up.
+            if self.physical_nic:
+                time.sleep(5)
+                utils.system("ifconfig %s up" % self.physical_nic)
+
             self._verify_bridge()
 
 
