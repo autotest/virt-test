@@ -753,7 +753,7 @@ class PciAssignable(object):
         # virtualized up to 7 virtual functions, therefore we multiply
         # two for the value of driver_option 'max_vfs'.
         expected_count = int((re.findall("(\d)", self.driver_option)[0])) * 2
-        return (self.get_vfs_count == expected_count)
+        return (self.get_vfs_count() == expected_count)
 
 
     def is_binded_to_stub(self, full_id):
@@ -767,6 +767,7 @@ class PciAssignable(object):
         if os.path.exists(os.path.join(stub_path, full_id)):
             return True
         return False
+
 
     @error.context_aware
     def sr_iov_setup(self):
@@ -908,12 +909,12 @@ class PciAssignable(object):
         base_dir = "/sys/bus/pci"
         stub_path = os.path.join(base_dir, "drivers/pci-stub")
 
-        pci_ids = self.get_devs(count)
-        logging.info("The following pci_ids were found: %s", pci_ids)
+        self.pci_ids = self.get_devs(count)
+        logging.info("The following pci_ids were found: %s", self.pci_ids)
         requested_pci_ids = []
 
         # Setup all devices specified for assignment to guest
-        for pci_id in pci_ids:
+        for pci_id in self.pci_ids:
             full_id = utils_misc.get_full_pci_id(pci_id)
             if not full_id:
                 continue
