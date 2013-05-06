@@ -32,11 +32,26 @@ class DeviceInsertError(DeviceError):
         self.device = device
         self.reason = reason
         self.vmdev = vmdev
+        self.issue = "insert"
 
     def __str__(self):
-        return ("Failed to insert device:\n%s\nBecause:\n%s\nList of VM"
-                "devices:\n%s\n%s" % (self.device.str_long(), self.reason,
-                                      self.vmdev, self.vmdev.str_bus_long()))
+        return ("Failed to %s device:\n%s\nBecause:\n%s\nList of VM devices:\n"
+                "%s\n%s" % (self.issue, self.device.str_long(), self.reason,
+                            self.vmdev.str_short(), self.vmdev.str_bus_long()))
+
+
+class DeviceRemoveError(DeviceInsertError):
+    """ Fail to remove device """
+    def __init__(self, device, reason, vmdev):
+        super(DeviceRemoveError, self).__init__(device, reason, vmdev)
+        self.issue = "remove"
+
+
+class DeviceHotplugError(DeviceInsertError):
+    """ Fail to hotplug device """
+    def __init__(self, device, reason, vmdev):
+        super(DeviceHotplugError, self).__init__(device, reason, vmdev)
+        self.issue = "hotplug"
 
 
 class JoinedIterators(object):
@@ -1363,30 +1378,30 @@ class DevContainer(object):
         @raise KeyError: In case no match was found
         """
         # Remove child_buses including devices
-        if self.remove(item):
-            raise KeyError(item)
+        self.remove(item)
 
-    def remove(self, item):
+    def remove(self, device, recursive=True):
         """
         Remove device from this representation
-        @param item: autotest id or QObject-like object
-        @return: None on success, -1 when the device is not present
+        @param device: autotest id or QObject-like object
         """
-        # Remove child_buses including devices
-        item = self.get(item)
-        if item is None:
-            return -1
-        for bus in item.child_bus:
-            remove = [dev for dev in bus]
-            for dev in remove:
-                del(self[dev])
-            self.__buses.remove(bus)
-        # Remove from parent_buses
-        for bus in self.__buses:
-            if item in bus:
-                del(bus[item])
-        # Remove from list of devices
-        self.__devices.remove(self[item])
+        device = self[device]
+        if not recursive:   # Check if there are no childrens
+            for bus in device.child_bus:
+                if len(bus) != 0:
+                    raise DeviceRemoveError(device, "Children bus contains "
+                                            "devices", self)
+        else:               # Recursively remove all devices
+            for dev in device.get_children():
+                # One child might be already removed from other child's bus
+                if dev in self:
+                    self.remove(dev, True)
+        if device in self.__devices:    # It might be removed from child bus
+            for bus in self.__buses:        # Remove from parent_buses
+                bus.remove(device)
+            for bus in device.child_bus:    # Remove child buses from vm buses
+                self.__buses.remove(bus)
+            self.__devices.remove(device)   # Remove from list of devices
 
     def __len__(self):
         """ @return: Number of inserted devices """
@@ -1681,8 +1696,8 @@ class DevContainer(object):
                               'is impossible (%s).\n Forcing', device, out)
         except DeviceError, exc:
             self.set_clean()  # qdev remains consistent
-            raise DeviceError('According to qemu_device hotplug of '
-                              '%s is impossible (%s).' % (device, exc))
+            raise DeviceHotplugError(device, 'According to qemu_device: %s'
+                                     % exc, self)
         out = device.hotplug(monitor)
 
         if verify:
