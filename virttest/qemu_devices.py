@@ -936,6 +936,8 @@ class QSparseBus(object):
                  False in case of incorrect address (oor)
         """
         # init
+        if addr_pattern is None:
+            addr_pattern = [None] * len(self.addr_lengths)
         last_addr, use_reserved = self._set_first_addr(addr_pattern)
         # Check the addr_pattern ranges
         for i in xrange(len(self.addr_lengths)):
