@@ -97,6 +97,18 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             time.sleep(step)
+        if not session and vm.get_params().get("try_serial_login") == "yes":
+            mode = "serial"
+            logging.info("Remote login failed, trying to login '%s' with "
+                         "serial, timeout %ds", vm.name, timeout)
+            time.sleep(start)
+            while time.time() < end_time:
+                try:
+                    session = vm.serial_login()
+                    break
+                except remote.LoginError, e:
+                    logging.debug(e)
+                time.sleep(step)
     if not session:
         raise error.TestFail("Could not log into guest %s using %s connection" %
                              (vm.name, mode))
