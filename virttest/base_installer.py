@@ -127,7 +127,7 @@ class BaseInstaller(object):
         Configuration file parameter: module_list
         Class attribute set: module_list
         '''
-        self.module_list = self.params.get('module_list', '').split()
+        self.module_list = self.params.get('module_list', '')
 
 
     def _set_param_save_results(self):
