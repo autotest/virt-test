@@ -451,6 +451,27 @@ class QDevice(QCustomDevice):
         """ @return: the hotplug monitor command """
         return "device_add", self.params
 
+    def get_children(self):
+        """ Device bus should be removed too """
+        devices = super(QDevice, self).get_children()
+        if self.hook_drive_bus:
+            devices.append(self.hook_drive_bus)
+        return devices
+
+    def unplug_hmp(self):
+        """ @return: the unplug monitor command """
+        if self.get_qid():
+            return "device_del %s" % self.get_qid()
+        else:
+            raise DeviceError("Device has no qemu_id.")
+
+    def unplug_qmp(self):
+        """ @return: the unplug monitor command """
+        if self.get_qid():
+            return "device_del", self.get_qid()
+        else:
+            raise DeviceError("Device has no qemu_id.")
+
 
 class QDrive(QCustomDevice):
     """
@@ -480,6 +501,10 @@ class QHPDrive(QDrive):
     """
     Representation of the '-drive' qemu object with hotplug support.
     """
+    def __init__(self, aobject):
+        super(QHPDrive, self).__init__(aobject)
+        self.__hook_drive_bus = None
+
     def verify_hotplug(self, out, monitor):
         if isinstance(monitor, qemu_monitor.QMPMonitor):
             if out.startswith('OK'):
@@ -488,6 +513,37 @@ class QHPDrive(QDrive):
             if out == 'OK':
                 return True
         return False
+
+    def get_children(self):
+        """ Device bus should be removed too """
+        for bus in self.child_bus:
+            if isinstance(bus, QDriveBus):
+                drive_bus = bus
+                self.rm_child_bus(bus)
+                break
+        devices = super(QHPDrive, self).get_children()
+        self.add_child_bus(drive_bus)
+        return devices
+
+    def unplug_hook(self):
+        """
+        Devices from this bus are not removed, only 'drive' is set to None.
+        """
+        for bus in self.child_bus:
+            if isinstance(bus, QDriveBus):
+                for dev in bus:
+                    self.__hook_drive_bus = dev.get_param('drive')
+                    dev['drive'] = None
+                break
+
+    def unplug_unhook(self):
+        """ Set back the previous 'drive' (unsafe, using the last value) """
+        if self.__hook_drive_bus is not None:
+            for bus in self.child_bus:
+                if isinstance(bus, QDriveBus):
+                    for dev in bus:
+                        dev['drive'] = self.__hook_drive_bus
+                    break
 
     def hotplug_hmp(self):
         """ @return: the hotplug monitor command """
@@ -508,6 +564,10 @@ class QRHDrive(QDrive):
     """
     Representation of the '-drive' qemu object with RedHat hotplug support.
     """
+    def __init__(self, aobject):
+        super(QRHDrive, self).__init__(aobject)
+        self.__hook_drive_bus = None
+
     def hotplug_hmp(self):
         """ @return: the hotplug monitor command """
         args = self.params.copy()
@@ -522,6 +582,37 @@ class QRHDrive(QDrive):
         args.pop('addr', None)    # not supported by RHDrive
         args.pop('if', None)
         return "__com.redhat_drive_add", args
+
+    def get_children(self):
+        """ Device bus should be removed too """
+        for bus in self.child_bus:
+            if isinstance(bus, QDriveBus):
+                drive_bus = bus
+                self.rm_child_bus(bus)
+                break
+        devices = super(QRHDrive, self).get_children()
+        self.add_child_bus(drive_bus)
+        return devices
+
+    def unplug_hook(self):
+        """
+        Devices from this bus are not removed, only 'drive' is set to None.
+        """
+        for bus in self.child_bus:
+            if isinstance(bus, QDriveBus):
+                for dev in bus:
+                    self.__hook_drive_bus = dev.get_param('drive')
+                    dev['drive'] = None
+                break
+
+    def unplug_unhook(self):
+        """ Set back the previous 'drive' (unsafe, using the last value) """
+        if self.__hook_drive_bus is not None:
+            for bus in self.child_bus:
+                if isinstance(bus, QDriveBus):
+                    for dev in bus:
+                        dev['drive'] = self.__hook_drive_bus
+                    break
 
     def unplug_hmp(self):
         """ @return: the unplug monitor command """
@@ -1050,8 +1141,13 @@ class QDriveBus(QSparseBus):
         return 'drive'
 
     def _update_device_props(self, device, addr):
-        """ Always set -drive property, it's mandatory """
+        """
+        Always set -drive property, it's mandatory. Also for hotplug purposes
+        store this bus device into hook variable of the device.
+        """
         self._set_device_props(device, addr)
+        if hasattr(device, 'hook_drive_bus'):
+            device.hook_drive_bus = self.get_device()
 
 
 class QDenseBus(QSparseBus):
