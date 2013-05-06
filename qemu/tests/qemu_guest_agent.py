@@ -113,9 +113,10 @@ class QemuGuestAgentTest(BaseVirtTest):
         error.context("Try to install 'qemu-guest-agent' package.",
                       logging.info)
         session = self._get_session(params, vm)
-        s, _ = self._session_cmd_close(session, gagent_install_cmd)
+        s, o = self._session_cmd_close(session, gagent_install_cmd)
         if bool(s):
-            raise error.TestError("Could not install qemu-guest-agent package")
+            raise error.TestFail("Could not install qemu-guest-agent package"
+                                  " in VM '%s', detail: '%s'" %(vm.name, o))
 
 
     @error.context_aware
@@ -130,10 +131,10 @@ class QemuGuestAgentTest(BaseVirtTest):
 
         error.context("Try to start 'qemu-guest-agent'.", logging.info)
         session = self._get_session(params, vm)
-        s, _ = self._session_cmd_close(session, gagent_start_cmd)
+        s, o = self._session_cmd_close(session, gagent_start_cmd)
         if bool(s):
-            raise error.TestError("Could not start qemu-guest-agent in VM '%s'",
-                                  vm.name)
+            raise error.TestFail("Could not start qemu-guest-agent in VM"
+                                  " '%s', detail: '%s'" % (vm.name, o))
 
 
     @error.context_aware
@@ -147,8 +148,16 @@ class QemuGuestAgentTest(BaseVirtTest):
 
         gagent_serial_type = args[0]
         gagent_name = args[1]
+
+        if gagent_serial_type == guest_agent.QemuAgent.SERIAL_TYPE_VIRTIO:
+            filename = vm.get_virtio_port_filename(gagent_name)
+        elif gagent_serial_type == guest_agent.QemuAgent.SERIAL_TYPE_ISA:
+            filename = vm.get_serial_console_filename(gagent_name)
+        else:
+            raise guest_agent.VAgentNotSupportedError("Not supported serial"
+                                                      " type")
         gagent = guest_agent.QemuAgent(vm, gagent_name, gagent_serial_type,
-                                       get_supported_cmds=True)
+                                       filename, get_supported_cmds=True)
         self.gagent = gagent
 
         return self.gagent
@@ -274,7 +283,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_REBOOT)
         # XXX: This way of checking if VM is rebooted can only work with
         # Linux guest, is there any way to check windows guest reboot?
-        pattern = "machine restart"
+        pattern = params["gagent_guest_reboot_pattern"]
         error.context("Verify serial output has '%s'" % pattern)
         rebooted = self.__gagent_check_serial_output(pattern)
         if not rebooted:
@@ -293,7 +302,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_HALT)
         # XXX: This way of checking if VM is halted can only work with
         # Linux guest, is there any way to check windows guest halt?
-        pattern = "System halted"
+        pattern = params["gagent_guest_shutdown_pattern"]
         error.context("Verify serial output has '%s'" % pattern)
         halted = self.__gagent_check_serial_output(pattern)
         if not halted:
@@ -375,8 +384,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self._action_before_fsthaw(test, params, env)
             error.context("Thaw the FS.")
             self.gagent.fsthaw()
-            self._action_after_fsthaw(test, params, env)
-        finally:
+        except Exception:
             # Thaw fs finally, avoid problem in following cases.
             try:
                 self.gagent.fsthaw(check_status=False)
@@ -384,6 +392,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 # Ignore exception for this thaw action.
                 logging.warn("Finally failed to thaw guest fs,"
                              " detail: '%s'", detail)
+            raise
+
+        # Finally, do something after thaw.
+        self._action_after_fsthaw(test, params, env)
 
 
     def run_once(self, test, params, env):

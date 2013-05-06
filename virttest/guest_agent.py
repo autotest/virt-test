@@ -45,10 +45,6 @@ class VAgentNotSupportedError(VAgentError):
     pass
 
 
-class VAgentNotSupportedSerialError(VAgentNotSupportedError):
-    pass
-
-
 class VAgentCmdError(VAgentError):
     def __init__(self, cmd, args, data):
         VAgentError.__init__(self, cmd, args, data)
@@ -64,10 +60,10 @@ class VAgentCmdError(VAgentError):
 class VAgentSyncError(VAgentError):
     def __init__(self, vm_name):
         VAgentError.__init__(self)
-        self.vm = vm_name
+        self.vm_name = vm_name
 
     def __str__(self):
-        return "Could not sync with guest agent in vm '%s'" % self.vm
+        return "Could not sync with guest agent in vm '%s'" % self.vm_name
 
 
 class VAgentSuspendError(VAgentError):
@@ -84,16 +80,16 @@ class VAgentSuspendUnknownModeError(VAgentSuspendError):
 
 
 class VAgentFreezeStatusError(VAgentError):
-    def __init__(self, vm, status, expected):
+    def __init__(self, vm_name, status, expected):
         VAgentError.__init__(self)
-        self.vm = vm
+        self.vm_name = vm_name
         self.status = status
         self.expected = expected
 
 
     def __str__(self):
         return ("Unexpected guest FS status '%s' (expected '%s') in vm "
-                "'%s'" % (self.status, self.expected, self.vm))
+                "'%s'" % (self.status, self.expected, self.vm_name))
 
 
 class QemuAgent(Monitor):
@@ -105,6 +101,10 @@ class QemuAgent(Monitor):
     CMD_TIMEOUT = 20
     RESPONSE_TIMEOUT = 20
     PROMPT_TIMEOUT = 20
+
+    SERIAL_TYPE_VIRTIO = "virtio"
+    SERIAL_TYPE_ISA = "isa"
+    SUPPORTED_SERIAL_TYPE = [SERIAL_TYPE_VIRTIO, SERIAL_TYPE_ISA]
 
     SHUTDOWN_MODE_POWERDOWN = "powerdown"
     SHUTDOWN_MODE_REBOOT = "reboot"
@@ -118,8 +118,8 @@ class QemuAgent(Monitor):
     FSFREEZE_STATUS_THAWED = "thawed"
 
 
-    def __init__(self, vm, name, serial_type, get_supported_cmds=False,
-                 suppress_exceptions=False):
+    def __init__(self, vm, name, serial_type, serial_filename,
+                 get_supported_cmds=False, suppress_exceptions=False):
         """
         Connect to the guest agent socket, Also make sure the json
         module is available.
@@ -128,26 +128,23 @@ class QemuAgent(Monitor):
         @param name: Guest agent identifier.
         @param serial_type: Specific which serial type (firtio or isa) guest
                 agent will use.
+        @param serial_filename: Guest agent socket filename.
         @param get_supported_cmds: Try to get supported cmd list when initiation.
         @param suppress_exceptions: If True, ignore VAgentError exception.
 
         @raise VAgentConnectError: Raised if the connection fails and
                 suppress_exceptions is False
-        @raise VAgentNotSupportedSerialError: Raised if the serial type is
+        @raise VAgentNotSupportedError: Raised if the serial type is
                 neither 'virtio' nor 'isa' and suppress_exceptions is False
         @raise VAgentNotSupportedError: Raised if json isn't available and
                 suppress_exceptions is False
         """
         try:
-            if serial_type == "virtio":
-                filename = vm.get_virtio_port_filename(name)
-            elif serial_type == "isa":
-                filename = vm.get_serial_console_filename(name)
-            else:
-                raise VAgentNotSupportedSerialError("Not supported serial type"
-                                                    "'%s'" % serial_type)
+            if serial_type not in self.SUPPORTED_SERIAL_TYPE:
+                raise VAgentNotSupportedError("Not supported serial type: "
+                                              "'%s'" % serial_type)
 
-            Monitor.__init__(self, name, filename)
+            Monitor.__init__(self, name, serial_filename)
             # Make sure json is available
             try:
                 json
@@ -503,18 +500,16 @@ class QemuAgent(Monitor):
                  'suspend' is unsupported.
         @raise VAgentSuspendUnknownModeError: Raise if mode is not supported.
         """
+        error.context("Suspend guest '%s' to '%s'" % (self.vm.name, mode))
+
         if not mode in [self.SUSPEND_MODE_DISK, self.SUSPEND_MODE_RAM,
                         self.SUSPEND_MODE_HYBRID]:
-            raise VAgentSuspendUnknownModeError("Not supported suspend mode '%s'" %
-                                          mode)
+            raise VAgentSuspendUnknownModeError("Not supported suspend"
+                                                " mode '%s'" % mode)
 
-        error.context("Suspend guest '%s' to '%s'" % (self.vm.name, mode))
         cmd = "guest-suspend-%s" % mode
         if not self._has_command(cmd):
             return False
-
-        # verify QEMU monitor has 'system_wakeup' command.
-        self.vm.monitor.verify_supported_cmd("system_wakeup")
 
         # First, sync with guest.
         self.sync()
@@ -545,7 +540,7 @@ class QemuAgent(Monitor):
         """
         status = self.get_fsfreeze_status()
         if status != expected:
-            raise VAgentFreezeStatusError(self.vm, status, expected)
+            raise VAgentFreezeStatusError(self.vm.name, status, expected)
 
 
     @error.context_aware

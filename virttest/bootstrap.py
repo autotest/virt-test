@@ -6,7 +6,7 @@ import utils_misc, data_dir, asset, cartesian_config
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
 recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
-                        'libvirt': [('virsh',), ('virt-install',)],
+                        'libvirt': [('virsh',), ('virt-install',), ('fakeroot',)],
                         'openvswitch': [],
                         'v2v': [],
                         'libguestfs': [('perl',)]}
@@ -133,7 +133,7 @@ def get_directory_structure(rootdir, guest_file):
                              (4 * (indent + number_variants - 1) * " "))
             number_variants += 1
         elif indent < previous_indent:
-            number_variants -= 1
+            number_variants = indent
         indent += number_variants
         try:
             base_folder = folders[-1]

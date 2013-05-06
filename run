@@ -238,6 +238,11 @@ class VirtTestRunParser(optparse.OptionParser):
                             "If -c is provided and this flag is omitted, "
                             "no attempt to set the qemu binaries will be made. "
                               "Default path: %s" % qemu_bin_path))
+        qemu.add_option("--use-malloc-perturb", action="store",
+                        dest="malloc_perturb", default="yes",
+                        help=("Use MALLOC_PERTURB_ env variable set to 1 "
+                              "to help catch memory allocation problems on "
+                              "qemu (yes or no). Default: %default"))
         qemu.add_option("--accel", action="store", dest="accel", default="kvm",
                         help=("Accelerator used to run qemu (kvm or tcg). "
                               "Default: kvm"))
@@ -442,7 +447,7 @@ class VirtTestApp(object):
             else:
                 _restore_stdout()
                 print("Option %s is not in the list %s, aborting..." %
-                      SUPPORTED_DISK_BUSES)
+                      (self.options.disk_bus, SUPPORTED_DISK_BUSES))
                 sys.exit(1)
         else:
             logging.info("Config provided, ignoring --disk-bus option")
@@ -468,6 +473,11 @@ class VirtTestApp(object):
             logging.info("Config provided, ignoring --vhost option")
 
 
+    def _process_malloc_perturb(self):
+        self.cartesian_parser.assign("malloc_perturb",
+                                     self.options.malloc_perturb)
+
+
     def _process_qemu_specific_options(self):
         """
         Calls for processing all options specific to the qemu test.
@@ -484,6 +494,7 @@ class VirtTestApp(object):
         self._process_nic_model()
         self._process_disk_buses()
         self._process_vhost()
+        self._process_malloc_perturb()
 
 
     def _process_guest_os(self):

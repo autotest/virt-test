@@ -10,7 +10,6 @@ from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
 import qemu_virtio_port, remote, data_dir, utils_net
 
-
 class QemuSegFaultError(virt_vm.VMError):
     def __init__(self, crash_message):
         virt_vm.VMError.__init__(self, crash_message)
@@ -26,7 +25,8 @@ class ImageUnbootableError(virt_vm.VMError):
         self.name = name
 
     def __str__(self):
-        return ("VM '%s' can't bootup from image" % self.name)
+        return ("VM '%s' can't bootup from image,"
+                " check your boot disk image file." % self.name)
 
 
 class VM(virt_vm.BaseVM):
@@ -38,6 +38,12 @@ class VM(virt_vm.BaseVM):
 
     # By default we inherit all timeouts from the base VM class except...
     CLOSE_SESSION_TIMEOUT = 30
+
+    # Because we've seen qemu taking longer than 5 seconds to initialize
+    # itself completely, including creating the monitor sockets files
+    # which are used on create(), this timeout is considerably larger
+    # than the one on the base vm class
+    CREATE_TIMEOUT = 20
 
     def __init__(self, name, params, root_dir, address_cache, state=None):
         """
@@ -84,7 +90,7 @@ class VM(virt_vm.BaseVM):
         self.usb_dev_dict = {}
         self.logs = {}
         self.logsessions = {}
-        self.driver_type = 'kvm'
+        self.driver_type = 'qemu'
         self.params['driver_type_'+self.name] = self.driver_type
         # virtnet init depends on vm_type/driver_type being set w/in params
         super(VM, self).__init__(name, params)
@@ -634,9 +640,7 @@ class VM(virt_vm.BaseVM):
                     hostfwd=[], netdev_id=None, netdev_extra_params=None,
                     tapfd=None):
             mode = None
-            if nettype == 'bridge':
-                mode = 'tap'
-            elif nettype == 'network':
+            if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
             elif nettype == 'user':
                 mode = 'user'
@@ -1071,7 +1075,8 @@ class VM(virt_vm.BaseVM):
         # Add monitors
         for monitor_name in params.objects("monitors"):
             monitor_params = params.object_params(monitor_name)
-            monitor_filename = vm.get_monitor_filename(monitor_name)
+            monitor_filename = qemu_monitor.get_monitor_filename(vm,
+                                                                 monitor_name)
             if monitor_params.get("monitor_type") == "qmp":
                 qemu_cmd += add_qmp_monitor(help_text, monitor_name,
                                             monitor_filename)
@@ -1556,27 +1561,36 @@ class VM(virt_vm.BaseVM):
 
 
     def _nic_tap_add_helper(self, nic):
-        nic.tapfd = str(utils_net.open_tap("/dev/net/tun", nic.ifname,
-                                           vnet_hdr=True))
-        logging.debug("Adding VM %s NIC ifname %s to bridge %s", self.name,
-                      nic.ifname, nic.netdst)
-        if nic.nettype == 'bridge':
-            utils_net.add_to_bridge(nic.ifname, nic.netdst)
-        utils_net.bring_up_ifname(nic.ifname)
+        if nic.nettype == 'macvtap':
+            logging.info("Adding macvtap ifname: %s" , nic.ifname)
+            utils_net.add_nic_macvtap(nic)
+        else:
+            nic.tapfd = str(utils_net.open_tap("/dev/net/tun", nic.ifname,
+                                               vnet_hdr=True))
+            logging.debug("Adding VM %s NIC ifname %s to bridge %s",
+                          self.name, nic.ifname, nic.netdst)
+            if nic.nettype == 'bridge':
+                utils_net.add_to_bridge(nic.ifname, nic.netdst)
+            utils_net.bring_up_ifname(nic.ifname)
 
 
     def _nic_tap_remove_helper(self, nic):
-        logging.debug("Removing VM %s NIC ifname %s from bridge %s", self.name,
-                      nic.ifname, nic.netdst)
         try:
-            os.close(int(nic.tapfd))
+            if nic.nettype == 'macvtap':
+                logging.info("Remove macvtap ifname %s", nic.ifname)
+                tap = utils_net.Macvtap(nic.ifname)
+                tap.delete()
+            else:
+                logging.debug("Removing VM %s NIC ifname %s from bridge %s",
+                             self.name, nic.ifname, nic.netdst)
+                os.close(int(nic.tapfd))
         except TypeError:
             pass
 
 
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None,
-               timeout=virt_vm.BaseVM.CREATE_TIMEOUT, migration_mode=None,
+               timeout=CREATE_TIMEOUT, migration_mode=None,
                migration_exec_cmd=None, migration_fd=None,
                mac_source=None):
         """
@@ -1703,7 +1717,7 @@ class VM(virt_vm.BaseVM):
                         logging.debug("Copying mac for nic %s from VM %s"
                                        % (nic.nic_name, mac_source.name))
                         nic.mac = mac_source.get_mac_address(nic.nic_name)
-                    if nic.nettype == 'bridge' or nic.nettype == 'network':
+                    if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
                     elif nic.nettype == 'user':
                         logging.info("Assuming dependencies met for "
@@ -1825,38 +1839,14 @@ class VM(virt_vm.BaseVM):
             self.monitors = []
             for monitor_name in params.objects("monitors"):
                 monitor_params = params.object_params(monitor_name)
-                # Wait for monitor connection to succeed
-                end_time = time.time() + timeout
-                while time.time() < end_time:
-                    try:
-                        if monitor_params.get("monitor_type") == "qmp":
-                            if utils_misc.qemu_has_option("qmp",
-                                                          self.qemu_binary):
-                                # Add a QMP monitor
-                                monitor = qemu_monitor.QMPMonitor(
-                                    monitor_name,
-                                    self.get_monitor_filename(monitor_name))
-                            else:
-                                logging.warn("qmp monitor is unsupported, "
-                                             "using human monitor instead.")
-                                # Add a "human" monitor
-                                monitor = qemu_monitor.HumanMonitor(
-                                    monitor_name,
-                                    self.get_monitor_filename(monitor_name))
-                        else:
-                            # Add a "human" monitor
-                            monitor = qemu_monitor.HumanMonitor(
-                                monitor_name,
-                                self.get_monitor_filename(monitor_name))
-                        monitor.verify_responsive()
-                        break
-                    except qemu_monitor.MonitorError, e:
-                        logging.warn(e)
-                        time.sleep(1)
-                else:
-                    e = qemu_monitor.MonitorConnectError(monitor_name)
+                try:
+                    monitor = qemu_monitor.wait_for_create_monitor(self,
+                                        monitor_name, monitor_params, timeout)
+                except qemu_monitor.MonitorConnectError, detail:
+                    logging.error(detail)
                     self.destroy()
-                    raise e
+                    raise
+
                 # Add this monitor to the list
                 self.monitors += [monitor]
 
@@ -2044,7 +2034,14 @@ class VM(virt_vm.BaseVM):
 
     def _cleanup(self, free_mac_addresses):
         """
-        Removes VM monitor files.
+        Do cleanup works
+            .removes VM monitor files.
+            .process close
+            .serial_console close
+            .logsessions close
+            .delete tmp files
+            .free_mac_addresses, if needed
+            .delete macvtap, if needed
 
         @param free_mac_addresses: Whether to release the VM's NICs back
                 to the address pool.
@@ -2063,7 +2060,7 @@ class VM(virt_vm.BaseVM):
 
         # Generate the tmp file which should be deleted.
         file_list = [self.get_testlog_filename()]
-        file_list += self.get_monitor_filenames()
+        file_list += qemu_monitor.get_monitor_filenames(self)
         file_list += self.get_virtio_port_filenames()
         file_list += self.get_serial_console_filenames()
         file_list += self.logs.values()
@@ -2084,6 +2081,10 @@ class VM(virt_vm.BaseVM):
             for nic_index in xrange(0,len(self.virtnet)):
                 self.free_mac_address(nic_index)
 
+        for nic in self.virtnet:
+            if nic.nettype == 'macvtap':
+                tap = utils_net.Macvtap(nic.ifname)
+                tap.delete()
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
@@ -2165,22 +2166,6 @@ class VM(virt_vm.BaseVM):
                 return m
         if self.monitors and not self.params.get("main_monitor"):
             return self.monitors[0]
-
-
-    def get_monitor_filename(self, monitor_name):
-        """
-        Return the filename corresponding to a given monitor name.
-        """
-        return "/tmp/monitor-%s-%s" % (monitor_name, self.instance)
-
-
-    def get_monitor_filenames(self):
-        """
-        Return a list of all monitor filenames (as specified in the VM's
-        params).
-        """
-        return [self.get_monitor_filename(m) for m in
-                self.params.objects("monitors")]
 
 
     def get_peer(self, netid):
@@ -2324,7 +2309,7 @@ class VM(virt_vm.BaseVM):
         nic.set_if_none('netdev_id', utils_misc.generate_random_id())
         nic.set_if_none('ifname', self.virtnet.generate_ifname(nic_index))
         nic.set_if_none('nettype', 'bridge')
-        if nic.nettype == 'bridge': # implies tap
+        if nic.nettype in ['bridge', 'macvtap']: # implies tap
             # destination is required, hard-code reasonable default if unset
             # nic.set_if_none('netdst', 'virbr0')
             # tapfd allocated/set in activate because requires system resources
@@ -2406,6 +2391,8 @@ class VM(virt_vm.BaseVM):
             # assume this will puke if netdst unset
             if not nic.netdst is None:
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)
+        elif nic.nettype == 'macvtap':
+            pass
         elif nic.nettype == 'user':
             attach_cmd += " user,id=%s" % nic.device_id
         else: # unsupported nettype
@@ -3029,3 +3016,73 @@ class VM(virt_vm.BaseVM):
             current_file = None
 
         return current_file
+
+
+    def block_stream(self, device, speed, base=None):
+        """
+        start to stream block device, aka merge snapshot;
+
+        @param device: device ID;
+        @param speed: limited speed, default unit B/s;
+        @param base: base file;
+        """
+        return self.monitor.block_stream(device, speed, base)
+
+
+    def block_mirror(self, device, target, speed, sync,
+                     format, mode="absolute-paths"):
+        """
+        Mirror block device to target file;
+
+        @param device: device ID
+        @param target: destination image file name;
+        @param speed: max limited speed, default unit is B/s;
+        @param sync: what parts of the disk image should be copied to the
+                     destination;
+        @param mode: new image open mode
+        @param format: target image format
+        """
+        cmd = self.params.get("block_mirror_cmd", "__com.redhat_drive-mirror")
+        return self.monitor.block_mirror(device, target, speed,
+                                         sync, format, mode, cmd)
+
+
+    def block_reopen(self, device, new_image, format="qcow2"):
+        """
+        Reopen a new image, no need to do this step in rhel7 host
+
+        @param device: device ID
+        @param new_image: new image filename
+        @param format: new image format
+        """
+        cmd = self.params.get("block_reopen_cmd", "__com.redhat_drive-reopen")
+        return self.monitor.block_reopen(device, new_image, format, cmd)
+
+
+    def cancel_block_job(self, device):
+        """
+        cancel active job on the image_file
+
+        @param device: device ID
+        @param timeout: seconds wait job cancel timeout, default is 3s
+        """
+        return self.monitor.cancel_block_job(device)
+
+
+    def set_job_speed(self, device, speed="0"):
+        """
+        set max speed of block job;
+
+        @param device: device ID
+        @param speed: max speed of block job
+        """
+        return self.monitor.set_block_job_speed(device, speed)
+
+
+    def get_job_status(self, device):
+        """
+        get block job info;
+
+        @param device: device ID
+        """
+        return self.monitor.query_block_job(device)

@@ -1,7 +1,7 @@
 import re, os, logging, time
 from autotest.client.shared import utils, error
-from virttest import qemu_monitor, env_process
-from virttest import data_dir
+from virttest import qemu_monitor, env_process, data_dir
+
 
 @error.context_aware
 def run_block_stream(test, params, env):
@@ -18,7 +18,8 @@ def run_block_stream(test, params, env):
     """
     image_format = params["image_format"]
     image_name = params.get("image_name", "image")
-    image_name = os.path.join(data_dir.get_data_dir(), image_name)
+    if not os.path.isabs(image_name):
+        image_name = os.path.join(data_dir.get_data_dir(), image_name)
     drive_format = params["drive_format"]
     backing_file_name = "%s_bak" % (image_name)
     qemu_img = params["qemu_img_binary"]

@@ -2,12 +2,12 @@ import os, logging, imp, sys, time, traceback, Queue, glob, shutil
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage, cartesian_config, arch
+import storage, cartesian_config, arch, funcatexit, version
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
 global TAG_INDEX
-TAG_INDEX = None
+TAG_INDEX = {}
 
 
 def get_tag_index(options, params):
@@ -15,18 +15,17 @@ def get_tag_index(options, params):
     if options.config:
         TAG_INDEX = -1
         return TAG_INDEX
-    if TAG_INDEX is None:
+    name = params['name']
+    if TAG_INDEX.get(name) is None:
         guest_name_list = get_guest_name_list(options)
-
-        name = params['name']
 
         for guest_name in guest_name_list:
             if guest_name in name:
                 idx = name.index(guest_name)
-                TAG_INDEX = idx + len(guest_name) + 1
+                TAG_INDEX[name] = idx + len(guest_name) + 1
                 break
 
-    return TAG_INDEX
+    return TAG_INDEX[name]
 
 
 def get_tag(params, index):
@@ -116,6 +115,8 @@ class Test(object):
         if params.get("dependency_failed") == 'yes':
             raise error.TestNAError("Test dependency failed")
 
+        # Report virt test version
+        logging.info(version.get_pretty_version_info())
         # Report the parameters we've received and write them as keyvals
         logging.info("Starting test %s", self.tag)
         logging.debug("Test parameters:")
@@ -197,8 +198,15 @@ class Test(object):
                         finally:
                             env.save()
                     test_passed = True
+                    error_message = funcatexit.run_exitfuncs(env, t_type)
+                    if error_message:
+                        raise error.TestWarn("funcatexit failed with: %s"
+                                             % error_message)
 
                 except Exception, e:
+                    error_message = funcatexit.run_exitfuncs(env, t_type)
+                    if error_message:
+                        logging.error(error_message)
                     try:
                         env_process.postprocess_on_error(self, params, env)
                     finally:
@@ -482,7 +490,7 @@ def print_test_list(options, cartesian_parser):
             basic_out = (bcolors.blue + str(index) + bcolors.end + " " +
                          shortname)
             if needs_root:
-                out =  (basic_out + bcolors.yellow + " (requires root)" +
+                out = (basic_out + bcolors.yellow + " (requires root)" +
                         bcolors.end + "\n")
             else:
                 out = basic_out + "\n"
@@ -699,6 +707,9 @@ def run_tests(parser, options):
     logging.info("Starting test job at %s", time.strftime('%Y-%m-%d %H:%M:%S'))
     logging.info("")
 
+    logging.info(version.get_pretty_version_info())
+    logging.info("")
+
     logging.debug("Cleaning up previous job tmp files")
     d = parser.get_dicts().next()
     env_filename = os.path.join(data_dir.get_root_dir(),
@@ -729,6 +740,7 @@ def run_tests(parser, options):
 
     logging.info("Defined test set:")
     for i, d in enumerate(parser.get_dicts()):
+        tag_index = get_tag_index(options, d)
         shortname = get_tag(d, tag_index)
 
         logging.info("Test %4d:  %s", i + 1, shortname)
@@ -759,7 +771,9 @@ def run_tests(parser, options):
     setup_flag = 1
     cleanup_flag = 2
     job_start_time = time.time()
+
     for dct in parser.get_dicts():
+        tag_index = get_tag_index(options, dct)
         shortname = get_tag(dct, tag_index)
 
         if index == 0:
@@ -796,6 +810,7 @@ def run_tests(parser, options):
         current_status = False
 
         pretty_index = "(%d/%d)" % (index, n_tests)
+
         t = Test(dct, options)
         print_stdout("%s %s:" % (pretty_index, t.tag), end=False)
 

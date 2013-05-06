@@ -3,7 +3,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
 import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
-import remote, data_dir, utils_test
+import remote, data_dir, utils_net
 
 
 try:
@@ -43,10 +43,13 @@ def preprocess_image(test, params, image_name):
               os.path.exists(image_filename)):
             create_image = True
 
+        if params.get("backup_image_before_testing", "no") == "yes":
+            image = kvm_storage.QemuImg(params, base_dir, image_name)
+            image.backup_image(params, base_dir, "backup", True)
         if create_image:
             image = qemu_storage.QemuImg(params, base_dir, image_name)
-            if not image.create(params):
-                raise error.TestError("Could not create image")
+            image.create(params)
+
 
 def preprocess_vm(test, params, env, name):
     """
@@ -104,7 +107,7 @@ def preprocess_vm(test, params, env, name):
             # Update mac and IP info for assigned device
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
-                utils_test.update_mac_ip_address(vm, params)
+                utils_net.update_mac_ip_address(vm, params)
     else:
         # Don't start the VM, just update its params
         vm.params = params
@@ -152,6 +155,8 @@ def postprocess_image(test, params, image_name):
                     if image_name in cl_images.split():
                         image.remove()
                 raise e
+        if params.get("restore_image_after_testing", "no") == "yes":
+            image.backup_image(params, base_dir, "restore", True)
         if params.get("remove_image") == "yes":
             if clone_master is None:
                 image.remove()
@@ -298,13 +303,25 @@ def preprocess(test, params, env):
     # does and the test suite is running as a regular user, we shall just
     # throw a TestNAError exception, which will skip the test.
     if params.get('requires_root', 'no') == 'yes':
-        utils_test.verify_running_as_root()
+        utils_misc.verify_running_as_root()
 
     port = params.get('shell_port')
     prompt = params.get('shell_prompt')
     address = params.get('ovirt_node_address')
     username = params.get('ovirt_node_user')
     password = params.get('ovirt_node_password')
+
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        nic_params = params.object_params(nic)
+        if nic_params.get('netdst') == 'private':
+            setup_pb = True
+            params_pb = nic_params
+            params['netdst_%s' % nic] = nic_params.get("priv_brname", 'atbr0')
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig(params_pb)
+        brcfg.setup()
 
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
@@ -522,8 +539,17 @@ def postprocess(test, params, env):
     # Kill all aexpect tail threads
     aexpect.kill_tail_threads()
 
-    # Terminate tcpdump if no VMs are alive
     living_vms = [vm for vm in env.get_all_vms() if vm.is_alive()]
+    # Close all monitor socket connections of living vm.
+    for vm in living_vms:
+        if hasattr(vm, "monitors"):
+            for m in vm.monitors:
+                try:
+                    m.close()
+                except Exception:
+                    pass
+
+    # Terminate tcpdump if no VMs are alive
     if not living_vms and "tcpdump" in env:
         env["tcpdump"].close()
         del env["tcpdump"]
@@ -543,6 +569,18 @@ def postprocess(test, params, env):
         process_command(test, params, env, params.get("post_command"),
                         int(params.get("post_command_timeout", "600")),
                         params.get("post_command_noncritical") == "yes")
+
+    setup_pb = False
+    for nic in params.get('nics', "").split():
+        if params.get('netdst_%s' % nic) == 'private':
+            setup_pb = True
+            break
+    else:
+        setup_pb = params.get("netdst") == 'private'
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig()
+        brcfg.cleanup()
 
 
 def postprocess_on_error(test, params, env):

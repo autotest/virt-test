@@ -73,6 +73,73 @@ class QMPCmdError(MonitorError):
                 "error message: %r)" % (self.cmd, self.qmp_args, self.data))
 
 
+def get_monitor_filename(vm, monitor_name):
+    """
+    Return the filename corresponding to a given monitor name.
+
+    @param vm: The VM object which has the monitor.
+    @param monitor_name: The monitor name.
+    @return: The string of socket file name for qemu monitor.
+    """
+    return "/tmp/monitor-%s-%s" % (monitor_name, vm.instance)
+
+
+def get_monitor_filenames(vm):
+    """
+    Return a list of all monitor filenames (as specified in the VM's
+    params).
+
+    @param vm: The VM object which has the monitors.
+    """
+    return [get_monitor_filename(vm, m) for m in vm.params.objects("monitors")]
+
+
+def create_monitor(vm, monitor_name, monitor_params):
+    """
+    Create monitor object and connect to the monitor socket.
+
+    @param vm: The VM object which has the monitor.
+    @param monitor_name: The name of this monitor object.
+    @param monitor_params: The dict for creating this monitor object.
+    """
+    monitor_creator = HumanMonitor
+    if monitor_params.get("monitor_type") == "qmp":
+        monitor_creator = QMPMonitor
+        if not utils_misc.qemu_has_option("qmp", vm.qemu_binary):
+            # Add a "human" monitor on non-qmp version of qemu.
+            logging.warn("QMP monitor is unsupported by this version of qemu,"
+                         " creating human monitor instead.")
+            monitor_creator = HumanMonitor
+
+    monitor_filename = get_monitor_filename(vm, monitor_name)
+    monitor = monitor_creator(vm, monitor_name, monitor_filename)
+    monitor.verify_responsive()
+
+    return monitor
+
+
+def wait_for_create_monitor(vm, monitor_name, monitor_params, timeout):
+    """
+    Wait for the progress of creating monitor object. This function will
+    retry to create the Monitor object until timeout.
+
+    @param vm: The VM object which has the monitor.
+    @param monitor_name: The name of this monitor object.
+    @param monitor_params: The dict for creating this monitor object.
+    @param timeout: Time to wait for creating this monitor object.
+    """
+    # Wait for monitor connection to succeed
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        try:
+            return create_monitor(vm, monitor_name, monitor_params)
+        except MonitorError, e:
+            logging.warn(e)
+            time.sleep(1)
+    else:
+        raise MonitorConnectError(monitor_name)
+
+
 class Monitor:
     """
     Common code for monitor classes.
@@ -82,14 +149,17 @@ class Monitor:
     DATA_AVAILABLE_TIMEOUT = 0
     CONNECT_TIMEOUT = 30
 
-    def __init__(self, name, filename):
+    def __init__(self, vm, name, filename):
         """
         Initialize the instance.
 
+        @param vm: The VM which this monitor belongs to.
         @param name: Monitor identifier (a string)
         @param filename: Monitor socket filename
+
         @raise MonitorConnectError: Raised if the connection fails
         """
+        self.vm = vm
         self.name = name
         self.filename = filename
         self._lock = threading.RLock()
@@ -128,7 +198,7 @@ class Monitor:
     def __getinitargs__(self):
         # Save some information when pickling -- will be passed to the
         # constructor upon unpickling
-        return self.name, self.filename, True
+        return self.vm, self.name, self.filename, True
 
 
     def _close_sock(self):
@@ -293,6 +363,14 @@ class Monitor:
         return self.parse_info_numa(r)
 
 
+    def close(self):
+        """
+        Close the connection to the monitor and its log file.
+        """
+        self._close_sock()
+        utils_misc.close_log_file(self.log_file)
+
+
 class HumanMonitor(Monitor):
     """
     Wraps "human monitor" commands.
@@ -301,12 +379,14 @@ class HumanMonitor(Monitor):
     PROMPT_TIMEOUT = 60
     CMD_TIMEOUT = 60
 
-    def __init__(self, name, filename, suppress_exceptions=False):
+    def __init__(self, vm, name, filename, suppress_exceptions=False):
         """
         Connect to the monitor socket and find the (qemu) prompt.
 
+        @param vm: The VM which this monitor belongs to.
         @param name: Monitor identifier (a string)
         @param filename: Monitor socket filename
+
         @raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
         @raise MonitorProtocolError: Raised if the initial (qemu) prompt isn't
@@ -315,7 +395,7 @@ class HumanMonitor(Monitor):
                 docstring.
         """
         try:
-            Monitor.__init__(self, name, filename)
+            Monitor.__init__(self, vm, name, filename)
 
             self.protocol = "human"
 
@@ -613,6 +693,141 @@ class HumanMonitor(Monitor):
         return self.cmd(cmd)
 
 
+    def block_stream(self, device, speed=None, base=None):
+        """
+        Start block-stream job;
+
+        @param device: device ID
+        @param speed: int type, lmited speed(B/s)
+        @param base: base file
+
+        @return: The command's output
+        """
+        cmd = "block-stream %s" % device
+        if speed is not None:
+            cmd = "%s %sB" % (cmd, speed)
+        if base:
+            cmd = "%s %s" % (cmd, base)
+        return self.cmd(cmd)
+
+
+    def set_block_job_speed(self, device, speed=0):
+        """
+        Set limited speed for runnig job on the device
+
+        @param device: device ID
+        @param speed: int type, limited speed(B/s)
+
+        @return: The command's output
+        """
+        cmd = "block-job-set-speed %s %sB" % (device, speed)
+        return self.cmd(cmd)
+
+
+    def cancel_block_job(self, device):
+        """
+        Cancel running block stream/mirror job on the device
+
+        @param device: device ID
+
+        @return: The command's output
+        """
+        return self.send_args_cmd("block-job-cancel %s" % device)
+
+
+    def query_block_job(self, device):
+        """
+        Get block job status on the device
+
+        @param device: device ID
+
+        @return: dict about job info, return empty dict if no active job
+        """
+        job = dict()
+        output = str(self.info("block-jobs"))
+        for line in output.split("\n"):
+            if "No" in re.match("\w+",output).group(0):
+                continue
+            if device in line:
+                if "Streaming" in re.match("\w+", output).group(0):
+                    job["type"] = "stream"
+                else:
+                    job["type"] = "mirror"
+                job["device"] = device
+                job["offset"] = int(re.findall("\d+", output)[-3])
+                job["len"] = int(re.findall("\d+", output)[-2])
+                job["speed"] = int(re.findall("\d+", output)[-1])
+                break
+        return job
+
+
+    def get_backingfile(self, device):
+        """
+        Return "backing_file" path of the device
+
+        @param device: device ID
+
+        @return: string, backing_file path
+        """
+        backing_file = None
+        block_info = self.query("block")
+        try:
+            pattern = "%s:.*backing_file=([\w./]*)" % device
+            backing_file = re.search(pattern, block_info, re.M).group(1)
+        except Exception:
+            pass
+        return backing_file
+
+
+    def block_mirror(self, device, target, speed, sync, format, mode,
+            cmd="__com.redhat_drive-mirror"):
+        """
+        Start mirror type block device copy job
+
+        @param device: device ID
+        @param target: target image
+        @param speed: limited speed, unit is B/s
+        @param sync: full copy to target image(unsupport in human monitor)
+        @param mode: target image create mode, 'absolute-paths' or 'existing'
+        @param format: target image format
+        @param cmd: block mirror command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = " ".join([device, target, format])
+        if cmd.startswith("__com.redhat"):
+            if mode == "existing":
+                args = "-n %s" % args
+            if sync == "full":
+                args ="-f %s" % args
+        else:
+            if speed:
+                args = "%s %sB" % (args, speed)
+        cmd = "%s %s" % (cmd, args)
+        return self.cmd(cmd)
+
+
+    def block_reopen(self, device, new_image_file, image_format,
+            cmd="__com.redhat_drive-reopen"):
+        """
+        Reopen new target image
+
+        @param device: device ID
+        @param new_image_file: new image file name
+        @param image_format: new image file format
+        @param cmd: image reopen command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = device
+        if cmd.startswith("__com.redhat"):
+            args += " ".join([new_image_file, image_format])
+        cmd = "%s %s" % (cmd, args)
+        return self.cmd(cmd)
+
+
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
         """
         Migrate.
@@ -697,6 +912,13 @@ class HumanMonitor(Monitor):
         return self.cmd("getfd %s" % name, fd=fd)
 
 
+    def nmi(self):
+        """
+        Inject a NMI on all guest's CPUs.
+        """
+        return self.cmd("nmi")
+
+
 class QMPMonitor(Monitor):
     """
     Wraps QMP monitor commands.
@@ -707,13 +929,15 @@ class QMPMonitor(Monitor):
     RESPONSE_TIMEOUT = 60
     PROMPT_TIMEOUT = 60
 
-    def __init__(self, name, filename, suppress_exceptions=False):
+    def __init__(self, vm, name, filename, suppress_exceptions=False):
         """
         Connect to the monitor socket, read the greeting message and issue the
         qmp_capabilities command.  Also make sure the json module is available.
 
+        @param vm: The VM which this monitor belongs to.
         @param name: Monitor identifier (a string)
         @param filename: Monitor socket filename
+
         @raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
         @raise MonitorProtocolError: Raised if the no QMP greeting message is
@@ -724,7 +948,7 @@ class QMPMonitor(Monitor):
                 fails.  See cmd()'s docstring.
         """
         try:
-            Monitor.__init__(self, name, filename)
+            Monitor.__init__(self, vm, name, filename)
 
             self.protocol = "qmp"
             self._greeting = None
@@ -1324,6 +1548,138 @@ class QMPMonitor(Monitor):
         return self.cmd("blockdev-snapshot-sync", args)
 
 
+    def block_stream(self, device, speed=None, base=None):
+        """
+        Start block-stream job;
+
+        @param device: device ID
+        @param speed: int type, limited speed(B/s)
+        @param base: base file
+
+        @return: The command's output
+        """
+        args = {"device": device}
+        if speed is not None:
+            args["speed"] = speed
+        if base:
+            args["base"] = base
+        return self.cmd("block-stream", args)
+
+
+    def set_block_job_speed(self, device, speed=0):
+        """
+        Set limited speed for runnig job on the device
+
+        @param device: device ID
+        @param speed: int type, limited speed(B/s)
+
+        @return: The command's output
+        """
+        args = {"device": device,
+                "speed": speed}
+        return self.cmd("block-job-set-speed", args)
+
+
+    def cancel_block_job(self, device):
+        """
+        Cancel running block stream/mirror job on the device
+
+        @param device: device ID
+
+        @return: The command's output
+        """
+        args = {"device": device}
+        return self.cmd("block-job-cancel", args)
+
+
+    def query_block_job(self, device):
+        """
+        Get block job status on the device
+
+        @param device: device ID
+
+        @return: dict about job info, return empty dict if no active job
+        """
+        job = dict()
+        output = str(self.info("block-jobs"))
+        try:
+            job = filter(lambda x: x.get("device") == device,
+                         eval(output))[0]
+        except Exception:
+            pass
+        return job
+
+
+    def get_backingfile(self, device):
+        """
+        Return "backing_file" path of the device
+
+        @param device: device ID
+
+        @return: string, backing_file path
+        """
+        backing_file = None
+        block_info = self.query("block")
+        try:
+            image_info = filter(lambda x:x["device"] == device, block_info)[0]
+            backing_file = image_info["inserted"].get("backing_file")
+        except Exception:
+            pass
+        return backing_file
+
+
+    def block_mirror(self, device, target, speed, sync, format, mode,
+            cmd="__com.redhat_drive-mirror"):
+        """
+        Start mirror type block device copy job
+
+        @param device: device ID
+        @param target: target image
+        @param speed: limited speed, unit is B/s
+        @param sync: what parts of the disk image should be copied to the
+                     destination;
+        @param mode: 'absolute-paths' or 'existing'
+        @param format: target image format
+        @param cmd: block mirror command
+
+        @return: The command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = {"device": device,
+                "target": target}
+        if cmd.startswith("__com.redhat"):
+            args["full"] = sync
+        else:
+            args["sync"] = sync
+        if mode:
+            args["mode"] = mode
+        if format:
+            args["format"] = format
+        if speed:
+            args["speed"] = speed
+        return self.cmd(cmd, args)
+
+
+    def block_reopen(self, device, new_image_file, image_format,
+            cmd="__com.redhat_drive-reopen"):
+        """
+        Reopen new target image;
+
+        @param device: device ID
+        @param new_image_file: new image file name
+        @param image_format: new image file format
+        @param cmd: image reopen command
+
+        @return: the command's output
+        """
+        self.verify_supported_cmd(cmd)
+        args = {"device": device}
+        if cmd.startswith("__com.redhat"):
+            args["new-image-file"] = new_image_file
+            args["format"] = image_format
+        return self.cmd(cmd, args)
+
+
     def getfd(self, fd, name):
         """
         Receives a file descriptor
@@ -1335,3 +1691,10 @@ class QMPMonitor(Monitor):
         """
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
+
+
+    def nmi(self):
+        """
+        Inject a NMI on all guest's CPUs.
+        """
+        return self.cmd("inject-nmi")

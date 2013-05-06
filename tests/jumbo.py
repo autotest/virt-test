@@ -1,7 +1,7 @@
 import logging, commands, random
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, utils_test
+from virttest import utils_misc, utils_test, utils_net
 
 
 def run_jumbo(test, params, env):
@@ -37,7 +37,7 @@ def run_jumbo(test, params, env):
 
     try:
         # Environment preparation
-        ethname = utils_test.get_linux_ifname(session, vm.get_mac_address(0))
+        ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
 
         logging.info("Changing the MTU of guest ...")
         guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname , mtu)
