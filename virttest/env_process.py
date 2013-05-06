@@ -3,7 +3,7 @@ from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
 import libvirt_vm, video_maker, utils_misc, storage, qemu_storage
-import remote, data_dir, utils_test, utils_net
+import remote, data_dir, utils_net
 
 
 try:
@@ -298,7 +298,7 @@ def preprocess(test, params, env):
     # does and the test suite is running as a regular user, we shall just
     # throw a TestNAError exception, which will skip the test.
     if params.get('requires_root', 'no') == 'yes':
-        utils_test.verify_running_as_root()
+        utils_misc.verify_running_as_root()
 
     port = params.get('shell_port')
     prompt = params.get('shell_prompt')
