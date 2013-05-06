@@ -43,7 +43,7 @@ def _execute_git_command(command):
     os.chdir(_ROOT_PATH)
     try:
         try:
-            return utils.system_output(command, verbose=False).strip()
+            return utils.system_output(command).strip()
         finally:
             os.chdir(cwd)
     except error.CmdError:
