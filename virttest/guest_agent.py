@@ -48,13 +48,13 @@ class VAgentNotSupportedError(VAgentError):
 class VAgentCmdError(VAgentError):
     def __init__(self, cmd, args, data):
         VAgentError.__init__(self)
-        self.cmd = cmd
-        self.args = args
-        self.data = data
+        self.ecmd = cmd
+        self.eargs = args
+        self.edata = data
 
     def __str__(self):
         return ("Virt Agent command %r failed    (arguments: %r,    "
-                "error message: %r)" % (self.cmd, self.args, self.data))
+                "error message: %r)" % (self.ecmd, self.eargs, self.edata))
 
 
 class VAgentSyncError(VAgentError):
