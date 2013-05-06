@@ -244,10 +244,54 @@ class QemuAgent(Monitor):
         return {}
 
 
+    def _sync(self, timeout=RESPONSE_TIMEOUT * 3):
+        """
+        Helper for guest agent socket sync.
+
+        The guest agent doesn't provide a command id in its response,
+        so we have to send 'guest-sync' cmd by ourselves to keep the
+        socket synced.
+
+        @param timeout: Time duration to wait for response
+        @return: True if socket is synced.
+        """
+        def check_result(response):
+            if response:
+                self._log_response(cmd, r)
+            if "return" in response:
+                return response["return"]
+            if "error" in response:
+                raise VAgentError("Get an error message when waiting for sync"
+                                  " with qemu guest agent, check the debug log"
+                                  " for the future message,"
+                                  " detail: '%s'" % r["error"])
+
+        cmd = "guest-sync"
+        rnd_num = random.randint(1000, 9999)
+        args = {"id": rnd_num}
+        self._log_command(cmd)
+        cmdobj = self._build_cmd(cmd, args)
+        data = json.dumps(cmdobj) + "\n"
+        # Send command
+        r = self.cmd_raw(data)
+        if check_result(r) == rnd_num:
+            return True
+
+        # We don't get the correct response of 'guest-sync' cmd,
+        # thus wait for the response until timeout.
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            r = self._get_response()
+            if check_result(r) == rnd_num:
+                return True
+        return False
+
+
     def _get_supported_cmds(self):
         """
         Get supported qmp cmds list.
         """
+        self._sync()
         cmds = self.cmd("guest-info", debug=False)
         if cmds and cmds.has_key("supported_commands"):
             cmd_list = cmds["supported_commands"]
@@ -473,10 +517,8 @@ class QemuAgent(Monitor):
         if not self._has_command(cmd):
             return
 
-        rnd_num = random.randint(1000, 9999)
-        args = {"id": rnd_num}
-        ret = self.cmd(cmd, args=args)
-        if ret != rnd_num:
+        synced = self._sync()
+        if not synced:
             raise VAgentSyncError(self.vm.name)
 
 
