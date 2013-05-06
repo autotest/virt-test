@@ -311,6 +311,18 @@ def preprocess(test, params, env):
     username = params.get('ovirt_node_user')
     password = params.get('ovirt_node_password')
 
+    setup_pb = False
+    for nic in params.get('nics').split():
+        nic_params = params.object_params(nic)
+        if nic_params.get('netdst') == 'private':
+            setup_pb = True
+            params_pb = nic_params
+            params['netdst_%s' % nic] = nic_params.get("priv_brname", 'atbr0')
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig(params_pb)
+        brcfg.setup()
+
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
         env["address_cache"] = {}
@@ -557,6 +569,18 @@ def postprocess(test, params, env):
         process_command(test, params, env, params.get("post_command"),
                         int(params.get("post_command_timeout", "600")),
                         params.get("post_command_noncritical") == "yes")
+
+    setup_pb = False
+    for nic in params.get('nics').split():
+        if params.get('netdst_%s' % nic) == 'private':
+            setup_pb = True
+            break
+    else:
+        setup_pb = params.get("netdst") == 'private'
+
+    if setup_pb:
+        brcfg = test_setup.PrivateBridgeConfig()
+        brcfg.cleanup()
 
 
 def postprocess_on_error(test, params, env):
