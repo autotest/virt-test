@@ -22,7 +22,7 @@ More specifically:
 """
 
 import time, os, logging, re, signal, imp, tempfile, commands, errno, fcntl
-import threading, shelve, getpass, socket
+import threading, shelve, socket
 from Queue import Queue
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
@@ -2077,15 +2077,3 @@ def find_substring(string, pattern1, pattern2=None):
                      pattern)
         return None
     return ret[0]
-
-
-def verify_running_as_root():
-    """
-    Verifies whether we're running under UID 0 (root).
-
-    @raise: error.TestNAError
-    """
-    if os.getuid() != 0:
-        raise error.TestNAError("This test requires root privileges "
-                                "(currently running with user %s)" %
-                                getpass.getuser())

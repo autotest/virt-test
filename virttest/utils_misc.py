@@ -5,7 +5,7 @@ Virtualization test utility functions.
 """
 
 import time, string, random, socket, os, signal, re, logging, commands
-import fcntl, sys, inspect, tarfile, shutil
+import fcntl, sys, inspect, tarfile, shutil, getpass
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
@@ -1559,3 +1559,15 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
         data *= multiple
 
     return str(data)
+
+
+def verify_running_as_root():
+    """
+    Verifies whether we're running under UID 0 (root).
+
+    @raise: error.TestNAError
+    """
+    if os.getuid() != 0:
+        raise error.TestNAError("This test requires root privileges "
+                                "(currently running with user %s)" %
+                                getpass.getuser())
