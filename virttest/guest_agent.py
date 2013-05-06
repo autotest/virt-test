@@ -144,7 +144,7 @@ class QemuAgent(Monitor):
                 raise VAgentNotSupportedError("Not supported serial type: "
                                               "'%s'" % serial_type)
 
-            Monitor.__init__(self, name, serial_filename)
+            Monitor.__init__(self, vm, name, serial_filename)
             # Make sure json is available
             try:
                 json
