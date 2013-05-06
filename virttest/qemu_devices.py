@@ -1258,7 +1258,8 @@ class DevContainer(object):
     Device container class
     """
     # General methods
-    def __init__(self, qemu_binary, vmname, strict_mode=False):
+    def __init__(self, qemu_binary, vmname, allow_hotplugged_vm=True,
+                 strict_mode=False):
         """
         @param qemu_binary: qemu binary
         @param vm: related VM
@@ -1300,7 +1301,7 @@ class DevContainer(object):
             if cmds:    # If no mathes, return None
                 return cmds
 
-        self.__state = 0    # is representation sync with VM (0 = synchronized)
+        self.__state = -1    # is representation sync with VM (0 = synchronized)
         self.__qemu_help = commands.getoutput("%s -help" % qemu_binary)
         self.__device_help = commands.getoutput("%s -device ?" % qemu_binary)
         self.__machine_types = commands.getoutput("%s -M ?" % qemu_binary)
@@ -1310,6 +1311,7 @@ class DevContainer(object):
         self.strict_mode = strict_mode
         self.__devices = []
         self.__buses = []
+        self.allow_hotplugged_vm = allow_hotplugged_vm
 
     def __getitem__(self, item):
         """
@@ -1394,7 +1396,11 @@ class DevContainer(object):
         if len(qdev2) != len(self):
             return False
         if qdev2.get_state() != self.get_state():
-            return False
+            if qdev2.allow_hotplugged_vm:
+                if qdev2.get_state() > 0 or self.get_state() > 0:
+                    return False
+            else:
+                return False
         for dev in self:
             if dev not in qdev2:
                 return False
@@ -1405,12 +1411,25 @@ class DevContainer(object):
         return not self.__eq__(qdev2)
 
     def set_dirty(self):
-        """ Mark representation as dirty (not synchronized with VM) """
-        self.__state += 1
+        """ Increase VM dirtiness (not synchronized with VM) """
+        if self.__state >= 0:
+            self.__state += 1
+        else:
+            self.__state = 1
 
     def set_clean(self):
-        """ Mark representation as clean (synchronized with VM) """
-        self.__state -= 1
+        """ Decrease VM dirtiness (synchronized with VM) """
+        if self.__state > 0:
+            self.__state -= 1
+        else:
+            raise DeviceError("Trying to clean clear VM (probably calling "
+                              "hotplug_clean() twice).\n%s" % self.str_long())
+
+    def reset_state(self):
+        """
+        Mark representation as completely clean, without hotplugged devices.
+        """
+        self.__state = -1
 
     def get_state(self):
         """ Get the current state (0 = synchronized with VM) """
@@ -1432,7 +1451,11 @@ class DevContainer(object):
         """ Short string representation of all devices """
         out = "Devices of %s" % self.vmname
         dirty = self.get_state()
-        if dirty:
+        if dirty == -1:
+            pass
+        elif dirty == 0:
+            out += "(H)"
+        else:
             out += "(DIRTY%s)" % dirty
         out += ": ["
         for device in self:
@@ -1445,8 +1468,12 @@ class DevContainer(object):
         """ Long string representation of all devices """
         out = "Devices of %s" % self.vmname
         dirty = self.get_state()
-        if dirty:
-            out += " (DIRTY%s)" % dirty
+        if dirty == -1:
+            pass
+        elif dirty == 0:
+            out += "(H)"
+        else:
+            out += "(DIRTY%s)" % dirty
         out += ":\n"
         for device in self:
             out += device.str_long()

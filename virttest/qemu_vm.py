@@ -812,7 +812,8 @@ class VM(virt_vm.BaseVM):
 
         # Start constructing devices representation
         devices = qemu_devices.DevContainer(qemu_binary, self.name,
-                                            params.get('strict_mode'))
+                                    params.get('allow_hotplugged_vm') != 'no',
+                                    params.get('strict_mode') == 'yes')
         StrDev = qemu_devices.QStringDevice
 
         cmd = ""
@@ -1565,6 +1566,7 @@ class VM(virt_vm.BaseVM):
             logging.info("Running qemu command (reformatted):\n%s",
                     qemu_command.replace(" -", " \\\n    -"))
             self.qemu_command = qemu_command
+            self.devices.reset_state()      # Devs are in sync without hotplug
             self.process = aexpect.run_bg(qemu_command, None,
                                           logging.info, "[qemu output] ",
                                           auto_close=False)
