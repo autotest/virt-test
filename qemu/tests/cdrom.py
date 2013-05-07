@@ -494,11 +494,11 @@ def run_cdrom(test, params, env):
                                          " unlocked" % (qemu_cdrom_device))
                 del _f
 
-            max_times = int(params.get("max_times", 100))
+            max_test_times = int(params.get("cdrom_max_test_times", 100))
             if params.get("cdrom_test_eject") == "yes":
                 eject_test_via_monitor(vm, qemu_cdrom_device,
                                        guest_cdrom_device, self.iso_image_orig,
-                                       self.iso_image_new, max_times)
+                                       self.iso_image_new, max_test_times)
 
             if params.get('cdrom_test_tray_status') == 'yes':
                 check_tray_status_test(vm, qemu_cdrom_device,
