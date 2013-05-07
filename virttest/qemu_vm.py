@@ -10,6 +10,7 @@ from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
 import qemu_virtio_port, remote, data_dir, utils_net
 
+
 class QemuSegFaultError(virt_vm.VMError):
     def __init__(self, crash_message):
         virt_vm.VMError.__init__(self, crash_message)
@@ -77,6 +78,7 @@ class VM(virt_vm.BaseVM):
         self.params = params
         self.root_dir = root_dir
         self.address_cache = address_cache
+        self.index_in_use = {}
         # This usb_dev_dict member stores usb controller and device info,
         # It's dict, each key is an id of usb controller,
         # and key's value is a list, contains usb devices' ids which
@@ -98,6 +100,8 @@ class VM(virt_vm.BaseVM):
         if state:
             self.instance = state['instance']
         self.qemu_command = ''
+        self.start_time = 0.0
+        self.init_pci_addr = int(params.get("init_pci_addr", 4))
 
 
     def verify_alive(self):
@@ -113,7 +117,7 @@ class VM(virt_vm.BaseVM):
         self.verify_illegal_instruction()
         try:
             virt_vm.BaseVM.verify_alive(self)
-            if self.monitors:
+            if self.monitor:
                 self.monitor.verify_responsive()
         except virt_vm.VMDeadError:
             raise virt_vm.VMDeadError(self.process.get_status(),
@@ -124,7 +128,7 @@ class VM(virt_vm.BaseVM):
         """
         Return True if the VM is alive and its monitor is responsive.
         """
-        return not self.is_dead() and (not self.monitors or
+        return not self.is_dead() and (not self.monitor or
                                        self.monitor.is_responsive())
 
 
@@ -294,6 +298,30 @@ class VM(virt_vm.BaseVM):
                     value = '""'
                 return fmt % (option, str(value))
             return ""
+
+
+        def get_free_pci_addr(pci_addr=None):
+            """
+            return *hex* format free pci addr.
+
+            @param pci_addr: *decimal* formated, desired pci_add
+            """
+            if pci_addr is None:
+                pci_addr = self.init_pci_addr
+                while True:
+                    # actually when pci_addr > 20? errors may happen
+                    if pci_addr > 31:
+                        raise virt_vm.VMPCIOutOfRangeError(self.name, 31)
+                    if pci_addr in self.pci_addr_list:
+                        pci_addr += 1
+                    else:
+                        self.pci_addr_list.append(pci_addr)
+                        return hex(pci_addr)
+            elif int(pci_addr) in self.pci_addr_list:
+                raise virt_vm.VMPCISlotInUseError(self.name, pci_addr)
+            else:
+                self.pci_addr_list.append(int(pci_addr))
+                return hex(int(pci_addr))
 
 
         def get_free_usb_port(dev, controller_type):
@@ -520,31 +548,53 @@ class VM(virt_vm.BaseVM):
                       werror=None, rerror=None, serial=None, snapshot=False,
                       boot=False, blkdebug=None, bus=None, port=None,
                       bootindex=None, removable=None, min_io_size=None,
-                      opt_io_size=None, physical_block_size=None,
-                      logical_block_size=None, readonly=False, scsiid=None,
-                      lun=None):
-            name = None
+                      opt_io_size=None,physical_block_size=None,
+                      logical_block_size=None, readonly=None, scsiid=None,
+                      lun=None, imgfmt="raw", aio=None, media="disk",
+                      ide_bus=None, ide_unit=None, vdisk=0, scsi_disk=None,
+                      pci_addr=None, scsi=None, x_data_plane=None,
+                      blk_extra_params=None):
+
+            dev_format = {"virtio" : "virtio-blk-pci",
+                          "ide" : "ide-drive",
+                          "usb2": "usb-storage"}
+
+            name = ""
+            if fmt == "ide":
+                name ="ide0-%s-%s" % (ide_bus, ide_unit)
+                ide_bus = "ide." + str(ide_bus)
+            elif fmt == "virtio":
+                if media == "disk":
+                    vdisk += 1
+                blkdev_id ="virtio-disk%s" % vdisk
+                name = "virtio-disk%s" % vdisk
+            elif fmt == "usb2":
+                name = "usb2.%s" % (index or utils_misc.generate_random_id())
+            elif media == "cdrom":
+                readonly = True
+            if not has_option(help_text, "device"):
+                name = None
+            if name:
+                blkdev_id = "drive-%s" % name
+            else:
+                blkdev_id = None
+            if ",aio=" not in help_text:
+                aio = None
+
             dev = ""
             if not re.search("boot=on\|off", help_text, re.MULTILINE):
                 if boot in ['yes', 'on', True]:
                     bootindex = "1"
                 boot = "unused"
             if fmt == "ahci":
-                name = "ahci%s" % index
+                tmp = "ahci%s" % (index or utils_misc.generate_random_id())
+                blkdev_id = tmp
                 dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
-                dev += _add_option("bootindex", bootindex)
                 fmt = "none"
                 index = None
-            if fmt == "virtio":
-                if has_option(help_text, "device"):
-                    name = "virtio%s" % index
-                    dev += " -device virtio-blk-pci"
-                    dev += _add_option("drive", name)
-                    fmt = "none"
-                    dev += _add_option("bootindex", bootindex)
-                index = None
-            if fmt in ['usb1', 'usb2', 'usb3']:
-                name = "%s.%s" % (fmt, index)
+            elif fmt in ['usb1', 'usb2', 'usb3']:
+                tmp = index or utils_misc.generate_random_id()
+                blkdev_id = "%s.%s" % (fmt, tmp)
                 dev += " -device usb-storage"
                 dev += _add_option("bus", bus)
                 dev += _add_option("port", port)
@@ -555,12 +605,13 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("opt_io_size", opt_io_size)
                 dev += _add_option("physical_block_size", physical_block_size)
                 dev += _add_option("logical_block_size", logical_block_size)
-                dev += _add_option("drive", name)
+                dev += _add_option("drive", blkdev_id)
+                dev += _add_option("id", "usb-disk%s" % tmp)
                 fmt = "none"
                 index = None
-            if fmt.startswith("scsi-"):
+            elif fmt and fmt.startswith("scsi-"):
                 # handles scsi-{hd, cd, disk, block, generic} targets
-                name = "virtio-scsi%s" % index
+                blkdev_id = "virtio-scsi%s-id%s" % ((index or ""), scsi_disk)
                 dev += " -device %s" % fmt
                 dev += _add_option("logical_block_size", logical_block_size)
                 dev += _add_option("physical_block_size", physical_block_size)
@@ -570,46 +621,77 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("serial", serial)
                 dev += _add_option("removable", removable)
                 if bus:
-                    name += "-b%s" % bus
                     dev += _add_option("bus", "virtio_scsi_pci%d.0" % bus)
                 if scsiid:
-                    name += "-i%s" % scsiid
                     dev += _add_option("scsi-id", scsiid)
                 if lun:
-                    name += "-l%s" % lun
                     dev += _add_option("lun", lun)
                 fmt = "none"
-                dev += _add_option("drive", name)
+                dev += _add_option("drive", blkdev_id)
                 index = None
+
+            elif has_option(help_text, "device") and fmt != "floppy":
+                dev += " -device %s" % dev_format[fmt]
+                if fmt == "ide":
+                    dev += _add_option("bus", str(ide_bus))
+                    dev += _add_option("unit", str(ide_unit))
+                elif fmt == "virtio":
+                    dev += _add_option("bus", "pci.0")
+                    dev += _add_option("addr", get_free_pci_addr(pci_addr))
+                    dev += _add_option("physical_block_size",
+                                       physical_block_size)
+                    dev += _add_option("logical_block_size", logical_block_size)
+                    # This 'scsi' option only affect on RHEL6.later host.
+                    # RHBZ 756677.
+                    dev += _add_option("scsi", scsi, bool)
+                dev += _add_option("drive", blkdev_id)
+                dev += _add_option("id", id)
+                dev += _add_option("x-data-plane", x_data_plane, bool)
+                dev += _add_option("bootindex", bootindex)
+                fmt = "none"
             if fmt == "floppy":
                 drivelist = ['driveA','driveB']
-                name ="fdc0-0-%s" % index
+                blkdev_id ="fdc0-0-%s" % index
                 fmt = "none"
                 dev += " -global"
-                dev += _add_option("isa-fdc.%s" % drivelist[index], name,
+                dev += _add_option("isa-fdc.%s" % drivelist[index], blkdev_id,
                                    first=True)
+            if blk_extra_params:
+                dev += ",%s" % blk_extra_params
 
+            # -drive part
             if blkdebug is not None:
                 cmd = " -drive file=blkdebug:%s:%s" % (blkdebug, filename)
-            else:
+            elif filename:
                 cmd = " -drive file='%s'" % filename
+            else:
+                cmd = " -drive "
 
             cmd += _add_option("index", index)
             cmd += _add_option("if", fmt)
+            cmd += _add_option("id", blkdev_id)
+            cmd += _add_option("media", media)
             cmd += _add_option("cache", cache)
             cmd += _add_option("rerror", rerror)
             cmd += _add_option("werror", werror)
             cmd += _add_option("serial", serial)
+            cmd += _add_option("boot", boot, bool)
             cmd += _add_option("snapshot", snapshot, bool)
             # Only add boot=on/off if necessary (deprecated in newer qemu)
             if boot != "unused":
                 cmd += _add_option("boot", boot, bool)
-            cmd += _add_option("id", name)
             cmd += _add_option("readonly", readonly, bool)
+            cmd += _add_option("format", imgfmt)
+            cmd += _add_option("aio", aio)
+            cmd = re.sub("\s+,", " ", cmd)
+
             return cmd + dev
 
-        def add_nic(help_text, vlan, model=None, mac=None, device_id=None, netdev_id=None,
-                    nic_extra_params=None):
+
+        def add_nic(help_text, vlan, model=None, mac=None, device_id=None,
+                    netdev_id=None, nic_extra_params=None, pci_addr=None,
+                    bootindex=None):
+            free_pci_addr = get_free_pci_addr(pci_addr)
             if model == 'none':
                 return ''
             if has_option(help_text, "netdev"):
@@ -624,8 +706,15 @@ class VM(virt_vm.BaseVM):
                 cmd = " -device %s" % model + netdev_vlan_str
                 if mac:
                     cmd += ",mac='%s'" % mac
+                # only pci domain=0,bus=0,function=0 is supported for now.
+                #
+                # libvirt gains the pci_slot, free_pci_addr here,
+                # value by parsing the xml file, i.e. counting all the
+                # pci devices and store the number.
+                cmd += ",bus=pci.0,addr=%s" % free_pci_addr
                 if nic_extra_params:
                     cmd += ",%s" % nic_extra_params
+                cmd += _add_option("bootindex", bootindex)
             else:
                 cmd = " -net nic" + netdev_vlan_str
                 if model:
@@ -636,9 +725,11 @@ class VM(virt_vm.BaseVM):
                 cmd += ",id='%s'" % device_id
             return cmd
 
-        def add_net(help_text, vlan, nettype, ifname=None, tftp=None, bootfile=None,
-                    hostfwd=[], netdev_id=None, netdev_extra_params=None,
-                    tapfd=None):
+
+        def add_net(help_text, vlan, nettype, ifname=None, tftp=None,
+                    bootfile=None, hostfwd=[], netdev_id=None,
+                    netdev_extra_params=None, tapfd=None, script=None,
+                    downscript=None, vhost=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -649,11 +740,13 @@ class VM(virt_vm.BaseVM):
                 return ''
             if has_option(help_text, "netdev"):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
+                if vhost:
+                    cmd += ",%s" % vhost
                 if netdev_extra_params:
                     cmd += "%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
-            if mode == "tap" and tapfd:
+            if mode == "tap" and tapfd is not None:
                 cmd += ",fd=%d" % tapfd
             elif mode == "user":
                 if tftp and "[,tftp=" in help_text:
@@ -663,6 +756,13 @@ class VM(virt_vm.BaseVM):
                 if "[,hostfwd=" in help_text:
                     for host_port, guest_port in hostfwd:
                         cmd += ",hostfwd=tcp::%s-:%s" % (host_port, guest_port)
+            else:
+                if ifname:
+                    cmd += ",ifname='%s'" % ifname
+                if script:
+                    cmd += ",script='%s'" % script
+                cmd += ",downscript='%s'" % (downscript or "no")
+
             return cmd
 
         def add_floppy(help_text, filename, index):
@@ -739,6 +839,43 @@ class VM(virt_vm.BaseVM):
                        (param, pcidevice_help))
                 logging.warn(msg)
             return cmd
+
+
+        def add_spice_rhel5(help, spice_params, port_range=(3100, 3199)):
+            """
+            processes spice parameters on rhel5 host.
+
+            @param spice_options - dict with spice keys/values
+            @param port_range - tuple with port range, default: (3000, 3199)
+            """
+
+            if has_option(help, "spice"):
+                cmd = " -spice"
+            else:
+                return ""
+            spice_help = ""
+            if has_option(help,"spice-help"):
+                spice_help = commands.getoutput("%s -device \\?" % qemu_binary)
+            s_port = str(utils_misc.find_free_port(*port_range))
+            self.spice_options['spice_port'] = s_port
+            cmd += " port=%s" % s_port
+            for param in spice_params.split():
+                value = params.get(param)
+                if value:
+                    if bool(re.search(param, spice_help, re.M)):
+                        cmd += ",%s=%s" % (param, value)
+                    else:
+                        msg = "parameter %s is not support in spice."\
+                              " It only support following paramter:\n %s" \
+                               % (param, spice_help)
+                        logging.warn(msg)
+                else:
+                    cmd += ",%s" % param
+            if has_option(help, "qxl"):
+                qxl_dev_nr = params.get("qxl_dev_nr", 1)
+                cmd += " -qxl %s" % qxl_dev_nr
+            return cmd
+
 
         def add_spice(port_range=(3000, 3199),
              tls_port_range=(3200, 3399)):
@@ -938,13 +1075,31 @@ class VM(virt_vm.BaseVM):
                 cmd = ""
             return cmd
 
-        def add_machine_type(help_text, machine_type):
+
+        def get_index(index):
+            while self.index_in_use.get(str(index)):
+                index += 1
+            return index
+
+
+        def add_machine_type(help, machine_type, invalid_type=False):
             if has_option(help_text, "machine") or has_option(help_text, "M"):
+                output = utils.system_output("%s -M ?" % qemu_binary)
+                hlp_m = [str.split()[0] for str in output.splitlines()[1:]]
+                if machine_type not in hlp_m and not invalid_type:
+                    msg = "%s not support," % machine_type
+                    machine_type = hlp_m[1]
+                    msg += " machine type '%s' used." % hlp_m[1]
+                    msg += " Qemu support following machines type:\n%s" % hlp_m
+                    logging.warn(msg)
                 return " -M %s" % machine_type
             else:
                 return ""
 
-        def add_usb(help_text, usb_id, usb_type):
+
+        def add_usb(help_text, usb_id, usb_type, multifunction=False,
+                    masterbus=None, firstport=None, freq=None,
+                    pci_addr=None):
             if not has_option(help_text, "device"):
                 # Okay, for the archaic qemu which has not device parameter,
                 # just return a usb uhci controller.
@@ -958,6 +1113,12 @@ class VM(virt_vm.BaseVM):
 
             cmd = " -device %s" % usb_type
             cmd += _add_option("id", usb_id)
+            cmd += _add_option("masterbus", masterbus)
+            cmd += _add_option("firstport", firstport)
+            cmd += _add_option("freq", freq)
+
+            free_pci_addr = get_free_pci_addr(pci_addr)
+            cmd += ",bus=pci.0,addr=%s" % free_pci_addr
 
             if usb_type == "ich9-usb-ehci1":
                 common = ",multifunction=on,masterbus=%s.0" % usb_id
@@ -1013,6 +1174,13 @@ class VM(virt_vm.BaseVM):
 
             return watchdog_cmd
 
+        def add_option_rom(help_text, opt_rom):
+            if not has_option(help_text, "option-rom"):
+                return ""
+
+            return " -option-rom %s" % opt_rom
+
+
         # End of command line option wrappers
 
         if name is None:
@@ -1023,10 +1191,21 @@ class VM(virt_vm.BaseVM):
             root_dir = self.root_dir
 
         have_ahci = False
+        have_virtio_scsi = False
         virtio_scsi_pcis = []
+
+        # init value by default.
+        # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the sound device.
+        self.pci_addr_list = [0, 1, 2]
 
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
+
+        # global counters
+        ide_bus = 0
+        ide_unit = 0
+        vdisk = 0
+        scsi_disk = 0
 
         qemu_binary = utils_misc.get_path(os.path.join(root_dir,
                                                        params.get("vm_type")),
@@ -1036,6 +1215,12 @@ class VM(virt_vm.BaseVM):
         help_text = commands.getoutput("%s -help" % qemu_binary)
         support_cpu_model = commands.getoutput("%s -cpu ?" % qemu_binary)
         support_machine_type = commands.getoutput("%s -M ?" % qemu_binary)
+
+        index_global = 0
+        # init the dict index_in_use
+        for key in params.keys():
+            if 'drive_index' in key:
+                self.index_in_use[params.get(key)] = True
 
         device_help = ""
         if has_option(help_text, "device"):
@@ -1077,8 +1262,8 @@ class VM(virt_vm.BaseVM):
         # Add the VM's name
         qemu_cmd += add_name(help_text, name)
         # no automagic devices please
-        defaults = params.get("defaults", "no")
-        if has_option(help_text, "nodefaults") and defaults != "yes":
+        use_nodefaults = params.get("use_nodefaults", "yes")
+        if has_option(help_text, "use_nodefaults") and use_nodefaults != "no":
             qemu_cmd += " -nodefaults"
         # Add monitors
         for monitor_name in params.objects("monitors"):
@@ -1119,7 +1304,7 @@ class VM(virt_vm.BaseVM):
             # Add virtio_serial_pcis
             for i in range(no_virtio_serial_pcis, bus + 1):
                 qemu_cmd += (" -device virtio-serial-pci,id=virtio_serial_pci"
-                             "%d" % i)
+                             "%d,addr=%s" % (i, get_free_pci_addr(None)))
                 no_virtio_serial_pcis += 1
             if bus is not False:
                 bus = "virtio_serial_pci%d.0" % bus
@@ -1141,12 +1326,26 @@ class VM(virt_vm.BaseVM):
         # Add USB controllers
         for usb_name in params.objects("usbs"):
             usb_params = params.object_params(usb_name)
-            qemu_cmd += add_usb(help_text, usb_name, usb_params.get("usb_type"))
+            qemu_cmd += add_usb(help_text, usb_name, usb_params.get("usb_type"),
+                                usb_params.get("multifunction") == "on",
+                                usb_params.get("masterbus"),
+                                usb_params.get("firstport"),
+                                usb_params.get("freq"))
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
+            if params.get("index_enable") == "yes":
+                drive_index = image_params.get("drive_index")
+                if drive_index:
+                    index = drive_index
+                else:
+                    index_global = get_index(index_global)
+                    index = str(index_global)
+                    index_global += 1
+            else:
+                index = None
             if image_params.get("drive_format") == "ahci" and not have_ahci:
                 qemu_cmd += " -device ahci,id=ahci"
                 have_ahci = True
@@ -1168,6 +1367,9 @@ class VM(virt_vm.BaseVM):
                 for i in range(len(virtio_scsi_pcis), bus + 1):
                     hba = params.get("scsi_hba", "virtio-scsi-pci")
                     qemu_cmd += " -device %s,id=virtio_scsi_pci%d" % (hba, i)
+                    qemu_cmd += ",addr=%s" % get_free_pci_addr(None)
+                    if params.get("scsi_extra_params_hda"):
+                        qemu_cmd += ",%s" % params.get("scsi_extra_params_hda")
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
             base_dir = image_params.get("images_base_dir",
@@ -1177,7 +1379,7 @@ class VM(virt_vm.BaseVM):
             qemu_cmd += add_drive(help_text,
                     storage.get_image_filename(image_params,
                                                base_dir),
-                    image_params.get("drive_index"),
+                    index,
                     image_params.get("drive_format"),
                     image_params.get("drive_cache"),
                     image_params.get("drive_werror"),
@@ -1197,7 +1399,25 @@ class VM(virt_vm.BaseVM):
                     image_params.get("logical_block_size"),
                     image_params.get("image_readonly"),
                     image_params.get("drive_scsiid"),
-                    image_params.get("drive_lun"))
+                    image_params.get("drive_lun"),
+                    image_params.get("image_format"),
+                    image_params.get("image_aio", "native"),
+                    "disk", ide_bus, ide_unit, vdisk, scsi_disk,
+                    image_params.get("drive_pci_addr"),
+                    scsi=image_params.get("virtio-blk-pci_scsi"),
+                    x_data_plane=image_params.get("x-data-plane"),
+                    blk_extra_params=image_params.get("blk_extra_params"))
+
+            # increase the bus and unit no for ide device
+            format = image_params.get("drive_format")
+            if format == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            elif format == "virtio":
+                vdisk += 1
+            elif format.startswith("scsi-"):
+                scsi_disk += 1
 
         # Networking
         redirs = []
@@ -1211,6 +1431,14 @@ class VM(virt_vm.BaseVM):
         for nic in vm.virtnet:
             nic_params = params.object_params(nic.nic_name)
             if nic_params.get('pci_assignable') == "no":
+                script = nic_params.get("nic_script")
+                downscript = nic_params.get("nic_downscript")
+                vhost = nic_params.get("vhost")
+                script_dir = data_dir.get_data_dir()
+                if script:
+                    script = utils_misc.get_path(script_dir, script)
+                if downscript:
+                    downscript = utils_misc.get_path(script_dir, downscript)
                 # setup nic parameters as needed
                 # add_netdev if netdev_id not set
                 nic = vm.add_nic(**dict(nic))
@@ -1221,6 +1449,7 @@ class VM(virt_vm.BaseVM):
                 mac = nic.get('mac')
                 nic_model = nic.get("nic_model")
                 nic_extra = nic.get("nic_extra_params")
+                bootindex = nic_params.get("bootindex")
                 netdev_extra = nic.get("netdev_extra_params")
                 bootp = nic.get("bootp")
                 if nic.get("tftp"):
@@ -1236,11 +1465,13 @@ class VM(virt_vm.BaseVM):
                 ifname = nic.get('ifname')
                 # Handle the '-net nic' part
                 qemu_cmd += add_nic(help_text, vlan, nic_model, mac,
-                                    device_id, netdev_id, nic_extra)
+                                    device_id, netdev_id, nic_extra,
+                                    nic_params.get("nic_pci_addr"),
+                                    bootindex)
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
                                     bootp, redirs, netdev_id, netdev_extra,
-                                    tapfd)
+                                    tapfd, script, downscript, vhost)
             else:
                 pci_id = vm.pa_pci_ids[iov]
                 qemu_cmd += add_pcidevice(help, pci_id, params=nic_params)
@@ -1261,11 +1492,17 @@ class VM(virt_vm.BaseVM):
         if smp > 8 and vcpu_threads <= 1:
             vcpu_threads = 2
 
+        # Some versions of windows don't support more than 2 sockets of cpu,
+        # here is a workaround to make all windows use only 2 sockets.
+        if (vcpu_sockets and vcpu_sockets > 2
+            and params.get("os_type") == 'windows'):
+            vcpu_sockets = 2
+
         if smp == 0 or vcpu_sockets == 0:
             vcpu_cores = vcpu_cores or 1
             vcpu_threads = vcpu_threads or 1
             if smp and vcpu_sockets == 0:
-                vcpu_sockets = smp / (vcpu_cores * vcpu_threads)
+                vcpu_sockets = int(smp / (vcpu_cores * vcpu_threads)) or 1
             else:
                 vcpu_sockets = vcpu_sockets or 1
             if smp == 0:
@@ -1273,9 +1510,9 @@ class VM(virt_vm.BaseVM):
         else:
             if vcpu_cores == 0:
                 vcpu_threads = vcpu_threads or 1
-                vcpu_cores = smp / (vcpu_sockets * vcpu_threads)
+                vcpu_cores = int(smp / (vcpu_sockets * vcpu_threads)) or 1
             else:
-                vcpu_threads = smp / (vcpu_cores * vcpu_sockets)
+                vcpu_threads = int(smp / (vcpu_cores * vcpu_sockets)) or 1
 
         self.cpuinfo.smp = smp
         self.cpuinfo.maxcpus = vcpu_maxcpus or smp
@@ -1319,18 +1556,20 @@ class VM(virt_vm.BaseVM):
             for m in support_machine_type.splitlines()[1:]:
                 m_types.append(m.split()[0])
 
-            if machine_type in m_types:
-                qemu_cmd += add_machine_type(help_text, machine_type)
+            invalid_type = params.get("invalid_machine_type", "no") == "yes"
+            if machine_type in m_types or invalid_type:
+                qemu_cmd += add_machine_type(help, machine_type, invalid_type)
             else:
                 raise error.TestNAError("Unsupported machine type %s." %
                                         (machine_type))
 
         for cdrom in params.objects("cdroms"):
-            cd_format = params.get("cd_format", "")
             cdrom_params = params.object_params(cdrom)
+            cd_format = cdrom_params.get("cd_format", "")
             iso = cdrom_params.get("cdrom")
             bus = None
             port = None
+            bootindex = cdrom_params.get("bootindex")
             if cd_format == "usb1":
                 bus, port = get_free_usb_port(image_name, "uhci")
             if cd_format == "usb2":
@@ -1350,10 +1589,34 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += " -device virtio-scsi-pci,id=virtio_scsi_pci%d" % i
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
-                qemu_cmd += add_cdrom(help_text,
-                              utils_misc.get_path(data_dir.get_data_dir(), iso),
-                                      cdrom_params.get("drive_index"),
-                                      cd_format, bus)
+                if params.get("index_enable") == "yes":
+                    drive_index = cdrom_params.get("drive_index")
+                    if drive_index:
+                        index = drive_index
+                    else:
+                        index_global = get_index(index_global)
+                        index = str(index_global)
+                        index_global += 1
+                else:
+                    index = None
+                if has_option(help_text, "device"):
+                    if not cd_format.startswith("scsi-"):
+                        cd_format = "ide"
+                    qemu_cmd += add_drive(help_text, iso, index, cd_format,
+                                          bootindex=bootindex,
+                                          media="cdrom",
+                                          ide_bus=ide_bus,
+                                          ide_unit=ide_unit,
+                                          bus = bus,
+                                          scsi_disk = scsi_disk)
+                else:
+                    qemu_cmd += add_cdrom(help_text, iso, index)
+                if cd_format == "ide":
+                    if ide_unit == 1:
+                        ide_bus += 1
+                    ide_unit ^= 1
+                elif cd_format.startswith("scsi-"):
+                    scsi_disk += 1
 
         soundhw = params.get("soundcards")
         if soundhw:
@@ -1384,7 +1647,9 @@ class VM(virt_vm.BaseVM):
                     qemu_cmd += add_drive(help_text, floppy,
                                           fmt="floppy",
                                           index=index,
-                                          readonly=floppy_readonly)
+                                          readonly=floppy_readonly,
+                                          imgfmt=params.get("floppy_format",
+                                                            "raw"))
                 else:
                     qemu_cmd += add_floppy(help_text, floppy, index)
 
@@ -1442,26 +1707,30 @@ class VM(virt_vm.BaseVM):
         elif params.get("display") == "nographic":
             qemu_cmd += add_nographic(help_text)
         elif params.get("display") == "spice":
-            spice_keys = (
-                "spice_port", "spice_password", "spice_addr", "spice_ssl",
-                "spice_tls_port", "spice_tls_ciphers", "spice_gen_x509",
-                "spice_x509_dir", "spice_x509_prefix", "spice_x509_key_file",
-                "spice_x509_cacert_file", "spice_x509_key_password",
-                "spice_x509_secure", "spice_x509_cacert_subj",
-                "spice_x509_server_subj", "spice_secure_channels",
-                "spice_image_compression", "spice_jpeg_wan_compression",
-                "spice_zlib_glz_wan_compression", "spice_streaming_video",
-                "spice_agent_mouse", "spice_playback_compression",
-                "spice_ipv4", "spice_ipv6", "spice_x509_cert_file",
-                "disable_copy_paste", "spice_seamless_migration"
-            )
+            if params.get("rhel5_spice"):
+                spice_params = params.get("spice_params")
+                qemu_cmd += add_spice_rhel5(help_text, spice_params)
+            else:
+                spice_keys = (
+                    "spice_port", "spice_password", "spice_addr", "spice_ssl",
+                    "spice_tls_port", "spice_tls_ciphers", "spice_gen_x509",
+                    "spice_x509_dir", "spice_x509_prefix", "spice_x509_key_file",
+                    "spice_x509_cacert_file", "spice_x509_key_password",
+                    "spice_x509_secure", "spice_x509_cacert_subj",
+                    "spice_x509_server_subj", "spice_secure_channels",
+                    "spice_image_compression", "spice_jpeg_wan_compression",
+                    "spice_zlib_glz_wan_compression", "spice_streaming_video",
+                    "spice_agent_mouse", "spice_playback_compression",
+                    "spice_ipv4", "spice_ipv6", "spice_x509_cert_file",
+                    "disable_copy_paste", "spice_seamless_migration"
+                )
 
-            for skey in spice_keys:
-                value = params.get(skey, None)
-                if value:
-                    self.spice_options[skey] = value
+                for skey in spice_keys:
+                    value = params.get(skey, None)
+                    if value:
+                        self.spice_options[skey] = value
 
-            qemu_cmd += add_spice()
+                qemu_cmd += add_spice()
 
         vga = params.get("vga", None)
         if vga:
@@ -1562,6 +1831,10 @@ class VM(virt_vm.BaseVM):
         if self.no_shutdown:
             qemu_cmd += " -no-shutdown "
 
+        user_runas = params.get("user_runas")
+        if has_option(help_text, "runas") and user_runas:
+            qemu_cmd += " -runas %s " % user_runas
+
         if params.get("enable_sga") == "yes":
             qemu_cmd += add_sga(help_text)
 
@@ -1571,6 +1844,11 @@ class VM(virt_vm.BaseVM):
                                      params.get("watchdog_action", "reset"))
 
         return qemu_cmd
+
+        option_roms = params.get("option_roms")
+        if option_roms:
+            for opt_rom in option_roms.split():
+                qemu_cmd += add_option_rom(help, opt_rom)
 
 
     def _nic_tap_add_helper(self, nic):
@@ -1635,6 +1913,7 @@ class VM(virt_vm.BaseVM):
         @raise TAPCreationError: If fail to create tap fd
         @raise BRAddIfError: If fail to add a tap to a bridge
         @raise TAPBringUpError: If fail to bring up a tap
+        @raise PrivateBridgeError: If fail to bring the private bridge
         """
         error.context("creating '%s'" % self.name)
         self.destroy(free_mac_addresses=False)
@@ -1723,6 +2002,9 @@ class VM(virt_vm.BaseVM):
                 else:
                     # fill in key values, validate nettype
                     # note: make_create_command() calls vm.add_nic (i.e. on a copy)
+                    if nic_params.get('netdst') == 'private':
+                        nic.netdst = (test_setup.
+                                      PrivateBridgeConfig(nic_params).brname)
                     nic = self.add_nic(**dict(nic)) # implied add_netdev
                     if mac_source:
                         # Will raise exception if source doesn't
@@ -1827,6 +2109,8 @@ class VM(virt_vm.BaseVM):
             self.process = aexpect.run_bg(qemu_command, None,
                                           logging.info, "[qemu output] ",
                                           auto_close=False)
+            self.start_time = time.time()
+            
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
@@ -2181,6 +2465,9 @@ class VM(virt_vm.BaseVM):
                 return m
         if self.monitors and not self.params.get("main_monitor"):
             return self.monitors[0]
+        return None
+
+
 
 
     def get_peer(self, netid):
@@ -2255,14 +2542,18 @@ class VM(virt_vm.BaseVM):
         return self.vnc_port
 
 
-    def get_vcpu_pids(self):
+    def get_vcpu_pids(self, params):
         """
         Return the list of vcpu PIDs
 
         @return: the list of vcpu PIDs
         """
-        return [int(_) for _ in re.findall(r'thread_id=(\d+)',
-                                           self.monitor.info("cpus"))]
+        vcpu_thread_pattern = params.get("vcpu_thread_pattern",
+                                         "thread_id=(\d+)")
+        return [int(_) for _ in re.findall(vcpu_thread_pattern,
+                                           str(self.monitor.info("cpus")))]
+
+
 
 
     def get_shared_meminfo(self):
@@ -2397,7 +2688,7 @@ class VM(virt_vm.BaseVM):
             error.context("Registering tap id %s for FD %d" %
                           (nic.tapfd_id, int(nic.tapfd)), logging.debug)
             self.monitor.getfd(int(nic.tapfd), nic.tapfd_id)
-            attach_cmd += " tap,id=%s,fd=%s" % (nic.device_id, nic.tapfd_id)
+            attach_cmd += " type=tap,id=%s,fd=%s" % (nic.device_id, nic.tapfd_id)
             error.context("Raising interface for " + msg_sfx + attach_cmd,
                           logging.debug)
             utils_net.bring_up_ifname(nic.ifname)
@@ -2416,7 +2707,7 @@ class VM(virt_vm.BaseVM):
         if nic.has_key('netdev_extra_params'):
             attach_cmd += nic.netdev_extra_params
         error.context("Hotplugging " + msg_sfx + attach_cmd, logging.debug)
-        self.monitor.cmd(attach_cmd)
+        self.monitor.send_args_cmd(attach_cmd)
         network_info = self.monitor.info("network")
         if nic.device_id not in network_info:
             # Don't leave resources dangling
@@ -2448,7 +2739,7 @@ class VM(virt_vm.BaseVM):
             device_add_cmd += ",romfile=%s" % nic.romfile
         error.context("Activating nic on VM %s with monitor command %s" % (
                     self.name, device_add_cmd))
-        self.monitor.cmd(device_add_cmd)
+        self.monitor.send_args_cmd(device_add_cmd)
         error.context("Verifying nic %s shows in qtree" % nic.nic_name)
         qtree = self.monitor.info("qtree")
         if not nic.nic_name in qtree:
@@ -2469,8 +2760,8 @@ class VM(virt_vm.BaseVM):
         nic = self.virtnet[nic_index_or_name]
         error.context("Removing nic %s from VM %s" % (nic_index_or_name,
                                         self.name))
-        nic_del_cmd = "device_del %s" % (nic.nic_name)
-        self.monitor.cmd(nic_del_cmd)
+        nic_del_cmd = "device_del id=%s" % (nic.nic_name)
+        self.monitor.send_args_cmd(nic_del_cmd)
         if wait:
             logging.info("waiting for the guest to finish the unplug")
             if not utils_misc.wait_for(lambda: nic.nic_name not in
@@ -2492,7 +2783,7 @@ class VM(virt_vm.BaseVM):
         # FIXME: Need to down interface & remove from bridge????
         error.context("removing netdev id %s from vm %s" %
                       (netdev_id, self.name))
-        self.monitor.cmd("netdev_del %s" % netdev_id)
+        self.monitor.send_args_cmd("netdev_del id=%s" % netdev_id)
         network_info = self.monitor.info("network")
         if netdev_id in network_info:
             raise virt_vm.VMDelNetDevError("Fail to remove netdev %s" %
@@ -2634,7 +2925,8 @@ class VM(virt_vm.BaseVM):
             os.close(fd_src)
 
         clone = self.clone()
-        if local:
+        if (local and not (migration_exec_cmd_src
+                           and "gzip" in migration_exec_cmd_src)):
             error.context("creating destination VM")
             if stable_check:
                 # Pause the dest vm after creation
@@ -2648,7 +2940,8 @@ class VM(virt_vm.BaseVM):
             error.context()
 
         try:
-            if self.params["display"] == "spice":
+            if (self.params["display"] == "spice" and
+                not (protocol == "exec" and migration_exec_cmd == "gzip")):
                 host_ip = utils_net.get_host_ip_address(self.params)
                 dest_port = clone.spice_options['spice_port']
                 if self.params["spice_ssl"] == "yes":
@@ -2707,7 +3000,7 @@ class VM(virt_vm.BaseVM):
 
             if protocol == "tcp":
                 if local:
-                    uri = "tcp:0:%d" % clone.migration_port
+                    uri = "tcp:localhost:%d" % clone.migration_port
                 else:
                     uri = "tcp:%s:%d" % (dest_host, remote_port)
             elif protocol == "unix":
@@ -2730,6 +3023,17 @@ class VM(virt_vm.BaseVM):
             self.monitor.migrate(uri)
             if not_wait_for_migration:
                 return clone
+
+            if (local and (migration_exec_cmd_src
+                           and "gzip" in migration_exec_cmd_src)):
+                error.context("creating destination VM")
+                if stable_check:
+                    # Pause the dest vm after creation
+                    extra_params = clone.params.get("extra_params", "") + " -S"
+                    clone.params["extra_params"] = extra_params
+                clone.create(migration_mode=protocol, mac_source=self,
+                             migration_fd=fd_dst,
+                             migration_exec_cmd=migration_exec_cmd_dst)
 
             if cancel_delay:
                 time.sleep(cancel_delay)
@@ -2844,6 +3148,9 @@ class VM(virt_vm.BaseVM):
         else:
             raise virt_vm.VMRebootError("Unknown reboot method: %s" % method)
 
+        if self.params.get("mac_changeable") == "yes":
+            utils_net.update_mac_ip_address(self, self.params)
+
         error.context("logging in after reboot", logging.info)
         return self.wait_for_login(nic_index, timeout=timeout)
 
@@ -2881,7 +3188,7 @@ class VM(virt_vm.BaseVM):
         """
         self.verify_status('paused') # Throws exception if not
         # Set high speed 1TB/S
-        self.monitor.migrate_set_speed(2<<39)
+        self.monitor.migrate_set_speed(str(2<<39))
         self.monitor.migrate_set_downtime(self.MIGRATE_TIMEOUT)
         logging.debug("Saving VM %s to %s" % (self.name, path))
         # Can only check status if background migration
@@ -2892,7 +3199,7 @@ class VM(virt_vm.BaseVM):
             self.MIGRATE_TIMEOUT, 2, 2,
             "Waiting for save to %s to complete" % path)
         # Restore the speed and downtime to default values
-        self.monitor.migrate_set_speed(32<<20)
+        self.monitor.migrate_set_speed(str(32<<20))
         self.monitor.migrate_set_downtime(0.03)
         # Base class defines VM must be off after a save
         self.monitor.cmd("system_reset")
