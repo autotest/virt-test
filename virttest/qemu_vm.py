@@ -2434,7 +2434,7 @@ class VM(virt_vm.BaseVM):
             error.context("Registering tap id %s for FD %d" %
                           (nic.tapfd_id, int(nic.tapfd)), logging.debug)
             self.monitor.getfd(int(nic.tapfd), nic.tapfd_id)
-            attach_cmd += " tap,id=%s,fd=%s" % (nic.device_id, nic.tapfd_id)
+            attach_cmd += " type=tap,id=%s,fd=%s" % (nic.device_id, nic.tapfd_id)
             error.context("Raising interface for " + msg_sfx + attach_cmd,
                           logging.debug)
             utils_net.bring_up_ifname(nic.ifname)
@@ -2453,7 +2453,7 @@ class VM(virt_vm.BaseVM):
         if nic.has_key('netdev_extra_params'):
             attach_cmd += nic.netdev_extra_params
         error.context("Hotplugging " + msg_sfx + attach_cmd, logging.debug)
-        self.monitor.cmd(attach_cmd)
+        self.monitor.send_args_cmd(attach_cmd)
         network_info = self.monitor.info("network")
         if nic.device_id not in network_info:
             # Don't leave resources dangling
@@ -2485,7 +2485,7 @@ class VM(virt_vm.BaseVM):
             device_add_cmd += ",romfile=%s" % nic.romfile
         error.context("Activating nic on VM %s with monitor command %s" % (
                     self.name, device_add_cmd))
-        self.monitor.cmd(device_add_cmd)
+        self.monitor.send_args_cmd(device_add_cmd)
         error.context("Verifying nic %s shows in qtree" % nic.nic_name)
         qtree = self.monitor.info("qtree")
         if not nic.nic_name in qtree:
@@ -2506,8 +2506,8 @@ class VM(virt_vm.BaseVM):
         nic = self.virtnet[nic_index_or_name]
         error.context("Removing nic %s from VM %s" % (nic_index_or_name,
                                         self.name))
-        nic_del_cmd = "device_del %s" % (nic.nic_name)
-        self.monitor.cmd(nic_del_cmd)
+        nic_del_cmd = "device_del id=%s" % (nic.nic_name)
+        self.monitor.send_args_cmd(nic_del_cmd)
         if wait:
             logging.info("waiting for the guest to finish the unplug")
             if not utils_misc.wait_for(lambda: nic.nic_name not in
@@ -2529,7 +2529,7 @@ class VM(virt_vm.BaseVM):
         # FIXME: Need to down interface & remove from bridge????
         error.context("removing netdev id %s from vm %s" %
                       (netdev_id, self.name))
-        self.monitor.cmd("netdev_del %s" % netdev_id)
+        self.monitor.send_args_cmd("netdev_del id=%s" % netdev_id)
         network_info = self.monitor.info("network")
         if netdev_id in network_info:
             raise virt_vm.VMDelNetDevError("Fail to remove netdev %s" %
