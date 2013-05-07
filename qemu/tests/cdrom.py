@@ -19,19 +19,20 @@ def run_cdrom(test, params, env):
     """
     KVM cdrom test:
 
-    1) Boot up a VM with one iso.
+    1) Boot up a VM, with one iso image (optional).
     2) Check if VM identifies correctly the iso file.
-    3) * If cdrom_test_autounlock is set, verifies that device is unlocked
-       <300s after boot
-    4) Eject cdrom using monitor and change with another iso several times.
-    5) * If cdrom_test_tray_status = yes, tests tray reporting.
+    3) Verifies that device is unlocked <300s after boot (optional, if
+       cdrom_test_autounlock is set).
+    4) Eject cdrom using monitor.
+    5) Change cdrom image with another iso several times.
+    5) Test tray reporting function (optional, if cdrom_test_tray_status is set)
     6) Try to format cdrom and check the return string.
     7) Mount cdrom device.
-    8) Copy file from cdrom and compare files using diff.
-    9) Umount and mount several times.
-    10) Check if the cdrom lock works well when cdrom file is not inserted.
-        This case required the a command line without cdrom file and will be
-        separated to a different cfg item.
+    8) Copy file from cdrom and compare files.
+    9) Umount and mount cdrom in guest for several times.
+    10) Check if the cdrom lock works well when iso file is not inserted.
+        Note: This case requires a qemu cli without setting file property
+        for -drive option, and will be separated to a different cfg item.
 
     @param test: kvm test object
     @param params: Dictionary with the test parameters
@@ -43,6 +44,13 @@ def run_cdrom(test, params, env):
                                         after boot (<300s after VM is booted)
     @param cfg: cdrom_test_tray_status - Test tray reporting (eject and insert
                                          CD couple of times in guest).
+    @param cfg: cdrom_test_locked -     Test whether cdrom tray lock function
+                                        work well in guest.
+    @param cfg: cdrom_test_eject -      Test whether cdrom works well after
+                                        several times of eject action.
+    @param cfg: cdrom_test_file_operation - Test file operation for cdrom,
+                                            such as mount/umount, reading files
+                                            on cdrom.
 
     @warning: Check dmesg for block device failures
     """
@@ -64,7 +72,7 @@ def run_cdrom(test, params, env):
 
         @return: path to new iso image file.
         """
-        error.context("creating test iso image '%s'" % name, logging.info)
+        error.context("Creating test iso image '%s'" % name, logging.info)
         cdrom_cd1 = params.get("cdrom_cd1")
         if not os.path.isabs(cdrom_cd1):
             cdrom_cd1 = os.path.join(data_dir.get_data_dir(), cdrom_cd1)
@@ -83,7 +91,7 @@ def run_cdrom(test, params, env):
 
     def cleanup_cdrom(path):
         """ Removes created iso image """
-        error.context("cleaning up temp iso image", logging.info)
+        error.context("Cleaning up temp iso image", logging.info)
         os.remove("%s" % path)
 
 
@@ -504,7 +512,7 @@ def run_cdrom(test, params, env):
             if params.get("cdrom_test_file_operation") == "yes":
                 file_operation_test(self.session, guest_cdrom_device)
 
-            error.context("Cleanup", logging.info)
+            error.context("Cleanup")
             # Return the self.iso_image_orig
             cdfile = get_cdrom_file(vm, qemu_cdrom_device)
             if cdfile != self.iso_image_orig:
