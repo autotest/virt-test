@@ -108,25 +108,47 @@ def run_cdrom(test, params, env):
         return cdfile
 
 
-    def check_cdrom_tray(vm, cdrom):
+    def check_cdrom_tray(vm, cdrom, mode='monitor', dev_name="/dev/sr0"):
         """
         Checks whether the tray is opend
 
         @param vm: VM object
         @param cdrom: cdrom object
+        @param mode: tray status checking method.
+        @param dev_name: cdrom device name in guest.
         """
         blocks = vm.monitor.info("block")
-        if isinstance(blocks, str):
-            for block in blocks.splitlines():
-                if cdrom in block:
-                    if "tray-open=1" in block:
-                        return True
-                    elif "tray-open=0" in block:
-                        return False
-        else:
-            for block in blocks:
-                if block['device'] == cdrom and 'tray_open' in block.keys():
-                    return block['tray_open']
+        checked = False
+        if mode == 'monitor' or mode == 'mixed':
+            blocks = vm.monitor.info("block")
+            if isinstance(blocks, str):
+                for block in blocks.splitlines():
+                    if cdrom in block:
+                        if "tray-open=1" in block:
+                            is_open = True
+                            checked = True
+                        elif "tray-open=0" in block:
+                            is_open = False
+                            checked = True
+            else:
+                for block in blocks:
+                    if (block['device'] == cdrom
+                        and 'tray_open' in block.keys()):
+                        is_open = block['tray_open']
+                        checked = True
+
+        if mode == 'session' or (mode == 'mixed' and not checked):
+            session = vm.wait_for_login(timeout=login_timeout)
+            tray_cmd = "python /tmp/tray_open.py %s" % dev_name
+            o = session.cmd_output(tray_cmd)
+            if "cdrom is open" in o:
+                is_open = True
+                checked = True
+            else:
+                is_open = False
+                checked = True
+        if checked:
+            return is_open
         return None
 
 
@@ -292,6 +314,11 @@ def run_cdrom(test, params, env):
                                          "cdrom %s (%s)" % (cdrom, i))
                 time.sleep(workaround_eject_time)
 
+            if params.get("tray_check_src"):
+                tray_check_src = utils_misc.get_path(test.virtdir,
+                                     "deps/%s" % params.get("tray_check_src"))
+                vm.copy_files_to(tray_check_src, "/tmp")
+
             error.context('Eject the cdrom in guest %s times' % max_times)
             if params.get('cdrom_test_tray_status') != 'yes':
                 pass
@@ -310,6 +337,33 @@ def run_cdrom(test, params, env):
                         raise error.TestFail("Monitor reports opened"
                                              " tray (%s)" % (i))
                     time.sleep(workaround_eject_time)
+
+            error.context("Check cdrom tray status after cdrom is locked")
+            if params.get('cdrom_test_locked') != 'yes':
+                pass
+            elif check_cdrom_tray(device, mode='mixed',
+                                  dev_name=cdrom_dev) is None:
+                logging.error("Tray reporting not supported by qemu!")
+                logging.error("cdrom_test_locked skipped...")
+            else:
+                eject_failed = False
+                eject_failed_msg = "Tray should be closed even in locked status"
+                self.session.cmd('eject %s' % cdrom_dev)
+                if not check_cdrom_tray(device, mode='mixed',
+                                        dev_name=cdrom_dev):
+                    raise error.TestFail("Tray should not in closed status")
+                self.session.cmd('eject -i on %s' % cdrom_dev)
+                try:
+                    self.session.cmd('eject -t %s' % cdrom_dev)
+                except aexpect.ShellCmdError, e:
+                    eject_failed = True
+                    eject_failed_msg += ", eject command failed: %s" % str(e)
+                if (eject_failed
+                    or check_cdrom_tray(device, mode='mixed',
+                                        dev_name=cdrom_dev)):
+                    raise error.TestFail(eject_failed_msg)
+                self.session.cmd('eject -i off %s' % cdrom_dev)
+                self.session.cmd('eject -t %s' % cdrom_dev)
 
             error.context("Check whether the cdrom is read-only")
             try:
