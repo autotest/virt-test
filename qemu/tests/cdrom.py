@@ -373,6 +373,13 @@ def run_cdrom(test, params, env):
             except aexpect.ShellError:
                 pass
 
+            sub_test = params.get("sub_test")
+            if sub_test:
+                error.context("Run sub test '%s' before doing file"
+                              " operation" % sub_test, logging.info)
+                params["cdrom_cd1"] = os.path.basename(cdrom)
+                utils_test.run_virt_sub_test(test, params, env, sub_test)
+
             error.context("Mounting the cdrom under /mnt")
             self.session.cmd("mount %s %s" % (cdrom_dev, "/mnt"), timeout=30)
 
