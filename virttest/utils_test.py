@@ -97,6 +97,18 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             time.sleep(step)
+        if not session and vm.get_params().get("try_serial_login") == "yes":
+            mode = "serial"
+            logging.info("Remote login failed, trying to login '%s' with "
+                         "serial, timeout %ds", vm.name, timeout)
+            time.sleep(start)
+            while time.time() < end_time:
+                try:
+                    session = vm.serial_login()
+                    break
+                except remote.LoginError, e:
+                    logging.debug(e)
+                time.sleep(step)
     if not session:
         raise error.TestFail("Could not log into guest %s using %s connection" %
                              (vm.name, mode))
@@ -220,11 +232,16 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
             case of multi-host migration.
     """
     def mig_finished():
-        o = vm.monitor.info("migrate")
-        if isinstance(o, str):
-            return "status: active" not in o
-        else:
-            return o.get("status") != "active"
+        try:
+            o = vm.monitor.info("migrate")
+            logging.debug("%s", o)
+            if isinstance(o, str):
+                return "status: active" not in o
+            else:
+                return o.get("status") != "active"
+        except Exception:
+            pass
+
 
     def mig_succeeded():
         o = vm.monitor.info("migrate")
@@ -270,7 +287,7 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
         try:
             if mig_protocol == "tcp":
                 if dest_host == 'localhost':
-                    uri = "tcp:0:%d" % dest_vm.migration_port
+                    uri = "tcp:localhost:%d" % dest_vm.migration_port
                 else:
                     uri = 'tcp:%s:%d' % (dest_host, mig_port)
             elif mig_protocol == "unix":
@@ -332,7 +349,8 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
     elif mig_failed():
         raise error.TestFail("Migration failed")
     else:
-        raise error.TestFail("Migration ended with unknown status")
+        status = vm.monitor.info("migrate")
+        raise error.TestFail("Migration end with stauts: %s" % status)
 
     if dest_host == 'localhost':
         if dest_vm.monitor.verify_status("paused"):
@@ -1326,6 +1344,62 @@ def get_time(session, time_command, time_filter_re, time_format):
     return (host_time, guest_time)
 
 
+def dump_command_output(session, command, filename, timeout=30.0,
+                        internal_timeout=1.0, print_func=None):
+    """
+    @param session: a saved communication between host and guest.
+    @param command: will running in guest side.
+    @param filename: redirect command output to the specify file
+    @param timeout: the duration (in seconds) to wait until a match is found.
+    @param internal_timeout: the timeout to pass to read_nonblocking.
+    @param print_func: a function to be used to print the data being read.
+    @return: Command output(string).
+    """
+
+    (status, output) = session.cmd_status_output(command, timeout,
+                                                 internal_timeout, print_func)
+    if status != 0:
+        raise error.TestError("Failed to run command %s in guest." % command)
+    try:
+        f = open(filename, "w")
+    except IOError:
+        raise error.TestError("Failed to open file opject: %s" % file)
+    f.write(output)
+    f.close()
+
+
+def fix_atest_cmd(atest_basedir, cmd, ip):
+    """
+    fixes the command "autotest/cli/atest" for the external server tests.
+
+    e.g.
+    1. adding -w autotest server argument;
+    2. adding autotest/cli/atest prefix/basedir;
+    and etc..
+
+    @param atest_basedir: base dir of autotest/cli/atest
+    @param cmd: command to fix.
+    @param ip: ip of the autotest server to add to the command.
+    """
+    cmd = os.path.join(atest_basedir, cmd)
+    return ''.join([cmd, " -w ", ip])
+
+
+def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
+    """
+    @param ip: IP address of the server.
+    @param port: the port for remote session.
+    @param usrname: user name for remote login.
+    @param passwd: password.
+    @param prompt: shell/session prompt for the connection.
+    """
+    session = remote.remote_login('ssh', ip, port, usrname, passwd, prompt)
+    if not session:
+        raise error.TestError("Failed to login to the autotest server.")
+
+    return session
+
+
 def get_memory_info(lvms):
     """
     Get memory information from host and guests in format:
@@ -1380,6 +1454,7 @@ def domstat_cgroup_cpuacct_percpu(domain, qemu_path="/libvirt/qemu/"):
                               percpu_act_file)
 
 
+@error.context_aware
 def run_file_transfer(test, params, env):
     """
     Transfer a file back and forth between host and guest.
@@ -1398,6 +1473,7 @@ def run_file_transfer(test, params, env):
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
 
+    error.context("Login to guest", logging.info)
     session = vm.wait_for_login(timeout=login_timeout)
 
     dir_name = test.tmpdir
@@ -1418,31 +1494,33 @@ def run_file_transfer(test, params, env):
                   utils_misc.generate_random_string(8))
 
     try:
-        logging.info("Creating %dMB file on host", filesize)
+        error.context("Creating %dMB file on host" % filesize, logging.info)
         utils.run(cmd)
 
-        if transfer_type == "remote":
-            logging.info("Transfering file host -> guest, timeout: %ss",
-                         transfer_timeout)
-            t_begin = time.time()
-            vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
-            t_end = time.time()
-            throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer host -> guest succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-
-            logging.info("Transfering file guest -> host, timeout: %ss",
-                         transfer_timeout)
-            t_begin = time.time()
-            vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
-            t_end = time.time()
-            throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer guest -> host succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
-        else:
+        if transfer_type != "remote":
             raise error.TestError("Unknown test file transfer mode %s" %
                                   transfer_type)
 
+        error.context("Transfering file host -> guest,"
+                      " timeout: %ss" % transfer_timeout, logging.info)
+        t_begin = time.time()
+        vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
+        t_end = time.time()
+        throughput = filesize / (t_end - t_begin)
+        logging.info("File transfer host -> guest succeed, "
+                     "estimated throughput: %.2fMB/s", throughput)
+
+        error.context("Transfering file guest -> host,"
+                      " timeout: %ss" % transfer_timeout, logging.info)
+        t_begin = time.time()
+        vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
+        t_end = time.time()
+        throughput = filesize / (t_end - t_begin)
+        logging.info("File transfer guest -> host succeed, "
+                     "estimated throughput: %.2fMB/s", throughput)
+
+        error.context("Compare md5sum between original file and"
+                      " transfered file", logging.info)
         if (utils.hash_file(host_path, method="md5") !=
             utils.hash_file(host_path2, method="md5")):
             raise error.TestFail("File changed after transfer host -> guest "
@@ -1450,7 +1528,11 @@ def run_file_transfer(test, params, env):
 
     finally:
         logging.info('Cleaning temp file on guest')
-        session.cmd("%s %s" % (clean_cmd, guest_path))
+        try:
+            session.cmd("%s %s" % (clean_cmd, guest_path))
+        except Exception, detail:
+            logging.warn("Could not remove temp files in guest: '%s'", detail)
+
         logging.info('Cleaning temp files on host')
         try:
             os.remove(host_path)
@@ -1540,8 +1622,11 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         """
         logging.debug("Trying to copy autotest results from guest")
         guest_results_dir = os.path.join(outputdir, "guest_autotest_results")
-        if not os.path.exists(guest_results_dir):
+        try:
             os.mkdir(guest_results_dir)
+        except OSError, detail:
+            if detail.errno != errno.EEXIST:
+                raise
         vm.copy_files_from("%s/results/default/*" % base_results_dir,
                            guest_results_dir)
 
@@ -1890,6 +1975,33 @@ def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     run_func(test, params, env)
 
 
+def get_readable_cdroms(params, session):
+    """
+    Get the cdrom list which contain media in guest.
+
+    @param params: Dictionary with the test parameters.
+    @param session: A shell session on the VM provided.
+    """
+    get_cdrom_cmd = params.get("cdrom_get_cdrom_cmd")
+    check_cdrom_patttern = params.get("cdrom_check_cdrom_pattern")
+    o = session.get_command_output(get_cdrom_cmd)
+    cdrom_list = re.findall(check_cdrom_patttern, o)
+    logging.debug("Found cdroms on guest: %s" % cdrom_list)
+
+    readable_cdroms = []
+    test_cmd = params.get("cdrom_test_cmd")
+    for d in cdrom_list:
+        s, o = session.cmd_status_output(test_cmd % d)
+        if s == 0:
+            readable_cdroms.append(d)
+            break
+
+    if readable_cdroms:
+        return readable_cdroms
+
+    raise error.TestFail("Could not find a cdrom device contain media.")
+
+
 def pin_vm_threads(vm, node):
     """
     Pin VM threads to single cpu of a numa node
@@ -2077,6 +2189,89 @@ def find_substring(string, pattern1, pattern2=None):
                      pattern)
         return None
     return ret[0]
+
+
+def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
+                           storage_path="/tmp/prewhql.iso",
+                           re_hw_id="(PCI.{14,50})\r\n", run_cmd=True):
+    """
+    Get windows driver's hardware id from inf files.
+
+    @param dirver: Configurable driver name.
+    @param mount_point: Mount point for the driver storage
+    @param storage_path: The path of the virtio driver storage
+    @param re_hw_id: the pattern for getting hardware id from inf files
+    @param run_cmd:  Use hardware id in windows cmd command or not
+
+    Return: Windows driver's hardware id
+    """
+    if not os.path.exists(mount_point):
+        os.mkdir(mount_point)
+
+    if not os.path.ismount(mount_point):
+        utils.system("mount %s %s -o loop" % (storage_path, mount_point),
+                     timeout=60)
+    driver_link = os.path.join(mount_point, driver_path)
+    try:
+        txt_file = open(driver_link, "r")
+        txt = txt_file.read()
+        hwid = re.findall(re_hw_id, txt)[-1].rstrip()
+        if run_cmd:
+            hwid = '^&'.join(hwid.split('&'))
+        txt_file.close()
+        utils.system("umount %s" % mount_point)
+        return hwid
+    except Exception, e:
+        logging.error("Fail to get hardware id with exception: %s" % e)
+        utils.system("umount %s" % mount_point)
+        return ""
+
+
+class BackgroundTest(object):
+    """
+    This class would run a test in background through a dedicated thread.
+    """
+
+    def __init__(self, func, params, kwargs={}):
+        """
+        Initialize the object and set a few attributes.
+        """
+        self.thread = threading.Thread(target=self.launch,
+                                       args=(func, params, kwargs))
+        self.exception = None
+
+
+    def launch(self, func, params, kwargs):
+        """
+        Catch and record the exception.
+        """
+        try:
+            func(*params, **kwargs)
+        except Exception, e:
+            self.exception = e
+
+
+    def start(self):
+        """
+        Run func(params) in a dedicated thread
+        """
+        self.thread.start()
+
+
+    def join(self):
+        """
+        Wait for the join of thread and raise its exception if any.
+        """
+        self.thread.join()
+        if self.exception:
+            raise self.exception
+
+
+    def is_alive(self):
+        """
+        Check whether the test is still alive.
+        """
+        return self.thread.isAlive()
 
 
 class GuestSuspend(object):
