@@ -974,7 +974,7 @@ class BaseVM(object):
                 if restart_network:
                     try:
                         utils_net.restart_guest_network(session)
-                    except:
+                    except Exception:
                         pass
                 return session
             except remote.LoginError, e:
@@ -1025,19 +1025,26 @@ class BaseVM(object):
             session.close()
 
 
-    def get_memory_size(self, cmd=None):
+    def get_memory_size(self, cmd=None, timeout=60, re_str=None):
         """
         Get bootup memory size of the VM.
 
-        @param check_cmd: Command used to check memory. If not provided,
-                self.params.get("mem_chk_cmd") will be used.
+        @param cmd: Command used to check memory. If not provided,
+                    self.params.get("mem_chk_cmd") will be used.
+        @param timeout: timeout for cmd
+        @param re_str: pattern to get memory size from the command
+                       output. If not provided,
+                       self.params.get("mem_chk_re_str") will be
+                       used.
         """
         session = self.login()
+        if re_str is None:
+            re_str = self.params.get("mem_chk_re_str", "([0-9]+)")
         try:
             if not cmd:
                 cmd = self.params.get("mem_chk_cmd")
-            mem_str = session.cmd(cmd)
-            mem = re.findall("([0-9]+)", mem_str)
+            mem_str = session.cmd_output(cmd, timeout=timeout)
+            mem = re.findall(re_str, mem_str)
             mem_size = 0
             for m in mem:
                 mem_size += int(m)
