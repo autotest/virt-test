@@ -29,6 +29,9 @@ def run_cdrom(test, params, env):
     7) Mount cdrom device.
     8) Copy file from cdrom and compare files using diff.
     9) Umount and mount several times.
+    10) Check if the cdrom lock works well when cdrom file is not inserted.
+        This case required the a command line without cdrom file and will be
+        separated to a different cfg item.
 
     @param test: kvm test object
     @param params: Dictionary with the test parameters
@@ -232,6 +235,21 @@ def run_cdrom(test, params, env):
         return pid.group(1)
 
 
+    def get_cdrom_device(vm):
+        """Get cdrom device when cdrom is not insert."""
+        device = None
+        blocks = vm.monitor.info("block")
+        if isinstance(blocks, str):
+            for block in blocks.strip().split('\n'):
+                if 'not inserted' in block:
+                    device = block.split(':')[0]
+        else:
+            for block in blocks:
+                if 'inserted' not in block.keys():
+                    device = block['device']
+        return device
+
+
     class MiniSubtest(object):
         def __new__(cls, *args, **kargs):
             self = super(MiniSubtest, cls).__new__(cls)
@@ -258,17 +276,34 @@ def run_cdrom(test, params, env):
 
     class test_singlehost(MiniSubtest):
         def test(self):
-            self.cdrom_orig = create_cdrom(params, "orig")
-            self.cdrom_new = create_cdrom(params, "new")
-            self.cdrom_dir = os.path.dirname(self.cdrom_new)
+            if (not params.get("not_insert_at_start")
+                or params.get("not_insert_at_start") == "no"):
+                self.cdrom_orig = create_cdrom(params, "orig")
+                self.cdrom_new = create_cdrom(params, "new")
+                self.cdrom_dir = os.path.dirname(self.cdrom_new)
             vm = env.get_vm(params["main_vm"])
             vm.create()
 
             self.session = vm.wait_for_login(timeout=login_timeout)
+            if self.cdrom_orig and not os.path.isabs(self.cdrom_orig):
+                 self.cdrom_orig = os.path.join(data_dir.get_data_dir(),
+                                                self.cdrom_orig)
             cdrom = self.cdrom_orig
             output = self.session.get_command_output("ls /dev/cdrom*")
             cdrom_dev_list = re.findall("/dev/cdrom-\w+|/dev/cdrom\d*", output)
             logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
+            if params.get('not_insert_at_start') == "yes":
+                error.context("Locked without media present")
+                device = get_cdrom_device()
+                cdrom_dev = cdrom_dev_list[0]
+                if vm.check_block_locked(device):
+                    raise error.TestFail("Device should not be locked just after "
+                                         "booting up")
+                self.session.cmd("eject -i on %s" % cdrom_dev)
+                if not vm.check_block_locked(device):
+                    raise error.TestFail("Device is not locked as expect.")
+                return
+
             error.context("Detecting the existence of a cdrom (guest OS side)")
             cdrom_dev = ""
             test_cmd = "dd if=%s of=/dev/null bs=1 count=1"
