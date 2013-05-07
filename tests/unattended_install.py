@@ -399,12 +399,9 @@ class UnattendedInstallConfig(object):
         utils.run("cp %s %s" % (self.unattended_file, dest_fname),
                   verbose=DEBUG)
 
-        if self.params.get("vm_type") == "libvirt":
-            utils.run("find . | fakeroot cpio -H newc --create > ../%s.img" %
-                      base_initrd.rstrip(".gz"), verbose=DEBUG)
-        else:
-            utils.run("find . | fakeroot cpio -H newc --create | gzip -9 > ../%s" %
-                      base_initrd, verbose=DEBUG)
+        # For libvirt initrd.gz will be renamed to initrd.img in setup_cdrom()
+        utils.run("find . | fakeroot cpio -H newc --create | gzip -9 > ../%s" %
+	          base_initrd, verbose=DEBUG)
 
         os.chdir(self.image_path)
         utils.run("rm -rf initrd_remaster", verbose=DEBUG)
