@@ -98,6 +98,7 @@ class VM(virt_vm.BaseVM):
         if state:
             self.instance = state['instance']
         self.qemu_command = ''
+        self.init_pci_addr = int(params.get("init_pci_addr", 4))
 
 
     def verify_alive(self):
@@ -294,6 +295,30 @@ class VM(virt_vm.BaseVM):
                     value = '""'
                 return fmt % (option, str(value))
             return ""
+
+
+        def get_free_pci_addr(pci_addr=None):
+            """
+            return *hex* format free pci addr.
+
+            @param pci_addr: *decimal* formated, desired pci_add
+            """
+            if pci_addr is None:
+                pci_addr = self.init_pci_addr
+                while True:
+                    # actually when pci_addr > 20? errors may happen
+                    if pci_addr > 31:
+                        raise virt_vm.VMPCIOutOfRangeError(self.name, 31)
+                    if pci_addr in self.pci_addr_list:
+                        pci_addr += 1
+                    else:
+                        self.pci_addr_list.append(pci_addr)
+                        return hex(pci_addr)
+            elif int(pci_addr) in self.pci_addr_list:
+                raise virt_vm.VMPCISlotInUseError(self.name, pci_addr)
+            else:
+                self.pci_addr_list.append(int(pci_addr))
+                return hex(int(pci_addr))
 
 
         def get_free_usb_port(dev, controller_type):
