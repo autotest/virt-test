@@ -110,49 +110,61 @@ def run_cdrom(test, params, env):
         return cdfile
 
 
+    def _get_tray_stat_via_monitor(vm, cdrom):
+        """
+        Get the cdrom tray status via qemu monitor
+        """
+        is_open, checked = (None, False)
+
+        blocks = vm.monitor.info("block")
+        if isinstance(blocks, str):
+            for block in blocks.splitlines():
+                if cdrom in block:
+                    if "tray-open=1" in block:
+                        is_open, checked = (True, True)
+                    elif "tray-open=0" in block:
+                        is_open, checked = (False, True)
+        else:
+            for block in blocks:
+                if block['device'] == cdrom:
+                    key = filter(lambda x: re.match(r"tray.*open", x),
+                                 block.keys())
+                    # compatible rhel6 and rhel7 diff qmp output
+                    if not key:
+                        break
+                    is_open, checked = (block[key[0]], True)
+        return (is_open, checked)
+
+
     def check_cdrom_tray(vm, cdrom, mode='monitor', dev_name="/dev/sr0"):
         """
         Checks whether the tray is opend
 
         @param vm: VM object
-        @param cdrom: cdrom object
-        @param mode: tray status checking method.
-        @param dev_name: cdrom device name in guest.
-        """
-        blocks = vm.monitor.info("block")
-        checked = False
-        if mode == 'monitor' or mode == 'mixed':
-            blocks = vm.monitor.info("block")
-            if isinstance(blocks, str):
-                for block in blocks.splitlines():
-                    if cdrom in block:
-                        if "tray-open=1" in block:
-                            is_open = True
-                            checked = True
-                        elif "tray-open=0" in block:
-                            is_open = False
-                            checked = True
-            else:
-                for block in blocks:
-                    if block['device'] == cdrom:
-                        key = filter(lambda x: re.match(r"tray.*open", x),
-                                      block.keys())
-                        # compatible rhel6 and rhel7 diff qmp output
-                        if not key:
-                            break
-                        is_open = block[key[0]]
-                        checked = True
+        @param cdrom: cdrom image file name.
+        @param mode: tray status checking mode, now support:
+                     "monitor": get tray status from monitor.
+                     "session": get tray status from guest os.
+                     "mixed": get tray status first, if failed, try to
+                              get the status in guest os again.
+        @param dev_name: cdrom device name in guest os.
 
-        if mode == 'session' or (mode == 'mixed' and not checked):
+        @return: True if cdrom tray is open, otherwise False.
+                 None if failed to get the tray status.
+        """
+        is_open, checked = (None, False)
+
+        if mode in ['monitor', 'mixed']:
+            is_open, checked = _get_tray_stat_via_monitor(cdrom)
+
+        if (mode in ['session', 'mixed']) and not checked:
             session = vm.wait_for_login(timeout=login_timeout)
             tray_cmd = "python /tmp/tray_open.py %s" % dev_name
             o = session.cmd_output(tray_cmd)
             if "cdrom is open" in o:
-                is_open = True
-                checked = True
+                is_open, checked = (True, True)
             else:
-                is_open = False
-                checked = True
+                is_open, checked = (False, True)
         if checked:
             return is_open
         return None
