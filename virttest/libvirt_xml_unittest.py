@@ -220,7 +220,13 @@ class testNetworkXML(LibvirtXMLTestBase):
         netxml.name = 'test1'
         netxml.uuid = 'test2'
         netxml.bridge = {'test3':'test4'}
+
+        ipxml = network_xml.IPXML()
+        ipxml.address = ('address_test')
+        ipxml.netmask = ('netmask_test')
+        netxml.ip = ipxml
         return netxml
+
 
     def test_getters(self):
         netxml = self._from_scratch()
@@ -235,6 +241,13 @@ class testNetworkXML(LibvirtXMLTestBase):
         self.assertEqual(test_xtf.find('name').text, 'test1')
         self.assertEqual(test_xtf.find('uuid').text, 'test2')
         self.assertEqual(test_xtf.find('bridge').get('test3'), 'test4')
+
+
+    def test_ip_getter(self):
+        netxml = self._from_scratch()
+        ipxml = netxml.ip
+        self.assertEqual(ipxml.address, 'address_test')
+        self.assertEqual(ipxml.netmask, 'netmask_test')
 
 
 if __name__ == "__main__":

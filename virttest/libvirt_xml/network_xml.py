@@ -279,7 +279,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
         ipxml = IPXML(self.dict_get('virsh'))
-        ipxml.xml = ip_root
+        ipxml.xmltreefile = ip_root
         return ipxml
 
 
@@ -291,7 +291,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         self.del_ip()
         # IPXML root element is whole IP element tree
         root = xmltreefile.getroot()
-        root.append(value.getroot())
+        root.append(value.xmltreefile.getroot())
+        xmltreefile.write()
 
 
     def del_ip(self):
@@ -299,6 +300,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         element = xmltreefile.find('/ip')
         if element is not None:
             xmltreefile.remove(element)
+            xmltreefile.write()
 
 
 class NetworkXML(NetworkXMLBase):
