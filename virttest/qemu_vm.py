@@ -2653,7 +2653,8 @@ class VM(virt_vm.BaseVM):
             os.close(fd_src)
 
         clone = self.clone()
-        if local:
+        if (local and not (migration_exec_cmd_src
+                           and "gzip" in migration_exec_cmd_src)):
             error.context("creating destination VM")
             if stable_check:
                 # Pause the dest vm after creation
@@ -2667,7 +2668,8 @@ class VM(virt_vm.BaseVM):
             error.context()
 
         try:
-            if self.params["display"] == "spice":
+            if (self.params["display"] == "spice" and
+                not (protocol == "exec" and migration_exec_cmd == "gzip")):
                 host_ip = utils_net.get_host_ip_address(self.params)
                 dest_port = clone.spice_options['spice_port']
                 if self.params["spice_ssl"] == "yes":
@@ -2726,7 +2728,7 @@ class VM(virt_vm.BaseVM):
 
             if protocol == "tcp":
                 if local:
-                    uri = "tcp:0:%d" % clone.migration_port
+                    uri = "tcp:localhost:%d" % clone.migration_port
                 else:
                     uri = "tcp:%s:%d" % (dest_host, remote_port)
             elif protocol == "unix":
@@ -2749,6 +2751,17 @@ class VM(virt_vm.BaseVM):
             self.monitor.migrate(uri)
             if not_wait_for_migration:
                 return clone
+
+            if (local and (migration_exec_cmd_src
+                           and "gzip" in migration_exec_cmd_src)):
+                error.context("creating destination VM")
+                if stable_check:
+                    # Pause the dest vm after creation
+                    extra_params = clone.params.get("extra_params", "") + " -S"
+                    clone.params["extra_params"] = extra_params
+                clone.create(migration_mode=protocol, mac_source=self,
+                             migration_fd=fd_dst,
+                             migration_exec_cmd=migration_exec_cmd_dst)
 
             if cancel_delay:
                 time.sleep(cancel_delay)
