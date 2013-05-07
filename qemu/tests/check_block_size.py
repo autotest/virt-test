@@ -1,7 +1,7 @@
 import logging, re
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt.tests import unattended_install
-from autotest_lib.client.virt import virt_vm
+from autotest.client.shared import error
+from tests import unattended_install
+from virttest import virt_vm
 
 
 @error.context_aware
@@ -14,7 +14,7 @@ def run_check_block_size(test, params, env):
     TODO: This test only works on Linux guest, should make it work in windows
           guest. (Is there any windows tools to check block size?)
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -65,8 +65,8 @@ def run_check_block_size(test, params, env):
         session.close()
         if (out_physical != expect_phyciscal) or \
            (out_logical != expect_logical):
-               raise error.TestFail("Physical/Logical block size in guest"
-                                    " doesn't match with qemu parameter.")
+           raise error.TestFail("Physical/Logical block size in guest"
+                                 " doesn't match with qemu parameter.")
     else:
         session.close()
         raise error.TestError("Could not find any virtio block device.")
