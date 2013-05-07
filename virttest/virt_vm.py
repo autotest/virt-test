@@ -1004,7 +1004,7 @@ class BaseVM(object):
         """
         Send a string to the VM.
 
-        @param str: String, that must consist of alphanumeric characters only.
+        @param sr: String, that must consist of alphanumeric characters only.
                 Capital letters are allowed.
         """
         for char in sr:
@@ -1098,6 +1098,7 @@ class BaseVM(object):
         @param: nic_index_or_name: name or index number for existing NIC
         """
         raise NotImplementedError
+
 
     def deactivate_nic(self, nic_index_or_name):
         """
