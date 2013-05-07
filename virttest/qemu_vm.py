@@ -10,6 +10,7 @@ from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
 import qemu_virtio_port, remote, data_dir, utils_net
 
+
 class QemuSegFaultError(virt_vm.VMError):
     def __init__(self, crash_message):
         virt_vm.VMError.__init__(self, crash_message)
@@ -1182,7 +1183,12 @@ class VM(virt_vm.BaseVM):
             root_dir = self.root_dir
 
         have_ahci = False
+        have_virtio_scsi = False
         virtio_scsi_pcis = []
+
+        # init value by default.
+        # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the sound device.
+        self.pci_addr_list = [0, 1, 2]
 
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
@@ -1290,7 +1296,7 @@ class VM(virt_vm.BaseVM):
             # Add virtio_serial_pcis
             for i in range(no_virtio_serial_pcis, bus + 1):
                 qemu_cmd += (" -device virtio-serial-pci,id=virtio_serial_pci"
-                             "%d" % i)
+                             "%d,addr=%s" % (i, get_free_pci_addr(None)))
                 no_virtio_serial_pcis += 1
             if bus is not False:
                 bus = "virtio_serial_pci%d.0" % bus
@@ -1477,6 +1483,12 @@ class VM(virt_vm.BaseVM):
         # Force CPU threads to 2 when smp > 8.
         if smp > 8 and vcpu_threads <= 1:
             vcpu_threads = 2
+
+        # Some versions of windows don't support more than 2 sockets of cpu,
+        # here is a workaround to make all windows use only 2 sockets.
+        if (vcpu_sockets and vcpu_sockets > 2
+            and params.get("os_type") == 'windows'):
+            vcpu_sockets = 2
 
         if smp == 0 or vcpu_sockets == 0:
             vcpu_cores = vcpu_cores or 1
@@ -1888,6 +1900,7 @@ class VM(virt_vm.BaseVM):
         @raise TAPCreationError: If fail to create tap fd
         @raise BRAddIfError: If fail to add a tap to a bridge
         @raise TAPBringUpError: If fail to bring up a tap
+        @raise PrivateBridgeError: If fail to bring the private bridge
         """
         error.context("creating '%s'" % self.name)
         self.destroy(free_mac_addresses=False)
@@ -1976,6 +1989,9 @@ class VM(virt_vm.BaseVM):
                 else:
                     # fill in key values, validate nettype
                     # note: make_create_command() calls vm.add_nic (i.e. on a copy)
+                    if nic_params.get('netdst') == 'private':
+                        nic.netdst = (test_setup.
+                                      PrivateBridgeConfig(nic_params).brname)
                     nic = self.add_nic(**dict(nic)) # implied add_netdev
                     if mac_source:
                         # Will raise exception if source doesn't
