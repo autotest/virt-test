@@ -43,7 +43,8 @@ def run_cluster_size_check(test, params, env):
         fail_log = ""
         image_name = params.get("images")
         image_params = params.object_params(image_name)
-        image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(), image_name)
+        image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(),
+                                     image_name)
 
         image.create(image_params)
         output = image.info()
@@ -73,11 +74,11 @@ def run_cluster_size_check(test, params, env):
 
     for cluster_size in re.split("\s+", cluster_size_set.strip()):
         if cluster_size == "default":
-            params["cluster_size"] = None
+            params["image_cluster_size"] = None
             csize_expect = params.get("cluster_size_default", "65536")
             csize_set = "default"
         else:
-            params["cluster_size"] = cluster_size
+            params["image_cluster_size"] = cluster_size
             csize_expect = str(memory_size(cluster_size))
             csize_set = cluster_size
         error.context("Check cluster size as cluster size set to %s"
