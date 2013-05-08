@@ -2,8 +2,8 @@ import sys
 import re
 import logging
 
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import kvm_storage
+from autotest.client.shared import error
+from virttest import qemu_storage, data_dir
 
 @error.context_aware
 def run_cluster_size_check(test, params, env):
@@ -14,7 +14,7 @@ def run_cluster_size_check(test, params, env):
     3) Create image with cluster_size option
     4) Verify if the cluster_size is the set value
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -23,7 +23,7 @@ def run_cluster_size_check(test, params, env):
         try:
             value = int(size)
         except ValueError:
-            unit = size[-1] 
+            unit = size[-1]
             value = int(size[:-1])
             if unit.upper() == "G":
                 value = value * 1073741824
@@ -43,8 +43,8 @@ def run_cluster_size_check(test, params, env):
         fail_log = ""
         image_name = params.get("images")
         image_params = params.object_params(image_name)
-        image = kvm_storage.QemuImg(image_params, test.bindir, image_name)
-        
+        image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(), image_name)
+
         image.create(image_params)
         output = image.info()
         error.context("Check the cluster size from output", logging.info)
