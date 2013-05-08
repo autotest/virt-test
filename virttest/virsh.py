@@ -1977,3 +1977,14 @@ def nodedev_dumpxml(name, options="", to_file=None, **dargs):
         result_file.close()
 
     return result
+
+
+def connect(connect_uri="", options="", **dargs):
+    """
+    Run a connect command to the uri.
+
+    @param connect_uri: target uri connect to.
+    @param: options: options to pass to connect command
+    @return: CmdResult object.
+    """
+    return command("connect %s %s" % (connect_uri, options), **dargs)
