@@ -168,6 +168,7 @@ class VirshSession(aexpect.ShellSession):
         if self.cmd_status('list', timeout=60) != 0:
             logging.debug("Persistent virsh session is not responding, "
                           "libvirtd may be dead.")
+            self.auto_close = True
             raise aexpect.ShellStatusError(virsh_exec, 'list')
 
 
