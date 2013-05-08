@@ -18,8 +18,8 @@ def run_check_block_size(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-    error.context("Install guest with a new image", logging.info)
     if params.get("need_install") == "yes":
+        error.context("Install guest with a new image", logging.info)
         unattended_install.run_unattended_install(test, params, env)
 
     params["cdroms"] = ""
@@ -27,8 +27,7 @@ def run_check_block_size(test, params, env):
     params["cdrom_unattended"] = ""
     params["kernel"] = ""
     params["initrd"] = ""
-    extra_params = params.get("extra_params", "")
-    params["extra_params"] = re.sub(" --append '.*?'", "", extra_params)
+    params["kernel_params"] = ""
     params["boot_once"] = "c"
 
     vm = env.get_vm(params["main_vm"])
@@ -61,10 +60,10 @@ def run_check_block_size(test, params, env):
             out_logical = int(session.cmd_output(cmd))
             if (out_physical != expect_phyciscal) or \
                (out_logical != expect_logical):
-                msg = "Block size in guest doesn't match with qemu parameter"
-                msg += "Physical block size in guest: %s" % out_physical
+                msg = "Block size in guest doesn't match with qemu parameter\n"
+                msg += "Physical block size in guest: %s, " % out_physical
                 msg += "expect: %s" % expect_phyciscal
-                msg += "\nLogical block size in guest: %s," % out_logical
+                msg += "\nLogical block size in guest: %s, " % out_logical
                 msg += "expect: %s" % expect_logical
                 raise error.TestFail(msg)
         else:
