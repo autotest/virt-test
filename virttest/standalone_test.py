@@ -76,6 +76,9 @@ class Test(object):
         self.resultsdir = os.path.join(self.debugdir, 'results')
         if not os.path.isdir(self.resultsdir):
             os.makedirs(self.resultsdir)
+        self.profdir = os.path.join(self.resultsdir, 'profiling')
+        if not os.path.isdir(self.profdir):
+            os.makedirs(self.profdir)
         utils_misc.set_log_file_dir(self.debugdir)
         self.logfile = os.path.join(self.debugdir, 'debug.log')
 
