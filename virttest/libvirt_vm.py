@@ -113,6 +113,41 @@ def complete_uri(ip_address):
     return complete_uri
 
 
+def get_uri_with_transport(uri_type='qemu', transport="", dest_ip=""):
+    """
+    Return a URI to connect driver on dest with a specificed transport.
+
+    @param origin_uri: The URI on dest used to connect itself directly.
+    @param transport: The transport type connect to dest.
+    @param dest_ip: The ip of destination.
+    """
+    _type2uri_ = {'qemu':"qemu:///system",
+                  'qemu_system':"qemu:///system",
+                  'qemu_session':"qemu:///session",
+                  'lxc':"lxc:///",
+                  'xen':"xen:///"}
+    try:
+        origin_uri = _type2uri_[uri_type]
+    except KeyError:
+        raise ValueError("Param uri_type = %s is not supported." % (uri_type))
+
+    #For example:
+    #   ("qemu:///system")-->("qemu", ":", "///system")
+    origin_uri_partitions = origin_uri.partition(":")
+    origin_uri_driver = origin_uri_partitions[0]
+    origin_uri_colon = origin_uri_partitions[1]
+    origin_uri_dest = origin_uri_partitions[2]
+
+    transport_uri_driver = ("%s+%s" % (origin_uri_driver, transport))
+    transport_uri_colon = origin_uri_colon
+    #For example:
+    #   ("///system")-->("", "//", "/system")
+    transport_dest_partitions = origin_uri_dest.partition("//")
+    transport_uri_dest = (transport_dest_partitions[0]+transport_dest_partitions[1]+
+                      dest_ip+transport_dest_partitions[2])
+    return ("%s%s%s" % (transport_uri_driver, transport_uri_colon, transport_uri_dest))
+
+
 class VM(virt_vm.BaseVM):
     """
     This class handles all basic VM operations for libvirt.
