@@ -440,7 +440,7 @@ class QtreeDisksContainer(object):
         scsis = set()
         for scsi in _scsis:
             # Ignore IDE disks
-            if scsi[4] != 'CD-ROM':
+            if scsi[5] != 'CD-ROM':
                 scsis.add("%d-%d-%d" % (int(scsi[1]), int(scsi[2]),
                                         int(scsi[3])))
             else:
