@@ -630,7 +630,8 @@ class VM(virt_vm.BaseVM):
                 dev += _add_option("drive", blkdev_id)
                 index = None
 
-            elif has_option(help_text, "device") and fmt != "floppy":
+            elif (has_option(help_text, "device") and
+                        fmt not in ("floppy", "scsi")):
                 dev += " -device %s" % dev_format[fmt]
                 if fmt == "ide":
                     dev += _add_option("bus", str(ide_bus))
@@ -1197,6 +1198,14 @@ class VM(virt_vm.BaseVM):
         # init value by default.
         # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the sound device.
         self.pci_addr_list = [0, 1, 2]
+
+        # When old scsi fmt is used, new device with lowest pci_addr is created
+        i = 6   # We are going to divide it by 7 so 6 will result in 0
+        for image_name in params.objects("images"):
+            if params.object_params(image_name).get('drive_format') == 'scsi':
+                i += 1
+        for _ in xrange(i / 7):
+            get_free_pci_addr()     # Autocreated lsi hba
 
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
