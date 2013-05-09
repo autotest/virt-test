@@ -116,7 +116,8 @@ def run_guest_suspend(test, params, env):
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
-    vm = env.get_vm(params["main_vm"])
+    vms = params.get("vms").split(" ")
+    vm = env.get_vm(vms[0])
     vm.verify_alive()
     if params.get("negative_test") == "yes":
         gs = GuestSuspendNegativeTest(params, vm)
