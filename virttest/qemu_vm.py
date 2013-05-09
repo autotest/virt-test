@@ -484,6 +484,7 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("nowait", "NO_EQUAL_STRING")
             cmd += " -device virtio-serial-pci"
             cmd += _add_option("id", vioser_id)
+            cmd += _add_option('addr', get_free_pci_addr())
             cmd += " -device virtserialport"
             cmd += _add_option("bus", "%s.0" % vioser_id)
             cmd += _add_option("chardev", chardev_id)
@@ -824,6 +825,7 @@ class VM(virt_vm.BaseVM):
             pcidevice_help = utils.system_output(help_cmd)
             cmd += "host=%s" % host
             cmd += ",id=id_%s" % host
+            cmd += ",addr=%s" % get_free_pci_addr()  # TODO: Verify this works
             if params is not None and params.get("pci-assign_params"):
                 assign_param = params.get("pci-assign_params").split()
             fail_param = []
@@ -1196,16 +1198,8 @@ class VM(virt_vm.BaseVM):
         virtio_scsi_pcis = []
 
         # init value by default.
-        # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the sound device.
+        # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the GPU.
         self.pci_addr_list = [0, 1, 2]
-
-        # When old scsi fmt is used, new device with lowest pci_addr is created
-        i = 6   # We are going to divide it by 7 so 6 will result in 0
-        for image_name in params.objects("images"):
-            if params.object_params(image_name).get('drive_format') == 'scsi':
-                i += 1
-        for _ in xrange(i / 7):
-            get_free_pci_addr()     # Autocreated lsi hba
 
         # Clone this VM using the new params
         vm = self.clone(name, params, root_dir, copy_state=True)
@@ -1234,6 +1228,28 @@ class VM(virt_vm.BaseVM):
         device_help = ""
         if has_option(help_text, "device"):
             device_help = commands.getoutput("%s -device \\?" % qemu_binary)
+
+        # -soundhw addresses are always the lowest ones, reserve the addrs
+        soundhw = params.get("soundcards")
+        if soundhw:
+            if soundhw == "all":
+                # qemu-1.4.0 uses 3 PCI slots
+                get_free_pci_addr()
+                get_free_pci_addr()
+                get_free_pci_addr()
+            elif not has_option(help_text, 'device'):
+                for _ in xrange(soundhw.count(',')):
+                    # Get free PCI addr for each device (not optimal, but safe)
+                    get_free_pci_addr()
+            # -device soundcards support custom addr
+
+        # When old scsi fmt is used, new device with lowest pci_addr is created
+        i = 6   # We are going to divide it by 7 so 6 will result in 0
+        for image_name in params.objects("images"):
+            if params.object_params(image_name).get('drive_format') == 'scsi':
+                i += 1
+        for _ in xrange(i / 7):
+            get_free_pci_addr()     # Autocreated lsi hba
 
         # Start constructing the qemu command
         qemu_cmd = ""
@@ -1356,7 +1372,8 @@ class VM(virt_vm.BaseVM):
             else:
                 index = None
             if image_params.get("drive_format") == "ahci" and not have_ahci:
-                qemu_cmd += " -device ahci,id=ahci"
+                qemu_cmd += (" -device ahci,id=ahci,addr=%s"
+                             % get_free_pci_addr())
                 have_ahci = True
 
             bus = None
@@ -1586,7 +1603,8 @@ class VM(virt_vm.BaseVM):
             if cd_format == "usb3":
                 bus, port = get_free_usb_port(image_name, "xhci")
             if cd_format == "ahci" and not have_ahci:
-                qemu_cmd += " -device ahci,id=ahci"
+                qemu_cmd += (" -device ahci,id=ahci,addr=%s"
+                             % get_free_pci_addr())
                 have_ahci = True
             if cd_format and cd_format.startswith("scsi-"):
                 try:
@@ -1595,7 +1613,8 @@ class VM(virt_vm.BaseVM):
                     raise virt_vm.VMError("cfg: drive_bus have to be an "
                                           "integer. (%s)" % cdrom)
                 for i in range(len(virtio_scsi_pcis), bus + 1):
-                    qemu_cmd += " -device virtio-scsi-pci,id=virtio_scsi_pci%d" % i
+                    qemu_cmd += (" -device virtio-scsi-pci,id=virtio_scsi_pci"
+                                 "%d,addr=%s" % (i, get_free_pci_addr()))
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
                 qemu_cmd += add_cdrom(help_text,
@@ -1640,11 +1659,15 @@ class VM(virt_vm.BaseVM):
             else:
                 for sound_device in soundhw.split(","):
                     if "hda" in sound_device:
-                        qemu_cmd += " -device intel-hda -device hda-duplex"
+                        qemu_cmd += (" -device intel-hda,addr=%s"
+                                     " -device hda-duplex"
+                                     % get_free_pci_addr())
                     elif sound_device in ["es1370", "ac97"]:
                         qemu_cmd += " -device %s" % sound_device.upper()
+                        qemu_cmd += ",addr=%s" % get_free_pci_addr()
                     else:
                         qemu_cmd += " -device %s" % sound_device
+                        qemu_cmd += ",addr=%s" % get_free_pci_addr()
 
 
         # We may want to add {floppy_otps} parameter for -fda, -fdb
@@ -1683,8 +1706,8 @@ class VM(virt_vm.BaseVM):
             else:
                 bus, port = get_free_usb_port(usb_dev, controller_type)
 
-            qemu_cmd += add_usbdevice(help_text, usb_dev, usb_type, controller_type,
-                                      bus, port)
+            qemu_cmd += add_usbdevice(help_text, usb_dev, usb_type,
+                                      controller_type, bus, port)
 
         tftp = params.get("tftp")
         if tftp:
@@ -1813,7 +1836,9 @@ class VM(virt_vm.BaseVM):
             if p9_readonly == "yes":
                 qemu_cmd += ",readonly"
 
-            qemu_cmd += " -device virtio-9p-pci,fsdev=local1,mount_tag=autotest_tag"
+            qemu_cmd += (" -device virtio-9p-pci,fsdev=local1,"
+                         "mount_tag=autotest_tag,addr=%s"
+                         % get_free_pci_addr())
 
         extra_params = params.get("extra_params")
         if extra_params:
