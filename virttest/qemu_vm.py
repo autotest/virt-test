@@ -582,10 +582,6 @@ class VM(virt_vm.BaseVM):
                 aio = None
 
             dev = ""
-            if not re.search("boot=on\|off", help_text, re.MULTILINE):
-                if boot in ['yes', 'on', True]:
-                    bootindex = "1"
-                boot = "unused"
             if fmt == "ahci":
                 tmp = "ahci%s" % (index or utils_misc.generate_random_id())
                 blkdev_id = tmp
@@ -675,7 +671,6 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("rerror", rerror)
             cmd += _add_option("werror", werror)
             cmd += _add_option("serial", serial)
-            cmd += _add_option("boot", boot, bool)
             cmd += _add_option("snapshot", snapshot, bool)
             # Only add boot=on/off if necessary (deprecated in newer qemu)
             if boot != "unused":
@@ -1206,6 +1201,7 @@ class VM(virt_vm.BaseVM):
         ide_unit = 0
         vdisk = 0
         scsi_disk = 0
+        global_image_bootindex = 0
 
         qemu_binary = utils_misc.get_path(os.path.join(root_dir,
                                                        params.get("vm_type")),
@@ -1372,6 +1368,20 @@ class VM(virt_vm.BaseVM):
                         qemu_cmd += ",%s" % params.get("scsi_extra_params_hda")
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
+            image_bootindex = None
+            if not re.search("boot=on\|off", help_text, re.MULTILINE):
+                if image_params["image_boot"] in ['yes', 'on', True]:
+                    image_bootindex = str(global_image_bootindex)
+                    global_image_bootindex += 1
+                image_boot = "unused"
+                image_bootindex = image_params.get('bootindex', image_bootindex)
+            else:
+                image_boot = image_params["image_boot"]
+                if image_params["image_boot"] in ['yes', 'on', True]:
+                    if global_image_bootindex > 0:
+                        image_boot = False
+                    global_image_bootindex += 1
+
             base_dir = image_params.get("images_base_dir",
                                         data_dir.get_data_dir())
 
@@ -1386,12 +1396,12 @@ class VM(virt_vm.BaseVM):
                     image_params.get("drive_rerror"),
                     image_params.get("drive_serial"),
                     image_params.get("image_snapshot"),
-                    image_params.get("image_boot"),
+                    image_boot,
                     storage.get_image_blkdebug_filename(image_params,
                                                         shared_dir),
                     bus,
                     port,
-                    image_params.get("bootindex"),
+                    image_bootindex,
                     image_params.get("removable"),
                     image_params.get("min_io_size"),
                     image_params.get("opt_io_size"),
