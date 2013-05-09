@@ -2386,7 +2386,8 @@ class GuestSuspend(object):
 
     @error.context_aware
     def start_suspend(self, **args):
-        error.context("Start suspend", logging.info)
+        supend_cmd = args.get("suspend_start_cmd")
+        error.context("Start suspend [%s]" % (supend_cmd), logging.info)
         suspend_start_cmd = args.get("suspend_start_cmd")
 
         session = self._get_session()
@@ -2425,9 +2426,9 @@ class GuestSuspend(object):
         suspend_log_chk_cmd = args.get("suspend_log_chk_cmd")
 
         session = self._get_session()
-        s, _ = self._session_cmd_close(session, suspend_log_chk_cmd)
+        s, o = self._session_cmd_close(session, suspend_log_chk_cmd)
         if s:
-            raise error.TestError("Could not find suspend log.")
+            raise error.TestError("Could not find suspend log. [%s]" % (o))
 
 
     @error.context_aware
