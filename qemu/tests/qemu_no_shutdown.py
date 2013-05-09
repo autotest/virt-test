@@ -19,7 +19,6 @@ def run_qemu_no_shutdown(test, params, env):
     @param env: Dictionary with test environment
     """
     timeout  = int(params.get("login_timeout", 360))
-    interval = int(params.get("reset_interval", 10))
     repeat_times = int(params.get("repeat_times", 5))
 
     error.base_context("Qemu -no-shutdown test")
@@ -30,7 +29,7 @@ def run_qemu_no_shutdown(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     logging.info("The guest bootup successfully.")
 
-    for i in range(repeat_times):
+    for i in xrange(repeat_times):
         error.context("Round %s : Send monitor cmd system_powerdown."
                        % str(i + 1), logging.info)
         # Send a system_powerdown monitor command
@@ -38,9 +37,13 @@ def run_qemu_no_shutdown(test, params, env):
         # Wait for the session to become unresponsive and close it
         if not utils_misc.wait_for(lambda: not session.is_responsive(),
                                     timeout, 0, 1):
-            raise error.TestFail("Oops,Guest refuses to go down!")
-        session.close()
+            raise error.TestFail("Oops, Guest refuses to go down!")
+        if session:
+            session.close()
         # Check the qemu id is not change
+        if not utils_misc.wait_for(lambda: vm.is_alive(), 5, 0, 1):
+            raise error.TestFail("VM not responsive after system_"
+                                 "powerdown with -no-shutdown!")
         if vm.get_pid() != qemu_process_id:
             raise error.TestFail("Qemu pid changed after system_powerdown!")
         logging.info("Round %s -> System_powerdown successfully.", str(i + 1))
@@ -49,11 +52,11 @@ def run_qemu_no_shutdown(test, params, env):
         error.context("Round %s : Send monitor command system_reset and cont."
                        % str(i + 1), logging.info)
         vm.monitor.cmd("system_reset")
-        time.sleep(interval)
         vm.resume()
 
         session = vm.wait_for_login(timeout=timeout)
         logging.info("Round %s -> Guest is up successfully." % str(i + 1))
         if vm.get_pid() != qemu_process_id:
             raise error.TestFail("Qemu pid changed after system_reset & cont!")
-    session.close()
+    if session:
+        session.close()
