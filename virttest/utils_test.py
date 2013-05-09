@@ -2415,8 +2415,6 @@ class GuestSuspend(object):
     @error.context_aware
     def resume_guest_disk(self, **args):
         error.context("Resume suspended VM from disk")
-        # Update vm's params dict with our params member.
-        self.vm.params = self.params
         self.vm.create()
 
 
