@@ -15,28 +15,26 @@ def run_migration_multi_host(test, params, env):
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
+    login_timeout = int(params.get("login_timeout", 360))
+    sub_test = params.get("sub_test")
+
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    mig_type = utils_test.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        mig_type = utils_test.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        mig_type = utils_test.MultihostMigrationExec
 
-    class TestMultihostMigration(base_class):
-        def __init__(self, test, params, env):
-            super(TestMultihostMigration, self).__init__(test, params, env)
-            self.srchost = self.params.get("hosts")[0]
-            self.dsthost = self.params.get("hosts")[1]
-            self.vms = params.get("vms").split()
+    vms = params.get("vms").split(" ")
+    srchost = params["hosts"][0]
+    dsthost = params["hosts"][1]
+    is_src = params["hostid"] == srchost
 
+    mig = mig_type(test, params, env, False)
+    mig.migrate_wait([vms[0]], srchost, dsthost)
 
-        def migration_scenario(self, worker=None):
-            error.context("Migration from %s to %s over protocol %s." %
-                          (self.srchost, self.dsthost, mig_protocol),
-                          logging.info)
-            self.migrate_wait(self.vms, self.srchost, self.dsthost,
-                              start_work=worker)
-
-
-    mig = TestMultihostMigration(test, params, env)
-    mig.run()
+    if not is_src:  #is destination
+        if sub_test:
+            error.context("Run sub test '%s' after checking"
+                          " clock resolution" % sub_test, logging.info)
+            utils_test.run_virt_sub_test(test, params, env, sub_test)
