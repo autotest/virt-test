@@ -1617,40 +1617,37 @@ class VM(virt_vm.BaseVM):
                                  "%d,addr=%s" % (i, get_free_pci_addr()))
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
             if iso:
-                qemu_cmd += add_cdrom(help_text,
-                              utils_misc.get_path(data_dir.get_data_dir(), iso),
-                                      cdrom_params.get("drive_index"),
-                                      cd_format, bus)
-            elif params.get("cdrom_without_file") != "yes":
+                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
+            elif cdrom_params.get("cdrom_without_file") != "yes":
                 continue
-                if params.get("index_enable") == "yes":
-                    drive_index = cdrom_params.get("drive_index")
-                    if drive_index:
-                        index = drive_index
-                    else:
-                        index_global = get_index(index_global)
-                        index = str(index_global)
-                        index_global += 1
+            if cdrom_params.get("index_enable") == "yes":
+                drive_index = cdrom_params.get("drive_index")
+                if drive_index:
+                    index = drive_index
                 else:
-                    index = None
-                if has_option(help_text, "device"):
-                    if not cd_format.startswith("scsi-"):
-                        cd_format = "ide"
-                    qemu_cmd += add_drive(help_text, iso, index, cd_format,
-                                          bootindex=bootindex,
-                                          media="cdrom",
-                                          ide_bus=ide_bus,
-                                          ide_unit=ide_unit,
-                                          bus=bus,
-                                          scsi_disk=scsi_disk)
-                else:
-                    qemu_cmd += add_cdrom(help_text, iso, index)
-                if cd_format == "ide":
-                    if ide_unit == 1:
-                        ide_bus += 1
-                    ide_unit ^= 1
-                elif cd_format.startswith("scsi-"):
-                    scsi_disk += 1
+                    index_global = get_index(index_global)
+                    index = str(index_global)
+                    index_global += 1
+            else:
+                index = None
+            if has_option(help_text, "device"):
+                if not cd_format.startswith("scsi-"):
+                    cd_format = "ide"
+                qemu_cmd += add_drive(help_text, iso, index, cd_format,
+                                      bootindex=bootindex,
+                                      media="cdrom",
+                                      ide_bus=ide_bus,
+                                      ide_unit=ide_unit,
+                                      bus=bus,
+                                      scsi_disk=scsi_disk)
+            else:
+                qemu_cmd += add_cdrom(help_text, iso, index)
+            if cd_format == "ide":
+                if ide_unit == 1:
+                    ide_bus += 1
+                ide_unit ^= 1
+            elif cd_format.startswith("scsi-"):
+                scsi_disk += 1
 
         soundhw = params.get("soundcards")
         if soundhw:
