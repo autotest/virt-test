@@ -193,7 +193,7 @@ def run_multi_disk(test, params, env):
     re_str = params["re_str"]
     black_list = params["black_list"].split()
 
-    if "qtree" in str(vm.monitor.send_args_cmd("help")):
+    if "qtree" in str(vm.monitor.human_monitor_cmd("help", debug=False)):
         error.context("verifying qtree vs. test params")
         err = 0
         qtree = qemu_qtree.QtreeContainer()
