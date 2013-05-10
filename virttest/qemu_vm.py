@@ -1369,15 +1369,15 @@ class VM(virt_vm.BaseVM):
                     virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
 
             image_bootindex = None
+            image_boot = image_params.get("image_boot")
             if not re.search("boot=on\|off", help_text, re.MULTILINE):
-                if image_params["image_boot"] in ['yes', 'on', True]:
+                if image_boot in ['yes', 'on', True]:
                     image_bootindex = str(global_image_bootindex)
                     global_image_bootindex += 1
                 image_boot = "unused"
                 image_bootindex = image_params.get('bootindex', image_bootindex)
             else:
-                image_boot = image_params["image_boot"]
-                if image_params["image_boot"] in ['yes', 'on', True]:
+                if image_boot in ['yes', 'on', True]:
                     if global_image_bootindex > 0:
                         image_boot = False
                     global_image_bootindex += 1
