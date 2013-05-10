@@ -4,6 +4,7 @@ import unittest
 import common
 from virttest import xml_utils, virsh, utils_misc
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
+from virttest.libvirt_xml import libvirt_xml, nodedev_xml
 from virttest.libvirt_xml.devices import librarian
 from virttest.libvirt_xml.devices import base as devices_base
 from virttest.libvirt_xml.devices import address
@@ -128,6 +129,34 @@ class AccessorsTest(LibvirtXMLTestBase):
         self.assertEqual(abinst.property_name, 'foobar')
         # test call to get_libvirtxml() accessor
         self.assertEqual(abinst.libvirtxml, lvx)
+
+
+    def test_XMLElementInt(self):
+        class FooBar(base.LibvirtXMLBase):
+            __slots__ = base.LibvirtXMLBase.__slots__ + ('auto_test',
+                                                         'bin_test',
+                                                         'oct_test',
+                                                         'dec_test',
+                                                         'hex_test')
+        lvx = FooBar(self.dummy_virsh)
+        lvx.xml =('<integer>'
+                  ' <auto>00</auto>'
+                  ' <bin>10</bin>'
+                  ' <oct>10</oct>'
+                  ' <dec>10</dec>'
+                  ' <hex>10</hex>'
+                  '</integer>')
+
+        name_radix = {'auto':0, 'bin':2, 'oct':8, 'dec':10, 'hex':16}
+        for name, radix in name_radix.items():
+            accessors.XMLElementInt(name + '_test', lvx, 
+                                parent_xpath='/',
+                                tag_name=name,
+                                radix=radix)
+            self.assertEqual(lvx[name+'_test'], radix)
+
+        self.assertRaises(ValueError, 
+                          lvx.__setitem__, 'bin_test', 'text')
 
 
     def test_AllForbidden(self):
