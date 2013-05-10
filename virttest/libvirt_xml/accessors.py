@@ -2,7 +2,7 @@
 Specializations of base.AccessorBase for particular XML manipulation types
 """
 
-import logging, os.path
+import logging
 from virttest import xml_utils
 from virttest.propcan import PropCanBase
 from virttest.libvirt_xml import xcepts, base
@@ -65,7 +65,8 @@ class AccessorBase(PropCanBase):
                 continue # already checked these
             # Don't care about value type
             if not dargs.has_key(slot):
-                raise ValueError('Required accessor generator parameter %s' % slot)
+                raise ValueError('Required accessor generator parameter %s'
+                                                                      % slot)
             self.dict_set(slot, dargs[slot])
 
     # Subclass expected to override this and specify parameters
@@ -334,11 +335,16 @@ class XMLElementInt(AccessorGeneratorBase):
     """
     Class of accessor classes operating on element.text as an integer
     """
+    __radix2func_dict__ = {0:int,
+                         2:bin,
+                         8:oct,
+                        10:int,
+                        16:hex}
 
-    required_dargs = ('parent_xpath', 'tag_name')
+    required_dargs = ('parent_xpath', 'tag_name', 'radix')
 
     def __init__(self, property_name, libvirtxml, forbidden=None,
-                 parent_xpath=None, tag_name=None):
+                 parent_xpath=None, tag_name=None, radix=10):
         """
         Create undefined accessors on libvirt instance
 
@@ -348,10 +354,16 @@ class XMLElementInt(AccessorGeneratorBase):
         @param: parent_xpath: XPath string of parent element
         @param: tag_name: element tag name to manipulate text attribute on.
         """
+        try:
+            self.__radix2func_dict__[radix]
+        except KeyError:
+            raise xcepts.LibvirtXMLError("Param radix=%s for XMLElementInt "
+                                        "is not accepted." % radix)
         super(XMLElementInt, self).__init__(property_name, libvirtxml,
                                             forbidden,
                                             parent_xpath=parent_xpath,
-                                           tag_name=tag_name)
+                                            tag_name=tag_name,
+                                            radix=radix)
 
 
     class Getter(AccessorBase):
@@ -359,12 +371,18 @@ class XMLElementInt(AccessorGeneratorBase):
         Retrieve text on element and convert to int
         """
 
-        __slots__ = add_to_slots('parent_xpath', 'tag_name')
+        __slots__ = add_to_slots('parent_xpath', 'tag_name', 'radix')
 
         def __call__(self):
             element = self.element_by_parent(self.parent_xpath,
                                                  self.tag_name, create=False)
-            return int(element.text)
+            try:
+                result = int(element.text, self.radix)
+            except ValueError:
+                raise xcepts.LibvirtXMLError("Value of %s in %s is %s,"
+                                             "not a Integer." % (self.tag_name,
+                                             self.parent_xpath, element.text))
+            return result
 
 
     class Setter(AccessorBase):
@@ -372,13 +390,14 @@ class XMLElementInt(AccessorGeneratorBase):
         Set text on element after converting to int then to str
         """
 
-        __slots__ = add_to_slots('parent_xpath', 'tag_name')
+        __slots__ = add_to_slots('parent_xpath', 'tag_name', 'radix')
 
         def __call__(self, value):
+            type_check(self.property_name + ' value', value, int)
             element = self.element_by_parent(self.parent_xpath,
                                                  self.tag_name, create=True)
-            value = str(int(value)) # Validates value
-            element.text = value
+            convertFunc = XMLElementInt.__radix2func_dict__[self.radix]
+            element.text = str(convertFunc(value))
             self.xmltreefile().write()
 
 
