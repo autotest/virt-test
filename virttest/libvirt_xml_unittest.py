@@ -149,13 +149,13 @@ class AccessorsTest(LibvirtXMLTestBase):
 
         name_radix = {'auto':0, 'bin':2, 'oct':8, 'dec':10, 'hex':16}
         for name, radix in name_radix.items():
-            accessors.XMLElementInt(name + '_test', lvx, 
+            accessors.XMLElementInt(name + '_test', lvx,
                                 parent_xpath='/',
                                 tag_name=name,
                                 radix=radix)
             self.assertEqual(lvx[name+'_test'], radix)
 
-        self.assertRaises(ValueError, 
+        self.assertRaises(ValueError,
                           lvx.__setitem__, 'bin_test', 'text')
 
 
@@ -453,6 +453,96 @@ class testAddressXML(LibvirtXMLTestBase):
         the_dict = {'type_name':'foobar', 'foo':'bar'}
         another_address = address.new_from_dict(the_dict, self.dummy_virsh)
         self.assertEqual(str(new_address), str(another_address))
+
+
+class testCAPXML(LibvirtXMLTestBase):
+
+    def test_capxmlbase(self):
+        capxmlbase = nodedev_xml.CAPXML()
+        self.assertRaises(NotImplementedError,
+                          capxmlbase.get_sysfs_sub_path)
+        self.assertRaises(NotImplementedError,
+                          capxmlbase.get_key2filename_dict)
+        self.assertRaises(NotImplementedError,
+                          capxmlbase.get_key2value_dict)
+
+class testNodedevXMLBase(LibvirtXMLTestBase):
+
+    def _from_scratch(self):
+        nodedevxml = nodedev_xml.NodedevXMLBase()
+        nodedevxml.name = 'name_test'
+        nodedevxml.parent = 'parent_test'
+
+        return nodedevxml
+
+    def test_getter(self):
+        nodedevxml = self._from_scratch()
+        self.assertEqual(nodedevxml.name, 'name_test')
+        self.assertEqual(nodedevxml.parent, 'parent_test')
+
+    def test_static(self):
+        base = nodedev_xml.NodedevXMLBase
+        cap_list = ['system', 'pci']
+        for cap_type in cap_list:
+            result = base.get_cap_by_type(cap_type)
+            self.assertTrue(isinstance(result, nodedev_xml.CAPXML))
+
+
+class testNodedevXML(LibvirtXMLTestBase):
+
+    def test_new_from_dumpxml(self):
+        NodedevXML = nodedev_xml.NodedevXML
+        nodedevxml = NodedevXML.new_from_dumpxml('pci_0000_00_00_0')
+        self.assertTrue(isinstance(nodedevxml, NodedevXML))
+
+
+    def test_get_key2value_dict(self):
+        NodedevXML = nodedev_xml.NodedevXML
+        result = NodedevXML.get_key2value_dict('pci_0000_00_00_0')
+        self.assertTrue(isinstance(result, dict))
+
+
+    def test_get_key2syspath_dict(self):
+        NodedevXML = nodedev_xml.NodedevXML
+        result = NodedevXML.get_key2syspath_dict('pci_0000_00_00_0')
+        self.assertTrue(isinstance(result, dict))
+
+
+class testPCIXML(LibvirtXMLTestBase):
+
+    def _from_scratch(self):
+        pcixml = nodedev_xml.PCIXML()
+        pcixml.domain = 0x10
+        pcixml.bus = 0x20
+        pcixml.slot = 0x30
+        pcixml.function = 0x1
+        pcixml.vendor_id = '0x123'
+        pcixml.product_id = '0x123'
+
+        return pcixml
+
+
+    def test_static(self):
+        PCIXML = nodedev_xml.PCIXML
+        result = PCIXML.make_sysfs_sub_path(0x10, 0x20, 0x30, 0x1)
+        self.assertEqual(result, 'pci_bus/0010:20/device/0010:20:30.1')
+
+
+    def test_get_path(self):
+        pcixml = self._from_scratch()
+        result = pcixml.get_sysfs_sub_path()
+        self.assertEqual(result, 'pci_bus/0010:20/device/0010:20:30.1')
+
+
+    def test_get_key2filename_dict(self):
+        PCIXML = nodedev_xml.PCIXML
+        self.assertTrue(isinstance(PCIXML.get_key2filename_dict(), dict))
+
+
+    def test_get_key2value_dict(self):
+        pcixml = self._from_scratch()
+        result = pcixml.get_key2value_dict()
+        self.assertTrue(isinstance(result, dict))
 
 
 if __name__ == "__main__":
