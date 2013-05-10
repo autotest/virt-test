@@ -80,7 +80,8 @@ def run_usb_storage(test, params, env):
                                  "fdisk output")
 
         error.context("Formatting USB disk")
-        devname = session.cmd("ls /dev/disk/by-path/* | grep usb").strip()
+        tmp_cmd = "readlink -f `ls /dev/disk/by-path/* | grep usb`"
+        devname = session.cmd(tmp_cmd).strip()
         session.cmd("yes | mkfs %s" % devname,
                     timeout=int(params["format_timeout"]))
 
