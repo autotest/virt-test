@@ -154,7 +154,7 @@ def run_multi_disk(test, params, env):
     for _ in param_matrix:
         param_table_header.append(_)
 
-    stg_image_name = params.get('stg_image_name', '%s')
+    stg_image_name = params.get('stg_image_name', 'images/%s')
     for i in xrange(stg_image_num):
         name = "stg%d" % i
         params['images'] += " %s" % name
