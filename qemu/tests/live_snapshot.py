@@ -1,6 +1,7 @@
-from autotest_lib.client.virt import virt_utils, virt_test_utils
-from autotest_lib.client.virt.tests import file_transfer
 import time, logging
+from autotest.client.shared import error
+from virttest import utils_misc, utils_test
+from tests import file_transfer
 
 def run_live_snapshot(test, params, env):
     """
@@ -26,7 +27,7 @@ def run_live_snapshot(test, params, env):
         cmd = params.get("create_sn_cmd")
 
         block_info = vm.monitor.info("block")
-        if virt_utils.has_option("qmp") and params.get("monitor_type") == "qmp":
+        if utils_misc.qemu_has_option("qmp") and params.get("monitor_type") == "qmp":
             device = block_info[0]["device"]
         else:
             string = ""
@@ -66,21 +67,21 @@ def run_live_snapshot(test, params, env):
             create_cmd = params.get("create_cmd") % file_create
 
             args = (create_cmd, dd_timeout)
-            bg = virt_test_utils.BackgroundTest(session.cmd_output, args)
+            bg = utils_test.BackgroundTest(session.cmd_output, args)
             bg.start()
             time.sleep(5)
             create_snapshot(vm)
             if bg.is_alive():
                 try:
                     bg.join()
-                except:
+                except Exception:
                     raise
         finally:
             session.close()
 
     def reboot_test():
         try:
-            bg = virt_test_utils.BackgroundTest(vm.reboot, (session,))
+            bg = utils_test.BackgroundTest(vm.reboot, (session,))
             logging.info("Rebooting guest ...")
             bg.start()
             sleep_time = int(params.get("sleep_time"))
@@ -93,7 +94,7 @@ def run_live_snapshot(test, params, env):
         try:
             bg_cmd = file_transfer.run_file_transfer
             args = (test, params, env)
-            bg = virt_test_utils.BackgroundTest(bg_cmd, args)
+            bg = utils_test.BackgroundTest(bg_cmd, args)
             bg.start()
             sleep_time = int(params.get("sleep_time"))
             time.sleep(sleep_time)
@@ -101,7 +102,7 @@ def run_live_snapshot(test, params, env):
             if bg.is_alive():
                 try:
                     bg.join()
-                except:
+                except Exception:
                     raise
         finally:
             session.close()
