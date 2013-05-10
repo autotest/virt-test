@@ -173,9 +173,10 @@ class VM(virt_vm.BaseVM):
         """
         Verify if the userspace component (qemu) crashed.
         """
-        for line in self.process.get_output().splitlines():
-            if "(core dumped)" in line:
-                raise QemuSegFaultError(line)
+        if "(core dumped)" in self.process.get_output():
+            for line in self.process.get_output().splitlines():
+                if "(core dumped)" in line:
+                    raise QemuSegFaultError(line)
 
     def verify_kvm_internal_error(self):
         """
