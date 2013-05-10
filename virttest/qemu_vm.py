@@ -20,6 +20,10 @@ class QemuSegFaultError(virt_vm.VMError):
         return ("Qemu crashed: %s" % self.crash_message)
 
 
+class KVMInternalError(virt_vm.VMError):
+    pass
+
+
 class ImageUnbootableError(virt_vm.VMError):
     def __init__(self, name):
         virt_vm.VMError.__init__(self, name)
@@ -115,6 +119,7 @@ class VM(virt_vm.BaseVM):
         self.verify_userspace_crash()
         self.verify_kernel_crash()
         self.verify_illegal_instruction()
+        self.verify_kvm_internal_error()
         try:
             virt_vm.BaseVM.verify_alive(self)
             if self.monitor:
@@ -171,6 +176,15 @@ class VM(virt_vm.BaseVM):
         for line in self.process.get_output().splitlines():
             if "(core dumped)" in line:
                 raise QemuSegFaultError(line)
+
+    def verify_kvm_internal_error(self):
+        """
+        Verify KVM internal error.
+        """
+        if "KVM internal error." in self.process.get_output():
+            out = self.process.get_output()
+            out = out[out.find("KVM internal error."):]
+            raise KVMInternalError(out)
 
 
     def verify_disk_image_bootable(self):
