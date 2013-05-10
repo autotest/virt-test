@@ -195,6 +195,18 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
+    def get_disk_source(vm_name):
+        """
+        Get block device  of a defined VM's disks.
+
+        @param: vm_name: Name of defined vm.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        disks = vmxml.get_disk_all()
+        return disks.values()
+
+
+    @staticmethod
     def get_disk_blk(vm_name):
         """
         Get block device  of a defined VM's disks.
@@ -203,9 +215,7 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         disks = vmxml.get_disk_all()
-        if disks != None:
-            return disks.keys()
-        return None
+        return disks.keys()
 
 
     @staticmethod
