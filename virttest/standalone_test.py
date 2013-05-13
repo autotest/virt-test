@@ -232,6 +232,16 @@ class Test(object):
                         env_process.postprocess_on_error(self, params, env)
                     finally:
                         env.save()
+                    if params.get("generate_bug_report") == "yes":
+                        # Try to generate a bug summary for qemu test.
+                        import qemu_bug_reporter
+                        try:
+                            if isinstance(e, error.TestFail):
+                                logging.debug("Generate bug report template.")
+                                qemu_bug_reporter.create_report(self.outputdir)
+                        except Exception, detail:
+                            logging.warn("Fail to generate bug report"
+                                         " templete: %s" % detail)
                     raise
 
             finally:
