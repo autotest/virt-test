@@ -129,9 +129,8 @@ def _find_default_qemu_paths(options_qemu=None):
             qemu_bin_path = utils_misc.find_command('kvm')
 
     qemu_dirname = os.path.dirname(qemu_bin_path)
-    parent_qemu_dirname = os.path.dirname(qemu_dirname)
-    qemu_img_path = os.path.join(parent_qemu_dirname, 'qemu-img')
-    qemu_io_path = os.path.join(parent_qemu_dirname, 'qemu-io')
+    qemu_img_path = os.path.join(qemu_dirname, 'qemu-img')
+    qemu_io_path = os.path.join(qemu_dirname, 'qemu-io')
 
     if not os.path.exists(qemu_img_path):
         qemu_img_path = utils_misc.find_command('qemu-img')
