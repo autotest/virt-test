@@ -74,7 +74,7 @@ def run_unittest(test, params, env):
             nfail += 1
             tests_failed.append(t)
             logging.error('Unittest file %s referenced in config file %s but '
-                          'was not find under the unittest dir', flat_file,
+                          'was not found under the unittest dir', flat_file,
                           unittest_cfg)
             continue
 
