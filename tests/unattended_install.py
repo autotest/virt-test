@@ -291,14 +291,15 @@ class UnattendedInstallConfig(object):
         # Now, writing the in memory config state to the unattended file
         fp = open(answer_path, 'w')
         parser.write(fp)
+        fp.close()
 
         # Let's read it so we can debug print the contents
         fp = open(answer_path, 'r')
         contents = fp.read()
+        fp.close()
         logging.debug("Unattended install contents:")
         for line in contents.splitlines():
             logging.debug(line)
-        fp.close()
 
 
     def answer_windows_xml(self, answer_path):
@@ -363,6 +364,7 @@ class UnattendedInstallConfig(object):
 
         fp = open(answer_path, 'w')
         doc.writexml(fp)
+        fp.close()
 
 
     def answer_suse_xml(self, answer_path):
@@ -376,6 +378,7 @@ class UnattendedInstallConfig(object):
 
         fp = open(answer_path, 'w')
         doc.writexml(fp)
+        fp.close()
 
 
     def preseed_initrd(self):
