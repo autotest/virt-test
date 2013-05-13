@@ -693,10 +693,17 @@ def run_tests(parser, options):
     @return: True, if all tests ran passed, False if any of them failed.
     """
     test_start_time = time.strftime('%Y-%m-%d-%H.%M.%S')
-    debugdir = options.logdir or os.path.join(data_dir.get_root_dir(), 'logs')
-    debugdir = os.path.join(debugdir, 'run-%s' % test_start_time)
+    logdir = options.logdir or os.path.join(data_dir.get_root_dir(), 'logs')
+    debugdir = os.path.join(logdir, 'run-%s' % test_start_time)
+    latestdir = os.path.join(logdir, "latest")
     if not os.path.isdir(debugdir):
         os.makedirs(debugdir)
+    try:
+        os.unlink(latestdir)
+    except OSError, detail:
+        pass
+    os.symlink(debugdir, latestdir)
+
     debuglog = os.path.join(debugdir, "debug.log")
     configure_file_logging(debuglog)
 
