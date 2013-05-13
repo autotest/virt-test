@@ -516,6 +516,19 @@ def get_vendor_from_pci_id(pci_id):
     return re.sub(":", " ", commands.getoutput(cmd))
 
 
+def get_dev_major_minor(dev):
+    """
+    Get the major and minor numbers of the device
+    @return: Tuple(major, minor) numbers of the device
+    """
+    try:
+        rdev = os.stat(dev).st_rdev
+        return (os.major(rdev), os.minor(rdev))
+    except Exception, details:
+        raise error.TestFail("get_dev_major_minor(%s) failed: %s" %
+                             (dev, details))
+
+
 class Flag(str):
     """
     Class for easy merge cpuflags.
