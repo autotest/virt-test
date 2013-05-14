@@ -1333,6 +1333,33 @@ def get_qemu_cpu_models(qemu_binary):
     return extract_qemu_cpu_models(result.stdout)
 
 
+def get_qemu_binary(params):
+    """
+    Get the path to the qemu binary currently in use.
+    """
+    return get_path(os.path.join(data_dir.get_root_dir(),
+                                 params.get("vm_type")),
+                                 params.get("qemu_binary", "qemu"))
+
+
+def get_qemu_img_binary(params):
+    """
+    Get the path to the qemu-img binary currently in use.
+    """
+    return get_path(os.path.join(data_dir.get_root_dir(),
+                                 params.get("vm_type")),
+                                 params.get("qemu_img_binary", "qemu"))
+
+
+def get_qemu_io_binary(params):
+    """
+    Get the path to the qemu-img binary currently in use.
+    """
+    return get_path(os.path.join(data_dir.get_root_dir(),
+                                 params.get("vm_type")),
+                                 params.get("qemu_io_binary", "qemu"))
+
+
 def get_qemu_best_cpu_model(params):
     """
     Try to find out the best CPU model available for qemu.
@@ -1348,9 +1375,7 @@ def get_qemu_best_cpu_model(params):
         return 'qemu64'.
     """
     host_cpu_models = get_host_cpu_models()
-    root_dir = data_dir.get_root_dir()
-    qemu_binary = get_path(os.path.join(root_dir, params.get("vm_type")),
-                                        params.get("qemu_binary", "qemu"))
+    qemu_binary = get_qemu_binary(params)
     qemu_cpu_models = get_qemu_cpu_models(qemu_binary)
     # Let's try to find a suitable model on the qemu list
     for host_cpu_model in host_cpu_models:

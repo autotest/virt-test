@@ -1221,9 +1221,7 @@ class VM(virt_vm.BaseVM):
         scsi_disk = 0
         global_image_bootindex = 0
 
-        qemu_binary = utils_misc.get_path(os.path.join(root_dir,
-                                                       params.get("vm_type")),
-                                          params.get("qemu_binary", "qemu"))
+        qemu_binary = utils_misc.get_qemu_binary(params)
 
         self.qemu_binary = qemu_binary
         help_text = commands.getoutput("%s -help" % qemu_binary)

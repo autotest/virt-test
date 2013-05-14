@@ -76,8 +76,7 @@ def run_flag_check(test, params, env):
         """
         Get all supported flags with qemu query cmd.
         """
-        qemu_binary = utils_misc.get_path(test.bindir,
-                                "qemu/%s" % params.get("qemu_binary", "qemu"))
+        qemu_binary = utils_misc.get_qemu_binary(params)
         cmd = qemu_binary + params.get("query_cmd", " -cpu ?")
         output = utils.system_output(cmd)
         flags_re = re.compile(params.get("pattern","flags:(.*)"))

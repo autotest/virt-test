@@ -15,7 +15,7 @@ def run_cpuflags(test, params, env):
     @param env: Dictionary with test environment.
     """
     utils_misc.Flag.aliases = utils_misc.kvm_map_flags_aliases
-    qemu_binary = utils_misc.get_path('.', params.get("qemu_binary", "qemu"))
+    qemu_binary = utils_misc.get_qemu_binary(params)
 
     cpuflags_src = os.path.join(test.virtdir, "deps", "test_cpu_flags")
     cpuflags_def = os.path.join(test.virtdir, "deps", "cpu_map.xml")
