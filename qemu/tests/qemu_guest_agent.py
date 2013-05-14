@@ -1,6 +1,7 @@
 import logging
 import time
 from autotest.client.shared import error
+from autotest.client import utils
 from virttest import guest_agent
 from virttest import utils_misc
 from virttest import aexpect
@@ -411,6 +412,47 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                   " config file")
 
 
+class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
+    """
+    Qemu guest agent test class for windows guest.
+    """
+    @error.context_aware
+    def setup_gagent_in_host(self, params, vm):
+        error.context("Install qemu guest agent package on host", logging.info)
+        gagent_host_install_cmd = params["gagent_host_install_cmd"]
+        utils.run(gagent_host_install_cmd)
+
+        error.context("Copy qemu guest agent program to guest", logging.info)
+        gagent_host_path = params["gagent_host_path"]
+        gagent_guest_dir = params["gagent_guest_dir"]
+        gagent_remove_service_cmd = params["gagent_remove_service_cmd"]
+
+        session = self._get_session(params, vm)
+        s, o = session.cmd_status_output("mkdir %s" % gagent_guest_dir)
+        if bool(s):
+            if str(s) == "1":
+                # The directory exists, try to remove previous copies
+                # of the qemu-ga.exe program, since the rss client
+                # can't transfer file if destination exists.
+                self._session_cmd_close(session, gagent_remove_service_cmd)
+            else:
+                raise error.TestError("Could not create qemu-ga directory"
+                                      " in VM '%s', detail: '%s'" %(vm.name, o))
+        vm.copy_files_to(gagent_host_path, gagent_guest_dir)
+
+
+    def setup(self, test, params, env):
+        BaseVirtTest.setup(self, test, params, env)
+
+        if not self.vm:
+            vm = self.env.get_vm(params["main_vm"])
+            vm.verify_alive()
+            self.vm = vm
+
+        self.setup_gagent_in_host(params, self.vm)
+        self.setup_gagent_in_guest(params, self.vm)
+
+
 def run_qemu_guest_agent(test, params, env):
     """
     Test qemu guest agent, this case will:
@@ -422,5 +464,9 @@ def run_qemu_guest_agent(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environmen.
     """
-    gagent_test = QemuGuestAgentBasicCheck(test, params, env)
+    if params["os_type"] == "windows":
+        gagent_test = QemuGuestAgentBasicCheckWin(test, params, env)
+    else:
+        gagent_test = QemuGuestAgentBasicCheck(test, params, env)
+
     gagent_test.execute(test, params, env)
