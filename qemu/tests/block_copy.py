@@ -122,9 +122,10 @@ class BlockCopy(object):
         cancel active job on given image;
         """
         def is_cancelled():
+            ret = not bool(self.get_status())
             if self.vm.monitor.protocol == "qmp":
-                return self.vm.monitor.get_event("BLOCK_JOB_CANCELLED")
-            return not self.get_status()
+                ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_CANCELLED"))
+            return ret
 
         error.context("cancel block copy job", logging.info)
         params = self.parser_test_args()
@@ -133,10 +134,10 @@ class BlockCopy(object):
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_events()
         self.vm.cancel_block_job(self.device)
-        cancelled = utils_misc.wait_for(is_cancelled, timeout=timeout,
-                    text="wait job cancelled in %ss" % timeout)
+        cancelled = utils_misc.wait_for(is_cancelled, timeout=timeout)
         if not cancelled:
-            raise error.TestFail("Job still running after %ss" % timeout)
+            msg = "Cancel block job timeout in %ss" % timeout
+            raise error.TestFail(msg)
 
 
     @error.context_aware
