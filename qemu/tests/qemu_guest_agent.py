@@ -282,13 +282,19 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         @param env: Dictionary with test environmen.
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_REBOOT)
-        # XXX: This way of checking if VM is rebooted can only work with
-        # Linux guest, is there any way to check windows guest reboot?
         pattern = params["gagent_guest_reboot_pattern"]
         error.context("Verify serial output has '%s'" % pattern)
         rebooted = self.__gagent_check_serial_output(pattern)
         if not rebooted:
             raise error.TestFail("Could not reboot VM via guest agent")
+        error.context("Try to re-login to guest after reboot")
+        try:
+            session = self._get_session(self.params, None)
+            session.close()
+        except Exception, detail:
+            raise error.TestFail("Could not login to guest,"
+                                 " detail: '%s'" % detail)
+
 
 
     @error.context_aware
