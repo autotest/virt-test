@@ -307,8 +307,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         @param env: Dictionary with test environmen.
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_HALT)
-        # XXX: This way of checking if VM is halted can only work with
-        # Linux guest, is there any way to check windows guest halt?
         pattern = params["gagent_guest_shutdown_pattern"]
         error.context("Verify serial output has '%s'" % pattern)
         halted = self.__gagent_check_serial_output(pattern)
@@ -317,8 +315,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # Since VM is halted, force shutdown it.
         try:
             self.vm.destroy(gracefully=False)
-        except Exception:
-            pass
+        except Exception, detail:
+            logging.warn("Got an exception when force destroying guest:"
+                         " '%s'", detail)
 
 
     @error.context_aware
