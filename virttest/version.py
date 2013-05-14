@@ -66,7 +66,7 @@ def get_top_commit():
     if _TOP_COMMIT_CACHE is not None:
         return _TOP_COMMIT_CACHE
 
-    _TOP_COMMIT_CACHE = _execute_git_command("git show --summary --pretty='%H'")
+    _TOP_COMMIT_CACHE = _execute_git_command("git show --summary --pretty='%H' | head -1")
 
     return _TOP_COMMIT_CACHE
 
