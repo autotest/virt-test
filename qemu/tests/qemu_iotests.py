@@ -29,12 +29,9 @@ def run_qemu_iotests(test, params, env):
                  destination_dir=destination_dir, base_uri=base_uri)
 
     # Then, set the qemu paths for the use of the testsuite
-    os.environ["QEMU_PROG"] = utils_misc.get_path(test.bindir,
-                                    params.get("qemu_binary", "qemu"))
-    os.environ["QEMU_IMG_PROG"] = utils_misc.get_path(test.bindir,
-                                    params.get("qemu_img_binary", "qemu-img"))
-    os.environ["QEMU_IO_PROG"] = utils_misc.get_path(test.bindir,
-                                    params.get("qemu_io_binary", "qemu-io"))
+    os.environ["QEMU_PROG"] = utils_misc.get_qemu_binary(params)
+    os.environ["QEMU_IMG_PROG"] = utils_misc.get_qemu_img_binary(params)
+    os.environ["QEMU_IO_PROG"] = utils_misc.get_qemu_io_binary(params)
 
     os.chdir(destination_dir)
     image_format = params["qemu_io_image_format"]

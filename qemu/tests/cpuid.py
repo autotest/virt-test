@@ -15,7 +15,7 @@ def run_cpuid(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    qemu_binary = utils_misc.get_path('.', params.get("qemu_binary", "qemu"))
+    qemu_binary = utils_misc.get_qemu_binary(params)
 
     cpu_model = params.get("cpu_model", "qemu64")
 

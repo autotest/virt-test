@@ -122,9 +122,7 @@ def run_watchdog(test, params, env):
         1. Send qemu command 'qemu -watchdog ?'
         2. Check the watchdog type that the host support.
         """
-        qemu_binary = utils_misc.get_path(os.path.join(test.bindir,
-                                                       params.get("vm_type")),
-                                          params.get("qemu_binary", "qemu"))
+        qemu_binary = utils_misc.get_qemu_binary(params)
 
         watchdog_type_check = params.get("watchdog_type_check"," -watchdog '?'")
         qemu_cmd  = qemu_binary + watchdog_type_check

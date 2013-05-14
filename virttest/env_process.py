@@ -402,8 +402,7 @@ def preprocess(test, params, env):
         except error.CmdError:
             kvm_userspace_version = "Unknown"
     else:
-        qemu_path = utils_misc.get_path(test.bindir,
-                                        params.get("qemu_binary", "qemu"))
+        qemu_path = utils_misc.get_qemu_binary(params)
         version_line = commands.getoutput("%s -help | head -n 1" % qemu_path)
         matches = re.findall("[Vv]ersion .*?,", version_line)
         if matches:
