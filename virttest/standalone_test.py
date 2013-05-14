@@ -692,10 +692,19 @@ def run_tests(parser, options):
     @param parser: Config parser object.
     @return: True, if all tests ran passed, False if any of them failed.
     """
-    debugdir = options.logdir or os.path.join(data_dir.get_root_dir(), 'logs')
-    debugdir = os.path.join(debugdir, 'run-%s' % time.strftime('%Y-%m-%d-%H.%M.%S'))
+    test_start_time = time.strftime('%Y-%m-%d-%H.%M.%S')
+    logdir = options.logdir or os.path.join(data_dir.get_root_dir(), 'logs')
+    debugdir = os.path.join(logdir, 'run-%s' % test_start_time)
+    latestdir = os.path.join(logdir, "latest")
     if not os.path.isdir(debugdir):
         os.makedirs(debugdir)
+    try:
+        os.unlink(latestdir)
+    except OSError, detail:
+        if detail.errno != 2:
+            raise
+    os.symlink(debugdir, latestdir)
+
     debuglog = os.path.join(debugdir, "debug.log")
     configure_file_logging(debuglog)
 
@@ -707,7 +716,7 @@ def run_tests(parser, options):
 
     last_index = -1
 
-    logging.info("Starting test job at %s", time.strftime('%Y-%m-%d %H:%M:%S'))
+    logging.info("Starting test job at %s", test_start_time)
     logging.info("")
 
     logging.info(version.get_pretty_version_info())
