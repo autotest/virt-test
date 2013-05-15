@@ -22,7 +22,7 @@ Usage: check_patch.py -p [/path/to/patch]
 @author: Lucas Meneghel Rodrigues <lmr@redhat.com>
 """
 
-import os, stat, logging, sys, optparse, re, urllib, shutil, unittest
+import os, stat, logging, sys, optparse, re, urllib, shutil, unittest, tempfile
 try:
     import autotest.common as common
 except ImportError:
@@ -35,12 +35,14 @@ import run_pylint, reindent
 # Hostname of patchwork server to use
 PWHOST = "patchwork.virt.bos.redhat.com"
 
+TMP_FILE_DIR = tempfile.gettempdir()
+LOG_FILE_PATH = os.path.join(TMP_FILE_DIR, 'check-patch.log')
+
 class CheckPatchLoggingConfig(logging_config.LoggingConfig):
     def configure_logging(self, results_dir=None, verbose=True):
         super(CheckPatchLoggingConfig, self).configure_logging(use_console=True,
                                                                verbose=verbose)
-        p = os.path.join(os.getcwd(), 'check-patch.log')
-        self.add_file_handler(file_path=p)
+        self.add_file_handler(file_path=LOG_FILE_PATH)
 
 class VCS(object):
     """
@@ -535,7 +537,7 @@ class PatchChecker(object):
                  confirm=False):
         self.confirm = confirm
         self.files_failed_check = []
-        self.base_dir = os.getcwd()
+        self.base_dir = TMP_FILE_DIR
         if pwhost is None:
             self.pwhost = PWHOST
         else:
@@ -696,6 +698,7 @@ if __name__ == "__main__":
         vcs = None
 
     logging_manager.configure_logging(CheckPatchLoggingConfig(), verbose=debug)
+    logging.info("Log saved to file: %s", LOG_FILE_PATH)
     extension_blacklist = ["common.py", ".svn", ".git", ".pyc", ".orig", ".rej",
                            ".bak", ".so", ".cfg", ".ks", ".preseed", ".steps", ".c",
                            ".xml", ".sif", ".cs", ".ini", ".exe", "logs", "shared/data"]
