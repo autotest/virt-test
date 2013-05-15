@@ -299,5 +299,45 @@ class VMXML(VMXMLBase):
         vmxml.undefine()
         vmxml.define()
 
+
+    def get_iface_all(self):
+        """
+        Get a dict with interface's mac and node.
+        """
+        iface_nodes = self.xmltreefile.find('devices').findall('interface')
+        interfaces = {}
+        for node in iface_nodes:
+            mac_addr = node.find('mac').get('address')
+            interfaces[mac_addr] = node
+        return interfaces
+
+
+    @staticmethod
+    def get_iface_by_mac(vm_name, mac):
+        """
+        Get the interface if mac is matched.
+
+        @param vm_name: Name of defined vm.
+        @param mac: a mac address.
+        @return: return a dict include main interface's features
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        interfaces = vmxml.get_iface_all()
+        try:
+            interface = interfaces[mac]
+        except KeyError:
+            interface = None
+        if interface is not None: # matched mac exists.
+            iface_type = interface.get('type')
+            source = interface.find('source').get(iface_type)
+            features = {}
+            features['type'] = iface_type
+            features['mac'] = mac
+            features['source'] = source
+            return features
+        else:
+            return None
+
+
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)
