@@ -93,9 +93,9 @@ def run_chardev_hotplug(test, params, env):
     chardev_use(vm, "chardev-null")
     chardev_del(vm, "chardev-null")
 
-    error.context("Test file chardev [path]", logging.info)
+    error.context("Test file chardev", logging.info)
     filename = "/tmp/chardev-file-%s" % vm.instance
-    args = { 'out' : { 'type' : 'path', 'data' : filename }}
+    args = { 'out' : filename }
     chardev_add(vm, "chardev-file", "file", args)
     chardev_use(vm, "chardev-file")
     chardev_del(vm, "chardev-file")
@@ -103,24 +103,9 @@ def run_chardev_hotplug(test, params, env):
     if output.find("Hello virttest world") == -1:
         raise error.TestFail("Guest message not found [%s]" % output)
 
-    error.context("Test file chardev [fd]", logging.info)
-    (fd_dst, fd_src) = os.pipe()
-    fl = fcntl.fcntl(fd_dst, fcntl.F_GETFL)
-    fcntl.fcntl(fd_dst, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-    vm.monitor.getfd(fd_src, "chardev-fd")
-    os.close(fd_src)
-    args = { 'out' : { 'type' : 'fd', 'data' : "chardev-fd" }}
-    chardev_add(vm, "chardev-file", "file", args)
-    chardev_use(vm, "chardev-file")
-    output = os.read(fd_dst, 256)
-    os.close(fd_dst)
-    if output.find("Hello virttest world") == -1:
-        raise error.TestFail("Guest message not found [%s]" % output)
-    chardev_del(vm, "chardev-file")
-
     error.context("Test pty chardev", logging.info)
     reply = chardev_add(vm, "chardev-pty", "pty", {})
-    filename = reply["return"]["data"]
+    filename = reply["return"]["pty"]
     logging.info("host pty device is '%s'" % filename)
     fd_dst = os.open(filename, os.O_RDWR | os.O_NONBLOCK)
     chardev_use(vm, "chardev-pty")
