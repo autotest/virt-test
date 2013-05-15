@@ -259,6 +259,8 @@ class QemuImg(object):
 
         image_filename = self.image_filename
         backup_dir = params.get("backup_dir")
+        if not os.path.isabs(backup_dir):
+            backup_dir = os.path.join(root_dir, backup_dir)
         if params.get('image_raw_device') == 'yes':
             iname = "raw_device"
             iformat = params.get("image_format", "qcow2")
