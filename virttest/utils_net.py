@@ -1,9 +1,15 @@
 import openvswitch, re, os, socket, fcntl, struct, logging, random
-import ctypes, math, time
+import math, time
 import shelve, commands
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 import propcan, utils_misc, arch, aexpect
+
+CTYPES_SUPPORT = True
+try:
+    import ctypes
+except ImportError:
+    CTYPES_SUPPORT = False
 
 SYSFS_NET_PATH = "/sys/class/net"
 PROCFS_NET_PATH = "/proc/net/dev"
@@ -303,6 +309,8 @@ class Interface(object):
         """
         Get ip network netmask
         """
+        if not CTYPES_SUPPORT:
+            raise error.TestNAError("Getting the netmask requires python > 2.4")
         ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00'*14)
         try:
             res = fcntl.ioctl(sockfd, arch.SIOCGIFNETMASK, ifreq)
@@ -317,6 +325,8 @@ class Interface(object):
         """
         Set netmask
         """
+        if not CTYPES_SUPPORT:
+            raise error.TestNAError("Setting the netmask requires python > 2.4")
         netmask = ctypes.c_uint32(~((2 ** (32 - netmask)) - 1)).value
         nmbytes = socket.htonl(netmask)
         ifreq = struct.pack('16sH2si8s', self.name,
