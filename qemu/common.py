@@ -28,5 +28,11 @@ except ImportError:
                   "please set it to a path containing an autotest checkout")
             print("Or install the autotest-framework package for your distro")
             sys.exit(1)
+        if not os.path.isdir(client_dir):
+            print('Autotest client library directory was not found at: "%s"' %
+                  client_dir)
+            print('Please check if the environment variable "$AUTOTEST_PATH" '
+                  'points to a valid location')
+            sys.exit(1)
         sm = load_setup_modules(client_dir)
 sm.setup(base_path=client_dir, root_module_name="autotest.client")
