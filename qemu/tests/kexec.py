@@ -34,6 +34,7 @@ def run_kexec(test, params, env):
     def install_new_kernel():
         error.context("Install a new kernel in guest", logging.info)
         try:
+            # pylint: disable=E0611
             from qemu.tests import rh_kernel_update
             rh_kernel_update.run_rh_kernel_update(test, params, env)
         except Exception, detail:
@@ -75,7 +76,7 @@ def run_kexec(test, params, env):
             new_kernel = kernel[7:]
     if not new_kernel:
         raise error.TestError("Could not find new kernel, "
-                              "command line output: %s" % o)
+                              "command line output: %s" % output)
     msg = "Reboot to kernel %s through kexec" % new_kernel
     error.context(msg, logging.info)
     cmd = params.get("get_kernel_image") % new_kernel
