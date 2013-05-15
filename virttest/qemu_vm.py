@@ -561,8 +561,8 @@ class VM(virt_vm.BaseVM):
 
 
         def add_drive(help_text, filename, index=None, fmt=None, cache=None,
-                      werror=None, rerror=None, serial=None, snapshot=False,
-                      boot=False, blkdebug=None, bus=None, port=None,
+                      werror=None, rerror=None, serial=None, snapshot=None,
+                      boot=None, blkdebug=None, bus=None, port=None,
                       bootindex=None, removable=None, min_io_size=None,
                       opt_io_size=None, physical_block_size=None,
                       logical_block_size=None, readonly=None, scsiid=None,
