@@ -21,10 +21,6 @@ def set_verbosity(verbose):
     global LINT_VERBOSE
     LINT_VERBOSE = verbose
 
-pylintrc_path = os.path.expanduser('~/.pylintrc')
-if not os.path.exists(pylintrc_path):
-    open(pylintrc_path, 'w').close()
-
 major, minor, _ = pylint_version.split('.')
 pylint_version = float("%s.%s" % (major, minor))
 
