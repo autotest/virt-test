@@ -67,27 +67,27 @@ def get_image_filename(params, root_dir):
            image_format -- the format of the image (qcow2, raw etc)
     @raise VMDeviceError: When no matching disk found (in indirect method).
     """
-    def sort_cmp(x, y):
+    def sort_cmp(first, second):
         """
         This function used for sort to suit for this test, first sort by len
         then by value.
         """
-        has_digit_x = re.findall('[vhs]d[a-z]*[\d]+', x)
-        has_digit_y = re.findall('[vhs]d[a-z]*[\d]+', y)
+        first_contains_digit = re.findall(r'[vhs]d[a-z]*[\d]+', first)
+        second_contains_digit = re.findall(r'[vhs]d[a-z]*[\d]+', second)
 
-        if not has_digit_x and  not has_digit_y:
-            if len(x) > len(y):
+        if not first_contains_digit and  not second_contains_digit:
+            if len(first) > len(second):
                 return 1
-            elif len(x) < len(y):
+            elif len(first) < len(second):
                 return -1
-        if len(x) == len(y):
-            if has_digit_x and has_digit_y:
-                return cmp(x, y)
-            elif has_digit_x:
+        if len(first) == len(second):
+            if first_contains_digit and second_contains_digit:
+                return cmp(first, second)
+            elif first_contains_digit:
                 return -1
-            elif has_digit_y:
+            elif second_contains_digit:
                 return 1
-        return cmp(x, y)
+        return cmp(first, second)
 
     image_name = params.get("image_name", "image")
     indirect_image_select = params.get("indirect_image_select")
@@ -95,7 +95,7 @@ def get_image_filename(params, root_dir):
         re_name = image_name
         indirect_image_select = int(indirect_image_select)
         matching_images = utils.system_output("ls -1d %s" % re_name)
-        matching_images = sorted(matching_images.split('\n'), cmp = sort_cmp)
+        matching_images = sorted(matching_images.split('\n'), cmp=sort_cmp)
         if matching_images[-1] == '':
             matching_images = matching_images[:-1]
         try:
@@ -109,10 +109,8 @@ def get_image_filename(params, root_dir):
         for protected in params.get('indirect_image_blacklist', '').split(' '):
             match_image = re.match(protected, image_name)
             if match_image and match_image.group(0) == image_name:
-                """
-                We just need raise an error if it is totally match, such as
-                sda sda1 and so on, but sdaa should not raise an error.
-                """
+                # We just need raise an error if it is totally match, such as
+                # sda sda1 and so on, but sdaa should not raise an error.
                 raise virt_vm.VMDeviceError("Matching disk is in blacklist. "
                                             "name = '%s', matching = '%s' and "
                                             "selector = '%s'" %
@@ -127,7 +125,8 @@ def get_image_filename(params, root_dir):
     else:
         image_filename = image_name
     if gluster_image:
-        image_filename = gluster.get_image_filename(params, image_name, image_format)
+        image_filename = gluster.get_image_filename(params, image_name,
+                                                    image_format)
     else:
         image_filename = utils_misc.get_path(root_dir, image_filename)
     return image_filename
@@ -139,7 +138,6 @@ class OptionMissing(Exception):
     """
     def __init__(self, option):
         self.option = option
-
 
     def __str__(self):
         return "%s is missing. Please check your parameters" % self.option
@@ -167,7 +165,7 @@ class QemuImg(object):
         self.base_tag = None
         self.snapshot_tag = None
         if image_chain:
-            image_chain = re.split("\s+", image_chain)
+            image_chain = re.split(r"\s+", image_chain)
             if tag in image_chain:
                 index = image_chain.index(tag)
                 if index < len(image_chain) - 1:
@@ -259,7 +257,6 @@ class QemuImg(object):
 
             return bkp_set
 
-
         image_filename = self.image_filename
         backup_dir = params.get("backup_dir")
         if params.get('image_raw_device') == 'yes':
@@ -270,7 +267,8 @@ class QemuImg(object):
             backup_set = get_backup_set(ifilename, backup_dir, action, good)
             backup_func = backup_raw_device
         else:
-            backup_set = get_backup_set(image_filename, backup_dir, action, good)
+            backup_set = get_backup_set(image_filename, backup_dir, action,
+                                        good)
             backup_func = backup_image_file
 
         if action == 'backup':
@@ -284,9 +282,9 @@ class QemuImg(object):
 
             minimum_disk_free = 1.2 * backup_size
             if image_dir_disk_free < minimum_disk_free:
-                image_dir_disk_free_gb = float(image_dir_disk_free) / 10**9
-                backup_size_gb = float(backup_size) / 10**9
-                minimum_disk_free_gb = float(minimum_disk_free) / 10**9
+                image_dir_disk_free_gb = float(image_dir_disk_free) / 10 ** 9
+                backup_size_gb = float(backup_size) / 10 ** 9
+                minimum_disk_free_gb = float(minimum_disk_free) / 10 ** 9
                 logging.error("Free space on %s: %.1f GB", image_dir,
                               image_dir_disk_free_gb)
                 logging.error("Backup size: %.1f GB", backup_size_gb)
@@ -300,7 +298,8 @@ class QemuImg(object):
             backup_func(src, dst)
 
 
-    def clone_image(self, params, vm_name, image_name, root_dir):
+    @staticmethod
+    def clone_image(params, vm_name, image_name, root_dir):
         """
         Clone master image to vm specific file.
 
@@ -328,7 +327,8 @@ class QemuImg(object):
             params["image_name_%s_%s" % (image_name, vm_name)] = vm_image_name
 
 
-    def rm_cloned_image(self, params, vm_name, image_name, root_dir):
+    @staticmethod
+    def rm_cloned_image(params, vm_name, image_name, root_dir):
         """
         Remove vm specific file.
 
@@ -355,7 +355,7 @@ class QemuImg(object):
 
 class Rawdev(object):
     """
-    Base class for rew storage devices such as iscsi and local disks
+    Base class for raw storage devices such as iscsi and local disks
     """
     def __init__(self, params, root_dir, tag):
         """
