@@ -45,7 +45,7 @@ def preprocess_image(test, params, image_name):
 
         if params.get("backup_image_before_testing", "no") == "yes":
             image = qemu_storage.QemuImg(params, base_dir, image_name)
-            image.backup_image(params, base_dir, "backup", True)
+            image.backup_image(params, base_dir, "backup", True, True)
         if create_image:
             image = qemu_storage.QemuImg(params, base_dir, image_name)
             image.create(params)
