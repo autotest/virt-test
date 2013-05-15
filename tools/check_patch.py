@@ -40,8 +40,9 @@ LOG_FILE_PATH = os.path.join(TMP_FILE_DIR, 'check-patch.log')
 
 class CheckPatchLoggingConfig(logging_config.LoggingConfig):
     def configure_logging(self, results_dir=None, verbose=True):
-        super(CheckPatchLoggingConfig, self).configure_logging(use_console=True,
-                                                               verbose=verbose)
+        super(CheckPatchLoggingConfig, self).configure_logging(
+            use_console=True,
+            verbose=verbose)
         self.add_file_handler(file_path=LOG_FILE_PATH)
 
 class VCS(object):
@@ -429,7 +430,8 @@ class FileChecker(object):
 
         This tool will call the static code checker pylint using the special
         autotest conventions and warn about problems. Some of the problems
-        reported might be false positive, but it's allways good to look at them.
+        reported might be false positive, but it's allways good to look at
+        them.
         """
         success = True
         for exc in self.check_exceptions:
@@ -533,8 +535,7 @@ class FileChecker(object):
 
 class PatchChecker(object):
     def __init__(self, patch=None, patchwork_id=None, github_id=None,
-                 pwhost=None, vcs=None,
-                 confirm=False):
+                 pwhost=None, vcs=None, confirm=False):
         self.confirm = confirm
         self.files_failed_check = []
         self.base_dir = TMP_FILE_DIR
@@ -562,7 +563,8 @@ class PatchChecker(object):
         if changed_files_before:
             logging.error("Repository has changed files prior to patch "
                           "application. ")
-            answer = utils.ask("Would you like to revert them?", auto=self.confirm)
+            answer = utils.ask("Would you like to revert them?",
+                               auto=self.confirm)
             if answer == "n":
                 logging.error("Not safe to proceed without reverting files.")
                 sys.exit(1)
@@ -609,7 +611,8 @@ class PatchChecker(object):
 
         @param gh_id: Patchwork patch id.
         """
-        patch_url = "https://github.com/autotest/virt-test/pull/%s.patch" % gh_id
+        url_template = "https://github.com/autotest/virt-test/pull/%s.patch"
+        patch_url = url_template % gh_id
         patch_dest = os.path.join(self.base_dir, 'github-%s.patch' % gh_id)
         urllib.urlretrieve(patch_url, patch_dest)
         return patch_dest
@@ -699,9 +702,10 @@ if __name__ == "__main__":
 
     logging_manager.configure_logging(CheckPatchLoggingConfig(), verbose=debug)
     logging.info("Log saved to file: %s", LOG_FILE_PATH)
-    extension_blacklist = ["common.py", ".svn", ".git", ".pyc", ".orig", ".rej",
-                           ".bak", ".so", ".cfg", ".ks", ".preseed", ".steps", ".c",
-                           ".xml", ".sif", ".cs", ".ini", ".exe", "logs", "shared/data"]
+    extension_blacklist = ["common.py", ".svn", ".git", ".pyc", ".orig",
+                           ".rej", ".bak", ".so", ".cfg", ".ks", ".preseed",
+                           ".steps", ".c", ".xml", ".sif", ".cs", ".ini",
+                           ".exe", "logs", "shared/data"]
     dir_blacklist = [".svn", ".git", "data", "logs"]
 
     if full_check:
