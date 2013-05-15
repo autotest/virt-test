@@ -194,7 +194,8 @@ class QemuImg(object):
             raise OptionMissing(option)
 
 
-    def backup_image(self, params, root_dir, action, good=True):
+    def backup_image(self, params, root_dir, action, good=True,
+                     skip_existing=False):
         """
         Backup or restore a disk image, depending on the action chosen.
 
@@ -297,6 +298,8 @@ class QemuImg(object):
                 return
 
         for src, dst in backup_set:
+            if action == 'backup' and skip_existing and os.path.exists(dst):
+                continue
             backup_func(src, dst)
 
 
