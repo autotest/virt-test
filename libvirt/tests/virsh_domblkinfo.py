@@ -57,7 +57,7 @@ def run_virsh_domblkinfo(test, params, env):
             lines = output_source.splitlines()
             capacity_cols = lines[0].split(":")
             size = int(capacity_cols[1].strip())
-            if disk_size != size:
+            if disk_size != size and disk_size_check:
                 raise error.TestFail("Command domblkinfo output is wrong! "
                                      "'%d' != '%d'" % (disk_size, size))
         else:
@@ -82,6 +82,11 @@ def run_virsh_domblkinfo(test, params, env):
     sourcelist = vm_xml.VMXML.get_disk_source(vm_name)
     test_disk_target = blklist[0]
     test_disk_source = sourcelist[0].find('source').get('file')
+    test_disk_format = sourcelist[0].find('driver').get('type')
+
+    disk_size_check = False
+    if test_disk_format == "raw":
+        disk_size_check = True
     if device == "no":
         test_disk_target = ""
         test_disk_source = ""
@@ -99,6 +104,7 @@ def run_virsh_domblkinfo(test, params, env):
 
     if vm_ref == "test_attach_disk":
         test_disk_source = test_attach_disk
+        disk_size_check = True
         (status_target, output_target,
         status_source, output_source) = attach_disk_test()
     else:
