@@ -1323,7 +1323,7 @@ def net_state_dict(only_names=False, **dargs):
             persistent = True
         except error.CmdError, detail:
             # Exception thrown, could be transient or real problem
-            if bool(detail.result_obj.stderr.count("ransient")):
+            if bool(str(detail.result_obj).count("ransient")):
                 persistent = False
             else: # A unexpected problem happened, re-raise it.
                 raise
