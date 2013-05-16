@@ -508,6 +508,21 @@ def run_cdrom(test, params, env):
                 check_tray_locked_test(vm, qemu_cdrom_device,
                                        guest_cdrom_device)
 
+            error.context("Check whether the cdrom is read-only", logging.info)
+            try:
+                self.session.cmd("echo y | mkfs %s" % guest_cdrom_device)
+                raise error.TestFail("Attempt to format cdrom %s succeeded" %
+                                                           (guest_cdrom_device))
+            except aexpect.ShellError:
+                pass
+
+            sub_test = params.get("sub_test")
+            if sub_test:
+                error.context("Run sub test '%s' before doing file"
+                              " operation" % sub_test, logging.info)
+                params["cdrom_cd1"] = os.path.basename(iso_image)
+                utils_test.run_virt_sub_test(test, params, env, sub_test)
+
             if params.get("cdrom_test_file_operation") == "yes":
                 file_operation_test(self.session, guest_cdrom_device,
                                     max_test_times)
