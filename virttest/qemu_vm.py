@@ -1220,6 +1220,8 @@ class VM(virt_vm.BaseVM):
         vdisk = 0
         scsi_disk = 0
         global_image_bootindex = 0
+        if params.get("kernel"):
+            global_image_bootindex = 1
 
         qemu_binary = utils_misc.get_qemu_binary(params)
 
