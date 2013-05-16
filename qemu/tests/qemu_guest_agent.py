@@ -1,5 +1,4 @@
-import logging
-import time
+import logging, time, os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import guest_agent
@@ -427,10 +426,15 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         gagent_host_install_cmd = params["gagent_host_install_cmd"]
         utils.run(gagent_host_install_cmd)
 
-        error.context("Copy qemu guest agent program to guest", logging.info)
-        gagent_host_path = params["gagent_host_path"]
+        error.context("Install dependence packages on host", logging.info)
+        gagent_host_dep_install_cmd = params.get("gagent_host_dep_install_cmd",
+                                                 "")
+        utils.run(gagent_host_dep_install_cmd)
+
+        error.context("Copy necessary DLLs to guest", logging.info)
         gagent_guest_dir = params["gagent_guest_dir"]
         gagent_remove_service_cmd = params["gagent_remove_service_cmd"]
+        gagent_dep_dlls_list = params.get("gagent_dep_dlls", "").split()
 
         session = self._get_session(params, vm)
         s, o = session.cmd_status_output("mkdir %s" % gagent_guest_dir)
@@ -443,6 +447,13 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             else:
                 raise error.TestError("Could not create qemu-ga directory"
                                       " in VM '%s', detail: '%s'" %(vm.name, o))
+        dlls_list = session.cmd("dir %s" % gagent_guest_dir)
+        missing_dlls_list = [_ for _ in gagent_dep_dlls_list
+                             if os.path.basename(_) not in dlls_list]
+        map(lambda f: vm.copy_files_to(f, gagent_guest_dir), missing_dlls_list)
+
+        error.context("Copy qemu guest agent program to guest", logging.info)
+        gagent_host_path = params["gagent_host_path"]
         vm.copy_files_to(gagent_host_path, gagent_guest_dir)
 
 
