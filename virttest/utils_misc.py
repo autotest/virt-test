@@ -669,7 +669,7 @@ def get_cpu_model():
                    "Haswell":
                    "fsgsbase,bmi1,hle,avx2,smep,bmi2,erms,invpcid,rtm",
                    "SandyBridge":
-                   "avx,xsave,aes,sse4_2|sse4.2,sse4.1|sse4_1,cx16,ssse3",
+                   "avx,xsave,sse4_2|sse4.2,sse4.1|sse4_1,cx16,ssse3",
                    "Westmere": "aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
                    "Nehalem": "sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
                    "Penryn": "sse4.1|sse4_1,cx16,ssse3",
@@ -1260,7 +1260,7 @@ def get_host_cpu_models():
                    "Opteron_G2": "cx16",
                    "Opteron_G1": "",
                    "SandyBridge":
-                   "avx,xsave,aes,sse4_2|sse4.2,sse4.1|sse4_1,cx16,ssse3",
+                   "avx,xsave,sse4_2|sse4.2,sse4.1|sse4_1,cx16,ssse3",
                    "Westmere": "aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
                    "Nehalem": "sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3",
                    "Penryn": "sse4.1|sse4_1,cx16,ssse3",
