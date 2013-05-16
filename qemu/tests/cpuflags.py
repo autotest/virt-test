@@ -656,8 +656,12 @@ def run_cpuflags(test, params, env):
                     out = e.result_obj.stderr
             finally:
                 uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
-                warn_flags = set(map(utils_misc.Flag, uns_re.findall(out)))
+                warn_flags = set([utils_misc.Flag(x)
+                                                for x in uns_re.findall(out)])
+                not_found = set([utils_misc.Flag(x)
+                                                for x in nf_re.findall(out)])
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
+                fwarn_flags -= not_found
                 if fwarn_flags:
                     raise error.TestFail("Qemu did not warn the use of "
                                          "flags %s" % str(fwarn_flags))
@@ -691,8 +695,13 @@ def run_cpuflags(test, params, env):
                     logging.error("Host boot with unsupported flag")
             finally:
                 uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
-                warn_flags = set(map(utils_misc.Flag, uns_re.findall(out)))
+                nf_re = re.compile(r"^CPU feature (.+) not found", re.MULTILINE)
+                warn_flags = set([utils_misc.Flag(x)
+                                                for x in uns_re.findall(out)])
+                not_found = set([utils_misc.Flag(x)
+                                                for x in nf_re.findall(out)])
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
+                fwarn_flags -= not_found
                 if fwarn_flags:
                     raise error.TestFail("Qemu did not warn the use of "
                                          "flags %s" % str(fwarn_flags))
