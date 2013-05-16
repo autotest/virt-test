@@ -260,6 +260,7 @@ def run_pci_hotplug(test, params, env):
     pci_num_range = int(params.get("pci_num"))
     rp_times = int(params.get("repeat_times"))
     img_list = params.get("images").split()
+    context_msg = "Running sub test '%s' %s"
     for j in range(rp_times):
         # pci_info is a list of list.
         # each element 'i' has 4 members:
@@ -269,8 +270,32 @@ def run_pci_hotplug(test, params, env):
         # pci_info[i][3] == device module name.
         pci_info = []
         for pci_num in xrange(pci_num_range):
+            sub_type = params.get("sub_type_before_plug")
+            if sub_type:
+                error.context(context_msg % (sub_type, "before hotplug"),
+                              logging.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
+
             error.context("Start hot-adding pci device, repeat %d" % j)
             add_device(pci_num)
+
+            sub_type = params.get("sub_type_after_plug")
+            if sub_type:
+                error.context(context_msg % (sub_type, "after hotplug"),
+                              logging.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
         for pci_num in xrange(pci_num_range):
+            sub_type = params.get("sub_type_before_unplug")
+            if sub_type:
+                error.context(context_msg % (sub_type, "before hotunplug"),
+                              logging.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
+
             error.context("start hot-deleting pci device, repeat %d" % j)
             pci_del(-(pci_num + 1))
+
+            sub_type = params.get("sub_type_after_unplug")
+            if sub_type:
+                error.context(context_msg % (sub_type, "after hotunplug"),
+                              logging.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
