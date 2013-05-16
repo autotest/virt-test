@@ -114,7 +114,9 @@ def run_virsh_domblkinfo(test, params, env):
         else:
             status_target = 0
             output_target = "xen doesn't support domblkinfo target!"
-    disk_size = os.path.getsize(test_disk_source)
+    disk_size = 0
+    if os.path.exists(test_disk_source):
+        disk_size = os.path.getsize(test_disk_source)
 
     # Recover enviremont
     if os.path.exists(test_attach_disk):
