@@ -338,7 +338,7 @@ class NetworkXML(NetworkXMLBase):
 
 
     @staticmethod
-    def new_from_net_dumpxml(network_name, virsh_instance=virsh):
+    def new_from_net_dumpxml(network_name, virsh_instance=base.virsh):
         """
         Return new NetworkXML instance from virsh net-dumpxml command
 
@@ -352,14 +352,15 @@ class NetworkXML(NetworkXMLBase):
 
 
     @staticmethod
-    def get_uuid_by_name(network_name):
+    def get_uuid_by_name(network_name, virsh_instance=base.virsh):
         """
         Return Network's uuid by Network's name.
 
         @param: network_name: Network's name
         @return: Network's uuid
         """
-        network_xml = NetworkXML.new_from_net_dumpxml(network_name)
+        network_xml = NetworkXML.new_from_net_dumpxml(network_name,
+                                                      virsh_instance)
         return network_xml.uuid
 
 

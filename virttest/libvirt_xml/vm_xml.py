@@ -229,7 +229,8 @@ class VMXML(VMXMLBase):
         """
         if vm.is_alive():
             vm.destroy(gracefully=True)
-        vmxml = VMXML.new_from_dumpxml(vm_name=vm.name, virsh_instance=virsh_instance)
+        vmxml = VMXML.new_from_dumpxml(vm_name=vm.name,
+                                       virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:
@@ -264,14 +265,14 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def set_vm_vcpus(vm_name, value):
+    def set_vm_vcpus(vm_name, value, virsh_instance=base.virsh):
         """
         Convenience method for updating 'vcpu' property of a defined VM
 
         @param: vm_name: Name of defined vm to change vcpu elemnet data
         @param: value: New data value, None to delete.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
         if value is not None:
             vmxml['vcpu'] = value # call accessor method to change XML
         else: # value == None
@@ -286,8 +287,7 @@ class VMXML(VMXMLBase):
         """
         Return VM's disk from XML definition, None if not set
         """
-        xmltreefile = self.dict_get('xml')
-        disk_nodes = xmltreefile.find('devices').findall('disk')
+        disk_nodes = self.xmltreefile.find('devices').findall('disk')
         disks = {}
         for node in disk_nodes:
             dev = node.find('target').get('dev')
@@ -296,37 +296,37 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def get_disk_source(vm_name):
+    def get_disk_source(vm_name, virsh_instance=base.virsh):
         """
         Get block device  of a defined VM's disks.
 
         @param: vm_name: Name of defined vm.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         return disks.values()
 
 
     @staticmethod
-    def get_disk_blk(vm_name):
+    def get_disk_blk(vm_name, virsh_instance=base.virsh):
         """
         Get block device  of a defined VM's disks.
 
         @param: vm_name: Name of defined vm.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         return disks.keys()
 
 
     @staticmethod
-    def get_disk_count(vm_name):
+    def get_disk_count(vm_name, virsh_instance=base.virsh):
         """
         Get count of VM's disks.
 
         @param: vm_name: Name of defined vm.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         if disks != None:
             return len(disks)
@@ -371,7 +371,8 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def set_primary_serial(vm_name, dev_type, port, path=None):
+    def set_primary_serial(vm_name, dev_type, port, path=None,
+                           virsh_instance=base.virsh):
         """
         Set primary serial's features of vm_name.
 
@@ -381,7 +382,7 @@ class VMXML(VMXMLBase):
         @param path: the path of serial, it is not necessary for pty
         # TODO: More features
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         xmltreefile = vmxml.dict_get('xml')
         try:
             serial = vmxml.get_primary_serial()['serial']
@@ -424,7 +425,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def get_iface_by_mac(vm_name, mac):
+    def get_iface_by_mac(vm_name, mac, virsh_instance=base.virsh):
         """
         Get the interface if mac is matched.
 
@@ -432,7 +433,7 @@ class VMXML(VMXMLBase):
         @param mac: a mac address.
         @return: return a dict include main interface's features
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         interfaces = vmxml.get_iface_all()
         try:
             interface = interfaces[mac]
