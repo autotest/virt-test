@@ -76,7 +76,8 @@ class VMXMLBase(base.LibvirtXMLBase):
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
-                                                 'current_mem', 'devices')
+                                                 'current_mem', 'numa',
+                                                 'devices')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -114,6 +115,11 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='currentMemory')
+        accessors.XMLElementDict(property_name="numa",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='numatune',
+                                 tag_name='memory')
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 
@@ -333,24 +339,13 @@ class VMXML(VMXMLBase):
         return 0
 
 
-    # ToDo: Convert into numa property (needs nested-dict accessorgenerator)
-    def get_numa_params(self, vm_name):
+    @staticmethod
+    def get_numa_params(vm_name, virsh_instance=base.virsh):
         """
         Return VM's numa setting from XML definition
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
-        xmltreefile = vmxml.dict_get('xml')
-        numa_params = {}
-        try:
-            numa = xmltreefile.find('numatune')
-            try:
-                numa_params['mode'] = numa.find('memory').get('mode')
-                numa_params['nodeset'] = numa.find('memory').get('nodeset')
-            except TypeError:
-                logging.error("Can't find <memory> element")
-        except TypeError:
-            logging.error("Can't find <numatune> element")
-        return numa_params
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
+        return vmxml.numa
 
 
     def get_primary_serial(self):
