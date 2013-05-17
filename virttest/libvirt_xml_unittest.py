@@ -168,6 +168,23 @@ class AccessorsTest(LibvirtXMLTestBase):
                           None, None, None, None)
 
 
+    def test_create_by_xpath(self):
+        class FooBar(base.LibvirtXMLBase):
+            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            def __init__(self, virsh_instance):
+                super(FooBar, self).__init__(virsh_instance)
+                accessors.XMLElementDict('test', self, None, 'foo/bar', 'baz')
+        foobar = FooBar(self.dummy_virsh)
+        foobar.xml = '<test></test>'
+        test_dict = {'test1':'1', 'test2':'2'}
+        foobar.test = test_dict
+        self.assertEqual(foobar.test, test_dict)
+        element = foobar.xmltreefile.find('foo/bar/baz')
+        self.assertTrue(element is not None)
+        element_dict = dict(element.items())
+        self.assertEqual(test_dict, element_dict)
+
+
 class TestLibvirtXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
