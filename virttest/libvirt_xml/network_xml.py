@@ -42,6 +42,11 @@ class RangeList(list):
 class IPXML(base.LibvirtXMLBase):
     """
     IP address block, optionally containing DHCP range information
+
+    Properties:
+        dhcp_ranges: RangeList instances (list-like)
+        address: string IP address
+        netmask: string IP's netmask
     """
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('dhcp_ranges', 'address',
@@ -51,17 +56,8 @@ class IPXML(base.LibvirtXMLBase):
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
         """
-        Accessor methods for IPXML class.
-
-        Properties:
-            dhcp_ranges: virtual, RangeList instances (list subclass)
-                get: Return RangeList of all DHCP ranges
-                set: Create DHCP ranges from a RangeList instance
-                del: Removes all DHCP ranges
-            address: virtual, IP address string
-            netmask: virtual, IP's netmask string
+        Create new IPXML instance based on address/mask
         """
-
         accessors.XMLAttribute('address', self, parent_xpath='/', tag_name='ip',
                                attribute='address')
         accessors.XMLAttribute('netmask', self, parent_xpath='/', tag_name='ip',
@@ -119,28 +115,25 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     Accessor methods for NetworkXML class.
 
     Properties:
-        name: virtual, operates on XML name tag
-        uuid: virtual, operates on uuid tag
-        fwd_mode: virtual, operates on mode attribute of forward tag
-        mac: virtual, operates on address attribute of mac tag
-        ip: virtual, operate on ip/dhcp ranges as IPXML instances
-        bridge: virtual, operates on bridge attributes
-            get: Return dictionary of attributes & values
-            set: Set attributes from dictionary of values
-            del: Remove bridge element
-        defined: virtual, callout to virsh methods
+        name: string, operates on XML name tag
+        uuid: string, operates on uuid tag
+        fwd_mode: string, operates on mode attribute of forward tag
+        mac: string, operates on address attribute of mac tag
+        ip: string operate on ip/dhcp ranges as IPXML instances
+        bridge: dict, operates on bridge attributes
+        defined: virtual boolean, callout to virsh methods
             get: True if libvirt knows network name
             set: True defines network, False undefines to libvirt
             del: Undefines network to libvirt
-        active: virtual, callout to virsh methods
+        active: virtual boolean, callout to virsh methods
             get: True if network is active to libvirt
             set: True activates network, False deactivates to libvirt
             del: Deactivates network to libvirt
-        autostart: virtual, callout to virsh methods
+        autostart: virtual boolean, callout to virsh methods
             get: True if libvirt autostarts network with same name
             set: True to set autostart, False to unset to libvirt
             del: Unset autostart to libvirt
-        persistent: virtual, callout to virsh methods
+        persistent: virtual boolean, callout to virsh methods
             get: True if network was defined, False if only created.
             set: Same as defined property
             del: Same as defined property

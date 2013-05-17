@@ -47,22 +47,30 @@ class VMXMLBase(base.LibvirtXMLBase):
     Accessor methods for VMXML class properties (items in __slots__)
 
     Properties:
-        hypervisor_type: virtual string, hypervisor type name
+        hypervisor_type: string, hypervisor type name
             get: return domain's type attribute value
             set: change domain type attribute value
             del: raise xcepts.LibvirtXMLError
-        vm_name: virtual string, name of the vm
+        vm_name: string, name of the vm
             get: return text value of name tag
             set: set text value of name tag
             del: raise xcepts.LibvirtXMLError
-        uuid: virtual string, uuid string for vm
+        uuid: string, uuid string for vm
             get: return text value of uuid tag
             set: set text value for (new) uuid tag (unvalidated)
             del: remove uuid tag
-        vcpu: virtual integer, number of vcpus
-            get: returns integer of vcpu tag text value
-            set: set integer of (new) vcpu tag text value
-            del: removes vcpu tag
+        vcpu, max_mem, current_mem: integers
+            get: returns integer
+            set: set integer
+            del: removes tag
+        numa: dictionary
+            get: return dictionary of numatune/memory attributes
+            set: set numatune/memory attributes from dictionary
+            del: remove numatune/memory tag
+        devices: VMXMLDevices (list-like)
+            get: returns VMXMLDevices instance for all devices
+            set: Define all devices from VMXMLDevices instance
+            del: remove all devices
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
