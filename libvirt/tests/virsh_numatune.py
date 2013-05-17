@@ -50,6 +50,7 @@ def nodeset_parser(nodeset):
 
         return list(set(hyphens).union(set(commas)).difference(set(carets)))
 
+
 def check_numatune_xml(params):
     """
     Compare mode and nodeset value with guest XML configuration
@@ -59,9 +60,7 @@ def check_numatune_xml(params):
     mode = params.get("numa_mode", "")
     nodeset = params.get("numa_nodeset", "")
 
-    virt_xml_obj = libvirt_xml.VMXML(virsh_instance=virsh)
-
-    numa_params = virt_xml_obj.get_numa_params(vm_name)
+    numa_params = libvirt_xml.VMXML.get_numa_params(vm_name)
     if not numa_params:
         logging.error("Could not get numa parameters for %s" % vm_name)
         return False
@@ -84,6 +83,7 @@ def check_numatune_xml(params):
         return False
 
     return True
+
 
 def get_numa_parameter(params):
     """
@@ -109,6 +109,7 @@ def get_numa_parameter(params):
         else:
             logging.info(result.stdout)
 
+
 def set_numa_parameter(params):
     """
     Set the numa parameters
@@ -120,6 +121,7 @@ def set_numa_parameter(params):
     options = params.get("options", None)
     start_vm = params.get("start_vm", "yes")
 
+    # Don't use libvirt_xml here because testing numatune command
     result = virsh.numatune(vm_name, mode, nodeset, options, debug=True)
     status = result.exit_status
 
@@ -154,6 +156,7 @@ def set_numa_parameter(params):
             else:
                 raise error.TestFail("The 'mode' or/and 'nodeset' are"
                                      " inconsistent with numatune XML")
+
 
 def run_virsh_numatune(test, params, env):
     """
