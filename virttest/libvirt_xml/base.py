@@ -1,4 +1,5 @@
 
+from autotest.client import utils
 from virttest import propcan, xml_utils, virsh
 from virttest.libvirt_xml import xcepts
 
@@ -17,11 +18,12 @@ class LibvirtXMLBase(propcan.PropCanBase):
             set: validates and sets value
             get: returns value
             del: removes value
-
+        validates: virtual, read-only, return True/False from virt-xml-validate
     """
 
-    __slots__ = ('xml', 'virsh', 'xmltreefile', 'xmlstr')
-
+    __slots__ = ('xml', 'virsh', 'xmltreefile', 'validates')
+    __uncompareable__ = __slots__
+    __schema_name__ = None
 
     def __init__(self, virsh_instance=virsh):
         """
@@ -29,7 +31,8 @@ class LibvirtXMLBase(propcan.PropCanBase):
 
         @param: virsh_instance: virsh module or instance to use
         """
-        # Don't define any initial property values
+        self.dict_set('xmltreefile', None)
+        self.dict_set('validates', None)
         super(LibvirtXMLBase, self).__init__({'virsh':virsh_instance,
                                               'xml':None})
         # Can't use accessors module here, would make circular dep.
@@ -40,6 +43,28 @@ class LibvirtXMLBase(propcan.PropCanBase):
         Returns raw XML as a string
         """
         return str(self.dict_get('xml'))
+
+
+    def __eq__(self, other):
+        # Dynamic accessor methods mean we cannot compare class objects directly
+        if self.__class__.__name__ != other.__class__.__name__:
+            return False
+        # Don't assume both instances have same comparables
+        uncomparable = set(self.__uncompareable__)
+        uncomparable |= set(other.__uncompareable__)
+        dict_1 = {}
+        dict_2 = {}
+        slots = set(self.__slots__) | set(other.__slots__)
+        for slot in slots - uncomparable:
+            try:
+                dict_1[slot] = getattr(self, slot)
+            except xcepts.LibvirtXMLNotFoundError:
+                pass # Unset virtual values won't have keys
+            try:
+                dict_2[slot] = getattr(other, slot)
+            except xcepts.LibvirtXMLNotFoundError:
+                pass # Unset virtual values won't have keys
+        return dict_1 == dict_2
 
 
     def set_virsh(self, value):
@@ -80,7 +105,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
 
     def get_xmltreefile(self):
         """
-        Return an xmltreefile object
+        Return the xmltreefile object backing this instance
         """
         try:
             # don't call get_xml() recursivly
@@ -93,6 +118,9 @@ class LibvirtXMLBase(propcan.PropCanBase):
 
 
     def set_xmltreefile(self, value):
+        """
+        Point instance directly at an already initialized XMLTreeFile instance
+        """
         if not issubclass(type(value), xml_utils.XMLTreeFile):
             raise xcepts.LibvirtXMLError("xmltreefile value must be XMLTreefile"
                                          " type or subclass, not a %s"
@@ -101,6 +129,9 @@ class LibvirtXMLBase(propcan.PropCanBase):
 
 
     def del_xmltreefile(self):
+        """
+        Remove all backing XML
+        """
         self.dict_del('xml')
 
 
@@ -118,3 +149,43 @@ class LibvirtXMLBase(propcan.PropCanBase):
         except xcepts.LibvirtXMLError: # Allow other exceptions through
             pass # no XML was loaded yet
         return the_copy
+
+
+    def get_validates(self):
+        """
+        Accessor method for 'validates' property returns virt-xml-validate T/F
+        """
+        # self.xml is the filename
+        ret = self.virt_xml_validate(self.xml,
+                                     self.super_get('__schema_name__'))
+        if ret.exit_status == 0:
+            return True
+        else:
+            return False
+
+
+    def set_validates(self, value):
+        """
+        Raises LibvirtXMLError
+        """
+        del value # not needed
+        raise xcepts.LibvirtXMLError("Read only property")
+
+
+    def del_validates(self):
+        """
+        Raises LibvirtXMLError
+        """
+        raise xcepts.LibvirtXMLError("Read only property")
+
+
+    @staticmethod
+    def virt_xml_validate(filename, schema_name=None):
+        """
+        Return CmdResult from running virt-xml-validate on backing XML
+        """
+        command = 'virt-xml-validate %s' % filename
+        if schema_name:
+            command += ' %s' % schema_name
+        cmdresult = utils.run(command, ignore_status=True)
+        return cmdresult

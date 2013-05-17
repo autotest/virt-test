@@ -3,7 +3,6 @@ Module simplifying manipulation of XML described at
 http://libvirt.org/formatcaps.html
 """
 
-from virttest import virsh
 from virttest.libvirt_xml import base, accessors
 
 class LibvirtXML(base.LibvirtXMLBase):
@@ -21,8 +20,9 @@ class LibvirtXML(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('uuid',
                                                  'os_arch_machine_map',)
 
+    __schema_name__ = "capability"
 
-    def __init__(self, virsh_instance=virsh):
+    def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText(property_name="uuid",
                                  libvirtxml=self,
                                  forbidden=['set', 'del'],
@@ -31,7 +31,7 @@ class LibvirtXML(base.LibvirtXMLBase):
         # This will skip self.get_os_arch_machine_map() defined below
         accessors.AllForbidden(property_name="os_arch_machine_map",
                                libvirtxml=self)
-        super(LibvirtXML, self).__init__(virsh_instance)
+        super(LibvirtXML, self).__init__(virsh_instance=virsh_instance)
         # calls set_xml accessor method
         self['xml'] = self.dict_get('virsh').capabilities()
 

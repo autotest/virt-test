@@ -48,8 +48,8 @@ class IPXML(base.LibvirtXMLBase):
                                                  'netmask')
 
 
-    def __init__(self, virsh_instance=virsh,
-                 address='192.168.122.1', netmask='255.255.255.0'):
+    def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
+                 virsh_instance=base.virsh):
         """
         Accessor methods for IPXML class.
 
@@ -66,7 +66,7 @@ class IPXML(base.LibvirtXMLBase):
                                attribute='address')
         accessors.XMLAttribute('netmask', self, parent_xpath='/', tag_name='ip',
                                attribute='netmask')
-        super(IPXML, self).__init__(virsh_instance)
+        super(IPXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<ip address='%s' netmask='%s'></ip>" % (address, netmask)
 
 
@@ -151,7 +151,13 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                                  'autostart', 'persistent',
                                                  'fwd_mode', 'mac', 'ip')
 
-    def __init__(self, virsh_instance=virsh):
+    __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
+                                            'defined', 'active',
+                                            'autostart', 'persistent')
+
+    __schema_name__ = "network"
+
+    def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText('name', self, parent_xpath='/',
                                  tag_name='name')
         accessors.XMLElementText('uuid', self, parent_xpath='/',
@@ -162,7 +168,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                tag_name='mac', attribute='address');
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
                                  tag_name='bridge')
-        super(NetworkXMLBase, self).__init__(virsh_instance)
+        super(NetworkXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 
     def __check_undefined__(self, errmsg):
@@ -278,7 +284,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             ip_root = xmltreefile.reroot('/ip')
         except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
-        ipxml = IPXML(self.dict_get('virsh'))
+        ipxml = IPXML(virsh_instance = self.dict_get('virsh'))
         ipxml.xmltreefile = ip_root
         return ipxml
 
@@ -311,16 +317,16 @@ class NetworkXML(NetworkXMLBase):
     __slots__ = NetworkXMLBase.__slots__
 
 
-    def __init__(self, virsh_instance=virsh, network_name='default'):
+    def __init__(self, network_name='default', virsh_instance=base.virsh):
         """
         Initialize new instance with empty XML
         """
-        super(NetworkXML, self).__init__(virsh_instance)
+        super(NetworkXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<network><name>%s</name></network>" % network_name
 
 
     @staticmethod # wraps __new__
-    def new_all_networks_dict(virsh_instance=virsh):
+    def new_all_networks_dict(virsh_instance=base.virsh):
         """
         Return a dictionary of names to NetworkXML instances for all networks
 
@@ -329,7 +335,7 @@ class NetworkXML(NetworkXMLBase):
         """
         result = {}
         # Values should all share virsh property
-        new_netxml = NetworkXML(virsh_instance)
+        new_netxml = NetworkXML(virsh_instance=virsh_instance)
         networks = new_netxml.virsh.net_state_dict(only_names=True).keys()
         for net_name in networks:
             new_copy = new_netxml.copy()
