@@ -7,6 +7,40 @@ import logging
 from autotest.client.shared import error
 from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
+from virttest.libvirt_xml.devices import librarian
+
+
+class VMXMLDevices(list):
+    """
+    List of device instances from classes handed out by librarian.get()
+    """
+
+    def __type_check__(self, other):
+        try:
+            # Raise error if object isn't dict-like or doesn't have key
+            device_tag = other['device_tag']
+            # Check that we have support for this type
+            librarian.get(device_tag)
+        except (AttributeError, TypeError, xcepts.LibvirtXMLError):
+            # Required to always raise TypeError for list API in VMXML class
+            raise TypeError("Unsupported item type: %s" % str(type(other)))
+
+
+    def __setitem__(self, key, value):
+        self.__type_check__(value)
+        super(VMXMLDevices, self).__setitem__(key, value)
+
+
+    def append(self, value):
+        self.__type_check__(value)
+        super(VMXMLDevices, self).append(value)
+
+
+    def extend(self, iterable):
+        # Make sure __type_check__ happens
+        for item in iterable:
+            self.append(item)
+
 
 class VMXMLBase(base.LibvirtXMLBase):
     """
@@ -34,10 +68,13 @@ class VMXMLBase(base.LibvirtXMLBase):
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
-                                                 'current_mem')
+                                                 'current_mem', 'devices')
 
+    __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
-    def __init__(self, virsh_instance=virsh):
+    __schema_name__ = "domain"
+
+    def __init__(self, virsh_instance=base.virsh):
         accessors.XMLAttribute(property_name="hypervisor_type",
                                libvirtxml=self,
                                forbidden=None,
@@ -69,7 +106,54 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='currentMemory')
-        super(VMXMLBase, self).__init__(virsh_instance)
+        super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
+
+
+    def get_devices(self, device_type=None):
+        """
+        Put all nodes of devices into a VMXMLDevices instance.
+        """
+        devices = VMXMLDevices()
+        all_devices = self.xmltreefile.find('devices')
+        if device_type is not None:
+            device_nodes = all_devices.findall(device_type)
+        else:
+            device_nodes = all_devices
+        for node in device_nodes:
+            device_tag = node.tag
+            device_class = librarian.get(device_tag)
+            new_one = device_class.new_from_element(node)
+            devices.append(new_one)
+        return devices
+
+
+    def set_devices(self, value):
+        """
+        Define devices based on contents of VMXMLDevices instance
+        """
+        value_type = type(value)
+        if not issubclass(value_type, VMXMLDevices):
+            raise xcepts.LibvirtXMLError("Value %s Must be a VMXMLDevices or "
+                                         "subclass not a %s"
+                                         % (str(value), str(value_type)))
+        # Start with clean slate
+        self.del_devices()
+        if len(value) > 0:
+            devices_element = xml_utils.ElementTree.SubElement(
+                                    self.xmltreefile.getroot(), 'devices')
+            for device in value:
+                # Separate the element from the tree
+                device_element = device.getroot()
+                devices_element.append(device_element)
+        self.xmltreefile.write()
+
+
+    def del_devices(self):
+        """
+        Remove all devices
+        """
+        self.xmltreefile.remove_by_xpath('/devices')
+        self.xmltreefile.write()
 
 
 class VMXML(VMXMLBase):
@@ -81,11 +165,11 @@ class VMXML(VMXMLBase):
     __slots__ = VMXMLBase.__slots__
 
 
-    def __init__(self, virsh_instance=virsh, hypervisor_type='kvm'):
+    def __init__(self, hypervisor_type='kvm', virsh_instance=base.virsh):
         """
         Create new VM XML instance
         """
-        super(VMXML, self).__init__(virsh_instance)
+        super(VMXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.xml = u"<domain type='%s'></domain>" % hypervisor_type
 
@@ -99,9 +183,18 @@ class VMXML(VMXMLBase):
         @param: virsh_instance: virsh module or instance to use
         @return: New initialized VMXML instance
         """
+        # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
         vmxml['xml'] = virsh_instance.dumpxml(vm_name)
         return vmxml
+
+
+    @staticmethod
+    def get_device_class(type_name):
+        """
+        Return class that handles type_name devices, or raise exception.
+        """
+        return librarian.get(type_name)
 
 
     def undefine(self):
@@ -117,7 +210,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def vm_rename(vm, new_name, uuid=None, virsh_instance=virsh):
+    def vm_rename(vm, new_name, uuid=None, virsh_instance=base.virsh):
         """
         Rename a vm from its XML.
 
@@ -128,7 +221,7 @@ class VMXML(VMXMLBase):
         """
         if vm.is_alive():
             vm.destroy(gracefully=True)
-        vmxml = VMXML.new_from_dumpxml(vm.name, virsh_instance=virsh_instance)
+        vmxml = VMXML.new_from_dumpxml(vm_name=vm.name, virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:
@@ -222,6 +315,7 @@ class VMXML(VMXMLBase):
         return 0
 
 
+    # ToDo: Convert into numa property (needs nested-dict accessorgenerator)
     def get_numa_params(self, vm_name):
         """
         Return VM's numa setting from XML definition
@@ -234,11 +328,10 @@ class VMXML(VMXMLBase):
             try:
                 numa_params['mode'] = numa.find('memory').get('mode')
                 numa_params['nodeset'] = numa.find('memory').get('nodeset')
-            except:
+            except TypeError:
                 logging.error("Can't find <memory> element")
-        except:
+        except TypeError:
             logging.error("Can't find <numatune> element")
-
         return numa_params
 
 
@@ -260,12 +353,12 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def set_primary_serial(vm_name, type, port, path=None):
+    def set_primary_serial(vm_name, dev_type, port, path=None):
         """
         Set primary serial's features of vm_name.
 
         @param vm_name: Name of defined vm to set primary serial.
-        @param type: the type of serial:pty,file...
+        @param dev_type: the type of serial:pty,file...
         @param port: the port of serial
         @param path: the path of serial, it is not necessary for pty
         # TODO: More features
@@ -283,7 +376,7 @@ class VMXML(VMXMLBase):
             # Create elements of serial target, default port is 0
             xml_utils.ElementTree.SubElement(serial, 'target', {'port': '0'})
 
-        serial.set('type', type)
+        serial.set('type', dev_type)
         serial.find('target').set('port', port)
         # path may not be exist.
         if path is not None:
@@ -337,7 +430,3 @@ class VMXML(VMXMLBase):
             return features
         else:
             return None
-
-
-    #TODO: Add function to create from xml_utils.TemplateXML()
-    # def new_from_template(...)

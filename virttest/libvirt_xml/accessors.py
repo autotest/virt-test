@@ -20,7 +20,7 @@ def type_check(name, thing, expected):
     except TypeError:
         it_is = isinstance(thing, expected)
     if not it_is:
-        raise ValueError("%s is not a %s, it is a %s"
+        raise ValueError('%s value is not a %s, it is a %s'
                          % (name, expected_string, is_a_name))
 
 
@@ -48,7 +48,7 @@ class AccessorBase(PropCanBase):
         @param: operation: Debug String for 'Getter', 'Setter', or 'Delter'
         @param: property_name: String name of property (for exception detail)
         @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: **dargs: Additional __slots__ values to set
+        @param: **dargs: Necessary for subclasses to extend required parameters
         """
         type_check('Parameter property_name', property_name, str)
         type_check('Operation attribute', operation, str)
@@ -63,11 +63,10 @@ class AccessorBase(PropCanBase):
         for slot in self.__slots__:
             if slot in AccessorBase.__slots__:
                 continue # already checked these
-            type_check('slot', slot, str)
-            value = dargs.get(slot, None)
-            type_check('value', value, str)
-            self.dict_set(slot, value)
-
+            # Don't care about value type
+            if not dargs.has_key(slot):
+                raise ValueError('Required accessor generator parameter %s' % slot)
+            self.dict_set(slot, dargs[slot])
 
     # Subclass expected to override this and specify parameters
     __call__ = NotImplementedError
@@ -266,7 +265,7 @@ class XMLElementText(AccessorGeneratorBase):
 
         @param: property_name: String name of property (for exception detail)
         @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        @param: forbidden: Optional list of 'get', 'set', 'del'
         @param: parent_xpath: XPath string of parent element
         @param: tag_name: element tag name to manipulate text attribute on.
         """
