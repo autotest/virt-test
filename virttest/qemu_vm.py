@@ -1788,6 +1788,8 @@ class VM(virt_vm.BaseVM):
             usb_dev_params = params.object_params(usb_dev)
             usb_type = usb_dev_params.get("usb_type")
             controller_type = usb_dev_params.get("usb_controller")
+            usb_bus = usb_dev_params.get("usb_bus")
+            usb_port = usb_dev_params.get("usb_port")
 
             usb_controller_list = self.usb_dev_dict.keys()
             is_usb_hub = False
@@ -1798,7 +1800,21 @@ class VM(virt_vm.BaseVM):
                 # old version of qemu-kvm doesn't support bus and port option.
                 bus = None
                 port = None
+            elif usb_bus and usb_port:
+                ctl_name = usb_bus.split(".")[0]
+                self.usb_assign_dev_to_port(usb_dev, ctl_name, usb_port,
+                                            is_usb_hub)
+                bus = usb_bus
+                port = usb_port
             else:
+                if usb_bus or usb_port:
+                    if usb_bus:
+                        log = "usb_port"
+                    if usb_port:
+                        log = "usb_bus"
+                    logging.warn("Missing '%s' config for usb device '%s',"
+                             " get a free port automatically", log, usb_dev)
+
                 bus, port = self.usb_get_free_port(usb_dev, controller_type,
                                                    is_usb_hub)
 
