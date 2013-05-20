@@ -310,6 +310,19 @@ class VMUSBControllerPortFullError(VMUSBControllerError):
         return ("No available USB Controller port left for VM %s." % self.name)
 
 
+class VMUSBPortInUseError(VMUSBError):
+    def __init__(self, vm_name, controller, port):
+        VMUSBError.__init__(self, vm_name, controller, port)
+        self.vm_name = vm_name
+        self.controller = controller
+        self.port = port
+
+    def __str__(self):
+        return ("USB port '%d' of controller '%s' is already in use on vm"
+                " '%s'. Please assign another port in config file." %
+                (self.port, self.controller, self.vm_name))
+
+
 class VMScreenInactiveError(VMError):
     def __init__(self, vm, inactive_time):
         VMError.__init__(self)
