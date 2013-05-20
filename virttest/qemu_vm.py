@@ -206,6 +206,92 @@ class VM(virt_vm.BaseVM):
                 pass
 
 
+    def __usb_get_controllers(self, controller_type):
+        ctl_list = []
+        for usb in self.params.objects("usbs"):
+            usb_params = self.params.object_params(usb)
+            usb_type = usb_params.get("usb_type")
+            if usb_type.find(controller_type) != -1:
+                ctl_list.append(usb)
+
+        if not ctl_list:
+            raise virt_vm.VMUSBControllerMissingError(self.name,
+                                                      controller_type)
+        return ctl_list
+
+
+    def __usb_verify_controller(self, controller):
+        if controller not in self.params.objects("usbs"):
+            raise virt_vm.VMUSBControllerError("No USB controller called"
+                                               " '%s'" % controller)
+
+
+    def __usb_get_dev_in_port(self, controller, port):
+        usb_dev_list = self.usb_dev_dict.get(controller)
+        try:
+            return usb_dev_list[port]
+        except IndexError:
+            raise virt_vm.VMUSBControllerError("%s controller doesn't provide"
+                                               " port %d" %(controller, port))
+
+
+    def usb_assign_dev_to_port(self, usb_dev, controller, port):
+        """
+        Assign an USB device to a port.
+
+        @param usb_dev: The usb device which is needed to be assigned a port.
+        @param controller: the usb controller which this usb device will be
+                                attached to.
+        @param port: The usb port this usb device will be attached to.
+
+        @return: The usb port number.
+        """
+        self.__usb_verify_controller(controller)
+        # Usb port starts from 1 besides python list starting from 0.
+        # minus 1 in port to make them equal.
+        port -= 1
+        dev = self.__usb_get_dev_in_port(controller, port)
+        if dev is not None:
+           raise virt_vm.VMUSBPortInUseError(self.name, controller, port)
+
+        usb_dev_list = self.usb_dev_dict.get(controller)
+        usb_dev_list[port] = usb_dev
+
+
+    def usb_get_free_port(self, usb_dev, controller_type):
+        """
+        Find an available USB port.
+
+        @param usb_dev: The usb device which is needed to be assigned a port.
+        @param controller_type: Usb controller type which this usb device needs.
+
+        @return: A tuple with a free usb_bus id and port number.
+        """
+        usb_bus = None
+        usb_port = None
+
+        for usb in self.__usb_get_controllers(controller_type):
+            usb_params = self.params.object_params(usb)
+            max_port_num = int(usb_params.get("usb_max_port", 6))
+            usb_bus = "%s.0" % usb
+
+            # Find a free port on this controller.
+            for port_num in range(max_port_num):
+                # Usb port starts from 1, so add 1 directly here.
+                port_num += 1
+                try:
+                    self.usb_assign_dev_to_port(usb_dev, usb, port_num)
+                    usb_port = port_num
+                    break
+                except virt_vm.VMUSBPortInUseError:
+                    continue
+
+        if not usb_port:
+            raise virt_vm.VMUSBControllerPortFullError(self.name)
+
+        return (usb_bus, str(usb_port))
+
+
     def clone(self, name=None, params=None, root_dir=None, address_cache=None,
               copy_state=False):
         """
@@ -337,36 +423,6 @@ class VM(virt_vm.BaseVM):
             else:
                 self.pci_addr_list.append(int(pci_addr))
                 return hex(int(pci_addr))
-
-
-        def get_free_usb_port(dev, controller_type):
-            # Find an available USB port.
-            bus = None
-            port = None
-            controller = None
-
-            for usb in params.objects("usbs"):
-                usb_params = params.object_params(usb)
-                usb_type = usb_params.get("usb_type")
-                usb_dev = self.usb_dev_dict.get(usb)
-
-                if usb_type.find(controller_type) != -1:
-                    controller = usb
-                    max_port = int(usb_params.get("usb_max_port", 6))
-                    if len(usb_dev) < max_port:
-                        bus = "%s.0" % usb
-                        self.usb_dev_dict[usb].append(dev)
-                        # Usb port starts from 1, so add 1 directly here.
-                        port = self.usb_dev_dict[usb].index(dev) + 1
-                        break
-
-            if controller is None:
-                raise virt_vm.VMUSBControllerMissingError(self.name,
-                                                          controller_type)
-            elif bus is None:
-                raise virt_vm.VMUSBControllerPortFullError(self.name)
-
-            return (bus, str(port))
 
 
         # Wrappers for all supported qemu command line parameters.
@@ -1109,13 +1165,13 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
-        def add_usb(help_text, usb_id, usb_type, pci_addr=None):
+        def add_usb(help_text, usb_id, usb_type, usb_max_port, pci_addr=None):
             if not has_option(help_text, "device"):
                 # Okay, for the archaic qemu which has not device parameter,
                 # just return a usb uhci controller.
                 # If choose this kind of usb controller, it has no name/id,
                 # and only can be created once, so give it a special name.
-                self.usb_dev_dict["OLDVERSION_usb0"] = []
+                self.usb_dev_dict["OLDVERSION_usb0"] = [None, None]
                 return " -usb"
 
             if not has_device(device_help, usb_type):
@@ -1137,7 +1193,7 @@ class VM(virt_vm.BaseVM):
                 cmd += uhci3 + common
 
             # register this usb controller.
-            self.usb_dev_dict[usb_id] = []
+            self.usb_dev_dict[usb_id] = [None] * int(usb_max_port)
             return cmd
 
         def add_usbdevice(help_text, usb_dev, usb_type, controller_type,
@@ -1355,7 +1411,8 @@ class VM(virt_vm.BaseVM):
         # Add USB controllers
         for usb_name in params.objects("usbs"):
             usb_params = params.object_params(usb_name)
-            qemu_cmd += add_usb(help_text, usb_name, usb_params.get("usb_type"))
+            qemu_cmd += add_usb(help_text, usb_name, usb_params.get("usb_type"),
+                                usb_params.get("usb_max_port", 6))
 
         for image_name in params.objects("images"):
             image_params = params.object_params(image_name)
@@ -1379,11 +1436,11 @@ class VM(virt_vm.BaseVM):
             bus = None
             port = None
             if image_params.get("drive_format") == "usb1":
-                bus, port = get_free_usb_port(image_name, "uhci")
+                bus, port = self.usb_get_free_port(image_name, "uhci")
             if image_params.get("drive_format") == "usb2":
-                bus, port = get_free_usb_port(image_name, "ehci")
+                bus, port = self.usb_get_free_port(image_name, "ehci")
             if image_params.get("drive_format") == "usb3":
-                bus, port = get_free_usb_port(image_name, "xhci")
+                bus, port = self.usb_get_free_port(image_name, "xhci")
             if image_params.get("drive_format").startswith("scsi-"):
                 try:
                     bus = int(image_params.get("drive_bus", 0))
@@ -1611,11 +1668,11 @@ class VM(virt_vm.BaseVM):
             port = None
             bootindex = cdrom_params.get("bootindex")
             if cd_format == "usb1":
-                bus, port = get_free_usb_port(image_name, "uhci")
+                bus, port = self.usb_get_free_port(image_name, "uhci")
             if cd_format == "usb2":
-                bus, port = get_free_usb_port(image_name, "ehci")
+                bus, port = self.usb_get_free_port(image_name, "ehci")
             if cd_format == "usb3":
-                bus, port = get_free_usb_port(image_name, "xhci")
+                bus, port = self.usb_get_free_port(image_name, "xhci")
             if cd_format == "ahci" and not have_ahci:
                 qemu_cmd += (" -device ahci,id=ahci,addr=%s"
                              % get_free_pci_addr())
@@ -1715,7 +1772,7 @@ class VM(virt_vm.BaseVM):
                 bus = None
                 port = None
             else:
-                bus, port = get_free_usb_port(usb_dev, controller_type)
+                bus, port = self.usb_get_free_port(usb_dev, controller_type)
 
             qemu_cmd += add_usbdevice(help_text, usb_dev, usb_type,
                                       controller_type, bus, port)
