@@ -226,16 +226,24 @@ class VM(virt_vm.BaseVM):
                                                " '%s'" % controller)
 
 
-    def __usb_get_dev_in_port(self, controller, port):
+    def __usb_get_dev_in_port(self, controller, port, hub_port=None):
         usb_dev_list = self.usb_dev_dict.get(controller)
-        try:
-            return usb_dev_list[port]
-        except IndexError:
-            raise virt_vm.VMUSBControllerError("%s controller doesn't provide"
-                                               " port %d" %(controller, port))
+        if hub_port is None:
+            try:
+                return usb_dev_list[port]
+            except IndexError:
+                raise virt_vm.VMUSBControllerError("USB controller '%s'"
+                            " doesn't provide port '%d'" %(controller, port))
+        else:
+            try:
+                return usb_dev_list[port][hub_port]
+            except IndexError:
+                raise virt_vm.VMUSBControllerError("usb hub on port '%d' of"
+                                    " controller '%s' doesn't provide"
+                                    " port '%d'" %(port, controller, hub_port))
 
 
-    def usb_assign_dev_to_port(self, usb_dev, controller, port):
+    def usb_assign_dev_to_port(self, usb_dev, controller, port, is_hub=False):
         """
         Assign an USB device to a port.
 
@@ -247,18 +255,34 @@ class VM(virt_vm.BaseVM):
         @return: The usb port number.
         """
         self.__usb_verify_controller(controller)
-        # Usb port starts from 1 besides python list starting from 0.
-        # minus 1 in port to make them equal.
-        port -= 1
-        dev = self.__usb_get_dev_in_port(controller, port)
+        hub_port = None
+        if "." in str(port):
+            # We get a device on usb hub here.
+            port, hub_port = port.split(".")
+            # Usb port starts from 1 besides python list starting from 0.
+            # minus 1 in port to make them equal.
+            hub_port = int(hub_port) - 1
+
+        port = int(port) - 1
+        dev = self.__usb_get_dev_in_port(controller, port, hub_port)
         if dev is not None:
-           raise virt_vm.VMUSBPortInUseError(self.name, controller, port)
+            raise virt_vm.VMUSBPortInUseError(self.name, controller, port)
 
         usb_dev_list = self.usb_dev_dict.get(controller)
-        usb_dev_list[port] = usb_dev
+        if is_hub:
+            if not hub_port:
+                # usb hub has extra 8 ports.
+                usb_dev_list[port] = [None] * 8
+            else:
+                usb_dev_list[port][hub_port] [None] * 8
+        else:
+            if not hub_port:
+                usb_dev_list[port] = usb_dev
+            else:
+                usb_dev_list[port][hub_port] = usb_dev
 
 
-    def usb_get_free_port(self, usb_dev, controller_type):
+    def usb_get_free_port(self, usb_dev, controller_type, is_hub=False):
         """
         Find an available USB port.
 
@@ -280,7 +304,7 @@ class VM(virt_vm.BaseVM):
                 # Usb port starts from 1, so add 1 directly here.
                 port_num += 1
                 try:
-                    self.usb_assign_dev_to_port(usb_dev, usb, port_num)
+                    self.usb_assign_dev_to_port(usb_dev, usb, port_num, is_hub)
                     usb_port = port_num
                     break
                 except virt_vm.VMUSBPortInUseError:
@@ -1766,13 +1790,17 @@ class VM(virt_vm.BaseVM):
             controller_type = usb_dev_params.get("usb_controller")
 
             usb_controller_list = self.usb_dev_dict.keys()
+            is_usb_hub = False
+            if usb_type == "usb-hub":
+                is_usb_hub = True
             if (len(usb_controller_list) == 1 and
                 "OLDVERSION_usb0" in usb_controller_list):
                 # old version of qemu-kvm doesn't support bus and port option.
                 bus = None
                 port = None
             else:
-                bus, port = self.usb_get_free_port(usb_dev, controller_type)
+                bus, port = self.usb_get_free_port(usb_dev, controller_type,
+                                                   is_usb_hub)
 
             qemu_cmd += add_usbdevice(help_text, usb_dev, usb_type,
                                       controller_type, bus, port)
