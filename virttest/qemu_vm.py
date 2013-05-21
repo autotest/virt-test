@@ -1109,7 +1109,7 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
-        def add_usb(help_text, usb_id, usb_type):
+        def add_usb(help_text, usb_id, usb_type, pci_addr=None):
             if not has_option(help_text, "device"):
                 # Okay, for the archaic qemu which has not device parameter,
                 # just return a usb uhci controller.
@@ -1123,6 +1123,8 @@ class VM(virt_vm.BaseVM):
 
             cmd = " -device %s" % usb_type
             cmd += _add_option("id", usb_id)
+            cmd += _add_option("bus", "pci.0")
+            cmd += _add_option("addr", get_free_pci_addr(pci_addr))
 
             if usb_type == "ich9-usb-ehci1":
                 common = ",multifunction=on,masterbus=%s.0" % usb_id
