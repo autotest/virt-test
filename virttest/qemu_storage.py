@@ -405,7 +405,7 @@ class QemuImg(storage.QemuImg):
 
                 # Just handle normal operation
                 if params.get("backup_image", "no") == "yes":
-                    self.backup_image(params, root_dir, "backup", True)
+                    self.backup_image(params, root_dir, "backup", True, True)
         else:
             if not os.path.exists(image_filename):
                 logging.debug("Image file %s not found, skipping check",
