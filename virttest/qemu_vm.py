@@ -2530,6 +2530,12 @@ class VM(virt_vm.BaseVM):
         return None
 
 
+    def get_monitors_by_type(self, mon_type=None):
+        """
+        Return list of monitors of mon_type type.
+        @param mon_type: desired monitor type (qmp, human)
+        """
+        return [_ for _ in self.monitors if _.protocol == mon_type]
 
 
     def get_peer(self, netid):
