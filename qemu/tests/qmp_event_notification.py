@@ -47,11 +47,7 @@ def run_qmp_event_notification(test, params, env):
     cmd_o = send_cmd(event_cmd)
 
     end_time = time.time() + timeout
-    qmp_monitors = []
-    for monitor in vm.monitors:
-        monitor_params = params.object_params(monitor.name)
-        if monitor_params.get("monitor_type") == "qmp":
-            qmp_monitors += [monitor]
+    qmp_monitors = vm.get_monitors_by_type("qmp")
     qmp_num = len(qmp_monitors)
     logging.info("Try to get qmp events in %s seconds!" % timeout)
     while time.time() < end_time:
