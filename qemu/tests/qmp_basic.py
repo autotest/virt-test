@@ -383,12 +383,10 @@ def run_qmp_basic(test, params, env):
     vm.verify_alive()
 
     # Look for the first qmp monitor available, otherwise, fail the test
-    qmp_monitor = None
-    for m in vm.monitors:
-        if isinstance(m, qemu_monitor.QMPMonitor):
-            qmp_monitor = m
-
-    if qmp_monitor is None:
+    qmp_monitor = vm.get_monitors_by_type("qmp")
+    if qmp_monitor:
+        qmp_monitor = qmp_monitor[0]
+    else:
         raise error.TestError('Could not find a QMP monitor, aborting test')
 
     # Run all suites
