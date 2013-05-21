@@ -1,9 +1,10 @@
 """
 Functions and classes used for logging into guests and transferring files.
 """
-import logging, time
+import logging, time, re
 import aexpect, utils_misc, rss_client
-
+from autotest.client.shared import error
+from autotest.client import utils
 
 class LoginError(Exception):
     def __init__(self, msg, output):
@@ -436,7 +437,7 @@ def nc_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
                             check_sum=True):
     """
     Copy files from a remote host (guest) to another remote host (guest) using
-    netcat.
+    netcat. now this method only support linux
 
     @param src/dst: Hostname or IP address of src and dst
     @param s_name/d_name: Username (if required)
@@ -454,8 +455,8 @@ def nc_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
     s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
     d_session = remote_login(c_type, dst, s_port, d_name, d_passwd, c_prompt)
 
-    s_session.cmd("iptables -F")
-    d_session.cmd("iptables -F")
+    s_session.cmd("iptables -I INPUT -p %s -j ACCEPT" % d_protocol)
+    d_session.cmd("iptables -I OUTPUT -p %s -j ACCEPT" % d_protocol)
 
     logging.info("Transfer data using netcat from %s to %s" % (src, dst))
     cmd = "nc"
@@ -470,6 +471,137 @@ def nc_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
             d_session.cmd("md5sum %s" % d_path).split()[0]):
             return False
     return True
+
+
+def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
+                             s_name, d_name, s_path, d_path,
+                             c_type="ssh", c_prompt="\n",
+                             d_port="9000", timeout=600):
+    """
+    Copy files from a remote host (guest) to another remote host (guest) by
+    udp.
+
+    @param src/dst: Hostname or IP address of src and dst
+    @param s_name/d_name: Username (if required)
+    @param s_passwd/d_passwd: Password (if required)
+    @param s_path/d_path: Path on the remote machine where we are copying
+    @param c_type: Login method to remote host(guest).
+    @param c_prompt : command line prompt of remote host(guest)
+    @param d_port:  the port data transfer
+    @param timeout: data transfer timeout
+
+    """
+    s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
+    d_session = remote_login(c_type, dst, s_port, d_name, d_passwd, c_prompt)
+
+    def send_cmd_safe(session, cmd, timeout=360):
+        logging.debug("Sending command: %s", cmd)
+        session.sendline(cmd)
+        output = ""
+        got_prompt = False
+        start_time = time.time()
+        # Wait for shell prompt until timeout.
+        while ((time.time() - start_time) < timeout and not got_prompt):
+            time.sleep(0.2)
+            session.sendline()
+            try:
+                output += session.read_up_to_prompt()
+                got_prompt = True
+            except aexpect.ExpectTimeoutError:
+                pass
+        return output
+
+    def get_abs_path(session, filename, extension):
+        """
+        return file path drive+path
+        """
+        cmd_tmp = "wmic datafile where \"Filename='%s' and "
+        cmd_tmp += "extension='%s'\" get drive^,path"
+        cmd = cmd_tmp %  (filename, extension)
+        info = session.cmd_output(cmd, timeout=360).strip()
+        drive_path = re.search(r'(\w):\s+(\S+)', info, re.M)
+        if not drive_path:
+            raise error.TestError("Not found file %s.%s in your guest"
+                                  % (filename, extension))
+        return ":".join(drive_path.groups())
+
+    def get_file_md5(session, file_path):
+        """
+        Get files md5sums
+        """
+        if c_type == "ssh":
+            md5_cmd = "md5sum %s" % file_path
+            md5_reg = r"(\w+)\s+%s.*" % file_path
+        else:
+            drive_path = get_abs_path(session, "md5sums", "exe")
+            filename = file_path.split("\\")[-1]
+            md5_reg = r"%s\s+(\w+)" % filename
+            md5_cmd = '%smd5sums.exe %s | find "%s"' % (drive_path, file_path,
+                                                         filename)
+        o = session.cmd_output(md5_cmd)
+        file_md5 = re.findall(md5_reg, o)
+        if not o:
+            raise error.TestError("Get file %s md5sum error" % file_path)
+        return file_md5
+
+    def server_alive(session):
+        if c_type == "ssh":
+            check_cmd = "ps aux"
+        else:
+            check_cmd = "tasklist"
+        o = session.cmd_output(check_cmd)
+        if not o:
+            raise error.TestError("Can not get the server status")
+        if "sendfile" in o.lower():
+            return True
+        return False
+
+    def start_server(session):
+        if c_type == "ssh":
+            start_cmd = "sendfile %s &"  % d_port
+        else:
+            drive_path =  get_abs_path(session, "sendfile", "exe")
+            start_cmd = "start /b %ssendfile.exe %s" % (drive_path,
+                                                           d_port)
+        send_cmd_safe(session, start_cmd)
+        if not server_alive(session):
+            raise error.TestError("Start udt server failed")
+
+    def start_client(session):
+        if c_type == "ssh":
+            client_cmd = "recvfile %s %s %s %s" % (src, d_port,
+                                                   s_path, d_path)
+        else:
+            drive_path =  get_abs_path(session, "recvfile", "exe")
+            client_cmd_tmp = "%srecvfile.exe %s %s %s %s"
+            client_cmd = client_cmd_tmp  % (drive_path, src, d_port,
+                                            s_path.split("\\")[-1],
+                                            d_path.split("\\")[-1])
+        send_cmd_safe(session, client_cmd, timeout)
+
+    def stop_server(session):
+        if c_type == "ssh":
+            stop_cmd = "killall sendfile"
+        else:
+            stop_cmd = "taskkill /F /IM sendfile.exe"
+        if server_alive(session):
+            send_cmd_safe(session, stop_cmd)
+
+    try:
+        src_md5 = get_file_md5(s_session, s_path)
+        if not server_alive(s_session):
+            start_server(s_session)
+        start_client(d_session)
+        dst_md5 = get_file_md5(d_session, d_path)
+        if src_md5 != dst_md5:
+            err_msg = "Files md5sum mismatch, file %s md5sum is '%s', "
+            err_msg = "but the file %s md5sum is %s"
+            raise error.TestError(err_msg  % (s_path, src_md5,
+                                              d_path, dst_md5))
+    finally:
+        stop_server(s_session)
+        s_session.close()
+        d_session.close()
 
 
 def copy_files_to(address, client, username, password, port, local_path,
