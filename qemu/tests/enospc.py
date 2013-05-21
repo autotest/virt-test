@@ -146,9 +146,9 @@ def run_enospc(test, params, env):
             for image_name in vm.params.objects("images"):
                 image_params = vm.params.object_params(image_name)
                 try:
-                    image = qemu_storage.QemuImg(image_params, test.bindir,
-                                               image_name)
-                    image.check_image(image_params, test.bindir)
+                    image = qemu_storage.QemuImg(image_params,
+                                  data_dir.get_data_dir(), image_name)
+                    image.check_image(image_params, data_dir.get_data_dir())
                 except (virt_vm.VMError, error.TestWarn), e:
                     logging.error(e)
             logging.info("Guest paused, extending Logical Volume size")
