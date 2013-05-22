@@ -491,11 +491,9 @@ class VM(virt_vm.BaseVM):
             else:
                 return ""
 
-        def add_serial(help_text, filename):
+        def add_serial(help_text):
             if has_option(help_text, "serial"):
-                return "  --serial file,path=%s --serial pty" % filename
-            else:
-                return "" # FIXME: Add additional serial ports on old libvirt?
+                return " --serial pty" % filename
 
         def add_kernel_cmdline(help_text, cmdline):
             return " -append %s" % cmdline
@@ -685,7 +683,7 @@ class VM(virt_vm.BaseVM):
             virt_install_cmd += add_os_variant(help_text, params.get("os_variant"))
 
         # Add serial console
-        virt_install_cmd += add_serial(help_text, self.get_serial_console_filename())
+        virt_install_cmd += add_serial(help_text)
 
         # If the PCI assignment step went OK, add each one of the PCI assigned
         # devices to the command line.
