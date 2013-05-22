@@ -43,6 +43,7 @@ def run_virsh_destroy(test, params, env):
 
     if vm_ref != "remote":
         status = virsh.destroy(vm_ref, ignore_status=True).exit_status
+        output = ""
     else:
         status = 0
         try:
