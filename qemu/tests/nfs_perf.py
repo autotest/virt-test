@@ -96,6 +96,9 @@ def run_nfs_perf(test, params, env):
 
         return out
 
+    if not hasattr(test, "write_perf_keyval"):
+        raise error.TestNAError("There is no 'write_perf_keyval' method in"
+                                " test object, skip this test")
 
     error.context("boot guest over virtio driver", logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -158,7 +161,9 @@ def run_nfs_perf(test, params, env):
     result_list = ["%s|%016s|%016s|" % ("blk_size", "Write", "Read")]
     speed_pattern = "(\d+ bytes).*?([\d\.]+ s).*?([\d\.]+ MB/s)"
     try:
+        prefix = "nfs"
         for blk_size in blk_size_list:
+            prefix += "--%s" % blk_size
             test_file = test_file_list[blk_size_list.index(blk_size)]
             result = "%08s|" % blk_size
             # Get write test result.
@@ -170,6 +175,7 @@ def run_nfs_perf(test, params, env):
                                       " dd cmd output:\n%s" % out)
             _, _, speed = tmp_list[0]
             result += "%016s|" % speed
+            test.write_perf_keyval({ "%s--%s" % (prefix, "write"): speed })
 
             # Get read test result.
             out = _do_read_test(blk_size, test_file)
@@ -180,6 +186,7 @@ def run_nfs_perf(test, params, env):
                                       " dd cmd output:\n%s" % out)
             _, _, speed = tmp_list[0]
             result += "%016s|" % speed
+            test.write_perf_keyval({ "%s--%s" % (prefix, "read"): speed })
             # Append result into result list.
             result_list.append(result)
     finally:
