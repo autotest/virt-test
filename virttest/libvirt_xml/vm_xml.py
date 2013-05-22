@@ -47,28 +47,37 @@ class VMXMLBase(base.LibvirtXMLBase):
     Accessor methods for VMXML class properties (items in __slots__)
 
     Properties:
-        hypervisor_type: virtual string, hypervisor type name
+        hypervisor_type: string, hypervisor type name
             get: return domain's type attribute value
             set: change domain type attribute value
             del: raise xcepts.LibvirtXMLError
-        vm_name: virtual string, name of the vm
+        vm_name: string, name of the vm
             get: return text value of name tag
             set: set text value of name tag
             del: raise xcepts.LibvirtXMLError
-        uuid: virtual string, uuid string for vm
+        uuid: string, uuid string for vm
             get: return text value of uuid tag
             set: set text value for (new) uuid tag (unvalidated)
             del: remove uuid tag
-        vcpu: virtual integer, number of vcpus
-            get: returns integer of vcpu tag text value
-            set: set integer of (new) vcpu tag text value
-            del: removes vcpu tag
+        vcpu, max_mem, current_mem: integers
+            get: returns integer
+            set: set integer
+            del: removes tag
+        numa: dictionary
+            get: return dictionary of numatune/memory attributes
+            set: set numatune/memory attributes from dictionary
+            del: remove numatune/memory tag
+        devices: VMXMLDevices (list-like)
+            get: returns VMXMLDevices instance for all devices
+            set: Define all devices from VMXMLDevices instance
+            del: remove all devices
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
-                                                 'current_mem', 'devices')
+                                                 'current_mem', 'numa',
+                                                 'devices')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -106,6 +115,11 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='/',
                                  tag_name='currentMemory')
+        accessors.XMLElementDict(property_name="numa",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='numatune',
+                                 tag_name='memory')
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 
@@ -221,7 +235,8 @@ class VMXML(VMXMLBase):
         """
         if vm.is_alive():
             vm.destroy(gracefully=True)
-        vmxml = VMXML.new_from_dumpxml(vm_name=vm.name, virsh_instance=virsh_instance)
+        vmxml = VMXML.new_from_dumpxml(vm_name=vm.name,
+                                       virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         try:
@@ -256,14 +271,14 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def set_vm_vcpus(vm_name, value):
+    def set_vm_vcpus(vm_name, value, virsh_instance=base.virsh):
         """
         Convenience method for updating 'vcpu' property of a defined VM
 
         @param: vm_name: Name of defined vm to change vcpu elemnet data
         @param: value: New data value, None to delete.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
         if value is not None:
             vmxml['vcpu'] = value # call accessor method to change XML
         else: # value == None
@@ -278,8 +293,7 @@ class VMXML(VMXMLBase):
         """
         Return VM's disk from XML definition, None if not set
         """
-        xmltreefile = self.dict_get('xml')
-        disk_nodes = xmltreefile.find('devices').findall('disk')
+        disk_nodes = self.xmltreefile.find('devices').findall('disk')
         disks = {}
         for node in disk_nodes:
             dev = node.find('target').get('dev')
@@ -288,61 +302,50 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def get_disk_source(vm_name):
+    def get_disk_source(vm_name, virsh_instance=base.virsh):
         """
         Get block device  of a defined VM's disks.
 
         @param: vm_name: Name of defined vm.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         return disks.values()
 
 
     @staticmethod
-    def get_disk_blk(vm_name):
+    def get_disk_blk(vm_name, virsh_instance=base.virsh):
         """
         Get block device  of a defined VM's disks.
 
         @param: vm_name: Name of defined vm.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         return disks.keys()
 
 
     @staticmethod
-    def get_disk_count(vm_name):
+    def get_disk_count(vm_name, virsh_instance=base.virsh):
         """
         Get count of VM's disks.
 
         @param: vm_name: Name of defined vm.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         if disks != None:
             return len(disks)
         return 0
 
 
-    # ToDo: Convert into numa property (needs nested-dict accessorgenerator)
-    def get_numa_params(self, vm_name):
+    @staticmethod
+    def get_numa_params(vm_name, virsh_instance=base.virsh):
         """
         Return VM's numa setting from XML definition
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
-        xmltreefile = vmxml.dict_get('xml')
-        numa_params = {}
-        try:
-            numa = xmltreefile.find('numatune')
-            try:
-                numa_params['mode'] = numa.find('memory').get('mode')
-                numa_params['nodeset'] = numa.find('memory').get('nodeset')
-            except TypeError:
-                logging.error("Can't find <memory> element")
-        except TypeError:
-            logging.error("Can't find <numatune> element")
-        return numa_params
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
+        return vmxml.numa
 
 
     def get_primary_serial(self):
@@ -363,7 +366,8 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def set_primary_serial(vm_name, dev_type, port, path=None):
+    def set_primary_serial(vm_name, dev_type, port, path=None,
+                           virsh_instance=base.virsh):
         """
         Set primary serial's features of vm_name.
 
@@ -373,7 +377,7 @@ class VMXML(VMXMLBase):
         @param path: the path of serial, it is not necessary for pty
         # TODO: More features
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         xmltreefile = vmxml.dict_get('xml')
         try:
             serial = vmxml.get_primary_serial()['serial']
@@ -416,7 +420,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def get_iface_by_mac(vm_name, mac):
+    def get_iface_by_mac(vm_name, mac, virsh_instance=base.virsh):
         """
         Get the interface if mac is matched.
 
@@ -424,7 +428,7 @@ class VMXML(VMXMLBase):
         @param mac: a mac address.
         @return: return a dict include main interface's features
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         interfaces = vmxml.get_iface_all()
         try:
             interface = interfaces[mac]

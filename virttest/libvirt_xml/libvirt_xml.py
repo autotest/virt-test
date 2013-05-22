@@ -10,7 +10,8 @@ class LibvirtXML(base.LibvirtXMLBase):
     Handler of libvirt capabilities and nonspecific item operations.
 
     Properties:
-        os_arch_machine_map: virtual, read-only
+        uuid: string of host uuid
+        os_arch_machine_map: dict, read-only
             get: dict map from os type names to dict map from arch names
     """
 

@@ -2,7 +2,7 @@
 Specializations of base.AccessorBase for particular XML manipulation types
 """
 
-import logging
+import logging, os.path
 from virttest import xml_utils
 from virttest.propcan import PropCanBase
 from virttest.libvirt_xml import xcepts, base
@@ -88,6 +88,12 @@ class AccessorBase(PropCanBase):
     def element_by_parent(self, parent_xpath, tag_name, create=True):
         """
         Retrieve/create an element instance at parent_xpath/tag_name
+
+        @param: parent_xpath: xpath of parent element
+        @param: tag_name: name of element under parent to retrieve/create
+        @param: create: True to create new element if not exist
+        @returns: ElementTree.Element instance
+        @raises: LibvirtXMLError: If element not exist & create=False
         """
         type_check('parent_xpath', parent_xpath, str)
         type_check('tag_name', tag_name, str)
@@ -101,7 +107,13 @@ class AccessorBase(PropCanBase):
                      self.property_name, tag_name, parent_xpath,
                      str(self.xmltreefile())))
         if parent_element is None:
-            raise xcepts.LibvirtXMLAccessorError(excpt_str)
+            if create:
+                # This will only work for simple XPath strings
+                self.xmltreefile().create_by_xpath(parent_xpath)
+                parent_element = self.xmltreefile().find(parent_xpath)
+            # if create or not, raise if not exist
+            if parent_element is None:
+                raise xcepts.LibvirtXMLAccessorError(excpt_str)
         try:
             element = parent_element.find(tag_name)
         except:
@@ -121,7 +133,6 @@ class AccessorBase(PropCanBase):
                                                     tag_name, parent_xpath,
                                                     str(self.xmltreefile())))
         return element
-
 
 
 class ForbiddenBase(AccessorBase):
