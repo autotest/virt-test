@@ -154,12 +154,12 @@ def run_nfs_perf(test, params, env):
     # Record mount command in result file.
     try:
         result_file.write("# %s\n" % mnt_cmd)
-    except IOError, e:
+    except (IOError, ValueError), e:
         logging.error("Failed to write to result file,"
                       " error message:\n%s", e)
 
     result_list = ["%s|%016s|%016s|" % ("blk_size", "Write", "Read")]
-    speed_pattern = "(\d+ bytes).*?([\d\.]+ s).*?([\d\.]+ MB/s)"
+    speed_pattern = r"(\d+ bytes).*?([\d\.]+ s).*?([\d\.]+ [KkMmGgTt])B/s"
     try:
         prefix = "nfs"
         for blk_size in blk_size_list:
@@ -174,6 +174,7 @@ def run_nfs_perf(test, params, env):
                 raise error.TestError("Could not get correct write result."
                                       " dd cmd output:\n%s" % out)
             _, _, speed = tmp_list[0]
+            speed = utils_misc.normalize_data_size(speed)
             result += "%016s|" % speed
             test.write_perf_keyval({ "%s--%s" % (prefix, "write"): speed })
 
@@ -185,6 +186,7 @@ def run_nfs_perf(test, params, env):
                 raise error.TestError("Could not get correct read result."
                                       " dd cmd output:\n%s" % out)
             _, _, speed = tmp_list[0]
+            speed = utils_misc.normalize_data_size(speed)
             result += "%016s|" % speed
             test.write_perf_keyval({ "%s--%s" % (prefix, "read"): speed })
             # Append result into result list.
@@ -192,7 +194,7 @@ def run_nfs_perf(test, params, env):
     finally:
         try:
             result_file.write("\n".join(result_list))
-        except IOError, e:
+        except (IOError, ValueError), e:
             logging.error("Failed to write to result file,"
                           " error message:\n%s", e)
 
