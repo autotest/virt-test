@@ -493,7 +493,7 @@ class VM(virt_vm.BaseVM):
 
         def add_serial(help_text, filename):
             if has_option(help_text, "serial"):
-                return "  --serial file,path=%s --serial pty" % filename
+                return "  --serial pty"
             else:
                 return "" # FIXME: Add additional serial ports on old libvirt?
 
