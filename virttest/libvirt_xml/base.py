@@ -9,16 +9,16 @@ class LibvirtXMLBase(propcan.PropCanBase):
     Base class for common attributes/methods applying to all sub-classes
 
     Properties:
-        xml: virtual, XMLTreeFile instance
+        xml: virtual XMLTreeFile instance
             get: xml filename string
             set: create new XMLTreeFile instance from string or filename
             del: deletes property, closes & unlinks any temp. files
-        xmltreefile: virtual, read-only, return XMLTreeFile instance
+        xmltreefile: XMLTreeFile instance
         virsh: virsh module or Virsh class instance
             set: validates and sets value
             get: returns value
             del: removes value
-        validates: virtual, read-only, return True/False from virt-xml-validate
+        validates: virtual boolean, read-only, True/False from virt-xml-validate
     """
 
     __slots__ = ('xml', 'virsh', 'xmltreefile', 'validates')
