@@ -126,13 +126,18 @@ def run_virsh_setmem(test, params, env):
     delta_percentage = float(params.get("setmem_delta_per", "10"))
     start_vm = params.get("start_vm", "yes")
     vm_name = params.get("main_vm")
+    paused_after_start_vm = "yes" == params.get("paused_after_start_vm", "no")
 
     # Gather environment parameters
     vm = env.get_vm(params["main_vm"])
     if start_vm == "yes":
+        if paused_after_start_vm:
+            vm.resume()
         session = vm.wait_for_login()
         original_inside_mem = vm_proc_meminfo(session)
         session.close()
+        if paused_after_start_vm:
+            vm.pause()
     else:
         session = None
         # Retrieve known mem value, convert into kilobytes
@@ -185,8 +190,8 @@ def run_virsh_setmem(test, params, env):
     if status_error == "no" and old_libvirt_fail == "no":
         if vm.state() == "shut off":
             vm.start()
-        elif vm.state() == "paused":
-            vm.resume()
+        # Make sure it's never paused
+        vm.resume()
         session = vm.wait_for_login()
 
         # Actual results

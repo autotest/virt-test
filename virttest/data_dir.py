@@ -20,7 +20,7 @@ class SubdirList(list):
         if self.filterlist:
             for _filter in self.filterlist:
                 if item.count(str(_filter)):
-                    logging.info("Filtering out %s b/c matches %s", item, _filter)
+                    logging.debug("Filtering out %s b/c matches %s", item, _filter)
                     return True
             return False
         else:
