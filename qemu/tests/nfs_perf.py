@@ -1,5 +1,6 @@
 import logging, re, os
 from autotest.client.shared import error
+from autotest.client import utils
 from virttest import utils_misc
 
 STEP_1, STEP_2, STEP_3, STEP_4, STEP_5, STEP_6 = range(6)
@@ -72,7 +73,7 @@ def run_nfs_perf(test, params, env):
         except Exception:
             _clean_up(STEP_4)
             raise
-        # After STEP 5
+
 
         return out
 
@@ -106,10 +107,15 @@ def run_nfs_perf(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     test_timeout = int(params["test_timeout"])
     session = vm.wait_for_login(timeout=timeout)
+    guest_ver = session.cmd_output("uname -r").strip()
+    host_ver = os.uname()[2]
+    kvm_ver = utils.system_output(params.get('kvm_userspace_ver_cmd', "rpm -q qemu-kvm"))
     # After STEP 1
 
     try:
-        result_file = open(os.path.join(test.outputdir, "nfs_result"), 'w')
+        result_name = params.get("result_name", "nfs-perf.RHS")
+        result_file_path = utils_misc.get_path(test.resultsdir, result_name)
+        result_file = open(result_file_path, 'w')
     except Exception:
         _clean_up(STEP_1)
         raise
@@ -143,6 +149,7 @@ def run_nfs_perf(test, params, env):
     if mnt_option:
         mnt_cmd += " -o %s" % mnt_option
     mnt_cmd += " %s:%s" % (nfs_server, nfs_path)
+    mnt_cmd_out = mnt_cmd + " /tmp/***_****_****"
     mnt_cmd += " %s" % mnt_point
     try:
         session.cmd(mnt_cmd)
@@ -153,19 +160,23 @@ def run_nfs_perf(test, params, env):
 
     # Record mount command in result file.
     try:
-        result_file.write("# %s\n" % mnt_cmd)
+        result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
+        result_file.write("### kvm_version : %s\n" % host_ver)
+        result_file.write("### guest-kernel-ver : %s\n" % guest_ver)
+        result_file.write("### %s\n" % mnt_cmd_out)
+        result_file.write("Category:ALL\n")
     except (IOError, ValueError), e:
         logging.error("Failed to write to result file,"
                       " error message:\n%s", e)
 
-    result_list = ["%s|%016s|%016s|" % ("blk_size", "Write", "Read")]
+    result_list = ["%s|%016s|%016s" % ("blk_size", "Write", "Read")]
     speed_pattern = r"(\d+ bytes).*?([\d\.]+ s).*?([\d\.]+ [KkMmGgTt])B/s"
     try:
         prefix = "nfs"
         for blk_size in blk_size_list:
             prefix += "--%s" % blk_size
             test_file = test_file_list[blk_size_list.index(blk_size)]
-            result = "%08s|" % blk_size
+            result = "%08s|" % blk_size[:-1]
             # Get write test result.
             out = _do_write_test(blk_size, test_file)
             tmp_list = re.findall(speed_pattern, out)
@@ -187,7 +198,7 @@ def run_nfs_perf(test, params, env):
                                       " dd cmd output:\n%s" % out)
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
-            result += "%016s|" % speed
+            result += "%016s" % speed
             test.write_perf_keyval({ "%s--%s" % (prefix, "read"): speed })
             # Append result into result list.
             result_list.append(result)
