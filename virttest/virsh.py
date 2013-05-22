@@ -33,14 +33,18 @@ from virttest import aexpect, propcan, remote
 NOCLOSE = globals().keys() + [
     'NOCLOSE', 'SCREENSHOT_ERROR_COUNT', 'VIRSH_COMMAND_CACHE',
     'VIRSH_EXEC', 'VirshBase', 'VirshClosure', 'VirshSession', 'Virsh',
-    'VirshPersistent',
+    'VirshPersistent', 'VIRSH_COMMAND_GROUP_CACHE',
+    'VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL',
 ]
 
 # Needs to be in-scope for Virsh* class screenshot method and module function
 SCREENSHOT_ERROR_COUNT = 0
 
-# Cache of virsh commands, used by has_help_command() and help_command()
+# Cache of virsh commands, used by help_command_group() and help_command_only()
+# TODO: Make the cache into a class attribute on VirshBase class.
 VIRSH_COMMAND_CACHE = None
+VIRSH_COMMAND_GROUP_CACHE = None
+VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL = False
 
 # This is used both inside and outside classes
 try:
@@ -1591,6 +1595,23 @@ def nodecpustats(option='', **dargs):
 
 def help_command(options='', cache=False, **dargs):
     """
+    Return list of commands and groups in help command output
+
+    @param: options: additional options to pass to help command
+    @param: cache: Return cached result if True, or refreshed cache if False
+    @param: dargs: standardized virsh function API keywords
+    @return: List of command and group names
+    """
+    # Combine virsh command list and virsh group list.
+    virsh_command_list = help_command_only(options, cache, **dargs)
+    virsh_group_list = help_command_group(options, cache, **dargs)
+    virsh_command_group = None
+    virsh_command_group = virsh_command_list + virsh_group_list
+    return virsh_command_group
+
+
+def help_command_only(options='', cache=False, **dargs):
+    """
     Return list of commands in help command output
 
     @param: options: additional options to pass to help command
@@ -1605,13 +1626,47 @@ def help_command(options='', cache=False, **dargs):
         cmd = 'help'
         if options:
             cmd += (' ' + options)
-        regx = re.compile(r"\s+([a-zA-Z0-9-]+)\s+")
+        regx_command_word = re.compile(r"\s+([a-z0-9-]+)\s+")
         for line in command(cmd, **dargs).stdout.strip().splitlines():
-            mobj = regx.search(line)
-            if mobj:
-                VIRSH_COMMAND_CACHE.append(mobj.group(1))
+            # Get rid of 'keyword' line
+            if line.find("keyword") != -1:
+                continue
+            mobj_command_word = regx_command_word.search(line)
+            if mobj_command_word:
+                VIRSH_COMMAND_CACHE.append(mobj_command_word.group(1))
     # Prevent accidental modification of cache itself
     return list(VIRSH_COMMAND_CACHE)
+
+
+def help_command_group(options='', cache=False, **dargs):
+    """
+    Return list of groups in help command output
+
+    @param: options: additional options to pass to help command
+    @param: cache: Return cached result if True, or refreshed cache if False
+    @param: dargs: standardized virsh function API keywords
+    @return: List of group names
+    """
+    # global needed to support this function's use in Virsh method closure
+    global VIRSH_COMMAND_GROUP_CACHE, VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL
+    if VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL:
+        return []
+    if not VIRSH_COMMAND_GROUP_CACHE or cache is False:
+        VIRSH_COMMAND_GROUP_CACHE = []
+        cmd = 'help'
+        if options:
+            cmd += (' ' + options)
+        regx_group_word = re.compile(r"[\']([a-zA-Z0-9]+)[\']")
+        for line in command(cmd, **dargs).stdout.strip().splitlines():
+            # 'keyword' only exists in group line.
+            if line.find("keyword") != -1:
+                mojb_group_word = regx_group_word.search(line)
+                if mojb_group_word:
+                    VIRSH_COMMAND_GROUP_CACHE.append(mojb_group_word.group(1))
+    if len(list(VIRSH_COMMAND_GROUP_CACHE)) == 0:
+        VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL = True
+    # Prevent accidental modification of cache itself
+    return list(VIRSH_COMMAND_GROUP_CACHE)
 
 
 def has_help_command(cmd, options='', **dargs):
