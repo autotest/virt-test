@@ -35,13 +35,13 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
     @error.context_aware
     def load_stress(self):
         """
-        load IO/CPU/Memoery stress in guest;
+        load IO/CPU/Memory stress in guest;
         """
         params = self.parser_test_args()
         self.install_stress_app()
         cmd = params.get("start_cmd")
         session = self.get_session()
-        error.context("lanuch stress app in guest", logging.info)
+        error.context("launch stress app in guest", logging.info)
         session.sendline(cmd)
         logging.info("Command: %s" % cmd)
         runing = utils_misc.wait_for(self.app_runing, first=0.5, timeout=300)
