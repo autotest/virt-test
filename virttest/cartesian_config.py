@@ -572,7 +572,7 @@ class LIdentifier(str):
 
 
     def __str__(self):
-        return self
+        return super(LIdentifier, self).__str__()
 
 
     def __repr__(self):
@@ -734,9 +734,9 @@ class LOperators(Token):
 
     def set_operands(self, name, value):
         # pylint: disable=W0201
-        self.name = name
+        self.name = str(name)
         # pylint: disable=W0201
-        self.value = value
+        self.value = str(value)
         return self
 
 
@@ -823,6 +823,12 @@ class LDel(LOperators):
 class LApplyPreDict(LOperators):
     identifier = "apply_pre_dict"
 
+    def set_operands(self, name, value):
+        # pylint: disable=W0201
+        self.name = name
+        # pylint: disable=W0201
+        self.value = value
+        return self
 
     def apply_to_dict(self, d):
         d.update(self.value)
