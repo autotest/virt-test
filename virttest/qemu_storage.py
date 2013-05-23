@@ -152,11 +152,11 @@ class QemuImg(storage.QemuImg):
             encrypted -- there are two value "off" and "on",
                 default value is "off"
         """
-        convert_image_tag = params.get("image_convert")
-        convert_image = params.get("image_name_%s" % convert_image_tag)
+        convert_image_tag = params["image_convert"]
+        convert_image = params["convert_name_%s" % convert_image_tag]
         convert_compressed = params.get("convert_compressed")
         convert_encrypted = params.get("convert_encrypted", "off")
-        convert_format = params.get("image_format_%s" % convert_image_tag)
+        convert_format = params["convert_format_%s" % convert_image_tag]
         params_convert = {"image_name": convert_image,
                           "image_format": convert_format}
 
