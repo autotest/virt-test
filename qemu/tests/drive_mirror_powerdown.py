@@ -37,7 +37,7 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
         params = self.parser_test_args()
         image_file = params.get("image_file")
         target_image = params.get("target_image")
-        cmd = "yes|mv %s %s" % (target_image, image_file)
+        cmd = "mv -f %s %s" % (target_image, image_file)
         error.context("copy target image")
         utils.system(cmd)
         error.context("powerup vm with target image", logging.info)
@@ -47,7 +47,7 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
         params = self.parser_test_args()
         image_file = params.get("image_file")
         super(DriveMirrorPowerdown, self).clean()
-        cmd = "yes|mv %s-bak %s" % (image_file, image_file)
+        cmd = "mv -f %s-bak %s" % (image_file, image_file)
         utils.system(cmd)
 
 def run_drive_mirror_powerdown(test, params, env):
