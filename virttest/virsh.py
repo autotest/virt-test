@@ -65,36 +65,9 @@ class VirshBase(propcan.PropCanBase):
         init_dict = dict(*args, **dargs)
         init_dict['virsh_exec'] = init_dict.get('virsh_exec', VIRSH_EXEC)
         init_dict['uri'] = init_dict.get('uri', None)
+        init_dict['debug'] = init_dict.get('debug', False)
+        init_dict['ignore_status'] = init_dict.get('ignore_status', False)
         super(VirshBase, self).__init__(init_dict)
-
-
-    def set_ignore_status(self, ignore_status):
-        """
-        Enforce setting ignore_status as a boolean
-        """
-        if bool(ignore_status):
-            self.dict_set('ignore_status', True)
-        else:
-            self.dict_set('ignore_status', False)
-
-
-    def set_debug(self, debug):
-        """
-        Accessor method for 'debug' property that logs message on change
-        """
-        if not self.INITIALIZED:
-            self.dict_set('debug', debug)
-        else:
-            current_setting = self.dict_get('debug')
-            desired_setting = bool(debug)
-            if not current_setting and desired_setting:
-                self.dict_set('debug', True)
-                logging.debug("Virsh debugging enabled")
-            # current and desired could both be True
-            if current_setting and not desired_setting:
-                self.dict_set('debug', False)
-                logging.debug("Virsh debugging disabled")
-
 
     def get_uri(self):
         """
