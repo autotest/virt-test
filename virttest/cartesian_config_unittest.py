@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import unittest, os
 import gzip
 import cartesian_config
@@ -224,8 +226,8 @@ class CartesianConfigTest(unittest.TestCase):
             ],
             True)
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 variants tests [default=system2]:
                   - system1:
                 """,
@@ -302,8 +304,8 @@ class CartesianConfigTest(unittest.TestCase):
 
 
     def testError1(self):
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 variants tests:
                   wait:
                        run = "wait"
@@ -320,15 +322,15 @@ class CartesianConfigTest(unittest.TestCase):
 
 
     def testMissingInclude(self):
-        with self.assertRaises(cartesian_config.MissingIncludeError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.MissingIncludeError,
+            self._checkStringDump, """
                 include xxxxxxxxx/xxxxxxxxxxx
                 """,
             [],
             True)
 
 
-    def testVariableAssignation(self):
+    def testVariableAssignment(self):
         self._checkStringDump("""
             variants tests:
               -system1:
@@ -437,8 +439,8 @@ class CartesianConfigTest(unittest.TestCase):
 
 
     def testSyntaxErrors(self):
-        with self.assertRaises(cartesian_config.LexerError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.LexerError,
+            self._checkStringDump, """
                 variants tests$:
                   - system1:
                         var = 1
@@ -454,46 +456,46 @@ class CartesianConfigTest(unittest.TestCase):
                 [],
                 True)
 
-        with self.assertRaises(cartesian_config.LexerError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.LexerError,
+            self._checkStringDump, """
                 variants tests [defaul$$$$t=system1]:
                   - system1:
                 """,
                 [],
                 True)
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 variants tests [default=system1] wrong:
                   - system1:
                 """,
                 [],
                 True)
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 only xxx...yyy
                 """,
                 [],
                 True)
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 only xxx..,yyy
                 """,
                 [],
                 True)
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 aaabbbb.ddd
                 """,
                 [],
                 True)
 
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 aaa.bbb:
                   variants test:
                      -sss:
@@ -502,8 +504,8 @@ class CartesianConfigTest(unittest.TestCase):
                 True)
 
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 variants test [sss = bbb:
                      -sss:
                 """,
@@ -511,8 +513,8 @@ class CartesianConfigTest(unittest.TestCase):
                 True)
 
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 variants test [default]:
                      -sss:
                 """,
@@ -520,8 +522,8 @@ class CartesianConfigTest(unittest.TestCase):
                 True)
 
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 variants test [default] ddd:
                      -sss:
                 """,
@@ -529,8 +531,8 @@ class CartesianConfigTest(unittest.TestCase):
                 True)
 
 
-        with self.assertRaises(cartesian_config.ParserError):
-            self._checkStringDump("""
+        self.assertRaises(cartesian_config.ParserError,
+            self._checkStringDump, """
                 variants test [default] ddd
                 """,
                 [],

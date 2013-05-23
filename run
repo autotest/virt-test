@@ -614,8 +614,7 @@ class VirtTestApp(object):
 
         standalone_test.create_config_files(self.options)
 
-        self.cartesian_parser = cartesian_config.Parser(
-                                                   debug=self.options.verbose)
+        self.cartesian_parser = cartesian_config.Parser(debug=False)
 
         if self.options.config:
             cfg = os.path.abspath(self.options.config)

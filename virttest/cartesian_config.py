@@ -170,7 +170,7 @@ class MissingIncludeError(Exception):
 
 def _match_adjacent(block, ctx, ctx_set):
     """
-    It try to match as much block as possible from ctx.
+    It try to match as many blocks as possible from context.
 
     @return: Count of matched blocks.
     """
@@ -1058,7 +1058,7 @@ class Lexer(object):
             if type(token) in lType:
                 tokens.append(token)
             else:
-                raise ParserError("Excepted %s got %s" % (lType, type(token)),
+                raise ParserError("Expected %s got %s" % (lType, type(token)),
                                     self.line, self.filename, self.linenum)
         return tokens
 
@@ -1102,7 +1102,7 @@ class Lexer(object):
         if type(token) in lType:
             return type(token), token
         else:
-            raise ParserError("Excepted %s got ['%s']=[%s]" %
+            raise ParserError("Expected %s got ['%s']=[%s]" %
                                                 ([x.identifier for x in lType],
                                                  token.identifier, token),
                                self.line, self.filename, self.linenum)
@@ -1115,7 +1115,7 @@ class Lexer(object):
         if type(token) in lType:
             return type(token), token
         else:
-            raise ParserError("Excepted %s got ['%s']" %
+            raise ParserError("Expected %s got ['%s']" %
                                                 ([x.identifier for x in lType],
                                                  token.identifier),
                                self.line, self.filename, self.linenum)
@@ -1125,7 +1125,7 @@ class Lexer(object):
         if type(token) in lType:
             return type(token), token
         else:
-            raise ParserError("Excepted %s got ['%s']" %
+            raise ParserError("Expected %s got ['%s']" %
                                                ([x.identifier for x in lType],
                                                 token.identifier),
                                self.line, self.filename, self.linenum)
@@ -1231,12 +1231,12 @@ def parse_filter(lexer, tokens):
 
 class Parser(object):
     # pylint: disable=W0102
-    def __init__(self, filename=None, defaults=False, expand_defualts=[],
+    def __init__(self, filename=None, defaults=False, expand_defaults=[],
                        debug=False):
         self.node = Node()
         self.debug = debug
         self.defaults = defaults
-        self.expand_defaults = [LIdentifier(x) for x in expand_defualts]
+        self.expand_defaults = [LIdentifier(x) for x in expand_defaults]
 
         self.filename = filename
         if self.filename:
@@ -1249,13 +1249,11 @@ class Parser(object):
 
     def _debug(self, s, *args):
         if self.debug:
-            s = "%s" % s
-            logging.debug(s, args)
+            logging.debug(s, *args)
 
 
     def _warn(self, s, *args):
-        s = "%s" % s
-        logging.warn(s, args)
+        logging.warn(s, *args)
 
 
 
@@ -1416,7 +1414,7 @@ class Parser(object):
                         self._parse(lexer, cond, prev_indent=indent)
                         node.content += [(lexer.filename, lexer.linenum, cond)]
                     else:
-                        raise ParserError("Syntax ERROR excepted \":\" or"
+                        raise ParserError("Syntax ERROR expected \":\" or"
                                           " operand", lexer.line,
                                           lexer.filename, lexer.linenum)
 
@@ -1557,7 +1555,7 @@ class Parser(object):
                     while not vtypet in [LColon, LEndL]:
                         if vtypet == LIdentifier:
                             if var_name != "":
-                                raise ParserError("Syntax ERROR excepted"
+                                raise ParserError("Syntax ERROR expected"
                                                   " \"[\" or \":\"",
                                                   lexer.line, lexer.filename,
                                                   lexer.linenum)
@@ -1575,7 +1573,7 @@ class Parser(object):
                                     meta[ident].append(tokens[:-1])
                                 else:
                                     raise ParserError("Syntax ERROR"
-                                                      " excepted \"]\"",
+                                                      " expected \"]\"",
                                                       lexer.line,
                                                       lexer.filename,
                                                       lexer.linenum)
@@ -1593,7 +1591,7 @@ class Parser(object):
                                                   lexer.linenum)
 
                     if vtypet == LEndL:
-                        raise ParserError("Syntax ERROR excepted \":\"",
+                        raise ParserError("Syntax ERROR expected \":\"",
                                           lexer.line, lexer.filename,
                                           lexer.linenum)
                     lexer.get_next_check_nw([LEndL])
@@ -1653,7 +1651,7 @@ class Parser(object):
 
                     node.content += [(lexer.filename, lexer.linenum, cond)]
                 else:
-                    raise ParserError("Syntax ERROR excepted", lexer.line,
+                    raise ParserError("Syntax ERROR expected", lexer.line,
                                       lexer.filename, lexer.linenum)
         except Exception:
             self._debug("%s  %s:  %s" % (lexer.filename, lexer.linenum,
@@ -1898,7 +1896,7 @@ if __name__ == "__main__":
     expand = []
     if options.expand:
         expand = [x.strip() for x in options.expand.split(",")]
-    c = Parser(args[0], defaults=options.defaults, expand_defualts=expand,
+    c = Parser(args[0], defaults=options.defaults, expand_defaults=expand,
                debug=options.debug)
     for s in args[1:]:
         c.parse_string(s)
