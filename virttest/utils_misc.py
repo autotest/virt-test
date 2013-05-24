@@ -1596,3 +1596,11 @@ def verify_running_as_root():
         raise error.TestNAError("This test requires root privileges "
                                 "(currently running with user %s)" %
                                 getpass.getuser())
+
+def selinux_enforcing():
+    """
+    Returns True if SELinux is in enforcing mode, False if permissive/disabled
+    """
+    cmdresult = utils.run('getenforce', ignore_status=True, verbose=False)
+    mobj = re.search('Enforcing', cmdresult.stdout)
+    return mobj is not None
