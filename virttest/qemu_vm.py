@@ -346,6 +346,26 @@ class VM(virt_vm.BaseVM):
         return VM(name, params, root_dir, address_cache, state)
 
 
+    def get_serial_console_filename(self, name=None):
+        """
+        Return the serial console filename.
+
+        @param name: The serial port name.
+        """
+        if name:
+            return "/tmp/serial-%s-%s" % (name, self.instance)
+        return "/tmp/serial-%s" % self.instance
+
+
+    def get_serial_console_filenames(self):
+        """
+        Return a list of all serial console filenames
+        (as specified in the VM's params).
+        """
+        return [self.get_serial_console_filename(_) for _ in
+                self.params.objects("isa_serials")]
+
+
     def make_create_command(self, name=None, params=None, root_dir=None):
         """
         Generate a qemu command line. All parameters are optional. If a
