@@ -17,6 +17,7 @@ def run_smbios_table(test, params, env):
     @param env: Dictionary with test environment.
     """
     smbios_type = params.get("smbios_type")
+    notset_output = params.get("notset_output")
     dmidecode_exp = params.get("dmidecode_exp")
     login_timeout = float(params.get("login_timeout", 360))
 
@@ -40,7 +41,10 @@ def run_smbios_table(test, params, env):
                                                               default_key_para)
                 smbios += ",%s='%s'" % (key.lower(), smbios_key_para_set)
 
-        params["extra_params"] += smbios
+        if params.get("extra_params"):
+            params["extra_params"] += smbios
+        else:
+            params["extra_params"] = smbios
 
     support_machine_types = []
     if  params.get("traversal_machine_emulated", "no") == "no" :
@@ -71,7 +75,7 @@ def run_smbios_table(test, params, env):
                 smbios_type_number = 1
             dmidecode_key = params.object_params(sm_type).get("dmikeyword")
             dmidecode_key = dmidecode_key.split()
-            for key in dmidecode_key :
+            for key in dmidecode_key:
                 cmd = (dmidecode_exp % (smbios_type_number, key))
                 smbios_get_para = session.cmd(cmd).strip()
                 if params.get("smbios_type_disable", "no") == "no" :
@@ -81,6 +85,9 @@ def run_smbios_table(test, params, env):
                 else:
                     key_index = support_machine_types.index(m_type)
                     smbios_set_para = expect_system_versions[key_index]
+
+                if smbios_get_para == notset_output:
+                    smbios_get_para = ""
 
                 if (smbios_get_para != smbios_set_para ):
                     e_msg = ("%s.%s mismatch, Set '%s' but guest is : '%s'"
