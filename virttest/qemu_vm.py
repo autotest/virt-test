@@ -816,7 +816,8 @@ class VM(virt_vm.BaseVM):
                 # libvirt gains the pci_slot, free_pci_addr here,
                 # value by parsing the xml file, i.e. counting all the
                 # pci devices and store the number.
-                cmd += ",bus=%s,addr=%s" % (get_pci_bus(), free_pci_addr)
+                if model != 'spapr-vlan':
+                    cmd += ",bus=%s,addr=%s" % (get_pci_bus(), free_pci_addr)
                 if nic_extra_params:
                     cmd += ",%s" % nic_extra_params
                 cmd += _add_option("bootindex", bootindex)
