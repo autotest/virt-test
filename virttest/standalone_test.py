@@ -158,8 +158,6 @@ class Test(object):
                                                     "tests")
                     subtest_dirs += data_dir.SubdirList(specific_testdir,
                                                         bootstrap.test_filter)
-                    logging.debug("Searching subtest files in dirs %s",
-                                  subtest_dirs)
                     subtest_dir = None
 
                     # Get the test routine corresponding to the specified
