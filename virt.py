@@ -1,4 +1,4 @@
-import os, sys, logging, imp, Queue
+import os, sys, logging, imp, Queue, inspect
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, utils_params, utils_env, env_process
@@ -40,6 +40,24 @@ class virt(test.test):
             pass
         else:
             raise exc[1], None, exc[2]
+
+
+    def step(self, step_str):
+        """
+        This function is a wrapper to record TCMS test step.
+
+        @param s: A test step string.
+        """
+        if step_str:
+            logging.info("TestStep: %s" % step_str)
+            try:
+                stack = inspect.stack()
+                gls = stack[1][0].f_globals
+                error_module = gls.get("error")
+                if error_module:
+                    error_module.context(step_str)
+            except Exception:
+                pass
 
 
     def run_once(self, params):
@@ -150,6 +168,16 @@ class virt(test.test):
                             self, params, env)
                     finally:
                         env.save()
+                    if params.get("generate_bug_report") == "yes":
+                        # Try to generate a bug summary for qemu test.
+                        from virttest import qemu_bug_reporter
+                        try:
+                            if isinstance(e, error.TestFail):
+                                logging.debug("Generate bug report template.")
+                                qemu_bug_reporter.create_report(self.outputdir)
+                        except Exception, detail:
+                            logging.warn("Fail to generate bug report"
+                                         " templete: %s" % detail)
                     raise
 
             finally:
