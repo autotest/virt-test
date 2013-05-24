@@ -297,6 +297,18 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         self.remove(self.find(xpath)) # can't remove root
 
 
+    def create_by_xpath(self, xpath):
+        """
+        Creates all elements in simplistic xpath from root if not exist
+        """
+        cur_element = self.getroot()
+        for tag in xpath.split('/'):
+            next_element = cur_element.find(tag)
+            if next_element is None:
+                next_element = ElementTree.SubElement(cur_element, tag)
+            cur_element = next_element
+
+
     # This overrides the file.write() method
     def write(self, filename=None, encoding=ENCODING):
         """

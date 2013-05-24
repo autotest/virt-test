@@ -2,11 +2,15 @@
 
 import unittest
 import common
-from virttest import xml_utils, virsh
+from virttest import xml_utils, virsh, utils_misc
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
 from virttest.libvirt_xml import libvirt_xml
+from virttest.libvirt_xml.devices import librarian
+from virttest.libvirt_xml.devices import base as devices_base
+from virttest.libvirt_xml.devices import address
 
-
+# save a copy
+ORIGINAL_DEVICE_TYPES = list(librarian.device_types)
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
 _CAPABILITIES = """<capabilities><host>
 <uuid>%s</uuid><cpu><arch>x86_64</arch><model>
@@ -28,7 +32,6 @@ class LibvirtXMLTestBase(unittest.TestCase):
 
     # Override instance methods needed for testing
 
-
     @staticmethod
     def _capabilities(option='', **dargs):
         # Compacted to save space
@@ -41,10 +44,29 @@ class LibvirtXMLTestBase(unittest.TestCase):
 
     @staticmethod
     def _dumpxml(name, to_file="", **dargs):
-        return ("<domain type='kvm'>"
-                "    <name>%s</name>"
-                "    <uuid>%s</uuid>"
-                "</domain>" % (name, LibvirtXMLTestBase._domuuid(None)))
+        return ('<domain type="kvm">'
+                '    <name>%s</name>'
+                '    <uuid>%s</uuid>'
+                '    <devices>' # Tests below depend on device order
+                '       <serial type="pty">'
+                '           <target port="0"/>'
+                '       </serial>'
+                '       <serial type="pty">'
+                '           <target port="1"/>'
+                '           <source path="/dev/null"/>'
+                '       </serial>'
+                '       <serial type="tcp">'
+                '         <source mode="connect" host="1.2.3.4" service="2445"/>'
+                '         <protocol type="raw"/>'
+                '         <target port="2"/>'
+                '       </serial>'
+                '       <serial type="udp">'
+                '         <source mode="bind" host="1.2.3.4" service="2445"/>'
+                '         <source mode="connect" host="4.3.2.1" service="5442"/>'
+                '         <target port="3"/>'
+                '       </serial>'
+                '    </devices>'
+                '</domain>' % (name, LibvirtXMLTestBase._domuuid(None)))
 
 
     def setUp(self):
@@ -58,6 +80,11 @@ class LibvirtXMLTestBase(unittest.TestCase):
         self.dummy_virsh.super_set('capabilities', self._capabilities)
         self.dummy_virsh.super_set('dumpxml', self._dumpxml)
         self.dummy_virsh.super_set('domuuid', self._domuuid)
+
+
+
+    def tearDown(self):
+        librarian.device_types = list(ORIGINAL_DEVICE_TYPES)
 
 
 class AccessorsTest(LibvirtXMLTestBase):
@@ -141,6 +168,23 @@ class AccessorsTest(LibvirtXMLTestBase):
                           None, None, None, None)
 
 
+    def test_create_by_xpath(self):
+        class FooBar(base.LibvirtXMLBase):
+            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            def __init__(self, virsh_instance):
+                super(FooBar, self).__init__(virsh_instance)
+                accessors.XMLElementDict('test', self, None, 'foo/bar', 'baz')
+        foobar = FooBar(self.dummy_virsh)
+        foobar.xml = '<test></test>'
+        test_dict = {'test1':'1', 'test2':'2'}
+        foobar.test = test_dict
+        self.assertEqual(foobar.test, test_dict)
+        element = foobar.xmltreefile.find('foo/bar/baz')
+        self.assertTrue(element is not None)
+        element_dict = dict(element.items())
+        self.assertEqual(test_dict, element_dict)
+
+
 class TestLibvirtXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
@@ -180,7 +224,7 @@ class TestVMXML(LibvirtXMLTestBase):
 
 
     def _from_scratch(self):
-        vmxml = vm_xml.VMXML(self.dummy_virsh, 'test1')
+        vmxml = vm_xml.VMXML('test1', self.dummy_virsh)
         vmxml.vm_name = 'test2'
         vmxml.uuid = 'test3'
         vmxml.vcpu = 4
@@ -214,8 +258,8 @@ class TestVMXML(LibvirtXMLTestBase):
 class testNetworkXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
-        netxml = network_xml.NetworkXML(virsh_instance = self.dummy_virsh,
-                                        network_name = 'test0')
+        netxml = network_xml.NetworkXML(network_name = 'test0',
+                                        virsh_instance = self.dummy_virsh)
         self.assertEqual(netxml.name, 'test0')
         netxml.name = 'test1'
         netxml.uuid = 'test2'
@@ -248,6 +292,138 @@ class testNetworkXML(LibvirtXMLTestBase):
         ipxml = netxml.ip
         self.assertEqual(ipxml.address, 'address_test')
         self.assertEqual(ipxml.netmask, 'netmask_test')
+
+
+class testLibrarian(LibvirtXMLTestBase):
+
+
+    def test_bad_names(self):
+        for badname in ('__init__', 'librarian', '__doc__', '/dev/null', '', None):
+            self.assertRaises(xcepts.LibvirtXMLError, librarian.get, badname)
+
+
+    def test_no_module(self):
+        # Bypass type-check to induse module load failure
+        original_device_types = librarian.device_types
+        for badname in ('DoesNotExist', '/dev/null', '', None):
+            librarian.device_types.append(badname)
+            self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
+                              badname)
+
+
+    def test_serial_class(self):
+        Serial = librarian.get('serial')
+        self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
+        self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
+
+
+class testCharacterXML(LibvirtXMLTestBase):
+
+    def test_arbitrart_attributes(self):
+        parallel = librarian.get('parallel')(virsh_instance = self.dummy_virsh)
+        serial = librarian.get('serial')(virsh_instance = self.dummy_virsh)
+        channel = librarian.get('channel')(virsh_instance = self.dummy_virsh)
+        console = librarian.get('console')(virsh_instance = self.dummy_virsh)
+        for chardev in (parallel, serial, channel, console):
+            attribute1 = utils_misc.generate_random_string(10)
+            value1 = utils_misc.generate_random_string(10)
+            attribute2 = utils_misc.generate_random_string(10)
+            value2 = utils_misc.generate_random_string(10)
+            chardev.add_source(**{attribute1:value1, attribute2:value2})
+            chardev.add_target(**{attribute1:value1, attribute2:value2})
+            self.assertEqual(chardev.sources, chardev.targets)
+
+
+class testSerialXML(LibvirtXMLTestBase):
+
+    XML = u"<serial type='pty'><source path='/dev/null'/><target port='-1'/></serial>"
+
+    def _from_scratch(self):
+        serial = librarian.get('Serial')(virsh_instance = self.dummy_virsh)
+        self.assertEqual(serial.device_tag, 'serial')
+        self.assertEqual(serial.type_name, 'pty')
+        self.assertEqual(serial.virsh, self.dummy_virsh)
+        serial.add_source(path='/dev/null')
+        serial.add_target(port="-1")
+        return serial
+
+
+    def test_getters(self):
+        serial = self._from_scratch()
+        self.assertEqual(serial.sources[0]['path'], '/dev/null')
+        self.assertEqual(serial.targets[0]['port'], '-1')
+
+
+    def test_from_element(self):
+        element = xml_utils.ElementTree.fromstring(self.XML)
+        serial1 = self._from_scratch()
+        serial2 = librarian.get('Serial').new_from_element(element)
+        self.assertEqual(serial1, serial2)
+        # Can't in-place modify the dictionary since it's virtual
+        serial2.update_target(0, port="0")
+        self.assertTrue(serial1 != serial2)
+        serial1.targets = [{'port':'0'}]
+        self.assertEqual(serial1, serial2)
+
+
+    def test_vm_get_by_class(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        serial_devices = vmxml.get_devices(device_type='serial')
+        self.assertEqual(len(serial_devices), 4)
+
+
+    def test_vm_get_modify(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        devices = vmxml['devices']
+        serial1 = devices[0]
+        serial2 = devices[1]
+        serial3 = devices[2]
+        serial4 = devices[3]
+        self.assertEqual(serial1.device_tag, 'serial')
+        self.assertEqual(serial2.device_tag, 'serial')
+        self.assertEqual(serial1.type_name, 'pty')
+        self.assertEqual(serial2.type_name, 'pty')
+        self.assertFalse(serial1 == serial2)
+        self.assertEqual(serial1.sources, [])
+        # mix up access style
+        serial1.add_source(**serial2.sources[0])
+        self.assertFalse(serial1 == serial2)
+        serial1.update_target(0, port="1")
+        self.assertEqual(serial1, serial2)
+        # Exercize bind mode
+        self.assertEqual(serial3.type_name, 'tcp')
+        source_connect = serial3.sources[0]
+        self.assertEqual(source_connect, {'mode':"connect", 'host':'1.2.3.4',
+                                          'service':'2445'})
+        self.assertEqual(serial3.protocol_type, 'raw')
+        self.assertEqual(serial3.targets[0]['port'], '2')
+        # Exercize udp type
+        self.assertEqual(serial4.type_name, 'udp')
+        source_bind = serial4.sources[0]
+        source_connect = serial4.sources[1]
+        self.assertEqual(source_bind['host'], "1.2.3.4")
+        self.assertEqual(source_connect['host'], "4.3.2.1")
+        self.assertEqual(source_bind['service'], '2445')
+        self.assertEqual(source_connect['service'], '5442')
+
+
+class testAddressXML(LibvirtXMLTestBase):
+
+    def test_required(self):
+        address = librarian.get('address')
+        self.assertRaises(xcepts.LibvirtXMLError,
+                          address.new_from_dict,
+                          {}, self.dummy_virsh)
+        # no type_name attribute
+        element = xml_utils.ElementTree.Element('address', {'foo':'bar'})
+        self.assertRaises(xcepts.LibvirtXMLError,
+                          address.new_from_element,
+                          element, self.dummy_virsh)
+        element.set('type', 'foobar')
+        new_address = address.new_from_element(element, self.dummy_virsh)
+        the_dict = {'type_name':'foobar', 'foo':'bar'}
+        another_address = address.new_from_dict(the_dict, self.dummy_virsh)
+        self.assertEqual(str(new_address), str(another_address))
 
 
 if __name__ == "__main__":

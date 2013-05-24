@@ -42,31 +42,27 @@ class RangeList(list):
 class IPXML(base.LibvirtXMLBase):
     """
     IP address block, optionally containing DHCP range information
+
+    Properties:
+        dhcp_ranges: RangeList instances (list-like)
+        address: string IP address
+        netmask: string IP's netmask
     """
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('dhcp_ranges', 'address',
                                                  'netmask')
 
 
-    def __init__(self, virsh_instance=virsh,
-                 address='192.168.122.1', netmask='255.255.255.0'):
+    def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
+                 virsh_instance=base.virsh):
         """
-        Accessor methods for IPXML class.
-
-        Properties:
-            dhcp_ranges: virtual, RangeList instances (list subclass)
-                get: Return RangeList of all DHCP ranges
-                set: Create DHCP ranges from a RangeList instance
-                del: Removes all DHCP ranges
-            address: virtual, IP address string
-            netmask: virtual, IP's netmask string
+        Create new IPXML instance based on address/mask
         """
-
         accessors.XMLAttribute('address', self, parent_xpath='/', tag_name='ip',
                                attribute='address')
         accessors.XMLAttribute('netmask', self, parent_xpath='/', tag_name='ip',
                                attribute='netmask')
-        super(IPXML, self).__init__(virsh_instance)
+        super(IPXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<ip address='%s' netmask='%s'></ip>" % (address, netmask)
 
 
@@ -119,28 +115,25 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     Accessor methods for NetworkXML class.
 
     Properties:
-        name: virtual, operates on XML name tag
-        uuid: virtual, operates on uuid tag
-        fwd_mode: virtual, operates on mode attribute of forward tag
-        mac: virtual, operates on address attribute of mac tag
-        ip: virtual, operate on ip/dhcp ranges as IPXML instances
-        bridge: virtual, operates on bridge attributes
-            get: Return dictionary of attributes & values
-            set: Set attributes from dictionary of values
-            del: Remove bridge element
-        defined: virtual, callout to virsh methods
+        name: string, operates on XML name tag
+        uuid: string, operates on uuid tag
+        fwd_mode: string, operates on mode attribute of forward tag
+        mac: string, operates on address attribute of mac tag
+        ip: string operate on ip/dhcp ranges as IPXML instances
+        bridge: dict, operates on bridge attributes
+        defined: virtual boolean, callout to virsh methods
             get: True if libvirt knows network name
             set: True defines network, False undefines to libvirt
             del: Undefines network to libvirt
-        active: virtual, callout to virsh methods
+        active: virtual boolean, callout to virsh methods
             get: True if network is active to libvirt
             set: True activates network, False deactivates to libvirt
             del: Deactivates network to libvirt
-        autostart: virtual, callout to virsh methods
+        autostart: virtual boolean, callout to virsh methods
             get: True if libvirt autostarts network with same name
             set: True to set autostart, False to unset to libvirt
             del: Unset autostart to libvirt
-        persistent: virtual, callout to virsh methods
+        persistent: virtual boolean, callout to virsh methods
             get: True if network was defined, False if only created.
             set: Same as defined property
             del: Same as defined property
@@ -151,7 +144,13 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                                  'autostart', 'persistent',
                                                  'fwd_mode', 'mac', 'ip')
 
-    def __init__(self, virsh_instance=virsh):
+    __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
+                                            'defined', 'active',
+                                            'autostart', 'persistent')
+
+    __schema_name__ = "network"
+
+    def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText('name', self, parent_xpath='/',
                                  tag_name='name')
         accessors.XMLElementText('uuid', self, parent_xpath='/',
@@ -162,7 +161,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                tag_name='mac', attribute='address');
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
                                  tag_name='bridge')
-        super(NetworkXMLBase, self).__init__(virsh_instance)
+        super(NetworkXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 
     def __check_undefined__(self, errmsg):
@@ -278,7 +277,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             ip_root = xmltreefile.reroot('/ip')
         except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
-        ipxml = IPXML(self.dict_get('virsh'))
+        ipxml = IPXML(virsh_instance = self.dict_get('virsh'))
         ipxml.xmltreefile = ip_root
         return ipxml
 
@@ -311,16 +310,16 @@ class NetworkXML(NetworkXMLBase):
     __slots__ = NetworkXMLBase.__slots__
 
 
-    def __init__(self, virsh_instance=virsh, network_name='default'):
+    def __init__(self, network_name='default', virsh_instance=base.virsh):
         """
         Initialize new instance with empty XML
         """
-        super(NetworkXML, self).__init__(virsh_instance)
+        super(NetworkXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<network><name>%s</name></network>" % network_name
 
 
     @staticmethod # wraps __new__
-    def new_all_networks_dict(virsh_instance=virsh):
+    def new_all_networks_dict(virsh_instance=base.virsh):
         """
         Return a dictionary of names to NetworkXML instances for all networks
 
@@ -329,7 +328,7 @@ class NetworkXML(NetworkXMLBase):
         """
         result = {}
         # Values should all share virsh property
-        new_netxml = NetworkXML(virsh_instance)
+        new_netxml = NetworkXML(virsh_instance=virsh_instance)
         networks = new_netxml.virsh.net_state_dict(only_names=True).keys()
         for net_name in networks:
             new_copy = new_netxml.copy()
@@ -339,7 +338,7 @@ class NetworkXML(NetworkXMLBase):
 
 
     @staticmethod
-    def new_from_net_dumpxml(network_name, virsh_instance=virsh):
+    def new_from_net_dumpxml(network_name, virsh_instance=base.virsh):
         """
         Return new NetworkXML instance from virsh net-dumpxml command
 
@@ -353,14 +352,15 @@ class NetworkXML(NetworkXMLBase):
 
 
     @staticmethod
-    def get_uuid_by_name(network_name):
+    def get_uuid_by_name(network_name, virsh_instance=base.virsh):
         """
         Return Network's uuid by Network's name.
 
         @param: network_name: Network's name
         @return: Network's uuid
         """
-        network_xml = NetworkXML.new_from_net_dumpxml(network_name)
+        network_xml = NetworkXML.new_from_net_dumpxml(network_name,
+                                                      virsh_instance)
         return network_xml.uuid
 
 

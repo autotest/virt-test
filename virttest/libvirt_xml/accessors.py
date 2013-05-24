@@ -2,7 +2,7 @@
 Specializations of base.AccessorBase for particular XML manipulation types
 """
 
-import logging
+import logging, os.path
 from virttest import xml_utils
 from virttest.propcan import PropCanBase
 from virttest.libvirt_xml import xcepts, base
@@ -20,7 +20,7 @@ def type_check(name, thing, expected):
     except TypeError:
         it_is = isinstance(thing, expected)
     if not it_is:
-        raise ValueError("%s is not a %s, it is a %s"
+        raise ValueError('%s value is not a %s, it is a %s'
                          % (name, expected_string, is_a_name))
 
 
@@ -48,7 +48,7 @@ class AccessorBase(PropCanBase):
         @param: operation: Debug String for 'Getter', 'Setter', or 'Delter'
         @param: property_name: String name of property (for exception detail)
         @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: **dargs: Additional __slots__ values to set
+        @param: **dargs: Necessary for subclasses to extend required parameters
         """
         type_check('Parameter property_name', property_name, str)
         type_check('Operation attribute', operation, str)
@@ -63,11 +63,10 @@ class AccessorBase(PropCanBase):
         for slot in self.__slots__:
             if slot in AccessorBase.__slots__:
                 continue # already checked these
-            type_check('slot', slot, str)
-            value = dargs.get(slot, None)
-            type_check('value', value, str)
-            self.dict_set(slot, value)
-
+            # Don't care about value type
+            if not dargs.has_key(slot):
+                raise ValueError('Required accessor generator parameter %s' % slot)
+            self.dict_set(slot, dargs[slot])
 
     # Subclass expected to override this and specify parameters
     __call__ = NotImplementedError
@@ -89,6 +88,12 @@ class AccessorBase(PropCanBase):
     def element_by_parent(self, parent_xpath, tag_name, create=True):
         """
         Retrieve/create an element instance at parent_xpath/tag_name
+
+        @param: parent_xpath: xpath of parent element
+        @param: tag_name: name of element under parent to retrieve/create
+        @param: create: True to create new element if not exist
+        @returns: ElementTree.Element instance
+        @raises: LibvirtXMLError: If element not exist & create=False
         """
         type_check('parent_xpath', parent_xpath, str)
         type_check('tag_name', tag_name, str)
@@ -102,7 +107,13 @@ class AccessorBase(PropCanBase):
                      self.property_name, tag_name, parent_xpath,
                      str(self.xmltreefile())))
         if parent_element is None:
-            raise xcepts.LibvirtXMLAccessorError(excpt_str)
+            if create:
+                # This will only work for simple XPath strings
+                self.xmltreefile().create_by_xpath(parent_xpath)
+                parent_element = self.xmltreefile().find(parent_xpath)
+            # if create or not, raise if not exist
+            if parent_element is None:
+                raise xcepts.LibvirtXMLAccessorError(excpt_str)
         try:
             element = parent_element.find(tag_name)
         except:
@@ -122,7 +133,6 @@ class AccessorBase(PropCanBase):
                                                     tag_name, parent_xpath,
                                                     str(self.xmltreefile())))
         return element
-
 
 
 class ForbiddenBase(AccessorBase):
@@ -266,7 +276,7 @@ class XMLElementText(AccessorGeneratorBase):
 
         @param: property_name: String name of property (for exception detail)
         @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        @param: forbidden: Optional list of 'get', 'set', 'del'
         @param: parent_xpath: XPath string of parent element
         @param: tag_name: element tag name to manipulate text attribute on.
         """

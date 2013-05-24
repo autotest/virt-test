@@ -15,9 +15,9 @@ def run_qmp_event_notification(test, params, env):
     @param env: Dictionary with test environmen.
     """
 
-
     if not utils_misc.qemu_has_option("qmp"):
-        error.TestNAError("This test case requires a host QEMU with QMP monitor support")
+        error.TestNAError("This test case requires a host QEMU with QMP "
+                          "monitor support")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -33,47 +33,41 @@ def run_qmp_event_notification(test, params, env):
         else:
             raise error.TestError("cmd_type is not supported")
 
-
     event_cmd = params.get("event_cmd")
     cmd_type = params.get("event_cmd_type")
     event_check = params.get("event_check")
     timeout = int(params.get("check_timeout", 360))
     action_check = params.get("action_check")
 
-
     if params.get("pre_event_cmd"):
         send_cmd(params.get("pre_event_cmd"))
 
-    cmd_o = send_cmd(event_cmd)
+    send_cmd(event_cmd)
 
     end_time = time.time() + timeout
-    qmp_monitors = []
-    for monitor in vm.monitors:
-        monitor_params = params.object_params(monitor.name)
-        if monitor_params.get("monitor_type") == "qmp":
-            qmp_monitors += [monitor]
+    qmp_monitors = vm.get_monitors_by_type("qmp")
     qmp_num = len(qmp_monitors)
-    logging.info("Try to get qmp events in %s seconds!" % timeout)
+    logging.info("Try to get qmp events in %s seconds!", timeout)
     while time.time() < end_time:
         for monitor in qmp_monitors:
             event = monitor.get_event(event_check)
             if event_check == "WATCHDOG":
                 if event and event['data']['action'] == action_check:
-                    logging.info("Receive watchdog %s event notification"
-                                  % action_check)
+                    logging.info("Receive watchdog %s event notification",
+                                 action_check)
                     qmp_num -= 1
                     qmp_monitors.remove(monitor)
             else:
                 if event:
-                    logging.info("Receive qmp %s event notification"
-                                  % event_check)
+                    logging.info("Receive qmp %s event notification",
+                                 event_check)
                     qmp_num -= 1
                     qmp_monitors.remove(monitor)
         time.sleep(5)
         if qmp_num <= 0:
             break
 
-    if qmp_num >0:
+    if qmp_num > 0:
         raise error.TestFail("Did not receive qmp %s event notification"
                        % event_check)
 

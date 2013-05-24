@@ -314,6 +314,21 @@ class test_XMLTreeFile(test_XMLBackup):
         self.assertEqual(*self.get_xpath_elements('host/cpu/arch'))
 
 
+    def test_create_by_xpath(self):
+        testxml = self.class_to_test(self.XMLSTR)
+        self.assertTrue(testxml.find('host/cpu') is not None)
+        self.assertFalse(testxml.find('host/cpu/foo') is not None)
+        testxml.create_by_xpath('host/cpu/foo/bar')
+        self.assertTrue(testxml.find('host/cpu/foo/bar') is not None)
+        self.assertFalse(testxml.find('host/cpu/foo/baz') is not None)
+        testxml.create_by_xpath('host/cpu/foo/bar/baz')
+        self.assertTrue(testxml.find('host/cpu/foo/bar/baz') is not None)
+        # something totally new
+        self.assertFalse(testxml.find('foo/bar/baz') is not None)
+        testxml.create_by_xpath('foo/bar/baz')
+        self.assertTrue(testxml.find('foo/bar/baz') is not None)
+
+
 class test_templatized_xml(xml_test_data):
 
     def setUp(self):
