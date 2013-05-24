@@ -974,6 +974,15 @@ class VM(virt_vm.BaseVM):
                                             "install.  Try using the "
                                             "unattended_install.cdrom.http_ks"
                                             " instead." % details.result_obj)
+                if stderr.count('failed to launch bridge helper'):
+                    if utils_misc.selinux_enforcing():
+                        raise error.TestNAError("SELinux is enabled and "
+                                                "preventing the bridge "
+                                                "helper from accessing "
+                                                "the bridge.  Consider "
+                                                "running as root or "
+                                                "placing SELinux into "
+                                                "permissive mode.")
                 # some other problem happend, raise normally
                 raise
             # Wait for the domain to be created
