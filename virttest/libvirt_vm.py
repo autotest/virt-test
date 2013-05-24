@@ -809,10 +809,7 @@ class VM(virt_vm.BaseVM):
 
     def setup_serial_console(self):
         self.serial_console = aexpect.ShellSession(
-            "virsh console %s" % self.name,
-            auto_close=False,
-            output_func=utils_misc.log_line,
-            output_params=("serial-%s.log" % self.name,))
+            "virsh console %s" % self.name, auto_close=False)
 
 
     @error.context_aware
@@ -1099,12 +1096,10 @@ class VM(virt_vm.BaseVM):
         finally:
             if self.serial_console:
                 self.serial_console.close()
-            for f in ([self.get_testlog_filename(),
-                       self.get_serial_console_filename()]):
-                try:
-                    os.unlink(f)
-                except OSError:
-                    pass
+            try:
+                os.unlink(self.get_testlog_filename())
+            except OSError:
+                pass
             if hasattr(self, "migration_file"):
                 try:
                     os.unlink(self.migration_file)
