@@ -239,11 +239,12 @@ class GitBackend(object):
         status = utils.system_output("git status --porcelain")
         unknown_files = []
         for line in status.split("\n"):
-            status_flag = line[0]
-            if line and status_flag == "??":
-                for extension in self.ignored_extension_list:
-                    if not line.endswith(extension):
-                        unknown_files.append(line[2:].strip())
+            if line:
+                status_flag = line[0]
+                if status_flag == "??":
+                    for extension in self.ignored_extension_list:
+                        if not line.endswith(extension):
+                            unknown_files.append(line[2:].strip())
         return unknown_files
 
 
@@ -251,9 +252,10 @@ class GitBackend(object):
         status = utils.system_output("git status --porcelain")
         modified_files = []
         for line in status.split("\n"):
-            status_flag = line[0]
-            if line and status_flag == "M" or status_flag == "A":
-                modified_files.append(line[1:].strip())
+            if line:
+                status_flag = line[0]
+                if status_flag in ["M", "A"]:
+                    modified_files.append(line[1:].strip())
         return modified_files
 
 
