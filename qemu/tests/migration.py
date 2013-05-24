@@ -15,7 +15,7 @@ def run_migration(test, params, env):
     4) Compare the output of a reference command executed on the source with
             the output of the same command on the destination machine.
 
-    @param test: kvm test object.
+    @param test: QEMU test object.
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
@@ -55,6 +55,7 @@ def run_migration(test, params, env):
             time.sleep(timeout)
         if not bg.is_alive():
             raise error.TestFail("Failed to start guest test!")
+
 
     def guest_stress_deamon():
         """
@@ -106,13 +107,22 @@ def run_migration(test, params, env):
                 funcs.append(f)
         return funcs
 
+
     def mig_set_speed():
         mig_speed = params.get("mig_speed", "1G")
         return vm.monitor.migrate_set_speed(mig_speed)
 
+
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")
     mig_cancel_delay = int(params.get("mig_cancel") == "yes") * 2
+    mig_exec_cmd_src = params.get("migration_exec_cmd_src")
+    mig_exec_cmd_dst = params.get("migration_exec_cmd_dst")
+    if mig_exec_cmd_src and "gzip" in mig_exec_cmd_src:
+        mig_exec_file = params.get("migration_exec_file", "/tmp/exec")
+        mig_exec_file += "-%s" % utils_misc.generate_random_string(8)
+        mig_exec_cmd_src = mig_exec_cmd_src % mig_exec_file
+        mig_exec_cmd_dst = mig_exec_cmd_dst % mig_exec_file
     offline = params.get("offline", "no") == "yes"
     check = params.get("vmstate_check", "no") == "yes"
     living_guest_os = params.get("migration_living_guest", "yes") == "yes"
@@ -126,7 +136,7 @@ def run_migration(test, params, env):
         session = vm.wait_for_login(timeout=timeout)
 
         # Get the output of migration_test_command
-        test_command = params["migration_test_command"]
+        test_command = params.get("migration_test_command")
         reference_output = session.cmd_output(test_command)
 
         # Start some process in the background (and leave the session open)
@@ -164,7 +174,9 @@ def run_migration(test, params, env):
                 else:
                     logging.info("Round %s pong..." % str(i / 2))
                 vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                           offline, check)
+                           offline, check,
+                           migration_exec_cmd_src=mig_exec_cmd_src,
+                           migration_exec_cmd_dst=mig_exec_cmd_dst)
 
             # Set deamon thread action to stop after migrate
             params["action"] = "stop"
@@ -210,4 +222,6 @@ def run_migration(test, params, env):
         session.close()
     else:
         # Just migrate without depending on a living guest OS
-        vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline, check)
+        vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline,
+                   check, migration_exec_cmd_src=mig_exec_cmd_src,
+                   migration_exec_cmd_dst=mig_exec_cmd_dst)
