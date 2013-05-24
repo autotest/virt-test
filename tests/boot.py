@@ -30,6 +30,8 @@ def run_boot(test, params, env):
         error.context("Reboot guest.")
         if params["reboot_method"] == "system_reset":
             time.sleep(int(params.get("sleep_before_reset", 10)))
-        session = vm.reboot(session, params["reboot_method"], 0, timeout)
+            # Reboot the VM
+        for i in range(int(params.get("reboot_count", 1))):
+            session = vm.reboot(session, params["reboot_method"], 0, timeout)
 
     session.close()
