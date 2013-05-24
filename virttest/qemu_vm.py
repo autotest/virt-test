@@ -394,6 +394,19 @@ class VM(virt_vm.BaseVM):
             return bool(re.search(r'name "%s"' % device, device_help, re.M))
 
 
+        def get_pci_bus():
+            """
+            Get the bus name, different machine type has different name.
+            In x86, qemu create bus: pci.0
+            In ppc64, qemu create bus: pci
+            """
+            arch = platform.machine()
+            if arch == 'ppc64':
+                return 'pci'
+            else:
+                return 'pci.0'
+
+
         def _add_option(option, value, option_type=None, first=False):
             """
             Add option to qemu parameters.
@@ -729,7 +742,7 @@ class VM(virt_vm.BaseVM):
                     dev += _add_option("bus", str(ide_bus))
                     dev += _add_option("unit", str(ide_unit))
                 elif fmt == "virtio":
-                    dev += _add_option("bus", "pci.0")
+                    dev += _add_option("bus", get_pci_bus())
                     dev += _add_option("addr", get_free_pci_addr(pci_addr))
                     dev += _add_option("physical_block_size",
                                        physical_block_size)
@@ -803,7 +816,7 @@ class VM(virt_vm.BaseVM):
                 # libvirt gains the pci_slot, free_pci_addr here,
                 # value by parsing the xml file, i.e. counting all the
                 # pci devices and store the number.
-                cmd += ",bus=pci.0,addr=%s" % free_pci_addr
+                cmd += ",bus=%s,addr=%s" % (get_pci_bus(), free_pci_addr)
                 if nic_extra_params:
                     cmd += ",%s" % nic_extra_params
                 cmd += _add_option("bootindex", bootindex)
@@ -1203,7 +1216,7 @@ class VM(virt_vm.BaseVM):
 
             cmd = " -device %s" % usb_type
             cmd += _add_option("id", usb_id)
-            cmd += _add_option("bus", "pci.0")
+            cmd += _add_option("bus", get_pci_bus())
             cmd += _add_option("addr", get_free_pci_addr(pci_addr))
 
             if usb_type == "ich9-usb-ehci1":
