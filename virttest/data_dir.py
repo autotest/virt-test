@@ -20,7 +20,6 @@ class SubdirList(list):
         if self.filterlist:
             for _filter in self.filterlist:
                 if item.count(str(_filter)):
-                    logging.debug("Filtering out %s b/c matches %s", item, _filter)
                     return True
             return False
         else:
@@ -30,12 +29,17 @@ class SubdirList(list):
     def __set_initset__(self):
         for dirpath, dirnames, filenames in os.walk(self.basedir):
             del filenames # not used
+            # Don't modify list while in use
+            del_list = []
             for _dirname in dirnames:
                 if _dirname.startswith('.') or self.__in_filter__(_dirname):
                     # Don't descend into filtered or hidden directories
-                    del dirnames[dirnames.index(_dirname)]
+                    del_list.append(_dirname)
                 else:
                     self.initset.add(os.path.join(dirpath, _dirname))
+            # Remove items in del_list from dirnames list
+            for _dirname in del_list:
+                del dirnames[dirnames.index(_dirname)]
 
 
     def __init__(self, basedir, filterlist=None):
