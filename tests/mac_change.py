@@ -15,6 +15,18 @@ def run_mac_change(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    def get_drive_num(session, path):
+        """
+        return file path drive
+        """
+        cmd = "wmic datafile where \"path='%s'\" get drive" % path
+        info = session.cmd_output(cmd, timeout=360).strip()
+        drive_num = re.search(r'(\w):', info, re.M)
+        if not drive_num:
+            raise error.TestError("No path %s in your guest" % path)
+        return drive_num.group()
+
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -29,20 +41,32 @@ def run_mac_change(test, params, env):
             break
 
     os_type = params.get("os_type")
+    os_variant = params.get("os_variant")
     change_cmd_pattern = params.get("change_cmd")
 
     logging.info("The initial MAC address is %s", old_mac)
     if os_type == "linux":
         interface = utils_net.get_linux_ifname(session_serial, old_mac)
     else:
+
         connection_id = utils_net.get_windows_nic_attribute(session,
-                                                             "macaddress",
-                                                             old_mac,
-                                                             "netconnectionid")
+                                                            "macaddress",
+                                                            old_mac,
+                                                            "netconnectionid")
         nic_index = utils_net.get_windows_nic_attribute(session,
-                                                         "netconnectionid",
-                                                         connection_id,
-                                                         "index")
+                                                        "netconnectionid",
+                                                        connection_id,
+                                                        "index")
+        if os_variant == "winxp":
+            pnpdevice_id = utils_net.get_windows_nic_attribute(session,
+                                                            "netconnectionid",
+                                                             connection_id,
+                                                             "pnpdeviceid")
+            devcon_path = r"\\devcon\\wxp_x86\\"
+            cd_drive = get_drive_num(session, devcon_path)
+
+            copy_cmd = r"xcopy %s\devcon\wxp_x86\devcon.exe c:\ " % cd_drive
+            session.cmd(copy_cmd)
 
     # Start change MAC address
     error.context("Changing MAC address to %s" % new_mac, logging.info)
@@ -64,8 +88,13 @@ def run_mac_change(test, params, env):
             dhclient_cmd = "dhclient -r && dhclient %s" % interface
             session_serial.sendline(dhclient_cmd)
         else:
+            mode = "netsh"
+            if os_variant == "winxp":
+                connection_id = pnpdevice_id.split("&")[-1]
+                mode = "devcon"
             utils_net.restart_windows_guest_network(session_serial,
-                                                    connection_id)
+                                                    connection_id,
+                                                    mode=mode)
 
             o = session_serial.cmd("ipconfig /all")
             if not re.findall("%s" % "-".join(new_mac.split(":")), o, re.I):
@@ -90,7 +119,8 @@ def run_mac_change(test, params, env):
             clean_cmd = clean_cmd_pattern % int(nic_index)
             session_serial.cmd(clean_cmd)
             utils_net.restart_windows_guest_network(session_serial,
-                                                    connection_id)
+                                                    connection_id,
+                                                    mode=mode)
             nic = vm.virtnet[0]
             nic.mac = old_mac
             vm.virtnet.update_db()
