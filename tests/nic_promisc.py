@@ -45,7 +45,8 @@ def run_nic_promisc(test, params, env):
         error.context("Run utils_test.file_transfer ...", logging.info)
         transfer_thread.start()
 
-        error.context("During file trans do nic pormisc on/off", logging.info)
+        error.context("Perform file transfer while turning nic promisc on/off",
+                      logging.info)
         while transfer_thread.isAlive():
             set_nic_promisc_onoff(session_serial)
     except Exception:
