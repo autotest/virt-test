@@ -91,8 +91,10 @@ def run_cdrom(test, params, env):
 
     def cleanup_cdrom(path):
         """ Removes created iso image """
-        error.context("Cleaning up temp iso image", logging.info)
-        os.remove("%s" % path)
+        if path:
+            error.context("Cleaning up temp iso image '%s'" % path,
+                          logging.info)
+            os.remove("%s" % path)
 
 
     def get_cdrom_file(vm, qemu_cdrom_device):
@@ -436,6 +438,8 @@ def run_cdrom(test, params, env):
 
     class test_singlehost(MiniSubtest):
         def test(self):
+            self.iso_image_orig = None
+            self.iso_image_new = None
             if (not params.get("not_insert_at_start")
                 or params.get("not_insert_at_start") == "no"):
                 self.iso_image_orig = create_iso_image(params, "orig")
@@ -457,7 +461,7 @@ def run_cdrom(test, params, env):
                 error.context("Locked without media present", logging.info)
                 #XXX: The device got from monitor might not match with the guest
                 # defice if there are multiple cdrom devices.
-                qemu_cdrom_device = get_empty_cdrom_device()
+                qemu_cdrom_device = get_empty_cdrom_device(vm)
                 guest_cdrom_device = guest_cdrom_device_list[0]
                 if vm.check_block_locked(qemu_cdrom_device):
                     raise error.TestFail("Device should not be locked just"

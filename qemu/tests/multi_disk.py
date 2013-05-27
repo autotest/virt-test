@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process, data_dir
+from virttest import qemu_qtree, env_process, qemu_monitor
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -72,13 +72,15 @@ def run_multi_disk(test, params, env):
     Test multi disk suport of guest, this case will:
     1) Create disks image in configuration file.
     2) Start the guest with those disks.
-    3) Checks qtree vs. test params.
-    4) Format those disks.
-    5) Copy file into / out of those disks.
-    6) Compare the original file and the copied file using md5 or fc comand.
-    7) Repeat steps 3-5 if needed.
+    3) Checks qtree vs. test params. (Optional)
+    4) Create partition on those disks.
+    5) Get disk dev filenames in guest.
+    6) Format those disks in guest.
+    7) Copy file into / out of those disks.
+    8) Compare the original file and the copied file using md5 or fc comand.
+    9) Repeat steps 3-5 if needed.
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -90,6 +92,14 @@ def run_multi_disk(test, params, env):
         else:
             return ''
 
+
+    def _do_post_cmd(session):
+        cmd = params.get("post_cmd")
+        if cmd:
+            session.cmd_status_output(cmd)
+        session.close()
+
+    error.context("Parsing test configuration", logging.info)
     stg_image_num = 0
     stg_params = params.get("stg_params", "")
     # Compatibility
@@ -174,27 +184,31 @@ def run_multi_disk(test, params, env):
         return
 
     # Always recreate VMs and disks
+    error.context("Start the guest with new disks", logging.info)
     for vm_name in params.objects("vms"):
         vm_params = params.object_params(vm_name)
         for image_name in vm_params.objects("images"):
             image_params = vm_params.object_params(image_name)
             env_process.preprocess_image(test, image_params, image_name)
 
+    error.context("Start the guest with those disks", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.create(timeout=max(10, stg_image_num), params=params)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    images = params["images"].split()
     n_repeat = int(params.get("n_repeat", "1"))
-    image_num = len(images)
-    file_system = params["file_system"].split()
-    fs_num = len(file_system)
+    file_system = [_.strip() for _ in params.get("file_system").split()]
     cmd_timeout = float(params.get("cmd_timeout", 360))
     re_str = params["re_str"]
     black_list = params["black_list"].split()
 
-    if "qtree" in str(vm.monitor.human_monitor_cmd("help", debug=False)):
-        error.context("verifying qtree vs. test params")
+    have_qtree = True
+    out = vm.monitor.human_monitor_cmd("qtree", debug=False)
+    if "unknown command" in str(out):
+        have_qtree = False
+
+    if have_qtree:
+        error.context("Verifying qtree vs. test params")
         err = 0
         qtree = qemu_qtree.QtreeContainer()
         qtree.parse_info_qtree(vm.monitor.info('qtree'))
@@ -214,72 +228,86 @@ def run_multi_disk(test, params, env):
             return
 
     try:
-        if params.get("clean_cmd"):
-            cmd = params.get("clean_cmd")
+        cmd = params.get("clean_cmd")
+        if cmd:
             session.cmd_status_output(cmd)
-        if params.get("pre_cmd"):
-            cmd = params.get("pre_cmd")
-            error.context("creating partition on test disk")
-            session.cmd(cmd, timeout=cmd_timeout)
+
+        cmd = params.get("pre_cmd")
+        if cmd:
+            error.context("Create partition on those disks", logging.info)
+            s, output = session.cmd_status_output(cmd, timeout=cmd_timeout)
+            if s != 0:
+                raise error.TestFail("Create partition on disks failed.\n"
+                                     "Output is: %s\n" % output)
+
+        error.context("Get disks dev filenames in guest", logging.info)
         cmd = params["list_volume_command"]
+        s, output = session.cmd_status_output(cmd, timeout=cmd_timeout)
+        if s != 0:
+            raise error.TestFail("List volume command failed with cmd '%s'.\n"
+                                 "Output is: %s\n" % (cmd, output))
+
         output = session.cmd_output(cmd, timeout=cmd_timeout)
         disks = re.findall(re_str, output)
         disks = map(string.strip, disks)
         disks.sort()
-        logging.debug("Volume list that meets regular expressions: '%s'", disks)
-        if len(disks) < image_num:
+        logging.debug("Volume list that meet regular expressions: %s",
+                      " ".join(disks))
+
+        if len(disks) < len(params.get("images").split()):
             raise error.TestFail("Fail to list all the volumes!")
 
         if params.get("os_type") == "linux":
             df_output = session.cmd_output("df")
-            li = re.findall("^/dev/(.*?)[ \d]", df_output, re.M)
+            li = re.findall(r"^/dev/(.*?)[ \d]", df_output, re.M)
             if li:
                 black_list.extend(li)
 
         exclude_list = [d for d in disks if d in black_list]
-        f = lambda d: logging.info("No need to check volume '%s'", d)
-        map(f, exclude_list)
+        func = lambda d: logging.info("No need to check volume '%s'", d)
+        map(func, exclude_list)
 
         disks = [d for d in disks if d not in exclude_list]
+    except Exception:
+        _do_post_cmd(session)
+        raise
 
+    try:
         for i in range(n_repeat):
             logging.info("iterations: %s", (i + 1))
+            error.context("Format those disks in guest", logging.info)
             for disk in disks:
                 disk = disk.strip()
-
-                logging.info("Format disk: %s...", disk)
-                index = random.randint(0, fs_num - 1)
+                error.context("Preparing disk: %s..." % disk)
 
                 # Random select one file system from file_system
+                index = random.randint(0, (len(file_system) - 1))
                 fs = file_system[index].strip()
                 cmd = params["format_command"] % (fs, disk)
                 error.context("formatting test disk")
                 session.cmd(cmd, timeout=cmd_timeout)
-                if params.get("mount_command"):
-                    cmd = params.get("mount_command") % (disk, disk, disk)
-                    session.cmd(cmd, timeout=cmd_timeout)
+                cmd = params.get("mount_command")
+                if cmd:
+                    cmd = cmd % (disk, disk, disk)
+                    session.cmd(cmd)
 
+            error.context("Cope file into / out of those disks", logging.info)
             for disk in disks:
                 disk = disk.strip()
 
-                logging.info("Performing I/O on disk: %s...", disk)
+                error.context("Performing I/O on disk: %s..." % disk)
                 cmd_list = params["cmd_list"].split()
                 for cmd_l in cmd_list:
-                    if params.get(cmd_l):
-                        cmd = params.get(cmd_l) % disk
-                        session.cmd(cmd, timeout=cmd_timeout)
+                    cmd = params.get(cmd_l)
+                    if cmd:
+                        session.cmd(cmd % disk, timeout=cmd_timeout)
 
                 cmd = params["compare_command"]
+                key_word = params["check_result_key_word"]
                 output = session.cmd_output(cmd)
-                key_word = params.get("check_result_key_word")
-                if key_word and key_word in output:
-                    logging.debug("Guest's virtual disk %s works fine", disk)
-                elif key_word:
+                if key_word not in output:
                     raise error.TestFail("Files on guest os root fs and disk "
                                          "differ")
-                else:
-                    raise error.TestError("Param check_result_key_word was not "
-                                          "specified! Please check your config")
 
             if params.get("umount_command"):
                 cmd = params.get("show_mount_cmd")
@@ -288,11 +316,22 @@ def run_multi_disk(test, params, env):
                 disks.sort()
                 for disk in disks:
                     disk = disk.strip()
-                    cmd = params["umount_command"] % (disk, disk)
-                    error.context("unmounting test disk")
+                    error.context("Unmounting disk: %s..." % disk)
+                    cmd = params.get("umount_command") % (disk, disk)
                     session.cmd(cmd)
     finally:
-        if params.get("post_cmd"):
-            cmd = params.get("post_cmd")
-            session.cmd(cmd)
+        cmd = params.get("show_mount_cmd")
+        if cmd:
+            try:
+                output = session.cmd_output(cmd)
+                disks = re.findall(re_str, output)
+                disks.sort()
+                for disk in disks:
+                    error.context("Unmounting disk: %s..." % disk)
+                    cmd = params["umount_command"] % (disk, disk)
+                    session.cmd(cmd)
+            except Exception, err:
+                logging.warn("Get error when cleanup, '%s'", err)
+
+        _do_post_cmd(session)
         session.close()
