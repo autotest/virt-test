@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process
+from virttest import qemu_qtree, env_process, qemu_monitor
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -202,7 +202,12 @@ def run_multi_disk(test, params, env):
     re_str = params["re_str"]
     black_list = params["black_list"].split()
 
-    if "qtree" in str(vm.monitor.human_monitor_cmd("help", debug=False)):
+    have_qtree = True
+    out = vm.monitor.human_monitor_cmd("qtree", debug=False)
+    if "unknown command" in str(out):
+        have_qtree = False
+
+    if have_qtree:
         error.context("Verifying qtree vs. test params")
         err = 0
         qtree = qemu_qtree.QtreeContainer()
