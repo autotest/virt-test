@@ -134,7 +134,7 @@ class UnattendedInstallConfig(object):
         if self.install_virtio == 'yes':
             v_attributes = ['virtio_floppy', 'virtio_storage_path',
                             'virtio_network_path', 'virtio_oemsetup_id',
-                            'virtio_network_installer']
+                            'virtio_network_installer_path']
             for va in v_attributes:
                 setattr(self, va, params.get(va, ''))
 
@@ -262,7 +262,7 @@ class UnattendedInstallConfig(object):
         # Now, replacing the virtio network driver path, under double quotes
         if self.install_virtio == 'yes':
             parser.set('Unattended', 'OemPnPDriversPath',
-                       '"%s"' % self.virtio_nework_path)
+                       '"%s"' % self.virtio_network_path)
         else:
             parser.remove_option('Unattended', 'OemPnPDriversPath')
 
