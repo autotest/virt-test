@@ -2002,29 +2002,61 @@ def enable_windows_guest_network(session, connection_id, timeout=240):
                                     "ENABLED", timeout)
 
 
-def restart_windows_guest_network(session, connection_id, timeout=240):
+def restart_windows_guest_network(session, connection_id, timeout=240,
+                                  mode="netsh"):
     """
-    Restart guest's network via serial console. winxp can not work
+    Restart guest's network via serial console. mode "netsh" can not
+    works in winxp system
 
     @param session: session to virtual machine
-    @param connection_id: windows nic connectionid,it means connection name, you Can
-                    get connection id string via wmic
+    @param connection_id: windows nic connectionid,it means connection name,
+                          you Can get connection id string via wmic
     """
-    disable_windows_guest_network(session, connection_id, timeout=timeout)
-    enable_windows_guest_network(session, connection_id, timeout=timeout)
+    if mode == "netsh":
+        disable_windows_guest_network(session, connection_id, timeout=timeout)
+        enable_windows_guest_network(session, connection_id, timeout=timeout)
+    elif mode == "devcon":
+        restart_windows_guest_network_by_devcon(session, connection_id)
 
 
-def restart_windows_guest_network_by_key(session, key, value, timeout=240):
+def restart_windows_guest_network_by_key(session, key, value, timeout=240,
+                                         mode="netsh"):
     """
-    Restart the guest network by nic Attribute like mac, interfaceindex
-    Winxp can not work
+    Restart the guest network by nic Attribute like connectionid,
+    interfaceindex, "netsh" can not work in winxp system.
+    using devcon mode must download devcon.exe and put it under c:\
 
     @param session: session to virtual machine
     @param key: the key supported by wmic nic
     @param value: the value of the key
+    @param timeout: timeout
+    @param mode: command mode netsh or devcon
     """
-    connection_id = get_windows_nic_attribute(session, key, value,
-                                              "netconnectionid", timeout)
-    if not  connection_id:
-        raise error.TestError("Get nic connection name failed")
-    restart_windows_guest_network(session, connection_id, timeout)
+    if mode == "netsh":
+        oper_key = "netconnectionid"
+    elif mode == "devcon":
+        oper_key = "pnpdeviceid"
+
+    id = get_windows_nic_attribute(session, key, value, oper_key, timeout)
+    if not  id:
+        raise error.TestError("Get nic %s failed" % oper_key)
+    if mode == "devcon":
+        id =  id.split("&")[-1]
+
+    restart_windows_guest_network(session, id, timeout, mode)
+
+
+def set_guest_network_status_by_devcon(session, status, netdevid,
+                                       timeout=240):
+    """
+    using devcon to enable/disable the network device.
+    using it must download the devcon.exe, and put it under c:\
+    """
+    set_cmd = r"c:\devcon.exe %s  =Net @PCI\*\*%s" % (status, netdevid)
+    session.cmd(set_cmd, timeout=timeout)
+
+
+def restart_windows_guest_network_by_devcon(session, netdevid, timeout=240):
+
+    set_guest_network_status_by_devcon(session, 'disable', netdevid)
+    set_guest_network_status_by_devcon(session, 'enable', netdevid)

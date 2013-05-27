@@ -1,4 +1,4 @@
-import logging, commands, random
+import logging, commands, random, re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_misc, utils_test, utils_net
@@ -23,11 +23,25 @@ def run_jumbo(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    def get_drive_num(session, path):
+
+        """
+        return file path drive
+        """
+        cmd = "wmic datafile where \"path='%s'\" get drive" % path
+        info = session.cmd_output(cmd, timeout=360).strip()
+        drive_num = re.search(r'(\w):', info, re.M)
+        if not drive_num:
+            raise error.TestError("No path %s in your guest" % path)
+        return drive_num.group()
+
+
     timeout = int(params.get("login_timeout", 360))
     mtu = params.get("mtu", "1500")
     max_icmp_pkt_size = int(mtu) - 28
     flood_time = params.get("flood_time", "300")
     os_type = params.get("os_type")
+    os_variant = params.get("os_variant")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -48,14 +62,25 @@ def run_jumbo(test, params, env):
             guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname , mtu)
         else:
             connection_id = utils_net.get_windows_nic_attribute(session,
-                                                             "macaddress",
-                                                             mac,
-                                                             "netconnectionid")
+                                                            "macaddress",
+                                                            mac,
+                                                            "netconnectionid")
 
             index = utils_net.get_windows_nic_attribute(session,
-                                                         "netconnectionid",
-                                                         connection_id,
-                                                         "index")
+                                                        "netconnectionid",
+                                                        connection_id,
+                                                        "index")
+            if os_variant == "winxp":
+                pnpdevice_id = utils_net.get_windows_nic_attribute(session,
+                                                            "netconnectionid",
+                                                             connection_id,
+                                                             "pnpdeviceid")
+                devcon_path = r"\\devcon\\wxp_x86\\"
+                cd_num = get_drive_num(session, devcon_path)
+                copy_cmd = r"xcopy %s\devcon\wxp_x86\devcon.exe c:\ " % cd_num
+                session.cmd(copy_cmd)
+
+
             reg_set_mtu_pattern = params.get("reg_mtu_cmd")
             mtu_key_word = params.get("mtu_key", "MTU")
             reg_set_mtu = reg_set_mtu_pattern % (int(index), mtu_key_word,
@@ -64,8 +89,14 @@ def run_jumbo(test, params, env):
 
         session.cmd(guest_mtu_cmd)
         if os_type == "windows":
+            mode = "netsh"
+            if os_variant == "winxp":
+                connection_id = pnpdevice_id.split("&")[-1]
+                mode = "devcon"
             utils_net.restart_windows_guest_network(session_serial,
-                                                    connection_id)
+                                                    connection_id,
+                                                    mode=mode)
+
 
         error.context("Chaning the MTU of host tap ...", logging.info)
         host_mtu_cmd = "ifconfig %s mtu %s" % (ifname, mtu)
