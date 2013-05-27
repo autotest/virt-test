@@ -1177,7 +1177,7 @@ class VM(virt_vm.BaseVM):
 
         def add_machine_type(help, machine_type, invalid_type=False):
             if has_option(help_text, "machine") or has_option(help_text, "M"):
-                output = utils.system_output("%s -M ?" % qemu_binary)
+                output = utils.system_output("%s -M \\?" % qemu_binary)
                 hlp_m = [str.split()[0] for str in output.splitlines()[1:]]
                 if machine_type not in hlp_m and not invalid_type:
                     msg = "%s not support," % machine_type
@@ -1300,8 +1300,8 @@ class VM(virt_vm.BaseVM):
 
         self.qemu_binary = qemu_binary
         help_text = commands.getoutput("%s -help" % qemu_binary)
-        support_cpu_model = commands.getoutput("%s -cpu ?" % qemu_binary)
-        support_machine_type = commands.getoutput("%s -M ?" % qemu_binary)
+        support_cpu_model = commands.getoutput("%s -cpu \\?" % qemu_binary)
+        support_machine_type = commands.getoutput("%s -M \\?" % qemu_binary)
 
         index_global = 0
         # init the dict index_in_use
