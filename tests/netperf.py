@@ -419,6 +419,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         """
         intr = 0
         stat = ssh_cmd(server_ctl, "cat /proc/interrupts |grep %s" % name)
+        stat = stat.strip().split("\n")[-1]
         for cpu in range(int(ncpu)):
             intr += int(stat.split()[cpu+1])
         return intr
@@ -426,7 +427,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     def get_state():
         for i in ssh_cmd(server_ctl, "ifconfig").split("\n\n"):
             if server in i:
-                ifname = i.split()[0]
+                ifname = re.findall("(\w+\d+)[:\s]", i)[0]
 
         path = "find /sys/devices|grep net/%s/statistics" % ifname
         cmd = "%s/rx_packets|xargs cat;%s/tx_packets|xargs cat;" \
