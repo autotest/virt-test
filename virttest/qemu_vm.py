@@ -8,7 +8,7 @@ import time, os, logging, fcntl, re, commands
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc, virt_vm, test_setup, storage, qemu_monitor, aexpect
-import qemu_virtio_port, remote, data_dir, utils_net
+import qemu_virtio_port, remote, data_dir, utils_net, arch
 
 
 class QemuSegFaultError(virt_vm.VMError):
@@ -749,7 +749,7 @@ class VM(virt_vm.BaseVM):
                     dev += _add_option("bus", str(ide_bus))
                     dev += _add_option("unit", str(ide_unit))
                 elif fmt == "virtio":
-                    dev += _add_option("bus", "pci.0")
+                    dev += _add_option("bus", arch.get_qemu_pci_bus_name())
                     dev += _add_option("addr", get_free_pci_addr(pci_addr))
                     dev += _add_option("physical_block_size",
                                        physical_block_size)
@@ -823,7 +823,8 @@ class VM(virt_vm.BaseVM):
                 # libvirt gains the pci_slot, free_pci_addr here,
                 # value by parsing the xml file, i.e. counting all the
                 # pci devices and store the number.
-                cmd += ",bus=pci.0,addr=%s" % free_pci_addr
+                cmd += (",bus=%s,addr=%s" %
+                        (arch.get_qemu_pci_bus_name(), free_pci_addr))
                 if nic_extra_params:
                     cmd += ",%s" % nic_extra_params
                 cmd += _add_option("bootindex", bootindex)
@@ -1223,7 +1224,7 @@ class VM(virt_vm.BaseVM):
 
             cmd = " -device %s" % usb_type
             cmd += _add_option("id", usb_id)
-            cmd += _add_option("bus", "pci.0")
+            cmd += _add_option("bus", arch.get_qemu_pci_bus_name())
             cmd += _add_option("addr", get_free_pci_addr(pci_addr))
 
             if usb_type == "ich9-usb-ehci1":
