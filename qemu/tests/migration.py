@@ -112,7 +112,7 @@ def run_migration(test, params, env):
         mig_speed = params.get("mig_speed", "1G")
         return vm.monitor.migrate_set_speed(mig_speed)
 
-
+    login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")
     mig_cancel_delay = int(params.get("mig_cancel") == "yes") * 2
@@ -132,8 +132,8 @@ def run_migration(test, params, env):
     vm.verify_alive()
 
     if living_guest_os:
-        timeout = int(params.get("login_timeout", 360))
-        session = vm.wait_for_login(timeout=timeout)
+
+        session = vm.wait_for_login(timeout=login_timeout)
 
         # Get the output of migration_test_command
         test_command = params.get("migration_test_command")
@@ -146,7 +146,7 @@ def run_migration(test, params, env):
 
         # Start another session with the guest and make sure the background
         # process is running
-        session2 = vm.wait_for_login(timeout=timeout)
+        session2 = vm.wait_for_login(timeout=login_timeout)
 
         try:
             check_command = params.get("migration_bg_check_command", "")
