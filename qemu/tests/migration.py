@@ -119,7 +119,7 @@ def run_migration(test, params, env):
     mig_exec_cmd_src = params.get("migration_exec_cmd_src")
     mig_exec_cmd_dst = params.get("migration_exec_cmd_dst")
     if mig_exec_cmd_src and "gzip" in mig_exec_cmd_src:
-        mig_exec_file = params.get("migration_exec_file", "/tmp/exec")
+        mig_exec_file = params.get("migration_exec_file", "/var/tmp/exec")
         mig_exec_file += "-%s" % utils_misc.generate_random_string(8)
         mig_exec_cmd_src = mig_exec_cmd_src % mig_exec_file
         mig_exec_cmd_dst = mig_exec_cmd_dst % mig_exec_file
