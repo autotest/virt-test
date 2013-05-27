@@ -1469,6 +1469,41 @@ def nodecpustats(option='', **dargs):
     return command(cmd_nodecpustat, **dargs)
 
 
+def memtune_set(vm_name, options, **dargs):
+    """
+    Set the memory controller parameters
+
+    @param: domname: VM Name
+    @param: options: contains the values limit, state and value
+    """
+    return command("memtune %s %s" % (vm_name, options), **dargs)
+
+
+def memtune_list(vm_name, **dargs):
+    """
+    List the memory controller value of a given domain
+
+    @param: domname: VM Name
+    """
+    return command("memtune %s" % (vm_name), **dargs)
+
+
+def memtune_get(vm_name, key):
+    """
+    Get the specific memory controller value
+
+    @param: domname: VM Name
+    @param: key: memory controller limit for which the value needed
+    @return: the memory value of a key in Kbs
+    """
+    memtune_output = memtune_list(vm_name)
+    memtune_value = re.findall(r"%s\s*:\s+(\S+)" % key, str(memtune_output))
+    if memtune_value:
+        return int(memtune_value[0])
+    else:
+        return -1
+
+
 def help_command(options='', cache=False, **dargs):
     """
     Return list of commands in help command output
