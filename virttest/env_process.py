@@ -423,6 +423,11 @@ def preprocess(test, params, env):
         thp = test_setup.TransparentHugePageConfig(test, params)
         thp.setup()
 
+
+    if params.get("setup_ksm") == "yes":
+        ksm = test_setup.KSMConfig(params, env)
+        ksm.setup(env)
+
     # Execute any pre_commands
     if params.get("pre_command"):
         process_command(test, params, env, params.get("pre_command"),
@@ -562,6 +567,10 @@ def postprocess(test, params, env):
     if params.get("setup_thp") == "yes":
         thp = test_setup.TransparentHugePageConfig(test, params)
         thp.cleanup()
+
+    if params.get("setup_ksm") == "yes":
+        ksm = test_setup.KSMConfig(params, env)
+        ksm.cleanup(env)
 
     # Execute any post_commands
     if params.get("post_command"):

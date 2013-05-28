@@ -3,6 +3,7 @@ from autotest.client.shared import error
 from virttest import aexpect, utils_test, data_dir
 
 
+@error.context_aware
 def run_ksm_base(test, params, env):
     """
     Test how KSM (Kernel Shared Memory) act when more than physical memory is
@@ -63,127 +64,92 @@ def run_ksm_base(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
 
-    try:
-        logging.info("Start to prepare env in host")
-        # Check ksm module status
-        ksm_module = params.get("ksm_module")
-        if  ksm_module:
-            module_status, _ = commands.getstatusoutput("lsmod |grep %s" %
-                                                        ksm_module)
-            if module_status == 256:
-                s, _ = commands.getstatusoutput("modprobe %s" % ksm_module)
-                if s != 0:
-                    raise error.TestError("Can not insert ksm module in host")
+    # Prepare work in guest
+    error.context("Turn off swap in guest", logging.info)
+    session.cmd_status_output("swapoff -a")
+    script_file_path = os.path.join(data_dir.get_root_dir(),
+                                    "shared/scripts/ksm_overcommit_guest.py")
+    vm.copy_files_to(script_file_path, "/tmp")
+    test_type = params.get("test_type")
+    shared_mem = params.get("shared_mem")
+    get_free_mem_cmd = params.get("get_free_mem_cmd",
+                                  "grep MemFree /proc/meminfo")
+    free_mem = vm.get_memory_size(get_free_mem_cmd)
+    # Keep test from OOM killer
+    if free_mem < shared_mem:
+        shared_mem = free_mem
+    fill_timeout = int(shared_mem) / 10
+    query_cmd = params.get("query_cmd")
+    query_regex = params.get("query_regex")
+    random_bits = params.get("random_bits")
+    seed = random.randint(0, 255)
 
-        # Prepare env for KSM
-        s, ksmtuned_id = commands.getstatusoutput("ps -C ksmtuned -o pid=")
-        if ksmtuned_id:
-            logging.info("Turn off ksmtuned in host")
-            s, o = commands.getstatusoutput("kill -9 %s" % ksmtuned_id)
-        status_query_cmd = params.get("status_query_cmd")
-        setup_cmd = params.get("setup_cmd")
-        s, status = commands.getstatusoutput(status_query_cmd)
-        if int(re.findall("\d+", status)[0]) == 0:
-            s, o = commands.getstatusoutput(setup_cmd)
-            if s != 0:
-                raise error.TestError("Can not setup KSM: %s" % o)
+    query_cmd = re.sub("QEMU_PID", str(vm.process.get_pid()), query_cmd)
 
-        # Prepare work in guest
-        logging.info("Turn off swap in guest")
-        session.cmd_status_output("swapoff -a")
-        script_file_path = os.path.join(data_dir.get_root_dir(),
-                                        "shared/scripts/ksm_overcommit_guest.py")
-        vm.copy_files_to(script_file_path, "/tmp")
-        test_type = params.get("test_type")
-        shared_mem = params.get("shared_mem")
-        get_free_mem_cmd = params.get("get_free_mem_cmd",
-                                      "grep MemFree /proc/meminfo")
-        free_mem = vm.get_memory_size(get_free_mem_cmd)
-        # Keep test from OOM killer
-        if free_mem < shared_mem:
-            shared_mem = free_mem
-        fill_timeout = int(shared_mem) / 10
-        query_cmd = params.get("query_cmd")
-        query_regex = params.get("query_regex")
-        random_bits = params.get("random_bits")
-        seed = random.randint(0, 255)
+    s, sharing_page_0 = commands.getstatusoutput(query_cmd)
+    if query_regex:
+        sharing_page_0 = re.findall(query_regex, sharing_page_0)[0]
 
-        s, sharing_page_0 = commands.getstatusoutput(query_cmd)
-        if query_regex:
-            sharing_page_0 = re.findall(query_regex, sharing_page_0)[0]
+    error.context("Start to allocate pages inside guest", logging.info)
+    _start_allocator(vm, session, 60)
+    error.context("Turn off swap in guest", logging.info)
+    mem_fill = "mem = MemFill(%s, 0, %s)" % (shared_mem, seed)
+    _execute_allocator(mem_fill, vm, session, fill_timeout)
+    cmd = "mem.value_fill()"
+    _execute_allocator(cmd, vm, session, fill_timeout)
+    time.sleep(120)
 
-        _start_allocator(vm, session, 60)
-        mem_fill = "mem = MemFill(%s, 0, %s)" % (shared_mem, seed)
-        _execute_allocator(mem_fill, vm, session, fill_timeout)
-        cmd = "mem.value_fill()"
-        _execute_allocator(cmd, vm, session, fill_timeout)
-        time.sleep(120)
+    s, sharing_page_1 = commands.getstatusoutput(query_cmd)
+    if query_regex:
+        sharing_page_1 = re.findall(query_regex, sharing_page_1)[0]
 
-        s, sharing_page_1 = commands.getstatusoutput(query_cmd)
-        if query_regex:
-            sharing_page_1 = re.findall(query_regex, sharing_page_1)[0]
-
-        split = params.get("split")
-        if split == "yes":
-            if test_type == "negative":
-                cmd = "mem.static_random_fill(%s)" % random_bits
-            else:
-                cmd = "mem.static_random_fill()"
-        _execute_allocator(cmd, vm, session, fill_timeout)
-        time.sleep(120)
-
-        s, sharing_page_2 = commands.getstatusoutput(query_cmd)
-        if query_regex:
-            sharing_page_2 = re.findall(query_regex, sharing_page_2)[0]
-
-        sharing_page = [sharing_page_0, sharing_page_1, sharing_page_2]
-        for i in sharing_page:
-            if re.findall("[A-Za-z]", i):
-                data = i[0:-1]
-                unit = i[-1]
-                index = sharing_page.index(i)
-                if unit == "g":
-                    sharing_page[index] = utils_test.aton(data) * 1024
-                else:
-                    sharing_page[index] = utils_test.aton(data)
-
-        fail_type = 0
-        if test_type == "disable":
-            if int(sharing_page[0]) != 0 and int(sharing_page[1]) != 0:
-                fail_type += 1
+    error.context("Start to fill memory with random value in guest",
+                  logging.info)
+    split = params.get("split")
+    if split == "yes":
+        if test_type == "negative":
+            cmd = "mem.static_random_fill(%s)" % random_bits
         else:
-            if int(sharing_page[0]) >= int(sharing_page[1]):
-                fail_type += 2
-            if int(sharing_page[1]) <= int(sharing_page[2]):
-                fail_type += 4
+            cmd = "mem.static_random_fill()"
+    _execute_allocator(cmd, vm, session, fill_timeout)
+    time.sleep(120)
 
-        fail = ["Sharing page increased abnormally",
-                "Sharing page didn't increase", "Sharing page didn't split"]
+    s, sharing_page_2 = commands.getstatusoutput(query_cmd)
+    if query_regex:
+        sharing_page_2 = re.findall(query_regex, sharing_page_2)[0]
 
-        if fail_type != 0:
-            turns = 0
-            while (fail_type > 0):
-                if fail_type % 2 == 1:
-                    logging.error(fail[turns])
-                fail_type = fail_type / 2
-                turns += 1
-            raise error.TestFail("KSM test failed: %s %s %s" %
-                                 (sharing_page_0, sharing_page_1,
-                                  sharing_page_2))
-
-    finally:
-        if ksm_module:
-            if module_status == 256:
-                logging.info("unload ksm module")
-                s, o = commands.getstatusoutput("modprobe -r %s" % ksm_module)
-        if ksmtuned_id:
-            logging.info("Restart ksmtuned in host")
-            os.system("/bin/bash /usr/sbin/ksmtuned")
-        if int(re.findall("\d+", status)[0]) == 0:
-            logging.info("Reset the ksm env in host")
-            if re.findall("ksmctl", setup_cmd):
-                cmd = "ksmctl stop"
+    sharing_page = [sharing_page_0, sharing_page_1, sharing_page_2]
+    for i in sharing_page:
+        if re.findall("[A-Za-z]", i):
+            data = i[0:-1]
+            unit = i[-1]
+            index = sharing_page.index(i)
+            if unit == "g":
+                sharing_page[index] = utils_test.aton(data) * 1024
             else:
-                cmd = "echo 0 > %s" % re.split(">", setup_cmd)[-1]
-            s, o = commands.getstatusoutput(cmd)
-        session.close()
+                sharing_page[index] = utils_test.aton(data)
+
+    fail_type = 0
+    if test_type == "disable":
+        if int(sharing_page[0]) != 0 and int(sharing_page[1]) != 0:
+            fail_type += 1
+    else:
+        if int(sharing_page[0]) >= int(sharing_page[1]):
+            fail_type += 2
+        if int(sharing_page[1]) <= int(sharing_page[2]):
+            fail_type += 4
+
+    fail = ["Sharing page increased abnormally",
+            "Sharing page didn't increase", "Sharing page didn't split"]
+
+    if fail_type != 0:
+        turns = 0
+        while (fail_type > 0):
+            if fail_type % 2 == 1:
+                logging.error(fail[turns])
+            fail_type = fail_type / 2
+            turns += 1
+        raise error.TestFail("KSM test failed: %s %s %s" %
+                             (sharing_page_0, sharing_page_1,
+                              sharing_page_2))
+    session.close()
