@@ -60,7 +60,7 @@ def run_balloon_check(test, params, env):
         try:
             output = vm.monitor.info("balloon")
             ballooned_mem = int(re.findall("\d+", str(output))[0])
-            if params["monitor_type"] == "qmp":
+            if vm.monitor.protocol == "qmp":
                 ballooned_mem *= 1024 ** -2
         except qemu_monitor.MonitorError, e:
             logging.error(e)
