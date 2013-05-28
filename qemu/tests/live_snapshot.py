@@ -27,7 +27,7 @@ def run_live_snapshot(test, params, env):
         cmd = params.get("create_sn_cmd")
 
         block_info = vm.monitor.info("block")
-        if utils_misc.qemu_has_option("qmp") and params.get("monitor_type") == "qmp":
+        if vm.monitor.protocol == 'qmp':
             device = block_info[0]["device"]
         else:
             string = ""
