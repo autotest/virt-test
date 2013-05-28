@@ -1,5 +1,6 @@
 import logging, re, uuid
 from autotest.client.shared import error
+from virttest import utils_test
 
 
 @error.context_aware
@@ -68,72 +69,8 @@ def run_usb_storage(test, params, env):
                                  ("\n".join(fail_log)))
 
 
-    @error.context_aware
     def _do_io_test_guest(session):
-        blksizes = [ "4K", "16K", "64K", "256K" ]
-
-        output = session.cmd("fdisk -l")
-        if params["fdisk_string"] not in output:
-            for line in output.splitlines():
-                logging.debug(line)
-            raise error.TestFail("Could not detect the usb device on"
-                                 "fdisk output")
-
-        error.context("Formatting USB disk")
-        tmp_cmd = "readlink -f `ls /dev/disk/by-path/* | grep usb`"
-        devname = session.cmd(tmp_cmd).strip()
-        session.cmd("yes | mkfs %s" % devname,
-                    timeout=int(params["format_timeout"]))
-
-        error.context("Mounting USB disk")
-        session.cmd("mount %s /mnt" % devname)
-
-        error.context("Creating comparison file")
-        c_file = '/tmp/usbfile'
-        session.cmd("dd if=/dev/urandom of=%s bs=1M count=1" % c_file)
-
-        error.context("Copying %s to USB disk" % c_file)
-        for s in blksizes:
-            u_file = "/mnt/usbfile-%s" % s
-            session.cmd("dd if=%s of=%s bs=%s" %
-                        (c_file, u_file, s))
-
-        error.context("Unmounting USB disk before file comparison")
-        session.cmd("umount %s" % devname)
-
-        error.context("Mounting USB disk for file comparison")
-        session.cmd("mount %s /mnt" % devname)
-
-        error.context("Determining md5sum for file on root fs and in USB disk")
-        md5_root = session.cmd("md5sum %s" % c_file).strip()
-        md5_root = md5_root.split()[0]
-        for s in blksizes:
-            u_file = "/mnt/usbfile-%s" % s
-            md5_usb = session.cmd("md5sum %s" % u_file).strip()
-            md5_usb = md5_usb.split()[0]
-
-            if md5_root != md5_usb:
-                raise error.TestError("MD5 mismatch between file on root fs "
-                                      "and on USB disk [%s]" % u_file)
-
-        error.context("Unmounting USB disk after file comparison")
-        session.cmd("umount %s" % devname)
-
-        error.context("Checking if there are I/O error messages in dmesg")
-        output = session.get_command_output("dmesg -c")
-        io_error_msg = []
-        for line in output.splitlines():
-            if "Buffer I/O error" in line:
-                io_error_msg.append(line)
-            if re.search("reset \w+ speed USB device", line):
-                io_error_msg.append(line)
-
-        if io_error_msg:
-            e_msg = "IO error found on guest's dmesg when formatting USB device"
-            logging.error(e_msg)
-            for line in io_error_msg:
-                logging.error(line)
-            raise error.TestFail(e_msg)
+        utils_test.run_virt_sub_test(test, params, env, "format_disk")
 
 
     @error.context_aware
