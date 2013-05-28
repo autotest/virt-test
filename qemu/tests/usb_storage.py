@@ -182,9 +182,9 @@ def run_usb_storage(test, params, env):
 
     error.context("Check usb device information in guest", logging.info)
     session = _login()
-    output = session.cmd("lsusb -v")
+    output = session.cmd(params["chk_usb_info_cmd"])
     # No bus specified, default using "usb.0" for "usb-storage"
-    for i in ["Mass Storage", "SCSI", "QEMU USB HARDDRIVE"]:
+    for i in params["chk_usb_info_keyword"].split(","):
         _verify_string(i, output, [i])
     _do_io_test_guest(session)
     session.close()
