@@ -3,6 +3,12 @@ Module simplifying manipulation of XML described at
 http://libvirt.org/formatcaps.html
 """
 
+<<<<<<< HEAD
+=======
+from virttest import virsh
+import xml.etree.ElementTree as ET
+from autotest.client.shared import error
+>>>>>>> virt: Modify libvirtxml class
 from virttest.libvirt_xml import base, accessors
 
 class LibvirtXML(base.LibvirtXMLBase):
@@ -16,12 +22,19 @@ class LibvirtXML(base.LibvirtXMLBase):
     """
 
     #TODO: Add more __slots__ and accessors to get some useful stats
-    # e.g. guest_count, arch, uuid, cpu_count, etc.
+    # e.g. guest_count etc.
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('uuid',
+<<<<<<< HEAD
                                                  'os_arch_machine_map',)
 
     __schema_name__ = "capability"
+=======
+                                                 'os_arch_machine_map',
+                                                 'cpu_count',
+                                                 'arch', 'model',
+                                                 'vendor', 'feature_list',)
+>>>>>>> virt: Modify libvirtxml class
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText(property_name="uuid",
@@ -32,7 +45,30 @@ class LibvirtXML(base.LibvirtXMLBase):
         # This will skip self.get_os_arch_machine_map() defined below
         accessors.AllForbidden(property_name="os_arch_machine_map",
                                libvirtxml=self)
+<<<<<<< HEAD
         super(LibvirtXML, self).__init__(virsh_instance=virsh_instance)
+=======
+        accessors.AllForbidden(property_name="cpu_count",
+                                 libvirtxml=self)
+        accessors.XMLElementText(property_name="arch",
+                                 libvirtxml=self,
+                                 forbidden=['del'],
+                                 parent_xpath='/host/cpu',
+                                 tag_name='arch')
+        accessors.XMLElementText(property_name="model",
+                                 libvirtxml=self,
+                                 forbidden=['del'],
+                                 parent_xpath='/host/cpu',
+                                 tag_name='model')
+        accessors.XMLElementText(property_name="vendor",
+                                 libvirtxml=self,
+                                 forbidden=['del'],
+                                 parent_xpath='/host/cpu',
+                                 tag_name='vendor')
+        accessors.AllForbidden(property_name="feature_list",
+                                 libvirtxml=self)
+        super(LibvirtXML, self).__init__(virsh_instance)
+>>>>>>> virt: Modify libvirtxml class
         # calls set_xml accessor method
         self['xml'] = self.dict_get('virsh').capabilities()
 
@@ -60,3 +96,82 @@ class LibvirtXML(base.LibvirtXMLBase):
                 amm[arch_name] = mmap
             oamm[os_type_name] = amm
         return oamm
+
+
+    def get_feature_list(self):
+        """
+        Accessor method for feature_list property (in __slots__)
+        """
+        feature_list = [] # [<feature1>, <feature2>, ...]
+        xmltreefile = self.dict_get('xml')
+        for feature_node in xmltreefile.findall('/host/cpu/feature'):
+            feature_list.append(feature_node)
+        return feature_list
+
+
+    def get_feature_name(self, num):
+        """
+        Get assigned feature name
+
+        @param: num: Assigned feature number
+        @return: Assigned feature name
+        """
+        count = len(self.feature_list)
+        if num >= count:
+            raise error.TestFail("Remove %d from %d features:" % (num, count))
+        feature_name = self.feature_list[num].get('name')
+        return feature_name
+
+
+    def get_cpu_count(self):
+        """
+        Accessor method for cpu_count property (in __slots__)
+        """
+        cpu_count = 0
+        xmltreefile = self.dict_get('xml')
+        for cpus in xmltreefile.findall('/host/topology/cells/cell/cpus'):
+            cpu_num = cpus.get('num')
+            cpu_count += int(cpu_num)
+        return cpu_count
+
+
+    def remove_feature(self, num):
+        """
+        Remove a assigned feature from xml
+
+        @param: num: Assigned feature number
+        """
+        xmltreefile = self.dict_get('xml')
+        count = len(self.feature_list)
+        if num >= count:
+            raise error.TestFail("Remove %d from %d features:" % (num, count))
+        feature_remove_node = self.feature_list[num]
+        cpu_node = xmltreefile.find('/host/cpu')
+        cpu_node.remove(feature_remove_node)
+
+
+    def set_feature(self, num, value):
+        """
+        Set a assigned feature value to xml
+
+        @param: num: Assigned feature number
+        @param: value: The feature name modified to
+        """
+        count = len(self.feature_list)
+        if num >= count:
+            raise error.TestFail("Set %d from %d features:" % (num, count))
+        feature_set_node = self.feature_list[num]
+        feature_set_node.set('name', value)
+
+
+    def add_feature(self, value):
+        """
+        Add a feature Element to xml
+
+        @param: value: The added feature name 
+        """
+        xmltreefile = self.dict_get('xml')
+        cpu_node = xmltreefile.find('/host/cpu')
+        element = ET.Element('feature')
+        element.set('name', value)
+        cpu_node.append(element)
