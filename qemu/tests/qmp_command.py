@@ -70,51 +70,60 @@ def run_qmp_command(test, params, env):
                 raise error.TestFail(msg)
             re_str = r'([^ \t\n\r\f\v=]*)=([^ \t\n\r\f\v=]*)'
             for i in range(len(res)):
-                matches = re.findall(re_str, res[i])
-                for key, val in matches:
-                    if '0x' in val:
-                        val = long(val, 16)
-                        if val != qmp_o[i][key]:
-                            msg += "\nValue in human monitor: %s" % val
-                            msg += "\nValue in qmp: %s" % qmp_o[i][key]
-                            raise error.TestFail(msg)
-                    elif qmp_cmd == "query-block":
-                        cmp_str = "u'%s': u'%s'" % (key, val)
-                        cmp_s = "u'%s': %s" % (key, val)
-                        if '0' == val:
-                            cmp_str_b = "u'%s': False" % key
-                        elif '1' == val:
-                            cmp_str_b = "u'%s': True" % key
+                if qmp_cmd == "query-version":
+                    version = qmp_o['qemu']
+                    version = "%s.%s.%s" % (version['major'], version['minor'],
+                                                              version['micro'])
+                    package = qmp_o['package']
+                    re_str = "([0-9]+\.[0-9]+\.[0-9]+)\s*(\(\S*\))?"
+                    hmp_version, hmp_package = re.findall(re_str, res[i])[0]
+                    if not hmp_package:
+                        hmp_package = package
+                    if version != hmp_version or package != hmp_package:
+                        raise error.TestFail(msg)
+                else:
+                    matches = re.findall(re_str, res[i])
+                    for key, val in matches:
+                        if '0x' in val:
+                            val = long(val, 16)
+                            if val != qmp_o[i][key]:
+                                msg += "\nValue in human monitor: %s" % val
+                                msg += "\nValue in qmp: %s" % qmp_o[i][key]
+                                raise error.TestFail(msg)
+                        elif qmp_cmd == "query-block":
+                            cmp_str = "u'%s': u'%s'" % (key, val)
+                            cmp_s = "u'%s': %s" % (key, val)
+                            if '0' == val:
+                                cmp_str_b = "u'%s': False" % key
+                            elif '1' == val:
+                                cmp_str_b = "u'%s': True" % key
+                            else:
+                                cmp_str_b = cmp_str
+                            if (cmp_str not in str(qmp_o[i]) and
+                               cmp_str_b not in str(qmp_o[i]) and
+                               cmp_s not in str(qmp_o[i])):
+                                msg += "\nCan not find %s, %s or %s" % (cmp_s,
+                                                                     cmp_str_b,
+                                                                     cmp_str)
+                                msg += " in QMP command output"
+                                raise error.TestFail(msg)
+                        elif qmp_cmd == "query-balloon":
+                            if (int(val) * 1024 * 1024 != qmp_o[key] and
+                              val not in str(qmp_o[key])):
+                                msg += "\n%s is not in QMP command output" % val
+                                raise error.TestFail(msg)
                         else:
-                            cmp_str_b = cmp_str
-                        if (cmp_str not in str(qmp_o[i]) and
-                           cmp_str_b not in str(qmp_o[i]) and
-                           cmp_s not in str(qmp_o[i])):
-                            msg += "\nCan not find %s, %s or %s" % (cmp_s,
-                                                                 cmp_str_b,
-                                                                 cmp_str)
-                            msg += " in QMP command output"
-                            raise error.TestFail(msg)
-                    elif qmp_cmd == "query-balloon":
-                        if (int(val) * 1024 * 1024 != qmp_o[key] and
-                        val not in str(qmp_o[key])):
-                            msg += "\n%s is not in QMP command output" % val
-                            raise error.TestFail(msg)
-                    else:
-                        if (val not in str(qmp_o[i][key]) and
-                           str(bool(int(val))) not in str(qmp_o[i][key])):
-                            msg += "\n%s is not in QMP command output" % val
-                            raise error.TestFail(msg)
+                            if (val not in str(qmp_o[i][key]) and
+                               str(bool(int(val))) not in str(qmp_o[i][key])):
+                                msg += "\n%s is not in QMP command output" % val
+                                raise error.TestFail(msg)
         elif result_check == "m_in_q":
             res = output.splitlines(True)
             msg = "Key value from human monitor command is not in"
             msg += "QMP command output.\nQMP command output: %s" % qmp_o
             msg += "\nHuman monitor command output %s" % output
             for i in  range(len(res)):
-                if qmp_cmd == "query-version":
-                    params = re.findall("\((\w*)\)", res[i])
-                else:
-                    params = res[i].rstrip().split()
+                params = res[i].rstrip().split()
                 for param in params:
                     try:
                         str_o = str(qmp_o.values())
