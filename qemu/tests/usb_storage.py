@@ -90,6 +90,14 @@ def run_usb_storage(test, params, env):
         return vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
 
+    def _get_usb_disk_name_in_guest(session):
+        output = session.cmd("ls -l /dev/disk/by-path/* | grep usb").strip()
+        devname = re.findall("sd\w", output)
+        if devname:
+            return devname[0]
+        return "sda"
+
+
     @error.context_aware
     def _check_serial_option(serial, regex_str, expect_str):
         error.context("Set serial option to '%s'" % serial, logging.info)
@@ -122,13 +130,7 @@ def run_usb_storage(test, params, env):
 
         error.context("Check removable option in guest", logging.info)
         session = _login()
-        output = session.cmd("ls -l /dev/disk/by-path/* | grep usb").strip()
-        devname = re.findall("sd\w", output)
-        if devname:
-            d = devname[0]
-        else:
-            d = "sda"
-        cmd = "dmesg | grep %s" % d
+        cmd = "dmesg | grep %s" % _get_usb_disk_name_in_guest(session)
         output = session.cmd(cmd)
         _verify_string(expect_str, output, [expect_str], re.I)
         _do_io_test_guest(session)
@@ -153,12 +155,7 @@ def run_usb_storage(test, params, env):
 
         error.context("Check min/opt io_size option in guest", logging.info)
         session = _login()
-        output = session.cmd("ls -l /dev/disk/by-path/* | grep usb").strip()
-        devname = re.findall("sd\w", output)
-        if devname:
-            d = devname[0]
-        else:
-            d = 'sda'
+        d = _get_usb_disk_name_in_guest(session)
         cmd = ("cat /sys/block/%s/queue/{minimum,optimal}_io_size" % d)
 
         output = session.cmd(cmd)
