@@ -23,7 +23,7 @@ def run_change_media(test, params, env):
     """
 
     def check_block_locked(block_name):
-        blocks_info = vm.monitor.info("block")
+        blocks_info = monitor.info("block")
 
         if isinstance(blocks_info, str):
             lock_str = "locked=1"
@@ -39,16 +39,20 @@ def run_change_media(test, params, env):
 
     def change_block(cmd=None):
         try:
-            output = vm.monitor.send_args_cmd(cmd)
+            output = monitor.send_args_cmd(cmd)
         except Exception, err:
             output = str(err)
         return output
 
 
-    if not utils_misc.qemu_has_option("qmp"):
-        logging.warn("qemu does not support qmp. Human monitor will be used.")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    monitor = vm.get_monitors_by_type('qmp')
+    if monitor:
+        monitor = monitor[0]
+    else:
+        logging.warn("qemu does not support qmp. Human monitor will be used.")
+        monitor = vm.monitor
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
     logging.info("Wait until device is ready")
@@ -62,9 +66,9 @@ def run_change_media(test, params, env):
     orig_img_name = params.get("orig_img_name")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         orig_img_name)
-    vm.monitor.send_args_cmd(change_insert_cmd)
+    monitor.send_args_cmd(change_insert_cmd)
     logging.info("Wait until device is ready")
-    blocks_info = lambda: orig_img_name in str(vm.monitor.info("block"))
+    blocks_info = lambda: orig_img_name in str(monitor.info("block"))
     if not utils_misc.wait_for(blocks_info, 10):
         msg = "Fail to insert device %s to guest" % orig_img_name
         raise error.TestFail(msg)
@@ -94,7 +98,7 @@ def run_change_media(test, params, env):
         msg += "Device is not locked after 'change' the locked device."
         raise error.TestFail("Device is not locked")
 
-    blocks_info = vm.monitor.info("block")
+    blocks_info = monitor.info("block")
     if orig_img_name not in str(blocks_info):
         raise error.TestFail("Locked device %s is changed!" % orig_img_name)
 
@@ -110,5 +114,4 @@ def run_change_media(test, params, env):
     umount_cmd = params.get("cd_umount_cmd")
     if umount_cmd:
         session.cmd(umount_cmd, timeout=360)
-    if session:
-        session.close()
+    session.close()
