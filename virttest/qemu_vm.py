@@ -1747,7 +1747,7 @@ class VM(virt_vm.BaseVM):
                     index_global += 1
             else:
                 index = None
-            if has_option(help_text, "device"):
+            if has_option(help_text, "device") and cd_format:
                 if not cd_format.startswith("scsi-"):
                     cd_format = "ide"
                 qemu_cmd += add_drive(help_text, iso, index, cd_format,
