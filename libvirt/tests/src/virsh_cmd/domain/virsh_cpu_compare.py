@@ -1,7 +1,7 @@
 import os
 from autotest.client.shared import error
 from virttest import virsh
-from xml.dom.minidom import parseString
+from virttest.libvirt_xml import vm_xml, libvirt_xml
 
 
 def run_virsh_cpu_compare(test, params, env):
@@ -14,44 +14,70 @@ def run_virsh_cpu_compare(test, params, env):
     3.Perform virsh cpu-compare operation.
     4.Confirm the result.
     """
-    def get_cpu_xml(mode, tmp_file):
+
+    def get_cpu_xml(target, mode, tmp_file, cpu_mode=""):
         """
         Get CPU infomation and put it into a file.
 
+        @param: target: Test target, host or guest's cpu description.
         @param: mode: Test mode, decides file's detail.
         @param: tmp_file: File saves CPU infomation.
         """
-        cpu_xml_file = open(tmp_file, 'wb')
-        domxml = virsh.capabilities()
-        dom = parseString(domxml)
-        cpu_node = dom.getElementsByTagName('cpu')[0]
-        if mode == "modify":
-            vendor = cpu_node.getElementsByTagName('vendor')[0]
-            for node in vendor.childNodes:
-                if node.nodeType == node.TEXT_NODE:
-                    vendor.removeChild(node)
-                    break
-            text_node = dom.createTextNode('test_vendor')
-            vendor.appendChild(text_node)
-            cpu_node.writexml(cpu_xml_file)
-        elif mode == "clear":
-            # Clear up file detail
-            cpu_xml_file.truncate(0)
-        else:
-            cpu_node.writexml(cpu_xml_file)
-        cpu_xml_file.close()
-        dom.unlink()
+        try:
+            cpu_xml_file = open(tmp_file, 'wb')
+            if target == "host":
+                libvirtxml = libvirt_xml.LibvirtXML()
+            else:
+                libvirtxml = vm_xml.VMCPUXML(vm_name=vm_name, mode=cpu_mode)
+            if mode == "modify":
+                if modify_target == "vendor":
+                    libvirtxml['vendor'] = test_vendor
+                else:
+                    # Choose the last feature to test
+                    if feature_action == "remove":
+                        libvirtxml.remove_feature(feature_num)
+                    elif feature_action == "repeat":
+                        name = libvirtxml.get_feature_name(feature_num)
+                        libvirtxml.add_feature(name)
+                    else:
+                        libvirtxml.set_feature(feature_num, feature_name)
+                libvirtxml.dict_get('xml').write(cpu_xml_file)
+            elif mode == "clear":
+                # Clear up file detail
+                cpu_xml_file.truncate(0)
+            else:
+                libvirtxml.dict_get('xml').write(cpu_xml_file)
+            cpu_xml_file.close()
+        except (IndexError, AttributeError):
+            if target == "guest":
+                vmxml.undefine()
+                vmxml.define()
+            raise error.TestError("Get CPU infomation failed!")
 
     # Get all parameters.
-    ref = params["cpu_compare_ref"]
+    ref = params.get("cpu_compare_ref")
     mode = params.get("cpu_compare_mode", "")
+    modify_target = params.get("cpu_compare_modify_target", "vendor")
+    feature_num = int(params.get("cpu_compare_feature_num", -1))
+    feature_action = params.get("cpu_compare_feature_action", "modify")
+    feature_name = params.get("cpu_compare_feature", "")
+    test_vendor = params.get("cpu_compare_vendor", "")
+    target = params.get("cpu_compare_target", "host")
     status_error = params.get("status_error", "no")
     extra = params.get("cpu_compare_extra", "")
     file_name = params.get("cpu_compare_file_name", "cpu.xml")
+    cpu_mode = params.get("cpu_compare_cpu_mode", "")
     tmp_file = os.path.join(test.tmpdir, file_name)
+    if target == "guest":
+        vm_name = params.get("main_vm")
+        vm = env.get_vm(vm_name)
+        if vm.is_alive():
+            vm.destroy()
+        # Backup the VM's xml.
+        vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
 
     # Prepare temp file.
-    get_cpu_xml(mode, tmp_file)
+    get_cpu_xml(target, mode, tmp_file, cpu_mode)
 
     if ref == "file":
         ref = tmp_file
@@ -59,6 +85,11 @@ def run_virsh_cpu_compare(test, params, env):
 
     # Perform virsh cpu-compare operation.
     status = virsh.cpu_compare(ref, ignore_status=True, debug=True).exit_status
+
+    # Recover VM.
+    if target == "guest":
+        vmxml.undefine()
+        vmxml.define()
 
     # Check status_error
     if status_error == "yes":
