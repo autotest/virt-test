@@ -4,7 +4,6 @@ http://libvirt.org/formatdomain.html
 """
 
 import logging
-import xml.etree.ElementTree as ET
 from autotest.client.shared import error
 from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
@@ -457,7 +456,7 @@ class VMXML(VMXMLBase):
         # "custom", "host-model", "host-passthrough"
         cpu_mode = ["custom", "host-model", "host-passthrough"]
         if mode.strip() not in cpu_mode:
-            raise error.TestFail("The cpu mode '%s' is invalid!" % mode)
+            raise xcepts.LibvirtXMLError("The cpu mode '%s' is invalid!" % mode)
 
 
     @staticmethod
@@ -497,6 +496,7 @@ class VMCPUXML(VMXML):
         """
         Create new VMCPU XML instance
         """
+        # The set action is for test.
         accessors.XMLElementText(property_name="model",
                                  libvirtxml=self,
                                  forbidden=['del'],
@@ -507,6 +507,7 @@ class VMCPUXML(VMXML):
                                  forbidden=['del'],
                                  parent_xpath='/cpu',
                                  tag_name='vendor')
+        # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                  libvirtxml=self)
         super(VMCPUXML, self).__init__(virsh_instance)
@@ -535,7 +536,8 @@ class VMCPUXML(VMXML):
         """
         count = len(self.feature_list)
         if num >= count:
-            raise error.TestFail("Remove %d from %d features" % (num, count))
+            raise xcepts.LibvirtXMLError("Get %d from %d features"
+                                         % (num, count))
         feature_name = self.feature_list[num].get('name')
         return feature_name
 
@@ -549,10 +551,28 @@ class VMCPUXML(VMXML):
         xmltreefile = self.dict_get('xml')
         count = len(self.feature_list)
         if num >= count:
-            raise error.TestFail("Remove %d from %d features" % (num, count))
+            raise xcepts.LibvirtXMLError("Remove %d from %d features"
+                                          % (num, count))
         feature_remove_node = self.feature_list[num]
         cpu_node = xmltreefile.find('/cpu')
         cpu_node.remove(feature_remove_node)
+
+
+    def check_feature_name(self, value):
+        """
+        Check feature name valid or not.
+
+        @param: value: The feature name
+        @return: True if check pass
+        """
+        sys_feature = []
+        cpu_xml_file = open('/proc/cpuinfo', 'r')
+        for line in cpu_xml_file.readline():
+            if line.find('flags') != -1:
+                feature_names = line.split(':')[1].strip()
+                sys_sub_feature = feature_names.split(' ')
+                sys_feature = list(set(sys_feature + sys_sub_feature))
+        return (value in sys_feature)
 
 
     def set_feature(self, num, value):
@@ -564,7 +584,8 @@ class VMCPUXML(VMXML):
         """
         count = len(self.feature_list)
         if num >= count:
-            raise error.TestFail("Set %d from %d features" % (num, count))
+            raise xcepts.LibvirtXMLError("Set %d from %d features"
+                                         % (num, count))
         feature_set_node = self.feature_list[num]
         feature_set_node.set('name', value)
 
@@ -577,9 +598,7 @@ class VMCPUXML(VMXML):
         """
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/cpu')
-        element = ET.Element('feature')
-        element.set('name', value)
-        cpu_node.append(element)
+        xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)
 >>>>>>> virt: Add VMCPUXML class

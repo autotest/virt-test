@@ -4,12 +4,17 @@ http://libvirt.org/formatcaps.html
 """
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 from virttest import virsh
 import xml.etree.ElementTree as ET
 from autotest.client.shared import error
 >>>>>>> virt: Modify libvirtxml class
 from virttest.libvirt_xml import base, accessors
+=======
+from virttest import virsh, xml_utils
+from virttest.libvirt_xml import base, accessors, xcepts
+>>>>>>> virt: Add some comments, add chech_feature_name for users, fix some issues
 
 class LibvirtXML(base.LibvirtXMLBase):
     """
@@ -46,10 +51,15 @@ class LibvirtXML(base.LibvirtXMLBase):
         accessors.AllForbidden(property_name="os_arch_machine_map",
                                libvirtxml=self)
 <<<<<<< HEAD
+<<<<<<< HEAD
         super(LibvirtXML, self).__init__(virsh_instance=virsh_instance)
 =======
+=======
+        # This will skip self.get_cpu_count() defined below
+>>>>>>> virt: Add some comments, add chech_feature_name for users, fix some issues
         accessors.AllForbidden(property_name="cpu_count",
                                  libvirtxml=self)
+        # The set action is for test.
         accessors.XMLElementText(property_name="arch",
                                  libvirtxml=self,
                                  forbidden=['del'],
@@ -65,6 +75,7 @@ class LibvirtXML(base.LibvirtXMLBase):
                                  forbidden=['del'],
                                  parent_xpath='/host/cpu',
                                  tag_name='vendor')
+        # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                  libvirtxml=self)
         super(LibvirtXML, self).__init__(virsh_instance)
@@ -118,7 +129,8 @@ class LibvirtXML(base.LibvirtXMLBase):
         """
         count = len(self.feature_list)
         if num >= count:
-            raise error.TestFail("Remove %d from %d features:" % (num, count))
+            raise xcepts.LibvirtXMLError("Get %d from %d features:"
+                                         % (num, count))
         feature_name = self.feature_list[num].get('name')
         return feature_name
 
@@ -144,10 +156,29 @@ class LibvirtXML(base.LibvirtXMLBase):
         xmltreefile = self.dict_get('xml')
         count = len(self.feature_list)
         if num >= count:
-            raise error.TestFail("Remove %d from %d features:" % (num, count))
+            raise xcepts.LibvirtXMLError("Remove %d from %d features:"
+                                         % (num, count))
         feature_remove_node = self.feature_list[num]
         cpu_node = xmltreefile.find('/host/cpu')
         cpu_node.remove(feature_remove_node)
+
+
+    def check_feature_name(self, name):
+        """
+        Check feature name valid or not.
+
+        @param: name: The checked feature name
+        @return: True if check pass
+        """
+        sys_feature = []
+        cpu_xml_file = open('/proc/cpuinfo', 'r')
+        for line in cpu_xml_file.readlines():
+            if line.find('flags') != -1:
+                feature_names = line.split(':')[1].strip()
+                sys_sub_feature = feature_names.split(' ')
+                sys_feature = list(set(sys_feature + sys_sub_feature))
+        cpu_xml_file.close()
+        return (name in sys_feature)
 
 
     def set_feature(self, num, value):
@@ -159,7 +190,8 @@ class LibvirtXML(base.LibvirtXMLBase):
         """
         count = len(self.feature_list)
         if num >= count:
-            raise error.TestFail("Set %d from %d features:" % (num, count))
+            raise xcepts.LibvirtXMLError("Set %d from %d features:"
+                                         % (num, count))
         feature_set_node = self.feature_list[num]
         feature_set_node.set('name', value)
 
@@ -172,6 +204,4 @@ class LibvirtXML(base.LibvirtXMLBase):
         """
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/host/cpu')
-        element = ET.Element('feature')
-        element.set('name', value)
-        cpu_node.append(element)
+        xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
