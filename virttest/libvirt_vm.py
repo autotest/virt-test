@@ -917,6 +917,111 @@ class VM(virt_vm.BaseVM):
         return False
 
 
+    def set_root_serial_console(self, device, remove=False):
+        """
+        Allow or ban root to login through serial console.
+
+        @param device: device to set root login
+        @param allow_root: do remove operation
+        """
+        try:
+            session = self.login()
+        except (remote.LoginError, virt_vm.VMError), e:
+            logging.debug(e)
+        else:
+            try:
+                securetty_output = session.cmd_output("cat /etc/securetty")
+                devices = str(securetty_output).strip().splitlines()
+                if device not in devices:
+                    if not remove:
+                        session.sendline("echo %s >> /etc/securetty" % device)
+                else:
+                    if remove:
+                        session.sendline("sed -i -e /%s/d /etc/securetty"
+                                         % device)
+                logging.debug("Set root login for %s successfuly.", device)
+                return True
+            finally:
+                session.close()
+        logging.debug("Set root login for %s failed.", device)
+        return False
+
+
+    def set_kernel_console(self, device, speed=None, remove=False):
+        """
+        Set kernel parameter for given console device.
+
+        @param device: a console device
+        @param speed: speed of serial console
+        @param remove: do remove operation
+        """
+        try:
+            session = self.login()
+        except (remote.LoginError, virt_vm.VMError), e:
+            logging.debug(e)
+        else:
+            try:
+                grub = "/etc/grub.cfg"
+                if session.cmd_status("ls /etc/grub2.cfg"):
+                    grub = "/etc/grub2.cfg"
+                kernel_params = "console=%s" % device
+                if speed is not None:
+                    kernel_params += ",%s" % speed
+
+                output = session.cmd_output("cat %s" % grub)
+                if not re.search("console=%s" % device, output):
+                    if not remove:
+                        session.sendline("sed -i -e \'s/vmlinuz-.*/& %s/g\' %s"
+                                         % (kernel_params, grub))
+                else:
+                    if remove:
+                        session.sendline("sed -i -e \'s/console=%s\w*\s//g\'"
+                                         " %s" % (device, grub))
+                logging.debug("Set kernel params for %s successfully.", device)
+                return True
+            finally:
+                session.close()
+        logging.debug("Set kernel params for %s failed.", device)
+        return False
+
+
+    def set_console_getty(self, device, getty="mgetty", remove=False):
+        """
+        Set getty for given console device.
+
+        @param device: a console device
+        @param getty: getty type: agetty, mgetty and so on.
+        @param remove: do remove operation
+        """
+        try:
+            session = self.login()
+        except (remote.LoginError, virt_vm.VMError), e:
+            logging.debug(e)
+        else:
+            try:
+                # Only configurate RHEL5 and below
+                regex = "gettys are handled by"
+                output = session.cmd_output("cat /etc/inittab")
+                if re.search(regex, output):
+                    logging.debug("Skip setting inittab for %s", device)
+                    return True
+                getty_str = "co:2345:respawn:/sbin/%s %s" % (getty, device)
+                matched_str = "respawn:/sbin/*getty %s" % device
+                if not re.search(matched_str, output):
+                    if not remove:
+                        session.sendline("echo %s >> /etc/inittab" % getty_str)
+                else:
+                    if remove:
+                        session.sendline("sed -i -e /%s/d "
+                                         "/etc/inittab" % matched_str)
+                logging.debug("Set inittab for %s successfuly.", device)
+                return True
+            finally:
+                session.close()
+        logging.debug("Set inittab for %s failed.", device)
+        return False
+
+
     @error.context_aware
     def create(self, name=None, params=None, root_dir=None, timeout=5.0,
                migration_mode=None, mac_source=None, autoconsole=True):
