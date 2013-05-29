@@ -38,7 +38,7 @@ within this module should raise LibvirtXMLError or a subclass.
 # all exceptions are siblings of LibvirtXMLError
 from virttest.libvirt_xml.xcepts import LibvirtXMLError
 
-from virttest.libvirt_xml.libvirt_xml import LibvirtXML
+from virttest.libvirt_xml.capability_xml import CapabilityXML
 
 from virttest.libvirt_xml.network_xml import RangeList, IPXML, NetworkXML
 
