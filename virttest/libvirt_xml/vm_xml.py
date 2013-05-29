@@ -476,7 +476,7 @@ class VMXML(VMXMLBase):
             cpu.set('mode', mode)
         except AttributeError:
             logging.debug("Can not find any cpu, now create one.")
-            cpu = xml_utils.ElementTree.SubElement(xmltreefile.getroot(), 
+            cpu = xml_utils.ElementTree.SubElement(xmltreefile.getroot(),
                                                    'cpu', {'mode': mode})
         xmltreefile.write()
         vmxml.undefine()

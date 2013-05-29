@@ -16,7 +16,7 @@ from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 >>>>>>> virt: Add some comments, add chech_feature_name for users, fix some issues
 
-class LibvirtXML(base.LibvirtXMLBase):
+class CapabilityXML(base.LibvirtXMLBase):
     """
     Handler of libvirt capabilities and nonspecific item operations.
 
@@ -78,8 +78,12 @@ class LibvirtXML(base.LibvirtXMLBase):
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                  libvirtxml=self)
+<<<<<<< HEAD:virttest/libvirt_xml/libvirt_xml.py
         super(LibvirtXML, self).__init__(virsh_instance)
 >>>>>>> virt: Modify libvirtxml class
+=======
+        super(CapabilityXML, self).__init__(virsh_instance)
+>>>>>>> virt-libvirt: rename libvirt_xml to capability_xml:virttest/libvirt_xml/capability_xml.py
         # calls set_xml accessor method
         self['xml'] = self.dict_get('virsh').capabilities()
 
