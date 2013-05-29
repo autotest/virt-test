@@ -1,7 +1,7 @@
 import os
 from autotest.client.shared import error
 from virttest import virsh
-from virttest.libvirt_xml import vm_xml, libvirt_xml
+from virttest.libvirt_xml import vm_xml, capability_xml
 
 
 def run_virsh_cpu_compare(test, params, env):
@@ -26,7 +26,7 @@ def run_virsh_cpu_compare(test, params, env):
         try:
             cpu_xml_file = open(tmp_file, 'wb')
             if target == "host":
-                libvirtxml = libvirt_xml.LibvirtXML()
+                libvirtxml = capability_xml.CapabilityXML()
             else:
                 libvirtxml = vm_xml.VMCPUXML(vm_name=vm_name, mode=cpu_mode)
             if mode == "modify":

@@ -560,7 +560,7 @@ class VM(virt_vm.BaseVM):
         hvm_or_pv = params.get("hvm_or_pv", "hvm")
         # default to 'uname -m' output
         arch_name = params.get("vm_arch_name", utils.get_current_kernel_arch())
-        capabs = libvirt_xml.LibvirtXML()
+        capabs = libvirt_xml.CapabilityXML()
         support_machine_type = capabs.os_arch_machine_map[hvm_or_pv][arch_name]
         logging.debug("Machine types supported for %s\%s: %s" % (hvm_or_pv,
                                               arch_name, support_machine_type))
