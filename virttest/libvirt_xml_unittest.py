@@ -4,14 +4,10 @@ import unittest
 import common
 from virttest import xml_utils, virsh, utils_misc
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
-<<<<<<< HEAD
-from virttest.libvirt_xml import libvirt_xml
 from virttest.libvirt_xml.devices import librarian
 from virttest.libvirt_xml.devices import base as devices_base
 from virttest.libvirt_xml.devices import address
-=======
 from virttest.libvirt_xml import capability_xml
->>>>>>> virt-libvirt: rename libvirt_xml to capability_xml
 
 # save a copy
 ORIGINAL_DEVICE_TYPES = list(librarian.device_types)
