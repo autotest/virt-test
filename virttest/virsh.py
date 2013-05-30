@@ -1479,18 +1479,14 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
     @return: True if pool define command was successful
     """
 
-    if not name:
-        logging.error("Please give a pool name")
-        return False
-
     types = [ 'dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical' ]
 
     if pool_type and pool_type not in types:
-        logging.error("Only support pool types: %s." % types)
+        logging.error("Only support pool types: %s.", types)
     elif not pool_type:
         pool_type = types[0]
 
-    logging.info("Define %s type pool %s" % (pool_type, name))
+    logging.info("Define %s type pool %s", pool_type, name)
     cmd = "pool-define-as --name %s --type %s --target %s %s" \
           % (name, pool_type, target, extra)
     return command(cmd, **dargs)

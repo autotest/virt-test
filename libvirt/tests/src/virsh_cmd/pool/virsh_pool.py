@@ -75,7 +75,7 @@ def run_virsh_pool(test, params, env):
                 found = True
                 if not autostart in item[2]:
                     raise error.TestFail("%s pool shouldn't be marked as "
-                                             "autostart=%s", item[0], item[2])
+                                         "autostart=%s", item[0], item[2])
         if found:
             return True
         else:
@@ -120,11 +120,11 @@ def run_virsh_pool(test, params, env):
                 raise error.TestFail("Command virsh pool-define-as"
                                      "failed:\n%s" % result.stdout)
             else:
-                logging.debug("%s type pool: %s defined"
-                              " successfully" % (pool_type, pool_name))
+                logging.debug("%s type pool: %s defined successfully",
+                              pool_type, pool_name)
         else:
             raise error.TestFail("pool type %s has not yet been"
-                                     "supported in the test" % pool_type)
+                                 "supported in the test" % pool_type)
 
 
     # Initialize the variables
@@ -147,7 +147,7 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("Command virsh pool-undefine failed:\n%s" %
                                  result.stdout)
         else:
-            logging.debug("Pool: %s successfully undefined" % pool_name)
+            logging.debug("Pool: %s successfully undefined", pool_name)
             shutil.rmtree(pool_target)
 
         # Step (3)
@@ -159,16 +159,16 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("Command virsh pool-start failed:\n%s" %
                                  result.stdout)
         else:
-            logging.debug("Pool: %s successfully started" % pool_name)
+            logging.debug("Pool: %s successfully started", pool_name)
 
         # Step (5)
 
         if not check_list_state(pool_name, "active"):
             raise error.TestFail("State of the pool: %s is marked inactive"
-                                     "instead of active" % pool_name)
+                                 "instead of active" % pool_name)
         if not check_list_autostart(pool_name, "no"):
             raise error.TestFail("Autostart of the pool: %s marked as yes"
-                                     "instead of no" % pool_name)
+                                 "instead of no" % pool_name)
 
 
         # Step (6)
@@ -177,15 +177,16 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("Command virsh autostart is failed:\n%s" %
                                  result.stdout)
         else:
-            logging.debug("Pool: %s marked for autostart successfully" % pool_name)
+            logging.debug("Pool: %s marked for autostart successfully",
+                          pool_name)
 
         # Step (7)
         if not check_list_state(pool_name, "active"):
             raise error.TestFail("State of pool: %s marked as inactive"
-                                     "instead of active" % pool_name)
+                                 "instead of active" % pool_name)
         if not check_list_autostart(pool_name, "yes"):
             raise error.TestFail("Autostart of pool: %s marked as no"
-                                     "instead of yes" % pool_name)
+                                 "instead of yes" % pool_name)
 
         # Step (7.a)
         libvirt_vm.service_libvirtd_control("stop")
@@ -195,18 +196,19 @@ def run_virsh_pool(test, params, env):
         # Step (7.b)
         if not check_list_state(pool_name, "active"):
             raise error.TestFail("State of pool: %s marked as inactive"
-                                     "instead of active" % pool_name)
+                                 "instead of active" % pool_name)
         if not check_list_autostart(pool_name, "yes"):
             raise error.TestFail("Autostart of pool: %s marked as no"
-                                     "instead of yes" % pool_name)
+                                 "instead of yes" % pool_name)
 
         # Step (8)
         result = virsh.pool_undefine(pool_name, ignore_status=True)
         if result.exit_status == 0:
             raise error.TestFail("Command virsh pool-undefine succeeded"
-                                     " with pool still active and running")
+                                 " with pool still active and running")
         else:
-            logging.debug("Active pool: %s undefine failed as expected" % pool_name)
+            logging.debug("Active pool: %s undefine failed as expected",
+                          pool_name)
 
         # Step (9)
         result = virsh.vol_create_as(vol_name, pool_name, "1048576",
@@ -215,43 +217,43 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("Command virsh vol-create-as failed:\n%s" %
                                  result.stdout)
         else:
-            logging.debug("Volume: %s successfully created on pool: %s" %
-                          (vol_name, pool_name))
+            logging.debug("Volume: %s successfully created on pool: %s",
+                          vol_name, pool_name)
 
         if not check_vol_list(vol_name, pool_name, pool_target):
             raise error.TestFail("Volume %s is not found in the "
-                                     "output of virsh vol-list" % vol_name)
+                                 "output of virsh vol-list" % vol_name)
 
         # Step (10)
         if not virsh.pool_destroy(pool_name):
             raise error.TestFail("Command virsh pool-destroy failed")
         else:
-            logging.debug("Pool: %s destroyed successfully" % pool_name)
+            logging.debug("Pool: %s destroyed successfully", pool_name)
 
         if not check_list_state(pool_name, "inactive"):
             raise error.TestFail("State of pool: %s marked as active"
-                                     "instead of inactive" % pool_name)
+                                 "instead of inactive" % pool_name)
         if not check_list_autostart(pool_name, "yes"):
             raise error.TestFail("Autostart of pool: %s marked as no"
-                                     "instead of yes" % pool_name)
+                                 "instead of yes" % pool_name)
 
 
         # Step (11)
         if check_vol_list(vol_name, pool_name, pool_target):
             raise error.TestFail("Command virsh vol-list succeeded"
-                                     " on an inactive pool")
+                                 " on an inactive pool")
         # Step (12)
         result = virsh.pool_start(pool_name, ignore_status=True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh pool-start failed:\n%s" %
                                  result.stdout)
         else:
-            logging.debug("Pool: %s started successfully" % pool_name)
+            logging.debug("Pool: %s started successfully", pool_name)
 
         # Step (13)
         if not check_vol_list(vol_name, pool_name, pool_target):
             raise error.TestFail("Volume %s is not found in the "
-                                     "output of virsh vol-list" % vol_name)
+                                 "output of virsh vol-list" % vol_name)
 
         # Step (14)
         result = virsh.vol_delete(vol_name, pool_name)
@@ -259,18 +261,18 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("Command virsh vol-delete failed:\n%s" %
                                  result.stdout)
         else:
-            logging.debug("Volume: %s deleted successfully" % vol_name)
+            logging.debug("Volume: %s deleted successfully", vol_name)
 
         # Step (15)
         if check_vol_list(vol_name, pool_name, pool_target):
             raise error.TestFail("Command virsh vol-list shows deleted volume"
-                                     " % for a pool %s" % vol_name, pool_name)
+                                 " % for a pool %s" % vol_name, pool_name)
 
         # Step (16)
         if not virsh.pool_destroy(pool_name):
             raise error.TestFail("Command virsh pool-destroy failed")
         else:
-            logging.debug("Pool: %s destroyed successfully" % pool_name)
+            logging.debug("Pool: %s destroyed successfully", pool_name)
 
         # Step (17)
         result = virsh.pool_undefine(pool_name)
@@ -278,7 +280,7 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("Command virsh pool-undefine failed:\n%s" %
                                  result.stdout)
         else:
-            logging.debug("Pool: %s undefined successfully" % pool_name)
+            logging.debug("Pool: %s undefined successfully", pool_name)
 
     finally:
         if check_list_state(pool_name, "active"):
@@ -296,8 +298,8 @@ def run_virsh_pool(test, params, env):
 
 
         try:
-            logging.debug("Deleting the pool target: %s directory" % pool_target)
+            logging.debug("Deleting the pool target: %s directory", pool_target)
             shutil.rmtree(pool_target)
         except OSError, detail:
             raise error.TestFail("Failed to delete the pool target directory"
-                                     "%s:\n %s" % (pool_target, detail) )
+                                 "%s:\n %s" % (pool_target, detail) )
