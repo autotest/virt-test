@@ -4,6 +4,7 @@ from autotest.client import utils
 from virttest import utils_misc, data_dir, utils_test, asset
 
 
+@error.context_aware
 def run_image_copy(test, params, env):
     """
     Copy guest images from nfs server.
@@ -23,11 +24,11 @@ def run_image_copy(test, params, env):
     asset_name = '%s' % (os.path.split(params['image_name'])[1])
     image = '%s.%s' % (params['image_name'], params['image_format'])
     dst_path = '%s/%s' % (data_dir.get_data_dir(), image)
-    pwd = os.path.join(test.bindir, "images")
+    image_dir = os.path.dirname(dst_path)
     if params.get("rename_error_image", "no") == "yes":
         error_image = os.path.basename(params['image_name']) + "-error"
         error_image += '.' + params['image_format']
-        error_dst_path = os.path.join(pwd, error_image)
+        error_dst_path = os.path.join(image_dir, error_image)
         mv_cmd = "/bin/mv %s %s" % (dst_path, error_dst_path)
         utils.system(mv_cmd, timeout=360, ignore_status=True)
 
@@ -47,6 +48,8 @@ def run_image_copy(test, params, env):
         if not utils_misc.mount(src, mount_dest_dir, 'nfs', 'ro'):
             raise error.TestError('Could not mount NFS share %s to %s' %
                                   (src, mount_dest_dir))
+
+        error.context("Check the existence of source image")
         src_path = '%s/%s.%s' % (mount_dest_dir, asset_name, params['image_format'])
         asset_info = asset.get_file_asset(asset_name, src_path, dst_path)
         if asset_info is None:
@@ -61,10 +64,16 @@ def run_image_copy(test, params, env):
         force = params.get("force_copy", "yes") == "yes"
 
     try:
-        asset.download_file(asset_info, interactive=False, force=force)
+        error.context("Copy image '%s'" % image, logging.info)
+        if utils.is_url(asset_info['url']):
+            asset.download_file(asset_info, interactive=False, force=force)
+        else:
+            utils.get_file(asset_info['url'], asset_info['destination'])
 
     finally:
-        if params.get("sub_type"):
+        sub_type = params.get("sub_type")
+        if sub_type:
+            error.context("Run sub test '%s'" % sub_type, logging.info)
             params['image_name'] += "-error"
             params['boot_once'] = "c"
             vm.create(params=params)
