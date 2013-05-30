@@ -513,7 +513,7 @@ class VMCPUXML(VMXML):
         super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
-        self['xml'] = self.dict_get('virsh').dumpxml(vm_name + ' --update-cpu')
+        self['xml'] = self.dict_get('virsh').dumpxml(vm_name, extra="--update-cpu")
 
 
     def get_feature_list(self):

@@ -89,7 +89,7 @@ def run_virsh_update_device(test, params, env):
 
     create_attach_xml(update_xmlfile, tmp_iso)
     vm_xml = os.path.join(test.tmpdir, "vm_xml")
-    virsh.dumpxml(vm_name, vm_xml)
+    virsh.dumpxml(vm_name, extra="", to_file=vm_xml)
     vmxml_before = libvirt_xml.VMXML.new_from_dumpxml(vm_name)
 
     if vm_ref == "id":
@@ -115,7 +115,7 @@ def run_virsh_update_device(test, params, env):
     output = "%s" % libvirt_xml.VMXML.new_from_dumpxml(vm_name)
     if params.has_key("updatedevice_diff_file"):
         vm_xml_after = os.path.join(test.tmpdir, "vm_xml_after")
-        virsh.dumpxml(vm_name, vm_xml_after)
+        virsh.dumpxml(vm_name, extra="", to_file=vm_xml_after)
     vm.destroy()
     output_shut = "%s" % libvirt_xml.VMXML.new_from_dumpxml(vm_name)
 
