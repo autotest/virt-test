@@ -711,12 +711,12 @@ class BaseVM(object):
                 found.
         """
         panic_re = [r"BUG:.*---\[ end trace .* \]---"]
-        panic_re.append(r"------------\[ cut here.*\[ end trace .* \]---")
+        panic_re.append(r"----------\[ cut here.* BUG .*\[ end trace .* \]---")
         panic_re.append(r"general protection fault:.* RSP.*>")
         panic_re = "|".join(panic_re)
         if self.serial_console is not None:
             data = self.serial_console.get_output()
-            match = re.search(panic_re, data, re.DOTALL|re.MULTILINE)
+            match = re.search(panic_re, data, re.DOTALL|re.MULTILINE|re.I)
             if match is not None:
                 raise VMDeadKernelCrashError(match.group(0))
 
