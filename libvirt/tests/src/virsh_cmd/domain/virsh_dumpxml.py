@@ -58,16 +58,13 @@ def run_virsh_dumpxml(test, params, env):
         else:
             vm_ref = hex(int(domid))
 
-    if options_ref:
-        vm_ref = "%s %s" % (vm_ref, options_ref)
-
     if options_suffix:
-        vm_ref = "%s %s" % (vm_ref, options_suffix)
+        options_ref = "%s %s" % (options_ref, options_suffix)
 
     # Run command
     logging.info("Command:virsh dumpxml %s", vm_ref)
     try:
-        output = virsh.dumpxml(vm_ref)
+        output = virsh.dumpxml(vm_ref, extra=options_ref)
         status = 0
     except error.CmdError, detail:
         status = 1
