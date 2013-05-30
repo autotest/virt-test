@@ -129,7 +129,7 @@ Formal definition:
 @copyright: Red Hat 2008-2013
 """
 
-import os, collections, optparse, logging, re, string
+import os, collections, optparse, logging, re, string, sys
 
 _reserved_keys = set(("name", "shortname", "dep"))
 
@@ -138,7 +138,7 @@ num_failed_cases = 5
 
 class ParserError(Exception):
     def __init__(self, msg, line=None, filename=None, linenum=None):
-        super(ParserError, self).__init__()
+        Exception.__init__(self)
         self.msg = msg
         self.line = line
         self.filename = filename
@@ -158,7 +158,7 @@ class LexerError(ParserError):
 
 class MissingIncludeError(Exception):
     def __init__(self, line, filename, linenum):
-        super(MissingIncludeError, self).__init__()
+        Exception.__init__(self)
         self.line = line
         self.filename = filename
         self.linenum = linenum
@@ -166,6 +166,15 @@ class MissingIncludeError(Exception):
     def __str__(self):
         return ("%r (%s:%s): file does not exist or it's not a regular "
                 "file" % (self.line, self.filename, self.linenum))
+
+
+if sys.version_info[0] == 2 and sys.version_info[1] < 6:
+    def enum(iterator, start_pos=0):
+        for i in iterator:
+            yield start_pos, i
+            start_pos += 1
+else:
+    enum = enumerate
 
 
 def _match_adjacent(block, ctx, ctx_set):
@@ -333,6 +342,15 @@ class Condition(NoFilter):
         self.content = []
 
 
+    def __str__(self):
+        return "Condition %s:%s" % (self.filter, self.content)
+
+
+    def __repr__(self):
+        return "Condition %s:%s" % (self.filter, self.content)
+
+
+
 class NegativeCondition(OnlyFilter):
     __slots__ = ["content"]
 
@@ -340,6 +358,15 @@ class NegativeCondition(OnlyFilter):
     def __init__(self, lfilter, line):
         super(NegativeCondition, self).__init__(lfilter, line)
         self.content = []
+
+
+    def __str__(self):
+        return "NotCond %s:%s" % (self.filter, self.content)
+
+
+    def __repr__(self):
+        return "NotCond %s:%s" % (self.filter, self.content)
+
 
 
 class StrReader(object):
@@ -834,6 +861,14 @@ class LApplyPreDict(LOperators):
         d.update(self.value)
 
 
+    def __str__(self):
+        return "Apply_pre_dict: %s" % self.value
+
+
+    def __repr__(self):
+        return "Apply_pre_dict: %s" % self.value
+
+
 spec_iden = "_-"
 spec_oper = "+<?"
 
@@ -946,7 +981,7 @@ class Lexer(object):
             yield tokens_oper[m.group()[:-1]]()
             yield LString(line[m.end():].lstrip())
         else:
-            li = enumerate(line[pos:], pos)
+            li = enum(line[pos:], pos)
             for pos, char in li:
                 if char.isalnum() or char in spec_iden:    # alfanum+_-
                     chars += char
@@ -1152,6 +1187,12 @@ def cmd_tokens(tokens1, tokens2):
         return True
 
 
+def apply_predict(lexer, node, pre_dict):
+    predict = LApplyPreDict().set_operands(None, pre_dict)
+    node.content += [(lexer.filename, lexer.linenum, predict)]
+    return {}
+
+
 def parse_filter(lexer, tokens):
     """
     @return: Parsed filter
@@ -1339,7 +1380,7 @@ class Parser(object):
         var_indent = 0
         var_name = ""
         # meta contains variants meta-data
-        meta = collections.defaultdict(list)
+        meta = {}
         # pre_dict contains block of operation without collision with
         # others block or operation. Increase speed almost twice.
         pre_dict = {}
@@ -1351,10 +1392,7 @@ class Parser(object):
                 if typet == LEndBlock:
                     if pre_dict:
                         # flush pre_dict to node content.
-                        predict = LApplyPreDict().set_operands(None, pre_dict)
-                        node.content += [(lexer.filename,
-                                          lexer.linenum,
-                                          predict)]
+                        pre_dict = apply_predict(lexer, node, pre_dict)
                     return node
 
                 indent = token.length
@@ -1395,12 +1433,7 @@ class Parser(object):
                                     lexer.get_next_check([LEndL])
                                     continue
                                 else:
-                                    predict = LApplyPreDict()
-                                    predict.set_operands(None, pre_dict)
-                                    node.content += [(lexer.filename,
-                                                      lexer.linenum,
-                                                      predict)]
-                                    pre_dict = {}
+                                    pre_dict = apply_predict(lexer, node, pre_dict)
 
                             node.content += [(lexer.filename,
                                               lexer.linenum,
@@ -1418,6 +1451,8 @@ class Parser(object):
                                                        lexer.linenum)
                         cond = Condition(cfilter, lexer.line)
                         self._parse(lexer, cond, prev_indent=indent)
+
+                        pre_dict = apply_predict(lexer, node, pre_dict)
                         node.content += [(lexer.filename, lexer.linenum, cond)]
                     else:
                         raise ParserError("Syntax ERROR expected \":\" or"
@@ -1431,11 +1466,7 @@ class Parser(object):
                     #  - var2:
                     #      block2
                     if pre_dict:
-                        predict = LApplyPreDict().set_operands(None, pre_dict)
-                        node.content += [(lexer.filename,
-                                                lexer.linenum,
-                                                predict)]
-                        pre_dict = {}
+                        pre_dict = apply_predict(lexer, node, pre_dict)
                     already_default = False
                     is_default = False
                     meta_with_default = False
@@ -1571,11 +1602,15 @@ class Parser(object):
                             typet, _ = lexer.get_next_check_nw([LSet,
                                                                 LRBracket])
                             if typet == LRBracket:  # [xxx]
+                                if not ident in meta:
+                                    meta[ident] = []
                                 meta[ident].append(True)
                             elif typet == LSet:  # [xxx = yyyy]
                                 tokens = lexer.get_until_no_white([LRBracket,
                                                                   LEndL])
                                 if type(tokens[-1]) == LRBracket:
+                                    if not ident in meta:
+                                        meta[ident] = []
                                     meta[ident].append(tokens[:-1])
                                 else:
                                     raise ParserError("Syntax ERROR"
@@ -1608,6 +1643,8 @@ class Parser(object):
                     #Parse:
                     #    only/no (filter=text)..aaa.bbb, xxxx
                     lfilter = parse_filter(lexer, lexer.rest_line())
+
+                    pre_dict = apply_predict(lexer, node, pre_dict)
                     if typet == LOnly:
                         node.content += [(lexer.filename, lexer.linenum,
                                           OnlyFilter(lfilter, lexer.line))]
@@ -1628,6 +1665,7 @@ class Parser(object):
                     if not os.path.isfile(filename):
                         raise MissingIncludeError(lexer.line, lexer.filename,
                                                   lexer.linenum)
+                    pre_dict = apply_predict(lexer, node, pre_dict)
                     lch = Lexer(FileReader(filename))
                     node = self._parse(lch, node, -1)
                     lexer.set_prev_indent(prev_indent)
@@ -1638,6 +1676,8 @@ class Parser(object):
                     _, to_del = lexer.get_next_check_nw([LIdentifier])
                     lexer.get_next_check_nw([LEndL])
                     token.set_operands(to_del, None)
+
+                    pre_dict = apply_predict(lexer, node, pre_dict)
                     node.content += [(lexer.filename, lexer.linenum,
                                       token)]
 
@@ -1655,6 +1695,7 @@ class Parser(object):
                     self._parse(lexer, cond, prev_indent=indent)
                     lexer.set_prev_indent(prev_indent)
 
+                    pre_dict = apply_predict(lexer, node, pre_dict)
                     node.content += [(lexer.filename, lexer.linenum, cond)]
                 else:
                     raise ParserError("Syntax ERROR expected", lexer.line,

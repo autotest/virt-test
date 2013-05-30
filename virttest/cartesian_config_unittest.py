@@ -394,6 +394,36 @@ class CartesianConfigTest(unittest.TestCase):
              'tests': 'test2'},
             ],
             True)
+        self._checkStringDump("""
+            variants:
+                - a:
+                    foo = foo
+                    c:
+                        foo = bar
+                - b:
+                    foo = foob
+            variants:
+                - c:
+                    bala = lalalala
+                    a:
+                       bala = balabala
+                - d:
+            """,
+            [
+                {'bala': 'balabala',
+                 'dep': [],
+                 'foo': 'bar',
+                 'name': 'c.a',
+                 'shortname': 'c.a'},
+                {'bala': 'lalalala',
+                 'dep': [],
+                 'foo': 'foob',
+                 'name': 'c.b',
+                 'shortname': 'c.b'},
+                {'dep': [], 'foo': 'foo', 'name': 'd.a', 'shortname': 'd.a'},
+                {'dep': [], 'foo': 'foob', 'name': 'd.b', 'shortname': 'd.b'},
+            ],
+            True)
 
 
     def testNegativeCondition(self):
