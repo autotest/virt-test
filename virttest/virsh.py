@@ -1942,3 +1942,23 @@ def ttyconsole(name, **dargs):
     @return: CmdResult instance
     """
     return command("ttyconsole %s" % name, **dargs)
+
+
+def nodedev_dumpxml(name, options="", to_file=None, **dargs):
+    """
+    Do dumpxml for node device.
+
+    @param name: the name of device.
+    @param options: extra options to nodedev-dumpxml cmd.
+    @param to_file: optional file to write XML output to.
+
+    @return: Cmdobject of virsh nodedev-dumpxml.
+    """
+    cmd = ('nodedev-dumpxml %s %s' % (name, options))
+    result = command(cmd, **dargs)
+    if to_file is not None:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+
+    return result
