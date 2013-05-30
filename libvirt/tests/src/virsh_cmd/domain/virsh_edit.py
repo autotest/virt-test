@@ -74,7 +74,7 @@ def run_virsh_edit(test, params, env):
 
     #run test case
     xml_file = os.path.join(test.tmpdir, 'tmp.xml')
-    virsh.dumpxml(vm_name, xml_file)
+    virsh.dumpxml(vm_name, extra="", to_file=xml_file)
 
     if libvirtd == "off":
         libvirt_vm.libvirtd_stop()

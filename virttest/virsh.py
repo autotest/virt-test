@@ -735,7 +735,7 @@ def domblkstat(name, device, option, **dargs):
     return command("domblkstat %s %s %s" % (name, device, option), **dargs)
 
 
-def dumpxml(name, to_file="", **dargs):
+def dumpxml(name, extra="", to_file="", **dargs):
     """
     Return the domain information as an XML dump.
 
@@ -745,11 +745,12 @@ def dumpxml(name, to_file="", **dargs):
     @return: standard output from command
     """
     dargs['ignore_status'] = True
-    if to_file:
-        cmd = "dumpxml %s > %s" % (name, to_file)
-    else:
-        cmd = "dumpxml %s" % name
+    cmd = "dumpxml %s %s" % (name, extra)
     result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
     if result.exit_status:
         raise error.CmdError(cmd, result,
                                  "Virsh dumpxml returned non-zero exit status")
