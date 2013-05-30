@@ -510,7 +510,7 @@ class VMCPUXML(VMXML):
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                  libvirtxml=self)
-        super(VMCPUXML, self).__init__(virsh_instance)
+        super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
         self['xml'] = self.dict_get('virsh').dumpxml(vm_name + ' --update-cpu')
