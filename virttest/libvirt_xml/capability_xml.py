@@ -3,18 +3,8 @@ Module simplifying manipulation of XML described at
 http://libvirt.org/formatcaps.html
 """
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-from virttest import virsh
-import xml.etree.ElementTree as ET
-from autotest.client.shared import error
->>>>>>> virt: Modify libvirtxml class
-from virttest.libvirt_xml import base, accessors
-=======
 from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
->>>>>>> virt: Add some comments, add chech_feature_name for users, fix some issues
 
 class CapabilityXML(base.LibvirtXMLBase):
     """
@@ -30,16 +20,11 @@ class CapabilityXML(base.LibvirtXMLBase):
     # e.g. guest_count etc.
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('uuid',
-<<<<<<< HEAD
-                                                 'os_arch_machine_map',)
-
-    __schema_name__ = "capability"
-=======
                                                  'os_arch_machine_map',
                                                  'cpu_count',
                                                  'arch', 'model',
                                                  'vendor', 'feature_list',)
->>>>>>> virt: Modify libvirtxml class
+    __schema_name__ = "capability"
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText(property_name="uuid",
@@ -50,13 +35,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         # This will skip self.get_os_arch_machine_map() defined below
         accessors.AllForbidden(property_name="os_arch_machine_map",
                                libvirtxml=self)
-<<<<<<< HEAD
-<<<<<<< HEAD
-        super(LibvirtXML, self).__init__(virsh_instance=virsh_instance)
-=======
-=======
         # This will skip self.get_cpu_count() defined below
->>>>>>> virt: Add some comments, add chech_feature_name for users, fix some issues
         accessors.AllForbidden(property_name="cpu_count",
                                  libvirtxml=self)
         # The set action is for test.
@@ -78,12 +57,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
                                  libvirtxml=self)
-<<<<<<< HEAD:virttest/libvirt_xml/libvirt_xml.py
-        super(LibvirtXML, self).__init__(virsh_instance)
->>>>>>> virt: Modify libvirtxml class
-=======
         super(CapabilityXML, self).__init__(virsh_instance)
->>>>>>> virt-libvirt: rename libvirt_xml to capability_xml:virttest/libvirt_xml/capability_xml.py
         # calls set_xml accessor method
         self['xml'] = self.dict_get('virsh').capabilities()
 

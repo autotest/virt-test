@@ -407,7 +407,6 @@ class VMXML(VMXMLBase):
         vmxml.define()
 
 
-<<<<<<< HEAD
     def get_iface_all(self):
         """
         Get a dict with interface's mac and node.
@@ -445,7 +444,8 @@ class VMXML(VMXMLBase):
             return features
         else:
             return None
-=======
+
+
     def check_cpu_mode(self, mode):
         """
         Check input cpu mode invalid or not.
@@ -601,4 +601,3 @@ class VMCPUXML(VMXML):
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
     #TODO: Add function to create from xml_utils.TemplateXML()
     # def new_from_template(...)
->>>>>>> virt: Add VMCPUXML class
