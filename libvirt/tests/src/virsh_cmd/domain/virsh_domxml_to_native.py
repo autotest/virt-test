@@ -66,7 +66,7 @@ def run_virsh_domxml_to_native(test, params, env):
     extra_param = params.get("dtn_extra_param")
     libvirtd = params.get("libvirtd")
     status_error = params.get("status_error")
-    virsh.dumpxml(vm_name, file_xml)
+    virsh.dumpxml(vm_name, extra="", to_file=file_xml)
     if libvirtd == "off":
         libvirt_vm.libvirtd_stop()
     ret = virsh.domxml_to_native(dtn_format, file_xml, extra_param,

@@ -17,7 +17,7 @@ def run_virsh_setvcpus(test, params, env):
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     xml_file = params.get("setvcpus_xml_file", "vm.xml")
-    virsh.dumpxml(vm_name, xml_file)
+    virsh.dumpxml(vm_name, extra="", to_file=xml_file)
     tmp_file = params.get("setvcpus_tmp_file", "tmp.xml")
     pre_vm_state = params.get("setvcpus_pre_vm_state")
     command = params.get("setvcpus_command", "setvcpus")
@@ -33,7 +33,7 @@ def run_virsh_setvcpus(test, params, env):
         Get current vcpu number.
         """
         vcpus_set = ""
-        virsh.dumpxml(vm_name, tmp_file)
+        virsh.dumpxml(vm_name, extra="", to_file=tmp_file)
         dom = parse(tmp_file)
         root = dom.documentElement
         vcpus_2 = root.getElementsByTagName("vcpu")

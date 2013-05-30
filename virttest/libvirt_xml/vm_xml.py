@@ -444,3 +444,160 @@ class VMXML(VMXMLBase):
             return features
         else:
             return None
+
+
+    def check_cpu_mode(self, mode):
+        """
+        Check input cpu mode invalid or not.
+
+        @param mode: the mode of cpu:'host-model'...
+        """
+        # Possible values for the mode attribute are:
+        # "custom", "host-model", "host-passthrough"
+        cpu_mode = ["custom", "host-model", "host-passthrough"]
+        if mode.strip() not in cpu_mode:
+            raise xcepts.LibvirtXMLError("The cpu mode '%s' is invalid!" % mode)
+
+
+    @staticmethod
+    def set_cpu_mode(vm_name, mode='host-model'):
+        """
+        Set cpu's mode of VM.
+
+        @param vm_name: Name of defined vm to set primary serial.
+        @param mode: the mode of cpu:'host-model'...
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        vmxml.check_cpu_mode(mode)
+        xmltreefile = vmxml.dict_get('xml')
+        try:
+            cpu = xmltreefile.find('/cpu')
+            logging.debug("Current cpu mode is '%s'!", cpu.get('mode'))
+            cpu.set('mode', mode)
+        except AttributeError:
+            logging.debug("Can not find any cpu, now create one.")
+            cpu = xml_utils.ElementTree.SubElement(xmltreefile.getroot(),
+                                                   'cpu', {'mode': mode})
+        xmltreefile.write()
+        vmxml.undefine()
+        vmxml.define()
+
+
+class VMCPUXML(VMXML):
+    """
+    Higher-level manipulations related to VM's XML(CPU)
+    """
+
+    # Must copy these here or there will be descriptor problems
+    __slots__ = VMXML.__slots__ + ('model', 'vendor', 'feature_list',)
+
+
+    def __init__(self, virsh_instance=virsh, vm_name='', mode='host-model'):
+        """
+        Create new VMCPU XML instance
+        """
+        # The set action is for test.
+        accessors.XMLElementText(property_name="model",
+                                 libvirtxml=self,
+                                 forbidden=['del'],
+                                 parent_xpath='/cpu',
+                                 tag_name='model')
+        accessors.XMLElementText(property_name="vendor",
+                                 libvirtxml=self,
+                                 forbidden=['del'],
+                                 parent_xpath='/cpu',
+                                 tag_name='vendor')
+        # This will skip self.get_feature_list() defined below
+        accessors.AllForbidden(property_name="feature_list",
+                                 libvirtxml=self)
+        super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
+        # Setup some bare-bones XML to build upon
+        self.set_cpu_mode(vm_name, mode)
+        self['xml'] = self.dict_get('virsh').dumpxml(vm_name, extra="--update-cpu")
+
+
+    def get_feature_list(self):
+        """
+        Accessor method for feature_list property (in __slots__)
+        """
+        feature_list = []
+        xmltreefile = self.dict_get('xml')
+        for feature_node in xmltreefile.findall('/cpu/feature'):
+            feature_list.append(feature_node)
+        return feature_list
+
+
+    def get_feature_name(self, num):
+        """
+        Get assigned feature name
+
+        @param: num: Assigned feature number
+        @return: Assigned feature name
+        """
+        count = len(self.feature_list)
+        if num >= count:
+            raise xcepts.LibvirtXMLError("Get %d from %d features"
+                                         % (num, count))
+        feature_name = self.feature_list[num].get('name')
+        return feature_name
+
+
+    def remove_feature(self, num):
+        """
+        Remove a assigned feature from xml
+
+        @param: num: Assigned feature number
+        """
+        xmltreefile = self.dict_get('xml')
+        count = len(self.feature_list)
+        if num >= count:
+            raise xcepts.LibvirtXMLError("Remove %d from %d features"
+                                          % (num, count))
+        feature_remove_node = self.feature_list[num]
+        cpu_node = xmltreefile.find('/cpu')
+        cpu_node.remove(feature_remove_node)
+
+
+    def check_feature_name(self, value):
+        """
+        Check feature name valid or not.
+
+        @param: value: The feature name
+        @return: True if check pass
+        """
+        sys_feature = []
+        cpu_xml_file = open('/proc/cpuinfo', 'r')
+        for line in cpu_xml_file.readline():
+            if line.find('flags') != -1:
+                feature_names = line.split(':')[1].strip()
+                sys_sub_feature = feature_names.split(' ')
+                sys_feature = list(set(sys_feature + sys_sub_feature))
+        return (value in sys_feature)
+
+
+    def set_feature(self, num, value):
+        """
+        Set a assigned feature value to xml
+
+        @param: num: Assigned feature number
+        @param: value: The feature name modified to
+        """
+        count = len(self.feature_list)
+        if num >= count:
+            raise xcepts.LibvirtXMLError("Set %d from %d features"
+                                         % (num, count))
+        feature_set_node = self.feature_list[num]
+        feature_set_node.set('name', value)
+
+
+    def add_feature(self, value):
+        """
+        Add a feature Element to xml
+
+        @param: num: Assigned feature number
+        """
+        xmltreefile = self.dict_get('xml')
+        cpu_node = xmltreefile.find('/cpu')
+        xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
+    #TODO: Add function to create from xml_utils.TemplateXML()
+    # def new_from_template(...)
