@@ -719,6 +719,11 @@ class BaseVM(object):
             match = re.search(panic_re, data, re.DOTALL|re.MULTILINE|re.I)
             if match is not None:
                 raise VMDeadKernelCrashError(match.group(0))
+            else:
+                panic_re = r"------------\[ cut here.*\[ end trace .* \]---"
+                match = re.search(panic_re, data, re.DOTALL|re.MULTILINE|re.I)
+                if match is not None:
+                    raise error.TestWarn(match.group(0))
 
 
     def verify_illegal_instruction(self):
