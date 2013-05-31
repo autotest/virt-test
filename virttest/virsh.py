@@ -1066,6 +1066,20 @@ def migrate(name="", dest_uri="", option="", extra="", **dargs):
     return command(cmd, **dargs)
 
 
+def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
+    """
+    Set maximum tolerable downtime of a domain
+    which is being live-migrated to another host.
+
+    @param domain: name/uuid/id of guest
+    @param downtime: downtime number of live migration
+    """
+    cmd = "migrate-setmaxdowntime %s %s" % (domain, downtime)
+    if extra is not None:
+        cmd += " %s" % extra
+    return command(cmd, **dargs)
+
+
 def attach_device(name, xml_file, extra="", **dargs):
     """
     Attach a device to VM.
