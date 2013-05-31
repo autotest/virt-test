@@ -58,7 +58,7 @@ def run_jumbo(test, params, env):
         # Environment preparation
         mac = vm.get_mac_address(0)
         if os_type == "linux":
-            ethname = utils_test.get_linux_ifname(session, mac)
+            ethname = utils_net.get_linux_ifname(session, mac)
             guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname , mtu)
         else:
             connection_id = utils_net.get_windows_nic_attribute(session,
