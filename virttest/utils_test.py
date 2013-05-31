@@ -1288,6 +1288,29 @@ def start_windows_service(session, service, timeout=120):
         raise error.TestError("Could not start service '%s'" % service)
 
 
+def get_windows_file_abs_path(session, filename, extension="exe", tmout=240):
+    """
+    return file abs path "drive+path" by "wmic datafile"
+    """
+    cmd_tmp = "wmic datafile where \"Filename='%s' and "
+    cmd_tmp += "extension='%s'\" get drive^,path"
+    cmd = cmd_tmp % (filename, extension)
+    info = session.cmd_output(cmd, timeout=tmout).strip()
+    drive_path = re.search(r'(\w):\s+(\S+)', info, re.M)
+    if not drive_path:
+        raise error.TestError("Not found file %s.%s in your guest"
+                              % (filename, extension))
+    return ":".join(drive_path.groups())
+
+
+def get_windows_disk_drive(session, filename, extension="exe", tmout=240):
+    """
+    Get the windows disk drive number
+    """
+    return get_windows_file_abs_path(session, filename,
+                                     extension).split(":")[0]
+
+
 def get_time(session, time_command, time_filter_re, time_format):
     """
     Return the host time and guest time.  If the guest time cannot be fetched
