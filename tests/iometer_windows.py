@@ -4,6 +4,7 @@
 """
 import logging, time, re
 from autotest.client.shared import error
+from virttest import utils_test, utils_misc
 
 
 @error.context_aware
@@ -12,79 +13,56 @@ def run_iometer_windows(test, params, env):
     Run Iometer for Windows on a Windows guest:
 
     1) Boot guest with additional disk
-    2) Install Iometer
-    3) Execute the Iometer test contained in the winutils.iso
-    4) Copy result to host
+    2) Format the additional disk
+    3) Install and register Iometer
+    4) Perpare icf to Iometer.exe
+    5) Run Iometer.exe with icf
+    6) Copy result to host
 
     @param test: kvm test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-    def check_cdrom(timeout):
-        cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"
-        cdrom_chk_cmd += " cmd && diskpart /s cmd"
-        vols = []
-        start_time = time.time()
-
-        while time.time() - start_time < timeout:
-            vols_str = session.cmd(cdrom_chk_cmd)
-            logging.info("vols_str is %s" % vols_str)
-
-            if len(re.findall("CDFS.*CD-ROM", vols_str)) >= 1:
-                vols = re.findall(".*CDFS.*?CD-ROM.*\n", vols_str)
-                logging.info("vols is %s" % vols)
-                break
-        return vols
-
-
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
-    cmd_timeout = int(params.get("cmd_timeout",1200))
 
-    logging.info("Sleep 120 seconds, and create a partition on second disk")
-    time.sleep(120)
+    # format the target disk
+    utils_test.run_virt_sub_test(test, params, env, "format_disk")
 
-    error.context("Creating partition")
-    create_partition_cmd = params.get("create_partition_cmd")
-    session.cmd_output(cmd=create_partition_cmd, timeout=cmd_timeout)
+    error.context("Install Iometer", logging.info)
+    cmd_timeout = int(params.get("cmd_timeout", 360))
+    ins_cmd = params["install_cmd"]
+    vol_utils = utils_misc.get_winutils_vol(session)
+    if not vol_utils:
+        raise error.TestError("WIN_UTILS CDROM not found")
+    ins_cmd = re.sub("WIN_UTILS", vol_utils, ins_cmd)
+    session.cmd(cmd=ins_cmd, timeout=cmd_timeout)
+    time.sleep(0.5)
 
-    # Format the disk
-    format_cmd = params.get("format_cmd")
-    error.context("Formating second disk")
-    session.cmd_output(cmd=format_cmd, timeout=cmd_timeout)
-    logging.info("Disk is formated")
+    error.context("Register Iometer", logging.info)
+    reg_cmd = params["register_cmd"]
+    reg_cmd = re.sub("WIN_UTILS", vol_utils, reg_cmd)
+    session.cmd_output(cmd=reg_cmd, timeout=cmd_timeout)
 
-    # Install Iometer
-    init_timeout = int(params.get("init_timeout", "60"))
-    volumes = check_cdrom(init_timeout)
-    vol_utils = re.findall("Volume\s+\d+\s+(\w).*?\d+\s+\w+", volumes[0])[0]
-
-    install_iometer_cmd = params.get("iometer_installation_cmd")
-    install_iometer_cmd = re.sub("WIN_UTILS", vol_utils, install_iometer_cmd)
-
-    error.context("Installing iometer")
-    session.cmd_output(cmd=install_iometer_cmd, timeout=cmd_timeout)
-    logging.info("Iometer is installed")
+    error.context("Prepare icf for Iometer", logging.info)
+    icf_name = params["icf_name"]
+    ins_path = params["install_path"]
+    res_file = params["result_file"]
+    icf_file = utils_misc.get_path(test.virtdir, "deps/%s" % icf_name)
+    vm.copy_files_to(icf_file, "%s\\%s" %(ins_path, icf_name))
 
     # Run Iometer
-    cmd_reg = params.get("iometer_reg")
-    cmd_run = params.get("iometer_run")
-    t = int(params.get("iometer_timeout", 1000))
-    cmd_reg = re.sub("WIN_UTILS", vol_utils, cmd_reg)
-    cmd_run = re.sub("WIN_UTILS", vol_utils, cmd_run)
+    error.context("Start Iometer", logging.info)
+    session.cmd("cd %s" % ins_path)
+    logging.info("Change dir to: %s" % ins_path)
+    run_cmd = params["run_cmd"]
+    run_timeout = int(params.get("run_timeout", 1000))
+    logging.info("Set Timeout: %ss" % run_timeout)
+    run_cmd = run_cmd % (icf_name, res_file)
+    logging.info("Execute Command: %s" % run_cmd)
+    session.cmd(cmd=run_cmd, timeout=run_timeout)
 
-    error.context("Registering Iometer on guest, timeout %ss" % cmd_timeout)
-    session.cmd_output(cmd=cmd_reg, timeout=cmd_timeout)
-    logging.info("Iometer is registered")
-
-    error.context("Running Iometer command on guest, timeout %ss" % cmd_timeout)
-    session.cmd_output(cmd=cmd_run, timeout=t)
-    logging.info("Iometer testing completed")
-
-    guest_path = params.get("guest_path")
-    error.context("Copying result '%s' to host" % guest_path)
-    vm.copy_files_from(guest_path, test.resultsdir)
-
-    session.close()
+    error.context("Copy result '%s' to host" % res_file, logging.info)
+    vm.copy_files_from(res_file, test.resultsdir)
