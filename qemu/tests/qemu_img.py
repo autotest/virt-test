@@ -3,17 +3,19 @@ from autotest.client.shared import utils, error
 from virttest import utils_misc, env_process, storage, data_dir
 
 
+@error.context_aware
 def run_qemu_img(test, params, env):
     """
     'qemu-img' functions test:
     1) Judge what subcommand is going to be tested
     2) Run subcommand test
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-    cmd = utils_misc.get_path(test.bindir, params.get("qemu_img_binary"))
+    qemu_img_binary = utils_misc.get_qemu_img_binary(params)
+    cmd = qemu_img_binary
     if not os.path.exists(cmd):
         raise error.TestError("Binary of 'qemu-img' not found")
     image_format = params["image_format"]
@@ -29,14 +31,15 @@ def run_qemu_img(test, params, env):
         @param img: image to be checked
         """
         cmd += " check %s" % img
-        logging.info("Checking image '%s'...", img)
+        error.context("Checking image '%s' by command '%s'" % (img, cmd),
+                      logging.info)
         try:
-            output = utils.system_output(cmd)
-        except error.CmdError, e:
-            if "does not support checks" in str(e):
+            output = utils.system_output(cmd, verbose=False)
+        except error.CmdError, err:
+            if "does not support checks" in str(err):
                 return (True, "")
             else:
-                return (False, str(e))
+                return (False, str(err))
         return (True, output)
 
 
@@ -51,28 +54,29 @@ def run_qemu_img(test, params, env):
         """
         test_image = utils_misc.get_path(data_dir.get_data_dir(),
                                          params["image_name_dd"])
-        print "test_image = %s" % test_image
         create_image_cmd = params["create_image_cmd"]
         create_image_cmd = create_image_cmd % test_image
-        print "create_image_cmd = %s" % create_image_cmd
-        utils.system(create_image_cmd)
-        s, o = _check(cmd, test_image)
-        if not s:
+        msg = " Create image %s by command %s" % (test_image, create_image_cmd)
+        error.context(msg, logging.info)
+        utils.system(create_image_cmd, verbose=False)
+        status, output = _check(cmd, test_image)
+        if not status:
             raise error.TestFail("Check image '%s' failed with error: %s" %
-                                                           (test_image, o))
+                                                          (test_image, output))
         for fmt in params["supported_image_formats"].split():
             output_image = test_image + ".%s" % fmt
             _convert(cmd, fmt, test_image, output_image)
-            s, o = _check(cmd, output_image)
-            if not s:
+            status, output = _check(cmd, output_image)
+            if not status:
                 raise error.TestFail("Check image '%s' got error: %s" %
-                                                     (output_image, o))
+                                                     (output_image, output))
             os.remove(output_image)
         os.remove(test_image)
 
 
     def _create(cmd, img_name, fmt, img_size=None, base_img=None,
-               base_img_fmt=None, encrypted="no"):
+                base_img_fmt=None, encrypted="no",
+                preallocated="no", cluster_size=None):
         """
         Simple wrapper of 'qemu-img create'
 
@@ -95,8 +99,17 @@ def run_qemu_img(test, params, env):
         cmd += " %s" % img_name
         if img_size:
             cmd += " %s" % img_size
-        utils.system(cmd)
-
+        if preallocated == "yes":
+            cmd += " -o preallocation=metadata"
+        if cluster_size is not None:
+            cmd += " -o cluster_size=%s" % cluster_size
+        msg = "Creating image %s by command %s" % (img_name, cmd)
+        error.context(msg, logging.info)
+        utils.system(cmd, verbose=False)
+        status, out = _check(qemu_img_binary, img_name)
+        if not status:
+            raise error.TestFail("Check image '%s' got error: %s" %
+                                 (img_name, out))
 
     def create_test(cmd):
         """
@@ -105,10 +118,15 @@ def run_qemu_img(test, params, env):
         @param cmd: qemu-img base command.
         """
         image_large = params["image_name_large"]
-        img = utils_misc.get_path(data_dir.get_data_dir(), image_large)
-        img += '.' + image_format
+        device = params.get("device")
+        if not device:
+            img = utils_misc.get_path(data_dir.get_data_dir(), image_large)
+            img += '.' + image_format
+        else:
+            img = device
         _create(cmd, img_name=img, fmt=image_format,
-               img_size=params["image_size_large"])
+                img_size=params["image_size_large"],
+                preallocated=params.get("preallocated", "no"))
         os.remove(img)
 
 
@@ -133,9 +151,18 @@ def run_qemu_img(test, params, env):
         if fmt:
             cmd += " -f %s" % fmt
         cmd += " -O %s" % output_fmt
+        options = params.get("qemu_img_options")
+        if options:
+            options = options.split()
+            cmd += " -o "
+            for option in options:
+                value = params.get(option)
+                cmd += "%s=%s," % (option, value)
+            cmd = cmd.rstrip(",")
         cmd += " %s %s" % (img_name, output_filename)
-        logging.info("Converting '%s' from format '%s' to '%s'", img_name, fmt,
-                     output_fmt)
+        msg = "Converting '%s' from format '%s'" % (img_name, fmt)
+        msg += " to '%s'" % output_fmt
+        error.context(msg, logging.info)
         utils.system(cmd)
 
 
@@ -146,18 +173,23 @@ def run_qemu_img(test, params, env):
         @param cmd: qemu-img base command.
         """
         dest_img_fmt = params["dest_image_format"]
-        output_filename = "%s.converted_%s" % (image_name, dest_img_fmt)
-
+        output_filename = "%s.converted_%s.%s" % (image_name,
+                                                  dest_img_fmt, dest_img_fmt)
+ 
         _convert(cmd, dest_img_fmt, image_name, output_filename,
                 image_format, params["compressed"], params["encrypted"])
+        orig_img_name = params.get("image_name")
+        img_name = "%s.%s.converted_%s" % (orig_img_name,
+                                           image_format, dest_img_fmt)
+        _boot(img_name, dest_img_fmt)
 
         if dest_img_fmt == "qcow2":
-            s, o = _check(cmd, output_filename)
-            if s:
+            status, output = _check(cmd, output_filename)
+            if status:
                 os.remove(output_filename)
             else:
                 raise error.TestFail("Check image '%s' failed with error: %s" %
-                                                        (output_filename, o))
+                                                     (output_filename, output))
         else:
             os.remove(output_filename)
 
@@ -178,8 +210,8 @@ def run_qemu_img(test, params, env):
 
         try:
             output = utils.system_output(cmd)
-        except error.CmdError, e:
-            logging.error("Get info of image '%s' failed: %s", img, str(e))
+        except error.CmdError, err:
+            logging.error("Get info of image '%s' failed: %s", img, str(err))
             return None
 
         if not sub_info:
@@ -219,25 +251,29 @@ def run_qemu_img(test, params, env):
             crtcmd = cmd
             sn_name = "snapshot%d" % i
             crtcmd += " -c %s %s" % (sn_name, image_name)
-            s, o = commands.getstatusoutput(crtcmd)
-            if s != 0:
+            msg = "Created snapshot '%s' in '%s' by command %s" % (sn_name,
+                    image_name, crtcmd)
+            error.context(msg, logging.info)
+            status, output = commands.getstatusoutput(crtcmd)
+            if status != 0:
                 raise error.TestFail("Create snapshot failed via command: %s;"
-                                     "Output is: %s" % (crtcmd, o))
-            logging.info("Created snapshot '%s' in '%s'", sn_name, image_name)
+                                     "Output is: %s" % (crtcmd, output))
         listcmd = cmd
         listcmd += " -l %s" % image_name
-        s, o = commands.getstatusoutput(listcmd)
-        if not ("snapshot0" in o and "snapshot1" in o and s == 0):
+        status, out = commands.getstatusoutput(listcmd)
+        if not ("snapshot0" in out and "snapshot1" in out and status == 0):
             raise error.TestFail("Snapshot created failed or missed;"
-                                 "snapshot list is: \n%s" % o)
+                                 "snapshot list is: \n%s" % out)
         for i in range(2):
             sn_name = "snapshot%d" % i
             delcmd = cmd
             delcmd += " -d %s %s" % (sn_name, image_name)
-            s, o = commands.getstatusoutput(delcmd)
-            if s != 0:
+            msg = "Delete snapshot '%s' by command %s" % (sn_name, delcmd)
+            error.context(msg, logging.info)
+            status, output = commands.getstatusoutput(delcmd)
+            if status != 0:
                 raise error.TestFail("Delete snapshot '%s' failed: %s" %
-                                                     (sn_name, o))
+                                                     (sn_name, output))
 
 
     def commit_test(cmd):
@@ -261,7 +297,16 @@ def run_qemu_img(test, params, env):
         image_name = os.path.join(data_dir.get_data_dir(), image_name)
         image_format = params.get("image_format", "qcow2")
         backing_file_name = "%s_bak" % (image_name)
-
+        file_create_cmd = params.get("file_create_cmd",
+                                     "touch /commit_testfile")
+        file_info_cmd = params.get("file_info_cmd",
+                                   "ls / | grep commit_testfile")
+        file_exist_chk_cmd = params.get("file_exist_chk_cmd",
+                                        "[ -e /commit_testfile ] && echo $?")
+        file_not_exist_chk_cmd = params.get("file_not_exist_chk_cmd",
+                                       "[ ! -e /commit_testfile ] && echo $?")
+        file_del_cmd = params.get("file_del_cmd",
+                                  "rm -f /commit_testfile")
         try:
             # Remove the existing backing file
             backing_file = "%s.%s" % (backing_file_name, image_format)
@@ -274,9 +319,11 @@ def run_qemu_img(test, params, env):
                                                                   image_format,
                                                              backing_file_name,
                                                                   image_format)
+            msg = "Create backing file by command: %s" % create_cmd
+            error.context(msg, logging.info)
             try:
-                utils.system(create_cmd)
-            except error.CmdError, e:
+                utils.system(create_cmd, verbose=False)
+            except error.CmdError:
                 raise error.TestFail("Could not create a backing file!")
             logging.info("backing_file created!")
 
@@ -286,24 +333,24 @@ def run_qemu_img(test, params, env):
             logging.info("Param image_name changed to: %s",
                          params.get('image_name'))
 
-            # Start a new VM, using backing file as its harddisk
+            msg = "Start a new VM, using backing file as its harddisk"
+            error.context(msg, logging.info)
             vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
-            vm.create()
+            vm.verify_alive()
             timeout = int(params.get("login_timeout", 360))
             session = vm.wait_for_login(timeout=timeout)
 
             # Do some changes to the backing_file harddisk
             try:
-                output = session.cmd("touch /commit_testfile")
-                logging.info("Output of touch /commit_testfile: %s", output)
-                output = session.cmd("ls / | grep commit_testfile")
-                logging.info("Output of ls / | grep commit_testfile: %s",
-                             output)
-            except Exception, e:
+                output = session.cmd(file_create_cmd)
+                logging.info("Output of %s: %s", file_create_cmd, output)
+                output = session.cmd(file_info_cmd)
+                logging.info("Output of %s: %s", file_info_cmd, output)
+            except Exception, err:
                 raise error.TestFail("Could not create commit_testfile in the "
-                                     "backing file %s" % e)
+                                     "backing file %s" % err)
             vm.destroy()
 
             # Make sure there is no effect on the original harddisk
@@ -318,40 +365,40 @@ def run_qemu_img(test, params, env):
             vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
-            vm.create()
+            vm.verify_alive()
             timeout = int(params.get("login_timeout", 360))
             session = vm.wait_for_login(timeout=timeout)
             try:
-                output = session.cmd("[ ! -e /commit_testfile ] && echo $?")
-                logging.info("Output of [ ! -e /commit_testfile ] && echo $?: "
-                             "%s", output)
+                output = session.cmd(file_not_exist_chk_cmd)
+                logging.info("Output of %s: %s", file_not_exist_chk_cmd, output)
             except Exception:
-                output = session.cmd("rm -f /commit_testfile")
+                output = session.cmd(file_del_cmd)
                 raise error.TestFail("The commit_testfile exists on the "
                                      "original file")
             vm.destroy()
 
             # Excecute the commit command
-            logging.info("Commiting image")
-            cmitcmd = "%s commit -f %s %s.%s" % (cmd, image_format, backing_file_name,
-                                          image_format)
+            cmitcmd = "%s commit -f %s %s.%s" % (cmd, image_format,
+                                                 backing_file_name,
+                                                 image_format)
+            error.context("Commiting image by command %s" % cmitcmd,
+                          logging.info)
             try:
-                utils.system(cmitcmd)
-            except error.CmdError, e:
+                utils.system(cmitcmd, verbose=False)
+            except error.CmdError:
                 raise error.TestFail("Could not commit the backing file")
 
             # Start a new VM, using image_name as its harddisk
             vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
-            vm.create()
+            vm.verify_alive()
             timeout = int(params.get("login_timeout", 360))
             session = vm.wait_for_login(timeout=timeout)
             try:
-                output = session.cmd("[ -e /commit_testfile ] && echo $?")
-                logging.info("Output of [ -e /commit_testfile ] && echo $?: %s",
-                             output)
-                session.cmd("rm -f /commit_testfile")
+                output = session.cmd(file_exist_chk_cmd)
+                logging.info("Output of %s: %s", file_exist_chk_cmd, output)
+                session.cmd(file_del_cmd)
             except Exception:
                 raise error.TestFail("Could not find commit_testfile after a "
                                      "commit")
@@ -377,11 +424,13 @@ def run_qemu_img(test, params, env):
         if mode == "unsafe":
             cmd += " -u"
         cmd += " -b %s -F %s %s" % (base_img, backing_fmt, img_name)
-        logging.info("Trying to rebase '%s' to '%s'...", img_name, base_img)
-        s, o = commands.getstatusoutput(cmd)
-        if s != 0:
+        msg = "Trying to rebase '%s' to '%s' by command %s" % (img_name,
+                                                             base_img, cmd)
+        error.context(msg, logging.info)
+        status, output = commands.getstatusoutput(cmd)
+        if status != 0:
             raise error.TestError("Failed to rebase '%s' to '%s': %s" %
-                                               (img_name, base_img, o))
+                                               (img_name, base_img, output))
 
 
     def rebase_test(cmd):
@@ -415,6 +464,10 @@ def run_qemu_img(test, params, env):
             os.remove(sn1)
 
         _rebase(cmd, sn2, base_img, image_format, mode=rebase_mode)
+        # Boot base image after rebase
+        img_suffix = ".%s" % image_format
+        img_name = base_img.split(img_suffix)[0]
+        _boot(img_name, image_format)
 
         # Check sn2's format and backing_file
         actual_base_img = _info(cmd, sn2, "backing file")
@@ -423,10 +476,10 @@ def run_qemu_img(test, params, env):
             raise error.TestFail("After rebase the backing_file of 'sn2' is "
                                  "'%s' which is not expected as '%s'"
                                  % (actual_base_img, base_img_name))
-        s, o = _check(cmd, sn2)
-        if not s:
+        status, output = _check(cmd, sn2)
+        if not status:
             raise error.TestFail("Check image '%s' failed after rebase;"
-                                 "got error: %s" % (sn2, o))
+                                 "got error: %s" % (sn2, output))
         try:
             os.remove(sn2)
             os.remove(sn1)
@@ -434,6 +487,50 @@ def run_qemu_img(test, params, env):
             pass
 
 
+    def _boot(img_name, img_fmt):
+        """
+        Boot test:
+        1) Login guest
+        2) Run dd in rhel guest
+        3) Shutdown guest
+
+        @param img_name: image name
+        @param img_fmt: image format
+        """
+        params['image_name'] = img_name
+        params['image_format'] = img_fmt
+        image_name = "%s.%s" % (img_name, img_fmt)
+        msg = "Try to boot vm with image %s" % image_name
+        error.context(msg, logging.info)
+        vm_name = params.get("main_vm")
+        dd_timeout = int(params.get("dd_timeout", 60))
+        params['vms'] = vm_name
+        env_process.preprocess_vm(test, params, env, vm_name)
+        vm = env.get_vm(params.get("main_vm"))
+        vm.verify_alive()
+        login_timeout = int(params.get("login_timeout", 360))
+        session = vm.wait_for_login(timeout=login_timeout)
+
+        # Run dd in linux guest
+        if params.get("os_type") == 'linux':
+            cmd = "dd if=/dev/zero of=/mnt/test bs=1000 count=1000"
+            status = session.get_command_status(cmd, timeout=dd_timeout)
+            if status != 0:
+                raise error.TestError("dd failed")
+
+        # Shutdown guest
+        error.context("Shutdown command is sent, guest is going down...",
+                      logging.info)
+        try:
+            session.sendline(params.get("shutdown_command"))
+            if not utils_misc.wait_for(vm.is_dead, login_timeout):
+                raise error.TestFail("Can not shutdown guest")
+
+            logging.info("Guest is down")
+        finally:
+            session.close()
+
     # Here starts test
     subcommand = params["subcommand"]
+    error.context("Running %s_test(cmd)" % subcommand, logging.info)
     eval("%s_test(cmd)" % subcommand)
