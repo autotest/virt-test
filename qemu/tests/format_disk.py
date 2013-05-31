@@ -68,23 +68,24 @@ def run_format_disk(test, params, env):
             raise error.TestFail("Failed to mount with error: %s" % o)
         logging.info("Output of mount disk command: %s" % o)
 
-    error.context("Write some random string to test file", logging.info)
     testfile_name = params.get("testfile_name")
-    ranstr = utils_misc.generate_random_string(100)
+    if testfile_name:
+        error.context("Write some random string to test file", logging.info)
+        ranstr = utils_misc.generate_random_string(100)
 
-    writefile_cmd = params.get("writefile_cmd")
-    wfilecmd = writefile_cmd + " " + ranstr + " >" + testfile_name
-    s, o = session.cmd_status_output(wfilecmd, timeout=cmd_timeout)
-    if s != 0:
-        raise error.TestFail("Write to file error: %s" % o)
+        writefile_cmd = params.get("writefile_cmd")
+        wfilecmd = writefile_cmd + " " + ranstr + " >" + testfile_name
+        s, o = session.cmd_status_output(wfilecmd, timeout=cmd_timeout)
+        if s != 0:
+            raise error.TestFail("Write to file error: %s" % o)
 
-    error.context("Read in the file to see whether content has changed",
-                  logging.info)
-    readfile_cmd = params.get("readfile_cmd")
-    rfilecmd = readfile_cmd + " " + testfile_name
-    s, o = session.cmd_status_output(rfilecmd, timeout=cmd_timeout)
-    if s != 0:
-        raise error.TestFail("Read file error: %s" % o)
-    if o.strip() != ranstr:
-        raise error.TestFail("The content writen to file has changed")
+        error.context("Read in the file to see whether content has changed",
+                      logging.info)
+        readfile_cmd = params.get("readfile_cmd")
+        rfilecmd = readfile_cmd + " " + testfile_name
+        s, o = session.cmd_status_output(rfilecmd, timeout=cmd_timeout)
+        if s != 0:
+            raise error.TestFail("Read file error: %s" % o)
+        if o.strip() != ranstr:
+            raise error.TestFail("The content writen to file has changed")
     session.close()
