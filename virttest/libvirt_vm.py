@@ -206,6 +206,14 @@ class VM(virt_vm.BaseVM):
         except error.CmdError:
             return False
 
+
+    def exists(self):
+        """
+        Return True if VM exists.
+        """
+        return virsh.domain_exists(self.name, uri=self.connect_uri)
+
+
     def undefine(self):
         """
         Undefine the VM.
