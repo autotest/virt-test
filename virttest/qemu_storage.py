@@ -427,7 +427,7 @@ class Iscsidev(storage.Iscsidev):
         @param root_dir: Base directory for relative filenames.
         @param tag: Image tag defined in parameter images
         """
-        super(Iscsidev, self).__init__(self, params, root_dir, tag)
+        super(Iscsidev, self).__init__(params, root_dir, tag)
 
 
     def setup(self):
