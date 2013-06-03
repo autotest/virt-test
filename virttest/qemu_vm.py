@@ -3204,17 +3204,6 @@ class VM(virt_vm.BaseVM):
             if not_wait_for_migration:
                 return clone
 
-            if (local and (migration_exec_cmd_src
-                           and "gzip" in migration_exec_cmd_src)):
-                error.context("creating destination VM")
-                if stable_check:
-                    # Pause the dest vm after creation
-                    extra_params = clone.params.get("extra_params", "") + " -S"
-                    clone.params["extra_params"] = extra_params
-                clone.create(migration_mode=protocol, mac_source=self,
-                             migration_fd=fd_dst,
-                             migration_exec_cmd=migration_exec_cmd_dst)
-
             if cancel_delay:
                 time.sleep(cancel_delay)
                 self.monitor.cmd("migrate_cancel")
@@ -3225,6 +3214,17 @@ class VM(virt_vm.BaseVM):
                 return
 
             self.wait_for_migration(timeout)
+
+            if (local and (migration_exec_cmd_src
+                           and "gzip" in migration_exec_cmd_src)):
+                error.context("creating destination VM")
+                if stable_check:
+                    # Pause the dest vm after creation
+                    extra_params = clone.params.get("extra_params", "") + " -S"
+                    clone.params["extra_params"] = extra_params
+                clone.create(migration_mode=protocol, mac_source=self,
+                             migration_fd=fd_dst,
+                             migration_exec_cmd=migration_exec_cmd_dst)
 
             self.verify_alive()
 
