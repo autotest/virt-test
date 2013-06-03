@@ -107,7 +107,7 @@ class QemuImg(storage.QemuImg):
             qemu_img_cmd += " %s" % self.size
 
         image_dirname = os.path.dirname(self.image_filename)
-        if not os.path.isdir(image_dirname):
+        if image_dirname and not os.path.isdir(image_dirname):
             e_msg = ("Parent directory of the image file %s does "
                      "not exist" % self.image_filename)
             logging.error(e_msg)
