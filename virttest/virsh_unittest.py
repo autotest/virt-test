@@ -172,9 +172,11 @@ class ModuleLoadCheckVirsh(unittest.TestCase):
 
 class VirshHasHelpCommandTest(ModuleLoadCheckVirsh):
 
+
     def setUp(self):
         # subclasses override self.virsh
         self.VIRSH_COMMAND_CACHE = self.virsh.VIRSH_COMMAND_CACHE
+
 
     def test_false_command(self):
         self.assertFalse(self.virsh.has_help_command('print'))
@@ -195,10 +197,29 @@ class VirshHasHelpCommandTest(ModuleLoadCheckVirsh):
         self.VIRSH_COMMAND_CACHE = []
         self.assertTrue(self.virsh.has_help_command('uri'))
 
+
     def test_subcommand_help(self):
         regex = r'\s+\[--command\]\s+\<string\>\s+'
         self.assertTrue(self.virsh.has_command_help_match('help', regex))
         self.assertFalse(self.virsh.has_command_help_match('uri', regex))
+
+
+    def test_groups_in_commands(self):
+        # groups will be empty in older libvirt, but test will still work
+        groups = self.virsh.help_command_group(cache=True)
+        groups_set = set(groups)
+        commands = self.virsh.help_command_only(cache=True)
+        commands_set = set(commands)
+        grp_cmd = self.virsh.help_command(cache=True)
+        grp_cmd_set = set(grp_cmd)
+        # No duplicates check
+        self.assertEqual(len(commands_set), len(commands))
+        self.assertEqual(len(groups_set), len(groups))
+        self.assertEqual(len(grp_cmd_set), len(grp_cmd))
+        # No groups in commands or commands in groups
+        self.assertEqual(len(groups_set & commands_set), 0)
+        # Groups and Commands in help_command
+        self.assertTrue(len(grp_cmd_set), len(commands_set) + len(groups_set))
 
 
 class VirshHelpCommandTest(ModuleLoadCheckVirsh):

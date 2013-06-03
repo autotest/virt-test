@@ -1686,7 +1686,8 @@ def has_help_command(virsh_cmd, options='', **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: True/False
     """
-    return bool(help_command(options, cache=True, **dargs).count(virsh_cmd))
+    return bool( help_command_only(options, cache=True,
+                 **dargs).count(virsh_cmd) )
 
 
 def has_command_help_match(virsh_cmd, regex, **dargs):
