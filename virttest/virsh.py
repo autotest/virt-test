@@ -1623,11 +1623,8 @@ def help_command_only(options='', cache=False, **dargs):
     global VIRSH_COMMAND_CACHE
     if not VIRSH_COMMAND_CACHE or cache is False:
         VIRSH_COMMAND_CACHE = []
-        cmd = 'help'
-        if options:
-            cmd += (' ' + options)
         regx_command_word = re.compile(r"\s+([a-z0-9-]+)\s+")
-        for line in command(cmd, **dargs).stdout.strip().splitlines():
+        for line in help(options, **dargs).stdout.strip().splitlines():
             # Get rid of 'keyword' line
             if line.find("keyword") != -1:
                 continue
@@ -1653,11 +1650,8 @@ def help_command_group(options='', cache=False, **dargs):
         return []
     if not VIRSH_COMMAND_GROUP_CACHE or cache is False:
         VIRSH_COMMAND_GROUP_CACHE = []
-        cmd = 'help'
-        if options:
-            cmd += (' ' + options)
         regx_group_word = re.compile(r"[\']([a-zA-Z0-9]+)[\']")
-        for line in command(cmd, **dargs).stdout.strip().splitlines():
+        for line in help(options, **dargs).stdout.strip().splitlines():
             # 'keyword' only exists in group line.
             if line.find("keyword") != -1:
                 mojb_group_word = regx_group_word.search(line)
@@ -1669,29 +1663,41 @@ def help_command_group(options='', cache=False, **dargs):
     return list(VIRSH_COMMAND_GROUP_CACHE)
 
 
-def has_help_command(cmd, options='', **dargs):
+def has_help_command(virsh_cmd, options='', **dargs):
     """
-    String match on cmd in help output command list
+    String match on virsh command in help output command list
 
-    @param: cmd: Name of command to look for
+    @param: virsh_cmd: Name of virsh command or group to look for
     @param: options: Additional options to send to help command
     @param: dargs: standardized virsh function API keywords
     @return: True/False
     """
-    return bool(help_command(options, cache=True, **dargs).count(cmd))
+    return bool(help_command(options, cache=True, **dargs).count(virsh_cmd))
 
 
-def has_command_help_match(cmd, regex, **dargs):
+def has_command_help_match(virsh_cmd, regex, **dargs):
     """
     Regex search on subcommand help output
 
-    @param: cmd: Name of command to match help output
+    @param: virsh_cmd: Name of virsh command or group to match help output
     @param: regex: regular expression string to match
     @param: dargs: standardized virsh function API keywords
     @return: re match object
     """
-    command_help_output = command("help %s" % cmd, **dargs).stdout.strip()
+    command_help_output = help(virsh_cmd, **dargs).stdout.strip()
     return re.search(regex, command_help_output)
+
+
+def help(virsh_cmd='', **dargs):
+    """
+    Prints global help, command specific help, or help for a
+    group of related commands
+
+    @param virsh_cmd: Name of virsh command or group
+    @param: dargs: standardized virsh function API keywords
+    @returns: CmdResult instance
+    """
+    return command("help %s" % virsh_cmd, **dargs)
 
 
 def schedinfo(domain, options="", **dargs):
