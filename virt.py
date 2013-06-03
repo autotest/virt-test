@@ -120,7 +120,14 @@ class virt(test.test):
                         f.close()
                     # Preprocess
                     try:
-                        env_process.preprocess(self, params, env)
+                        update_params = env_process.preprocess(self, params, env)
+                        if update_params:
+                            for i in update_params.keys():
+                                if i in params.keys():
+                                    params[i] = update_params[i]
+                                else:
+                                    logging.error("Can not find %s in params. "
+                                                  "Give up to update it." % i)
                     finally:
                         env.save()
                     # Run the test function
