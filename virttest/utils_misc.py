@@ -1604,3 +1604,20 @@ def selinux_enforcing():
     cmdresult = utils.run('getenforce', ignore_status=True, verbose=False)
     mobj = re.search('Enforcing', cmdresult.stdout)
     return mobj is not None
+
+def get_winutils_vol(session, label="WIN_UTILS"):
+    """
+    Return Volum ID of winutils CDROM;ISO file should be create via command:
+    mkisofs -V $label -o winutils.iso
+
+    @parm session: session Object
+    @parm label:volum ID of WIN_UTILS.iso
+
+    @return: volum ID
+    """
+    cmd = "wmic logicaldisk where (VolumeName='%s') get DeviceID" % label
+    output = session.cmd(cmd, timeout=120)
+    device = re.search(r'(\w):', output, re.M)
+    if not device:
+        return ""
+    return device.group(1)
