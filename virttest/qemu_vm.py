@@ -2017,12 +2017,12 @@ class VM(virt_vm.BaseVM):
                                      params.get("watchdog_device_type", None),
                                      params.get("watchdog_action", "reset"))
 
-        return qemu_cmd
-
         option_roms = params.get("option_roms")
         if option_roms:
             for opt_rom in option_roms.split():
                 qemu_cmd += add_option_rom(help, opt_rom)
+
+        return qemu_cmd
 
 
     def _nic_tap_add_helper(self, nic):
