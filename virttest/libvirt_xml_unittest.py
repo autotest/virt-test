@@ -339,6 +339,22 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertEqual(vmxml.hypervisor_type, 'kvm')
 
 
+    def test_seclabel(self):
+        vmxml = self._from_scratch()
+        vmxml.set_seclabel({'type':"dynamic"})
+
+        seclabel_dict = {'type':'test_type', 'model':'test_model',
+                         'relabel':'test_relabel', 'label':'test_label',
+                         'baselabel':'test_baselabel',
+                         'imagelabel':'test_imagelabel'}
+        vmxml.set_seclabel(seclabel_dict)
+
+        seclabel = vmxml.get_seclabel()
+
+        for key, value in seclabel_dict.items():
+            self.assertEqual(seclabel[key], value)
+
+
 class testNetworkXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
