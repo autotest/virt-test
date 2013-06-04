@@ -36,12 +36,14 @@ def run_virsh_domxml_from_native(test, params, env):
 
     libvirtd = params.get("libvirtd")
     dfn_format = params.get("dfn_format")
-    guest_args = params.get("dfn_guest_args")
+    guest_args = params.get("dfn_guest_args", "")
     invalid_guest_args = params.get("dfn_invalid_guest_args")
     status_error = params.get("status_error")
 
     #put vm's infomation to a file
     if guest_args != "":
+        if os.path.dirname(guest_args) is "":
+            guest_args = os.path.join(test.tmpdir, guest_args)
         virsh_convxml(guest_args)
 
     #libvirtd off
