@@ -29,6 +29,8 @@ KVM_TEST_LOGGING
 @network-tools
 @x11
 @basic-desktop
+@fonts
+@Smart Card Support
 NetworkManager
 ntpdate
 watchdog
@@ -39,6 +41,7 @@ virt-viewer
 spice-vdagent
 usbredir
 SDL
+totem
 %end
 
 %post
@@ -57,4 +60,11 @@ cat > '/mnt/sysimage/etc/gdm/custom.conf' << EOF
 AutomaticLogin=test
 AutomaticLoginEnable=True
 EOF
+echo 'test ALL = NOPASSWD: /sbin/shutdown -r now,/sbin/shutdown -h now' >> /etc/sudoers
+echo "alias shutdown='sudo shutdown'" >> /home/test/.bashrc
+echo 'modprobe snd-aloop' > /etc/rc.modules
+echo 'modprobe snd-pcm-oss' >> /etc/rc.modules
+echo 'modprobe snd-mixer-oss' >> /etc/rc.modules
+echo 'modprobe snd-seq-oss' >> /etc/rc.modules
+chmod +x /etc/rc.modules
 %end
