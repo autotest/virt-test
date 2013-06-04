@@ -116,7 +116,10 @@ class QBaseDevice(object):
             elif value in ['no', 'off', False]:
                 self.params[option] = "off"
         elif value or value == 0:
-            self.params[option] = value
+            if option_type is 'NEED_QUOTE':
+                self.params[option] = "'%s'" % value
+            else:
+                self.params[option] = value
         elif value is None and option in self.params:
             del(self.params[option])
 
@@ -287,6 +290,70 @@ class QStringDevice(QBaseDevice):
         except KeyError, details:
             raise KeyError("Param %s required for readconfig is not present in"
                            " %s" % (details, self.str_long()))
+
+
+class QCustomDevice(QBaseDevice):
+    """
+    Representation of the '-$option $param1=$value1,$param2...' qemu object.
+    This representation handles only cmdline and readconfig outputs.
+    """
+    def __init__(self, dev_type, params=None, aobject=None,
+                 parent_bus=None, child_bus=None):
+        """
+        @param dev_type: The desired -$option parameter (device, chardev, ..)
+        """
+        super(QCustomDevice, self).__init__(dev_type, params, aobject,
+                                            parent_bus, child_bus)
+
+    def cmdline(self):
+        """ @return: cmdline command to define this device """
+        out = "-%s " % self.type
+        for key, value in self.params.iteritems():
+            out += "%s=%s," % (key, value)
+        if out[-1] == ',':
+            out = out[:-1]
+        return out
+
+    def readconfig(self):
+        """ @return: readconfig-like config of this device """
+        out = "[%s" % self.type
+        if self.get_qid():
+            out += ' "%s"' % self.get_qid()
+        out += "]\n"
+        for key, value in self.params.iteritems():
+            if key == "id":
+                continue
+            if value.startswith("'") and value.endswith("'"):
+                out += '  %s = "%s"\n' % (key, value[1:-1])
+            else:
+                out += '  %s = "%s"\n' % (key, value)
+        return out
+
+
+class QDevice(QCustomDevice):
+    """
+    Representation of the '-device' qemu object. It supports all methods.
+    @note: Use driver format in full form - 'driver' = '...' (usb-ehci, ide-hd)
+    """
+    def __init__(self, driver=None, params=None, aobject=None,
+                 parent_bus=None, child_bus=None):
+        super(QDevice, self).__init__("device", params, aobject, parent_bus,
+                                      child_bus)
+        if driver:
+            self['driver'] = driver
+
+    def _get_alternative_name(self):
+        """ @return: alternative object name """
+        if self.params.get('driver'):
+            return self.params.get('driver')
+
+    def hotplug_hmp(self):
+        """ @return: the hotplug monitor command """
+        return "device_add %s" % _convert_args(self.params)
+
+    def hotplug_qmp(self):
+        """ @return: the hotplug monitor command """
+        return "device_add", self.params
 
 
 ##############################################################################
@@ -876,7 +943,7 @@ class DevContainer(object):
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
         self.__qmp_cmds = get_qmp_cmds(qemu_binary)
         self.vmname = vmname
-        self.strict_mode = strict_mode
+        self.strict_mode = strict_mode == 'yes'
         self.__devices = []
         self.__buses = []
 
