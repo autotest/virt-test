@@ -233,14 +233,14 @@ class VM(virt_vm.BaseVM):
                 return usb_dev_list[port]
             except IndexError:
                 raise virt_vm.VMUSBControllerError("USB controller '%s'"
-                            " doesn't provide port '%d'" %(controller, port))
+                            " doesn't provide port '%d'" % (controller, port))
         else:
             try:
                 return usb_dev_list[port][hub_port]
             except IndexError:
                 raise virt_vm.VMUSBControllerError("usb hub on port '%d' of"
                                     " controller '%s' doesn't provide"
-                                    " port '%d'" %(port, controller, hub_port))
+                                    " port '%d'" % (port, controller, hub_port))
 
 
     def usb_assign_dev_to_port(self, usb_dev, controller, port, is_hub=False):
@@ -436,7 +436,7 @@ class VM(virt_vm.BaseVM):
                 # "EMPTY_STRING": set option as a empty string "".
                 # "NO_EQUAL_STRING": set option as a option string only,
                 #                    even without "=".
-                #       (In most case, qemu-kvm should recognize it as "<null>")
+                #      (In most case, qemu-kvm should recognize it as "<null>")
                 if value == "NO_EQUAL_STRING":
                     return ",%s" % option
                 if value == "EMPTY_STRING":
@@ -629,7 +629,8 @@ class VM(virt_vm.BaseVM):
                 dev = "";
                 if fmt == "ahci":
                     name = "ahci%s" % index
-                    dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
+                    dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index,
+                                                                        name)
                     fmt = "none"
                     index = None
                 if fmt in ['usb1', 'usb2', 'usb3']:
@@ -701,7 +702,8 @@ class VM(virt_vm.BaseVM):
             if fmt == "ahci":
                 tmp = "ahci%s" % (index or utils_misc.generate_random_id())
                 blkdev_id = tmp
-                dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index, name)
+                dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index,
+                                                                    name)
                 fmt = "none"
                 index = None
             elif fmt in ['usb1', 'usb2', 'usb3']:
@@ -983,8 +985,8 @@ class VM(virt_vm.BaseVM):
                     if bool(re.search(param, spice_help, re.M)):
                         cmd += ",%s=%s" % (param, value)
                     else:
-                        msg = ("parameter %s is not supported in spice. "
-                               "It only supports the following parameters:\n %s"
+                        msg = ("parameter %s is not supported in spice. It "
+                               "only supports the following parameters:\n %s"
                                % (param, spice_help))
                         logging.warn(msg)
                 else:
@@ -1033,7 +1035,8 @@ class VM(virt_vm.BaseVM):
                 set_value("port=%s", "spice_port")
 
             set_value("password=%s", "spice_password", "disable-ticketing")
-            set_yes_no_value("disable_copy_paste", yes_value="disable-copy-paste")
+            set_yes_no_value("disable_copy_paste",
+                             yes_value="disable-copy-paste")
             set_value("addr=%s", "spice_addr")
 
             if optget("spice_ssl") == "yes":
@@ -1209,8 +1212,9 @@ class VM(virt_vm.BaseVM):
                 self.usb_dev_dict["OLDVERSION_usb0"] = [None, None]
                 return " -usb"
 
-            if not has_device(device_help, usb_type):
-                raise error.TestNAError("usb controller %s not available" % usb_type)
+            if not devices.has_device(usb_type):
+                raise error.TestNAError("usb controller %s not available"
+                                        % usb_type)
 
             cmd = " -device %s" % usb_type
             cmd += _add_option("id", usb_id)
@@ -1237,8 +1241,9 @@ class VM(virt_vm.BaseVM):
             This function is used to add usb device except for usb storage.
             """
 
-            if not has_device(device_help, usb_type):
-                raise error.TestNAError("usb device %s not available" % usb_type)
+            if not devices.has_device(usb_type):
+                raise error.TestNAError("usb device %s not available"
+                                        % usb_type)
 
             cmd = ""
             if has_option(help_text, "device"):
@@ -1935,11 +1940,12 @@ class VM(virt_vm.BaseVM):
                 spice_keys = (
                     "spice_port", "spice_password", "spice_addr", "spice_ssl",
                     "spice_tls_port", "spice_tls_ciphers", "spice_gen_x509",
-                    "spice_x509_dir", "spice_x509_prefix", "spice_x509_key_file",
-                    "spice_x509_cacert_file", "spice_x509_key_password",
-                    "spice_x509_secure", "spice_x509_cacert_subj",
-                    "spice_x509_server_subj", "spice_secure_channels",
-                    "spice_image_compression", "spice_jpeg_wan_compression",
+                    "spice_x509_dir", "spice_x509_prefix",
+                    "spice_x509_key_file", "spice_x509_cacert_file",
+                    "spice_x509_key_password", "spice_x509_secure",
+                    "spice_x509_cacert_subj", "spice_x509_server_subj",
+                    "spice_secure_channels", "spice_image_compression",
+                    "spice_jpeg_wan_compression",
                     "spice_zlib_glz_wan_compression", "spice_streaming_video",
                     "spice_agent_mouse", "spice_playback_compression",
                     "spice_ipv4", "spice_ipv6", "spice_x509_cert_file",
@@ -2005,7 +2011,8 @@ class VM(virt_vm.BaseVM):
             elif p9_fs_driver == "proxy":
                 p9_socket_name = params.get("9p_socket_name")
                 if not p9_socket_name:
-                    raise virt_vm.VMImageMissingError("Socket name not defined")
+                    raise virt_vm.VMImageMissingError("Socket name not "
+                                                      "defined")
                 cmd += p9_socket_name
 
             p9_immediate_writeout = params.get("9p_immediate_writeout")
