@@ -20,10 +20,13 @@ def run_virsh_save(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    domid = virsh.domid(vm_name).strip()
-    domuuid = virsh.domuuid(vm_name).strip()
+    domid = vm.get_id().strip()
+    domuuid = vm.get_uuid().strip()
 
-    savefile = params.get("save_file")
+    savefile = params.get("save_file", "save.file")
+    # If savefile is not an abs path, join it to test.tmpdir
+    if os.path.dirname(savefile) is "":
+        savefile = os.path.join(test.tmpdir, savefile)
     pre_vm_state = params.get("save_pre_vm_state", "null")
     libvirtd = params.get("save_libvirtd")
     extra_param = params.get("save_extra_param")
