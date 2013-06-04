@@ -77,7 +77,7 @@ class VMXMLBase(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
                                                  'current_mem', 'numa',
-                                                 'devices')
+                                                 'devices', 'seclabel')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -168,6 +168,70 @@ class VMXMLBase(base.LibvirtXMLBase):
         """
         self.xmltreefile.remove_by_xpath('/devices')
         self.xmltreefile.write()
+
+
+    def get_seclabel(self):
+        """
+        Get the security label of vm.
+
+        @return: None if no seclabel in xml,
+                 dict of seclabel's attributs and children.
+        """
+        __children_list__ = ['label', 'baselabel', 'imagelabel']
+
+        seclabel_node = self.xmltreefile.find("seclabel")
+        #no seclabel tag found in xml.
+        if seclabel_node is None:
+            return None
+        seclabel = dict(seclabel_node.items())
+        for child_name in __children_list__:
+            child_node = seclabel_node.find(child_name)
+            if child_node is not None:
+                seclabel[child_name] = child_node.text
+
+        return seclabel
+
+    def set_seclabel(self, seclabel_dict):
+        """
+        Set seclabel of vm. Modify the attributs and children if seclabel
+        exists and create a new seclabel if seclabel is not found in
+        xmltreefile.
+        """
+        __attributs_list__ = ['type', 'model', 'relabel']
+        __children_list__ = ['label', 'baselabel', 'imagelabel']
+
+        #check the type of seclabel_dict.
+        if not isinstance(seclabel_dict, dict):
+            raise xcepts.LibvirtXMLError("seclabel_dict should be a instance of"
+                                         "dict, but not a %s.\n"
+                                         % type(seclabel_dict))
+        seclabel_node = self.xmltreefile.find("seclabel")
+        if seclabel_node is None:
+            seclabel_attr = {}
+            for attribute in __attributs_list__:
+                seclabel_attr[attribute] = ''
+
+            seclabel_node = xml_utils.ElementTree.SubElement(
+                                                self.xmltreefile.getroot(),
+                                                "seclabel", seclabel_attr)
+
+        for key, value in seclabel_dict.items():
+            if key in __children_list__:
+                child_node = seclabel_node.find(key)
+                if child_node is None:
+                    child_node = xml_utils.ElementTree.SubElement(seclabel_node,
+                                                                        key, {})
+                child_node.text = value
+
+            elif key in __attributs_list__:
+                seclabel_node.set(key, value)
+
+            else:
+                continue
+
+        self.xmltreefile.write()
+        self.undefine()
+        self.define()
 
 
 class VMXML(VMXMLBase):
