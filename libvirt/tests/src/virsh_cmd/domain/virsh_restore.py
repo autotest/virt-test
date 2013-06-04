@@ -32,9 +32,10 @@ def run_virsh_restore(test, params, env):
     else:
         if os_type == "linux":
             cmd = "cat /proc/cpuinfo"
-            status, output = session.cmd_status_output(cmd,
-                                                       internal_timeout = 10)
-            session.close()
+            try:
+                status, output = session.cmd_status_output(cmd, timeout=10)
+            finally:
+                session.close()
             if not re.search("processor", output):
                 raise error.TestFail("Unable to read /proc/cpuinfo")
         tmp_file = os.path.join(test.tmpdir, "save.file")
