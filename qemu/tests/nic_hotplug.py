@@ -2,7 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_test, utils_net, virt_vm
 
-
+@error.context_aware
 def run_nic_hotplug(test, params, env):
     """
     Test hotplug of NIC devices
@@ -14,7 +14,8 @@ def run_nic_hotplug(test, params, env):
     5) Disable primary link of guest
     6) Ping guest new ip from host
     7) Delete nic device and netdev
-    8) Re-enable primary link of guest
+    8) Ping guest's new ip address after guest pause/resume
+    9) Re-enable primary link of guest
 
     BEWARE OF THE NETWORK BRIDGE DEVICE USED FOR THIS TEST ("nettype=bridge"
     and "netdst=<bridgename>" param).  The KVM autotest default bridge virbr0,
@@ -45,6 +46,7 @@ def run_nic_hotplug(test, params, env):
             session.get_command_output("modprobe %s" % module)
 
     # hot-add the nic
+    error.context("Add network devices through monitor cmd", logging.info)
     nic_name = 'hotadded'
     nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name,
                               netdst=netdst, nettype=nettype)
@@ -56,30 +58,39 @@ def run_nic_hotplug(test, params, env):
         ifname = utils_net.get_linux_ifname(session, nic_info['mac'])
         session_serial.cmd("dhclient %s &" % ifname)
 
-    logging.info("Shutting down the primary link(s)")
+    error.context("Disable the primary link(s) of guest", logging.info)
     for nic in vm.virtnet:
         if not (nic.nic_name == nic_name):
             vm.set_link(nic.device_id, up=False)
 
     try:
-        logging.info("Waiting for new nic's ip address acquisition...")
+        error.context("Check if new interface gets ip address", logging.info)
         try:
             ip = vm.wait_for_get_address(nic_name)
         except virt_vm.VMIPAddressMissingError:
             raise error.TestFail("Could not get or verify ip address of nic")
         logging.info("Got the ip address of new nic: %s", ip)
 
-        logging.info("Ping test the new nic ...")
-        s, o = utils_test.ping(ip, 100)
+        error.context("Ping guest's new ip from host", logging.info)
+        s, o = utils_test.ping(ip, 10, timeout=15)
         if s != 0:
             logging.error(o)
             raise error.TestFail("New nic failed ping test")
+        error.context("Ping guest's new ip after pasue/resume", logging.info)
+        vm.monitor.cmd("stop")
+        vm.monitor.cmd("cont")
+        s, o = utils_test.ping(ip, 10, timeout=15)
+        if s != 0:
+            logging.error(o)
+            raise error.TestFail("New nic failed ping test after stop/cont")
 
         logging.info("Detaching the previously attached nic from vm")
+        error.context("Detaching the previously attached nic from vm",
+                      logging.info)
         vm.hotunplug_nic(nic_name)
 
     finally:
-        logging.info("Re-enabling the primary link(s)")
+        error.context("Re-enabling the primary link(s)", logging.info)
         for nic in vm.virtnet:
             if not (nic.nic_name == nic_name):
                 vm.set_link(nic.device_id, up=True)
