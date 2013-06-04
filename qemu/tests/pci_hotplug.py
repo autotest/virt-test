@@ -53,7 +53,7 @@ def run_pci_hotplug(test, params, env):
 
     def is_supported_device(dev):
         # Probe qemu to verify what is the supported syntax for PCI hotplug
-        cmd_output = vm.monitor.cmd("?")
+        cmd_output = vm.monitor.human_monitor_cmd("?")
         if len(re.findall("\ndevice_add", cmd_output)) > 0:
             cmd_type = "device_add"
         elif len(re.findall("\npci_add", cmd_output)) > 0:
@@ -62,7 +62,7 @@ def run_pci_hotplug(test, params, env):
             raise error.TestError("Unknow version of qemu")
 
         # Probe qemu for a list of supported devices
-        probe_output = vm.monitor.cmd("%s ?" % cmd_type)
+        probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)
         devices_supported = [j.strip('"') for j in
                              re.findall('\"[a-z|0-9|\-|\_|\,|\.]*\"',
                                         probe_output, re.MULTILINE)]
