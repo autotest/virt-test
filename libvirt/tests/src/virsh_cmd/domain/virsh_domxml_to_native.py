@@ -1,7 +1,7 @@
 import re, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_domxml_to_native(test, params, env):
@@ -68,7 +68,7 @@ def run_virsh_domxml_to_native(test, params, env):
     status_error = params.get("status_error")
     virsh.dumpxml(vm_name, extra="", to_file=file_xml)
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
     ret = virsh.domxml_to_native(dtn_format, file_xml, extra_param,
                                  ignore_status = True)
     status = ret.exit_status
@@ -76,7 +76,7 @@ def run_virsh_domxml_to_native(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #clean up
     if os.path.exists(file_xml):

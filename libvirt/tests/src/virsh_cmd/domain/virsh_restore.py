@@ -1,6 +1,6 @@
 import re, os
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_restore(test, params, env):
@@ -50,7 +50,7 @@ def run_virsh_restore(test, params, env):
         if pre_status == "start":
             virsh.start(vm_name)
         if libvirtd == "off":
-            libvirt_vm.libvirtd_stop()
+            utils_libvirtd.libvirtd_stop()
         status = virsh.restore(vm_ref, ignore_status=True).exit_status
         if os.path.exists(tmp_file):
             os.unlink(tmp_file)
@@ -61,7 +61,7 @@ def run_virsh_restore(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
     if vm.is_alive():
         vm.destroy()
 

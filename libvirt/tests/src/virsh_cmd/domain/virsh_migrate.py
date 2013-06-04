@@ -1,6 +1,6 @@
 import logging, os, re, time, codecs
 from autotest.client.shared import error
-from virttest import libvirt_vm, utils_test, virsh
+from virttest import utils_test, virsh, utils_libvirtd
 
 
 def run_virsh_migrate(test, params, env):
@@ -142,7 +142,7 @@ def run_virsh_migrate(test, params, env):
         # Turn libvirtd into certain state.
         logging.debug("Turning libvirtd into certain status.")
         if libvirtd_state == "off":
-            libvirt_vm.libvirtd_stop()
+            utils_libvirtd.libvirtd_stop()
 
         # Test uni-direction migration.
         logging.debug("Doing migration test.")
@@ -155,7 +155,7 @@ def run_virsh_migrate(test, params, env):
         # Recover libvirtd state.
         logging.debug("Recovering libvirtd status.")
         if libvirtd_state == "off":
-            libvirt_vm.libvirtd_start()
+            utils_libvirtd.libvirtd_start()
 
         # Check vm state on destination.
         logging.debug("Checking %s state on %s." % (vm.name, vm.connect_uri))
