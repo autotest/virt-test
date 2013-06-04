@@ -17,7 +17,7 @@ def run_block_stream_drop_backingfile(test, params, env):
     5). reboot guest vierfy it works correctly
     6). verify not backingfile with qemu-img command too;
 
-    @param test: Kvm test object
+    @param test: Qemu test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -30,16 +30,17 @@ def run_block_stream_drop_backingfile(test, params, env):
     image_dir = os.path.dirname(image_file)
     qemu_img = params.get("qemu_img_binary", "qemu-img")
     speed = int(params.get("limited_speed", 0))
+    wait_timeout = int(params.get("wait_timeout", 3600))
 
-    def wait_job_done():
+    def wait_job_done(timeout=3600):
         """
         Wait for job on the device done, raise TestFail exception if timeout;
         """
         if utils_misc.wait_for(lambda:
                                not vm.monitor.query_block_job(device_id),
-                               timeout=int(params.get("job_timeout", 3600)),
+                               timeout, first=0.2, step=2.0,
                                text="Wait for canceling block job") is None:
-            raise error.TestFail("Wait job finish timeout")
+            raise error.TestFail("Wait job finish timeout in %ss" % timeout)
 
     def verify_backingfile(except_backingfile):
         """
@@ -71,7 +72,7 @@ def run_block_stream_drop_backingfile(test, params, env):
 
         error.context("Merge sn1 to sn2", logging.info)
         vm.monitor.block_stream(device_id, base=image_file, speed=speed)
-        wait_job_done()
+        wait_job_done(wait_timeout)
         error.context("Check backing-file of sn2", logging.info)
         verify_backingfile(image_file)
         error.context("Check sn1 is not opening by qemu process",
@@ -81,7 +82,7 @@ def run_block_stream_drop_backingfile(test, params, env):
 
         error.context("Merge base to sn2", logging.info)
         vm.monitor.block_stream(device_id)
-        wait_job_done()
+        wait_job_done(wait_timeout)
         error.context("Check backing-file of sn2", logging.info)
         verify_backingfile(None)
         error.context("check sn1 and base are not opening by qemu process",
