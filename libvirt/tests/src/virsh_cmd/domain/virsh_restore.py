@@ -2,6 +2,7 @@ import re, os
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
 
+
 def run_virsh_restore(test, params, env):
     """
     Test command: virsh restore.
@@ -36,11 +37,12 @@ def run_virsh_restore(test, params, env):
             session.close()
             if not re.search("processor", output):
                 raise error.TestFail("Unable to read /proc/cpuinfo")
-        tmp_file = vm_ref
-        if vm_ref == "/tmp/save.file":
+        tmp_file = os.path.join(test.tmpdir, "save.file")
+        if vm_ref == "saved_file":
             virsh.save(vm_name, vm_ref)
             vm_ref = "%s %s" % (vm_ref, extra_param)
-        elif  vm_ref == "/tmp/new.file":
+        elif vm_ref == "empty_new_file":
+            tmp_file = os.path.join(test.tmpdir, "new.file")
             open(vm_ref, 'w').close()
         if vm.is_alive():
             vm.destroy()
@@ -49,7 +51,8 @@ def run_virsh_restore(test, params, env):
         if libvirtd == "off":
             libvirt_vm.libvirtd_stop()
         status = virsh.restore(vm_ref, ignore_status=True).exit_status
-        os.unlink(tmp_file)
+        if os.path.exists(tmp_file):
+            os.unlink(tmp_file)
     if status_error == "no":
         list_output = virsh.dom_list().stdout.strip()
 

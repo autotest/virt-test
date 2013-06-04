@@ -66,7 +66,9 @@ def run_virsh_dump(test, params, env):
     vm_name = params.get("main_vm", "vm1")
     vm = env.get_vm(params["main_vm"])
     options = params.get("dump_options")
-    dump_file = params.get("dump_file")
+    dump_file = params.get("dump_file", "vm.core")
+    if os.path.dirname(dump_file) is "":
+        dump_file = os.path.join(test.tmpdir, dump_file)
     dump_image_format = params.get("dump_image_format")
     start_vm = params.get("start_vm")
     status_error = params.get("status_error", "no")
@@ -186,7 +188,7 @@ def run_virsh_dump(test, params, env):
     else:
         raise error.TestFail("Libvirtd service is dead.")
 
-    if os.path.exists(dump_file):
+    if os.path.isfile(dump_file):
         os.remove(dump_file)
 
     if len(dump_image_format) != 0:
