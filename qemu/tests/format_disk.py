@@ -1,6 +1,6 @@
 import logging, re
 from autotest.client.shared import error
-from virttest import utils_misc
+from virttest import utils_misc, aexpect
 
 @error.context_aware
 def run_format_disk(test, params, env):
@@ -13,6 +13,8 @@ def run_format_disk(test, params, env):
     5) Format the disk
     6) Mount the disk
     7) Read in the file to see whether content has changed
+    8) Umount the disk (Optional)
+    9) Check dmesg output in guest (Optional)
 
     @param test: QEMU test object
     @param params: Dictionary with the test parameters
@@ -88,4 +90,31 @@ def run_format_disk(test, params, env):
             raise error.TestFail("Read file error: %s" % o)
         if o.strip() != ranstr:
             raise error.TestFail("The content writen to file has changed")
+
+    umount_cmd = params.get("umount_cmd")
+    if umount_cmd:
+        error.context("Unmounting disk(s) after file write/read operation")
+        session.cmd(umount_cmd)
+
+    output = ""
+    try:
+        output = session.cmd("dmesg -c")
+        error.context("Checking if there are I/O error messages in dmesg")
+    except aexpect.ShellCmdError:
+        pass
+
+    io_error_msg = []
+    for line in output.splitlines():
+        if "Buffer I/O error" in line:
+            io_error_msg.append(line)
+        if re.search("reset \w+ speed USB device", line):
+            io_error_msg.append(line)
+
+    if io_error_msg:
+        e_msg = "IO error found on guest's dmesg when formatting USB device"
+        logging.error(e_msg)
+        for line in io_error_msg:
+            logging.error(line)
+        raise error.TestFail(e_msg)
+
     session.close()
