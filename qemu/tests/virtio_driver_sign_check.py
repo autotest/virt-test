@@ -1,6 +1,6 @@
 import logging, os, re, time
-from autotest_lib.client.common_lib import error
-from autotest_lib.client.virt import virt_utils
+from autotest.client.shared import error
+from virttest import utils_misc
 
 
 def run_virtio_driver_sign_check(test, params, env):
@@ -10,7 +10,7 @@ def run_virtio_driver_sign_check(test, params, env):
     2) Install windows SDK in guest.
     3) use SignTool.exe to verify whether block driver digital signed
 
-    @param test: kvm test object
+    @param test: QEMU test object
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
@@ -39,7 +39,7 @@ def run_virtio_driver_sign_check(test, params, env):
     # Wait until guest start install sdk.
     time.sleep(10)
     logging.info("Waiting for guest sdk setup ...")
-    virt_utils.wait_for(is_sdksetup_finished, timeout=1800)
+    utils_misc.wait_for(is_sdksetup_finished, timeout=1800)
     results_all = """All the signature check log:\n"""
     fails_log = """Failed signature check log:\n"""
     fail_num = 0

@@ -8,9 +8,15 @@ from autotest.client.shared import error
 from virttest import aexpect
 
 
+@error.context_aware
 def run_dd_test(test, params, env):
     """
     Executes dd with defined parameters and checks the return number and output
+
+    Test steps:
+    1). wait guest boot up
+    2). run dd command in guest with special params(eg. oflag, bs and so on)
+    3). check command exit stauts and output
     """
     def _get_file(filename, select):
         """ Picks the actual file based on select value """
@@ -40,6 +46,8 @@ def run_dd_test(test, params, env):
 
     vm = env.get_vm(params['main_vm'])
     timeout = int(params.get("login_timeout", 360))
+
+    error.context("Wait guest boot up", logging.info)
     session = vm.wait_for_login(timeout=timeout)
 
     dd_if = params.get("dd_if")
@@ -79,6 +87,7 @@ def run_dd_test(test, params, env):
         dd_cmd += " seek=%s" % dd_seek
     logging.info("Using '%s' cmd", dd_cmd)
 
+    error.context("Execute dd in guest", logging.info)
     try:
         (stat, out) = session.cmd_status_output(dd_cmd, timeout=dd_timeout)
     except aexpect.ShellTimeoutError:
@@ -90,6 +99,7 @@ def run_dd_test(test, params, env):
         stat = details.status
         out = details.output
 
+    error.context("Check command exit status and output", logging.info)
     logging.debug("Returned dd_status: %s\nReturned output:\n%s", stat, out)
     if stat != dd_stat:
         err = ("Return code doesn't match (expected=%s, actual=%s)\n"
