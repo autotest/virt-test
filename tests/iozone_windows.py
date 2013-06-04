@@ -1,6 +1,7 @@
 import logging, os
 from autotest.client import utils
 from virttest import postprocess_iozone
+from virttest import utils_misc
 
 
 def run_iozone_windows(test, params, env):
@@ -24,7 +25,8 @@ def run_iozone_windows(test, params, env):
     analysisdir = os.path.join(test.resultsdir, 'analysis_%s' % test.iteration)
 
     # Run IOzone and record its results
-    c = params.get("iozone_cmd")
+    drive_letter = utils_misc.get_winutils_vol(session)
+    c = params["iozone_cmd"] % drive_letter
     t = int(params.get("iozone_timeout"))
     logging.info("Running IOzone command on guest, timeout %ss", t)
     results = session.cmd_output(cmd=c, timeout=t)
