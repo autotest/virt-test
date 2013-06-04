@@ -132,7 +132,7 @@ def run_block_stream(test, params, env):
         logging.info("Checking whether the guest with backup-harddrive boot "
                      "and respond after block stream completion")
         error.context("checking responsiveness of guest")
-        session.cmd(params["alive_test_cmd"])
+        session.cmd(params["alive_check_cmd"])
 
         # Finally shutdown the virtual machine
         vm.destroy()
