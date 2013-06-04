@@ -10,6 +10,7 @@ import logging
 import re
 # Autotest imports
 from autotest.client.shared import error
+import qemu_monitor
 import arch
 
 try:
@@ -93,10 +94,10 @@ class QBaseDevice(object):
         self.type = dev_type    # device type
         self.aobject = aobject  # related autotest object
         if parent_bus is None:
-            parent_bus = ()
+            parent_bus = tuple()
         self.parent_bus = parent_bus   # list of buses into which this dev fits
         if child_bus is None:
-            child_bus = ()
+            child_bus = tuple()
         self.child_bus = child_bus     # list of buses which this dev provides
         self.params = OrderedDict()    # various device params (id, name, ...)
         if params:
@@ -221,14 +222,17 @@ class QBaseDevice(object):
 
     def hotplug(self, monitor):
         """ @return: the output of monitor.cmd() hotplug command """
-        if monitor.protocol == "qmp":
+        if isinstance(monitor, qemu_monitor.QMPMonitor):
             try:
                 cmd, args = self.hotplug_qmp()
                 return monitor.cmd(cmd, args)
             except DeviceError:     # qmp command not supported
                 return monitor.human_monitor_cmd(self.hotplug_hmp())
-        else:
+        elif isinstance(monitor, qemu_monitor.HumanMonitor):
             return monitor.cmd(self.hotplug_hmp())
+        else:
+            raise TypeError("Invalid monitor object: %s(%s)" % (monitor,
+                                                                type(monitor)))
 
     def hotplug_hmp(self):
         """ @return: the hotplug monitor command """
@@ -271,7 +275,6 @@ class QStringDevice(QBaseDevice):
         """
         super(QStringDevice, self).__init__(dev_type, params, aobject,
                                             parent_bus, child_bus)
-        self.type = dev_type
         self._cmdline = cmdline
         self._readconfig = readconfig
 
@@ -1190,8 +1193,8 @@ class DevContainer(object):
 
         1) get list of matching parent buses
         2) try to find matching bus+address gently
-        3) if it fails and force is specified, force it first on full, than on
-           bad buses or without parent bus at all
+        3) if it fails and force is specified, try to insert it into full
+           buses. If none is found use non-matching bus.
         4) insert(0, child bus) (this way we always start with the latest bus)
         5) append into self.devices
         """
@@ -1346,7 +1349,7 @@ class DevContainer(object):
             # TODO: Add all supported devices (AHCI, ...) and
             # verify that PCIE works as pci bus (ranges, etc...)
             logging.warn('Using Q35 machine which is not yet fullytested on '
-                         'autotest. False errors might occur.')
+                         'virt-test. False errors might occur.')
             devices = []
             devices.append(QStringDevice('machine', cmdline=cmd,
                                          child_bus=QPCIBus('pcie.0', 'pci')))
