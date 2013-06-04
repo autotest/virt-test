@@ -131,6 +131,8 @@ def run_virsh_pool(test, params, env):
     pool_name = params.get("pool_name")
     pool_type = params.get("pool_type")
     pool_target = params.get("pool_target")
+    if os.path.dirname(pool_target) is "":
+        pool_target = os.path.join(test.tmpdir, pool_target)
     vol_name = params.get("vol_name")
 
     logging.info("\n\tPool Name: %s\n\tPool Type: %s\n\tPool Target: %s\n\t"
