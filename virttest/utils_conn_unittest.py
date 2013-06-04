@@ -1,7 +1,6 @@
 #!/usr/bin/python
-
-import unittest, os, common
-from virttest import utils_conn
+import common, unittest, os
+import utils_conn
 
 class UtilsConnTestBase(unittest.TestCase):
     pass

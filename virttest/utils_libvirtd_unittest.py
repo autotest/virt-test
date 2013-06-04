@@ -12,13 +12,13 @@ class UtilsLibvirtdTest(unittest.TestCase):
         self.assertTrue(service_libvirtd_control('status') in (True, False))
 
     def test_libvirtd_error(self):
-        method2error_dict = {
-          utils_libvirtd.libvirtd_restart:utils_libvirtd.LibvirtdRestartError,
-          utils_libvirtd.libvirtd_stop:utils_libvirtd.LibvirtdStopError,
-          utils_libvirtd.libvirtd_start:utils_libvirtd.LibvirtdStartError}
+        method_list = [utils_libvirtd.libvirtd_restart,
+                       utils_libvirtd.libvirtd_stop,
+                       utils_libvirtd.libvirtd_start]
 
-        for method, error in method2error_dict.items():
-            self.assertRaises(error, method, service_name='')
+        for method in method_list:
+            self.assertRaises(utils_libvirtd.LibvirtdActionError,
+                                            method, service_name='')
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,8 @@ connection tools to manage kinds of connection.
 
 import logging, time, os, shutil, re
 from autotest.client import utils, os_dep
-from virttest import aexpect, propcan, remote, utils_libvirtd
+from virttest import propcan, remote, utils_libvirtd
+from virttest import data_dir
 
 
 class ConnectionError(Exception):
@@ -42,6 +43,9 @@ class ConnCopyError(ConnectionError):
 
 
 class ConnNotImplementedError(ConnectionError):
+    """
+    Error in calling unimplemented method
+    """
     def __init__(self, method_type, class_type):
         ConnectionError.__init__(self)
         self.method_type = method_type
@@ -157,38 +161,14 @@ class ConnMkdirError(ConnectionError):
     """
     Error in making directory.
     """
-    def __init__(self, dir, output):
+    def __init__(self, directory, output):
         ConnectionError.__init__(self)
-        self.dir = dir
+        self.directory = directory
         self.output = output
 
     def __str__(self):
         return ("Failed to make directory %s \n"
-               "output: %s.\n" % (self.dir, self.output))
-
-
-class ConnClientEditHostsConfigError(ConnectionError):
-    """
-    Error in editing config file /etc/hosts on client.
-    """
-    def __init__(self, output):
-        ConnectionError.__init__(self)
-        self.output = output
-    def __str__(self):
-        return ("Failed to edit /etc/hosts on client.\n"
-               "output: %s.\n" % (self.output))
-
-
-class ConnServerConfigError(ConnectionError):
-    """
-    Error in editing config file /etc/sysconfig/libvirtd on server.
-    """
-    def __init__(self, output):
-        ConnectionError.__init__(self)
-        self.output = output
-    def __str__(self):
-        return ("Failed to edit /etc/sysconfig/libvirtd on server.\n"
-               "output: %s.\n" % (self.output))
+               "output: %s.\n" % (self.directory, self.output))
 
 
 class ConnServerRestartError(ConnectionError):
@@ -232,12 +212,10 @@ class ConnectionBase(propcan.PropCanBase):
         #make a tmp dir as a workspace
         tmp_dir = self.dict_get('tmp_dir')
         if tmp_dir is None:
-            current_time = time.time()
-            tmp_dir = "/tmp/%s" % current_time
-            try:
+            tmp_dir = data_dir.get_tmp_dir()
+            if not os.path.isdir(tmp_dir):
                 os.makedirs(tmp_dir)
-            except OSError, e:
-                raise ConnMkdirError(tmp_dir, e)
+
             self.tmp_dir = tmp_dir
 
 
@@ -288,6 +266,7 @@ class ConnectionBase(propcan.PropCanBase):
 
     def _new_client_session(self):
         """
+        Build a new client session.
         """
         transport = 'ssh'
         host = self.client_ip
@@ -298,13 +277,13 @@ class ConnectionBase(propcan.PropCanBase):
         try:
             client_session = remote.wait_for_login(transport, host, port,
                                                username, password, prompt)
-        except remote.LoginTimeoutError, e:
+        except remote.LoginTimeoutError:
             raise ConnLoginError("Got a timeout error when login to client.")
-        except remote.LoginAuthenticationError, e:
+        except remote.LoginAuthenticationError:
             raise ConnLoginError("Authentication failed to login to client.")
-        except remote.LoginProcessTerminatedError, e:
+        except remote.LoginProcessTerminatedError:
             raise ConnLoginError("Host terminates during login to client.")
-        except remote.LoginError, e:
+        except remote.LoginError:
             raise ConnLoginError("Some error occurs login to client failed.")
 
         return client_session
@@ -326,13 +305,25 @@ class ConnectionBase(propcan.PropCanBase):
         return client_session
 
     def set_client_session(self, value):
-        raise ConnForbiddenError('Forbide to set client_session')
+        """
+        Set client session to value.
+        """
+        if value:
+            message = "Forbide to set client_session to %s." % value
+        else:
+            message = "Forbide to set client_session."
+
+        raise ConnForbiddenError(message)
 
     def del_client_session(self):
+        """
+        Delete client session.
+        """
         raise ConnForbiddenError('Forbide to del client_session')
 
     def _new_server_session(self):
         """
+        Build a new server session.
         """
         transport = 'ssh'
         host = self.server_ip
@@ -343,13 +334,13 @@ class ConnectionBase(propcan.PropCanBase):
         try:
             server_session = remote.wait_for_login(transport, host, port,
                                                username, password, prompt)
-        except remote.LoginTimeoutError, e:
+        except remote.LoginTimeoutError:
             raise ConnLoginError("Got a timeout error when login to server.")
-        except remote.LoginAuthenticationError, e:
+        except remote.LoginAuthenticationError:
             raise ConnLoginError("Authentication failed to login to server.")
-        except remote.LoginProcessTerminatedError, e:
+        except remote.LoginProcessTerminatedError:
             raise ConnLoginError("Host terminates during login to server.")
-        except remote.LoginError, e:
+        except remote.LoginError:
             raise ConnLoginError("Some error occurs login to client server.")
 
         return server_session
@@ -371,11 +362,22 @@ class ConnectionBase(propcan.PropCanBase):
         return server_session
 
 
-    def set_server_session(self, value):
-        raise ConnForbiddenError('Forbide to set server_session')
+    def set_server_session(self, value=None):
+        """
+        Set server session to value.
+        """
+        if value:
+            message = "Forbide to set server_session to %s." % value
+        else:
+            message = "Forbide to set server_session."
+
+        raise ConnForbiddenError(message)
 
 
     def del_server_session(self):
+        """
+        Delete server session.
+        """
         raise ConnForbiddenError('Forbide to del server_session')
 
 
@@ -420,6 +422,7 @@ class SSHConnection(ConnectionBase):
                 tool = '/bin/true'
             self.dict_set(key, tool)
 
+
     def conn_check(self):
         """
         Check the SSH connection.
@@ -436,11 +439,11 @@ class SSHConnection(ConnectionBase):
                     "executable not set or found on path, ")
 
         cmd = "%s %s@%s exit 0" % (ssh, server_user, server_ip)
-        try:
-            status, output = client_session.cmd_status_output(cmd, timeout=5)
-        except aexpect.ShellError, e:
-            raise SSHCheckError(server_ip, e)
+        status, output = client_session.cmd_status_output(cmd, timeout=5)
+        if status:
+            raise SSHCheckError(server_ip, output)
         logging.debug("Check the SSH to %s OK." % server_ip)
+
 
     def conn_finish(self):
         """
@@ -512,6 +515,9 @@ class SSHConnection(ConnectionBase):
 
 
 class TCPConnection(ConnectionBase):
+    """
+    Connection class for TCP transport.
+    """
     __slots__ = ConnectionBase.__slots__ + ('tcp_port',
                                 'sysconfig_libvirtd_path',
                                 'libvirtd_conf_path')

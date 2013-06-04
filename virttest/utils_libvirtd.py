@@ -43,36 +43,6 @@ class LibvirtdActionUnknownError(LibvirtdActionError):
         LibvirtdActionError.__init__(self, self.action, self.detail)
 
 
-class LibvirtdRestartError(LibvirtdActionError):
-    """
-    Error in restart libvirtd.
-    """
-    def __init__(self, detail=''):
-        LibvirtdActionError.__init__(self, 'restart', detail)
-
-class LibvirtdStopError(LibvirtdActionError):
-    """
-    Error in stop libvirtd.
-    """
-    def __init__(self, detail=''):
-        LibvirtdActionError.__init__(self, 'stop', detail)
-
-class LibvirtdStartError(LibvirtdActionError):
-    """
-    Error in start libvirtd.
-    """
-    def __init__(self, detail=''):
-        LibvirtdActionError.__init__(self, 'start', detail)
-
-
-class LibvirtdStatusError(LibvirtdActionError):
-    """
-    Error in get status of libvirtd.
-    """
-    def __init__(self, detail=''):
-        LibvirtdActionError.__init__(self, 'status', detail)
-
-
 def service_libvirtd_control(action, **dargs):
     """
     Libvirtd control by action, if cmd executes successfully,
@@ -126,7 +96,7 @@ def libvirtd_restart(**dargs):
         logging.debug("Restarted libvirtd successfuly")
     except LibvirtdActionError, detail:
         logging.debug("Failed to restart libvirtd:\n%s", detail)
-        raise LibvirtdRestartError()
+        raise
 
 
 def libvirtd_stop(**dargs):
@@ -138,7 +108,7 @@ def libvirtd_stop(**dargs):
         logging.debug("Stop libvirtd successfuly")
     except LibvirtdActionError, detail:
         logging.debug("Failed to stop libvirtd:\n%s", detail)
-        raise LibvirtdStopError()
+        raise
 
 
 def libvirtd_start(**dargs):
@@ -150,7 +120,7 @@ def libvirtd_start(**dargs):
         logging.debug("Start libvirtd successfuly")
     except LibvirtdActionError, detail:
         logging.debug("Failed to start libvirtd:\n%s", detail)
-        raise LibvirtdStartError()
+        raise
 
 
 def libvirtd_status(**dargs):
@@ -161,4 +131,4 @@ def libvirtd_status(**dargs):
         return service_libvirtd_control('status', **dargs)
     except LibvirtdActionError, detail:
         logging.debug("Failed to get status of libvirtd:\n%s", detail)
-        raise LibvirtdStatusError()
+        raise
