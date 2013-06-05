@@ -1,5 +1,6 @@
 import time, re, logging
 from autotest.client.shared import error
+from virttest import aexpect
 
 
 @error.context_aware
@@ -38,6 +39,11 @@ def check_usb_device(test, params, env):
     if product:
         chk_list.append(product)
 
+    try:
+        session.cmd("dmesg -c")
+    except aexpect.ShellCmdError:
+        pass
+
     error.context("Verify USB device in guest.")
     o = session.cmd_output(params["chk_usb_info_cmd"])
     for item in chk_list:
@@ -45,16 +51,35 @@ def check_usb_device(test, params, env):
             raise error.TestFail("Could not find item '%s' in guest, "
                                  "Output:\n %s" % (item, o))
 
+    output = ""
+    try:
+        output = session.cmd("dmesg -c")
+        error.context("Checking if there is I/O error in dmesg")
+    except aexpect.ShellCmdError:
+        pass
+
+    io_error_msg = []
+    for line in output.splitlines():
+        if "error" in line:
+            io_error_msg.append(line)
+
+    if io_error_msg:
+        e_msg = "Error found in guest's dmesg"
+        logging.error(e_msg)
+        for line in io_error_msg:
+            logging.error(line)
+        raise error.TestFail(e_msg)
+
 
 @error.context_aware
 def run_usb_basic_check(test, params, env):
     """
     KVM usb_basic_check test:
     1) Log into a guest
-    2) Verify device(s) work well in guest (optional)
+    2) Verify device(s) work well in guest
     3) Send a reboot command or a system_reset monitor command (optional)
-    4) Wait until the guest is up again
-    5) Log into the guest to verify it's up again
+    4) Wait until the guest is up again (optional)
+    5) Log into the guest to verify it's up again (optional)
     6) Verify device(s) again after guest reboot (optional)
 
     @param test: kvm test object
