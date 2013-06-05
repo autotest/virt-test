@@ -19,7 +19,7 @@ def iscsi_get_sessions():
     """
     cmd = "iscsiadm --mode session"
 
-    output = utils.system_output(cmd)
+    output = utils.system_output(cmd, ignore_status=True)
     pattern = r"(\d+\.\d+\.\d+\.\d+):\d+,\d+\s+([\w\.\-:\d]+)"
     sessions = []
     if  "No active sessions" not in output:
@@ -84,7 +84,7 @@ def iscsi_discover(portal_ip):
     @param portal_ip: Ip for iscsi server
     """
     cmd = "iscsiadm -m discovery -t sendtargets -p %s" % portal_ip
-    output = utils.system_output(cmd)
+    output = utils.system_output(cmd, ignore_status=True)
 
     session = ""
     if "Invalid" in output:
