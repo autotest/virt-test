@@ -240,7 +240,7 @@ def run_pci_hotplug(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    test_timeout = int(params.get("test_timeout", 360))
+    test_timeout = int(params.get("hotplug_timeout", 360))
     reference_cmd = params["reference_cmd"]
     # Test if it is nic or block
     pci_type = params["pci_type"]
