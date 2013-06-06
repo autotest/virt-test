@@ -274,7 +274,7 @@ class VM(virt_vm.BaseVM):
                 # usb hub has extra 8 ports.
                 usb_dev_list[port] = [None] * 8
             else:
-                usb_dev_list[port][hub_port] [None] * 8
+                usb_dev_list[port][hub_port] = [None] * 8
         else:
             if not hub_port:
                 usb_dev_list[port] = usb_dev
