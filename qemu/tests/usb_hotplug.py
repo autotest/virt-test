@@ -1,6 +1,5 @@
-import logging, re, uuid
+import logging
 from autotest.client.shared import error
-from autotest.client import utils
 
 @error.context_aware
 def run_usb_hotplug(test, params, env):
@@ -28,6 +27,12 @@ def run_usb_hotplug(test, params, env):
 
     error.context("Plugin usb device", logging.info)
     reply = vm.monitor.cmd(monitor_add)
+    if params.get("usb_negative_test") == "yes":
+        if params["usb_reply_msg"] not in reply:
+            raise error.TestFail("Could not get expected warning msg in"
+                            " negative test, monitor returns: '%s'" % reply)
+        return
+
     if reply.find("Parameter 'driver' expects a driver name") != -1:
         raise error.TestNAError("usb device %s not available" % device)
 
