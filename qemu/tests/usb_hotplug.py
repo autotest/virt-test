@@ -11,7 +11,7 @@ def run_usb_hotplug(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-    device = params["usb_type_testdev"]
+    device = params.object_params("testdev")["usb_type"]
     product = params["product"]
 
     # compose strings
