@@ -2095,7 +2095,7 @@ def connect(connect_uri="", options="", **dargs):
     """
     return command("connect %s %s" % (connect_uri, options), **dargs)
 
-def domif_setlink(name, interface, state, options, **dargs):
+def domif_setlink(name, interface, state, options=None, **dargs):
     """
     Set network interface stats for a running domain.
 
@@ -2112,7 +2112,7 @@ def domif_setlink(name, interface, state, options, **dargs):
 
     return command(cmd, **dargs)
 
-def domif_getlink(name, interface, options, **dargs):
+def domif_getlink(name, interface, options=None, **dargs):
     """
     Get network interface stats for a running domain.
 
