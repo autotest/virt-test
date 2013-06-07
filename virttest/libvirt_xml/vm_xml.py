@@ -614,6 +614,7 @@ class VMCPUXML(VMXML):
             nets[dev] = node
         return nets
 
+    #TODO re-visit this method after the libvirt_xml.devices.interface module is implemented
 
     @staticmethod
     def get_net_dev(vm_name):
