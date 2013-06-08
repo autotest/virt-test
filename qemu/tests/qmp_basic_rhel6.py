@@ -132,7 +132,7 @@ def run_qmp_basic_rhel6(test, params, env):
         { "qemu": { "major": json-int, "minor": json-int, "micro": json-int }
           "package": json-string }
         """
-        check_key_is_str(version, "qemu")
+        check_key_is_dict(version, "qemu")
         check_key_is_str(version, "package")
 
 
@@ -225,8 +225,8 @@ def run_qmp_basic_rhel6(test, params, env):
         names must be detected.
         """
         resp = monitor.cmd_obj({"execute": "eject", "foobar": True})
-        expected_error = "MissingParameter"
-        data_dict = {"name": "device"}
+        expected_error = "QMPExtraInputObjectMember"
+        data_dict = {"member": "foobar"}
         check_error_resp(resp, expected_error, data_dict)
 
 
@@ -359,7 +359,7 @@ def run_qmp_basic_rhel6(test, params, env):
         Check that QMP handles unknown commands correctly.
         """
         # We also call a HMP-only command, to be sure it will fail as expected
-        for cmd in ("bar", "query-", "query-foo", "q", "help"):
+        for cmd in ("bar", "query-", "query-foo", "help"):
             resp = monitor.cmd_qmp(cmd)
             check_error_resp(resp, "CommandNotFound", {"name": cmd})
 
