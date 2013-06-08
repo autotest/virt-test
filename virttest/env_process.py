@@ -28,27 +28,23 @@ def preprocess_image(test, params, image_name):
     """
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
 
-    if params.get("storage_type") == "iscsi":
-        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
-        params["image_name"] = iscsidev.setup()
-    else:
-        image_filename = storage.get_image_filename(params,
-                                                    base_dir)
+    image_filename = storage.get_image_filename(params,
+                                                base_dir)
 
-        create_image = False
+    create_image = False
 
-        if params.get("force_create_image") == "yes":
-            create_image = True
-        elif (params.get("create_image") == "yes" and not
-              os.path.exists(image_filename)):
-            create_image = True
+    if params.get("force_create_image") == "yes":
+        create_image = True
+    elif (params.get("create_image") == "yes" and not
+          os.path.exists(image_filename)):
+        create_image = True
 
-        if params.get("backup_image_before_testing", "no") == "yes":
-            image = qemu_storage.QemuImg(params, base_dir, image_name)
-            image.backup_image(params, base_dir, "backup", True, True)
-        if create_image:
-            image = qemu_storage.QemuImg(params, base_dir, image_name)
-            image.create(params)
+    if params.get("backup_image_before_testing", "no") == "yes":
+        image = qemu_storage.QemuImg(params, base_dir, image_name)
+        image.backup_image(params, base_dir, "backup", True, True)
+    if create_image:
+        image = qemu_storage.QemuImg(params, base_dir, image_name)
+        image.create(params)
 
 
 def preprocess_vm(test, params, env, name):
@@ -134,36 +130,32 @@ def postprocess_image(test, params, image_name):
     """
     clone_master = params.get("clone_master", None)
     base_dir = data_dir.get_data_dir()
-    if params.get("storage_type") == "iscsi":
-        iscsidev = qemu_storage.Iscsidev(params, base_dir, image_name)
-        iscsidev.cleanup()
-    else:
-        image = qemu_storage.QemuImg(params, base_dir, image_name)
-        if params.get("check_image") == "yes":
-            try:
-                if clone_master is None:
-                    image.check_image(params, base_dir)
-                elif clone_master == "yes":
-                    if image_name in params.get("master_images_clone").split():
-                        image.check_image(params, base_dir)
-                if params.get("restore_image", "no") == "yes":
-                    image.backup_image(params, base_dir, "restore", True)
-            except Exception, e:
-                if params.get("restore_image_on_check_error", "no") == "yes":
-                    image.backup_image(params, base_dir, "restore", True)
-                if params.get("remove_image_on_check_error", "no") == "yes":
-                    cl_images = params.get("master_images_clone", "")
-                    if image_name in cl_images.split():
-                        image.remove()
-                raise e
-        if params.get("restore_image_after_testing", "no") == "yes":
-            image.backup_image(params, base_dir, "restore", True)
-        if params.get("remove_image") == "yes":
+    image = qemu_storage.QemuImg(params, base_dir, image_name)
+    if params.get("check_image") == "yes":
+        try:
             if clone_master is None:
-                image.remove()
+                image.check_image(params, base_dir)
             elif clone_master == "yes":
                 if image_name in params.get("master_images_clone").split():
+                    image.check_image(params, base_dir)
+            if params.get("restore_image", "no") == "yes":
+                image.backup_image(params, base_dir, "restore", True)
+        except Exception, e:
+            if params.get("restore_image_on_check_error", "no") == "yes":
+                image.backup_image(params, base_dir, "restore", True)
+            if params.get("remove_image_on_check_error", "no") == "yes":
+                cl_images = params.get("master_images_clone", "")
+                if image_name in cl_images.split():
                     image.remove()
+            raise e
+    if params.get("restore_image_after_testing", "no") == "yes":
+        image.backup_image(params, base_dir, "restore", True)
+    if params.get("remove_image") == "yes":
+        if clone_master is None:
+            image.remove()
+        elif clone_master == "yes":
+            if image_name in params.get("master_images_clone").split():
+                image.remove()
 
 
 def postprocess_vm(test, params, env, name):
@@ -324,6 +316,12 @@ def preprocess(test, params, env):
         brcfg = test_setup.PrivateBridgeConfig(params_pb)
         brcfg.setup()
 
+    base_dir = data_dir.get_data_dir()
+    if params.get("storage_type") == "iscsi":
+        iscsidev = qemu_storage.Iscsidev(params, base_dir, "iscsi")
+        params["image_name"] = iscsidev.setup()
+        params["image_raw_device"] = "yes"
+
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
         env["address_cache"] = {}
@@ -462,6 +460,8 @@ def preprocess(test, params, env):
                                               args=(test, params, env))
         _screendump_thread.start()
 
+    return params
+
 
 @error.context_aware
 def postprocess(test, params, env):
@@ -578,6 +578,11 @@ def postprocess(test, params, env):
         process_command(test, params, env, params.get("post_command"),
                         int(params.get("post_command_timeout", "600")),
                         params.get("post_command_noncritical") == "yes")
+
+    base_dir = data_dir.get_data_dir()
+    if params.get("storage_type") == "iscsi":
+        iscsidev = qemu_storage.Iscsidev(params, base_dir, "iscsi")
+        iscsidev.cleanup()
 
     setup_pb = False
     for nic in params.get('nics', "").split():
