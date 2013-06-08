@@ -120,7 +120,7 @@ class virt(test.test):
                         f.close()
                     # Preprocess
                     try:
-                        env_process.preprocess(self, params, env)
+                        params = env_process.preprocess(self, params, env)
                     finally:
                         env.save()
                     # Run the test function

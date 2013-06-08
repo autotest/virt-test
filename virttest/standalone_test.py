@@ -186,7 +186,7 @@ class Test(object):
 
                     # Preprocess
                     try:
-                        env_process.preprocess(self, params, env)
+                        params = env_process.preprocess(self, params, env)
                     finally:
                         env.save()
 
