@@ -842,8 +842,8 @@ class VM(virt_vm.BaseVM):
 
         def add_net(help_text, vlan, nettype, ifname=None, tftp=None,
                     bootfile=None, hostfwd=[], netdev_id=None,
-                    netdev_extra_params=None, tapfd=None, script=None,
-                    downscript=None, vhost=None):
+                    netdev_extra_params=None, tapfds=None, script=None,
+                    downscript=None, vhost=None, queues=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -860,8 +860,11 @@ class VM(virt_vm.BaseVM):
                     cmd += "%s" % netdev_extra_params
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
-            if mode == "tap" and tapfd is not None:
-                cmd += ",fd=%d" % tapfd
+            if mode == "tap" and tapfds:
+                if (int(queues)) > 1 and ',fds=' in help_text:
+                    cmd += ",fds=%s" % tapfds
+                else:
+                    cmd += ",fd=%s" % tapfds
             elif mode == "user":
                 if tftp and "[,tftp=" in help_text:
                     cmd += ",tftp='%s'" % tftp
@@ -1601,20 +1604,21 @@ class VM(virt_vm.BaseVM):
                     tftp = None
                 nettype = nic.get("nettype", "bridge")
                 # don't force conversion add_nic()/add_net() optional parameter
-                if nic.has_key('tapfd'):
-                    tapfd = int(nic.tapfd)
+                if nic.has_key('tapfds'):
+                    tapfds = nic.tapfds
                 else:
-                    tapfd = None
+                    tapfds = None
                 ifname = nic.get('ifname')
                 # Handle the '-net nic' part
                 qemu_cmd += add_nic(help_text, vlan, nic_model, mac,
                                     device_id, netdev_id, nic_extra,
                                     nic_params.get("nic_pci_addr"),
                                     bootindex)
+                queues = nic.get("queues", 1)
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 qemu_cmd += add_net(help_text, vlan, nettype, ifname, tftp,
                                     bootp, redirs, netdev_id, netdev_extra,
-                                    tapfd, script, downscript, vhost)
+                                    tapfds, script, downscript, vhost, queues)
             else:
                 pci_id = vm.pa_pci_ids[iov]
                 qemu_cmd += add_pcidevice(help, pci_id, params=nic_params)
@@ -2030,14 +2034,13 @@ class VM(virt_vm.BaseVM):
             logging.info("Adding macvtap ifname: %s" , nic.ifname)
             utils_net.add_nic_macvtap(nic)
         else:
-            nic.tapfd = str(utils_net.open_tap("/dev/net/tun", nic.ifname,
-                                               vnet_hdr=True))
+            nic.tapfds = utils_net.open_tap("/dev/net/tun", nic.ifname,
+                                            queues=nic.queues, vnet_hdr=True)
             logging.debug("Adding VM %s NIC ifname %s to bridge %s",
                           self.name, nic.ifname, nic.netdst)
             if nic.nettype == 'bridge':
                 utils_net.add_to_bridge(nic.ifname, nic.netdst)
             utils_net.bring_up_ifname(nic.ifname)
-
 
     def _nic_tap_remove_helper(self, nic):
         try:
@@ -2048,7 +2051,9 @@ class VM(virt_vm.BaseVM):
             else:
                 logging.debug("Removing VM %s NIC ifname %s from bridge %s",
                              self.name, nic.ifname, nic.netdst)
-                os.close(int(nic.tapfd))
+                if nic.tapfds:
+                    for i in nic.tapfds.split(':'):
+                        os.close(int(i))
         except TypeError:
             pass
 
@@ -2288,14 +2293,15 @@ class VM(virt_vm.BaseVM):
 
             # test doesn't need to hold tapfd's open
             for nic in self.virtnet:
-                if nic.has_key('tapfd'): # implies bridge/tap
+                if nic.has_key('tapfds'): # implies bridge/tap
                     try:
-                        os.close(int(nic.tapfd))
+                        for i in nic.tapfds.split(':'):
+                            os.close(int(i))
                         # qemu process retains access via open file
                         # remove this attribute from virtnet because
                         # fd numbers are not always predictable and
                         # vm instance must support cloning.
-                        del nic['tapfd']
+                        del nic['tapfds']
                     # File descriptor is already closed
                     except OSError:
                         pass
@@ -2799,7 +2805,12 @@ class VM(virt_vm.BaseVM):
             # destination is required, hard-code reasonable default if unset
             # nic.set_if_none('netdst', 'virbr0')
             # tapfd allocated/set in activate because requires system resources
-            nic.set_if_none('tapfd_id', utils_misc.generate_random_id())
+            nic.set_if_none('queues', '1')
+            ids = []
+            for i in range(int(nic.queues)):
+                ids.append(utils_misc.generate_random_id())
+            nic.set_if_none('tapfd_ids', ids)
+
         elif nic.nettype == 'user':
             pass # nothing to do
         else: # unsupported nettype
@@ -2817,7 +2828,7 @@ class VM(virt_vm.BaseVM):
         nic = self.virtnet[nic_index_or_name]
         error.context("removing netdev info from nic %s from vm %s" % (
                       nic, self.name))
-        for propertea in ['netdev_id', 'ifname', 'tapfd', 'tapfd_id']:
+        for propertea in ['netdev_id', 'ifname', 'queues', 'tapfds', 'tapfd_ids']:
             if nic.has_key(propertea):
                 del nic[propertea]
 
@@ -2840,6 +2851,7 @@ class VM(virt_vm.BaseVM):
             # virtnet items are lists that act like dicts
             nic.netdev_id = self.add_netdev(**dict(nic))
         nic.set_if_none('nic_model', params['nic_model'])
+        nic.set_if_none('queues', params.get('queues', '1'))
         return nic
 
 
@@ -2862,13 +2874,23 @@ class VM(virt_vm.BaseVM):
         if nic.nettype == 'bridge': # implies tap
             error.context("Opening tap device node for %s " % nic.ifname,
                           logging.debug)
-            nic.set_if_none('tapfd', str(utils_net.open_tap("/dev/net/tun",
-                                                             nic.ifname,
-                                                             vnet_hdr=False)))
-            error.context("Registering tap id %s for FD %d" %
-                          (nic.tapfd_id, int(nic.tapfd)), logging.debug)
-            self.monitor.getfd(int(nic.tapfd), nic.tapfd_id)
-            attach_cmd += " type=tap,id=%s,fd=%s" % (nic.device_id, nic.tapfd_id)
+            nic.set_if_none('tapfds', utils_net.open_tap("/dev/net/tun",
+                                                         nic.ifname,
+                                                         queues=nic.queues,
+                                                         vnet_hdr=False))
+            for i in range(int(nic.queues)):
+                error.context("Assigning tap id %s for FD %s" %
+                              (nic.tapfd_ids[i], nic.tapfds.split(':')[i]),
+                              logging.debug)
+                self.monitor.getfd(int(nic.tapfds.split(':')[i]),
+                                   nic.tapfd_ids[i])
+
+            if (int(nic.queues)) > 1 and ',fds=' in help_text:
+                attach_cmd += " type=tap,id=%s,fds=%s" % (nic.device_id,
+                                                          nic.tapfds)
+            else:
+                attach_cmd += " type=tap,id=%s,fd=%s" % (nic.device_id,
+                                                         nic.tapfds)
             error.context("Raising interface for " + msg_sfx + attach_cmd,
                           logging.debug)
             utils_net.bring_up_ifname(nic.ifname)
