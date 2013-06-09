@@ -40,6 +40,7 @@ make
 nc
 ntp
 redhat-lsb
+sg3_utils
 
 %post
 echo "OS install is completed" > /dev/ttyS0
