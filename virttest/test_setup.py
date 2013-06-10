@@ -226,9 +226,18 @@ class HugePageConfig(object):
         self.vms = len(params.objects("vms"))
         self.mem = int(params.get("mem"))
         self.max_vms = int(params.get("max_vms", 0))
+        self.qemu_overhead = int(params.get("hugepages_qemu_overhead", 128))
+        self.deallocate = params.get("hugepages_deallocate", "yes") == "yes"
         self.hugepage_path = '/mnt/kvm_hugepage'
         self.hugepage_size = self.get_hugepage_size()
-        self.target_hugepages = self.get_target_hugepages()
+
+        target_hugepages = params.get("target_hugepages")
+        if target_hugepages is None:
+            target_hugepages = self.get_target_hugepages()
+        else:
+            target_hugepages = int(target_hugepages)
+
+        self.target_hugepages = target_hugepages
         self.kernel_hp_file = '/proc/sys/vm/nr_hugepages'
 
 
@@ -252,8 +261,11 @@ class HugePageConfig(object):
         if self.vms < self.max_vms:
             self.vms = self.max_vms
         # memory of all VMs plus qemu overhead of 128MB per guest
-        vmsm = (self.vms * self.mem) + (self.vms * 128)
-        return int(vmsm * 1024 / self.hugepage_size)
+        # (this value can be overriden in your cartesian config)
+        vmsm = self.vms * (self.mem + self.qemu_overhead)
+        target_hugepages = int(vmsm * 1024 / self.hugepage_size)
+
+        return target_hugepages
 
 
     @error.context_aware
@@ -307,13 +319,14 @@ class HugePageConfig(object):
 
     @error.context_aware
     def cleanup(self):
-        error.context("trying to dealocate hugepage memory")
-        try:
-            utils.system("umount %s" % self.hugepage_path)
-        except error.CmdError:
-            return
-        utils.system("echo 0 > %s" % self.kernel_hp_file)
-        logging.debug("Hugepage memory successfuly dealocated")
+        if self.deallocate:
+            error.context("trying to dealocate hugepage memory")
+            try:
+                utils.system("umount %s" % self.hugepage_path)
+            except error.CmdError:
+                return
+            utils.system("echo 0 > %s" % self.kernel_hp_file)
+            logging.debug("Hugepage memory successfuly dealocated")
 
 
 class PrivateBridgeError(Exception):
