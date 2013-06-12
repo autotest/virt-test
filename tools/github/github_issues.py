@@ -83,15 +83,17 @@ class GithubCache(object):
     @staticmethod
     def format_data(klass, expires, raw_data, inside_klass=None):
         """
-        Enforce uniform data format
+        Enforce uniform data format for fetched data
         """
         if inside_klass is None:
             return {'klass':klass,
+                    'fetched':datetime.datetime.utcnow(),
                     'expires':expires,
                     'raw_data':raw_data}
         else:
             return {'klass':klass,
                     'inside_klass':inside_klass,
+                    'fetched':datetime.datetime.utcnow(),
                     'expires':expires,
                     'raw_data':raw_data}
 
@@ -162,16 +164,7 @@ class GithubCache(object):
         Return dictionary containing cached values or raise KeyError
         """
         try:
-            data = self.cache_get() # maybe raise KeyError or TypeError
-            if data['klass'] == github.PaginatedList.PaginatedList:
-                return self.__class__.format_data(data['klass'],
-                                                  data['expires'],
-                                                  data['raw_data'],
-                                                  data['inside_klass'])
-            else:
-                return self.__class__.format_data(data['klass'],
-                                                  data['expires'],
-                                                  data['raw_data'])
+            return self.cache_get() # maybe raise KeyError or TypeError
         except TypeError:
             raise KeyError("Cache is corrupted")
 
@@ -320,6 +313,7 @@ class GithubIssues(GithubIssuesBase, object):
         'comments':lambda gh_obj:getattr(gh_obj, 'comments'),
         'comment_authors':NotImplementedError, # setup in __init__
         'labels':lambda gh_obj:[label.name for label in gh_obj.labels],
+        'url':lambda gh_obj:getattr(gh_obj, 'html_url'),
         'github_issue':lambda gh_obj:gh_obj
     }
 
