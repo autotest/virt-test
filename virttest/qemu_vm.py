@@ -793,7 +793,7 @@ class VM(virt_vm.BaseVM):
 
         def add_nic(devices, vlan, model=None, mac=None, device_id=None,
                     netdev_id=None, nic_extra_params=None, pci_addr=None,
-                    bootindex=None):
+                    bootindex=None, queues=1):
             if model == 'none':
                 return
             if devices.has_option("device"):
@@ -821,6 +821,8 @@ class VM(virt_vm.BaseVM):
                 dev.set_param('model', model)
                 dev.set_param('macaddr', mac, 'NEED_QUOTE')
             dev.set_param('id', device_id, 'NEED_QUOTE')
+            if int(queues) > 1 and "virtio" in model:
+                dev.set_param('mq', 'on')
             if devices.has_option("netdev"):
                 dev.set_param('netdev', netdev_id)
             else:
@@ -1636,12 +1638,15 @@ class VM(virt_vm.BaseVM):
                 else:
                     tapfds = None
                 ifname = nic.get('ifname')
+                queues = nic.get("queues", 1)
                 # Handle the '-net nic' part
+                queues = nic.get("queues", 1)
+
                 add_nic(devices, vlan, nic_model, mac,
                         device_id, netdev_id, nic_extra,
                         nic_params.get("nic_pci_addr"),
-                        bootindex)
-                queues = nic.get("queues", 1)
+                        bootindex, queues)
+
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
                                bootp, redirs, netdev_id, netdev_extra,
@@ -2968,6 +2973,8 @@ class VM(virt_vm.BaseVM):
         if nic.has_key('mac'):
             device_add_cmd += ",mac=%s" % nic.mac
         device_add_cmd += ",id=%s" % nic.nic_name
+        if int(nic['queues']) > 1 and nic['nic_model'] == 'virtio-net-pci':
+            device_add_cmd += ",mq=on"
         device_add_cmd += nic.get('nic_extra_params', '')
         if nic.has_key('romfile'):
             device_add_cmd += ",romfile=%s" % nic.romfile
