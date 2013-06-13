@@ -1299,28 +1299,47 @@ class ShellSession(Expect):
         """
         def remove_command_echo(cont, cmd):
             if cont and cont.splitlines()[0] == cmd:
-                cont = "".join(cont.splitlines(True)[1:])
+                cont = "".join(cont.lstrip().splitlines(True)[1:])
             return cont
 
-        def remove_last_nonempty_line(cont):
-            return "".join(cont.rstrip().splitlines(True)[:-1])
+        def remove_last_nonempty_line(cont, empty_line_num):
+            return "".join(cont.rstrip().splitlines(True)[:-empty_line_num])
 
         logging.debug("Sending command: %s" % cmd)
         self.read_nonblocking(0, timeout)
+        read_timeout = timeout / 6
+        output=""
+        empty_line_number = 1
+        got_prompt = False
+        start_time = time.time()
+
         self.sendline(cmd)
         try:
-            o = self.read_up_to_prompt(timeout, internal_timeout, print_func)
+            while not got_prompt:
+                self.sendline()
+                empty_line_number += 1
+                try:
+                    output += self.read_up_to_prompt(read_timeout,
+                                                     internal_timeout,
+                                                     print_func)
+                    got_prompt = True
+                except ExpectTimeoutError, e:
+                    if (time.time() - start_time) < timeout:
+                        pass
+                    else:
+                        raise ExpectTimeoutError([self.prompt], e)
         except ExpectError, e:
-            o = remove_command_echo(e.output, cmd)
+            output = remove_command_echo(str(e.output), cmd)
             if isinstance(e, ExpectTimeoutError):
-                raise ShellTimeoutError(cmd, o)
+                raise ShellTimeoutError(cmd, output)
             elif isinstance(e, ExpectProcessTerminatedError):
-                raise ShellProcessTerminatedError(cmd, e.status, o)
+                raise ShellProcessTerminatedError(cmd, e.status, output)
             else:
-                raise ShellError(cmd, o)
+                raise ShellError(cmd, output)
 
         # Remove the echoed command and the final shell prompt
-        return remove_last_nonempty_line(remove_command_echo(o, cmd))
+        return remove_last_nonempty_line(remove_command_echo(output, cmd),
+                                         empty_line_number)
 
 
     def cmd_status_output(self, cmd, timeout=60, internal_timeout=None,
