@@ -22,10 +22,10 @@ class TestSelinux(unittest.TestCase):
 
         if utils_selinux.is_disabled():
             self.assertRaises(utils_selinux.SelinuxError,
-                            utils_selinux.set_status, "enforcing")
+                              utils_selinux.set_status, "enforcing")
         else:
             self.assertRaises(utils_selinux.SelinuxError,
-                            utils_selinux.set_status, "disabled")
+                              utils_selinux.set_status, "disabled")
 
     def test_is_or_not_disabled(self):
         """

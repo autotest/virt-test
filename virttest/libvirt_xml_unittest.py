@@ -194,13 +194,13 @@ class AccessorsTest(LibvirtXMLTestBase):
                                                          'dec_test',
                                                          'hex_test')
         lvx = FooBar(self.dummy_virsh)
-        lvx.xml =('<integer>'
-                  ' <auto>00</auto>'
-                  ' <bin>10</bin>'
-                  ' <oct>10</oct>'
-                  ' <dec>10</dec>'
-                  ' <hex>10</hex>'
-                  '</integer>')
+        lvx.xml = ('<integer>'
+                   ' <auto>00</auto>'
+                   ' <bin>10</bin>'
+                   ' <oct>10</oct>'
+                   ' <dec>10</dec>'
+                   ' <hex>10</hex>'
+                   '</integer>')
 
         name_radix = {'auto':0, 'bin':2, 'oct':8, 'dec':10, 'hex':16}
         for name, radix in name_radix.items():

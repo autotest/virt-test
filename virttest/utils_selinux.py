@@ -50,7 +50,7 @@ def get_status():
             continue
 
     raise SelinuxError("result of 'getenforce' (%s)is not expected."
-                            % result.stdout)
+                       % result.stdout)
 
 
 def set_status(status):
@@ -72,8 +72,8 @@ def set_status(status):
         return
     else:
         if current_status == "disabled" or status == "disabled":
-            raise SelinuxError("Please modify /etc/selinux/config"
-                            "and reboot host to set selinux to %s." % status)
+            raise SelinuxError("Please modify /etc/selinux/config and "
+                               "reboot host to set selinux to %s." % status)
         else:
             cmd = "setenforce %s" % status
             result = utils.run(cmd, ignore_status=True)
@@ -83,12 +83,12 @@ def set_status(status):
                 current_status = get_status()
                 if not status == current_status:
                     raise SelinuxError("Status of selinux is set to %s,"
-                                           "but not expected %s. "
-                                           % (current_status, status))
+                                       "but not expected %s. "
+                                       % (current_status, status))
                 else:
                     pass
 
-    logging.debug("Set status of selinux to %s success." % (status))
+    logging.debug("Set status of selinux to %s success.", status)
 
 
 def is_disabled():
@@ -157,10 +157,10 @@ def set_context_of_file(filename, context):
     context_result = get_context_of_file(filename)
     if not context == context_result:
         raise SelinuxError("Context of %s after chcon is %s, "
-                                "but not expected %s."
-                                % (filename, context_result, context))
+                           "but not expected %s."
+                           % (filename, context_result, context))
 
-    logging.debug("Set context of %s success." % filename)
+    logging.debug("Set context of %s success.", filename)
 
 
 def get_context_of_process(pid):
