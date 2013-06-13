@@ -71,6 +71,19 @@ class GitRepoParamHelper(git.GitRepoHelper):
 
         self.cmd = os_dep.command('git')
 
+        self.recursive = self.params.get('%s_recursive', 'yes')
+
+
+    def execute(self):
+        super(GitRepoParamHelper, self).execute()
+        cwd = os.path.curdir
+        os.chdir(self.destination_dir)
+        utils.system('git remote add origin %s' % self.uri)
+        if self.recursive == 'yes':
+            utils.system('git submodule init')
+            utils.system('git submodule update')
+        os.chdir(cwd)
+
 
 class LocalSourceDirHelper(object):
     '''
