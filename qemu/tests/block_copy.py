@@ -276,13 +276,11 @@ class BlockCopy(object):
             image_file = self.get_image_file()
             cmd += " info %s " % image_file
             info = utils.system_output(cmd)
-            matched = re.search(r"backing file:\b+(.*)", info)
+            matched = re.search(r"backing file: +(.*)", info, re.M)
             if matched:
                 backing_file = matched.group(1)
         if backing_file:
             backing_file = os.path.abspath(backing_file)
-            if not os.path.exists(backing_file):
-                raise error.TestError("backingfile(%s) not exists")
         return backing_file
 
 
