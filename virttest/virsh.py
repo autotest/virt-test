@@ -1607,6 +1607,17 @@ def nodecpustats(option='', **dargs):
     return command(cmd_nodecpustat, **dargs)
 
 
+def nodememstats(option='', **dargs):
+    """
+    Returns basic information about the node Memory statistics
+
+    @param: option: additional options (takes none)
+    @param: dargs: standardized virsh function API keywords
+    """
+
+    return command('nodememstats %s' % option, **dargs)
+
+
 def help_command(options='', cache=False, **dargs):
     """
     Return list of commands and groups in help command output
