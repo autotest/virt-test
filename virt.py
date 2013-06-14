@@ -71,18 +71,19 @@ class virt(test.test):
         env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
+        t_type = None
 
         try:
             try:
                 try:
                     subtest_dirs = []
-                    tests_dir = self.job.testdir
+                    bin_dir = self.bindir
 
                     other_subtests_dirs = params.get("other_tests_dirs", "")
                     for d in other_subtests_dirs.split():
                         # Replace split char.
                         d = os.path.join(*d.split("/"))
-                        subtestdir = os.path.join(tests_dir, d, "tests")
+                        subtestdir = os.path.join(bin_dir, d, "tests")
                         if not os.path.isdir(subtestdir):
                             raise error.TestError("Directory %s not"
                                                   " exist." % (subtestdir))
@@ -140,9 +141,10 @@ class virt(test.test):
                                              % error_message)
 
                 except Exception, e:
-                    error_message = funcatexit.run_exitfuncs(env, t_type)
-                    if error_message:
-                        logging.error(error_message)
+                    if (not t_type is None):
+                        error_message = funcatexit.run_exitfuncs(env, t_type)
+                        if error_message:
+                            logging.error(error_message)
                     logging.error("Test failed: %s: %s",
                                   e.__class__.__name__, e)
                     try:
