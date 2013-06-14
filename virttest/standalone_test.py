@@ -134,6 +134,7 @@ class Test(object):
         env = utils_env.Env(env_filename, self.env_version)
 
         test_passed = False
+        t_types = None
 
         try:
             try:
@@ -143,7 +144,8 @@ class Test(object):
 
                     other_subtests_dirs = params.get("other_tests_dirs", "")
                     for d in other_subtests_dirs.split():
-                        subtestdir = os.path.join(tests_dir, d, "tests")
+                        d = os.path.join(*d.split("/"))
+                        subtestdir = os.path.join(self.bindir, d, "tests")
                         if not os.path.isdir(subtestdir):
                             raise error.TestError("Directory %s does not "
                                                   "exist" % (subtestdir))
@@ -205,9 +207,10 @@ class Test(object):
                                              % error_message)
 
                 except Exception, e:
-                    error_message = funcatexit.run_exitfuncs(env, t_type)
-                    if error_message:
-                        logging.error(error_message)
+                    if (not t_type is None):
+                        error_message = funcatexit.run_exitfuncs(env, t_type)
+                        if error_message:
+                            logging.error(error_message)
                     try:
                         env_process.postprocess_on_error(self, params, env)
                     finally:
