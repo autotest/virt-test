@@ -29,17 +29,28 @@ class VMXMLDevices(list):
     def __setitem__(self, key, value):
         self.__type_check__(value)
         super(VMXMLDevices, self).__setitem__(key, value)
+        return self
 
 
     def append(self, value):
         self.__type_check__(value)
         super(VMXMLDevices, self).append(value)
+        return self
 
 
     def extend(self, iterable):
         # Make sure __type_check__ happens
         for item in iterable:
             self.append(item)
+        return self
+
+
+    def by_device_tag(self, tag):
+        result = VMXMLDevices()
+        for device in self:
+            if device.device_tag == tag:
+                result.append(device)
+        return result
 
 
 class VMXMLBase(base.LibvirtXMLBase):
@@ -157,7 +168,7 @@ class VMXMLBase(base.LibvirtXMLBase):
                                     self.xmltreefile.getroot(), 'devices')
             for device in value:
                 # Separate the element from the tree
-                device_element = device.getroot()
+                device_element = device.xmltreefile.getroot()
                 devices_element.append(device_element)
         self.xmltreefile.write()
 
