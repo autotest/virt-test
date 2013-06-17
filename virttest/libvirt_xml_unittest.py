@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import unittest, os, shutil
+import unittest, os, shutil, warnings
 import common
 from virttest import xml_utils, virsh, utils_misc, data_dir
 from autotest.client import utils
@@ -12,7 +12,7 @@ from virttest.libvirt_xml.devices import base as devices_base
 from virttest.libvirt_xml import capability_xml
 
 # save a copy
-ORIGINAL_DEVICE_TYPES = list(librarian.device_types)
+ORIGINAL_DEVICE_TYPES = list(librarian.DEVICE_TYPES)
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
 _CAPABILITIES = """<capabilities><host>
 <uuid>%s</uuid><cpu><arch>x86_64</arch><model>
@@ -140,7 +140,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
         self.dummy_virsh.super_set('define', self._define)
 
     def tearDown(self):
-        librarian.device_types = list(ORIGINAL_DEVICE_TYPES)
+        librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)
         if os.path.isdir(self.__doms_dir__):
             shutil.rmtree(self.__doms_dir__)
 
@@ -421,9 +421,9 @@ class testLibrarian(LibvirtXMLTestBase):
 
     def test_no_module(self):
         # Bypass type-check to induse module load failure
-        original_device_types = librarian.device_types
+        original_device_types = librarian.DEVICE_TYPES
         for badname in ('DoesNotExist', '/dev/null', '', None):
-            librarian.device_types.append(badname)
+            librarian.DEVICE_TYPES.append(badname)
             self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
                               badname)
 
@@ -432,6 +432,46 @@ class testLibrarian(LibvirtXMLTestBase):
         Serial = librarian.get('serial')
         self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
         self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
+
+
+class testStubXML(LibvirtXMLTestBase):
+
+
+    class UntypedFoobar(devices_base.UntypedDeviceBase):
+        __metaclass__ = devices_base.StubDeviceMeta
+        _device_tag = 'foobar'
+
+
+    class TypedFoobar(devices_base.TypedDeviceBase):
+        __metaclass__ = devices_base.StubDeviceMeta
+        _device_tag = 'foo'
+        _def_type_name = 'bar'
+
+
+    def setUp(self):
+        # This is not thread-safe, hopefully it doesn't mess anything up :S
+        warnings.resetwarnings()
+        warnings.simplefilter("ignore")
+        super(testStubXML, self).setUp()
+
+
+    def test_untyped_device_stub(self):
+        foobar = self.UntypedFoobar(virsh_instance = self.dummy_virsh)
+        self.assertEqual(foobar.virsh.domuuid(None),
+                         "ddb0cf86-5ba8-4f83-480a-d96f54339219")
+        self.assertEqual(foobar.device_tag, 'foobar')
+        self.assertEqual(unicode(foobar),
+                         u"<?xml version='1.0' encoding='UTF-8'?>\n<foobar />")
+
+
+    def test_typed_device_stub(self):
+        foobar = self.TypedFoobar(virsh_instance = self.dummy_virsh)
+        self.assertEqual(foobar.virsh.domuuid(None),
+                         "ddb0cf86-5ba8-4f83-480a-d96f54339219")
+        self.assertEqual(foobar.device_tag, 'foo')
+        self.assertEqual(foobar.type_name, 'bar')
+        self.assertEqual(unicode(foobar),
+              u'<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<foo type="bar" />')
 
 
 class testCharacterXML(LibvirtXMLTestBase):
