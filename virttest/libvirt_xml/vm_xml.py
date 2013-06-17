@@ -172,7 +172,7 @@ class VMXMLBase(base.LibvirtXMLBase):
 
     def get_seclabel(self):
         """
-        Get the security label of vm.
+        Return seclabel + child attribute dict or raise LibvirtXML error
 
         @return: None if no seclabel in xml,
                  dict of seclabel's attributs and children.
@@ -182,7 +182,8 @@ class VMXMLBase(base.LibvirtXMLBase):
         seclabel_node = self.xmltreefile.find("seclabel")
         #no seclabel tag found in xml.
         if seclabel_node is None:
-            return None
+            raise xcepts.LibvirtXMLError("Seclabel for this domain does not "
+                                         "exist")
         seclabel = dict(seclabel_node.items())
         for child_name in __children_list__:
             child_node = seclabel_node.find(child_name)
@@ -190,6 +191,7 @@ class VMXMLBase(base.LibvirtXMLBase):
                 seclabel[child_name] = child_node.text
 
         return seclabel
+
 
     def set_seclabel(self, seclabel_dict):
         """
@@ -208,19 +210,16 @@ class VMXMLBase(base.LibvirtXMLBase):
         seclabel_node = self.xmltreefile.find("seclabel")
         if seclabel_node is None:
             seclabel_attr = {}
-            for attribute in __attributs_list__:
-                seclabel_attr[attribute] = ''
-
             seclabel_node = xml_utils.ElementTree.SubElement(
-                                                self.xmltreefile.getroot(),
-                                                "seclabel", seclabel_attr)
+                                                    self.xmltreefile.getroot(),
+                                                    "seclabel")
 
         for key, value in seclabel_dict.items():
             if key in __children_list__:
                 child_node = seclabel_node.find(key)
                 if child_node is None:
                     child_node = xml_utils.ElementTree.SubElement(seclabel_node,
-                                                                        key, {})
+                                                                  key)
                 child_node.text = value
 
             elif key in __attributs_list__:
@@ -230,8 +229,17 @@ class VMXMLBase(base.LibvirtXMLBase):
                 continue
 
         self.xmltreefile.write()
-        self.undefine()
-        self.define()
+
+
+    def del_seclabel(self):
+        """
+        Remove the seclabel tag from a domain
+        """
+        try:
+            self.xmltreefile.remove_by_xpath("/seclabel")
+        except (AttributeError, TypeError):
+            pass # Element already doesn't exist
+        self.xmltreefile.write()
 
 
 class VMXML(VMXMLBase):

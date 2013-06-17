@@ -118,9 +118,11 @@ class LibvirtXMLTestBase(unittest.TestCase):
         return domain_xml
 
     def setUp(self):
-        # cause all virsh commands to do nothing and return nothing
+        # cause any called virsh commands to fail testing unless a mock declared
         # necessary so virsh module doesn't complain about missing virsh command
-        self.dummy_virsh = virsh.Virsh(virsh_exec='/bin/true',
+        # and to catch any libvirt_xml interface which calls virsh functions
+        # unexpectidly.
+        self.dummy_virsh = virsh.Virsh(virsh_exec='/bin/false',
                                        uri='qemu:///system',
                                        debug=True,
                                        ignore_status=True)
@@ -341,7 +343,16 @@ class TestVMXML(LibvirtXMLTestBase):
 
     def test_seclabel(self):
         vmxml = self._from_scratch()
+
+        # should not raise an exception
+        del vmxml.seclabel
+
+        self.assertRaises(xcepts.LibvirtXMLError,
+                          getattr, vmxml, 'seclabel')
+
         vmxml.set_seclabel({'type':"dynamic"})
+        self.assertEqual(vmxml.seclabel['type'], 'dynamic')
+        self.assertEqual(len(vmxml.seclabel), 1)
 
         seclabel_dict = {'type':'test_type', 'model':'test_model',
                          'relabel':'test_relabel', 'label':'test_label',
@@ -353,6 +364,11 @@ class TestVMXML(LibvirtXMLTestBase):
 
         for key, value in seclabel_dict.items():
             self.assertEqual(seclabel[key], value)
+
+        # test attribute-like access also
+        for key, value in vmxml.seclabel.items():
+            self.assertEqual(seclabel_dict[key], value)
+
 
 
 class testNetworkXML(LibvirtXMLTestBase):
