@@ -13,7 +13,7 @@ device_types = ['disk', 'filesystem', 'controller', 'lease',
                 'hostdev', 'redirdev', 'smartcard', 'interface', 'input',
                 'hub', 'graphics', 'video', 'parallel', 'serial', 'console',
                 'channel', 'sound', 'watchdog', 'memballoon', 'rng',
-                'seclabel', 'address']
+                'seclabel', 'address', 'emulator']
 
 
 def get(name):
