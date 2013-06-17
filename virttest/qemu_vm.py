@@ -105,7 +105,6 @@ class VM(virt_vm.BaseVM):
             self.instance = state['instance']
         self.qemu_command = ''
         self.start_time = 0.0
-        self.init_pci_addr = int(params.get("init_pci_addr", 4))
 
 
     def verify_alive(self):
@@ -452,7 +451,7 @@ class VM(virt_vm.BaseVM):
             @param pci_addr: *decimal* formated, desired pci_add
             """
             if pci_addr is None:
-                pci_addr = self.init_pci_addr
+                pci_addr = int(params.get("init_pci_addr", 3))
                 while True:
                     # actually when pci_addr > 20? errors may happen
                     if pci_addr > 31:
