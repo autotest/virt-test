@@ -62,6 +62,14 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                         service="5442"/>'
                     '         <target port="3"/>'
                     '       </serial>'
+                    '       <channel type="foo1">'
+                    '         <source mode="foo2" path="foo3" />'
+                    '         <target name="foo4" type="foo5" />'
+                    '       </channel>'
+                    '       <channel type="bar1">'
+                    '         <source mode="bar2" path="bar3" />'
+                    '         <target name="bar4" type="bar5" />'
+                    '       </channel>'
                     '    </devices>'
                     '    <seclabel type="sec_type" model="sec_model"\
                                                     relabel="sec_relabel">'
@@ -582,6 +590,21 @@ class testAddressXML(LibvirtXMLTestBase):
         the_dict = {'type_name':'foobar', 'foo':'bar'}
         another_address = address.new_from_dict(the_dict, self.dummy_virsh)
         self.assertEqual(str(new_address), str(another_address))
+
+
+class testVMXMLDevices(LibvirtXMLTestBase):
+
+    def test_channels(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        channels = vmxml.devices.by_device_tag('channel')
+        self.assertEqual(len(channels), 2)
+        self.assertTrue(isinstance(channels, vm_xml.VMXMLDevices))
+        self.assertEqual(channels[0].type_name, 'foo1')
+        self.assertEqual(channels[1].type_name, 'bar1')
+        one = channels.pop()
+        two = channels.pop()
+        self.assertEqual(len(channels), 0)
+        self.assertFalse(one == two)
 
 
 class testCAPXML(LibvirtXMLTestBase):
