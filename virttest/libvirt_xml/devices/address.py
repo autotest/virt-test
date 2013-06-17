@@ -1,4 +1,6 @@
 """
+Address device / device descriptor class
+
 http://libvirt.org/formatdomain.html#elementsAddress
 """
 
