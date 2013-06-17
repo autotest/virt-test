@@ -1,15 +1,14 @@
 """
-Device class librarian to standardize handling across many device type classes
+Module to hide underlying device xml handler class implementation
 
 Always raises ValueError for bad/unknown/unsupported type names
 """
 
 import os, imp
-from virttest.libvirt_xml import base, xcepts
-from virttest.libvirt_xml.devices import base as device_base
+from virttest.libvirt_xml import xcepts
 
 # Avoid accidental names like __init__, librarian, and/or other support modules
-device_types = ['disk', 'filesystem', 'controller', 'lease',
+DEVICE_TYPES = ['disk', 'filesystem', 'controller', 'lease',
                 'hostdev', 'redirdev', 'smartcard', 'interface', 'input',
                 'hub', 'graphics', 'video', 'parallel', 'serial', 'console',
                 'channel', 'sound', 'watchdog', 'memballoon', 'rng',
@@ -17,11 +16,14 @@ device_types = ['disk', 'filesystem', 'controller', 'lease',
 
 
 def get(name):
+    """
+    Returns named device xml element's handler class
+    """
     # Module names and device-tags are always all lower-case
     name = str(name).lower()
     errmsg = ("Unknown/unsupported type '%s', supported types %s"
-              % (str(name), device_types))
-    if name not in device_types:
+              % (str(name), DEVICE_TYPES))
+    if name not in DEVICE_TYPES:
         raise xcepts.LibvirtXMLError(errmsg)
     mod_path = os.path.abspath(os.path.dirname(__file__))
     try:
