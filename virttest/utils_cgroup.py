@@ -77,7 +77,11 @@ class Cgroup(object):
         if isinstance(pwd, int):
             pwd = self.cgroups[pwd]
         try:
-            os.rmdir(pwd)
+            relative_path = pwd.rstrip("/").rsplit("/", 1)[-1]
+            try:
+                utils.run("cgdelete -r %s:%s" % (self.module, relative_path))
+            except error.CmdError:
+                os.rmdir(pwd)
             self.cgroups.remove(pwd)
         except ValueError:
             logging.warn("cg.rm_cgroup(): Removed cgroup which wasn't created"
@@ -226,7 +230,7 @@ class Cgroup(object):
                 checkprop = prop
             _values = self.get_property(checkprop, pwd)
             # Sanitize non printable characters before check
-            check = " ".join(check.split())
+            check = " ".join(check.split(" "))
             if check not in _values:
                 raise error.TestError("cg.set_property(): Setting failed: "
                                       "desired = %s, real values = %s"
@@ -260,8 +264,8 @@ class Cgroup(object):
         except error.TestError:
             pass
         else:
-            raise error.TestError("cg.smoke_test: Unexpected successful deletion"
-                                 " of the used cgroup")
+            raise error.TestError("cg.smoke_test: Unexpected successful "
+                                  "deletion of the used cgroup")
 
         # Return the process into the root cgroup
         self.set_root_cgroup(ps.pid)
