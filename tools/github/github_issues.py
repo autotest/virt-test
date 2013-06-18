@@ -284,13 +284,14 @@ class GithubIssuesBase(list):
 
 class GithubIssues(GithubIssuesBase, object):
     """
-    List-like interface to cached github issues in standardized format
+    Read-only List-like interface to cached github issues in standardized format
     """
 
     # Marshal callables for key to github.Issue.Issue value
     marshal_map = {
         'number':lambda gh_obj:getattr(gh_obj, 'number'),
         'summary':lambda gh_obj:getattr(gh_obj, 'title'),
+        'description':lambda gh_obj:getattr(gh_obj, 'body'),
         'modified':lambda gh_obj:getattr(gh_obj, 'updated_at'),
         'commits':NotImplementedError, # setup in __init__
         'opened':lambda gh_obj:getattr(gh_obj, 'created_at'),
