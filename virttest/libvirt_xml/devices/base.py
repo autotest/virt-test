@@ -2,7 +2,7 @@
 Common base classes for devices
 """
 
-import warnings
+import logging
 from StringIO import StringIO
 from virttest import xml_utils
 from virttest.libvirt_xml import base, xcepts, accessors
@@ -106,12 +106,37 @@ class TypedDeviceBase(UntypedDeviceBase):
         return instance
 
 
+# Metaclass is a type-of-types or a class-generating class.
+# Using it here to avoid copy-pasting very similar class
+# definitions into every unwritten device module.
+#
+# Example usage for stub disk device:
+#
+# class Disk(base.TypedDeviceBase):
+#     __metaclass__ = base.StubDeviceMeta
+#     _device_tag = 'disk'
+#     _def_type_name = 'block'
+#
+# will become defined as:
+#
+# class Disk(base.TypedDeviceBase):
+#     def __init__(self, type_name='block', virsh_instance=base.virsh):
+#         issue_warning()
+#         super(Disk, self).__init__(device_tag='disk'),
+#                                    type_name=type_name,
+#                                    virsh_instance=virsh_instance)
+#
 
 class StubDeviceMeta(type):
     """
     Metaclass for generating stub Device classes where not fully implemented yet
     """
 
+    warning_issued = False
+
+    # cls is the class object being generated, name is it's name, bases
+    # is tuple of all baseclasses, and dct is what will become cls's
+    # __dict__ after super(...).__init__() is called.
     def __init__(cls, name, bases, dct):
         """
         Configuration for new class
@@ -120,51 +145,59 @@ class StubDeviceMeta(type):
         # Keep pylint happy
         dct = dict(dct)
 
-        # Call type() to setup new class
+        # Call type() to setup new class and store it as 'cls'
         super(StubDeviceMeta, cls).__init__(name, bases, dct)
 
-        # Needed for __init__'s default argument value
+        # Needed for UntypedDeviceBase __init__'s default argument value
+        # i.e. device_tag='disk' as specified by specific device class
         if not hasattr(cls, '_device_tag'):
             raise ValueError("Class %s requires a _device_tag attribute" % name)
 
         # Same message for both TypedDeviceBase & UntypedDeviceBase subclasses
-        message = ("Stub device XML for %s class. Only implements "
-                   "minimal interface and is likely to change in "
-                   "future versions.  This warning will only be issued "
-                   "once." % name)
+        message = ("Detected use of a stub device XML for a %s class. These "
+                   "only implement a minimal interface that is very likely to "
+                   "change in future versions.  This warning will only be "
+                   " logged once." % name)
+
+        def issue_warning():
+            # Examine the CLASS variable
+            if not StubDeviceMeta.warning_issued:
+                # Set the CLASS variable
+                StubDeviceMeta.warning_issued = True
+                logging.warning(message)
+            else:
+                pass # do nothing
 
         # Create the proper init function for subclass type
         if TypedDeviceBase in bases:
+            # Needed for TypedDeviceBase __init__'s default argument value
+            # i.e. type_name='pci' as specified by specific device class.
             if not hasattr(cls, '_def_type_name'):
                 raise ValueError("TypedDevice sub-Class %s must define a "
                                  "_def_type_name attribute" % name)
-            # __init__ for typed devices
+            # form __init__() and it's arguments for generated class
             def stub_init(self, type_name=getattr(cls, '_def_type_name'),
                           virsh_instance=base.virsh):
                 """
                 Initialize stub typed device instance
                 """
-                if not cls.__warning_issued__:
-                    # The instances created class variable
-                    setattr(cls, '__warning_issued__', True) # make pylint happy
-                    warnings.warn(message, FutureWarning, stacklevel=2)
-                # Call created class "cls" base class's __init__ method
-                # Pylint E1003 warning on this is _wrong_
+                # issue warning only when some code instantiats
+                # object from generated class
+                issue_warning()
+                # Created class __init__ still needs to call superclass
+                # __init__ (i.e. UntypedDeviceBase or TypedDeviceBase)
+                # Pylint E1003 error on this is _wrong_
                 super(cls, self).__init__(device_tag=getattr(cls,
                                                              '_device_tag'),
                                           type_name=type_name,
                                           virsh_instance=virsh_instance)
         elif UntypedDeviceBase in bases:
-            # __init__ for untyped devices
+            # generate __init__() for untyped devices (similar to above)
             def stub_init(self, virsh_instance=base.virsh):
                 """
                 Initialize stub un-typed device instance
                 """
-                if not cls.__warning_issued__:
-                    setattr(cls, '__warning_issued__', True) # make pylint happy
-                    warnings.warn(message, FutureWarning, stacklevel=2)
-                # Call created class "cls" base class's __init__ method
-                # Pylint E1003 warning on this is _wrong_
+                issue_warning()
                 super(cls, self).__init__(device_tag=getattr(cls,
                                                              '_device_tag'),
                                           virsh_instance=virsh_instance)
@@ -172,6 +205,5 @@ class StubDeviceMeta(type):
             # unexpected usage
             raise TypeError("Class %s is not a subclass of TypedDeviceBase or "
                             "UntypedDeviceBase")
-
-        setattr(cls, '__warning_issued__', False)
+        # Point the generated class's __init__ at the generated function above
         setattr(cls, '__init__', stub_init)
