@@ -8,14 +8,6 @@ import datetime, time, shelve
 import github
 
 
-CACHE_LIFETIMES = {
-    'tiny':datetime.timedelta(minutes=10),
-    'short':datetime.timedelta(hours=2),
-    'medium':datetime.timedelta(days=15),
-    'long':datetime.timedelta(days=30),
-    'forever':datetime.timedelta(days=9999)}
-
-
 # Needed to not confuse cached 'None' objects
 class Nothing(object):
     raw_data = None
@@ -35,6 +27,22 @@ class GithubCache(object):
 
     cache_hits = 0
     cache_misses = 0
+
+    cache_lifetimes = {
+        'default':datetime.timedelta(hours=2),
+        github.GitCommit.GitCommit:datetime.timedelta(days=30),
+        github.NamedUser.NamedUser:datetime.timedelta(days=30),
+        github.Commit.Commit:datetime.timedelta(days=30),
+        github.Issue.Issue:datetime.timedelta(minutes=30),
+        github.PullRequest.PullRequest:datetime.timedelta(hours=1),
+        # Special case for github.Issue.Issue
+        'closed':datetime.timedelta(days=30),
+        SearchResults:datetime.timedelta(minutes=10),
+        github.NamedUser.NamedUser:datetime.timedelta(hours=2),
+        github.GitAuthor.GitAuthor:datetime.timedelta(days=9999),
+        'total_issues':datetime.timedelta(days=9999)
+    }
+
 
     def __init__(self, github_obj, cache_get_partial, cache_set_partial,
                  pre_fetch_partial, fetch_partial):
@@ -117,44 +125,24 @@ class GithubCache(object):
         if fetched_obj is None:
             fetched_obj = Nothing()
         klass = fetched_obj.__class__
-        # Short by default
-        expires = now + CACHE_LIFETIMES['short']
         # github.PaginatedList.PaginatedList need special handling
         if isinstance(fetched_obj, github.PaginatedList.PaginatedList):
             raw_data = [item.raw_data for item in fetched_obj]
             inside_klass = fetched_obj[0].__class__
-            dont_change_much = [github.GitCommit.GitCommit,
-                                github.NamedUser.NamedUser,
-                                github.Commit.Commit]
-            for dont_change in dont_change_much:
-                if issubclass(inside_klass, dont_change):
-                    expires = now + CACHE_LIFETIMES['medium']
-                    break
+            expires = now + self.cache_lifetimes.get(inside_klass,
+                                                self.cache_lifetimes['default'])
             return self.__class__.format_data(klass,
-                                              expires,
-                                              raw_data,
-                                              inside_klass)
+                           now + self.cache_lifetimes.get(inside_klass,
+                                  self.cache_lifetimes['default']),
+                           raw_data, inside_klass)
         else:
+            expires = now + self.cache_lifetimes.get(klass,
+                                                     # else default
+                                                self.cache_lifetimes['default'])
             # closed issues/pull requests don't change much
-            if (issubclass(klass, github.Issue.Issue) or
-                issubclass(klass, github.PullRequest.PullRequest)):
+            if hasattr(fetched_obj, 'closed_at'):
                 if fetched_obj.closed_at is not None:
-                    expires = now + CACHE_LIFETIMES['long']
-                else:
-                    # Issue comments are cheap to get
-                    if issubclass(klass, github.Issue.Issue):
-                        expires = now + CACHE_LIFETIMES['tiny']
-                    else: # pull request commits are expensive
-                        expires = now + CACHE_LIFETIMES['short']
-            # These should expire fairly quickly
-            if issubclass(klass, SearchResults):
-                expires = now + CACHE_LIFETIMES['tiny']
-            # These rarely change
-            if issubclass(klass, github.NamedUser.NamedUser):
-                expires = now + CACHE_LIFETIMES['medium']
-            # These probably never change
-            if issubclass(klass, github.GitAuthor.GitAuthor):
-                expires = now + CACHE_LIFETIMES['forever']
+                    expires = now + self.cache_lifetimes['closed']
             return self.__class__.format_data(klass, expires,
                                               fetched_obj.raw_data)
 
@@ -397,7 +385,8 @@ class GithubIssues(GithubIssuesBase, object):
         except KeyError:
             cache_data = {}
             # doesn't expire ever
-            cache_data['expires'] = now + CACHE_LIFETIMES['forever']
+            cache_data['expires'] = now + GithubCache.cache_lifetimes[
+                                                                 'total_issues']
             cache_data['since'] = now
             # This will take a while if issue cache is stale
             cache_data['raw_data'] = super(GithubIssues, self).__len__()
