@@ -633,3 +633,78 @@ class GithubIssues(GithubIssuesBase, object):
             pull = self.get_gh_obj(cache_key, fetch_partial)
             return pull.commits
         return None # not a pull request
+
+
+class MutateError(KeyError):
+
+    def __init__(self, key, number):
+        super(MutateError, self).__init__("Unable to modify %s on issue %d"
+                                          % (str(key), number))
+
+
+class MutableIssue(dict):
+    """Allow modification of some issue values"""
+
+    def __init__(self, github_issues, issue_number):
+        if not isinstance(github_issues, GithubIssues):
+            raise ValueError("github_issues %s is not a GithubIssues, it is a %s"
+                             % (str(github_issues), str(type(github_issues))))
+        # make sure issue_number is valid and cached
+        junk = github_issues[issue_number]
+        del junk
+        # Private for private _github_issue property access
+        self._github_issues = github_issues
+        self._issue_number = issue_number
+
+
+    @property
+    def _github_issue(self):
+        return self._github_issues[self._issue_number]
+
+
+    def _setdelitem(self, opr, key, value):
+        if key not in self._github_issues.marshal_map.keys():
+            raise MutateError(key, self._issue_number)
+        methodname = '%s_%s' % (opr, key)
+        if callable(getattr(self, methodname)):
+            method = getattr(self, methodname)
+            if opr == 'set':
+                method(value)
+            else:
+                method()
+        else:
+            raise MutateError(key, self._issue_number)
+
+
+    def __getitem__(self, key):
+        # Guarantees fresh/cached data for every call
+        return self._github_issue[key]
+
+
+    def __setitem__(self, key, value):
+        self._setdelitem('set', key, value)
+
+
+    def __delitem__(self, key):
+        self._setdelitem('del', key, value)
+
+
+    def set_labels(self, value):
+        """
+        Merge list of new lables into existing label set
+        """
+        new_labels = set(value)
+        old_labels = set(self._github_issue['labels'])
+        change_list = list(new_labels | old_labels)
+        get_gh_label = self._github_issues.get_gh_label # save typing
+        # Raise exception if any label name is bad
+        gh_labels = [get_gh_label(label) for label in change_list]
+        # Access PyGithub object to change labels
+        github_issue = self._github_issue['github_issue'].set_labels(*gh_labels)
+
+
+    def del_labels(self):
+        """
+        Remove all lbels from an issue
+        """
+        self._github_issue['github_issue'].delete_labels()
