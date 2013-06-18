@@ -3,7 +3,7 @@ Classes to cache and read specific items from github issues in a uniform way
 """
 
 from functools import partial as Partial
-import datetime, time, shelve
+import datetime, time, shelve, cPickle
 # Requires PyGithub version >= 1.13 for access to raw_data attribute
 import github
 
@@ -153,8 +153,9 @@ class GithubCache(object):
         """
         try:
             return self.cache_get() # maybe raise KeyError or TypeError
-        except TypeError:
-            raise KeyError("Cache is corrupted")
+        except (TypeError, cPickle.UnpicklingError, AttributeError, EOFError,
+                ImportError, IndexError):
+            raise AttributeError("Cache is corrupted")
 
 
 class GithubIssuesBase(list):
@@ -196,6 +197,7 @@ class GithubIssuesBase(list):
                                     cache_set_partial,
                                     self.pre_fetch_partial,
                                     fetch_partial)
+        super(GithubIssuesBase, self).__init__()
 
 
     def __del__(self):
@@ -647,7 +649,7 @@ class MutableIssue(dict):
 
     def __init__(self, github_issues, issue_number):
         if not isinstance(github_issues, GithubIssues):
-            raise ValueError("github_issues %s is not a GithubIssues, it is a %s"
+            raise ValueError("github_issues %s is not a GithubIssues, it's a %s"
                              % (str(github_issues), str(type(github_issues))))
         # make sure issue_number is valid and cached
         junk = github_issues[issue_number]
@@ -655,7 +657,7 @@ class MutableIssue(dict):
         # Private for private _github_issue property access
         self._github_issues = github_issues
         self._issue_number = issue_number
-
+        super(MutableIssue, self).__init__()
 
     @property
     def _github_issue(self):
@@ -686,7 +688,7 @@ class MutableIssue(dict):
 
 
     def __delitem__(self, key):
-        self._setdelitem('del', key, value)
+        self._setdelitem('del', key, None)
 
 
     def set_labels(self, value):
@@ -700,11 +702,12 @@ class MutableIssue(dict):
         # Raise exception if any label name is bad
         gh_labels = [get_gh_label(label) for label in change_list]
         # Access PyGithub object to change labels
-        github_issue = self._github_issue['github_issue'].set_labels(*gh_labels)
-
+        self._github_issue['github_issue'].set_labels(*gh_labels)
+        # TODO: Remove or update cache entry
 
     def del_labels(self):
         """
         Remove all lbels from an issue
         """
         self._github_issue['github_issue'].delete_labels()
+        # TODO: Remove or update cache entry
