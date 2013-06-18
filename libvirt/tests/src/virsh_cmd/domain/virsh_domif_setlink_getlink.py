@@ -42,7 +42,7 @@ def run_virsh_domif_setlink_getlink(test, params, env):
 
     vm_name = params.get("main_vm", "virt-tests-vm1")
     vm = env.get_vm(vm_name)
-    options = params.get("options", "--config")
+    options = params.get("if_options", "--config")
     start_vm = params.get("start_vm", "no")
     libvirtd = params.get("libvirtd", "on")
     if_device = params.get("if_device", "net")
