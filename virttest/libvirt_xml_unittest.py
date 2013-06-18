@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import unittest, os, shutil, warnings
+import unittest, os, shutil, logging
 import common
 from virttest import xml_utils, virsh, utils_misc, data_dir
 from autotest.client import utils
@@ -457,9 +457,7 @@ class testStubXML(LibvirtXMLTestBase):
 
 
     def setUp(self):
-        # This is not thread-safe, hopefully it doesn't mess anything up :S
-        warnings.resetwarnings()
-        warnings.simplefilter("ignore")
+        logging.disable(logging.WARNING)
         super(testStubXML, self).setUp()
 
 
@@ -595,6 +593,7 @@ class testAddressXML(LibvirtXMLTestBase):
 class testVMXMLDevices(LibvirtXMLTestBase):
 
     def test_channels(self):
+        logging.disable(logging.WARNING)
         vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
         channels = vmxml.devices.by_device_tag('channel')
         self.assertEqual(len(channels), 2)
