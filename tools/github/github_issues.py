@@ -524,7 +524,7 @@ class GithubIssues(GithubIssuesBase, object):
 
     def get_gh_label(self, name):
         repo = self.get_repo()
-        cache_key = 'repo_%s_labels'
+        cache_key = str('repo_%s_label_%s' % (self.repo_full_name, name))
         fetch_partial = Partial(repo.get_label, name)
         try:
             return self.get_gh_obj(cache_key, fetch_partial)
