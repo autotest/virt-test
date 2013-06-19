@@ -1,6 +1,9 @@
 """
 Library of objects, which could represent qemu devices in order to create
 complete representation of VM. There are three parts:
+1) Device objects - individual devices representation
+2) Bus representation - bus representation
+3) Device container - qemu machine representation
 
 @copyright: 2012-2013 Red Hat Inc.
 """
@@ -1418,4 +1421,3 @@ class DevContainer(object):
                              "i440FX.")
                 devices = machine_i440FX(False)
         return devices
-
