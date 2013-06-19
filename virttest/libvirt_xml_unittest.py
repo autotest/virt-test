@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import unittest, os, shutil
+import unittest, os, shutil, logging
 import common
 from virttest import xml_utils, virsh, utils_misc, data_dir
 from autotest.client import utils
@@ -12,7 +12,7 @@ from virttest.libvirt_xml.devices import base as devices_base
 from virttest.libvirt_xml import capability_xml
 
 # save a copy
-ORIGINAL_DEVICE_TYPES = list(librarian.device_types)
+ORIGINAL_DEVICE_TYPES = list(librarian.DEVICE_TYPES)
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
 _CAPABILITIES = """<capabilities><host>
 <uuid>%s</uuid><cpu><arch>x86_64</arch><model>
@@ -62,6 +62,14 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                         service="5442"/>'
                     '         <target port="3"/>'
                     '       </serial>'
+                    '       <channel type="foo1">'
+                    '         <source mode="foo2" path="foo3" />'
+                    '         <target name="foo4" type="foo5" />'
+                    '       </channel>'
+                    '       <channel type="bar1">'
+                    '         <source mode="bar2" path="bar3" />'
+                    '         <target name="bar4" type="bar5" />'
+                    '       </channel>'
                     '    </devices>'
                     '    <seclabel type="sec_type" model="sec_model"\
                                                     relabel="sec_relabel">'
@@ -118,9 +126,11 @@ class LibvirtXMLTestBase(unittest.TestCase):
         return domain_xml
 
     def setUp(self):
-        # cause all virsh commands to do nothing and return nothing
+        # cause any called virsh commands to fail testing unless a mock declared
         # necessary so virsh module doesn't complain about missing virsh command
-        self.dummy_virsh = virsh.Virsh(virsh_exec='/bin/true',
+        # and to catch any libvirt_xml interface which calls virsh functions
+        # unexpectidly.
+        self.dummy_virsh = virsh.Virsh(virsh_exec='/bin/false',
                                        uri='qemu:///system',
                                        debug=True,
                                        ignore_status=True)
@@ -138,7 +148,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
         self.dummy_virsh.super_set('define', self._define)
 
     def tearDown(self):
-        librarian.device_types = list(ORIGINAL_DEVICE_TYPES)
+        librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)
         if os.path.isdir(self.__doms_dir__):
             shutil.rmtree(self.__doms_dir__)
 
@@ -341,7 +351,16 @@ class TestVMXML(LibvirtXMLTestBase):
 
     def test_seclabel(self):
         vmxml = self._from_scratch()
+
+        # should not raise an exception
+        del vmxml.seclabel
+
+        self.assertRaises(xcepts.LibvirtXMLError,
+                          getattr, vmxml, 'seclabel')
+
         vmxml.set_seclabel({'type':"dynamic"})
+        self.assertEqual(vmxml.seclabel['type'], 'dynamic')
+        self.assertEqual(len(vmxml.seclabel), 1)
 
         seclabel_dict = {'type':'test_type', 'model':'test_model',
                          'relabel':'test_relabel', 'label':'test_label',
@@ -353,6 +372,11 @@ class TestVMXML(LibvirtXMLTestBase):
 
         for key, value in seclabel_dict.items():
             self.assertEqual(seclabel[key], value)
+
+        # test attribute-like access also
+        for key, value in vmxml.seclabel.items():
+            self.assertEqual(seclabel_dict[key], value)
+
 
 
 class testNetworkXML(LibvirtXMLTestBase):
@@ -405,9 +429,9 @@ class testLibrarian(LibvirtXMLTestBase):
 
     def test_no_module(self):
         # Bypass type-check to induse module load failure
-        original_device_types = librarian.device_types
+        original_device_types = librarian.DEVICE_TYPES
         for badname in ('DoesNotExist', '/dev/null', '', None):
-            librarian.device_types.append(badname)
+            librarian.DEVICE_TYPES.append(badname)
             self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
                               badname)
 
@@ -416,6 +440,44 @@ class testLibrarian(LibvirtXMLTestBase):
         Serial = librarian.get('serial')
         self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
         self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
+
+
+class testStubXML(LibvirtXMLTestBase):
+
+
+    class UntypedFoobar(devices_base.UntypedDeviceBase):
+        __metaclass__ = devices_base.StubDeviceMeta
+        _device_tag = 'foobar'
+
+
+    class TypedFoobar(devices_base.TypedDeviceBase):
+        __metaclass__ = devices_base.StubDeviceMeta
+        _device_tag = 'foo'
+        _def_type_name = 'bar'
+
+
+    def setUp(self):
+        logging.disable(logging.WARNING)
+        super(testStubXML, self).setUp()
+
+
+    def test_untyped_device_stub(self):
+        foobar = self.UntypedFoobar(virsh_instance = self.dummy_virsh)
+        self.assertEqual(foobar.virsh.domuuid(None),
+                         "ddb0cf86-5ba8-4f83-480a-d96f54339219")
+        self.assertEqual(foobar.device_tag, 'foobar')
+        self.assertEqual(unicode(foobar),
+                         u"<?xml version='1.0' encoding='UTF-8'?>\n<foobar />")
+
+
+    def test_typed_device_stub(self):
+        foobar = self.TypedFoobar(virsh_instance = self.dummy_virsh)
+        self.assertEqual(foobar.virsh.domuuid(None),
+                         "ddb0cf86-5ba8-4f83-480a-d96f54339219")
+        self.assertEqual(foobar.device_tag, 'foo')
+        self.assertEqual(foobar.type_name, 'bar')
+        self.assertEqual(unicode(foobar),
+              u'<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<foo type="bar" />')
 
 
 class testCharacterXML(LibvirtXMLTestBase):
@@ -526,6 +588,22 @@ class testAddressXML(LibvirtXMLTestBase):
         the_dict = {'type_name':'foobar', 'foo':'bar'}
         another_address = address.new_from_dict(the_dict, self.dummy_virsh)
         self.assertEqual(str(new_address), str(another_address))
+
+
+class testVMXMLDevices(LibvirtXMLTestBase):
+
+    def test_channels(self):
+        logging.disable(logging.WARNING)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        channels = vmxml.devices.by_device_tag('channel')
+        self.assertEqual(len(channels), 2)
+        self.assertTrue(isinstance(channels, vm_xml.VMXMLDevices))
+        self.assertEqual(channels[0].type_name, 'foo1')
+        self.assertEqual(channels[1].type_name, 'bar1')
+        one = channels.pop()
+        two = channels.pop()
+        self.assertEqual(len(channels), 0)
+        self.assertFalse(one == two)
 
 
 class testCAPXML(LibvirtXMLTestBase):
