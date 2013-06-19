@@ -6,12 +6,14 @@ complete representation of VM. There are three parts:
 """
 # Python imports
 import commands
+import itertools
 import logging
 import re
 # Autotest imports
 from autotest.client.shared import error
-import qemu_monitor
 import arch
+import qemu_monitor
+
 
 try:
     from collections import OrderedDict
@@ -42,27 +44,6 @@ class DeviceInsertError(DeviceError):
         return ("Failed to insert device:\n%s\nBecause:\n%s\nList of VM"
                 "devices:\n%s\n%s" % (self.device.str_long(), self.reason,
                                       self.vmdev, self.vmdev.str_bus_long()))
-
-
-class JoinedIterators(object):
-    """ iterator over multiple iterable objects """
-    def __init__(self, iters):
-        """ @param iters: List of iterable objects """
-        self.iters = [iter(_) for _ in iters]
-        self.idx = 0
-
-    def __iter__(self):
-        """ @return: Iterator over all objects """
-        return self
-
-    def next(self):
-        """ @return: Next item """
-        while self.idx < len(self.iters):
-            try:
-                return self.iters[self.idx].next()
-            except StopIteration:
-                self.idx += 1
-        raise StopIteration
 
 
 def _convert_args(arg_dict):
@@ -460,8 +441,8 @@ class QSparseBus(object):
 
     def __iter__(self):
         """ Iterate over all defined devices. """
-        return JoinedIterators((self.bus.itervalues(),
-                                self.badbus.itervalues()))
+        return itertools.chain(self.bus.itervalues(),
+                               self.badbus.itervalues())
 
     def str_short(self):
         """ short string representation """
