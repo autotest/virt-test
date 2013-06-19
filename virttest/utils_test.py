@@ -2406,7 +2406,7 @@ class GuestSuspend(object):
         return s, o
 
 
-    def verfiy_guest_support_suspend(self, **args):
+    def verify_guest_support_suspend(self, **args):
         s, _ = self._check_guest_suspend_log(**args)
         if s:
             raise error.TestError("Guest doesn't support suspend.")

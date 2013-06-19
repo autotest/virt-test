@@ -6,7 +6,7 @@ class GuestSuspendBaseTest(utils_test.GuestSuspend):
     def do_guest_suspend(self, **args):
         suspend_type = args.get("suspend_type", self.SUSPEND_TYPE_MEM)
 
-        self.verfiy_guest_support_suspend(**args)
+        self.verify_guest_support_suspend(**args)
         self.setup_bg_program(**args)
         self.check_bg_program(**args)
 
