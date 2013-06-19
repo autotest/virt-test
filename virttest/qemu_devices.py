@@ -5,12 +5,11 @@ complete representation of VM. There are three parts:
 @copyright: 2012-2013 Red Hat Inc.
 """
 # Python imports
-import commands
 import itertools
 import logging
 import re
 # Autotest imports
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 import arch
 import qemu_monitor
 
@@ -886,8 +885,10 @@ class DevContainer(object):
         """
         def get_hmp_cmds(qemu_binary):
             """ @return: list of human monitor commands """
-            _ = commands.getoutput("echo -e 'help\nquit' | %s -monitor "
-                                   "stdio -vnc none" % qemu_binary)
+            _ = utils.system_output("echo -e 'help\nquit' | %s -monitor "
+                                    "stdio -vnc none" % qemu_binary,
+                                    timeout=10, ignore_status=True,
+                                    verbose=False)
             _ = re.findall(r'^([^\| ]+\|?\w+)', _, re.M)
             hmp_cmds = []
             for cmd in _:
@@ -899,31 +900,35 @@ class DevContainer(object):
 
         def get_qmp_cmds(qemu_binary):
             """ @return: list of qmp commands """
-            cmds = commands.getoutput('echo -e \''
+            cmds = utils.system_output('echo -e \''
                             '{ "execute": "qmp_capabilities" }\n'
                             '{ "execute": "query-commands", "id": "RAND91" }\n'
                             '{ "execute": "quit" }\''
                             '| %s -qmp stdio -vnc none | grep return |'
-                            ' grep RAND91'
-                            % qemu_binary).splitlines()
+                            ' grep RAND91' % qemu_binary, timeout=10,
+                            ignore_status=True, verbose=False).splitlines()
             if not cmds:
                 # Some qemu versions crashes when qmp used too early; add sleep
-                cmds = commands.getoutput('echo -e \''
+                cmds = utils.system_output('echo -e \''
                             '{ "execute": "qmp_capabilities" }\n'
                             '{ "execute": "query-commands", "id": "RAND91" }\n'
                             '{ "execute": "quit" }\' | (sleep 1; cat )'
                             '| %s -qmp stdio -vnc none | grep return |'
-                            ' grep RAND91'
-                            % qemu_binary).splitlines()
+                            ' grep RAND91' % qemu_binary, timeout=10,
+                            ignore_status=True, verbose=False).splitlines()
             if cmds:
                 cmds = re.findall(r'{\s*"name"\s*:\s*"([^"]+)"\s*}', cmds[0])
             if cmds:    # If no mathes, return None
                 return cmds
 
         self.__state = 0    # is representation sync with VM (0 = synchronized)
-        self.__qemu_help = commands.getoutput("%s -help" % qemu_binary)
-        self.__device_help = commands.getoutput("%s -device ?" % qemu_binary)
-        self.__machine_types = commands.getoutput("%s -M ?" % qemu_binary)
+        self.__qemu_help = utils.system_output("%s -help" % qemu_binary,
+                                timeout=10, ignore_status=True, verbose=False)
+        self.__device_help = utils.system_output("%s -device ? 2>&1"
+                                            % qemu_binary, timeout=10,
+                                            ignore_status=True, verbose=False)
+        self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
+                                timeout=10, ignore_status=True, verbose=False)
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
         self.__qmp_cmds = get_qmp_cmds(qemu_binary)
         self.vmname = vmname
