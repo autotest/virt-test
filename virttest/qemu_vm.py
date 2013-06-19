@@ -828,7 +828,7 @@ class VM(virt_vm.BaseVM):
             else:
                 cmd = " -net %s,vlan=%d" % (mode, vlan)
             if mode == "tap" and tapfds:
-                if (int(queues)) > 1 and ',fds=' in help_text:
+                if (int(queues)) > 1 and ',fds=' in devices.get_help_text():
                     cmd += ",fds=%s" % tapfds
                 else:
                     cmd += ",fd=%s" % tapfds
@@ -2883,7 +2883,11 @@ class VM(virt_vm.BaseVM):
                 self.monitor.getfd(int(nic.tapfds.split(':')[i]),
                                    nic.tapfd_ids[i])
 
-            if (int(nic.queues)) > 1 and ',fds=' in self.help_text:
+            if not self.devices:
+                raise virt_vm.VMAddNetDevError("Can't add nic for VM which is"
+                                               " not running.")
+            if ((int(nic.queues)) > 1 and
+                        ',fds=' in self.devices.get_help_text()):
                 attach_cmd += " type=tap,id=%s,fds=%s" % (nic.device_id,
                                                           nic.tapfds)
             else:
