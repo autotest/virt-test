@@ -272,7 +272,7 @@ class BlockCopy(object):
         if method == "monitor":
             backing_file = self.vm.monitor.get_backingfile(self.device)
         else:
-            cmd = self.params.get("qemu_img", "qemu-img")
+            cmd = utils_misc.get_qemu_img_binary(self.params)
             image_file = self.get_image_file()
             cmd += " info %s " % image_file
             info = utils.system_output(cmd)
