@@ -1,5 +1,6 @@
 import logging, time, os
 from virttest import utils_misc, aexpect, utils_net, openvswitch, ovs_utils
+from virttest import versionable_class
 from autotest.client.shared import error
 
 
@@ -40,7 +41,7 @@ class InfrastructureInit(MiniSubtest):
             vm.verify_alive()
 
         error.context("Start OpenVSwitch.")
-        self.ovs = openvswitch.OpenVSwitchSystem()
+        self.ovs = versionable_class.factory(openvswitch.OpenVSwitchSystem)()
         self.ovs.init_system()
         self.ovs.check()
         error.context("Add new bridge %s." % (self.br0_name))
