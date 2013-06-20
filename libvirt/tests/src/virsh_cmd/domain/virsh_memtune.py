@@ -142,7 +142,7 @@ def run_virsh_memtune(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     pid = vm.get_pid()
-    logging.info("SAtheesh: %s", pid)
+    logging.info("Verify valid cgroup path for VM pid: %s", pid)
 
     # Resolve the memory cgroup path for a domain
     path = cgroup_utils.resolve_task_cgroup_path(int(pid), "memory")
