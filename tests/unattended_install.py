@@ -831,6 +831,20 @@ def run_unattended_install(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    @error.context_aware
+    def copy_images():
+        error.base_context("Copy image from NFS after installation failure")
+        image_copy_on_error = params.get("image_copy_on_error", "yes")
+        if "yes" in image_copy_on_error:
+            try:
+                error.context("Quit qemu-kvm before copying guest image")
+                vm.monitor.quit()
+            except Exception, e:
+                logging.warn(e)
+            from autotest.client.virt.tests import image_copy
+            error.context("Copy image from NFS Server")
+            image_copy.run_image_copy(test, params, env)
+
     vm = env.get_vm(params["main_vm"])
     unattended_install_config = UnattendedInstallConfig(test, params, vm)
     unattended_install_config.setup()
@@ -862,7 +876,11 @@ def run_unattended_install(test, params, env):
             if params.get("wait_no_ack", "no") == "yes":
                 break
             else:
+                # Print out the original exception before copying images.
+                logging.error(e)
+                copy_images()
                 raise e
+
         test.verify_background_errors()
         finish_signal = vm.serial_console.get_output()
         if (params.get("wait_no_ack", "no") == "no" and
@@ -883,6 +901,9 @@ def run_unattended_install(test, params, env):
         else:
             time.sleep(1)
     else:
+        logging.warn("Timeout elapsed while waiting for install to finish."
+                     "Will run image_copy to copy image from NFS.")
+        copy_images()
         raise error.TestFail("Timeout elapsed while waiting for install to "
                              "finish")
 
