@@ -219,10 +219,12 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         """Overwrite original source from current tree"""
         self.write()
         self.flush()
+        # self is the 'original', so backup/restore logic is reversed
         super(XMLTreeFile, self).restore()
 
     def restore(self):
         """Overwrite and reparse current tree from original source"""
+        # self is the 'original', so backup/restore logic is reversed
         super(XMLTreeFile, self).backup()
         try:
             ElementTree.ElementTree.__init__(self, element=None,
