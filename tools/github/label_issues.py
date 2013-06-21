@@ -36,7 +36,7 @@ issues = GithubIssues(gh, repo_full_name)
 
 # Can't directly search for no labels
 criteria = {'state':'open',
-            'sort':'updated', 'direction':'desc'}
+            'sort':'updated', 'direction':'asc'} # updated-asc == oldest first
 
 heading = ("Open, unlabeled issues from %s, oldest-first" % repo_full_name)
 print heading
@@ -49,6 +49,7 @@ labels = ", ".join( [label.name for label in repo.get_labels()] )
 for number in issues.search(criteria):
     if len(issues[number]['labels']) > 0:
         continue
+    print '#%d:' % number,
     print issues[number]['summary'] + ':'
     print issues[number]['description']
     print "Available Labels:", labels

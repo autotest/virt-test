@@ -30,7 +30,7 @@ while True:
 print
 
 criteria = {'state':'open', 'assignee':'none', 'labels':labels,
-            'sort':'updated', 'direction':'desc'}
+            'sort':'updated', 'direction':'asc'} # asc-updated == oldest first
 
 heading = ("Unassigned %s issues from %s, oldest-first"
            % (",".join(labels), repo_full_name))
@@ -39,7 +39,7 @@ print "-" * len(heading)
 print
 
 for number in issues.search(criteria):
-    print issues[number]['url']
+    print issues[number]['url'], issues[number]['summary'][:30]
 
 # make sure cache is cleaned and saved up
 del issues
