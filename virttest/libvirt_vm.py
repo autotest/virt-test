@@ -1144,6 +1144,29 @@ class VM(virt_vm.BaseVM):
                                       ignore_status=ignore_status,
                                       debug=debug)
 
+    def attach_disk(self, source, target, extra=""):
+        """
+        Attach a disk to VM.
+        """
+        cmd_result = virsh.attach_disk(self.name, source=source,
+                                       target=target,
+                                       extra=extra,
+                                       uri=self.connect_uri)
+        if cmd_result.exit_status:
+            raise error.TestFail("Attach disk %s to %s on VM %s failed."
+                                 % (source, target, self.name))
+
+    def detach_disk(self, target, extra=""):
+        """
+        Detach a disk from VM.
+        """
+        cmd_result = virsh.detach_disk(self.name, target=target,
+                                       extra=extra,
+                                       uri=self.connect_uri)
+        if cmd_result.exit_status:
+            raise error.TestFail("Dettach disk %s from VM %s failed."
+                                 % (target, self.name))
+
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
         Destroy the VM.
