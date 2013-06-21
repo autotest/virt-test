@@ -135,7 +135,14 @@ class UnattendedInstallConfig(object):
         if self.install_virtio == 'yes':
             v_attributes = ['virtio_floppy', 'virtio_storage_path',
                             'virtio_network_path', 'virtio_oemsetup_id',
-                            'virtio_network_installer_path']
+                            'virtio_network_installer_path',
+                            'virtio_balloon_installer_path',
+                            'virtio_qxl_installer_path',
+                            'virtio_scsi_cdrom']
+        else:
+            v_attributes = ['virtio_balloon_installer_path',
+                            'virtio_qxl_installer_path']
+
             for va in v_attributes:
                 setattr(self, va, params.get(va, ''))
 
@@ -273,11 +280,18 @@ class UnattendedInstallConfig(object):
         else:
             driver = 'dir'
 
-        dummy_re = 'KVM_TEST_VIRTIO_NETWORK_INSTALLER'
-        installer = parser.get('GuiRunOnce', 'Command0')
-        if dummy_re in installer:
-            installer = re.sub(dummy_re, driver, installer)
-        parser.set('GuiRunOnce', 'Command0', installer)
+        dummy_re_dirver = {'KVM_TEST_VIRTIO_NETWORK_INSTALLER':
+                 'virtio_network_installer_path',
+                 'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
+                 'virtio_balloon_installer_path',
+                 'KVM_TEST_VIRTIO_QXL_INSTALLER':
+                 'virtio_qxl_installer_path'}
+        dummy_re = ""
+        for dummy in dummy_re_dirver:
+            if dummy_re:
+                dummy_re += "|%s" % dummy
+            else:
+                dummy_re = dummy
 
         # Replace the process check in finish command
         dummy_process_re = r'\bPROCESS_CHECK\b'
@@ -288,7 +302,11 @@ class UnattendedInstallConfig(object):
                               "%s" % self.process_check,
                               process_check)
                 parser.set('GuiRunOnce', opt, process_check)
-
+            elif re.findall(dummy_re, check):
+                dummy = re.findall(dummy_re, check)[0]
+                driver = getattr(self, dummy_re_dirver[dummy])
+                check = re.sub(dummy, driver, check)
+                parser.set('GuiRunOnce', opt, check)
         # Now, writing the in memory config state to the unattended file
         fp = open(answer_path, 'w')
         parser.write(fp)
@@ -341,22 +359,34 @@ class UnattendedInstallConfig(object):
         # Last but not least important, replacing the virtio installer command
         # And process check in finish command
         command_lines = doc.getElementsByTagName("CommandLine")
+        dummy_re_dirver = {'KVM_TEST_VIRTIO_NETWORK_INSTALLER':
+                 'virtio_network_installer_path',
+                 'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
+                 'virtio_balloon_installer_path',
+                 'KVM_TEST_VIRTIO_QXL_INSTALLER':
+                 'virtio_qxl_installer_path'}
+        process_check_re = 'PROCESS_CHECK'
+        dummy_re = ""
+        for dummy in dummy_re_dirver:
+            if dummy_re:
+                dummy_re += "|%s" % dummy
+            else:
+                dummy_re = dummy
+
         for command_line in command_lines:
             command_line_text = command_line.childNodes[0]
             assert command_line_text.nodeType == doc.TEXT_NODE
-            dummy_re = 'KVM_TEST_VIRTIO_NETWORK_INSTALLER'
-            process_check_re = 'PROCESS_CHECK'
-            if (self.install_virtio == 'yes' and
-                hasattr(self, 'virtio_network_installer_path')):
-                driver = self.virtio_network_installer_path
-            else:
-                driver = 'dir'
-            if driver.endswith("msi"):
-                driver = 'msiexec /passive /package ' + driver
-            if dummy_re in command_line_text.data:
+
+            if re.findall(dummy_re, command_line_text.data):
+                dummy = re.findall(dummy_re, command_line_text.data)[0]
+                driver = getattr(self, dummy_re_dirver[dummy])
+
+                if driver.endswith("msi"):
+                    driver = 'msiexec /passive /package ' + driver
                 t = command_line_text.data
                 t = re.sub(dummy_re, driver, t)
                 command_line_text.data = t
+
             if process_check_re in command_line_text.data:
                 t = command_line_text.data
                 t = re.sub(process_check_re, self.process_check, t)
