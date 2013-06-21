@@ -6,7 +6,7 @@ from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
 from virttest import qemu_monitor, remote, syslog_server
-from virttest import http_server, data_dir, utils_net
+from virttest import http_server, data_dir, utils_net, utils_test
 
 
 # Whether to print all shell commands called
@@ -127,24 +127,24 @@ class UnattendedInstallConfig(object):
                            'floppy_name', 'cdrom_unattended', 'boot_path',
                            'kernel_params', 'extra_params', 'qemu_img_binary',
                            'cdkey', 'finish_program', 'vm_type',
-                           'process_check', 'vfd_size']
+                           'process_check', 'vfd_size', 'cdrom_mount_point',
+                           'floppy_mount_point', 'cdrom_virtio',
+                           'virtio_floppy', 're_driver_match',
+                           're_hardware_id', 'driver_in_floppy']
 
         for a in self.attributes:
             setattr(self, a, params.get(a, ''))
 
-        if self.install_virtio == 'yes':
-            v_attributes = ['virtio_floppy', 'virtio_storage_path',
-                            'virtio_network_path', 'virtio_oemsetup_id',
-                            'virtio_network_installer_path',
-                            'virtio_balloon_installer_path',
-                            'virtio_qxl_installer_path',
-                            'virtio_scsi_cdrom']
-        else:
-            v_attributes = ['virtio_balloon_installer_path',
-                            'virtio_qxl_installer_path']
+        # Will setup the virtio attributes
+        v_attributes = ['virtio_floppy', 'virtio_storage_path',
+                        'virtio_network_path', 'virtio_oemsetup_id',
+                        'virtio_network_installer_path',
+                        'virtio_balloon_installer_path',
+                        'virtio_qxl_installer_path',
+                        'virtio_scsi_cdrom']
 
-            for va in v_attributes:
-                setattr(self, va, params.get(va, ''))
+        for va in v_attributes:
+            setattr(self, va, params.get(va, ''))
 
         self.tmpdir = test.tmpdir
 
@@ -170,6 +170,13 @@ class UnattendedInstallConfig(object):
         if getattr(self, 'cdrom_unattended'):
             self.cdrom_unattended = os.path.join(root_dir,
                                                  self.cdrom_unattended)
+
+        if getattr(self, 'virtio_floppy'):
+            self.virtio_floppy = os.path.join(root_dir, self.virtio_floppy)
+
+        if getattr(self, 'cdrom_virtio'):
+            self.cdrom_virtio = os.path.join(root_dir, self.cdrom_virtio)
+
         if getattr(self, 'kernel'):
             self.kernel = os.path.join(root_dir, self.kernel)
         if getattr(self, 'initrd'):
@@ -209,6 +216,91 @@ class UnattendedInstallConfig(object):
                                             'tcp') == 'tcp'
 
         self.vm = vm
+
+
+    @error.context_aware
+    def get_driver_hardware_id(self, driver, run_cmd=True):
+        """
+        Get windows driver's hardware id from inf files.
+
+        @param dirver: Configurable driver name.
+        @param run_cmd:  Use hardware id in windows cmd command or not.
+        @param return: Windows driver's hardware id
+        """
+        if not os.path.exists(self.cdrom_mount_point):
+            os.mkdir(self.cdrom_mount_point)
+        if not os.path.exists(self.floppy_mount_point):
+            os.mkdir(self.floppy_mount_point)
+        if not os.path.ismount(self.cdrom_mount_point):
+            utils.system("mount %s %s -o loop" % (self.cdrom_virtio,
+                                         self.cdrom_mount_point), timeout=60)
+        if not os.path.ismount(self.floppy_mount_point):
+            utils.system("mount %s %s -o loop" % (self.virtio_floppy,
+                                        self.floppy_mount_point), timeout=60)
+        drivers_d = []
+        driver_link = None
+        if self.driver_in_floppy is not None:
+            driver_in_floppy = self.driver_in_floppy
+            drivers_d = driver_in_floppy.split()
+        else:
+            drivers_d.append('qxl.inf')
+        for driver_d in drivers_d:
+            if driver_d in driver:
+                driver_link = os.path.join(self.floppy_mount_point, driver)
+        if driver_link is None:
+            driver_link = os.path.join(self.cdrom_mount_point, driver)
+        try:
+            txt = open(driver_link, "r").read()
+            hwid = re.findall(self.re_hardware_id, txt)[-1].rstrip()
+            if run_cmd:
+                hwid = '^&'.join(hwid.split('&'))
+            return hwid
+        except Exception, e:
+            logging.error("Fail to get hardware id with exception: %s" % e)
+
+
+    @error.context_aware
+    def update_driver_hardware_id(self, driver):
+        """
+        Update driver string with the hardware id get from inf files
+
+        @driver: driver string
+        @return new driver string
+        """
+        if 'hwid' in driver:
+            if 'hwidcmd' in driver:
+                run_cmd = True
+            else:
+                run_cmd = False
+            if self.re_driver_match is not None:
+                d_str = self.re_driver_match
+            else:
+                d_str = "(\S+)\s*hwid"
+
+            drivers_in_floppy = []
+            if self.driver_in_floppy is not None:
+                drivers_in_floppy = self.driver_in_floppy.split()
+
+
+            mount_point = self.cdrom_mount_point
+            storage_path = self.cdrom_virtio
+            for driver_in_floppy in drivers_in_floppy:
+                if driver_in_floppy in driver:
+                    mount_point = self.floppy_mount_point
+                    storage_path = self.virtio_floppy
+                    break
+
+            d_link = re.findall(d_str, driver)[0].split(":")[1]
+            d_link = "/".join(d_link.split("\\\\")[1:])
+            hwid = utils_test.get_driver_hardware_id(d_link, mount_point,
+                                                     storage_path,
+                                                     run_cmd=run_cmd)
+            if hwid:
+                driver = driver.replace("hwidcmd", hwid.strip())
+            else:
+                raise error.TestError("Can not find hwid from the driver"
+                                      " inf file")
+        return driver
 
 
     def answer_kickstart(self, answer_path):
@@ -274,12 +366,6 @@ class UnattendedInstallConfig(object):
         else:
             parser.remove_option('Unattended', 'OemPnPDriversPath')
 
-        # Replace the virtio installer command
-        if self.install_virtio == 'yes':
-            driver = self.virtio_network_installer_path
-        else:
-            driver = 'dir'
-
         dummy_re_dirver = {'KVM_TEST_VIRTIO_NETWORK_INSTALLER':
                  'virtio_network_installer_path',
                  'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
@@ -296,15 +382,21 @@ class UnattendedInstallConfig(object):
         # Replace the process check in finish command
         dummy_process_re = r'\bPROCESS_CHECK\b'
         for opt in parser.options('GuiRunOnce'):
-            process_check = parser.get('GuiRunOnce', opt)
-            if re.search(dummy_process_re, process_check):
+            check = parser.get('GuiRunOnce', opt)
+            if re.search(dummy_process_re, check):
                 process_check = re.sub(dummy_process_re,
-                              "%s" % self.process_check,
-                              process_check)
+                                       "%s" % self.process_check,
+                                       check)
                 parser.set('GuiRunOnce', opt, process_check)
             elif re.findall(dummy_re, check):
                 dummy = re.findall(dummy_re, check)[0]
                 driver = getattr(self, dummy_re_dirver[dummy])
+                if driver.endswith("msi"):
+                    driver = 'msiexec /passive /package ' + driver
+                elif 'INSTALLER' in dummy:
+                    driver = self.update_driver_hardware_id(driver)
+                elif driver is None:
+                    driver = 'dir'
                 check = re.sub(dummy, driver, check)
                 parser.set('GuiRunOnce', opt, check)
         # Now, writing the in memory config state to the unattended file
@@ -383,6 +475,8 @@ class UnattendedInstallConfig(object):
 
                 if driver.endswith("msi"):
                     driver = 'msiexec /passive /package ' + driver
+                elif 'INSTALLER' in dummy:
+                    driver = self.update_driver_hardware_id(driver)
                 t = command_line_text.data
                 t = re.sub(dummy_re, driver, t)
                 command_line_text.data = t
