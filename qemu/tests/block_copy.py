@@ -272,17 +272,15 @@ class BlockCopy(object):
         if method == "monitor":
             backing_file = self.vm.monitor.get_backingfile(self.device)
         else:
-            cmd = self.params.get("qemu_img", "qemu-img")
+            cmd = utils_misc.get_qemu_img_binary(self.params)
             image_file = self.get_image_file()
             cmd += " info %s " % image_file
             info = utils.system_output(cmd)
-            matched = re.search(r"backing file:\b+(.*)", info)
+            matched = re.search(r"backing file: +(.*)", info, re.M)
             if matched:
                 backing_file = matched.group(1)
         if backing_file:
             backing_file = os.path.abspath(backing_file)
-            if not os.path.exists(backing_file):
-                raise error.TestError("backingfile(%s) not exists")
         return backing_file
 
 

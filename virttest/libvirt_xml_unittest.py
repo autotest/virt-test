@@ -1,17 +1,18 @@
 #!/usr/bin/python
 
-import unittest
+import unittest, os, shutil, logging
 import common
-from virttest import xml_utils, virsh, utils_misc
+from virttest import xml_utils, virsh, utils_misc, data_dir
+from autotest.client import utils
+from autotest.client.shared import error
 from virttest.libvirt_xml import accessors, vm_xml, xcepts, network_xml, base
 from virttest.libvirt_xml import nodedev_xml
 from virttest.libvirt_xml.devices import librarian
 from virttest.libvirt_xml.devices import base as devices_base
-from virttest.libvirt_xml.devices import address
 from virttest.libvirt_xml import capability_xml
 
 # save a copy
-ORIGINAL_DEVICE_TYPES = list(librarian.device_types)
+ORIGINAL_DEVICE_TYPES = list(librarian.DEVICE_TYPES)
 UUID = "8109c109-1551-cb11-8e2c-bc43745252ef"
 _CAPABILITIES = """<capabilities><host>
 <uuid>%s</uuid><cpu><arch>x86_64</arch><model>
@@ -29,9 +30,56 @@ type='kvm'><emulator>/usr/libexec/qemu-kvm</emulator></domain></arch><features>
 toggle='no'/></features></guest></capabilities>"""
 CAPABILITIES = _CAPABILITIES % UUID
 
+
 class LibvirtXMLTestBase(unittest.TestCase):
 
     # Override instance methods needed for testing
+
+    #domain_xml
+    #usage:
+    #    xml = __domain_xml__ % (name, uuid)
+    __domain_xml__ = ('<domain type="kvm">'
+                    '    <name>%s</name>'
+                    '    <uuid>%s</uuid>'
+                    '    <devices>' # Tests below depend on device order
+                    '       <serial type="pty">'
+                    '           <target port="0"/>'
+                    '       </serial>'
+                    '       <serial type="pty">'
+                    '           <target port="1"/>'
+                    '           <source path="/dev/null"/>'
+                    '       </serial>'
+                    '       <serial type="tcp">'
+                    '         <source mode="connect" host="1.2.3.4"\
+                                                        service="2445"/>'
+                    '         <protocol type="raw"/>'
+                    '         <target port="2"/>'
+                    '       </serial>'
+                    '       <serial type="udp">'
+                    '         <source mode="bind" host="1.2.3.4"\
+                                                        service="2445"/>'
+                    '         <source mode="connect" host="4.3.2.1"\
+                                                        service="5442"/>'
+                    '         <target port="3"/>'
+                    '       </serial>'
+                    '       <channel type="foo1">'
+                    '         <source mode="foo2" path="foo3" />'
+                    '         <target name="foo4" type="foo5" />'
+                    '       </channel>'
+                    '       <channel type="bar1">'
+                    '         <source mode="bar2" path="bar3" />'
+                    '         <target name="bar4" type="bar5" />'
+                    '       </channel>'
+                    '    </devices>'
+                    '    <seclabel type="sec_type" model="sec_model"\
+                                                    relabel="sec_relabel">'
+                    '       <label>sec_label</label>'
+                    '       <baselabel>sec_baselabel</baselabel>'
+                    '       <imagelabel>sec_imagelabel</imagelabel>'
+                    '    </seclabel>'
+                    '</domain>')
+
+    __doms_dir__ = None
 
     @staticmethod
     def _capabilities(option='', **dargs):
@@ -42,50 +90,75 @@ class LibvirtXMLTestBase(unittest.TestCase):
     def _domuuid(name, **dargs):
         return "ddb0cf86-5ba8-4f83-480a-d96f54339219"
 
+    @staticmethod
+    def _define(file_path, **dargs):
+        vmxml = xml_utils.XMLTreeFile(file_path)
+        dom_name = vmxml.find('name').text
+        xml_path = os.path.join(LibvirtXMLTestBase.__doms_dir__,
+                                                '%s.xml' % dom_name)
+        shutil.copy(file_path, xml_path)
+
+        cmd = "virsh define --file %s" % file_path
+        stdout = ""
+        stderr = stdout
+        exit_status = 0
+        result = utils.CmdResult(cmd, stdout, stderr, exit_status)
+
+        return result
 
     @staticmethod
     def _dumpxml(name, to_file="", **dargs):
-        return ('<domain type="kvm">'
-                '    <name>%s</name>'
-                '    <uuid>%s</uuid>'
-                '    <devices>' # Tests below depend on device order
-                '       <serial type="pty">'
-                '           <target port="0"/>'
-                '       </serial>'
-                '       <serial type="pty">'
-                '           <target port="1"/>'
-                '           <source path="/dev/null"/>'
-                '       </serial>'
-                '       <serial type="tcp">'
-                '         <source mode="connect" host="1.2.3.4" service="2445"/>'
-                '         <protocol type="raw"/>'
-                '         <target port="2"/>'
-                '       </serial>'
-                '       <serial type="udp">'
-                '         <source mode="bind" host="1.2.3.4" service="2445"/>'
-                '         <source mode="connect" host="4.3.2.1" service="5442"/>'
-                '         <target port="3"/>'
-                '       </serial>'
-                '    </devices>'
-                '</domain>' % (name, LibvirtXMLTestBase._domuuid(None)))
+        """
+        Get a xml from name.
+        """
+        if not name:
+            cmd = "virsh dumpxml %s" % name
+            stdout = "error: command 'dumpxml' requires <domain> option"
+            stderr = stdout
+            exit_status = 1
+            result = utils.CmdResult(cmd, stdout, stderr, exit_status)
+            raise error.CmdError(cmd, result,
+                            "Virsh Command returned non-zero exit status")
 
+        file_path = os.path.join(LibvirtXMLTestBase.__doms_dir__,
+                                                        '%s.xml' % name)
+        if os.path.exists(file_path):
+            xml_file = open(file_path, 'r')
+            domain_xml = xml_file.read()
+        else:
+            xml_file = open(file_path, 'w')
+            domain_xml = LibvirtXMLTestBase.__domain_xml__ % (name,
+                                            LibvirtXMLTestBase._domuuid(None))
+            xml_file.write(domain_xml)
+        xml_file.close()
+        return domain_xml
 
     def setUp(self):
-        # cause all virsh commands to do nothing and return nothing
+        # cause any called virsh commands to fail testing unless a mock declared
         # necessary so virsh module doesn't complain about missing virsh command
-        self.dummy_virsh = virsh.Virsh(virsh_exec='/bin/true',
+        # and to catch any libvirt_xml interface which calls virsh functions
+        # unexpectidly.
+        self.dummy_virsh = virsh.Virsh(virsh_exec='/bin/false',
                                        uri='qemu:///system',
                                        debug=True,
                                        ignore_status=True)
+
+        # make a tmp_dir to store informations.
+        LibvirtXMLTestBase.__doms_dir__ = os.path.join(data_dir.get_tmp_dir(),
+                                                                    'domains')
+        if not os.path.isdir(LibvirtXMLTestBase.__doms_dir__):
+            os.makedirs(LibvirtXMLTestBase.__doms_dir__)
+
         # Normally not kosher to call super_set, but required here for testing
         self.dummy_virsh.super_set('capabilities', self._capabilities)
         self.dummy_virsh.super_set('dumpxml', self._dumpxml)
         self.dummy_virsh.super_set('domuuid', self._domuuid)
-
-
+        self.dummy_virsh.super_set('define', self._define)
 
     def tearDown(self):
-        librarian.device_types = list(ORIGINAL_DEVICE_TYPES)
+        librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)
+        if os.path.isdir(self.__doms_dir__):
+            shutil.rmtree(self.__doms_dir__)
 
 
 class AccessorsTest(LibvirtXMLTestBase):
@@ -139,13 +212,13 @@ class AccessorsTest(LibvirtXMLTestBase):
                                                          'dec_test',
                                                          'hex_test')
         lvx = FooBar(self.dummy_virsh)
-        lvx.xml =('<integer>'
-                  ' <auto>00</auto>'
-                  ' <bin>10</bin>'
-                  ' <oct>10</oct>'
-                  ' <dec>10</dec>'
-                  ' <hex>10</hex>'
-                  '</integer>')
+        lvx.xml = ('<integer>'
+                   ' <auto>00</auto>'
+                   ' <bin>10</bin>'
+                   ' <oct>10</oct>'
+                   ' <dec>10</dec>'
+                   ' <hex>10</hex>'
+                   '</integer>')
 
         name_radix = {'auto':0, 'bin':2, 'oct':8, 'dec':10, 'hex':16}
         for name, radix in name_radix.items():
@@ -284,6 +357,36 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertEqual(vmxml.hypervisor_type, 'kvm')
 
 
+    def test_seclabel(self):
+        vmxml = self._from_scratch()
+
+        # should not raise an exception
+        del vmxml.seclabel
+
+        self.assertRaises(xcepts.LibvirtXMLError,
+                          getattr, vmxml, 'seclabel')
+
+        vmxml.set_seclabel({'type':"dynamic"})
+        self.assertEqual(vmxml.seclabel['type'], 'dynamic')
+        self.assertEqual(len(vmxml.seclabel), 1)
+
+        seclabel_dict = {'type':'test_type', 'model':'test_model',
+                         'relabel':'test_relabel', 'label':'test_label',
+                         'baselabel':'test_baselabel',
+                         'imagelabel':'test_imagelabel'}
+        vmxml.set_seclabel(seclabel_dict)
+
+        seclabel = vmxml.get_seclabel()
+
+        for key, value in seclabel_dict.items():
+            self.assertEqual(seclabel[key], value)
+
+        # test attribute-like access also
+        for key, value in vmxml.seclabel.items():
+            self.assertEqual(seclabel_dict[key], value)
+
+
+
 class testNetworkXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
@@ -327,15 +430,16 @@ class testLibrarian(LibvirtXMLTestBase):
 
 
     def test_bad_names(self):
-        for badname in ('__init__', 'librarian', '__doc__', '/dev/null', '', None):
+        for badname in ('__init__', 'librarian', '__doc__', '/dev/null', '',
+                                                                        None):
             self.assertRaises(xcepts.LibvirtXMLError, librarian.get, badname)
 
 
     def test_no_module(self):
         # Bypass type-check to induse module load failure
-        original_device_types = librarian.device_types
+        original_device_types = librarian.DEVICE_TYPES
         for badname in ('DoesNotExist', '/dev/null', '', None):
-            librarian.device_types.append(badname)
+            librarian.DEVICE_TYPES.append(badname)
             self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
                               badname)
 
@@ -344,6 +448,44 @@ class testLibrarian(LibvirtXMLTestBase):
         Serial = librarian.get('serial')
         self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
         self.assertTrue(issubclass(Serial, devices_base.TypedDeviceBase))
+
+
+class testStubXML(LibvirtXMLTestBase):
+
+
+    class UntypedFoobar(devices_base.UntypedDeviceBase):
+        __metaclass__ = devices_base.StubDeviceMeta
+        _device_tag = 'foobar'
+
+
+    class TypedFoobar(devices_base.TypedDeviceBase):
+        __metaclass__ = devices_base.StubDeviceMeta
+        _device_tag = 'foo'
+        _def_type_name = 'bar'
+
+
+    def setUp(self):
+        logging.disable(logging.WARNING)
+        super(testStubXML, self).setUp()
+
+
+    def test_untyped_device_stub(self):
+        foobar = self.UntypedFoobar(virsh_instance = self.dummy_virsh)
+        self.assertEqual(foobar.virsh.domuuid(None),
+                         "ddb0cf86-5ba8-4f83-480a-d96f54339219")
+        self.assertEqual(foobar.device_tag, 'foobar')
+        self.assertEqual(unicode(foobar),
+                         u"<?xml version='1.0' encoding='UTF-8'?>\n<foobar />")
+
+
+    def test_typed_device_stub(self):
+        foobar = self.TypedFoobar(virsh_instance = self.dummy_virsh)
+        self.assertEqual(foobar.virsh.domuuid(None),
+                         "ddb0cf86-5ba8-4f83-480a-d96f54339219")
+        self.assertEqual(foobar.device_tag, 'foo')
+        self.assertEqual(foobar.type_name, 'bar')
+        self.assertEqual(unicode(foobar),
+              u'<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<foo type="bar" />')
 
 
 class testCharacterXML(LibvirtXMLTestBase):
@@ -365,7 +507,8 @@ class testCharacterXML(LibvirtXMLTestBase):
 
 class testSerialXML(LibvirtXMLTestBase):
 
-    XML = u"<serial type='pty'><source path='/dev/null'/><target port='-1'/></serial>"
+    XML = u"<serial type='pty'><source path='/dev/null'/>\
+                                        <target port='-1'/></serial>"
 
     def _from_scratch(self):
         serial = librarian.get('Serial')(virsh_instance = self.dummy_virsh)
@@ -453,6 +596,22 @@ class testAddressXML(LibvirtXMLTestBase):
         the_dict = {'type_name':'foobar', 'foo':'bar'}
         another_address = address.new_from_dict(the_dict, self.dummy_virsh)
         self.assertEqual(str(new_address), str(another_address))
+
+
+class testVMXMLDevices(LibvirtXMLTestBase):
+
+    def test_channels(self):
+        logging.disable(logging.WARNING)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        channels = vmxml.devices.by_device_tag('channel')
+        self.assertEqual(len(channels), 2)
+        self.assertTrue(isinstance(channels, vm_xml.VMXMLDevices))
+        self.assertEqual(channels[0].type_name, 'foo1')
+        self.assertEqual(channels[1].type_name, 'bar1')
+        one = channels.pop()
+        two = channels.pop()
+        self.assertEqual(len(channels), 0)
+        self.assertFalse(one == two)
 
 
 class testCAPXML(LibvirtXMLTestBase):

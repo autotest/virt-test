@@ -421,8 +421,10 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     if download_image or restore_image:
         logging.info("")
         step += 2
-        logging.info("%s - Verifying (and possibly downloading) guest image", step)
-        asset.download_asset('jeos-17-64', interactive=interactive, restore_image=restore_image)
+        logging.info("%s - Verifying (and possibly downloading) guest image",
+                     step)
+        asset.download_asset('jeos-17-64', interactive=interactive,
+                             restore_image=restore_image)
 
     if check_modules:
         logging.info("")

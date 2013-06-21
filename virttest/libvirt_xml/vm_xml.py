@@ -29,17 +29,28 @@ class VMXMLDevices(list):
     def __setitem__(self, key, value):
         self.__type_check__(value)
         super(VMXMLDevices, self).__setitem__(key, value)
+        return self
 
 
     def append(self, value):
         self.__type_check__(value)
         super(VMXMLDevices, self).append(value)
+        return self
 
 
     def extend(self, iterable):
         # Make sure __type_check__ happens
         for item in iterable:
             self.append(item)
+        return self
+
+
+    def by_device_tag(self, tag):
+        result = VMXMLDevices()
+        for device in self:
+            if device.device_tag == tag:
+                result.append(device)
+        return result
 
 
 class VMXMLBase(base.LibvirtXMLBase):
@@ -77,7 +88,7 @@ class VMXMLBase(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
                                                  'current_mem', 'numa',
-                                                 'devices')
+                                                 'devices', 'seclabel')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -157,7 +168,7 @@ class VMXMLBase(base.LibvirtXMLBase):
                                     self.xmltreefile.getroot(), 'devices')
             for device in value:
                 # Separate the element from the tree
-                device_element = device.getroot()
+                device_element = device.xmltreefile.getroot()
                 devices_element.append(device_element)
         self.xmltreefile.write()
 
@@ -167,6 +178,78 @@ class VMXMLBase(base.LibvirtXMLBase):
         Remove all devices
         """
         self.xmltreefile.remove_by_xpath('/devices')
+        self.xmltreefile.write()
+
+
+    def get_seclabel(self):
+        """
+        Return seclabel + child attribute dict or raise LibvirtXML error
+
+        @return: None if no seclabel in xml,
+                 dict of seclabel's attributs and children.
+        """
+        __children_list__ = ['label', 'baselabel', 'imagelabel']
+
+        seclabel_node = self.xmltreefile.find("seclabel")
+        #no seclabel tag found in xml.
+        if seclabel_node is None:
+            raise xcepts.LibvirtXMLError("Seclabel for this domain does not "
+                                         "exist")
+        seclabel = dict(seclabel_node.items())
+        for child_name in __children_list__:
+            child_node = seclabel_node.find(child_name)
+            if child_node is not None:
+                seclabel[child_name] = child_node.text
+
+        return seclabel
+
+
+    def set_seclabel(self, seclabel_dict):
+        """
+        Set seclabel of vm. Modify the attributs and children if seclabel
+        exists and create a new seclabel if seclabel is not found in
+        xmltreefile.
+        """
+        __attributs_list__ = ['type', 'model', 'relabel']
+        __children_list__ = ['label', 'baselabel', 'imagelabel']
+
+        #check the type of seclabel_dict.
+        if not isinstance(seclabel_dict, dict):
+            raise xcepts.LibvirtXMLError("seclabel_dict should be a instance of"
+                                         "dict, but not a %s.\n"
+                                         % type(seclabel_dict))
+        seclabel_node = self.xmltreefile.find("seclabel")
+        if seclabel_node is None:
+            seclabel_attr = {}
+            seclabel_node = xml_utils.ElementTree.SubElement(
+                                                    self.xmltreefile.getroot(),
+                                                    "seclabel")
+
+        for key, value in seclabel_dict.items():
+            if key in __children_list__:
+                child_node = seclabel_node.find(key)
+                if child_node is None:
+                    child_node = xml_utils.ElementTree.SubElement(seclabel_node,
+                                                                  key)
+                child_node.text = value
+
+            elif key in __attributs_list__:
+                seclabel_node.set(key, value)
+
+            else:
+                continue
+
+        self.xmltreefile.write()
+
+
+    def del_seclabel(self):
+        """
+        Remove the seclabel tag from a domain
+        """
+        try:
+            self.xmltreefile.remove_by_xpath("/seclabel")
+        except (AttributeError, TypeError):
+            pass # Element already doesn't exist
         self.xmltreefile.write()
 
 
@@ -213,14 +296,21 @@ class VMXML(VMXMLBase):
 
     def undefine(self):
         """Undefine this VM with libvirt retaining XML in instance"""
-        # Allow any exceptions to propigate up
-        self.virsh.remove_domain(self.vm_name)
+        try:
+            self.virsh.remove_domain(self.vm_name)
+        except error.CmdError, detail:
+            raise xpects.LibvirtXMLError("Undefine %s failed.\n"
+                                         "Detail: %s."
+                                         % (self.vm_name, detail))
 
 
     def define(self):
         """Define VM with virsh from this instance"""
-        # Allow any exceptions to propigate up
-        self.virsh.define(self.xml)
+        result = self.virsh.define(self.xml)
+        if result.exit_status:
+            raise xpects.LibvirtXMLError("Define %s failed.\n"
+                                         "Detail: %s."
+                                         % (self.vm_name, result.stderr))
 
 
     @staticmethod
@@ -513,7 +603,8 @@ class VMCPUXML(VMXML):
         super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
-        self['xml'] = self.dict_get('virsh').dumpxml(vm_name, extra="--update-cpu")
+        self['xml'] = self.dict_get('virsh').dumpxml(vm_name,
+                                                     extra="--update-cpu")
 
 
     def get_feature_list(self):

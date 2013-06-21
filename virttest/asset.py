@@ -208,6 +208,7 @@ def download_file(asset_info, interactive=False, force=False):
 
     uncompress_asset(asset_info=asset_info, force=force or had_to_download)
 
+
 def download_asset(asset, interactive=True, restore_image=False):
     """
     Download an asset defined on an asset file.
@@ -240,4 +241,5 @@ def download_asset(asset, interactive=True, restore_image=False):
         answer = "y"
 
     if answer == "y":
-        download_file(asset_info=asset_info, interactive=interactive)
+        download_file(asset_info=asset_info, interactive=interactive,
+                      force=restore_image)

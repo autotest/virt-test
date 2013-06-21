@@ -1204,6 +1204,25 @@ class VM(virt_vm.BaseVM):
                                       debug=debug)
 
 
+    def attach_disk(self, source, target, extra=""):
+        """
+        Attach a disk to VM.
+        """
+        return virsh.attach_disk(self.name, source=source,
+                                 target=target,
+                                 extra=extra,
+                                 uri=self.connect_uri)
+
+
+    def detach_disk(self, target, extra=""):
+        """
+        Detach a disk from VM.
+        """
+        return virsh.detach_disk(self.name, target=target,
+                                 extra=extra,
+                                 uri=self.connect_uri)
+
+
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
         Destroy the VM.
@@ -1442,7 +1461,8 @@ class VM(virt_vm.BaseVM):
                                 " vm %s" % (index, self.name))
 
         logging.debug("Starting vm '%s'", self.name)
-        if virsh.start(self.name, uri=self.connect_uri):
+        result = virsh.start(self.name, uri=self.connect_uri)
+        if not result.exit_status:
             # Wait for the domain to be created
             has_started = utils_misc.wait_for(func=self.is_alive, timeout=60,
                                               text=("waiting for domain %s "

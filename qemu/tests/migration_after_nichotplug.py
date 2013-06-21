@@ -55,7 +55,8 @@ def run_migration_after_nichotplug(test, params, env):
     error.context("Add network devices through monitor cmd", logging.info)
     nic_name = 'hotadded'
     nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name,
-                              netdst=netdst, nettype=nettype)
+                              netdst=netdst, nettype=nettype,
+                              queues=params.get('queues'))
     nic_mac = nic_info['mac']
     vm.params['nics'] += " %s" % nic_name
     vm.params['nic_model_%s' % nic_name] = nic_info['nic_model']

@@ -24,12 +24,10 @@ class QemuImg(storage.QemuImg):
         @param tag: Image tag defined in parameter images
         """
         storage.QemuImg.__init__(self, params, root_dir, tag)
-        # qemu img binary can be found in the test dir, not data_dir
-        qemu_img_base_dir = os.path.join(data_dir.get_root_dir(),
-                                         params.get("vm_type"))
-        self.image_cmd = utils_misc.get_path(qemu_img_base_dir,
-                                 params.get("qemu_img_binary","qemu-img"))
-
+        self.image_cmd = utils_misc.get_qemu_img_binary(params)
+        q_result = utils.run(self.image_cmd, ignore_status=True,
+                             verbose=False)
+        self.help_text = q_result.stdout
 
 
     @error.context_aware
@@ -329,6 +327,52 @@ class QemuImg(storage.QemuImg):
         return output
 
 
+    def support_cmd(self, cmd):
+        """
+        Verifies whether qemu-img supports command cmd.
+
+        @param cmd: Command string.
+        """
+        supports_cmd = True
+
+        if not cmd in self.help_text:
+            logging.error("%s does not support command '%s'", self.image_cmd,
+                          cmd)
+            supports_cmd = False
+
+        return supports_cmd
+
+
+    def compare_images(self, image1, image2):
+        """
+        Compare 2 images using the appropriate tools for each virt backend.
+
+        @param params: Dictionary containing the test parameters.
+        @param root_dir: Base directory for relative filenames.
+
+        @note: params should contain:
+               image_name -- the name of the image file, without extension
+               image_format -- the format of the image (qcow2, raw etc)
+
+        @raise VMImageCheckError: In case qemu-img check fails on the image.
+        """
+        compare_images = self.support_cmd("compare")
+        if not compare_images:
+            logging.debug("Skipping image comparison "
+                          "(lack of support in qemu-img)")
+        else:
+            logging.info("Comparing images %s and %s", image1, image2)
+            compare_cmd = "%s compare %s %s" % (self.image_cmd, image1, image2)
+            rv = utils.run(compare_cmd, ignore_status=True)
+
+            if rv.exit_status == 0:
+                logging.info("Compared images are equal")
+            elif rv.exit_status == 1:
+                raise error.TestFail("Compared images differ")
+            else:
+                raise error.TestError("Error in image comparison")
+
+
     def check_image(self, params, root_dir):
         """
         Check an image using the appropriate tools for each virt backend.
@@ -347,20 +391,11 @@ class QemuImg(storage.QemuImg):
         qemu_img_cmd = self.image_cmd
         image_is_qcow2 = self.image_format == 'qcow2'
         if os.path.exists(image_filename) and image_is_qcow2:
-            # Verifying if qemu-img supports 'check'
-            q_result = utils.run(qemu_img_cmd, ignore_status=True,
-                                 verbose=False)
-            q_output = q_result.stdout
-            check_img = True
-            if not "check" in q_output:
-                logging.error("qemu-img does not support 'check', "
-                              "skipping check")
-                check_img = False
-            if not "info" in q_output:
-                logging.error("qemu-img does not support 'info', "
-                              "skipping check")
-                check_img = False
-            if check_img:
+            check_img = self.support_cmd("check") and self.support_cmd("info")
+            if not check_img:
+                logging.debug("Skipping image check "
+                              "(lack of support in qemu-img)")
+            else:
                 try:
                     utils.run("%s info %s" % (qemu_img_cmd, image_filename),
                               verbose=False)

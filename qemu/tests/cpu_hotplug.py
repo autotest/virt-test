@@ -37,7 +37,7 @@ def run_cpu_hotplug(test, params, env):
     onoff_iterations = int(params.get("onoff_iterations", 20))
 
     if n_cpus_add + current_cpus > maxcpus:
-        error.TestWarn("CPU quantity more than maxcpus, set it to maxcpus")
+        logging.warn("CPU quantity more than maxcpus, set it to %s", maxcpus)
         total_cpus = maxcpus
     else:
         total_cpus = current_cpus + n_cpus_add
@@ -64,7 +64,8 @@ def run_cpu_hotplug(test, params, env):
                   " check CPUs quantity in guest.", logging.info)
     if not utils_misc.wait_for(lambda: utils_misc.check_if_vm_vcpu_match(
                                                               total_cpus, vm),
-                               60, first=10, step=5.0, text="retry later"):
+                               60 + total_cpus, first=10,
+                               step=5.0, text="retry later"):
         raise error.TestFail("CPU quantity mismatch cmd after hotplug !")
     error.context("rebooting the vm and check CPU quantity !", logging.info)
     session = vm.reboot()
