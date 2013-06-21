@@ -1204,6 +1204,25 @@ class VM(virt_vm.BaseVM):
                                       debug=debug)
 
 
+    def attach_disk(self, source, target, extra=""):
+        """
+        Attach a disk to VM.
+        """
+        return virsh.attach_disk(self.name, source=source,
+                                 target=target,
+                                 extra=extra,
+                                 uri=self.connect_uri)
+
+
+    def detach_disk(self, target, extra=""):
+        """
+        Detach a disk from VM.
+        """
+        return virsh.detach_disk(self.name, target=target,
+                                 extra=extra,
+                                 uri=self.connect_uri)
+
+
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
         Destroy the VM.
