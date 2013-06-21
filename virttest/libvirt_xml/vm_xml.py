@@ -296,14 +296,18 @@ class VMXML(VMXMLBase):
 
     def undefine(self):
         """Undefine this VM with libvirt retaining XML in instance"""
-        # Allow any exceptions to propigate up
-        self.virsh.remove_domain(self.vm_name)
+        return self.virsh.remove_domain(self.vm_name):
 
 
     def define(self):
         """Define VM with virsh from this instance"""
-        # Allow any exceptions to propigate up
-        self.virsh.define(self.xml)
+        result = self.virsh.define(self.xml)
+        if result.exit_status:
+            logging.debug("Define %s failed.\n"
+                          "Detail: %s."
+                          % (self.vm_name, result.stderr))
+            return False
+        return True
 
 
     @staticmethod

@@ -999,7 +999,7 @@ def define(xml_path, **dargs):
 
 def undefine(name, **dargs):
     """
-    Return True on successful domain undefine (after shutdown/destroy).
+    Return cmd result of domain undefine (after shutdown/destroy).
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
