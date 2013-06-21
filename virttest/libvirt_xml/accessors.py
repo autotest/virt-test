@@ -350,10 +350,10 @@ class XMLElementText(AccessorGeneratorBase):
             element.text = str(value)
             self.xmltreefile().write()
 
-    class Delter(AccessorBase):
 
+    class Delter(AccessorBase):
         """
-        Remove element & text
+        Remove element and ignore if it doesn't exist (same as False)
         """
 
         __slots__ = add_to_slots('parent_xpath', 'tag_name')
@@ -362,7 +362,8 @@ class XMLElementText(AccessorGeneratorBase):
             try:
                 element = self.element_by_parent(self.parent_xpath,
                                                  self.tag_name, create=False)
-            except xcepts.LibvirtXMLNotFoundError:
+            except (xcepts.LibvirtXMLNotFoundError, # element doesn't exist
+                    xcepts.LibvirtXMLAccessorError): # parent doesn't exist
                 pass # already gone
             else:
                 parent = self.xmltreefile().find(self.parent_xpath)
@@ -502,25 +503,7 @@ class XMLElementBool(AccessorGeneratorBase):
             self.xmltreefile().write()
 
 
-    class Delter(AccessorBase):
-        """
-        Remove element and ignore if it doesn't exist (same as False)
-        """
-
-        __slots__ = add_to_slots('parent_xpath', 'tag_name')
-
-        def __call__(self):
-            try:
-                element = self.element_by_parent(self.parent_xpath,
-                                                 self.tag_name, create=False)
-            except (xcepts.LibvirtXMLNotFoundError, # element doesn't exist
-                    xcepts.LibvirtXMLAccessorError): # parent doesn't exist
-                pass # already gone
-            else:
-                parent = self.xmltreefile().find(self.parent_xpath)
-                if parent is not None:
-                    parent.remove(element)
-                    self.xmltreefile().write()
+    Delter = XMLElementText.Delter
 
 
 class XMLAttribute(AccessorGeneratorBase):

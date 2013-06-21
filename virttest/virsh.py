@@ -1143,44 +1143,63 @@ def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
     return command(cmd, **dargs)
 
 
-def attach_device(name, xml_file, extra="", **dargs):
+def _adu_device(action, domainarg=None, filearg=None,
+                domain_opt=None, file_opt=None,
+                flagstr=None, **dargs):
     """
-    Attach a device to VM.
+    Private helper for attach, detach, update device commands
+    """
+    # N/B: Parameter order is significant: RH BZ 1018369
+    cmd = action
+    if domain_opt is not None:
+        cmd += " --domain %s" % domain_opt
+    if domainarg is not None:
+        cmd += " %s" % domainarg
+    if file_opt is not None:
+        cmd += " --file %s" % file_opt
+    if filearg is not None:
+        cmd += " %s" % filearg
+    if flagstr is not None:
+        cmd += " %s" % flagstr
+    return command(cmd, **dargs)
 
-    :param name: name of guest
-    :param xml_file: xml describing device to detach
-    :param extra: additional arguments to command
+
+def attach_device(domainarg=None, filearg=None,
+                  domain_opt=None, file_opt=None,
+                  flagstr=None, **dargs):
+    """
+    Attach a device using full parameter/argument set.
+
+    :param domainarg: Domain name (first pos. parameter)
+    :param filearg: File name (second pos. parameter)
+    :param domain_opt: Option to --domain parameter
+    :param file_opt: Option to --file parameter
+    :param flagstr: string of "--force, --persistent, etc."
     :param dargs: standardized virsh function API keywords
-    :return: True operation was successful
+    :return: CmdResult instance
     """
-    cmd = "attach-device --domain %s --file %s %s" % (name, xml_file, extra)
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError:
-        logging.error("Attaching device to VM %s failed.", name)
-        return False
+    return _adu_device("attach-device", domainarg=domainarg, filearg=filearg,
+                       domain_opt=domain_opt, file_opt=file_opt,
+                       flagstr=flagstr, **dargs)
 
 
-def detach_device(name, xml_file, extra="", **dargs):
+def detach_device(domainarg=None, filearg=None,
+                  domain_opt=None, file_opt=None,
+                  flagstr=None, **dargs):
     """
-    Detach a device from VM.
+    Attach a device using full parameter/argument set.
 
-    :param name: name of guest
-    :param xml_file: xml describing device to detach
-    :param extra: additional arguments to command
+    :param domainarg: Domain name (first pos. parameter)
+    :param filearg: File name (second pos. parameter)
+    :param domain_opt: Option to --domain parameter
+    :param file_opt: Option to --file parameter
+    :param flagstr: string of "--force, --persistent, etc."
     :param dargs: standardized virsh function API keywords
-    :return: True operation was successful
+    :return: CmdResult instance
     """
-    cmd = "detach-device --domain %s --file %s %s" % (name, xml_file, extra)
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError:
-        logging.error("Detaching device from VM %s failed.", name)
-        return False
+    return _adu_device("detach-device", domainarg=domainarg, filearg=filearg,
+                       domain_opt=domain_opt, file_opt=file_opt,
+                       flagstr=flagstr, **dargs)
 
 
 def update_device(domainarg=None, filearg=None,
@@ -1198,17 +1217,9 @@ def update_device(domainarg=None, filearg=None,
     :return: CmdResult instance
     """
     cmd = "update-device"
-    if domainarg is not None:  # Allow testing of ""
-        cmd += " %s" % domainarg
-    if filearg is not None:  # Allow testing of 0 and ""
-        cmd += " %s" % filearg
-    if domain_opt is not None:  # Allow testing of --domain ""
-        cmd += " --domain %s" % domain_opt
-    if file_opt is not None:  # Allow testing of --file ""
-        cmd += " --file %s" % file_opt
-    if len(flagstr) > 0:
-        cmd += " %s" % flagstr
-    return command(cmd, **dargs)
+    return _adu_device("update-device", domainarg=domainarg, filearg=filearg,
+                       domain_opt=domain_opt, file_opt=file_opt,
+                       flagstr=flagstr, **dargs)
 
 
 def attach_disk(name, source, target, extra="", **dargs):
