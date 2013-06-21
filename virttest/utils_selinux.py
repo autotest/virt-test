@@ -115,7 +115,7 @@ def get_context_from_str(string):
 
     @raise SelinuxError: if there is no context in string.
     """
-    context_pattern = r"[a-z]*_u:[a-z]*_r:[a-z]*_t:[s,\-,0-9,:[c,\,,0-9]*]*"
+    context_pattern = r"[a-z,_]*_u:[a-z,_]*_r:[a-z,_]*_t:[s,\-,0-9,:[c,\,,0-9]*]*"
     if re.search(context_pattern, string):
         context_list = re.findall(context_pattern, string)
         return context_list[0]
