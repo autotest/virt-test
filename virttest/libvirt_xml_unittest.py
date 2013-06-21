@@ -98,6 +98,13 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                 '%s.xml' % dom_name)
         shutil.copy(file_path, xml_path)
 
+        cmd = "virsh define --file %s" % file_path
+        stdout = ""
+        stderr = stdout
+        exit_status = 0
+
+        return utils.CmdResult(cmd, stdout, stderr, exit_status)
+
     @staticmethod
     def _dumpxml(name, to_file="", **dargs):
         """
