@@ -949,17 +949,9 @@ def start(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object.
     """
-    if is_alive(name, **dargs):
-        return True
-    dargs['ignore_status'] = False
-    try:
-        command("start %s" % (name), **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Start VM %s failed:\n%s", name, detail)
-        return False
+    return command("start %s" % name, **dargs)
 
 
 def shutdown(name, **dargs):

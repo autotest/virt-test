@@ -1442,7 +1442,8 @@ class VM(virt_vm.BaseVM):
                                 " vm %s" % (index, self.name))
 
         logging.debug("Starting vm '%s'", self.name)
-        if virsh.start(self.name, uri=self.connect_uri):
+        result = virsh.start(self.name, uri=self.connect_uri)
+        if not result.exit_status:
             # Wait for the domain to be created
             has_started = utils_misc.wait_for(func=self.is_alive, timeout=60,
                                               text=("waiting for domain %s "
