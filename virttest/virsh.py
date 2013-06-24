@@ -2157,6 +2157,19 @@ def domblklist(name, options=None, **dargs):
     return command(cmd, **dargs)
 
 
+def domiflist(name, options='', **dargs):
+    """
+    Get the domain network devices
+
+    @param name: name of domain
+    @param options: options of domiflist
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+
+    return command('domiflist %s %s' % (name, options), **dargs)
+
+
 def cpu_stats(name, options, **dargs):
     """
     Display per-CPU and total statistics about domain's CPUs
