@@ -311,7 +311,8 @@ class VM(virt_vm.BaseVM):
                     continue
 
         if not usb_port:
-            raise virt_vm.VMUSBControllerPortFullError(self.name)
+            raise virt_vm.VMUSBControllerPortFullError(self.name,
+                                                       self.usb_dev_dict)
 
         return (usb_bus, str(usb_port))
 
