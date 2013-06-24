@@ -308,6 +308,9 @@ class VM(virt_vm.BaseVM):
                     break
                 except virt_vm.VMUSBPortInUseError:
                     continue
+            # Exit for-loop if we find a free port.
+            if usb_port:
+                break
 
         if not usb_port:
             raise virt_vm.VMUSBControllerPortFullError(self.name,
