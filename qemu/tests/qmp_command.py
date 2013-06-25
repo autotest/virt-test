@@ -16,8 +16,6 @@ def run_qmp_command(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environmen.
     """
-
-
     def check_result(qmp_o, output=None):
         """
         Check test result with difference way accoriding to
@@ -75,7 +73,7 @@ def run_qmp_command(test, params, env):
                     version = "%s.%s.%s" % (version['major'], version['minor'],
                                                               version['micro'])
                     package = qmp_o['package']
-                    re_str = "([0-9]+\.[0-9]+\.[0-9]+)\s*(\(\S*\))?"
+                    re_str = r"([0-9]+\.[0-9]+\.[0-9]+)\s*(\(\S*\))?"
                     hmp_version, hmp_package = re.findall(re_str, res[i])[0]
                     if not hmp_package:
                         hmp_package = package
@@ -144,6 +142,7 @@ def run_qmp_command(test, params, env):
                 raise error.TestFail(msg)
 
     def qmp_cpu_check(output):
+        """ qmp_cpu test check """
         last_cpu = int(params['smp']) - 1
         for out in output:
             cpu = out.get('CPU')
@@ -187,7 +186,7 @@ def run_qmp_command(test, params, env):
 
     module = params.get("modprobe_module")
     if module:
-        error.context("modprobe the module %s" %module, logging.info)
+        error.context("modprobe the module %s" % module, logging.info)
         session.cmd("modprobe %s" % module)
 
     qmp_ports = vm.get_monitors_by_type('qmp')
@@ -206,6 +205,7 @@ def run_qmp_command(test, params, env):
                 "qmp_cmd": qmp_port.send_args_cmd}
 
     def send_cmd(cmd):
+        """ Helper to execute command on ssh/host/monitor """
         if cmd_type in callback.keys():
             return callback[cmd_type](cmd)
         else:
