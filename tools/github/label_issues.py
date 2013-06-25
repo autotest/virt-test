@@ -24,12 +24,14 @@ def set_labels(mutable_issue):
     if len(labels) > 0:
         mutable_issue['labels'] = labels
 
-
-repo_full_name = 'autotest/virt-test'
-
 gh = Github(login_or_token=raw_input("Enter github username: "),
             password=getpass.getpass('Enter github password: '),
             user_agent='PyGithub/Python')
+
+print "Enter location (<user>/<repo>)",
+repo_full_name = 'autotest/virt-test'
+repo_full_name = raw_input("or blank for '%s': "
+                           % repo_full_name).strip() or repo_full_name
 print
 
 issues = GithubIssues(gh, repo_full_name)
