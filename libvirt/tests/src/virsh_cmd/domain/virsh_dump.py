@@ -1,6 +1,6 @@
 import os, logging, commands, thread, time
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 def check_flag(file_flag):
     """
@@ -150,7 +150,7 @@ def run_virsh_dump(test, params, env):
         if os.system(conf_cmd):
             logging.error("Config dump_image_format to %s fail",
                           dump_image_format)
-        libvirt_vm.service_libvirtd_control("restart")
+        utils_libvirtd.libvirtd_restart()
 
     # Deal with bypass-cache option
     if options.find('bypass-cache') >= 0:
@@ -164,7 +164,7 @@ def run_virsh_dump(test, params, env):
     status = cmd_result.exit_status
 
     # Check libvirtd status
-    if libvirt_vm.service_libvirtd_control("status"):
+    if utils_libvirtd.libvirtd_status():
         if check_domstate(vm.state(), options):
             if status_error == "yes":
                 if status == 0:

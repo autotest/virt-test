@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, libvirt_xml
+from virttest import virsh, libvirt_xml, utils_libvirtd
 
 def run_virsh_domblkstat(test, params, env):
     """
@@ -46,7 +46,7 @@ def run_virsh_domblkstat(test, params, env):
             status_error = "yes"
             break
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     result = virsh.domblkstat(vm_ref, blk, options, ignore_status=True)
     status = result.exit_status
@@ -55,7 +55,7 @@ def run_virsh_domblkstat(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
     #check status_error
     if status_error == "yes":
         if status == 0 or err == "":

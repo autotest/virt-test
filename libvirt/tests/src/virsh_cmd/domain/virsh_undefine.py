@@ -1,6 +1,6 @@
 import os, logging
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, remote
+from virttest import libvirt_vm, virsh, remote, utils_libvirtd
 
 def run_virsh_undefine(test, params, env):
     """
@@ -49,7 +49,7 @@ def run_virsh_undefine(test, params, env):
 
     # Turn libvirtd into certain state.
     if libvirtd_state == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     # Test virsh undefine command.
     status = 0
@@ -80,7 +80,7 @@ def run_virsh_undefine(test, params, env):
 
     # Recover libvirtd state.
     if libvirtd_state == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     # Shutdown VM.
     if virsh.domain_exists(vm.name, uri=uri):

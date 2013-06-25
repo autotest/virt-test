@@ -1,6 +1,6 @@
 import logging, re
 from autotest.client.shared import utils, error
-from virttest import libvirt_vm
+from virttest import libvirt_vm, utils_libvirtd
 import virttest.utils_libguestfs as lgf
 
 
@@ -88,7 +88,7 @@ def run_virt_edit(test, params, env):
     # Stop libvirtd if test need.
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     # Run test
     virsh_dargs = {'ignore_status': True, 'debug': True, 'uri': uri}
@@ -98,7 +98,7 @@ def run_virt_edit(test, params, env):
 
     # Recover libvirtd.
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     utils.run("rm -f %s" % created_img)
 
