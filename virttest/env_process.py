@@ -110,6 +110,7 @@ def preprocess_vm(test, params, env, name):
                 utils_net.update_mac_ip_address(vm, params)
     else:
         # Don't start the VM, just update its params
+        vm.devices = None
         vm.params = params
 
     pause_vm = False
