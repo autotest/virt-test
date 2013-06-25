@@ -176,7 +176,7 @@ def run_qmp_command(test, params, env):
                                          % (cpu, out))
 
 
-    if not utils_misc.qemu_has_option("qmp"):
+    if not utils_misc.qemu_has_option("qmp", params['qemu_binary']):
         raise error.TestNAError("Host qemu does not support qmp.")
 
     vm = env.get_vm(params["main_vm"])
