@@ -39,8 +39,8 @@ class GithubCache(object):
         'closed':datetime.timedelta(days=30),
         SearchResults:datetime.timedelta(minutes=10),
         github.NamedUser.NamedUser:datetime.timedelta(hours=2),
-        github.GitAuthor.GitAuthor:datetime.timedelta(days=9999),
-        'total_issues':datetime.timedelta(days=9999)
+        github.GitAuthor.GitAuthor:datetime.timedelta(days=999),
+        'total_issues':datetime.timedelta(days=999)
     }
 
 
@@ -169,6 +169,66 @@ class GithubCache(object):
             self.cache_del()
             raise
 
+class HourRateLimiter(object):
+    """
+    Objects that sleep when called, based on per-hour rate limiting.
+    """
+
+    def __init__(self, limit, remaining, reset=None):
+        """
+        Initialize rate-limiter callable based on current external state
+
+        @param: limit: Number of requests per period
+        @param: remaining: Number of requests remaining for this period
+        @param: period: datetime.TimeDelta describing reset period
+        @param: reset: datetime of current period end (None for bottom of hour)
+        """
+        if reset is None:
+            self.__next_reset__()
+        else:
+            self.reset = reset
+        self.limit = limit
+        self.remaining = remaining
+        self.duration = 0
+        self.__update__() # Set self.duration
+
+
+    def __next_reset__(self):
+        """Calculate and set reset time from now"""
+        now = datetime.datetime.utcnow()
+        hour_top = datetime.datetime(year=now.year, month=now.month,
+                                     day=now.day, hour=now.hour,
+                                     minute=0, second=0, microsecond=0)
+        self.reset = hour_top + datetime.timedelta(hours=1)
+
+
+    def __update__(self):
+        """Update counters and timers, deducting one request"""
+        now = datetime.datetime.utcnow()
+        if now >= self.reset:
+            self.remaining = self.limit
+            self.__next_reset__()
+        if self.remaining < 1:
+            raise ValueError("Rate limit exceeded: Check for unaccounted "
+                             "requests or inaccurate reset time")
+        # Seconds until next reset
+        delta = self.reset - now
+        reset_seconds = delta.seconds + (delta.microseconds / 1000000.0)
+        # Divide remaining requests into available time
+        self.duration = reset_seconds / self.remaining
+
+
+    def __call__(self):
+        """Sleep for self.duration"""
+        # Deduct request and update self.duration
+        self.__update__()
+        if self.duration > 5:
+            raise ValueError("Sleeping too long: %0.4fseconds" % self.duration)
+        time.sleep(self.duration)
+        # Deduct this request
+        self.remaining -= 1
+
+
 class GithubIssuesBase(list):
     """
     Base class for cached list of github issues
@@ -191,12 +251,9 @@ class GithubIssuesBase(list):
                                  protocol=self.protocol,
                                  writeback=True)
 
-        # Avoid exceeding rate-limit per hour
-        requests = self.github.rate_limiting[1] # requests per hour
-        period = 60.0 * 60.0 # one hour in seconds
-        sleeptime = period / requests
-        self.pre_fetch_partial = Partial(time.sleep, sleeptime)
-        # self.pre_fetch_partial = None # cheat-mode enable (no delays)
+        # Initialize sleeptime
+        remaining, limit = self.github.rate_limiting
+        self.ratelimit = HourRateLimiter(limit, remaining)
 
         repo_cache_key = 'repo_%s' % self.repo_full_name
         # get_repo called same way throughout instance life
@@ -210,7 +267,7 @@ class GithubIssuesBase(list):
                                          cache_get_partial,
                                          cache_set_partial,
                                          cache_del_partial,
-                                         self.pre_fetch_partial,
+                                         self.ratelimit,
                                          fetch_partial)
         super(GithubIssuesBase, self).__init__()
 
@@ -253,8 +310,7 @@ class GithubIssuesBase(list):
 
 
     def __iter__(self):
-        for key in self.keys():
-            yield self[key]
+        return (self[key] for key in self.keys())
 
 
     def __setitem__(self, key, value):
@@ -295,7 +351,7 @@ class GithubIssuesBase(list):
 
     def keys(self):
         # Iterators are simply better
-        return xrange(1, self.__len__() + 1)
+        return xrange(1, self.__len__())
 
 
     def values(self):
@@ -315,9 +371,10 @@ class GithubIssues(GithubIssuesBase, object):
         'description':lambda gh_obj:getattr(gh_obj, 'body'),
         'modified':lambda gh_obj:getattr(gh_obj, 'updated_at'),
         'commits':NotImplementedError, # setup in __init__
+        'merged':NotImplementedError, # setup in __init__
         'opened':lambda gh_obj:getattr(gh_obj, 'created_at'),
         'closed':lambda gh_obj:getattr(gh_obj, 'closed_at'),
-        'assigned':lambda gh_obj:getattr(gh_obj, 'assignee'),
+        'assigned':lambda gh_obj:GithubIssues.assignee_or_none(gh_obj),
         'author':lambda gh_obj:getattr(gh_obj, 'user').login,
         'commit_authors':NotImplementedError, # setup in __init__
         'comments':lambda gh_obj:getattr(gh_obj, 'comments'),
@@ -343,6 +400,7 @@ class GithubIssues(GithubIssuesBase, object):
         self.marshal_map['commits'] = self.gh_pr_commits
         self.marshal_map['commit_authors'] = self.gh_pr_commit_authors
         self.marshal_map['comment_authors'] = self.gh_issue_comment_authors
+        self.marshal_map['merged'] = self.gh_pr_merged
 
 
     def __del__(self):
@@ -377,8 +435,19 @@ class GithubIssues(GithubIssuesBase, object):
         """
         Return a standardized dict of github issue
         """
-        item = self.marshal_gh_obj(super(GithubIssues, self).__getitem__(key))
+        try:
+            item = self.marshal_gh_obj(super(GithubIssues,
+                                             self).__getitem__(key))
+        except:
+            # Don't store problems in cache
+            self.clean_cache_entry(self.get_issue_cache_key(key))
+            self.shelf.sync()
+            raise
         self.shelf.sync()
+        # Not everything is accounted for, update requests for rate limiting
+        remaining, limit = self.github.rate_limiting
+        self.ratelimit.limit = limit
+        self.ratelimit.remaining = remaining
         return item
 
 
@@ -431,7 +500,7 @@ class GithubIssues(GithubIssuesBase, object):
                               cache_get_partial,
                               cache_set_partial,
                               cache_del_partial,
-                              self.pre_fetch_partial,
+                              self.ratelimit,
                               fetch_partial)
         result = get_obj()
         self._cache_hits += get_obj.cache_hits
@@ -556,6 +625,15 @@ class GithubIssues(GithubIssuesBase, object):
             raise ValueError('login %s is not a valid github user' % login)
 
 
+    @staticmethod
+    def assignee_or_none(gh_issue):
+        """Return assignee login or None if not assigned"""
+        if gh_issue.assignee is not None:
+            return gh_issue.assignee.login
+        else:
+            return None
+
+
     def get_gh_label(self, name):
         repo = self.get_repo()
         cache_key = str('repo_%s_label_%s' % (self.repo_full_name, name))
@@ -580,16 +658,14 @@ class GithubIssues(GithubIssuesBase, object):
         """
         Return True/False if gh_issue is a pull request or not
         """
-        pullreq = gh_issue.pull_request
-        if pullreq is not None:
-            if (pullreq.diff_url is None and
-                pullreq.html_url is None and
-                pullreq.patch_url is None):
-                return False
-        else:
+        pullreq = getattr(gh_issue, 'pull_request', None)
+        if pullreq is None:
             return False
-        # pullreq not None but pullreq attributes are not None
-        return True
+        else:
+            if (pullreq.diff_url is not None and
+                pullreq.html_url is not None and
+                pullreq.patch_url is not None):
+                return True
 
 
     # marshal_map method
@@ -613,7 +689,7 @@ class GithubIssues(GithubIssuesBase, object):
                     # Also clean up comments cache
                     self.clean_cache_entry(cache_key)
                     raise # original exception
-                authors.add(user.email)
+                authors.add(user.login)
             return authors
         else:
             return None
@@ -682,8 +758,30 @@ class GithubIssues(GithubIssuesBase, object):
             cache_key = 'repo_%s_pull_%s' % (self.repo_full_name, str(num))
             fetch_partial = Partial(repo.get_pull, num)
             pull = self.get_gh_obj(cache_key, fetch_partial)
-            return pull.commits
+            try:
+                return pull.commits
+            except:
+                # Don't store bad data
+                self.clean_cache_entry(cache_key)
+                self.clean_cache_entry(self.get_issue_cache_key(num))
+                raise
         return None # not a pull request
+
+
+    # marshal_map method
+    def gh_pr_merged(self, gh_issue):
+        """
+        Retrieves the datetime when a pull request was merged, None if not.
+        """
+        if GithubIssues.gh_issue_is_pull(gh_issue):
+            num = gh_issue.number
+            repo = self.get_repo()
+            cache_key = 'repo_%s_pull_%s' % (self.repo_full_name, str(num))
+            fetch_partial = Partial(repo.get_pull, num)
+            pull = self.get_gh_obj(cache_key, fetch_partial)
+            if pull.merged:
+                return pull.merged_at
+        return None # Not merged or not pull request
 
 
 class MutateError(KeyError):
@@ -715,7 +813,7 @@ class MutableIssue(dict):
 
     @property
     def _issue_cache_key(self):
-        return self.get_issue_cache_key(self._issue_number)
+        return self._github_issues.get_issue_cache_key(self._issue_number)
 
 
     def _setdelitem(self, opr, key, value):
@@ -758,7 +856,7 @@ class MutableIssue(dict):
         # Access PyGithub object to change labels
         self._github_issue['github_issue'].set_labels(*gh_labels)
         # Force retrieval of changed item
-        self._github_issues.clean_cache_entry(self._issue_cache_key())
+        self._github_issues.clean_cache_entry(self._issue_cache_key)
 
 
     def del_labels(self):
@@ -767,6 +865,6 @@ class MutableIssue(dict):
         """
         self._github_issue['github_issue'].delete_labels()
         # Force retrieval of changed item
-        self._github_issues.clean_cache_entry(self._issue_cache_key())
+        self._github_issues.clean_cache_entry(self._issue_cache_key)
 
     # TODO: Write get_*(), set_*(), del_*() for other dictionary keys
