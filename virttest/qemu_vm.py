@@ -1712,7 +1712,7 @@ class VM(virt_vm.BaseVM):
 
         for cdrom in params.objects("cdroms"):
             cdrom_params = params.object_params(cdrom)
-            cd_format = cdrom_params.get("cd_format", "")
+            cd_format = cdrom_params.get("cd_format", arch.default_cd_format())
             iso = cdrom_params.get("cdrom")
             bus = None
             port = None

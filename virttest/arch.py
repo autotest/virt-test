@@ -71,3 +71,14 @@ def get_qemu_pci_bus_name():
         return 'pci'
     else:
         return 'pci.0'
+
+def default_cd_format():
+    """
+    The default cd format for X86 is ide while this does not
+    support by Power.
+    In Power arch, the default cd format use scsi-cd
+    """
+    if ARCH == 'ppc64':
+        return 'scsi-cd'
+    else:
+        return 'ide'
