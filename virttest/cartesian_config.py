@@ -677,7 +677,7 @@ class LColon(Token):
 
 
 class LVariants(Token):
-    identifier = "variatns"
+    identifier = "variants"
 
 
 class LDot(Token):
