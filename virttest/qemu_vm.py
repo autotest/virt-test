@@ -558,10 +558,11 @@ class VM(virt_vm.BaseVM):
             filename = "/tmp/anaconda-%s" % self.instance
             self.logs["anaconda"] = filename
             dev = qemu_devices.QCustomDevice('chardev')
+            dev.set_param('backend', 'socket')
             dev.set_param('id', chardev_id)
             dev.set_param("path", filename)
             dev.set_param("server", True, bool)
-            dev.set_param("nowait", True, bool)
+            dev.set_param("wait", False, bool)
             devices.insert(dev)
             dev = QDevice('virtio-serial-pci', parent_bus={'type': 'pci'})
             dev.set_param("id", vioser_id)
