@@ -38,27 +38,29 @@ def run_qmp_command(test, params, env):
         if result_check == "equal":
             value = output
             if value != str(qmp_o):
-                raise error.TestFail("QMP command return value does not match"
-                                     " the expect result. Expect result: %s\n"
-                                     "Actual result: %s" % (value, qmp_o))
+                raise error.TestFail("QMP command return value does not match "
+                                     "the expect result. Expect result: '%s'\n"
+                                     "Actual result: '%s'" % (value, qmp_o))
         elif result_check == "contain":
             values = output.split(';')
             for value in values:
                 if value.strip() not in str(qmp_o):
-                    raise error.TestFail("QMP command output does not contain"
-                                         " expect result. Expect result: %s\n"
-                                         "Actual result: %s" % (value, qmp_o))
+                    raise error.TestFail("QMP command output does not contain "
+                                         "expect result. Expect result: '%s'\n"
+                                         "Actual result: '%s'"
+                                         % (value, qmp_o))
         elif result_check == "not_contain":
             values = output.split(';')
             for value in values:
                 if value in str(qmp_o):
                     raise error.TestFail("QMP command output contains unexpect"
-                                         " result. Unexpect result: %s\n"
-                                         "Actual result: %s" % (value, qmp_o))
+                                         " result. Unexpect result: '%s'\n"
+                                         "Actual result: '%s'"
+                                         % (value, qmp_o))
         elif result_check == "m_equal_q":
             msg = "QMP command ouput is not equal to in human monitor command."
-            msg += "\nQMP command output: %s" % qmp_o
-            msg += "\nHuman command output: %s" % output
+            msg += "\nQMP command output: '%s'" % qmp_o
+            msg += "\nHuman command output: '%s'" % output
             res = output.splitlines(True)
             if type(qmp_o) != type(res):
                 len_o = 1
@@ -85,8 +87,8 @@ def run_qmp_command(test, params, env):
                         if '0x' in val:
                             val = long(val, 16)
                             if val != qmp_o[i][key]:
-                                msg += "\nValue in human monitor: %s" % val
-                                msg += "\nValue in qmp: %s" % qmp_o[i][key]
+                                msg += "\nValue in human monitor: '%s'" % val
+                                msg += "\nValue in qmp: '%s'" % qmp_o[i][key]
                                 raise error.TestFail(msg)
                         elif qmp_cmd == "query-block":
                             cmp_str = "u'%s': u'%s'" % (key, val)
@@ -100,26 +102,27 @@ def run_qmp_command(test, params, env):
                             if (cmp_str not in str(qmp_o[i]) and
                                cmp_str_b not in str(qmp_o[i]) and
                                cmp_s not in str(qmp_o[i])):
-                                msg += "\nCan not find %s, %s or %s" % (cmp_s,
-                                                                     cmp_str_b,
-                                                                     cmp_str)
-                                msg += " in QMP command output"
+                                msg += ("\nCan not find '%s', '%s' or '%s' in "
+                                        " QMP command output."
+                                        % (cmp_s, cmp_str_b, cmp_str))
                                 raise error.TestFail(msg)
                         elif qmp_cmd == "query-balloon":
                             if (int(val) * 1024 * 1024 != qmp_o[key] and
                               val not in str(qmp_o[key])):
-                                msg += "\n%s is not in QMP command output" % val
+                                msg += ("\n'%s' is not in QMP command output"
+                                        % val)
                                 raise error.TestFail(msg)
                         else:
                             if (val not in str(qmp_o[i][key]) and
                                str(bool(int(val))) not in str(qmp_o[i][key])):
-                                msg += "\n%s is not in QMP command output" % val
+                                msg += ("\n'%s' is not in QMP command output"
+                                        % val)
                                 raise error.TestFail(msg)
         elif result_check == "m_in_q":
             res = output.splitlines(True)
             msg = "Key value from human monitor command is not in"
-            msg += "QMP command output.\nQMP command output: %s" % qmp_o
-            msg += "\nHuman monitor command output %s" % output
+            msg += "QMP command output.\nQMP command output: '%s'" % qmp_o
+            msg += "\nHuman monitor command output '%s'" % output
             for i in  range(len(res)):
                 params = res[i].rstrip().split()
                 for param in params:
@@ -128,7 +131,7 @@ def run_qmp_command(test, params, env):
                     except AttributeError:
                         str_o = qmp_o
                     if param.rstrip() not in str(str_o):
-                        msg += "\nKey value is %s" % param.rstrip()
+                        msg += "\nKey value is '%s'" % param.rstrip()
                         raise error.TestFail(msg)
         elif result_check == "m_format_q":
             match_flag = True
@@ -138,7 +141,7 @@ def run_qmp_command(test, params, env):
                 if re.match(output.strip(), str(i)) is None:
                     match_flag = False
             if not match_flag:
-                msg = "Output does not match the pattern: %s" % output
+                msg = "Output does not match the pattern: '%s'" % output
                 raise error.TestFail(msg)
 
     def qmp_cpu_check(output):
@@ -147,27 +150,27 @@ def run_qmp_command(test, params, env):
         for out in output:
             cpu = out.get('CPU')
             if cpu is None:
-                raise error.TestFail("'CPU' index is missing in QMP output %s"
-                                     % out)
+                raise error.TestFail("'CPU' index is missing in QMP output "
+                                     "'%s'" % out)
             else:
                 current = out.get('current')
                 if current is None:
                     raise error.TestFail("'current' key is missing in QMP "
-                                         "output %s" % out)
+                                         "output '%s'" % out)
                 elif cpu < last_cpu:
                     if current == False:
                         pass
                     else:
                         raise error.TestFail("Attribute 'current' should be "
-                                             "False, but is '%s' instead.\n%s"
-                                             % (current, out))
+                                             "'False', but is '%s' instead.\n"
+                                             "'%s'" % (current, out))
                 elif cpu == last_cpu:
                     if current == True:
                         pass
                     else:
                         raise error.TestFail("Attribute 'current' should be "
-                                             "True, but is '%s' instead.\n%s"
-                                             % (current, out))
+                                             "'True', but is '%s' instead.\n"
+                                             "'%s'" % (current, out))
                 elif cpu <= last_cpu:
                     continue
                 else:
@@ -226,20 +229,20 @@ def run_qmp_command(test, params, env):
     if pre_cmd is not None:
         error.context("Run prepare command '%s'." % pre_cmd, logging.info)
         pre_o = send_cmd(pre_cmd)
-        logging.debug("Pre-command: %s\n Output: %s", pre_cmd, pre_o)
+        logging.debug("Pre-command: '%s'\n Output: '%s'", pre_cmd, pre_o)
     try:
         # Testing command
         error.context("Run qmp command '%s'." % qmp_cmd, logging.info)
         output = qmp_port.send_args_cmd(qmp_cmd)
-        logging.debug("QMP command: %s \n Output: %s", qmp_cmd, output)
+        logging.debug("QMP command: '%s' \n Output: '%s'", qmp_cmd, output)
     except qemu_monitor.QMPCmdError, err:
         if params.get("negative_test") == 'yes':
-            logging.debug("Negative QMP command: %s\n output:%s", qmp_cmd,
-                                                                  err)
+            logging.debug("Negative QMP command: '%s'\n output:'%s'", qmp_cmd,
+                          err)
             if params.get("negative_check_pattern"):
                 check_pattern = params.get("negative_check_pattern")
                 if check_pattern not in str(err):
-                    raise error.TestFail("%s not in exception %s"
+                    raise error.TestFail("'%s' not in exception '%s'"
                                          % (check_pattern, err))
         else:
             raise error.TestFail(err)
@@ -252,7 +255,7 @@ def run_qmp_command(test, params, env):
     if post_cmd is not None:
         error.context("Run post command '%s'." % post_cmd, logging.info)
         post_o = send_cmd(post_cmd)
-        logging.debug("Post-command: %s\n Output: %s", post_cmd, post_o)
+        logging.debug("Post-command: '%s'\n Output: '%s'", post_cmd, post_o)
 
     if result_check is not None:
         txt = "Verify that qmp command '%s' works as designed." % qmp_cmd
