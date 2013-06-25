@@ -1,6 +1,6 @@
 import re, logging
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, remote
+from virttest import libvirt_vm, virsh, remote, utils_libvirtd
 
 def run_virsh_reboot(test, params, env):
     """
@@ -28,7 +28,7 @@ def run_virsh_reboot(test, params, env):
     domid = vm.get_id()
     domuuid = vm.get_uuid()
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     if vm_ref == "id":
         vm_ref = domid
@@ -70,7 +70,7 @@ def run_virsh_reboot(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     if status_error == "yes":

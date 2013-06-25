@@ -1,7 +1,7 @@
 import re, os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import  libvirt_vm, virsh
+from virttest import  virsh, utils_libvirtd
 
 
 def run_virsh_domxml_from_native(test, params, env):
@@ -48,7 +48,7 @@ def run_virsh_domxml_from_native(test, params, env):
 
     #libvirtd off
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     #Ignore exception with ignore_status=True.
     ret = virsh.domxml_from_native(dfn_format, guest_args, invalid_guest_args,
@@ -57,7 +57,7 @@ def run_virsh_domxml_from_native(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #clean up
     if os.path.exists(guest_args):

@@ -1,6 +1,6 @@
 import re
 from autotest.client.shared import  error
-from virttest import  libvirt_vm, virsh
+from virttest import  virsh, utils_libvirtd
 
 
 def run_virsh_managedsave(test, params, env):
@@ -55,7 +55,7 @@ def run_virsh_managedsave(test, params, env):
 
     #stop the libvirtd service
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     #Ignore exception with "ignore_status=True"
     ret = virsh.managedsave(vm_ref, ignore_status=True)
@@ -63,7 +63,7 @@ def run_virsh_managedsave(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     status_error = params.get("status_error")

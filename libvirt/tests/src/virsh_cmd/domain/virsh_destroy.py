@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import libvirt_vm, remote, virsh
+from virttest import libvirt_vm, remote, virsh, utils_libvirtd
 
 def run_virsh_destroy(test, params, env):
     """
@@ -39,7 +39,7 @@ def run_virsh_destroy(test, params, env):
         vm_ref = domuuid
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     if vm_ref != "remote":
         status = virsh.destroy(vm_ref, ignore_status=True).exit_status
@@ -59,7 +59,7 @@ def run_virsh_destroy(test, params, env):
             status = 1
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     if status_error == "yes":
