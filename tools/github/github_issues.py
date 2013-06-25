@@ -3,7 +3,7 @@ Classes to cache and read specific items from github issues in a uniform way
 """
 
 from functools import partial as Partial
-import datetime, time, shelve, cPickle
+import datetime, time, shelve
 # Requires PyGithub version >= 1.13 for access to raw_data attribute
 import github
 
@@ -45,10 +45,11 @@ class GithubCache(object):
 
 
     def __init__(self, github_obj, cache_get_partial, cache_set_partial,
-                 pre_fetch_partial, fetch_partial):
+                 cache_del_partial, pre_fetch_partial, fetch_partial):
         self.github = github_obj
         self.cache_get = cache_get_partial # Returns native dict
         self.cache_set = cache_set_partial # called with value=dict
+        self.cache_del = cache_del_partial
         self.pre_fetch = pre_fetch_partial # called with nothing
         self.fetch = fetch_partial # Returns github.GithubObject.GithubObject
 
@@ -71,21 +72,29 @@ class GithubCache(object):
             data = self.fetched_data(now)
             self.cache_set(value=data)
             self.cache_misses += 1
-        # Format data for consumption
-        if data['klass'] == github.PaginatedList.PaginatedList:
-            inside_klass = data['inside_klass']
-            result = []
-            for item in data['raw_data']:
-                result.append(self.github.create_from_raw_data(inside_klass,
-                                                               item))
-            return result
-        elif data['klass'] == Nothing:
-            return None # it's a None object
-        elif data['klass'] == SearchResults:
-            return data['raw_data'] # just the contents
-        else:
-            return self.github.create_from_raw_data(data['klass'],
-                                                    data['raw_data'])
+        # Any exceptions thrown during conversion should purge cache entry
+        try:
+            # Format data for consumption
+            if data['klass'] == github.PaginatedList.PaginatedList:
+                inside_klass = data['inside_klass']
+                result = []
+                for item in data['raw_data']:
+                    result.append(self.github.create_from_raw_data(inside_klass,
+                                                                   item))
+                return result
+            elif data['klass'] == Nothing:
+                return None # it's a None object
+            elif data['klass'] == SearchResults:
+                return data['raw_data'] # just the contents
+            else:
+                return self.github.create_from_raw_data(data['klass'],
+                                                        data['raw_data'])
+        except:
+            try:
+                self.cache_del()
+            except KeyError:
+                pass # doesn't exist in cache, ignore
+            raise # original exception
 
 
     @staticmethod
@@ -153,10 +162,12 @@ class GithubCache(object):
         """
         try:
             return self.cache_get() # maybe raise KeyError or TypeError
-        except (TypeError, cPickle.UnpicklingError, AttributeError, EOFError,
-                ImportError, IndexError):
-            raise AttributeError("Cache is corrupted")
-
+        except KeyError:
+            raise
+        except:
+            # Try to delete the entry
+            self.cache_del()
+            raise
 
 class GithubIssuesBase(list):
     """
@@ -165,6 +176,9 @@ class GithubIssuesBase(list):
 
     # Force static pickle protocol version
     protocol = 2
+
+    # Class to use for cache management
+    cache_class = GithubCache
 
     def __init__(self, github_obj, repo_full_name, cache_filename):
         """
@@ -184,19 +198,20 @@ class GithubIssuesBase(list):
         self.pre_fetch_partial = Partial(time.sleep, sleeptime)
         # self.pre_fetch_partial = None # cheat-mode enable (no delays)
 
+        repo_cache_key = 'repo_%s' % self.repo_full_name
         # get_repo called same way throughout instance life
-        cache_get_partial = Partial(self.shelf.__getitem__,
-                                    'repo_%s' % self.repo_full_name)
-        cache_set_partial = Partial(self.shelf.__setitem__,
-                                    'repo_%s' % self.repo_full_name)
+        cache_get_partial = Partial(self.shelf.__getitem__, repo_cache_key)
+        cache_set_partial = Partial(self.shelf.__setitem__, repo_cache_key)
+        cache_del_partial = Partial(self.shelf.__delitem__, repo_cache_key)
         fetch_partial = Partial(self.github.get_repo,
                                 self.repo_full_name)
-        # Callable instance
-        self.get_repo = GithubCache(self.github,
-                                    cache_get_partial,
-                                    cache_set_partial,
-                                    self.pre_fetch_partial,
-                                    fetch_partial)
+        # Callable instance retrieves cached or fetched value for key
+        self.get_repo = self.cache_class(self.github,
+                                         cache_get_partial,
+                                         cache_set_partial,
+                                         cache_del_partial,
+                                         self.pre_fetch_partial,
+                                         fetch_partial)
         super(GithubIssuesBase, self).__init__()
 
 
@@ -257,12 +272,16 @@ class GithubIssuesBase(list):
         """
         repo = self.get_repo()
         # Enforce uniform key string
-        cache_key = 'repo_%s_issue_%s' % (self.repo_full_name, str(int(key)))
+        cache_key = self.get_issue_cache_key(key)
         fetch_partial = Partial(repo.get_issue, int(key))
         item = self.get_gh_obj(cache_key, fetch_partial)
         # No exception raised, update cache on disk
         self.shelf.sync()
         return item
+
+
+    def get_issue_cache_key(self, number):
+        return 'repo_%s_issue_%s' % (self.repo_full_name, str(int(number)))
 
 
     def has_key(self, key):
@@ -397,6 +416,29 @@ class GithubIssues(GithubIssuesBase, object):
         return cache_data['raw_data']
 
 
+    def get_gh_obj(self, cache_key, fetch_partial):
+        """
+        Helper to get object possibly from cache and update counters
+        """
+        cache_get_partial = Partial(self.shelf.__getitem__,
+                                    cache_key)
+        cache_set_partial = Partial(self.shelf.__setitem__,
+                                    cache_key)
+        cache_del_partial = Partial(self.shelf.__delitem__,
+                                    cache_key)
+        # Callable instance could change every time
+        get_obj = GithubCache(self.github,
+                              cache_get_partial,
+                              cache_set_partial,
+                              cache_del_partial,
+                              self.pre_fetch_partial,
+                              fetch_partial)
+        result = get_obj()
+        self._cache_hits += get_obj.cache_hits
+        self._cache_misses += get_obj.cache_misses
+        return result # DOES NOT SYNC DATA!
+
+
     def search(self, criteria):
         """
         Return a list of issue-numbers that match a search criteria.
@@ -495,24 +537,14 @@ class GithubIssues(GithubIssuesBase, object):
         return SearchResults(*[issue.number for issue in result])
 
 
-    def get_gh_obj(self, cache_key, fetch_partial):
+    def clean_cache_entry(self, key):
         """
-        Helper to get object possibly from cache and update counters
+        Remove an entry from cache, ignoring any KeyErrors
         """
-        cache_get_partial = Partial(self.shelf.__getitem__,
-                                    cache_key)
-        cache_set_partial = Partial(self.shelf.__setitem__,
-                                    cache_key)
-        # Callable instance could change every time
-        get_obj = GithubCache(self.github,
-                              cache_get_partial,
-                              cache_set_partial,
-                              self.pre_fetch_partial,
-                              fetch_partial)
-        result = get_obj()
-        self._cache_hits += get_obj.cache_hits
-        self._cache_misses += get_obj.cache_misses
-        return result # DOES NOT SYNC DATA!
+        try:
+            del self.shelf[key]
+        except KeyError:
+            pass
 
 
     def get_gh_user(self, login):
@@ -575,7 +607,12 @@ class GithubIssues(GithubIssuesBase, object):
                 # Referencing user attribute requires a request, so cache it
                 user_cache_key = cache_key + '_%s_user' % comment.id
                 user_fetch_partial = Partial(getattr, comment, 'user')
-                user = self.get_gh_obj(user_cache_key, user_fetch_partial)
+                try:
+                    user = self.get_gh_obj(user_cache_key, user_fetch_partial)
+                except:
+                    # Also clean up comments cache
+                    self.clean_cache_entry(cache_key)
+                    raise # original exception
                 authors.add(user.email)
             return authors
         else:
@@ -587,6 +624,7 @@ class GithubIssues(GithubIssuesBase, object):
         """
         Return list of commit author e-mail addresses for a pull-request
         """
+
         if GithubIssues.gh_issue_is_pull(gh_issue):
             num = gh_issue.number
             repo = self.get_repo()
@@ -604,8 +642,13 @@ class GithubIssues(GithubIssuesBase, object):
                 # Referencing commit author requires a request, cache it.
                 author_cache_key = cache_key + '_%s_author' % str(commit.sha)
                 author_fetch_partial = Partial(getattr, commit, 'author')
-                author_obj = self.get_gh_obj(author_cache_key,
-                                             author_fetch_partial)
+                try:
+                    author_obj = self.get_gh_obj(author_cache_key,
+                                                 author_fetch_partial)
+                except:
+                    # clean up commit list cache entry also
+                    self.clean_cache_entry(cache_key)
+                    raise # original exception
                 # Retrieve e-mail from git commit object
                 if author_obj is None:
                     # Referencing git commit requires a request, cache it
@@ -613,8 +656,14 @@ class GithubIssues(GithubIssuesBase, object):
                                                        % str(commit.sha))
                     gitcommit_fetch_partial = Partial(getattr, commit,
                                                      'commit') # git commit
-                    gitcommit = self.get_gh_obj(gitcommit_cache_key,
-                                                gitcommit_fetch_partial)
+                    try:
+                        gitcommit = self.get_gh_obj(gitcommit_cache_key,
+                                                    gitcommit_fetch_partial)
+                    except:
+                        # Need to clean commit and gitcommit entries
+                        self.clean_cache_entry(cache_key)
+                        self.clean_cache_entry(gitcommit_cache_key)
+                        raise
                     authors.add(gitcommit.author.email)
                 else: # Author is a github user
                     authors.add(author_obj.login)
@@ -664,6 +713,11 @@ class MutableIssue(dict):
         return self._github_issues[self._issue_number]
 
 
+    @property
+    def _issue_cache_key(self):
+        return self.get_issue_cache_key(self._issue_number)
+
+
     def _setdelitem(self, opr, key, value):
         if key not in self._github_issues.marshal_map.keys():
             raise MutateError(key, self._issue_number)
@@ -703,11 +757,16 @@ class MutableIssue(dict):
         gh_labels = [get_gh_label(label) for label in change_list]
         # Access PyGithub object to change labels
         self._github_issue['github_issue'].set_labels(*gh_labels)
-        # TODO: Remove or update cache entry
+        # Force retrieval of changed item
+        self._github_issues.clean_cache_entry(self._issue_cache_key())
+
 
     def del_labels(self):
         """
         Remove all lbels from an issue
         """
         self._github_issue['github_issue'].delete_labels()
-        # TODO: Remove or update cache entry
+        # Force retrieval of changed item
+        self._github_issues.clean_cache_entry(self._issue_cache_key())
+
+    # TODO: Write get_*(), set_*(), del_*() for other dictionary keys
