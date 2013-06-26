@@ -1,10 +1,10 @@
 """
 Functions and classes used for logging into guests and transferring files.
 """
-import logging, time, re
+import logging, time, re, os, shutil, uuid
 import aexpect, utils_misc, rss_client
 from autotest.client.shared import error
-from autotest.client import utils
+import data_dir
 
 class LoginError(Exception):
     def __init__(self, msg, output):
@@ -664,3 +664,155 @@ def copy_files_from(address, client, username, password, port, remote_path,
         c = rss_client.FileDownloadClient(address, port, log_func)
         c.download(remote_path, local_path, timeout)
         c.close()
+
+
+class RemoteFile(object):
+    """
+    Class to handle the operations of file on remote host or guest.
+    """
+    def __init__(self, address, client, username, password, port,
+                 remote_path, limit="", log_filename=None,
+                 verbose=False, timeout=600):
+        """
+        Initialization of RemoteFile class.
+
+        @param address: Address of remote host(guest)
+        @param client: Type of transfer client
+        @param username: Username (if required)
+        @param password: Password (if requried)
+        @param remote_path: Path of file which we want to edit on remote.
+        @param limit: Speed limit of file transfer.
+        @param log_filename: If specified, log all output to this file(SCP only)
+        @param verbose: If True, log some stats using logging.debug (RSS only)
+        @param timeout: The time duration (in seconds) to wait for the 
+                        transfer tocomplete.
+        """
+        self.address = address
+        self.client = client
+        self.username = username
+        self.password = password
+        self.port = port
+        self.remote_path = remote_path
+        self.limit = limit
+        self.log_filename = log_filename
+        self.verbose = verbose
+        self.timeout = timeout
+
+        #Get a local_path and all actions is taken on it.
+        file_id = uuid.uuid1()
+        filename = os.path.basename(self.remote_path)
+        tmp_dir = data_dir.get_tmp_dir()
+        self.local_path = os.path.join(tmp_dir, "%s_%s" % (filename, file_id))
+        back_dir = data_dir.get_backing_data_dir()
+        self.backup_path = os.path.join(back_dir, "%s_%s.bak"
+                                        % (filename, file_id))
+
+        #Get file from remote.
+        self._pull_file()
+        #Save a backup.
+        shutil.copy(self.local_path, self.backup_path)
+
+    def __del__(self):
+        """
+        Called when the instance is about to be destroyed.
+        """
+        self._reset_file()
+        if os.path.exists(self.backup_path):
+            os.remove(self.backup_path)
+        if os.path.exists(self.local_path):
+            os.remove(self.local_path)
+
+    def _pull_file(self):
+        """
+        Copy file from remote to local.
+        """
+        if self.client == "test":
+            shutil.copy(self.remote_path, self.local_path)
+        else:
+            copy_files_from(self.address, self.client, self.username,
+                            self.password, self.port, self.remote_path,
+                            self.local_path, self.limit, self.log_filename,
+                            self.verbose, self.timeout)
+    
+    def _push_file(self):
+        """
+        Copy file from local to remote.
+        """
+        if self.client == "test":
+            shutil.copy(self.local_path, self.remote_path)
+        else:
+            copy_files_to(self.address, self.client, self.username,
+                          self.password, self.port, self.local_path,
+                          self.remote_path, self.limit, self.log_filename,
+                          self.verbose, self.timeout)
+    def _reset_file(self):
+        """
+        Copy backup from local to remote.
+        """
+        if self.client == "test":
+            shutil.copy(self.backup_path, self.remote_path)
+        else:
+            copy_files_to(self.address, self.client, self.username,
+                          self.password, self.port, self.backup_path,
+                          self.remote_path, self.limit, self.log_filename,
+                          self.verbose, self.timeout)
+
+
+    def _read_local(self):
+        """
+        Read file on local_path.
+
+        @return: string list got from readlines().
+        """
+        local_file = open(self.local_path, "r")
+        lines = local_file.readlines()
+        local_file.close()
+        return lines
+
+    def _write_local(self, lines):
+        """
+        Write file on local_path. Call writelines method of File.
+        """
+        local_file = open(self.local_path, "w")
+        local_file.writelines(lines)
+        local_file.close()
+
+    def add(self, line_list):
+        """
+        Append lines in line_list into file on remote.
+        """
+        lines = self._read_local()
+        for line in line_list:
+            lines.append("\n%s" % line)
+        self._write_local(lines)
+        self._push_file()
+
+    def sub(self, pattern2repl_dict):
+        """
+        Replace the string which match the pattern
+        to the value contained in pattern2repl_dict.
+        """
+        lines = self._read_local()
+        for pattern, repl in pattern2repl_dict.items():
+            for index in range(len(lines)):
+                line = lines[index]
+                lines[index] = re.sub(pattern, repl, line)
+        self._write_local(lines)
+        self._push_file()
+
+    def remove(self, pattern_list):
+        """
+        Remove the lines in remote file which matchs a pattern
+        in pattern_list.
+        """
+        lines = self._read_local()
+        for pattern in pattern_list:
+            for index in range(len(lines)):
+                line = lines[index]
+                if re.match(pattern, line):
+                    lines.remove(line)
+                    #Check this line is the last one or not.
+                    if (not line.endswith('\n') and (index >0)):
+                        lines[index-1] = lines[index-1].rstrip("\n")
+        self._write_local(lines)
+        self._push_file()
