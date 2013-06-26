@@ -29,6 +29,8 @@ NetworkManager
 ntpdate
 watchdog
 coreutils
+libblkid-devel
+koji
 usbutils
 
 %post --interpreter /usr/bin/python
