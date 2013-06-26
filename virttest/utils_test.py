@@ -284,11 +284,11 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
 
     try:
         try:
-            if mig_protocol == "tcp":
+            if mig_protocol in [ "tcp", "rdma", "x-rdma" ]:
                 if dest_host == 'localhost':
-                    uri = "tcp:0:%d" % dest_vm.migration_port
+                    uri = mig_protocol + ":0:%d" % dest_vm.migration_port
                 else:
-                    uri = 'tcp:%s:%d' % (dest_host, mig_port)
+                    uri = mig_protocol + ':%s:%d' % (dest_host, mig_port)
             elif mig_protocol == "unix":
                 uri = "unix:%s" % dest_vm.migration_file
             elif mig_protocol == "exec":
