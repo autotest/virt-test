@@ -1,7 +1,7 @@
 """
 Functions and classes used for logging into guests and transferring files.
 """
-import logging, time, re, os, shutil, uuid
+import logging, time, re, os, shutil, tempfile
 import aexpect, utils_misc, rss_client
 from autotest.client.shared import error
 import data_dir
@@ -684,7 +684,7 @@ class RemoteFile(object):
         @param limit: Speed limit of file transfer.
         @param log_filename: If specified, log all output to this file(SCP only)
         @param verbose: If True, log some stats using logging.debug (RSS only)
-        @param timeout: The time duration (in seconds) to wait for the 
+        @param timeout: The time duration (in seconds) to wait for the
                         transfer tocomplete.
         """
         self.address = address
@@ -699,13 +699,21 @@ class RemoteFile(object):
         self.timeout = timeout
 
         #Get a local_path and all actions is taken on it.
-        file_id = uuid.uuid1()
         filename = os.path.basename(self.remote_path)
+
+        #Get a local_path.
         tmp_dir = data_dir.get_tmp_dir()
-        self.local_path = os.path.join(tmp_dir, "%s_%s" % (filename, file_id))
+        local_file = tempfile.NamedTemporaryFile(prefix=("%s_" % filename),
+                                                 dir=tmp_dir)
+        self.local_path = local_file.name
+        local_file.close()
+
+        #Get a backup_path.
         back_dir = data_dir.get_backing_data_dir()
-        self.backup_path = os.path.join(back_dir, "%s_%s.bak"
-                                        % (filename, file_id))
+        backup_file = tempfile.NamedTemporaryFile(prefix=("%s_" % filename),
+                                                  dir=tmp_dir)
+        self.backup_path = backup_file.name
+        backup_file.close()
 
         #Get file from remote.
         self._pull_file()
@@ -733,7 +741,7 @@ class RemoteFile(object):
                             self.password, self.port, self.remote_path,
                             self.local_path, self.limit, self.log_filename,
                             self.verbose, self.timeout)
-    
+
     def _push_file(self):
         """
         Copy file from local to remote.

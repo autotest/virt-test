@@ -8,6 +8,10 @@ class RemoteFileTest(unittest.TestCase):
     test_file_path = os.path.join(tmp_dir, "remote_file")
     default_data = ["RemoteFile Test.\n", "Pattern Line."]
 
+    def __del__(self):
+        if os.path.exists(self.test_file_path):
+            os.remove(self.test_file_path)
+
     def _new_remote_file(self):
         if os.path.exists(self.test_file_path):
             os.remove(self.test_file_path)
