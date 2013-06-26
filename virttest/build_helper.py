@@ -69,6 +69,26 @@ class GitRepoParamHelper(git.GitRepoHelper):
         else:
             logging.debug('Git repo %s commit: %s' % (self.name, self.commit))
 
+        self.tag = self.params.get('%s_tag' % config_prefix)
+        if self.tag is None:
+            logging.debug('Git repo %s tag is not set' % self.name)
+        else:
+            logging.debug('Git repo %s tag: %s' % (self.name, self.tag))
+
+        self.key_id = None
+        self.key_server = None
+        tag_signed = self.params.get('%s_tag_signed' % config_prefix)
+        if tag_signed is None:
+            logging.warning('Git repo %s tag is not signed' % self.name)
+            logging.warning('This means we will not verify if the key was '
+                            'made by whomever claims to have made it '
+                            '(dangerous)')
+        else:
+            self.key_server, self.key_id = tag_signed.split(":")
+            logging.debug('Git repo %s tag %s was signed with GPG key ID %s '
+                          'present on key server %s', self.name, self.tag,
+                          self.key_id, self.key_server)
+
         self.cmd = os_dep.command('git')
 
         self.recursive = self.params.get('%s_recursive', 'yes')
@@ -76,12 +96,29 @@ class GitRepoParamHelper(git.GitRepoHelper):
 
     def execute(self):
         super(GitRepoParamHelper, self).execute()
+
         cwd = os.path.curdir
         os.chdir(self.destination_dir)
-        utils.system('git remote add origin %s' % self.uri)
+        utils.system('git remote add origin %s' % self.uri, ignore_status=True)
         if self.recursive == 'yes':
             utils.system('git submodule init')
             utils.system('git submodule update')
+
+        if self.tag:
+            utils.system('git checkout %s' % self.tag)
+            if self.key_server is not None and self.key_id is not None:
+                try:
+                    logging.debug('Downloading GPG key ID %s from key server '
+                                  '%s', self.key_id, self.key_server)
+                    utils.system('gpg --batch --keyserver %s --recv-keys %s' %
+                                 (self.key_server, self.key_id))
+                    logging.debug('Verifying if tag is actually signed with '
+                                  'GPG key ID %s' % self.key_id)
+                    utils.system('git tag -v %s' % self.tag)
+                except error.CmdError:
+                    raise error.TestError("GPG signature check for git repo "
+                                          "%s failed" % self.name)
+
         os.chdir(cwd)
 
 
