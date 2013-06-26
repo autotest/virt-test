@@ -1,5 +1,6 @@
-import os, logging
-from autotest.client.shared import ssh_key, error
+import os, logging, re
+from autotest.client import lv_utils
+from autotest.client.shared import ssh_key, error, utils
 from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh
 
 
@@ -27,7 +28,8 @@ def create_dir_pool(spool, pool_name, target_path):
     return True
 
 
-def create_partition_pool(spool, pool_name, block_device, target_path):
+def create_partition_pool(spool, pool_name, block_device,
+                          target_path="/dev/v2v_test"):
     """
     Create a persistent partition pool.
     """
@@ -38,10 +40,37 @@ def create_partition_pool(spool, pool_name, block_device, target_path):
         return False
 
     if not spool.define_fs_pool(pool_name, block_device,
-                                target_path="/dev/v2v_test"):
+                                target_path=target_path):
         return False
 
     if not spool.build_pool(pool_name):
+        return False
+
+    if not spool.start_pool(pool_name):
+        return False
+
+    if not spool.set_pool_autostart(pool_name):
+        return False
+    return True
+
+
+def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
+                    target_path="/dev/v2v_test"):
+    """
+    Create a persistent lvm pool.
+    """
+    # Check pool before creating
+    if spool.pool_exists(pool_name):
+        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
+                      spool.connect_uri)
+        return False
+
+    if not spool.define_lvm_pool(pool_name, block_device, vg_name=vg_name,
+                                target_path=target_path):
+        return False
+
+    vgroups = lv_utils.vg_list()
+    if vg_name not in vgroups.keys() and not spool.build_pool(pool_name):
         return False
 
     if not spool.start_pool(pool_name):
@@ -65,7 +94,7 @@ def prepare_remote_sp(rsp, rvm, pool_name="v2v_test"):
     for target in ['hda', 'sda', 'vda', 'xvda']:
         try:
             target_path = disks[target]["source"]
-            print target_path
+            logging.debug("System Disk:%s", target_path)
             target_path = os.path.dirname(target_path)
         except KeyError:
             continue
@@ -108,6 +137,7 @@ def run_convert_remote_vm(test, params, env):
     pool_name = params.get("pool_name", "v2v_test")
     target_path = params.get("target_path", "pool_path")
     block_device = params.get("block_device")
+    vg_name = params.get("volume_group_name", "vg_v2v")
     # If target_path is not an abs path, join it to test.tmpdir
     if os.path.dirname(target_path) is "":
         target_path = os.path.join(test.tmpdir, target_path)
@@ -152,13 +182,18 @@ def run_convert_remote_vm(test, params, env):
         # Create storage pool for test
         if pool_type == "dir":
             if not create_dir_pool(lsp, pool_name, target_path):
-                raise error.TestFail("Prepare storage pool for virt-v2v "
-                                     "failed.")
+                raise error.TestFail("Prepare directory storage pool for "
+                                     "virt-v2v failed.")
         elif pool_type == "partition":
             if not create_partition_pool(lsp, pool_name, block_device,
                                          target_path):
-                raise error.TestFail("Prepare storage pool for virt-v2v "
-                                     "failed.")
+                raise error.TestFail("Prepare partition storage pool for "
+                                     "virt-v2v failed.")
+        elif pool_type == "lvm":
+            if not create_lvm_pool(lsp, pool_name, block_device, vg_name,
+                                   target_path):
+                raise error.TestFail("Preapre lvm storage pool for "
+                                     "virt-v2v failed.")
 
         # Maintain a single params for v2v to avoid duplicate parameters
         v2v_params = {"hostname": remote_hostname, "username": username,
