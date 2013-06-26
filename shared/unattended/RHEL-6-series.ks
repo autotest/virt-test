@@ -48,6 +48,8 @@ ntpdate
 redhat-lsb
 watchdog
 coreutils
+libblkid-devel
+koji
 usbutils
 qemu-guest-agent
 sg3_utils
