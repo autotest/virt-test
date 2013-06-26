@@ -99,6 +99,7 @@ def run_kernel_install(test, params, env):
         var_list = map(_copy_file_to_test_dir, params.get(i, "").split())
         _tmp_params_dict[i] = " ".join(var_list)
 
+
     # Env preparation for test.
     install_type = params.get("install_type", "brew")
     sub_test_params = {}
@@ -108,9 +109,10 @@ def run_kernel_install(test, params, env):
     sub_test_params.update(_build_params('kernel_deps_rpms'))
 
     # koji
-    sub_test_params.update(_build_params('kernel_deps_koji_spec'))
-    sub_test_params.update(_build_params('kernel_koji_spec'))
-
+    sub_test_params.update(_build_params('kernel_dep_pkgs'))
+    sub_test_params.update(_build_params('kernel_sub_pkgs'))
+    sub_test_params.update(_build_params('kernel_koji_tag'))
+    sub_test_params.update(_build_params('need_reboot'))
     # git
     sub_test_params.update(_build_params('kernel_git_repo'))
     sub_test_params.update(_build_params('kernel_git_repo_base'))
@@ -136,7 +138,6 @@ def run_kernel_install(test, params, env):
     if install_type == "tar" and tag:
         control_base += ", tag='%s'" % tag
     control_base += ")"
-
     control_dir = os.path.join(data_dir.get_root_dir(), "shared", "control")
     test_control_file = "kernel_install.control"
     test_control_path = os.path.join(control_dir, test_control_file)
