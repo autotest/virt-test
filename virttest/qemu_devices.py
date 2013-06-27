@@ -100,8 +100,8 @@ class QBaseDevice(object):
             elif value in ['no', 'off', False]:
                 self.params[option] = "off"
         elif value or value == 0:
-            if option_type is 'NEED_QUOTE':
-                self.params[option] = "'%s'" % value
+            if value == "EMPTY_STRING":
+                self.params[option] = '""'
             else:
                 self.params[option] = value
         elif value is None and option in self.params:
@@ -281,7 +281,10 @@ class QCustomDevice(QBaseDevice):
         """ @return: cmdline command to define this device """
         out = "-%s " % self.type
         for key, value in self.params.iteritems():
-            out += "%s=%s," % (key, value)
+            if value != "NO_EQUAL_STRING":
+                out += "%s=%s," % (key, value)
+            else:
+                out += "%s," % key
         if out[-1] == ',':
             out = out[:-1]
         return out
