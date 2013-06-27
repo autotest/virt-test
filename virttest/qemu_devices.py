@@ -138,7 +138,7 @@ class QBaseDevice(object):
     def __eq__(self, dev2):
         """ @return: True when devs are similar, False when different. """
         try:
-            for check_attr in ('cmdline', 'readconfig', 'hotplug_hmp',
+            for check_attr in ('cmdline', 'hotplug_hmp',
                                'hotplug_qmp'):
                 try:
                     _ = getattr(self, check_attr)()
@@ -234,10 +234,6 @@ class QBaseDevice(object):
         """
         return out
 
-    def readconfig(self):
-        """ @return: readconfig-like config of this device """
-        raise NotImplementedError
-
 
 class QStringDevice(QBaseDevice):
     """
@@ -246,7 +242,7 @@ class QStringDevice(QBaseDevice):
       "%(type)s,id=%(id)s,addr=%(addr)s" -- params will be used to subst %()s
     """
     def __init__(self, dev_type, params=None, aobject=None,
-                 parent_bus=None, child_bus=None, cmdline="", readconfig=""):
+                 parent_bus=None, child_bus=None, cmdline=""):
         """
         @param dev_type: type of this component
         @param params: component's parameters
@@ -254,12 +250,10 @@ class QStringDevice(QBaseDevice):
         @param parent_bus: bus(es), in which this device is plugged in
         @param child_bus: bus, which this device provides
         @param cmdline: cmdline string
-        @param readconfig: readconfig string
         """
         super(QStringDevice, self).__init__(dev_type, params, aobject,
                                             parent_bus, child_bus)
         self._cmdline = cmdline
-        self._readconfig = readconfig
 
     def cmdline(self):
         """ @return: cmdline command to define this device """
@@ -269,19 +263,11 @@ class QStringDevice(QBaseDevice):
             raise KeyError("Param %s required for cmdline is not present in %s"
                            % (details, self.str_long()))
 
-    def readconfig(self):
-        """ @return: readconfig-like config of this device """
-        try:
-            return self._readconfig % self.params
-        except KeyError, details:
-            raise KeyError("Param %s required for readconfig is not present in"
-                           " %s" % (details, self.str_long()))
-
 
 class QCustomDevice(QBaseDevice):
     """
     Representation of the '-$option $param1=$value1,$param2...' qemu object.
-    This representation handles only cmdline and readconfig outputs.
+    This representation handles only cmdline.
     """
     def __init__(self, dev_type, params=None, aobject=None,
                  parent_bus=None, child_bus=None):
@@ -298,21 +284,6 @@ class QCustomDevice(QBaseDevice):
             out += "%s=%s," % (key, value)
         if out[-1] == ',':
             out = out[:-1]
-        return out
-
-    def readconfig(self):
-        """ @return: readconfig-like config of this device """
-        out = "[%s" % self.type
-        if self.get_qid():
-            out += ' "%s"' % self.get_qid()
-        out += "]\n"
-        for key, value in self.params.iteritems():
-            if key == "id":
-                continue
-            if value.startswith("'") and value.endswith("'"):
-                out += '  %s = "%s"\n' % (key, value[1:-1])
-            else:
-                out += '  %s = "%s"\n' % (key, value)
         return out
 
 
@@ -1303,24 +1274,6 @@ class DevContainer(object):
                 out += " %s" % device.cmdline()
         return out
 
-    def readconfig(self):
-        """
-        Creates -readconfig-like config for all defined devices.
-        @return: list, where first item is -readconfig-like config for all
-                 inserted devices. and second item are cmdline options of
-                 devices, which don't have -readconfig fmt specified
-        """
-        out = ["", ""]
-        for device in self.__devices:
-            if device.readconfig():
-                out[0] += "%s\n\n" % device.readconfig()
-            elif device.cmdline():
-                out[1] += "%s  " % device.cmdline()
-        if out[0]:
-            out[0] = out[0][:-2]
-        if out[1]:
-            out[1] = out[1][:-1]
-        return out
 
     # Machine related methods
     def machine_by_variables(self, params=None):
