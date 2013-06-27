@@ -371,10 +371,10 @@ class QSparseBus(object):
             elif item in self.badbus.itervalues():
                 return item
         elif item:
-            for device in self.bus:
+            for device in self.bus.itervalues():
                 if device.get_aid() == item:
                     return device
-            for device in self.badbus:
+            for device in self.badbus.itervalues():
                 if device.get_aid() == item:
                     return device
         raise KeyError("Device %s is not in %s" % (item, self))
