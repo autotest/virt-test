@@ -526,7 +526,11 @@ class QSparseBus(object):
         """
         addr = []
         for key in self.addr_items:
-            addr.append(device.get_param(key))
+            value = device.get_param(key)
+            if value is None:
+                addr.append(None)
+            else:
+                addr.append(int(value))
         return addr
 
     def _set_first_addr(self, addr_pattern):
@@ -622,7 +626,14 @@ class QSparseBus(object):
                 device.set_param(self.bus_item, self.busid)
             else:
                 return False
-        addr_pattern = self._dev2addr(device)
+        try:
+            addr_pattern = self._dev2addr(device)
+        except (ValueError, LookupError):
+            if force:
+                err += "BasicAddress, "
+                addr_pattern = [None] * len(self.addr_items)
+            else:
+                return False
         addr = self.get_free_slot(addr_pattern)
         if addr is None:
             if force:
