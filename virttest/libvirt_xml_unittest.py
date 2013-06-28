@@ -770,7 +770,6 @@ class testVMXMLDevices(LibvirtXMLTestBase):
         one = channels.pop()
         two = channels.pop()
         self.assertEqual(len(channels), 0)
-        self.assertFalse(one == two)
 
     def test_graphics(self):
         logging.disable(logging.WARNING)
@@ -818,10 +817,12 @@ class testNodedevXMLBase(LibvirtXMLTestBase):
 
         return nodedevxml
 
+
     def test_getter(self):
         nodedevxml = self._from_scratch()
         self.assertEqual(nodedevxml.name, 'name_test')
         self.assertEqual(nodedevxml.parent, 'parent_test')
+
 
     def test_static(self):
         base = nodedev_xml.NodedevXMLBase
