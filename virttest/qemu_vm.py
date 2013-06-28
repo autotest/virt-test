@@ -20,6 +20,22 @@ class QemuSegFaultError(virt_vm.VMError):
         return ("Qemu crashed: %s" % self.crash_message)
 
 
+class VMMigrateProtoUnsupportedError(virt_vm.VMMigrateProtoUnknownError):
+    """
+    When QEMU tells us it doesn't know about a given migration protocol.
+
+    This usually happens when we're testing older QEMU. It makes sense to
+    skip the test in this situation.
+    """
+    def __init__(self, protocol, output):
+        self.protocol = protocol
+        self.output = output
+
+    def __str__(self):
+        return ("QEMU reports it doesn't know migration protocol '%s'. "
+                "QEMU output: %s" % self.protocol, self.output)
+
+
 class KVMInternalError(virt_vm.VMError):
     pass
 
@@ -2310,9 +2326,14 @@ class VM(virt_vm.BaseVM):
 
             # Make sure the process was started successfully
             if not self.process.is_alive():
-                e = virt_vm.VMCreateError(qemu_command,
-                                          self.process.get_status(),
-                                          self.process.get_output())
+                status = self.process.get_status()
+                output = self.process.get_output()
+                migration_in_course = migration_mode is not None
+                unknown_protocol = "unknown migration protocol" in output
+                if migration_in_course and unknown_protocol:
+                    e = VMMigrateProtoUnsupportedError(migration_mode, output)
+                else:
+                    e = virt_vm.VMCreateError(qemu_command, status, output)
                 self.destroy()
                 raise e
 
@@ -3117,7 +3138,7 @@ class VM(virt_vm.BaseVM):
                 default to listening on a random TCP port
         """
         if protocol not in self.MIGRATION_PROTOS:
-            raise virt_vm.VMMigrateProtoUnsupportedError
+            raise virt_vm.VMMigrateProtoUnknownError(protocol)
 
         error.base_context("migrating '%s'" % self.name)
 

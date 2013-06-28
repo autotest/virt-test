@@ -228,8 +228,15 @@ class VMMigrateCancelError(VMMigrateError):
 class VMMigrateFailedError(VMMigrateError):
     pass
 
-class VMMigrateProtoUnsupportedError(VMMigrateError):
-    pass
+
+class VMMigrateProtoUnknownError(error.TestNAError):
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    def __str__(self):
+        return ("Virt Test doesn't know migration protocol '%s'. "
+                "You would have to add it to the list of known protocols" %
+                self.protocol)
 
 
 class VMMigrateStateMismatchError(VMMigrateError):
