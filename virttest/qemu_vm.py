@@ -828,6 +828,10 @@ class VM(virt_vm.BaseVM):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if vhost:
                     cmd += ",%s" % vhost
+                    enable_vhostfd = params.get("enable_vhostfd", "yes")
+                    if vhost == 'vhost=on' and enable_vhostfd == 'yes':
+                        vhostfd = os.open("/dev/vhost-net", os.O_RDWR)
+                        cmd += ",vhostfd=%s" % vhostfd
                 if netdev_extra_params:
                     cmd += "%s" % netdev_extra_params
             else:
