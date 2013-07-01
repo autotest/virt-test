@@ -272,7 +272,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod # static method (no self) needed b/c calls VMXML.__new__
-    def new_from_dumpxml(vm_name, virsh_instance=virsh):
+    def new_from_dumpxml(vm_name, options="", virsh_instance=virsh):
         """
         Return new VMXML instance from virsh dumpxml command
 
@@ -282,7 +282,7 @@ class VMXML(VMXMLBase):
         """
         # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
-        vmxml['xml'] = virsh_instance.dumpxml(vm_name)
+        vmxml['xml'] = virsh_instance.dumpxml(vm_name, options=options)
         return vmxml
 
 
@@ -564,6 +564,31 @@ class VMXML(VMXMLBase):
         xmltreefile.write()
         vmxml.undefine()
         vmxml.define()
+
+
+    @staticmethod
+    def get_blkio_params(vm_name, options="", virsh_instance=base.virsh):
+        """
+        Return VM's block I/O setting from XML definition
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, options=options,
+                                       virsh_instance=virsh_instance)
+        xmltreefile = vmxml.dict_get('xml')
+        blkio_params = {}
+        try:
+            blkio = xmltreefile.find('blkiotune')
+            try:
+                blkio_params['weight'] = blkio.find('weight').text
+            except AttributeError:
+                logging.error("Can't find <weight> element")
+        except AttributeError:
+            logging.error("Can't find <blkiotune> element")
+        finally:
+            if blkio and blkio.find('device'):
+                blkio_params['device_weights_path'] = blkio.find('device').find('path').text
+                blkio_params['device_weights_weight'] = blkio.find('device').find('weight').text
+
+        return blkio_params
 
 
 class VMCPUXML(VMXML):
