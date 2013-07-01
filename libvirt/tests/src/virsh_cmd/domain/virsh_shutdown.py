@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import remote, libvirt_vm, virsh
+from virttest import remote, libvirt_vm, virsh, utils_libvirtd
 
 
 def run_virsh_shutdown(test, params, env):
@@ -37,7 +37,7 @@ def run_virsh_shutdown(test, params, env):
         vm_ref = domuuid
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     if vm_ref != "remote":
         status = virsh.shutdown(vm_ref, ignore_status = True).exit_status
@@ -59,7 +59,7 @@ def run_virsh_shutdown(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     status_error = params.get("status_error")

@@ -1,6 +1,5 @@
-import logging
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, remote
+from virttest import libvirt_vm, virsh, remote, utils_libvirtd
 
 def run_virsh_vncdisplay(test, params, env):
     """
@@ -65,7 +64,7 @@ def run_virsh_vncdisplay(test, params, env):
         vm_ref = domuuid
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     if vm_ref == "remote":
         status, output = remote_case(params, vm_name)
@@ -75,7 +74,7 @@ def run_virsh_vncdisplay(test, params, env):
         output = result.stdout.strip()
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     if status_error == "yes":

@@ -1,7 +1,7 @@
 import re, logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_nodeinfo(test, params, env):
@@ -77,7 +77,7 @@ def run_virsh_nodeinfo(test, params, env):
     if check_libvirtd:
         libvirtd = params.get("libvirtd")
         if libvirtd == "off":
-            libvirt_vm.service_libvirtd_control("stop")
+            utils_libvirtd.libvirtd_stop()
 
     # Run test case
     option = params.get("virsh_node_options")
@@ -91,7 +91,7 @@ def run_virsh_nodeinfo(test, params, env):
 
     # Recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.libvirtd_start()
 
     # Check status_error
     status_error = params.get("status_error")
