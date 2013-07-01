@@ -1286,7 +1286,8 @@ class DevContainer(object):
         for device in self.__devices:
             if device.cmdline():
                 out += " %s" % device.cmdline()
-        return out
+        if out:
+            return out[1:]
 
 
     # Machine related methods
