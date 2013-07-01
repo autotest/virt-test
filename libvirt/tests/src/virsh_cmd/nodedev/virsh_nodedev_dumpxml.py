@@ -1,7 +1,7 @@
 import logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh
 from virttest.libvirt_xml import nodedev_xml
 
 
@@ -19,8 +19,8 @@ def do_nodedev_dumpxml(dev_name, dev_opt=""):
     result = virsh.nodedev_dumpxml(dev_name, options=dev_opt)
     if result.exit_status:
         raise error.TestError("Dumpxml node device %s failed.\n"
-                             "Detail:%s." % (dev_name, result.stderr))
-    logging.debug('Executing "virsh nodedev-dumpxml %s" finished.' % (dev_name))
+                              "Detail:%s." % (dev_name, result.stderr))
+    logging.debug('Executing "virsh nodedev-dumpxml %s" finished.', dev_name)
     #compare info in xml with info in sysfs.
     nodedevxml = nodedev_xml.NodedevXML.new_from_dumpxml(dev_name)
     if not nodedevxml.validates:
@@ -51,7 +51,7 @@ def do_nodedev_dumpxml(dev_name, dev_opt=""):
             continue
 
     logging.debug("Compare info in xml and info in sysfs finished"
-                    "for device %s." % (dev_name))
+                  "for device %s.", dev_name)
 
 
 def run_virsh_nodedev_dumpxml(test, params, env):
