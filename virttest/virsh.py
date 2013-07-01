@@ -2096,3 +2096,26 @@ def connect(connect_uri="", options="", **dargs):
     @return: CmdResult object.
     """
     return command("connect %s %s" % (connect_uri, options), **dargs)
+
+
+def domiftune(name, interface, options=None, inbound=None,
+              outbound=None, **dargs):
+    """
+    Set/get parameters of a virtual interface
+    @param name: name of domain
+    @param interface: interface device (MAC Address)
+    @param inbound: control domain's incoming traffics
+    @param outbound: control domain's outgoing traffics
+    @param options: options may be live, config and current
+    @param dargs: standardized virsh function API keywords
+    @return: CmdResult instance
+    """
+    cmd = "domiftune %s %s" %(name, interface)
+    if inbound:
+        cmd += "  --inbound %s" % inbound
+    if outbound:
+        cmd += "  --outbound %s" % outbound
+    if options:
+        cmd += " --%s" % options
+
+    return command(cmd, **dargs)
