@@ -168,37 +168,38 @@ usbutils
 -rsyslog
 %end
 
-%post --interpreter /usr/bin/python
-import os
-os.system('grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)')
-os.system('echo 0 > /selinux/enforce')
-os.system('systemctl enable sshd.service')
-os.system('systemctl mask fedora-wait-storage.service')
-os.system('systemctl mask fedora-storage-init-late.service')
-os.system('systemctl mask fedora-storage-init.service')
-os.system('systemctl mask fedora-autoswap.service')
-os.system('systemctl mask fedora-configure.service')
-os.system('systemctl mask fedora-loadmodules.service')
-os.system('systemctl mask fedora-readonly.service')
-os.system('systemctl mask systemd-readahead-collect.service')
-os.system('systemctl mask plymouth-start.service')
-os.system('systemctl mask network.service')
-os.system('systemctl mask remote-fs.target')
-os.system('systemctl mask cryptsetup.target')
-os.system('systemctl mask sys-devices-virtual-tty-tty2.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty3.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty4.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty5.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty6.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty7.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty8.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty9.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty10.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty11.device')
-os.system('systemctl mask sys-devices-virtual-tty-tty12.device')
-os.system('yum install -y hdparm ntpdate')
-os.system('yum clean all')
-os.system('mkdir -p /var/log/journal')
-os.system('echo Post set up finished > /dev/ttyS0')
-os.system('echo Post set up finished > /dev/hvc0')
+%post
+echo "OS install is completed" > /dev/ttyS0
+grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
+echo 0 > /selinux/enforce
+sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
+systemctl enable sshd.service
+systemctl mask fedora-wait-storage.service
+systemctl mask fedora-storage-init-late.service
+systemctl mask fedora-storage-init.service
+systemctl mask fedora-autoswap.service
+systemctl mask fedora-configure.service
+systemctl mask fedora-loadmodules.service
+systemctl mask fedora-readonly.service
+systemctl mask systemd-readahead-collect.service
+systemctl mask plymouth-start.service
+systemctl mask network.service
+systemctl mask remote-fs.target
+systemctl mask cryptsetup.target
+systemctl mask sys-devices-virtual-tty-tty2.device
+systemctl mask sys-devices-virtual-tty-tty3.device
+systemctl mask sys-devices-virtual-tty-tty4.device
+systemctl mask sys-devices-virtual-tty-tty5.device
+systemctl mask sys-devices-virtual-tty-tty6.device
+systemctl mask sys-devices-virtual-tty-tty7.device
+systemctl mask sys-devices-virtual-tty-tty8.device
+systemctl mask sys-devices-virtual-tty-tty9.device
+systemctl mask sys-devices-virtual-tty-tty10.device
+systemctl mask sys-devices-virtual-tty-tty11.device
+systemctl mask sys-devices-virtual-tty-tty12.device
+yum install -y hdparm ntpdate
+yum clean all
+mkdir -p /var/log/journal
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0
 %end
