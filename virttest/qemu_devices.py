@@ -602,10 +602,10 @@ class QSparseBus(object):
         @param device: QBaseDevice device
         @param addr: internal address  [addr1, addr2, ...]
         """
-        if device.get_param(self.bus_item):
+        if device.get_param(self.bus_item) is not None:
             device.set_param(self.bus_item, self.busid)
         for i in xrange(len(self.addr_items)):
-            if device.get_param(self.addr_items[i]):
+            if device.get_param(self.addr_items[i]) is not None:
                 device.set_param(self.addr_items[i], addr[i])
 
     def insert(self, device, strict_mode=False, force=False):
