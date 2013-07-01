@@ -180,7 +180,7 @@ class NodedevXMLBase(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'parent',
                                     'cap_type', 'cap', 'sysfs_main_path')
 
-    __schema_name__ = "device"
+    __schema_name__ = "nodedev"
 
     __sysfs_dir__ = "/sys/class"
 
@@ -305,30 +305,26 @@ class NodedevXML(NodedevXMLBase):
         return nodedevxml
 
 
-    @staticmethod
-    def get_key2value_dict(dev_name):
+    def get_key2value_dict(self):
         """
         Get the dict which contain key and value in xml.
         key: keys in nodedev xml need to check.
         value: value in xml for the key.
         """
-        nodedevxml = NodedevXML.new_from_dumpxml(dev_name)
-        capxml = nodedevxml.cap
+        capxml = self.cap
         key2value_dict = capxml.get_key2value_dict()
 
         return key2value_dict
 
 
-    @staticmethod
-    def get_key2syspath_dict(dev_name):
+    def get_key2syspath_dict(self):
         """
         Get the dict which contains key and path.
         key: keys in nodedev xml need to check.
         syspath: the abs path for the file stores info for the key.
         """
-        nodedevxml = NodedevXML.new_from_dumpxml(dev_name)
-        sysfs_path = nodedevxml.get_sysfs_path()
-        capxml = nodedevxml.cap
+        sysfs_path = self.get_sysfs_path()
+        capxml = self.cap
         key2filename_dict = capxml.__class__.get_key2filename_dict()
 
         key2syspath_dict = {}
