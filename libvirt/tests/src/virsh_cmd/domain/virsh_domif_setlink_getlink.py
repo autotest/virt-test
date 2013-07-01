@@ -44,10 +44,11 @@ def run_virsh_domif_setlink_getlink(test, params, env):
     vm = env.get_vm(vm_name)
     options = params.get("if_options", "--config")
     start_vm = params.get("start_vm", "no")
-    libvirtd = params.get("libvirtd", "on")
     if_device = params.get("if_device", "net")
     if_name = params.get("if_name", "vnet0")
     if_operation = params.get("if_operation", "up")
+    if_name_re = params.get("if_ifname_re",
+                            r"\s*\d+:\s+([[a-zA-Z]+\d+):")
     status_error = params.get("status_error", "no")
     mac_address = vm.get_virsh_mac_address(0)
     device = "vnet0"
@@ -95,13 +96,23 @@ def run_virsh_domif_setlink_getlink(test, params, env):
         # Serial login the vm to check link status
         # Start vm check the link statue
         session = vm.wait_for_serial_login()
-        cmd = "ip add |grep -i '%s' -B1|grep -i 'state %s' " \
-        % (mac_address, if_operation)
+        cmd = ("ip add |grep -i '%s' -B1|grep -i 'state %s' "
+               % (mac_address, if_operation))
         cmd_status, output = session.cmd_status_output(cmd)
         logging.info("====%s==%s===", cmd_status, output )
         # Set the link up make host connect with vm
         domif_setlink(vm_name, device, "up", "")
-        session.cmd("service network restart")
+        # Bring up referenced guest nic
+        guest_if_name = re.search(if_name_re, output).group(1)
+        # Ignore status of this one
+        cmd_status = session.cmd_status('ifdown %s' % guest_if_name)
+        cmd_status = session.cmd_status('ifup %s' % guest_if_name)
+        if cmd_status != 0:
+            raise error.TestFail("Could not bring up interface %s inside guest"
+                                 % guest_if_name)
+    else: # negative test
+        # stop guest, so state is always consistent on next start
+        vm.destroy()
 
     # Check status_error
 
