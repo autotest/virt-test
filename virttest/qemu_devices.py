@@ -1063,7 +1063,7 @@ class DevContainer(object):
             out += device.str_long()
         if out[-1] == '\n':
             out = out[:-1]
-        return out + "]"
+        return out
 
     def str_bus_short(self):
         """ Short representation of all buses """
