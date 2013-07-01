@@ -877,11 +877,12 @@ class DevContainer(object):
                                     "stdio -vnc none" % qemu_binary,
                                     timeout=10, ignore_status=True,
                                     verbose=False)
-            _ = re.findall(r'^([^\| ]+\|?\w+)', _, re.M)
+            _ = re.findall(r'^([^\| \[\n]+\|?\w+)', _, re.M)
             hmp_cmds = []
             for cmd in _:
                 if '|' not in cmd:
-                    hmp_cmds.append(cmd)
+                    if cmd != 'The':
+                        hmp_cmds.append(cmd)
                 else:
                     hmp_cmds.extend(cmd.split('|'))
             return hmp_cmds
