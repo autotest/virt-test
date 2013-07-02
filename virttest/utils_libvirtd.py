@@ -84,7 +84,10 @@ def service_libvirtd_control(action, remote_ip=None,
 
     elif action == "status":
         if session:
-            status, output = session.cmd_status_output(service_cmd)
+            try:
+                status, output = session.cmd_status_output(service_cmd)
+            except aexpect.ShellError, detail:
+                raise LibvirtdActionError(action, detail)
             if status:
                 raise LibvirtdActionError(action, output)
         else:
