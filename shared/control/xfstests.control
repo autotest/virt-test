@@ -60,15 +60,34 @@ Make sure you have them or a real spare device to test things.
 """
 # Define the partitions you want to use.
 #
-# Here, by default we use the concept of virtual partition (a partition of 1GB
-# of size), to avoid setup by the user. However, you'll most likely use a real
-# block device for your tests.
 from autotest.client import partition
-file_img = os.path.join(job.tmpdir, 'xfstests.img')
-vp = partition.virtual_partition(file_img=file_img, file_size=1024*1024)
-device = vp.device
-# You can use a real block device, such as /dev/sdc1
-#device=/dev/sdc1
+import re
+
+disks=[]
+boot_disk = []
+for line in open("/proc/partitions").readlines():
+    try:
+        major,minor, blocks, name = line.split()
+    except:
+        continue
+    if re.match("[shv]d.*", name):
+        if name[-1].isdigit():
+            boot_disk.append(name[:-1])
+        else:
+            disks.append(name)
+
+device = set(disks) - set(boot_disk)
+try:
+    device = device.pop()
+except KeyError:
+    raise error.TestError("No realy partation found")
+
+device = os.path.join("/dev", device)
+cmd = "parted -s %s mklabel gpt && " % device
+cmd += "parted -s %s mkpart primary 1 1G" % device
+utils.run(cmd)
+# Make test run on first partition of the disc
+device += "1"
 
 # By default, we create a directory under autotest
 mountpoint = os.path.join(job.tmpdir, 'xfstests')
@@ -140,4 +159,5 @@ for fs_type in FS_TYPES:
 # It is good practice to unmount the partition created
 p.unmount()
 # If you are using the virtual partition, you may destroy it here
-vp.destroy()
+cmd = "parted -s %s rm 1 && partprobe %s" % (device, device)
+utils.run(cmd)
