@@ -5,6 +5,8 @@ Run virt tests outside the autotest client harness.
 @copyright: Red Hat 2012
 """
 import os, sys, traceback, signal, optparse, logging
+from virttest import data_dir
+
 
 class StreamProxy(object):
     """
@@ -589,12 +591,20 @@ class VirtTestApp(object):
         self._process_no_filter()
 
 
+    def _process_default_paths(self):
+        """
+        Add default paths to cartesian config
+        """
+        self.cartesian_parser.assign('autotest_root_dir', data_dir.get_root_dir())
+        self.cartesian_parser.assign('autotest_tmp_dir', data_dir.get_tmp_dir())
+        self.cartesian_parser.assign('autotest_data_dir', data_dir.get_data_dir())
+
+
     def _process_options(self):
         """
         Process the options given in the command line.
         """
         from virttest import cartesian_config, standalone_test
-        from virttest import data_dir
 
         if (not self.options.type) and (not self.options.config):
             _restore_stdout()
@@ -623,6 +633,7 @@ class VirtTestApp(object):
             cfg = os.path.join(data_dir.get_root_dir(), self.options.type,
                                "cfg", "tests.cfg")
 
+        self._process_default_paths()
         self.cartesian_parser.parse_file(cfg)
 
         self._process_general_options()
