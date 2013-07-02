@@ -1629,12 +1629,12 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         """
         basename = os.path.basename(remote_path)
         logging.debug("Extracting %s on VM %s", basename, vm.name)
-        session.cmd("rm -rf %s" % dest_dir)
+        session.cmd("rm -rf %s" % dest_dir, timeout=240)
         dirname = os.path.dirname(remote_path)
         session.cmd("cd %s" % dirname)
         session.cmd("mkdir -p %s" % os.path.dirname(dest_dir))
         e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
-        output = session.cmd(e_cmd, timeout=120)
+        output = session.cmd(e_cmd, timeout=240)
         autotest_dirname = ""
         for line in output.splitlines()[1:]:
             autotest_dirname = line.split("/")[0]
@@ -1656,9 +1656,25 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         except OSError, detail:
             if detail.errno != errno.EEXIST:
                 raise
-        vm.copy_files_from("%s/results/default/*" % base_results_dir,
-                           guest_results_dir)
-
+        # result info tarball to host result dir
+        session = vm.wait_for_login(timeout=360)
+        results_dir = "%s/results/default" % base_results_dir
+        results_tarball = "/tmp/results.tgz"
+        compress_cmd = "cd %s && " % results_dir
+        compress_cmd += "tar cjvf %s ./* --exclude=*core*" % results_tarball
+        session.cmd(compress_cmd, timeout=600)
+        vm.copy_files_from(results_tarball, guest_results_dir)
+        # cleanup autotest subprocess which not terminated, change PWD to
+        # avoid current connection kill by fuser command;
+        clean_cmd = "cd /tmp && fuser -k %s" % results_dir
+        session.sendline(clean_cmd)
+        session.cmd("rm -f %s" % results_tarball, timeout=240)
+        results_tarball = os.path.basename(results_tarball)
+        results_tarball = os.path.join(guest_results_dir, results_tarball)
+        uncompress_cmd = "tar xjvf %s -C %s" % (results_tarball,
+                                                guest_results_dir)
+        utils.run(uncompress_cmd)
+        utils.run("rm -f %s" % results_tarball)
 
     def get_results_summary():
         """
@@ -1724,7 +1740,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
            (autotest_parentdir, compressed_autotest_path, autotest_basename))
     # Until we have nested virtualization, we don't need the virt test :)
     cmd += " --exclude=%s/tests/virt" % autotest_basename
-    cmd += " --exclude=%s/results" % autotest_basename
+    cmd += " --exclude=%s/results*" % autotest_basename
     cmd += " --exclude=%s/tmp" % autotest_basename
     cmd += " --exclude=%s/control*" % autotest_basename
     cmd += " --exclude=*.pyc"
