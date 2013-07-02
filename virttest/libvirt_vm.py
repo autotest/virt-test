@@ -1577,3 +1577,14 @@ class VM(virt_vm.BaseVM):
         dominfo_dict = self.dominfo()
         max_mem = dominfo_dict['Max memory'].split(' ')[0] # strip off 'kb'
         return int(max_mem)
+
+
+    def domjobabort(self):
+        """
+        Abort job for vm.
+        """
+        result = virsh.domjobabort(self.name, ignore_status=True)
+        if result.exit_status:
+            logging.debug(result)
+            return False
+        return True
