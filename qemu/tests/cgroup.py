@@ -6,15 +6,20 @@ cgroup autotest test (on KVM guest)
 import logging, os, re, time
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest.utils_cgroup import Cgroup
-from virttest.utils_cgroup import CgroupModules
-from virttest.utils_cgroup import get_load_per_cpu
 from virttest.env_process import preprocess
 from virttest import qemu_monitor
 from virttest.aexpect import ExpectTimeoutError
 from virttest.aexpect import ExpectProcessTerminatedError
 from virttest.aexpect import ShellTimeoutError
-
+try:
+    from autotest.client.shared.utils_cgroup import Cgroup
+    from autotest.client.shared.utils_cgroup import CgroupModules
+    from autotest.client.shared.utils_cgroup import get_load_per_cpu
+except ImportError:
+    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
+    from virttest.utils_cgroup import Cgroup
+    from virttest.utils_cgroup import CgroupModules
+    from virttest.utils_cgroup import get_load_per_cpu
 
 @error.context_aware
 def run_cgroup(test, params, env):
