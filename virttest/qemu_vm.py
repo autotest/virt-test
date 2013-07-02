@@ -1356,7 +1356,7 @@ class VM(virt_vm.BaseVM):
         # Add the VM's name
         devices.insert(StrDev('vmname', cmdline=add_name(devices, name)))
 
-        devs = devices.machine_by_variables(params)
+        devs = devices.machine_by_params(params)
         for dev in devs:
             devices.insert(dev)
 
