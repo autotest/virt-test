@@ -1290,9 +1290,8 @@ class DevContainer(object):
         if out:
             return out[1:]
 
-
     # Machine related methods
-    def machine_by_variables(self, params=None):
+    def machine_by_params(self, params=None):
         """
         Choose the used machine and set the default devices accordingly
         @param params: VM params
