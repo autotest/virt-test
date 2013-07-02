@@ -1,6 +1,6 @@
 import logging
 from autotest.client.shared import error
-from virttest import virsh, libvirt_vm
+from virttest import virsh, libvirt_vm, utils_libvirtd
 from virttest.libvirt_xml import network_xml, xcepts
 
 
@@ -77,7 +77,7 @@ def run_virsh_net_autostart(test, params, env):
         # Check if autostart or disable is successful with libvirtd restart.
         # TODO: Since autostart is designed for host reboot,
         #       we'd better check it with host reboot.
-        libvirt_vm.libvirtd_restart()
+        utils_libvirtd.libvirtd_restart()
 
         # Reopen default_xml
         virsh_instance = virsh.VirshPersistent(**virsh_dargs)

@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import remote, libvirt_vm, virsh, libvirt_xml
+from virttest import remote, libvirt_vm, virsh, libvirt_xml, utils_libvirtd
 
 
 class StartError(Exception):
@@ -63,9 +63,9 @@ def run_virsh_start(test, params, env):
     try:
         #prepare before start vm
         if libvirtd_state == "on":
-            libvirt_vm.libvirtd_start()
+            utils_libvirtd.libvirtd_start()
         elif libvirtd_state == "off":
-            libvirt_vm.libvirtd_stop()
+            utils_libvirtd.libvirtd_stop()
 
         if pre_operation == "rename":
             new_vm_name = params.get("vs_new_vm_name", "virsh_start_vm1")
@@ -103,7 +103,7 @@ def run_virsh_start(test, params, env):
     finally:
         #clean up
         if libvirtd_state == "off":
-            libvirt_vm.libvirtd_start()
+            utils_libvirtd.libvirtd_start()
 
         if (pre_operation == "undefine") and (not vmxml.xml == None):
             vmxml.define()

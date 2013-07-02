@@ -1,6 +1,6 @@
 import re
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import libvirt_vm, virsh, utils_libvirtd
 
 def run_virsh_freecell(test, params, env):
     """
@@ -22,7 +22,7 @@ def run_virsh_freecell(test, params, env):
     if check_libvirtd:
         libvirtd = params.get("libvirtd")
         if libvirtd == "off":
-            libvirt_vm.service_libvirtd_control("stop")
+            utils_libvirtd.libvirtd_stop()
 
     # Run test case
     cmd_result = virsh.freecell(ignore_status=True, extra=option,
@@ -32,7 +32,7 @@ def run_virsh_freecell(test, params, env):
 
     # Recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.libvirtd_start()
 
     # Check the output
     if virsh.has_help_command('numatune'):
