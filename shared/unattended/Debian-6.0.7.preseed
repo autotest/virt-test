@@ -32,7 +32,7 @@ d-i mirror/http/proxy string
 
 tasksel tasksel/first multiselect standard
 
-d-i pkgsel/include string openssh-server build-essential
+d-i pkgsel/include string openssh-server build-essential lvm2 ethtool sg3-utils lsscsi libaio-dev libtime-hires-perl
 
 d-i grub-installer/only_debian boolean true
 d-i grub-installer/with_other_os boolean true
