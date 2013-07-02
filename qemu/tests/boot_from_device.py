@@ -26,7 +26,6 @@ def run_boot_from_device(test, params, env):
 
         logging.info("creating test cdrom")
         cdrom_test = params.get("cdrom_test")
-        cdrom_test = utils_misc.get_path(data_dir.get_data_dir(), cdrom_test)
         utils.run("dd if=/dev/urandom of=test bs=10M count=1")
         utils.run("mkisofs -o %s test" % cdrom_test)
         utils.run("rm -f test")
