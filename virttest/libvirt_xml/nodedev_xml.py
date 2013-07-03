@@ -40,9 +40,9 @@ class SystemXML(CAPXML):
     class for capability which type is system.
     """
     __slots__ = CAPXML.__slots__ + ('product', 'hdware_vendor',
-                                  'hdware_serial', 'hdware_uuid',
-                                  'firmware_vendor','firmversion'
-                                  'firm_release_date')
+                                    'hdware_serial', 'hdware_uuid',
+                                    'firmware_vendor','firmversion'
+                                    'firm_release_date')
 
     __sysfs_sub_path__ = 'dmi/id/'
 
@@ -123,8 +123,8 @@ class PCIXML(CAPXML):
         pci_bus_path = ("%04x:%02x" % (domain, bus))
         pci_device_path = ("%04x:%02x:%02x.%01x" % (domain, bus,
                                                     slot, function))
-        pci_sysfs_sub_path = ("pci_bus/%s/device/%s" %
-                                    (pci_bus_path, pci_device_path))
+        pci_sysfs_sub_path = ("pci_bus/%s/device/%s" 
+                              % (pci_bus_path, pci_device_path))
 
         return pci_sysfs_sub_path
 
@@ -178,7 +178,8 @@ class NodedevXMLBase(base.LibvirtXMLBase):
     """
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'parent',
-                                    'cap_type', 'cap', 'sysfs_main_path')
+                                                 'cap_type', 'cap',
+                                                 'sysfs_main_path')
 
     __schema_name__ = "nodedev"
 
@@ -199,7 +200,7 @@ class NodedevXMLBase(base.LibvirtXMLBase):
         accessors.XMLElementText('parent', self, parent_xpath='/',
                                  tag_name='parent')
         accessors.XMLAttribute('cap_type', self, parent_xpath='/',
-                                  tag_name='capability', attribute='type')
+                               tag_name='capability', attribute='type')
         super(NodedevXMLBase, self).__init__(virsh_instance=virsh_instance)
         self.xml = '<device></device>'
 
