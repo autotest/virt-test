@@ -32,9 +32,9 @@ class TestSelinux(unittest.TestCase):
         Test the method about selinux disabled.
         """
         is_disabled = utils_selinux.is_disabled()
-        self.assertIn(is_disabled, [True, False])
+        self.assertTrue(is_disabled in [True, False])
         is_not_disabled = utils_selinux.is_not_disabled()
-        self.assertIn(is_not_disabled, [True, False])
+        self.assertTrue(is_not_disabled in [True, False])
         self.assertEqual(not is_disabled, is_not_disabled)
 
     def test_context(self):

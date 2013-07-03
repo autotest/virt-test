@@ -299,7 +299,8 @@ class NodedevXML(NodedevXMLBase):
         dumpxml_result = virsh_instance.nodedev_dumpxml(dev_name)
         if dumpxml_result.exit_status:
             raise xcepts.LibvirtXMLError("Nodedev_dumpxml %s failed.\n"
-                                    "Error: %s." % (dumpxml_result.stderr))
+                                         "Error: %s."
+                                         % (dev_name, dumpxml_result.stderr))
         nodedevxml.xml = dumpxml_result.stdout
 
         return nodedevxml
