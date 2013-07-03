@@ -30,7 +30,7 @@ def lgf_cmd_check(cmd):
     @param cmd: the cmd to use a libguest tool.
     @return: None if the cmd is not exist, otherwise return its path.
     """
-    libguestfs_cmds = ['libguestfs_test_tool', 'guestfish', 'guestmount',
+    libguestfs_cmds = ['libguestfs-test-tool', 'guestfish', 'guestmount',
                        'virt-alignment-scan', 'virt-cat', 'virt-copy-in',
                        'virt-copy-out', 'virt-df', 'virt-edit',
                        'virt-filesystems', 'virt-format', 'virt-inspector',
@@ -50,20 +50,15 @@ def lgf_cmd_check(cmd):
         return None
 
 
-def lgf_command(cmd, **dargs):
+def lgf_command(cmd, ignore_status=True, debug=False, timeout=60):
     """
     Interface of libguestfs tools' commands.
 
     @param cmd: Command line to execute.
-    @param dargs: standardized command keywords.
     @return: CmdResult object.
     @raise: LibguestfsCmdError if non-zero exit status
             and ignore_status=False
     """
-    ignore_status = dargs.get('ignore_status', True)
-    debug = dargs.get('debug', False)
-    timeout = dargs.get('timeout', 60)
-
     if debug:
         logging.debug("Running command %s in debug mode.", cmd)
 
@@ -90,13 +85,14 @@ class LibguestfsBase(propcan.PropCanBase):
 
     __slots__ = ('ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec')
 
-    def __init__(self, *args, **dargs):
-        init_dict = dict(*args, **dargs)
-        init_dict['ignore_status'] = init_dict.get('ignore_status', True)
-        init_dict['debug'] = init_dict.get('debug', False)
-        init_dict['timeout'] = init_dict.get('timeout', 60)
-        init_dict['uri'] = init_dict.get('uri', None)
-        init_dict['lgf_exec'] = init_dict.get('lgf_exec', '/bin/true')
+    def __init__(self, lgf_exec="/bin/true", ignore_status=True,
+                 debug=False, timeout=60, uri=None):
+        init_dict = {}
+        init_dict['ignore_status'] = ignore_status
+        init_dict['debug'] = debug
+        init_dict['timeout'] = timeout
+        init_dict['uri'] = uri
+        init_dict['lgf_exec'] = lgf_exec
         super(LibguestfsBase, self).__init__(init_dict)
 
 
@@ -192,8 +188,7 @@ class Guestfish(LibguestfsBase):
         if inspector:
             guestfs_exec += " -i"
 
-        self.dict_set('lgf_exec', guestfs_exec)
-        super(Guestfish, self).__init__(self)
+        super(Guestfish, self).__init__(guestfs_exec)
 
 
     def complete_cmd(self, command):
@@ -203,9 +198,12 @@ class Guestfish(LibguestfsBase):
         command: guestfish [--options] [commands]
         """
         guestfs_exec = self.dict_get('lgf_exec')
+        ignore_status = self.dict_get('ignore_status')
+        debug = self.dict_get('debug')
+        timeout = self.dict_get('timeout')
         if command:
             guestfs_exec += " %s" % command
-            return lgf_command(guestfs_exec, **self)
+            return lgf_command(guestfs_exec, ignore_status, debug, timeout)
         else:
             raise LibguestfsCmdError("No built-in command was passed.")
 
@@ -279,8 +277,11 @@ class GuestfishPersistent(Guestfish):
     # Help detect leftover sessions
     SESSION_COUNTER = 0
 
-    def __init__(self, *args, **dargs):
-        super(GuestfishPersistent, self).__init__(*args, **dargs)
+    def __init__(self, disk_img=None, ro_mode=False,
+                 libvirt_domain=None, inspector=False,
+                 uri=None):
+        super(GuestfishPersistent, self).__init__(disk_img, ro_mode,
+                                        libvirt_domain, inspector, uri)
         if self.get('session_id') is None:
             # set_uri does not call when INITIALIZED = False
             # and no session_id passed to super __init__
@@ -573,7 +574,8 @@ class GuestfishPersistent(Guestfish):
 ##### libguestfs module functions follow #####
 
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
-                           timeoutarg=None, **dargs):
+                           timeoutarg=None, ignore_status=True,
+                           debug=False, timeout=60):
     """
     Execute libguest-test-tool command.
 
@@ -583,7 +585,7 @@ def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
     @return: a CmdResult object
     @raise: raise LibguestfsCmdError
     """
-    cmd = "libguest-test-tool"
+    cmd = "libguestfs-test-tool"
     if qemuarg is not None:
         cmd += " --qemu '%s'" % qemuarg
     if qemudirarg is not None:
@@ -592,11 +594,12 @@ def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
         cmd += " --timeout %s" % timeoutarg
 
     # Allow to raise LibguestfsCmdError if ignore_status is False.
-    return lgf_command(cmd, **dargs)
+    return lgf_command(cmd, ignore_status, debug, timeout)
 
 
 def virt_edit_cmd(disk_or_domain, file_path, options=None,
-                  extra=None, expr=None, **dargs):
+                  extra=None, expr=None, ignore_status=True,
+                  debug=False, timeout=60):
     """
     Execute virt-edit command to check whether it is ok.
 
@@ -618,4 +621,4 @@ def virt_edit_cmd(disk_or_domain, file_path, options=None,
     if expr is not None:
         cmd += " -e '%s'" % expr
 
-    return lgf_command(cmd, **dargs)
+    return lgf_command(cmd, ignore_status, debug, timeout)
