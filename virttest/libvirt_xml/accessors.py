@@ -363,10 +363,12 @@ class XMLElementText(AccessorGeneratorBase):
                 element = self.element_by_parent(self.parent_xpath,
                                                  self.tag_name, create=False)
             except xcepts.LibvirtXMLNotFoundError:
-                element = None
-            if element:
-                self.xmltreefile().remove(element)
-                self.xmltreefile().write()
+                pass # already gone
+            else:
+                parent = self.xmltreefile().find(self.parent_xpath)
+                if parent is not None:
+                    parent.remove(element)
+                    self.xmltreefile().write()
 
 
 class XMLElementInt(AccessorGeneratorBase):
@@ -440,6 +442,85 @@ class XMLElementInt(AccessorGeneratorBase):
             self.xmltreefile().write()
 
     Delter = XMLElementText.Delter
+
+
+class XMLElementBool(AccessorGeneratorBase):
+    """
+    Class of accessor classes operating purely element existance
+    """
+
+    required_dargs = ('parent_xpath', 'tag_name')
+
+    def __init__(self, property_name, libvirtxml, forbidden=None,
+                 parent_xpath=None, tag_name=None):
+        """
+        Create undefined accessors on libvirt instance
+
+        @param: property_name: String name of property (for exception detail)
+        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
+        @param: forbidden: Optional list of 'get', 'set', 'del'
+        @param: parent_xpath: XPath string of parent element
+        @param: tag_name: element tag name to manipulate text attribute on.
+        """
+        super(XMLElementBool, self).__init__(property_name, libvirtxml,
+                                             forbidden,
+                                             parent_xpath=parent_xpath,
+                                             tag_name=tag_name)
+
+
+    class Getter(AccessorBase):
+        """
+        Retrieve text on element
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'tag_name')
+
+        def __call__(self):
+            try:
+                # Throws exception if parent path or element not exist
+                self.element_by_parent(self.parent_xpath, self.tag_name,
+                                       create=False)
+                return True
+            except (xcepts.LibvirtXMLAccessorError,
+                    xcepts.LibvirtXMLNotFoundError):
+                return False
+
+
+    class Setter(AccessorBase):
+        """
+        Create element when True, delete when false
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'tag_name')
+
+        def __call__(self, value):
+            if bool(value) == True:
+                self.element_by_parent(self.parent_xpath, self.tag_name,
+                                       create=True)
+            else:
+                delattr(self.libvirtxml, self.property_name)
+            self.xmltreefile().write()
+
+
+    class Delter(AccessorBase):
+        """
+        Remove element and ignore if it doesn't exist (same as False)
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'tag_name')
+
+        def __call__(self):
+            try:
+                element = self.element_by_parent(self.parent_xpath,
+                                                 self.tag_name, create=False)
+            except (xcepts.LibvirtXMLNotFoundError, # element doesn't exist
+                    xcepts.LibvirtXMLAccessorError): # parent doesn't exist
+                pass # already gone
+            else:
+                parent = self.xmltreefile().find(self.parent_xpath)
+                if parent is not None:
+                    parent.remove(element)
+                    self.xmltreefile().write()
 
 
 class XMLAttribute(AccessorGeneratorBase):
@@ -531,6 +612,7 @@ class XMLElementDict(AccessorGeneratorBase):
                                              parent_xpath=parent_xpath,
                                              tag_name=tag_name)
 
+
     class Getter(AccessorBase):
 
         """
@@ -562,3 +644,238 @@ class XMLElementDict(AccessorGeneratorBase):
 
     # Inheriting from XMLElementText not work right
     Delter = XMLElementText.Delter
+
+
+class XMLElementNest(AccessorGeneratorBase):
+    """
+    Class of accessor classes operating on a LibvirtXMLBase subclass
+    """
+
+    required_dargs = ('parent_xpath', 'tag_name', 'subclass', 'subclass_dargs')
+
+
+    def __init__(self, property_name, libvirtxml, forbidden=None,
+                 parent_xpath=None, tag_name=None, subclass=None,
+                 subclass_dargs=None):
+        """
+        Create undefined accessors on libvirt instance
+
+        @param: property_name: String name of property (for exception detail)
+        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
+        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        @param: parent_xpath: XPath string of parent element
+        @param: tag_name: element tag name to manipulate text attribute on.
+        @param: subclass: A LibvirtXMLBase subclass with root tag == tag_name
+        @param: subclass_dargs: dict. to pass as kw args to subclass.__init__
+
+        N/B: Works ONLY if tag_name is unique within parent element
+        """
+        type_check('subclass', subclass, base.LibvirtXMLBase)
+        type_check('subclass_dargs', subclass_dargs, dict)
+        super(XMLElementNest, self).__init__(property_name, libvirtxml,
+                                             forbidden,
+                                             parent_xpath=parent_xpath,
+                                             tag_name=tag_name,
+                                             subclass=subclass,
+                                             subclass_dargs=subclass_dargs)
+
+
+    class Getter(AccessorBase):
+        """
+        Retrieve instance of subclass with it's xml set to rerooted xpath/tag
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'tag_name', 'subclass',
+                                 'subclass_dargs')
+
+        def __call__(self):
+            xmltreefile = self.xmltreefile()
+            # Don't re-invent XPath generation method/behavior
+            nested_root_element = self.element_by_parent(self.parent_xpath,
+                                                         self.tag_name,
+                                                         create=False)
+            nested_root_xpath = xmltreefile.get_xpath(nested_root_element)
+            # Try to make XMLTreeFile copy, rooted at nested_root_xpath
+            # with copies of any/all child elements also
+            nested_xtf = xmltreefile.reroot(nested_root_xpath)
+            # Create instance of subclass to assign nested_xtf onto
+            nestedinst = self.subclass(**self.subclass_dargs)
+            # nestedxml.xmltreefile.restore() will fail on nested_xtf.__del__
+            nestedinst.set_xml(str(nested_xtf)) # set from string not filename!
+            return nestedinst
+
+
+    class Setter(AccessorBase):
+        """
+        Set attributes to value on element
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'tag_name', 'subclass')
+
+        def __call__(self, value):
+            type_check('Instance of %s' % self.subclass.__name__,
+                       value,
+                       self.subclass)
+            # Will overwrite if exists
+            existing_element = self.element_by_parent(self.parent_xpath,
+                                                      self.tag_name,
+                                                      create=True)
+            existing_parent = self.xmltreefile().get_parent(existing_element)
+            self.xmltreefile().remove(existing_element)
+            existing_parent.append(value.xmltreefile.getroot())
+            self.xmltreefile().write()
+
+
+    # Nothing fancy, just make sure that part of tree doesn't exist
+    Delter = XMLElementText.Delter
+
+
+class XMLElementList(AccessorGeneratorBase):
+    """
+    Class of accessor classes operating on a list of child elements
+
+    Other generators here have a hard-time dealing with XML that has
+    multiple child-elements with the same tag.  This class allows
+    treating these structures as lists of arbitrary user-defined
+    objects.  User-defined marshal functions are called to perform
+    the conversion to/from the format described in __init__.
+    """
+
+    required_dargs = ('parent_xpath', 'tag_name', 'marshal_from', 'marshal_to')
+
+
+    def __init__(self, property_name, libvirtxml, forbidden=None,
+                 parent_xpath=None, marshal_from=None, marshal_to=None):
+        """
+        Create undefined accessors on libvirt instance
+
+        @param: property_name: String name of property (for exception detail)
+        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
+        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        @param: parent_xpath: XPath string of parent element
+        @param: marshal_from: Callable, passed the item, index, and
+                              libvirtxml instance.  Must return tuple
+                              of tag-name, and an attribute-dict or raise
+                              ValueError exception.
+        @param: marshal_to: Callable. Passed a the item tag, attribute-dict.,
+                            index, and libvirtxml instance.  Returns
+                            item value accepted by marshal_from or None to skip
+        """
+        if not callable(marshal_from) or not callable(marshal_to):
+            raise ValueError("Both marshal_from and marshal_to must be "
+                             "callable")
+        super(XMLElementList, self).__init__(property_name, libvirtxml,
+                                             forbidden,
+                                             parent_xpath=parent_xpath,
+                                             marshal_from=marshal_from,
+                                             marshal_to=marshal_to)
+
+
+    class Getter(AccessorBase):
+        """
+        Retrieve list of values as returned by the marshal_to callable
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'marshal_to')
+
+        def __call__(self):
+            # Parent structure cannot be pre-determined as in other classes
+            parent = self.xmltreefile().find(self.parent_xpath)
+            if parent is None:
+                # Used as "undefined" signal, raising exception may
+                # not be appropriate when other accessors are used
+                # to generate missing structure.
+                return None
+            result = []
+            # Give user-defined marshal functions a way to act on
+            # item order if needed, and/or help with error reporting.
+            index = 0
+            # user-defined marshal functions might want to use
+            # index numbers to filter/skip certain elements
+            # but also support specific item ordering.
+            for child in parent.getchildren():
+                # Call user-defined helper to translate Element
+                # into simple pre-defined format.
+                item = self.marshal_to(child.tag, dict(child.items()),
+                                       index, self.libvirtxml)
+                if item is not None:
+                    result.append(item)
+                # Always use absolute index (even if item was None)
+                index += 1
+            return result
+
+
+    class Setter(AccessorBase):
+        """
+        Set child elements as returned by the marshal_to callable
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'marshal_from')
+
+        def __call__(self, value):
+            type_check('value', value, list)
+            # Allow other classes to generate parent structure
+            parent = self.xmltreefile().find(self.parent_xpath)
+            if parent is None:
+                raise xcepts.LibvirtXMLNotFoundError
+            # Remove existing by calling accessor method, allowing
+            # any "untouchable" or "filtered" elements (by marshal)
+            # to be ignored and left as-is.
+            delattr(self.libvirtxml, self.property_name)
+            # Allow user-defined marshal function to determine
+            # if item order is important.  Also give more meaningful
+            # exception message below, if there is a problem.
+            index = 0
+            for item in value:
+                try:
+                    # Call user-defined conversion from simple
+                    # format, back to Element instances.
+                    element_tuple = self.marshal_from(item, index,
+                                                      self.libvirtxml)
+                except ValueError:
+                    # Defined in marshal API, to help with error reporting
+                    # and debugging with more rich message.
+                    msg = ("Call to %s by set accessor method for property %s "
+                           "with unsupported item type %s, at index %d, "
+                           " with value %s." % (str(self.marshal_from),
+                                                self.property_name,
+                                                str(type(item)),
+                                                index,
+                                                str(item)))
+                    raise xcepts.LibvirtXMLAccessorError(msg)
+                xml_utils.ElementTree.SubElement(parent,
+                                                 element_tuple[0],
+                                                 element_tuple[1])
+                index += 1
+            self.xmltreefile().write()
+
+
+    class Delter(AccessorBase):
+        """
+        Remove ALL child elements for which marshal_to does NOT return None
+        """
+
+        __slots__ = add_to_slots('parent_xpath', 'marshal_to')
+
+        def __call__(self):
+            parent = self.xmltreefile().find(self.parent_xpath)
+            if parent is None:
+                raise xcepts.LibvirtXMLNotFoundError("Parent element %s not "
+                                                     "found" % self.parent_xpath)
+            # Don't delete while traversing list
+            todel = []
+            index = 0
+            for child in parent.getchildren():
+                item = self.marshal_to(child.tag, dict(child.items()),
+                                       index, self.libvirtxml)
+                # Always use absolute index (even if item was None)
+                index += 1
+                # Account for case where child elements are mixed in
+                # with other elements not supported by this class.
+                # Also permits marshal functions to do element filtering
+                # if the class should only address specificly attributed
+                # elements.
+                if item is not None:
+                    todel.append(child)
+            for child in todel:
+                parent.remove(child)
