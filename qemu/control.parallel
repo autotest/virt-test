@@ -169,6 +169,9 @@ str = """
 """
 
 parser = cartesian_config.Parser()
+parser.assign('autotest_root_dir', data_dir.get_root_dir())
+parser.assign('autotest_tmp_dir', data_dir.get_tmp_dir())
+parser.assign('autotest_data_dir', data_dir.get_data_dir())
 parser.parse_file(os.path.join(pwd, "tests.cfg"))
 parser.parse_string(str)
 

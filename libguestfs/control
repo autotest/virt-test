@@ -14,7 +14,7 @@ Test the libguestfs tools on a given host.
 import sys, os, logging
 virt_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt')
 sys.path.insert(0, virt_test_dir)
-from virttest import utils_misc, cartesian_config
+from virttest import utils_misc, cartesian_config, data_dir
 
 libguestfs_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt/libguestfs')
 
@@ -22,6 +22,9 @@ libguestfs_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt/libguestfs'
 os.environ['LANG'] = 'en_US.UTF-8'
 
 parser = cartesian_config.Parser()
+parser.assign('autotest_root_dir', data_dir.get_root_dir())
+parser.assign('autotest_tmp_dir', data_dir.get_tmp_dir())
+parser.assign('autotest_data_dir', data_dir.get_data_dir())
 parser.parse_file(os.path.join(libguestfs_test_dir, "cfg", "tests.cfg"))
 
 utils_misc.run_tests(parser, job)
