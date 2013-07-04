@@ -232,7 +232,6 @@ def run_ksm_overcommit(test, params, env):
                         logging.debug("Only %s free memory, killing %d guests",
                                       free_mem, (i - 1))
                         last_vm = i
-                        break
                     out = session.read_nonblocking(0.1, 1)
                     time.sleep(2)
             except OSError:
@@ -267,7 +266,7 @@ def run_ksm_overcommit(test, params, env):
                            (mem / 200 * 50 * perf_ratio))
         logging.debug(utils_test.get_memory_info([lvms[last_vm]]))
 
-        lsessions[i].cmd_output("die()", 20)
+        lsessions[last_vm].cmd_output("die()", 20)
         lvms[last_vm].destroy(gracefully=False)
         logging.info("Phase 3b: PASS")
 
