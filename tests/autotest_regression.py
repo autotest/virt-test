@@ -49,9 +49,16 @@ def run_autotest_regression(test, params, env):
 
     step1 = "autotest-server-install"
     try:
+        installer_file = "install-autotest-server.sh"
+        installer_url = ("https://raw.github.com/autotest/autotest/master"
+                         "/contrib/%s" % installer_file)
+
         # Download the install script and execute it
-        download_cmd = ("wget https://raw.github.com/autotest/autotest/master"
-                        "/contrib/install-autotest-server.sh")
+        download_cmd = ("python -c 'from urllib2 import urlopen; "
+                        "r = urlopen(\"%s\"); "
+                        "f = open(\"%s\", \"w\"); "
+                        "f.write(r.read())'" % (installer_url,
+                                                installer_file))
         session_server.cmd(download_cmd)
         permission_cmd = ("chmod +x install-autotest-server.sh")
         session_server.cmd(permission_cmd)
