@@ -34,9 +34,9 @@ def run_boot_savevm(test, params, env):
         vm.create(params=params)
 
     vm.verify_alive() # This shouldn't require logging in to guest
-    savevm_delay = float(params.get("savevm_delay"))
-    savevm_login_delay = float(params.get("savevm_login_delay"))
-    savevm_login_timeout = float(params.get("savevm_timeout"))
+    savevm_delay = float(params["savevm_delay"])
+    savevm_login_delay = float(params["savevm_login_delay"])
+    savevm_login_timeout = float(params["savevm_timeout"])
     savevm_statedir = params.get("savevm_statedir", tempfile.gettempdir())
     fd, savevm_statefile = tempfile.mkstemp(suffix='.img', prefix=vm.name+'-',
                                             dir=savevm_statedir)
