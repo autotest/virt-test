@@ -706,7 +706,7 @@ class HumanMonitor(Monitor):
 
         @return: The command's output
         """
-        cmd = "block-stream %s" % device
+        cmd = "block_stream %s" % device
         if speed is not None:
             cmd = "%s %sB" % (cmd, speed)
         if base:
