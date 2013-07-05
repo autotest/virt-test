@@ -71,7 +71,7 @@ def run_rv_vmshutdown(test, params, env):
 
     #wait for the guest vm to be shutoff
     logging.info("Waiting for the guest VM to be shutoff")
-    utils_misc.wait_for(guest_vm.is_dead, 70, 30, 1, "waiting...")
+    utils_misc.wait_for(guest_vm.is_dead, 90, 30, 1, "waiting...")
     logging.info("Guest VM is now shutoff")
 
     #Verify there was a clean exit by
