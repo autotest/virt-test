@@ -611,7 +611,7 @@ class VM(virt_vm.BaseVM):
 
         def add_cdrom(devices, filename, index=None, fmt=None, bus=None,
                       port=None):
-            if has_option(help_text, "drive"):
+            if devices.has_option("drive"):
                 name = None
                 dev = ""
                 if fmt == "ahci":
@@ -1290,7 +1290,7 @@ class VM(virt_vm.BaseVM):
 
             return " -option-rom %s" % opt_rom
 
-        def add_smartcard(help_text, sc_chardev, sc_id):
+        def add_smartcard(devices, sc_chardev, sc_id):
             sc_cmd = " -device usb-ccid,id=ccid0"
             sc_cmd += " -chardev " + sc_chardev
             sc_cmd += ",id=" + sc_id + ",name=smartcard"
@@ -2057,7 +2057,8 @@ class VM(virt_vm.BaseVM):
         if params.get("smartcard", "no") == "yes":
             sc_chardev = params.get("smartcard_chardev")
             sc_id = params.get("smartcard_id")
-            qemu_cmd += add_smartcard(help_text, sc_chardev, sc_id)
+            cmd = add_smartcard(devices, sc_chardev, sc_id)
+            devices.insert(StrDev('smartcard', cmdline=cmd))
 
         if params.get("enable_watchdog", "no") == "yes":
             cmd = add_watchdog(devices,
