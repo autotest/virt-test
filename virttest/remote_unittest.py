@@ -69,5 +69,19 @@ class RemoteFileTest(unittest.TestCase):
         test_data = self._read_test_file()
         self.assertEqual(test_data, self.default_data)
 
+    def testSEEA(self):
+        remote_file = self._new_remote_file()
+        _pattern2repl = {r"Remote":"Local", r"NoMatch":"ADD line."}
+        remote_file.sub_else_add(_pattern2repl)
+        test_data = self._read_test_file()
+        except_data = ["LocalFile Test.\n",
+                       "Pattern Line.\n",
+                       "ADD line."]
+        for index in range(len(except_data)):
+            self.assertEqual(except_data[index], test_data[index])
+        del remote_file
+        test_data = self._read_test_file()
+        self.assertEqual(test_data, self.default_data)
+
 if __name__ == "__main__":
     unittest.main()
