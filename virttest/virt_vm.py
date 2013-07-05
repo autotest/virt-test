@@ -685,9 +685,7 @@ class BaseVM(object):
                 return self.get_address(nic_index_or_name)
             except (VMIPAddressMissingError, VMAddressVerificationError):
                 # Maybe the mac of nic is outdated.
-                if not self.update_mac_address(nic_index_or_name):
-                    # MAC updating failed. No need to wait any more.
-                    return True
+                self.update_mac_address(nic_index_or_name)
                 return False
         if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
             raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
