@@ -100,8 +100,8 @@ class QBaseDevice(object):
             elif value in ['no', 'off', False]:
                 self.params[option] = "off"
         elif value or value == 0:
-            if option_type is 'NEED_QUOTE':
-                self.params[option] = "'%s'" % value
+            if value == "EMPTY_STRING":
+                self.params[option] = '""'
             else:
                 self.params[option] = value
         elif value is None and option in self.params:
@@ -138,7 +138,7 @@ class QBaseDevice(object):
     def __eq__(self, dev2):
         """ @return: True when devs are similar, False when different. """
         try:
-            for check_attr in ('cmdline', 'readconfig', 'hotplug_hmp',
+            for check_attr in ('cmdline', 'hotplug_hmp',
                                'hotplug_qmp'):
                 try:
                     _ = getattr(self, check_attr)()
@@ -234,10 +234,6 @@ class QBaseDevice(object):
         """
         return out
 
-    def readconfig(self):
-        """ @return: readconfig-like config of this device """
-        raise NotImplementedError
-
 
 class QStringDevice(QBaseDevice):
     """
@@ -246,7 +242,7 @@ class QStringDevice(QBaseDevice):
       "%(type)s,id=%(id)s,addr=%(addr)s" -- params will be used to subst %()s
     """
     def __init__(self, dev_type, params=None, aobject=None,
-                 parent_bus=None, child_bus=None, cmdline="", readconfig=""):
+                 parent_bus=None, child_bus=None, cmdline=""):
         """
         @param dev_type: type of this component
         @param params: component's parameters
@@ -254,12 +250,10 @@ class QStringDevice(QBaseDevice):
         @param parent_bus: bus(es), in which this device is plugged in
         @param child_bus: bus, which this device provides
         @param cmdline: cmdline string
-        @param readconfig: readconfig string
         """
         super(QStringDevice, self).__init__(dev_type, params, aobject,
                                             parent_bus, child_bus)
         self._cmdline = cmdline
-        self._readconfig = readconfig
 
     def cmdline(self):
         """ @return: cmdline command to define this device """
@@ -269,19 +263,11 @@ class QStringDevice(QBaseDevice):
             raise KeyError("Param %s required for cmdline is not present in %s"
                            % (details, self.str_long()))
 
-    def readconfig(self):
-        """ @return: readconfig-like config of this device """
-        try:
-            return self._readconfig % self.params
-        except KeyError, details:
-            raise KeyError("Param %s required for readconfig is not present in"
-                           " %s" % (details, self.str_long()))
-
 
 class QCustomDevice(QBaseDevice):
     """
     Representation of the '-$option $param1=$value1,$param2...' qemu object.
-    This representation handles only cmdline and readconfig outputs.
+    This representation handles only cmdline.
     """
     def __init__(self, dev_type, params=None, aobject=None,
                  parent_bus=None, child_bus=None):
@@ -295,24 +281,12 @@ class QCustomDevice(QBaseDevice):
         """ @return: cmdline command to define this device """
         out = "-%s " % self.type
         for key, value in self.params.iteritems():
-            out += "%s=%s," % (key, value)
+            if value != "NO_EQUAL_STRING":
+                out += "%s=%s," % (key, value)
+            else:
+                out += "%s," % key
         if out[-1] == ',':
             out = out[:-1]
-        return out
-
-    def readconfig(self):
-        """ @return: readconfig-like config of this device """
-        out = "[%s" % self.type
-        if self.get_qid():
-            out += ' "%s"' % self.get_qid()
-        out += "]\n"
-        for key, value in self.params.iteritems():
-            if key == "id":
-                continue
-            if value.startswith("'") and value.endswith("'"):
-                out += '  %s = "%s"\n' % (key, value[1:-1])
-            else:
-                out += '  %s = "%s"\n' % (key, value)
         return out
 
 
@@ -397,10 +371,10 @@ class QSparseBus(object):
             elif item in self.badbus.itervalues():
                 return item
         elif item:
-            for device in self.bus:
+            for device in self.bus.itervalues():
                 if device.get_aid() == item:
                     return device
-            for device in self.badbus:
+            for device in self.badbus.itervalues():
                 if device.get_aid() == item:
                     return device
         raise KeyError("Device %s is not in %s" % (item, self))
@@ -552,7 +526,11 @@ class QSparseBus(object):
         """
         addr = []
         for key in self.addr_items:
-            addr.append(device.get_param(key))
+            value = device.get_param(key)
+            if value is None:
+                addr.append(None)
+            else:
+                addr.append(int(value))
         return addr
 
     def _set_first_addr(self, addr_pattern):
@@ -624,10 +602,10 @@ class QSparseBus(object):
         @param device: QBaseDevice device
         @param addr: internal address  [addr1, addr2, ...]
         """
-        if device.get_param(self.bus_item):
+        if device.get_param(self.bus_item) is not None:
             device.set_param(self.bus_item, self.busid)
         for i in xrange(len(self.addr_items)):
-            if device.get_param(self.addr_items[i]):
+            if device.get_param(self.addr_items[i]) is not None:
                 device.set_param(self.addr_items[i], addr[i])
 
     def insert(self, device, strict_mode=False, force=False):
@@ -648,7 +626,14 @@ class QSparseBus(object):
                 device.set_param(self.bus_item, self.busid)
             else:
                 return False
-        addr_pattern = self._dev2addr(device)
+        try:
+            addr_pattern = self._dev2addr(device)
+        except (ValueError, LookupError):
+            if force:
+                err += "BasicAddress, "
+                addr_pattern = [None] * len(self.addr_items)
+            else:
+                return False
         addr = self.get_free_slot(addr_pattern)
         if addr is None:
             if force:
@@ -892,11 +877,12 @@ class DevContainer(object):
                                     "stdio -vnc none" % qemu_binary,
                                     timeout=10, ignore_status=True,
                                     verbose=False)
-            _ = re.findall(r'^([^\| ]+\|?\w+)', _, re.M)
+            _ = re.findall(r'^([^\| \[\n]+\|?\w+)', _, re.M)
             hmp_cmds = []
             for cmd in _:
                 if '|' not in cmd:
-                    hmp_cmds.append(cmd)
+                    if cmd != 'The':
+                        hmp_cmds.append(cmd)
                 else:
                     hmp_cmds.extend(cmd.split('|'))
             return hmp_cmds
@@ -1078,7 +1064,7 @@ class DevContainer(object):
             out += device.str_long()
         if out[-1] == '\n':
             out = out[:-1]
-        return out + "]"
+        return out
 
     def str_bus_short(self):
         """ Short representation of all buses """
@@ -1301,29 +1287,11 @@ class DevContainer(object):
         for device in self.__devices:
             if device.cmdline():
                 out += " %s" % device.cmdline()
-        return out
-
-    def readconfig(self):
-        """
-        Creates -readconfig-like config for all defined devices.
-        @return: list, where first item is -readconfig-like config for all
-                 inserted devices. and second item are cmdline options of
-                 devices, which don't have -readconfig fmt specified
-        """
-        out = ["", ""]
-        for device in self.__devices:
-            if device.readconfig():
-                out[0] += "%s\n\n" % device.readconfig()
-            elif device.cmdline():
-                out[1] += "%s  " % device.cmdline()
-        if out[0]:
-            out[0] = out[0][:-2]
-        if out[1]:
-            out[1] = out[1][:-1]
-        return out
+        if out:
+            return out[1:]
 
     # Machine related methods
-    def machine_by_variables(self, params=None):
+    def machine_by_params(self, params=None):
         """
         Choose the used machine and set the default devices accordingly
         @param params: VM params

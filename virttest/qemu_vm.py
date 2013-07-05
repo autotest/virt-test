@@ -581,8 +581,8 @@ class VM(virt_vm.BaseVM):
             dev.set_param('backend', 'socket')
             dev.set_param('id', chardev_id)
             dev.set_param("path", filename)
-            dev.set_param("server", True, bool)
-            dev.set_param("wait", False, bool)
+            dev.set_param("server", 'NO_EQUAL_STRING')
+            dev.set_param("nowait", 'NO_EQUAL_STRING')
             devices.insert(dev)
             dev = QDevice('virtio-serial-pci', parent_bus={'type': 'pci'})
             dev.set_param("id", vioser_id)
@@ -1356,7 +1356,7 @@ class VM(virt_vm.BaseVM):
         # Add the VM's name
         devices.insert(StrDev('vmname', cmdline=add_name(devices, name)))
 
-        devs = devices.machine_by_variables(params)
+        devs = devices.machine_by_params(params)
         for dev in devs:
             devices.insert(dev)
 
