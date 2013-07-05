@@ -98,8 +98,11 @@ def run_floppy(test, params, env):
     class test_singlehost(MiniSubtest):
         def test(self):
             create_floppy(params)
-            vm = env.get_vm(params["main_vm"])
-            vm.create()
+            params["start_vm"] = "yes"
+            vm_name = params.get("main_vm", "vm1")
+            env_process.preprocess_vm(test, params, env, vm_name)
+            vm = env.get_vm(vm_name)
+            vm.verify_alive()
             self.session = vm.wait_for_login(timeout=login_timeout)
 
             self.dest_dir = params["mount_dir"]
