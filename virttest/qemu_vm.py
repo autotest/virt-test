@@ -1943,7 +1943,7 @@ class VM(virt_vm.BaseVM):
                 if value is not None:
                     self.spice_options[skey] = value
 
-                cmd += add_spice()
+            cmd += add_spice()
         if cmd:
             devices.insert(StrDev('display', cmdline=cmd))
 
