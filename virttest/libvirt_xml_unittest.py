@@ -45,6 +45,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
                       '    <name>%s</name>'
                       '    <uuid>%s</uuid>'
                       '    <devices>'  # Tests below depend on device order
+
                       '       <serial type="pty">'
                       '           <target port="0"/>'
                       '       </serial>'
@@ -65,6 +66,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                         service="5442"/>'
                       '         <target port="3"/>'
                       '       </serial>'
+
                       '       <channel type="foo1">'
                       '         <source mode="foo2" path="foo3" />'
                       '         <target name="foo4" type="foo5" />'
@@ -73,14 +75,25 @@ class LibvirtXMLTestBase(unittest.TestCase):
                       '         <source mode="bar2" path="bar3" />'
                       '         <target name="bar4" type="bar5" />'
                       '       </channel>'
+
                       '       <graphics type="vnc" port="-1" autoport="yes"/>'
+
+                      '       <disk type="file" device="disk">'
+                      '         <driver name="qemu" type="qcow2"/>'
+                      '         <source file="/foo/bar/baz.qcow2"/>'
+                      '         <target dev="vda" bus="virtio"/>'
+                      '         <address type="pci" domain="0x0000"'
+                      '               bus="0x00" slot="0x04" function="0x0"/>'
+                      '       </disk>'
+
                       '    </devices>'
-                      '    <seclabel type="sec_type" model="sec_model"\
-                                                    relabel="sec_relabel">'
+
+                      '    <seclabel type="sec_type" model="sec_model">'
                       '       <label>sec_label</label>'
                       '       <baselabel>sec_baselabel</baselabel>'
                       '       <imagelabel>sec_imagelabel</imagelabel>'
                       '    </seclabel>'
+
                       '</domain>')
 
     __doms_dir__ = None
@@ -735,6 +748,48 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(source_connect['host'], "4.3.2.1")
         self.assertEqual(source_bind['service'], '2445')
         self.assertEqual(source_connect['service'], '5442')
+
+
+class testDiskXML(LibvirtXMLTestBase):
+
+
+    def _check_disk(self, disk):
+        self.assertEqual(disk.type_name, "file")
+        self.assertEqual(disk.device, "disk")
+        for propname in ('rawio', 'sgio', 'snapshot', 'iotune'):
+            self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                              disk.__getitem__, propname)
+            self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                              disk.__getattr__, propname)
+            self.assertRaises(xcepts.LibvirtXMLNotFoundError,
+                              getattr(disk, 'get_' + propname))
+        self.assertEqual(disk.driver, {'name':'qemu', 'type':'qcow2'})
+        self.assertEqual(disk.target['dev'], 'vda')
+        self.assertEqual(disk.target['bus'], 'virtio')
+        source = disk.source
+        self.assertEqual(source.attrs, {'file':'/foo/bar/baz.qcow2'})
+        self.assertEqual(source.seclabels, [])
+        self.assertEqual(source.hosts, [])
+        self.assertEqual(disk.address.attrs, {"domain":"0x0000",
+                                              "bus":"0x00", "slot":"0x04",
+                                              "function":"0x0", "type":"pci"})
+
+
+    def test_vm_get(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        for device in vmxml.devices:
+            if device.device_tag is 'disk':
+                self._check_disk(device)
+            else:
+                continue
+
+
+    def test_vm_get_by_class(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        disk_devices = vmxml.get_devices(device_type='disk')
+        self.assertEqual(len(disk_devices), 1)
+        self._check_disk(disk_devices[0])
+
 
 
 class testAddressXML(LibvirtXMLTestBase):
