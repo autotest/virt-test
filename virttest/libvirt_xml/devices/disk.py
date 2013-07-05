@@ -209,5 +209,5 @@ class Disk(base.TypedDeviceBase):
                 else:
                     accessors.XMLElementInt(slot, self, parent_xpath='/',
                                             tag_name=slot)
-            super(IOTune, self).__init__(virsh_instance=virsh_instance)
+            super(Disk.IOTune, self).__init__(virsh_instance=virsh_instance)
             self.xml = '<iotune/>'
