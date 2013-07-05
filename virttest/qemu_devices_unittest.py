@@ -7,23 +7,24 @@ This is a unittest for qemu_devices library.
 """
 __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 
+import re, unittest, os
+import common
 from autotest.client.shared.test_utils import mock
-import qemu_devices
-import re
-import unittest
+import qemu_devices, data_dir
 
+UNITTEST_DATA_DIR = os.path.join(data_dir.get_root_dir(), "virttest", "unittest_data")
 
 # Dummy variables
 # qemu-1.5.0 human monitor help output
-QEMU_HMP = open("unittest_data/qemu-1.5.0__hmp_help").read()
+QEMU_HMP = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__hmp_help")).read()
 # qemu-1.5.0 QMP monitor commands output
-QEMU_QMP = open("unittest_data/qemu-1.5.0__qmp_help").read()
+QEMU_QMP = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__qmp_help")).read()
 # qemu-1.5.0 -help
-QEMU_HELP = open("unittest_data/qemu-1.5.0__help").read()
+QEMU_HELP = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__help")).read()
 # qemu-1.5.0 -devices ?
-QEMU_DEVICES = open("unittest_data/qemu-1.5.0__devices_help").read()
+QEMU_DEVICES = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__devices_help")).read()
 # qemu-1.5.0 -M ?
-QEMU_MACHINE = open("unittest_data/qemu-1.5.0__machine_help").read()
+QEMU_MACHINE = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__machine_help")).read()
 
 
 class Devices(unittest.TestCase):
