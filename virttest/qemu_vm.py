@@ -611,9 +611,9 @@ class VM(virt_vm.BaseVM):
 
         def add_cdrom(devices, filename, index=None, fmt=None, bus=None,
                       port=None):
-            if devices.has_option("drive"):
-                name = None;
-                dev = "";
+            if has_option(help_text, "drive"):
+                name = None
+                dev = ""
                 if fmt == "ahci":
                     name = "ahci%s" % index
                     dev += " -device ide-drive,bus=ahci.%s,drive=%s" % (index,
@@ -1011,12 +1011,27 @@ class VM(virt_vm.BaseVM):
                     spice_opts.append(fallback)
             s_port = str(utils_misc.find_free_port(*port_range))
             if optget("spice_port") == "generate":
-                self.spice_options['spice_port'] = s_port
-                spice_opts.append("port=%s" % s_port)
+                if not self.is_alive():
+                    self.spice_options['spice_port'] = s_port
+                    spice_opts.append("port=%s" % s_port)
+                    self.spice_port = s_port
+                else:
+                    self.spice_options['spice_port'] = self.spice_port
             else:
                 set_value("port=%s", "spice_port")
 
             set_value("password=%s", "spice_password", "disable-ticketing")
+            if optget("listening_addr") == "ipv4":
+                host_ip = utils_net.get_host_ip_address(self.params)
+                self.spice_options['listening_addr'] = "ipv4"
+                spice_opts.append("addr=%s" % host_ip)
+                #set_value("addr=%s", "listening_addr", )
+            elif optget("listening_addr") == "ipv6":
+                host_ip = utils_net.get_host_ip_address(self.params)
+                host_ip_ipv6 = utils_misc.convert_ipv4_to_ipv6(host_ip)
+                self.spice_options['listening_addr'] = "ipv6"
+                spice_opts.append("addr=%s" % host_ip_ipv6)
+
             set_yes_no_value("disable_copy_paste",
                              yes_value="disable-copy-paste")
             set_value("addr=%s", "spice_addr")
@@ -1025,8 +1040,12 @@ class VM(virt_vm.BaseVM):
                 # SSL only part
                 t_port = str(utils_misc.find_free_port(*tls_port_range))
                 if optget("spice_tls_port") == "generate":
-                    self.spice_options['spice_tls_port'] = t_port
-                    spice_opts.append("tls-port=%s" % t_port)
+                    if not self.is_alive():
+                        self.spice_options['spice_tls_port'] = t_port
+                        spice_opts.append("tls-port=%s" % t_port)
+                        self.spice_tls_port = t_port
+                    else:
+                        self.spice_options['spice_tls_port'] = self.spice_tls_port
                 else:
                     set_value("tls-port=%s", "spice_tls_port")
 
@@ -1038,6 +1057,9 @@ class VM(virt_vm.BaseVM):
                     # not longer accessiable via encrypted spice.
                     c_subj = optget("spice_x509_cacert_subj")
                     s_subj = optget("spice_x509_server_subj")
+                    #If CN is not specified, add IP of host
+                    if s_subj[-3:] == "CN=":
+                        s_subj += utils_net.get_host_ip_address(self.params)
                     passwd = optget("spice_x509_key_password")
                     secure = optget("spice_x509_secure")
 
@@ -1268,6 +1290,13 @@ class VM(virt_vm.BaseVM):
 
             return " -option-rom %s" % opt_rom
 
+        def add_smartcard(help_text, sc_chardev, sc_id):
+            sc_cmd = " -device usb-ccid,id=ccid0"
+            sc_cmd += " -chardev " + sc_chardev
+            sc_cmd += ",id=" + sc_id + ",name=smartcard"
+            sc_cmd += " -device ccid-card-passthru,chardev=" + sc_id
+
+            return sc_cmd
 
         # End of command line option wrappers
 
@@ -1905,15 +1934,16 @@ class VM(virt_vm.BaseVM):
                     "spice_zlib_glz_wan_compression", "spice_streaming_video",
                     "spice_agent_mouse", "spice_playback_compression",
                     "spice_ipv4", "spice_ipv6", "spice_x509_cert_file",
-                    "disable_copy_paste", "spice_seamless_migration"
+                    "disable_copy_paste", "spice_seamless_migration",
+                   "listening_addr"
                 )
 
-                for skey in spice_keys:
-                    value = params.get(skey, None)
-                    if value:
-                        self.spice_options[skey] = value
+            for skey in spice_keys:
+                value = params.get(skey, None)
+                if value is not None:
+                    self.spice_options[skey] = value
 
-                cmd += add_spice()
+            cmd += add_spice()
         if cmd:
             devices.insert(StrDev('display', cmdline=cmd))
 
@@ -2023,6 +2053,11 @@ class VM(virt_vm.BaseVM):
 
         if params.get("enable_sga") == "yes":
             devices.insert(StrDev('sga', cmdline=add_sga(devices)))
+
+        if params.get("smartcard", "no") == "yes":
+            sc_chardev = params.get("smartcard_chardev")
+            sc_id = params.get("smartcard_id")
+            qemu_cmd += add_smartcard(help_text, sc_chardev, sc_id)
 
         if params.get("enable_watchdog", "no") == "yes":
             cmd = add_watchdog(devices,
@@ -3177,7 +3212,9 @@ class VM(virt_vm.BaseVM):
                 if self.params["spice_ssl"] == "yes":
                     dest_tls_port = clone.spice_options["spice_tls_port"]
                     cert_subj = clone.spice_options["spice_x509_server_subj"]
-                    cert_subj = "\"%s\"" % cert_subj.replace('/', ',')[1:]
+                    cert_subj = "%s" % cert_subj.replace('/',',')[1:]
+                    cert_subj += host_ip
+                    cert_subj = "\"%s\"" % cert_subj
                 else:
                     dest_tls_port = ""
                     cert_subj = ""
@@ -3394,7 +3431,8 @@ class VM(virt_vm.BaseVM):
         # For compatibility with versions of QEMU that do not recognize all
         # key names: replace keyname with the hex value from the dict, which
         # QEMU will definitely accept
-        key_mapping = {"comma": "0x33",
+        key_mapping = {"semicolon": "0x27",
+                       "comma": "0x33",
                        "dot":   "0x34",
                        "slash": "0x35"}
         for key, value in key_mapping.items():
