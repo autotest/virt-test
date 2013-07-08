@@ -1031,7 +1031,7 @@ class VM(virt_vm.BaseVM):
                     set_value("tls-port=%s", "spice_tls_port")
 
                 prefix = optget("spice_x509_prefix")
-                if (not os.path.exists(prefix) and
+                if ((prefix is None or not os.path.exists(prefix)) and
                     (optget("spice_gen_x509") == "yes")):
                     # Generate spice_x509_* is not always necessary,
                     # Regenerate them will make your existing VM
@@ -3173,11 +3173,13 @@ class VM(virt_vm.BaseVM):
             if (self.params["display"] == "spice" and
                 not (protocol == "exec" and "gzip" in migration_exec_cmd_src)):
                 host_ip = utils_net.get_host_ip_address(self.params)
-                dest_port = clone.spice_options['spice_port']
-                if self.params["spice_ssl"] == "yes":
-                    dest_tls_port = clone.spice_options["spice_tls_port"]
-                    cert_subj = clone.spice_options["spice_x509_server_subj"]
-                    cert_subj = "\"%s\"" % cert_subj.replace('/', ',')[1:]
+                dest_port = clone.spice_options.get('spice_port', '')
+                if self.params.get("spice_ssl") == "yes":
+                    dest_tls_port = clone.spice_options.get("spice_tls_port",
+                                                            "")
+                    cert_s = clone.spice_options.get("spice_x509_server_subj",
+                                                        "")
+                    cert_subj = "\"%s\"" % cert_s.replace('/', ',')[1:]
                 else:
                     dest_tls_port = ""
                     cert_subj = ""
@@ -3186,47 +3188,24 @@ class VM(virt_vm.BaseVM):
                             "spice_migrate_info",
                             "client_migrate_info"]
 
-                if self.monitor.protocol == "human":
-                    out = self.monitor.cmd("help", debug=False)
-                    for command in commands:
-                        if "\n%s" % command in out:
-                            # spice_migrate_info requires host_ip, dest_port
-                            if command in commands[:2]:
-                                command = "%s %s %s %s %s" % (command, host_ip,
-                                                        dest_port, dest_tls_port,
-                                                        cert_subj)
-                            # client_migrate_info also requires protocol
-                            else:
-                                command = "%s %s %s %s %s %s" % (command,
-                                                         self.params['display'],
-                                                         host_ip, dest_port,
-                                                         dest_tls_port, cert_subj)
-                            break
-                    self.monitor.cmd(command)
-
-                elif self.monitor.protocol == "qmp":
-                    out = self.monitor.cmd_obj({"execute": "query-commands"})
-                    for command in commands:
-                        if {'name': command} in out['return']:
-                            # spice_migrate_info requires host_ip, dest_port
-                            if command in commands[:2]:
-                                command_dict = {"execute": command,
-                                                "arguments":
-                                                 {"hostname": host_ip,
-                                                  "port": dest_port,
-                                                  "tls-port": dest_tls_port,
-                                                  "cert-subject": cert_subj}}
-                            # client_migrate_info also requires protocol
-                            else:
-                                command_dict = {"execute": command,
-                                                "arguments":
-                                            {"protocol": self.params['display'],
-                                             "hostname": host_ip,
-                                             "port": dest_port,
-                                             "tls-port": dest_tls_port,
-                                             "cert-subject": cert_subj}}
-                            break
-                    self.monitor.cmd_obj(command_dict)
+                for command in commands:
+                    try:
+                        self.monitor.verify_supported_cmd(command)
+                    except qemu_monitor.MonitorNotSupportedCmdError:
+                        continue
+                    # spice_migrate_info requires host_ip, dest_port
+                    # client_migrate_info also requires protocol
+                    cmdline = "%s hostname=%s" % (command, host_ip)
+                    if command == "client_migrate_info":
+                        cmdline += ",protocol=%s" % self.params['display']
+                    if dest_port:
+                        cmdline += ",port=%s" % dest_port
+                    if dest_tls_port:
+                        cmdline += ",tls-port=%s" % dest_tls_port
+                    if cert_subj:
+                        cmdline += ",cert-subject=%s" % cert_subj
+                    break
+                self.monitor.send_args_cmd(cmdline)
 
             if protocol in [ "tcp", "rdma", "x-rdma" ]:
                 if local:
