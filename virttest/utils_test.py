@@ -2227,7 +2227,7 @@ def find_substring(string, pattern1, pattern2=None):
 
 def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
                            storage_path="/tmp/prewhql.iso",
-                           re_hw_id="(PCI.{14,50})\r\n", run_cmd=True):
+                           re_hw_id="(PCI.{14,50})", run_cmd=True):
     """
     Get windows driver's hardware id from inf files.
 
@@ -2246,6 +2246,7 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
         utils.system("mount %s %s -o loop" % (storage_path, mount_point),
                      timeout=60)
     driver_link = os.path.join(mount_point, driver_path)
+    txt_file = ""
     try:
         txt_file = open(driver_link, "r")
         txt = txt_file.read()
@@ -2257,7 +2258,9 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
         return hwid
     except Exception, e:
         logging.error("Fail to get hardware id with exception: %s" % e)
-        utils.system("umount %s" % mount_point)
+        if txt_file:
+            txt_file.close()
+        utils.system("umount %s" % mount_point, ignore_status=True)
         return ""
 
 
