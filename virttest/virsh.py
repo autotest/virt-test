@@ -2150,7 +2150,7 @@ def nodedev_dettach(name, options="", **dargs):
 
     @return: nodedev_detach(name).
     """
-    return nodedev_detach(name, options, **datgs)
+    return nodedev_detach(name, options, **dargs)
 
 
 def nodedev_reattach(name, options="", **dargs):
