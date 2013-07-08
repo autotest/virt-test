@@ -2119,3 +2119,48 @@ def domif_getlink(name, interface, options=None, **dargs):
         cmd += " %s" % options
 
     return command(cmd, **dargs)
+
+def nodedev_list(options="", **dargs):
+    """
+    List the node devices.
+
+    @return: CmdResult object.
+    """
+    cmd = "nodedev-list %s" % (options)
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
+
+def nodedev_detach(name, options="", **dargs):
+    """
+    Detach node device from host.
+
+    @return: cmdresult object.
+    """
+    cmd = ("nodedev-detach --device %s %s" % (name, options))
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
+
+def nodedev_dettach(name, options="", **dargs):
+    """
+    Detach node device from host.
+
+    @return: nodedev_detach(name).
+    """
+    return nodedev_detach(name, options, **datgs)
+
+
+def nodedev_reattach(name, options="", **dargs):
+    """
+    If node device is detached, this action will
+    reattach it to its device driver.
+
+    @return: cmdresult object.
+    """
+    cmd = ("nodedev-reattach --device %s %s" % (name, options))
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
