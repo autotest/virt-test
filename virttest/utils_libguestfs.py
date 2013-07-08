@@ -226,8 +226,9 @@ class GuestfishSession(aexpect.ShellSession):
         @param prompt: Regular expression describing the shell's prompt line.
         """
         # aexpect tries to auto close session because no clients connected yet
-        aexpect.ShellSession.__init__(self, guestfs_exec, a_id,
-                                      prompt=prompt, auto_close=False)
+        super(GuestfishSession, self).__init__(guestfs_exec, a_id,
+                                               prompt=prompt,
+                                               auto_close=False)
 
 
     def cmd_status_output(self, cmd, timeout=60, internal_timeout=None,
