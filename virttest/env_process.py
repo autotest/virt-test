@@ -255,18 +255,25 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
             for vm_name in params.objects("vms"):
                 vm_params = params.object_params(vm_name)
                 vm = env.get_vm(vm_name)
-                for image_name in vm_params.objects("images"):
-                    image_params = vm_params.object_params(image_name)
-                    # Call image_func for each image
-                    unpause_vm = False
-                    if vm is not None and vm.is_alive() and not vm.is_paused():
-                        vm.pause()
-                        unpause_vm = True
-                    try:
-                        image_func(test, image_params, image_name)
-                    finally:
-                        if unpause_vm:
-                            vm.resume()
+                unpause_vm = False
+                if vm is not None and vm.is_alive() and not vm.is_paused():
+                    vm.pause()
+                    unpause_vm = True
+                try:
+                    err = ""
+                    for image_name in vm_params.objects("images"):
+                        image_params = vm_params.object_params(image_name)
+                        # Call image_func for each image
+                        try:
+                            image_func(test, image_params, image_name)
+                        except Exception, details:
+                            err += "\n%s: %s" % (image_name, details)
+                    if err:
+                        raise virt_vm.VMImageCheckError("Error(s) occured "
+                                        "while processing images: %s" % err)
+                finally:
+                    if unpause_vm:
+                        vm.resume()
         else:
             for image_name in params.objects("images"):
                 image_params = params.object_params(image_name)
