@@ -1,5 +1,5 @@
 import logging, time, re, os, tempfile, ConfigParser
-import threading
+import threading, shutil
 import xml.dom.minidom
 import errno
 from autotest.client.shared import error, iso9660
@@ -119,6 +119,7 @@ class UnattendedInstallConfig(object):
         root_dir = data_dir.get_data_dir()
         self.deps_dir = os.path.join(test.virtdir, 'deps')
         self.unattended_dir = os.path.join(test.virtdir, 'unattended')
+        self.results_dir = test.debugdir
         self.params = params
 
         self.attributes = ['kernel_args', 'finish_program', 'cdrom_cd1',
@@ -916,6 +917,12 @@ class UnattendedInstallConfig(object):
                              self.medium)
         if self.unattended_file and (self.floppy or self.cdrom_unattended):
             self.setup_boot_disk()
+            if self.params.get("store_boot_disk") == "yes":
+                logging.info("Sotre the boot disk to result directory for"
+                             " further debug")
+                src_dir = self.floppy or self.cdrom_unattended
+                dst_dir = self.results_dir
+                shutil.copy(src_dir, dst_dir)
 
         # Update params dictionary as some of the values could be updated
         for a in self.attributes:
