@@ -28,8 +28,14 @@ from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
-import aexpect, utils_misc, virt_vm, remote, storage, env_process, utils_cgroup
+import aexpect, utils_misc, virt_vm, remote, storage, env_process
 import virttest
+
+try:
+    from autotest.client.shared import utils_cgroup
+except ImportError:
+    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
+    from virttest import utils_cgroup
 
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)

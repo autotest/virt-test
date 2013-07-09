@@ -1,8 +1,13 @@
 import logging
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest.utils_cgroup import Cgroup, CgroupModules
 from virttest.env_process import preprocess
+
+try:
+    from autotest.client.shared.utils_cgroup import Cgroup, CgroupModules
+except ImportError:
+    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
+    from virttest.utils_cgroup import Cgroup, CgroupModules
 
 
 @error.context_aware
