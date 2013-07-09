@@ -61,7 +61,7 @@ def run_hdparm(test, params, env):
 
     ignore_string = params.get("ignore_string")
     vm = env.get_vm(params["main_vm"])
-    vm.create()
+    vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     try:
         timeout = float(params.get("cmd_timeout", 60))
