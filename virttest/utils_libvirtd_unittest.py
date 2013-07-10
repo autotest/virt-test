@@ -19,5 +19,24 @@ class UtilsLibvirtdTest(unittest.TestCase):
                               utils_libvirtd.service_libvirtd_control,
                               action=action, libvirtd="")
 
+class RemoteControlTest(unittest.TestCase):
+    def test_status(self):
+        service_libvirtd_control = utils_libvirtd.service_libvirtd_control
+        status_remote = service_libvirtd_control("status", client="unittest")
+        status_local = utils_libvirtd.libvirtd_status()
+        self.assertEqual(status_remote, status_local)
+
+    def test_restart_stop_start(self):
+        service_libvirtd_control = utils_libvirtd.service_libvirtd_control
+
+        service_libvirtd_control("restart", client="unittest")
+        self.assertTrue(utils_libvirtd.libvirtd_status())
+
+        service_libvirtd_control("stop", client="unittest")
+        self.assertFalse(utils_libvirtd.libvirtd_status())
+        service_libvirtd_control("start", client="unittest")
+        self.assertTrue(utils_libvirtd.libvirtd_status())
+
+
 if __name__ == "__main__":
     unittest.main()
