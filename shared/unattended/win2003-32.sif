@@ -10,7 +10,7 @@ OemPreinstall = No
 UnattendSwitch = Yes
 CrashDumpSetting = 1
 DriverSigningPolicy = ignore
-OemPnPDriversPath = KVM_TEST_NETWORK_DRIVER_PATH
+OemPnPDriversPath="KVM_TEST_NETWORK_DRIVER_PATH"
 WaitForReboot = no
 Repartition = yes
 
@@ -23,20 +23,20 @@ TimeZone = 85
 OemSkipWelcome = 1
 
 [UserData]
-ProductKey = KVM_TEST_CDKEY
-FullName = "Autotest Mindless Drone"
-OrgName = "Autotest"
-ComputerName = *
+ProductKey=KVM_TEST_CDKEY
+FullName="Autotest Mindless Drone"
+OrgName="Autotest"
+ComputerName=*
 
 [LicenseFilePrintData]
-AutoMode = PerServer
-AutoUsers = 15
+AutoMode=PerServer
+AutoUsers=15
 
 [Identification]
-JoinWorkgroup = WORKGROUP
+JoinWorkgroup=WORKGROUP
 
 [Networking]
-InstallDefaultComponents = Yes
+InstallDefaultComponents=Yes
 
 [Components]
 
@@ -50,17 +50,23 @@ Profiles = WindowsFirewall.TurnOffFirewall
 Mode = 0
 
 [SetupParams]
-local = "Local Area Connection"
+local="Local Area Connection"
 
 [Display]
-Xresolution = 1024
-YResolution = 768
+Xresolution=1024
+YResolution=768
 
 [GuiRunOnce]
-Command0 = "cmd /c KVM_TEST_VIRTIO_NETWORK_INSTALLER"
-Command1 = "cmd /c sc config TlntSvr start= auto"
-Command2 = "cmd /c netsh firewall set opmode disable"
-Command3 = "cmd /c net start telnet"
-Command4 = "cmd /c E:\setuprss.bat"
-Command5 = "cmd /c netsh interface ip set address local dhcp"
-Command6 = "cmd /c A:\finish.bat PROCESS_CHECK"
+Command0="cmd /c echo OS install is completed > COM1"
+Command1="cmd /c KVM_TEST_VIRTIO_NETWORK_INSTALLER"
+Command2="cmd /c sc config TlntSvr start= auto"
+Command3="cmd /c netsh firewall set opmode disable"
+Command4="cmd /c net start telnet"
+Command5="cmd /c E:\autoit3.exe  E:\git\git.au3"
+Command6="cmd /c E:\cfg\use_pmtmr.bat"
+Command7="cmd /c netsh interface ip set address local dhcp"
+Command8="cmd /c E:\setuprss.bat"
+Command9="cmd /c start /wait E:\dotnetfx35.exe /lang:ENU /norestart /passive"
+Command10="cmd /c E:\setupsp.bat"
+Command11="cmd /c E:\software_install_32.bat"
+Command12="cmd /c A:\finish.bat PROCESS_CHECK"

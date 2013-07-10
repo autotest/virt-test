@@ -13,6 +13,7 @@ timezone --utc America/New_York
 firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 zerombr
+xconfig --startxonboot
 #partitioning
 clearpart --all --initlabel
 part /boot --fstype=ext3 --size=500
@@ -44,6 +45,8 @@ sg3_utils
 
 %post
 echo "OS install is completed" > /dev/ttyS0
+grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
+grubby --args="divider=10 crashkernel=128M@16M" --update-kernel=$(grubby --default-kernel)
 dhclient
 chkconfig sshd on
 iptables -F

@@ -1,7 +1,6 @@
 install
 KVM_TEST_MEDIUM
 text
-reboot
 lang en_US.UTF-8
 keyboard us
 key --skip
@@ -13,6 +12,7 @@ timezone --utc America/New_York
 firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 zerombr
+xconfig --startxonboot
 #partitioning
 clearpart --all --initlabel
 part /boot --fstype=ext4 --size=500
@@ -30,8 +30,22 @@ KVM_TEST_LOGGING
 @additional-devel
 @debugging-tools
 @network-tools
+@basic-desktop
+@desktop-platform
+@fonts
+@general-desktop
+@graphical-admin-tools
+@x11
+lftp
+gcc
+gcc-c++
+patch
+make
+git
+nc
 NetworkManager
 ntpdate
+redhat-lsb
 watchdog
 coreutils
 usbutils
@@ -49,3 +63,4 @@ chkconfig NetworkManager on
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
 echo 'Post set up finished' > /dev/ttyS0
 echo Post set up finished > /dev/hvc0
+%end
