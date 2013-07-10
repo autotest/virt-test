@@ -7,6 +7,7 @@ from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
 from virttest import qemu_monitor, remote, syslog_server
 from virttest import http_server, data_dir, utils_net, utils_test
+from virttest import funcatexit
 
 
 # Whether to print all shell commands called
@@ -958,6 +959,15 @@ def terminate_syslog_server_thread():
     return False
 
 
+def copy_file_from_nfs(src, dst, mount_point, image_name):
+    logging.info("Test failed before the install process start."
+                " So just copy a good image from nfs for following tests.")
+    utils_misc.mount(src, mount_point, "nfs", perm="ro")
+    image_src = utils_misc.get_path(mount_point, image_name)
+    shutil.copy(image_src, dst)
+    utils_misc.umount(src, mount_point, "nfs")
+
+
 @error.context_aware
 def run_unattended_install(test, params, env):
     """
@@ -982,6 +992,15 @@ def run_unattended_install(test, params, env):
             from autotest.client.virt.tests import image_copy
             error.context("Copy image from NFS Server")
             image_copy.run_image_copy(test, params, env)
+
+    image = '%s.%s' % (params['image_name'], params['image_format'])
+    image_name = os.path.basename(image)
+    src = params.get('images_good')
+    dst = '%s/%s' % (data_dir.get_data_dir(), image)
+    mount_point = params.get("dst_dir")
+    if mount_point and src:
+        funcatexit.register(env, params.get("type"), copy_file_from_nfs, src,
+                            dst, mount_point, image_name)
 
     vm = env.get_vm(params["main_vm"])
     local_dir = params.get("local_dir")
@@ -1041,6 +1060,12 @@ def run_unattended_install(test, params, env):
     serial_log_msg = ""
     serial_log_file = None
 
+    # As the the install process start. We may need collect informations from
+    # the image. So use the test case instead this simple function in the
+    # following code.
+    if mount_point and src:
+        funcatexit.unregister(env, params.get("type"), copy_file_from_nfs,
+                              src, dst, mount_point, image_name)
 
     while (time.time() - start_time) < install_timeout:
         try:
@@ -1056,7 +1081,11 @@ def run_unattended_install(test, params, env):
                 copy_images()
                 raise e
 
-        test.verify_background_errors()
+        try:
+            test.verify_background_errors()
+        except Exception, e:
+            copy_images()
+            raise e
 
         # To ignore the try:except:finally problem in old version of python
         try:
