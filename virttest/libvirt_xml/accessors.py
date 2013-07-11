@@ -556,7 +556,13 @@ class XMLAttribute(AccessorGeneratorBase):
         def __call__(self):
             element = self.element_by_parent(self.parent_xpath,
                                              self.tag_name, create=False)
-            return element.get(self.attribute, None)
+            value = element.get(self.attribute, None)
+            if value is None:
+                raise xcepts.LibvirtXMLNotFoundError("Attribute %s not found"
+                                                     "on element %s"
+                                                     % (self.attribute,
+                                                        element.tag))
+            return value
 
     class Setter(AccessorBase):
 
