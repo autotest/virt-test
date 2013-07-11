@@ -1970,7 +1970,7 @@ def domblklist(name, options=None, **dargs):
     return command(cmd, **dargs)
 
 
-def domiflist(name, options='', **dargs):
+def domiflist(name, options='', extra='', **dargs):
     """
     Get the domain network devices
 
@@ -1980,7 +1980,7 @@ def domiflist(name, options='', **dargs):
     @return: CmdResult instance
     """
 
-    return command('domiflist %s %s' % (name, options), **dargs)
+    return command('domiflist %s %s %s' % (name, options, extra), **dargs)
 
 
 def cpu_stats(name, options, **dargs):

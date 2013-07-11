@@ -1,6 +1,6 @@
 import re, logging
 from autotest.client.shared import error
-from virttest import virsh, libvirt_vm
+from virttest import virsh, utils_libvirtd
 from virttest.libvirt_xml import vm_xml
 
 driver_dict = {'virtio':'virtio_net', '-':'8139cp', 'e1000':'e1000',
@@ -45,7 +45,10 @@ def run_virsh_domiflist(test, params, env):
         2. Get the interface details from xml file
         3. Check command output agaist xml and guest output
         """
-        session = vm.wait_for_login()
+        try:
+            session = vm.wait_for_login()
+        except Exception, detail:
+            raise error.TestFail("Unable to login to VM:%s" % detail)
         ifaces_actual = parse_interface_details(output)
         iface_xml = {}
         error_count = 0
@@ -98,38 +101,33 @@ def run_virsh_domiflist(test, params, env):
 
 
     vm_name = params.get("main_vm")
-    vm = env.get_vm(params["main_vm"])
+    vm = env.get_vm(vm_name)
     vm.verify_alive()
     domid = vm.get_id()
     domuuid = vm.get_uuid()
 
     # Get the virsh domiflist
-    options_ref = params.get("domname_options", "id")
+    options = params.get("domname_options", "id")
     additional_options = params.get("extra_options", "")
     status_error = params.get("status_error", "no")
 
     #Prepare libvirtd status
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("stop")
+        utils_libvirtd.service_libvirtd_control("stop")
 
-    if options_ref == "id":
-        options_ref = domid
-    elif options_ref == "uuid":
-        options_ref = domuuid
-    elif options_ref == "name":
-        options_ref = vm_name
+    if options == "id":
+        options = domid
+    elif options == "uuid":
+        options = domuuid
+    elif options == "name":
+        options = vm_name
 
-    if additional_options:
-        options = options_ref + ' ' + additional_options
-    else:
-        options = options_ref
-
-    result = virsh.domiflist(options, ignore_status=True)
+    result = virsh.domiflist(options, additional_options, ignore_status=True)
 
     #Recover libvirtd service to start
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.service_libvirtd_control("start")
 
     if status_error == "yes":
         if result.exit_status == 0:
