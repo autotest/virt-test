@@ -1,7 +1,7 @@
 import re
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 def run_virsh_nodecpustats(test, params, env):
     """
@@ -133,7 +133,7 @@ def run_virsh_nodecpustats(test, params, env):
 
     # Prepare libvirtd service
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("stop")
+        utils_libvirtd.libvirtd_stop()
 
     # Get the host cpu count
     host_cpu_count = utils.count_cpus()
@@ -147,7 +147,7 @@ def run_virsh_nodecpustats(test, params, env):
 
             if status == 0:
                 if libvirtd == "off":
-                    libvirt_vm.service_libvirtd_control("start")
+                    utils_libvirtd.libvirtd_start()
                     raise error.TestFail("Command 'virsh nodecpustats' "
                                      "succeeded with libvirtd service "
                                      "stopped, incorrect")
@@ -209,4 +209,4 @@ def run_virsh_nodecpustats(test, params, env):
 
     # Recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.libvirtd_start()

@@ -23,7 +23,7 @@ def run_physical_resources_check(test, params, env):
         expected_num = params.objects(devices).__len__()
         o = ""
         try:
-            o = vm.monitor.info(info_cmd)
+            o = vm.monitor.human_monitor_cmd("info %s " % info_cmd)
         except qemu_monitor.MonitorError, e:
             fail_log =  e + "\n"
             fail_log += "info/query monitor command failed (%s)" % info_cmd
@@ -49,7 +49,7 @@ def run_physical_resources_check(test, params, env):
                 expected = "rtl8139"
             o = ""
             try:
-                o = vm.monitor.info(info_cmd)
+                o = vm.monitor.human_monitor_cmd("info %s" % info_cmd)
             except qemu_monitor.MonitorError, e:
                 fail_log = e + "\n"
                 fail_log += "info/query monitor command failed (%s)" % info_cmd
@@ -257,7 +257,7 @@ def run_physical_resources_check(test, params, env):
     logging.info("Network card MAC check")
     o = ""
     try:
-        o = vm.monitor.info("network")
+        o = vm.monitor.human_monitor_cmd("info network")
     except qemu_monitor.MonitorError, e:
         fail_log =  e + "\n"
         fail_log += "info/query monitor command failed (network)"

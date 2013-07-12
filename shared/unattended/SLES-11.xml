@@ -581,6 +581,7 @@ ycpc -c Packages.ycp
     <packages config:type="list">
       <package>dhcp-client</package>
       <package>patch</package>
+      <package>sg3_utils</package>
     </packages>
     <patterns config:type="list">
       <pattern>Basis-Devel</pattern>

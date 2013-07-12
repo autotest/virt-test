@@ -342,7 +342,7 @@ def run_fg(command, output_func=None, output_prefix="", timeout=1.0):
     return (status, output)
 
 
-class Spawn:
+class Spawn(object):
     """
     This class is used for spawning and controlling a child process.
 

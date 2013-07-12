@@ -1,6 +1,6 @@
 import re, logging, time
 from autotest.client.shared import error
-from virttest import virsh, libvirt_vm, remote
+from virttest import virsh, libvirt_vm, remote, utils_libvirtd
 
 
 def run_virsh_list(test, params, env):
@@ -67,7 +67,7 @@ def run_virsh_list(test, params, env):
     #Prepare libvirtd status
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("stop")
+        utils_libvirtd.libvirtd_stop()
 
     #run test case
     if list_ref == "--uuid":
@@ -112,7 +112,7 @@ def run_virsh_list(test, params, env):
 
     #Recover libvirtd service status
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.libvirtd_start()
 
     #Recover of domain
     if vm_ref == "transient":

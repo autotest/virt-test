@@ -372,6 +372,19 @@ class VMXML(VMXMLBase):
         # when it goes out of scope here.
 
 
+    def check_cpu_mode(self, mode):
+        """
+        Check input cpu mode invalid or not.
+
+        @param mode: the mode of cpu:'host-model'...
+        """
+        # Possible values for the mode attribute are:
+        # "custom", "host-model", "host-passthrough"
+        cpu_mode = ["custom", "host-model", "host-passthrough"]
+        if mode.strip() not in cpu_mode:
+            raise xcepts.LibvirtXMLError("The cpu mode '%s' is invalid!" % mode)
+
+
     def get_disk_all(self):
         """
         Return VM's disk from XML definition, None if not set
@@ -529,17 +542,31 @@ class VMXML(VMXMLBase):
             return None
 
 
-    def check_cpu_mode(self, mode):
+    def get_net_all(self):
         """
-        Check input cpu mode invalid or not.
+        Return VM's net from XML definition, None if not set
+        """
+        xmltreefile = self.dict_get('xml')
+        net_nodes = xmltreefile.find('devices').findall('interface')
+        nets = {}
+        for node in net_nodes:
+            dev = node.find('target').get('dev')
+            nets[dev] = node
+        return nets
 
-        @param mode: the mode of cpu:'host-model'...
+    #TODO re-visit this method after the libvirt_xml.devices.interface module is implemented
+    @staticmethod
+    def get_net_dev(vm_name):
         """
-        # Possible values for the mode attribute are:
-        # "custom", "host-model", "host-passthrough"
-        cpu_mode = ["custom", "host-model", "host-passthrough"]
-        if mode.strip() not in cpu_mode:
-            raise xcepts.LibvirtXMLError("The cpu mode '%s' is invalid!" % mode)
+        Get net device of a defined VM's nets.
+
+        @param: vm_name: Name of defined vm.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        nets = vmxml.get_net_all()
+        if nets != None:
+            return nets.keys()
+        return None
 
 
     @staticmethod
@@ -683,5 +710,3 @@ class VMCPUXML(VMXML):
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
-    #TODO: Add function to create from xml_utils.TemplateXML()
-    # def new_from_template(...)

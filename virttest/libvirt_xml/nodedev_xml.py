@@ -40,9 +40,9 @@ class SystemXML(CAPXML):
     class for capability which type is system.
     """
     __slots__ = CAPXML.__slots__ + ('product', 'hdware_vendor',
-                                  'hdware_serial', 'hdware_uuid',
-                                  'firmware_vendor','firmversion'
-                                  'firm_release_date')
+                                    'hdware_serial', 'hdware_uuid',
+                                    'firmware_vendor','firmversion'
+                                    'firm_release_date')
 
     __sysfs_sub_path__ = 'dmi/id/'
 
@@ -100,17 +100,17 @@ class PCIXML(CAPXML):
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementInt('domain', self, parent_xpath='/',
-                                    tag_name='domain', radix=16)
+                                tag_name='domain')
         accessors.XMLElementInt('bus', self, parent_xpath='/',
-                                    tag_name='bus', radix=16)
+                                tag_name='bus')
         accessors.XMLElementInt('slot', self, parent_xpath='/',
-                                    tag_name='slot', radix=16)
+                                tag_name='slot')
         accessors.XMLElementInt('function', self, parent_xpath='/',
-                                    tag_name='function', radix=16)
+                                tag_name='function')
         accessors.XMLAttribute('product_id', self, parent_xpath='/',
-                                    tag_name='product', attribute='id')
+                                tag_name='product', attribute='id')
         accessors.XMLAttribute('vendor_id', self, parent_xpath='/',
-                                    tag_name='vendor', attribute='id')
+                                tag_name='vendor', attribute='id')
         super(PCIXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = ( ' <capability type=\'pci\'></capability>')
 
@@ -123,8 +123,8 @@ class PCIXML(CAPXML):
         pci_bus_path = ("%04x:%02x" % (domain, bus))
         pci_device_path = ("%04x:%02x:%02x.%01x" % (domain, bus,
                                                     slot, function))
-        pci_sysfs_sub_path = ("pci_bus/%s/device/%s" %
-                                    (pci_bus_path, pci_device_path))
+        pci_sysfs_sub_path = ("pci_bus/%s/device/%s"
+                              % (pci_bus_path, pci_device_path))
 
         return pci_sysfs_sub_path
 
@@ -178,9 +178,10 @@ class NodedevXMLBase(base.LibvirtXMLBase):
     """
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'parent',
-                                    'cap_type', 'cap', 'sysfs_main_path')
+                                                 'cap_type', 'cap',
+                                                 'sysfs_main_path')
 
-    __schema_name__ = "device"
+    __schema_name__ = "nodedev"
 
     __sysfs_dir__ = "/sys/class"
 
@@ -199,7 +200,7 @@ class NodedevXMLBase(base.LibvirtXMLBase):
         accessors.XMLElementText('parent', self, parent_xpath='/',
                                  tag_name='parent')
         accessors.XMLAttribute('cap_type', self, parent_xpath='/',
-                                  tag_name='capability', attribute='type')
+                               tag_name='capability', attribute='type')
         super(NodedevXMLBase, self).__init__(virsh_instance=virsh_instance)
         self.xml = '<device></device>'
 
@@ -299,36 +300,33 @@ class NodedevXML(NodedevXMLBase):
         dumpxml_result = virsh_instance.nodedev_dumpxml(dev_name)
         if dumpxml_result.exit_status:
             raise xcepts.LibvirtXMLError("Nodedev_dumpxml %s failed.\n"
-                                    "Error: %s." % (dumpxml_result.stderr))
+                                         "Error: %s."
+                                         % (dev_name, dumpxml_result.stderr))
         nodedevxml.xml = dumpxml_result.stdout
 
         return nodedevxml
 
 
-    @staticmethod
-    def get_key2value_dict(dev_name):
+    def get_key2value_dict(self):
         """
         Get the dict which contain key and value in xml.
         key: keys in nodedev xml need to check.
         value: value in xml for the key.
         """
-        nodedevxml = NodedevXML.new_from_dumpxml(dev_name)
-        capxml = nodedevxml.cap
+        capxml = self.cap
         key2value_dict = capxml.get_key2value_dict()
 
         return key2value_dict
 
 
-    @staticmethod
-    def get_key2syspath_dict(dev_name):
+    def get_key2syspath_dict(self):
         """
         Get the dict which contains key and path.
         key: keys in nodedev xml need to check.
         syspath: the abs path for the file stores info for the key.
         """
-        nodedevxml = NodedevXML.new_from_dumpxml(dev_name)
-        sysfs_path = nodedevxml.get_sysfs_path()
-        capxml = nodedevxml.cap
+        sysfs_path = self.get_sysfs_path()
+        capxml = self.cap
         key2filename_dict = capxml.__class__.get_key2filename_dict()
 
         key2syspath_dict = {}

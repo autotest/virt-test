@@ -1,5 +1,5 @@
 from autotest.client.shared import error
-from virttest import virsh, libvirt_vm
+from virttest import virsh, utils_libvirtd
 
 def run_virsh_vcpuinfo(test, params, env):
     """
@@ -18,7 +18,7 @@ def run_virsh_vcpuinfo(test, params, env):
     status_error = params.get("status_error", "no")
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     #run test case
     vm_ref = params.get("vcpuinfo_vm_ref")
@@ -85,7 +85,7 @@ def run_virsh_vcpuinfo(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     if status_error == "yes":

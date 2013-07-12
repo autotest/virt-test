@@ -3,8 +3,7 @@ Virtualization test - Virtual disk related utility functions
 
 @copyright: Red Hat Inc.
 """
-
-import os, glob, shutil, tempfile, logging, ConfigParser
+import os, glob, shutil, tempfile, logging, ConfigParser,re
 from autotest.client import utils
 from autotest.client.shared import error
 
@@ -260,3 +259,135 @@ class CdromInstallDisk(Disk):
         cleanup(self.source_cdrom)
         logging.debug("unattended install CD image %s successfully created",
                       self.path)
+
+
+class GuestFSModiDisk(object):
+    """
+    class of guest disk using guestfs lib to do some operation(like read/write)
+    on guest disk:
+    """
+
+    def __init__(self, disk):
+        try:
+            import guestfs
+        except ImportError:
+            install_cmd = "yum -y install python-libguestfs"
+            try:
+                utils.run(install_cmd)
+                import guestfs
+            except Exception:
+                raise error.TestNAError('We need python-libguestfs (or the '
+                                        'equivalent for your distro) for this '
+                                        'particular feature (modifying guest '
+                                        'files with libguestfs)')
+
+        self.g = guestfs.GuestFS()
+        self.disk = disk
+        self.g.add_drive(disk)
+        logging.debug("Launch the disk %s, wait..." % self.disk)
+        self.g.launch()
+
+    def os_inspects(self):
+        self.roots = self.g.inspect_os()
+        if self.roots:
+            return self.roots
+        else:
+            return None
+
+    def mounts(self):
+        return self.g.mounts()
+
+    def mount_all(self):
+        def compare (a, b):
+            if len(a[0]) > len(b[0]):
+                return 1
+            elif len(a[0]) == len(b[0]):
+                return 0
+            else:
+                return -1
+
+        roots = self.os_inspects()
+        if roots:
+            for root in roots:
+                mps = self.g.inspect_get_mountpoints(root)
+                mps.sort(compare)
+                for mp_dev in mps:
+                    try:
+                        msg = "Mount dev '%s' partitions '%s' to '%s'"
+                        logging.info(msg % (root, mp_dev[1], mp_dev[0]))
+                        self.g.mount(mp_dev[1], mp_dev[0])
+                    except RuntimeError as err_msg:
+                        logging.info("%s (ignored)" % err_msg)
+        else:
+            raise error.TestError("inspect_vm: no operating systems found")
+
+    def umount_all (self):
+        logging.debug("Umount all device partitions")
+        if self.mounts():
+            self.g.umount_all()
+
+    def read_file(self, file_name):
+        """
+        read file from the guest disk, return the content of the file
+
+        @Param file_name: the file you want to read.
+        """
+
+        try:
+            self.mount_all()
+            o = self.g.cat(file_name)
+            if o:
+                return o
+            else:
+                err_msg = "Can't read file '%s', check is it exist?"
+                raise error.TestError(err_msg % file_name)
+        finally:
+            self.umount_all()
+
+    def write_to_image_file(self, file_name, content, w_append=False):
+        """
+        wirte content to the file on the guest disk.
+        when using this method all the original content will be overriding.
+        if you don't hope your original data be override make:
+        'w_append=True'
+
+        @Param  file_name: the file you want to write
+        @Param  content: the content you want to write.
+        @Param  w_append append the content or override
+        """
+
+        try:
+            self.mount_all()
+            if w_append:
+                self.g.write_append(file_name, content)
+            else:
+                self.g.write(file_name, content)
+        except Exception:
+            raise error.TestError("write '%s' to file '%s' error!"
+                                  % (content, file_name ))
+        finally:
+            self.umount_all()
+
+    def replace_image_file_content(self, file_name, find_con, rep_con):
+        """
+        replace file content matchs in the file with rep_con.
+        suport using Regular expression
+
+        @Param  file_name: the file you want to replace
+        @Param  find_con: the orign content you want to replace.
+        @Param  rep_con: the replace content you want.
+        """
+
+        try:
+            self.mount_all()
+            file_content = self.g.cat(file_name)
+            if file_content:
+                file_content_after_replace = re.sub(find_con, rep_con,
+                                                    file_content)
+                if file_content != file_content_after_replace:
+                    self.g.write(file_name, file_content_after_replace)
+            else:
+                err_msg = "Can't read file '%s', check is it exist?"
+                raise error.TestError(err_msg % file_name)
+        finally:
+            self.umount_all()

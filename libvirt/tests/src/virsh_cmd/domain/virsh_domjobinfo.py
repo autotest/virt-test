@@ -1,6 +1,6 @@
 import os
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_domjobinfo(test, params, env):
@@ -50,13 +50,13 @@ def run_virsh_domjobinfo(test, params, env):
         vm_ref = params.get(vm_ref)
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     status = virsh.domjobinfo(vm_ref, ignore_status=True).exit_status
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     if status_error == "yes":

@@ -1,6 +1,6 @@
 import re, logging, time
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_setmem(test, params, env):
@@ -164,9 +164,9 @@ def run_virsh_setmem(test, params, env):
 
     # Prepare libvirtd status
     if libvirt == "off":
-        libvirt_vm.service_libvirtd_control("stop")
+        utils_libvirtd.libvirtd_stop()
     else: # make sure it's running
-        libvirt_vm.service_libvirtd_control("restart")
+        utils_libvirtd.libvirtd_restart()
 
     if status_error == "yes" or old_libvirt_fail == "yes":
         logging.info("Error Test: Expecting an error to occur!")
@@ -176,7 +176,7 @@ def run_virsh_setmem(test, params, env):
 
     # Recover libvirtd status
     if libvirt == "off":
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.libvirtd_start()
 
     if status is 0:
         logging.info("Waiting %d seconds for VM memory to settle", quiesce_delay)

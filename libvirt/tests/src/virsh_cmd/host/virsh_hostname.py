@@ -1,5 +1,5 @@
 from autotest.client.shared import utils, error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_hostname(test, params, env):
@@ -19,7 +19,7 @@ def run_virsh_hostname(test, params, env):
     if check_libvirtd:
         libvirtd = params.get("libvirtd")
         if libvirtd == "off":
-            libvirt_vm.libvirtd_stop()
+            utils_libvirtd.libvirtd_stop()
 
     # Run test case
     option = params.get("virsh_hostname_options")
@@ -34,7 +34,7 @@ def run_virsh_hostname(test, params, env):
 
     # Recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     # Check status_error
     status_error = params.get("status_error")

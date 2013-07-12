@@ -1,6 +1,6 @@
 import logging, re, uuid
 from autotest.client.shared import error
-from virttest import utils_test
+from virttest import utils_test, aexpect, utils_misc
 
 
 @error.context_aware
@@ -87,11 +87,19 @@ def run_usb_storage(test, params, env):
 
 
     def _login():
-        return vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+        return vm.wait_for_login(timeout=login_timeout)
 
 
     def _get_usb_disk_name_in_guest(session):
-        output = session.cmd("ls -l /dev/disk/by-path/* | grep usb").strip()
+        def _get_output():
+            cmd = "ls -l /dev/disk/by-path/* | grep usb"
+            try:
+                return session.cmd(cmd).strip()
+            except aexpect.ShellCmdError:
+                return ""
+
+        output = utils_misc.wait_for(_get_output, login_timeout, step=5,
+                                     text="Wait for getting USB disk name")
         devname = re.findall("sd\w", output)
         if devname:
             return devname[0]
@@ -174,6 +182,7 @@ def run_usb_storage(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
+    login_timeout = int(params.get("login_timeout", 360))
     error.context("Check usb device information in monitor", logging.info)
     output = str(vm.monitor.info("usb"))
     if "Product QEMU USB MSD" not in output:

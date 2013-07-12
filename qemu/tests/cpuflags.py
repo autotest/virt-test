@@ -81,11 +81,16 @@ def run_cpuflags(test, params, env):
             vm.create(migration_mode=mig_protocol)
         else:
             vm.create()
-        vm.verify_alive()
 
         session = None
-        if wait:
-            session = vm.wait_for_login()
+        try:
+            vm.verify_alive()
+
+            if wait:
+                session = vm.wait_for_login()
+        except qemu_vm.ImageUnbootableError:
+            vm.destroy(gracefully=False)
+            raise
 
         return (vm, session)
 

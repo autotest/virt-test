@@ -1,6 +1,6 @@
 import logging, os, shutil
 from autotest.client.shared import error, utils
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 from virttest.libvirt_xml import vm_xml
 
 
@@ -130,7 +130,7 @@ def run_virsh_change_media(test, params, env):
     libvirtd = params.get("libvirtd", "on")
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     source_name = params.get("change_media_source")
     # Libvirt will ignore --source when action is eject
@@ -158,7 +158,7 @@ def run_virsh_change_media(test, params, env):
 
     # Recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     # Clean the cdrom dir  and clean the cdrom device
     update_cdrom(vm_name, "", options, start_vm)

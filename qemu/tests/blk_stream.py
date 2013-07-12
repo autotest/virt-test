@@ -1,5 +1,5 @@
 import logging, time
-from virttest import utils_misc
+from virttest import utils_misc, data_dir
 from autotest.client.shared import error
 from qemu.tests import block_copy
 
@@ -52,6 +52,7 @@ class BlockStream(block_copy.BlockCopy):
         format = params.get("snapshot_format", "qcow2")
         error.context("create live snapshots", logging.info)
         for sn in snapshots:
+            sn = utils_misc.get_path(data_dir.get_data_dir(), sn)
             image_file = self.get_block_file()
             device = self.vm.live_snapshot(image_file, sn, format)
             if device != self.device:

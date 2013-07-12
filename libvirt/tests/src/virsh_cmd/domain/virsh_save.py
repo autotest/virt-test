@@ -1,6 +1,6 @@
 import os
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_save(test, params, env):
@@ -54,12 +54,12 @@ def run_virsh_save(test, params, env):
         vm_ref = vm_name
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
     status = virsh.save(vm_ref, savefile, ignore_status=True).exit_status
 
     # recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     # cleanup
     if os.path.exists(savefile):

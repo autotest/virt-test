@@ -339,7 +339,9 @@ class CartesianConfigTest(unittest.TestCase):
                     var += a
                     var <= b
                     system = 2
-                    s.* ?= ${tests}4
+                    ddd = ${tests + str(int(system) + 3)}4
+                    error = ${tests + str(system + 3)}4
+                    s.* ?= ${tests + "ahoj"}4
                     s.* ?+= c
                     s.* ?<= d
                     system += 4
@@ -349,7 +351,9 @@ class CartesianConfigTest(unittest.TestCase):
             {'dep': [],
              'name': '(tests=system1)',
              'shortname': '(tests=system1)',
-             'system': 'dsystem14c4',
+             'system': 'dsystem1ahoj4c4',
+             'ddd': 'system154',
+             'error': '${tests + str(system + 3)}4',
              'tests': 'system1',
              'var': 'b2atest'},
             ],
