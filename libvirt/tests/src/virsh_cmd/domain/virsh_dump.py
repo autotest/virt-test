@@ -164,7 +164,7 @@ def run_virsh_dump(test, params, env):
     status = cmd_result.exit_status
 
     # Check libvirtd status
-    if utils_libvirtd.libvirtd_status():
+    if utils_libvirtd.libvirtd_is_running():
         if check_domstate(vm.state(), options):
             if status_error == "yes":
                 if status == 0:

@@ -145,9 +145,9 @@ def libvirtd_start():
         return False
 
 
-def libvirtd_status():
+def libvirtd_is_running():
     """
-    Get the status of libvirt daemon.
+    Check if libvirt service is running.
     """
     try:
         return service_libvirtd_control('status')
