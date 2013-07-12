@@ -41,7 +41,9 @@ try:
     os_dep.command("libvirtd")
     LIBVIRTD = "libvirtd"
 except ValueError:
-    raise LibvirtdError("There is no libvirtd on the host.")
+    LIBVIRTD = None
+    logging.warning("Libvirtd service is not availible in host, "
+                    "utils_libvirtd module will not function normally")
 
 
 def service_libvirtd_control(action, remote_ip=None,
