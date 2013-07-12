@@ -189,6 +189,8 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
         cmd = "telnet -l %s %s %s" % (username, host, port)
     elif client == "nc":
         cmd = "nc %s %s" % (host, port)
+    elif client == "unittest":
+        cmd = "sh"
     else:
         raise LoginBadClientError(client)
 

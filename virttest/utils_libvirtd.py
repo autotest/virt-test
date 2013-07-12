@@ -46,7 +46,7 @@ except ValueError:
 
 def service_libvirtd_control(action, remote_ip=None,
                              remote_pwd=None, remote_user='root',
-                             libvirtd=LIBVIRTD):
+                             client="ssh", port="22", libvirtd=LIBVIRTD):
     """
     Libvirtd control by action, if cmd executes successfully,
     return True, otherwise raise LibvirtActionError.
@@ -65,9 +65,9 @@ def service_libvirtd_control(action, remote_ip=None,
                'force-reload', 'try-restart']
 
     session = None
-    if remote_ip:
+    if ((remote_ip) or (client=="unittest")):
         try:
-            session = remote.wait_for_login('ssh', remote_ip, '22',
+            session = remote.wait_for_login(client, remote_ip, port,
                                             remote_user, remote_pwd,
                                             r"[\#\$]\s*$")
         except remote.LoginError, detail:
