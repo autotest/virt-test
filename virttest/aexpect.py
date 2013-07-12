@@ -457,6 +457,10 @@ class Spawn(object):
     # The following two functions are defined to make sure the state is set
     # exclusively by the constructor call as specified in __getinitargs__().
 
+    def __reduce__(self):
+        return self.__class__, (self.__getinitargs__())
+
+
     def __getstate__(self):
         pass
 
@@ -722,6 +726,10 @@ class Tail(Spawn):
             self._start_thread()
 
 
+    def __reduce__(self):
+        return self.__class__, (self.__getinitargs__())
+
+
     def __getinitargs__(self):
         return Spawn.__getinitargs__(self) + (self.termination_func,
                                               self.termination_params,
@@ -917,6 +925,10 @@ class Expect(Tail):
         Tail.__init__(self, command, a_id, auto_close, echo, linesep,
                       termination_func, termination_params,
                       output_func, output_params, output_prefix)
+
+
+    def __reduce__(self):
+        return self.__class__, (self.__getinitargs__())
 
 
     def __getinitargs__(self):
@@ -1199,6 +1211,10 @@ class ShellSession(Expect):
         # Remember some attributes
         self.prompt = prompt
         self.status_test_command = status_test_command
+
+
+    def __reduce__(self):
+        return self.__class__, (self.__getinitargs__())
 
 
     def __getinitargs__(self):
