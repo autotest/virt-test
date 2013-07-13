@@ -1963,9 +1963,10 @@ class VM(virt_vm.BaseVM):
             vcpu_thread_pattern = self.params.get("vcpu_thread_pattern",
                                                   r"thread_id.?[:|=]\s*(\d+)")
             self.vcpu_threads = self.get_vcpu_pids(vcpu_thread_pattern)
-            o = commands.getoutput("ps aux")
-            self.vhost_threads = re.findall("\w+\s+(\d+)\s.*\[vhost-%s\]" %
-                                            self.get_pid(), o)
+
+            vhost_thread_pattern = params.get("vhost_thread_pattern",
+                                              r"\w+\s+(\d+)\s.*\[vhost-%s\]")
+            self.vhost_threads = self.get_vhost_threads(vhost_thread_pattern)
 
             # Establish a session with the serial console
             # Let's consider the first serial port as serial console.
@@ -2320,6 +2321,20 @@ class VM(virt_vm.BaseVM):
         """
         return [int(_) for _ in re.findall(vcpu_thread_pattern,
                                            str(self.monitor.info("cpus")))]
+
+
+    def get_vhost_threads(self, vhost_thread_pattern):
+        """
+        Return the list of vhost threads PIDs
+
+        :param vhost_thread_pattern: a regex to match the vhost threads
+        :type vhost_thread_pattern: string
+        :return: a list of vhost threads PIDs
+        :rtype: list of integer
+        """
+        return [int(_) for _ in re.findall(vhost_thread_pattern %
+                                           self.get_pid(),
+                                           utils.system_output("ps aux"))]
 
 
     def get_shared_meminfo(self):
