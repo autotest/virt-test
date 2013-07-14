@@ -119,3 +119,30 @@ platform. Autotest is a modular framework, and this suite can be used as
 a submodule of the client module. If you do not want to use or know about
 autotest, this is fine too, and we'll provide documentation and tools to
 perform development style testing with it.
+
+
+Basic Troubleshooting
+---------------------
+
+If you have problems with the basic usage described here, it's possible
+that there's some local change in your working copy of virt-test. These
+changes can come in (at least) two different categories:
+
+- Code changes, which you can check with the git tools (try "git diff"
+  and "git branch" first)
+- Configuration changes that can you reset with "update_config.py"
+
+If you find that you have local changes in the code, please try to reset
+your checked out copy to upstream's master by running::
+
+$ git checkout master
+$ git pull
+
+
+And then, reset you configuration. If you're going to run qemu tests, run::
+
+$ qemu/update_config.py
+
+
+If you're still having problems after these basic troubleshoot steps,
+please contact us!
