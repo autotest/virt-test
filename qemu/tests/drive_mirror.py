@@ -62,7 +62,6 @@ class DriveMirror(block_copy.BlockCopy):
         reopen target image, then check if image file of the device is
         target images;
         """
-
         params = self.parser_test_args()
         target_format = params["target_format"]
         timeout = params["reopen_timeout"]
@@ -105,8 +104,8 @@ class DriveMirror(block_copy.BlockCopy):
         timeout = params.get("wait_timeout")
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_READY")
-        steady =utils_misc.wait_for(self.is_steady, step=2.0,
-                                        timeout=timeout)
+        steady = utils_misc.wait_for(self.is_steady, step=2.0,
+                                         timeout=timeout)
         if not steady:
             raise error.TestFail("Wait mirroring job ready "
                                  "timeout in %ss" % timeout)
