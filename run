@@ -140,7 +140,7 @@ def _find_default_qemu_paths(options_qemu=None):
 
     return [qemu_bin_path, qemu_img_path, qemu_io_path]
 
-SUPPORTED_TEST_TYPES = ['qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v']
+SUPPORTED_TEST_TYPES = ['qemu', 'libvirt', 'libguestfs', 'openvswitch', 'v2v', 'sandbox']
 
 SUPPORTED_IMAGE_TYPES = ['raw', 'qcow2', 'qed', 'vmdk']
 
@@ -299,6 +299,7 @@ LIBVIRT_DEFAULT_SET = (
                 "unattended_install.import.import.default_install.aio_native, "
                 "virsh_domname, "
                 "remove_guest.without_disk")
+SANDBOX_DEFAULT_SET = ("virt_sandbox_date")
 
 class VirtTestApp(object):
     """
@@ -515,6 +516,13 @@ class VirtTestApp(object):
         self._process_malloc_perturb()
 
 
+    def _process_sandbox_specific_options(self):
+        """
+        Calls for processing all options specific to sandbox test
+        """
+        self.options.no_downloads = True
+
+
     def _process_guest_os(self):
         if not self.options.config:
             from virttest import standalone_test
@@ -551,6 +559,8 @@ class VirtTestApp(object):
                         self.cartesian_parser.only_filter(QEMU_DEFAULT_SET)
                     elif self.options.type == 'libvirt':
                         self.cartesian_parser.only_filter(LIBVIRT_DEFAULT_SET)
+                    elif self.options.type == 'sandbox':
+                        self.cartesian_parser.only_filter(SANDBOX_DEFAULT_SET)
         else:
             logging.info("Config provided, ignoring --tests option")
 
@@ -652,12 +662,13 @@ class VirtTestApp(object):
                                "cfg", "tests.cfg")
 
         self.cartesian_parser.parse_file(cfg)
-
-        self._process_general_options()
+        if self.options.type != 'sandbox':
+            self._process_general_options()
 
         if self.options.type == 'qemu':
             self._process_qemu_specific_options()
-
+        elif self.options.type == 'sandbox':
+            self._process_sandbox_specific_options()
         # List and tests have to be the last things to be processed
         self._process_list()
         self._process_tests()
