@@ -26,7 +26,9 @@ class BlockCopy(object):
         self.params = params
         self.tag = tag
         self.vm = self.get_vm()
+        self.data_dir = data_dir.get_data_dir()
         self.device = self.get_device()
+        self.image_file = self.get_image_file()
 
 
     def parser_test_args(self):
@@ -57,7 +59,7 @@ class BlockCopy(object):
         """
         according configuration get target device ID;
         """
-        root_dir = data_dir.get_data_dir()
+        root_dir = self.data_dir
         params = self.parser_test_args()
         image_file = storage.get_image_filename(params, root_dir)
         device = self.vm.get_block({"file": image_file})
@@ -132,12 +134,14 @@ class BlockCopy(object):
         timeout = params.get("cancel_timeout")
 
         if self.vm.monitor.protocol == "qmp":
-            self.vm.monitor.clear_events()
+            self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
         self.vm.cancel_block_job(self.device)
         cancelled = utils_misc.wait_for(is_cancelled, timeout=timeout)
         if not cancelled:
             msg = "Cancel block job timeout in %ss" % timeout
             raise error.TestFail(msg)
+        if self.vm.monitor.protocol == "qmp":
+            self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
 
 
     @error.context_aware
@@ -178,37 +182,27 @@ class BlockCopy(object):
         """
         reboot VM, alias of vm.reboot();
         """
-        def reseted():
-            """
-            check reset event recived after system_reset execute, only for qmp
-            monitor;
-            """
-            return self.vm.monitor.get_event("RESET")
-
         params = self.parser_test_args()
         timeout = params["login_timeout"]
 
         if boot_check:
             session = self.get_session()
-            return self.vm.reboot(session=session, timeout=timeout, method=method)
-        if method == "system_reset":
+            return self.vm.reboot(session=session,
+                                  timeout=timeout, method=method)
+        if self.monitor.protocol == "qmp":
             error.context("reset guest via system_reset", logging.info)
-            event_check = False
-            if self.vm.monitor.protocol == "qmp":
-                event_check = True
-                self.vm.monitor.clear_events()
+            self.vm.monitor.clear_event("RESET")
             self.vm.monitor.cmd("system_reset")
-            if event_check:
-                reseted = utils_misc.wait_for(reseted, timeout=timeout)
-                if not reseted:
-                    raise error.TestFail("No RESET event recived after"
-                                         "execute system_reset %ss" % timeout)
-        elif method == "shell":
-            reboot_cmd = params.get("reboot_command")
-            session = self.get_session()
-            session.sendline(reboot_cmd)
+            reseted = utils_misc.wait_for(lambda:
+                                          self.vm.monitor.get_event("RESET"),
+                                          timeout=timeout)
+            if not reseted:
+                raise error.TestFail("No RESET event recived after"
+                                     "execute system_reset %ss" % timeout)
+            self.vm.monitor.clear_event("RESET")
         else:
-            raise error.TestError("Unsupport reboot method '%s'" % method)
+            self.vm.monitor.cmd("system_reset")
+        return None
 
 
     @error.context_aware
