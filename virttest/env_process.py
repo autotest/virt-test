@@ -527,7 +527,7 @@ def postprocess(test, params, env):
         process(test, params, env, postprocess_image, postprocess_vm,
                 vm_first=True)
     except Exception, details:
-        err += "\nPostprocess: %s" % details
+        err += "\nPostprocess: %s" % str(details).replace('\\n', '\n  ')
         logging.error(details)
 
     # Terminate the screendump thread
@@ -619,7 +619,7 @@ def postprocess(test, params, env):
             if params.get("vm_type") == "libvirt":
                 utils_libvirtd.libvirtd_restart()
         except Exception, details:
-            err += "\nHP cleanup: %s" % details
+            err += "\nHP cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
 
     if params.get("setup_thp") == "yes":
@@ -627,7 +627,7 @@ def postprocess(test, params, env):
             thp = test_setup.TransparentHugePageConfig(test, params)
             thp.cleanup()
         except Exception, details:
-            err += "\nTHP cleanup: %s" % details
+            err += "\nTHP cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
 
     if params.get("setup_ksm") == "yes":
@@ -635,7 +635,7 @@ def postprocess(test, params, env):
             ksm = test_setup.KSMConfig(params, env)
             ksm.cleanup(env)
         except Exception, details:
-            err += "\nKSM cleanup: %s" % details
+            err += "\nKSM cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
 
     # Execute any post_commands
@@ -645,7 +645,8 @@ def postprocess(test, params, env):
                             int(params.get("post_command_timeout", "600")),
                             params.get("post_command_noncritical") == "yes")
         except Exception, details:
-            err += "\nPostprocess command: %s" % details
+            err += "\nPostprocess command: %s" % str(details).replace('\n',
+                                                                      '\n  ')
             logging.error(details)
 
     base_dir = data_dir.get_data_dir()
@@ -654,7 +655,7 @@ def postprocess(test, params, env):
             iscsidev = qemu_storage.Iscsidev(params, base_dir, "iscsi")
             iscsidev.cleanup()
         except Exception, details:
-            err += "\niscsi cleanup: %s" % details
+            err += "\niscsi cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
 
     setup_pb = False
@@ -670,7 +671,7 @@ def postprocess(test, params, env):
             brcfg = test_setup.PrivateBridgeConfig()
             brcfg.cleanup()
         except Exception, details:
-            err += "\nPB cleanup: %s" % details
+            err += "\nPB cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
 
     if err:
