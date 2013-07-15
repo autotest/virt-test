@@ -54,7 +54,7 @@ def _wait(filename):
 def _get_filenames(base_dir, a_id):
     return [os.path.join(base_dir, s + a_id) for s in
             "shell-pid-", "status-", "output-", "inpipe-",
-            "lock-server-running-", "lock-client-starting-"]
+            "lock-server-running-", "server-log-"]
 
 
 def _get_reader_filename(base_dir, a_id, reader):
@@ -64,10 +64,15 @@ def _get_reader_filename(base_dir, a_id, reader):
 # The following is the server part of the module.
 
 if __name__ == "__main__":
+
     a_id = sys.stdin.readline().strip()
     echo = sys.stdin.readline().strip() == "True"
     readers = sys.stdin.readline().strip().split(",")
     command = sys.stdin.readline().strip() + " && echo %s > /dev/null" % a_id
+
+    # Clear empty reader list
+    if readers == ['']:
+        readers = []
 
     # Define filenames to be used for communication
     (shell_pid_filename,
@@ -75,14 +80,23 @@ if __name__ == "__main__":
      output_filename,
      inpipe_filename,
      lock_server_running_filename,
-     lock_client_starting_filename) = _get_filenames(BASE_DIR, a_id)
+     log_filename) = _get_filenames(BASE_DIR, a_id)
+
+    log = lambda msg: open(log_filename, 'ab').write('%s\n' % msg)
+
+    log('Server starting with parameters "%s", "%s", "%s", "%s"'
+        % (str(a_id), str(echo), str(readers), str(command)))
 
     # Populate the reader filenames list
     reader_filenames = [_get_reader_filename(BASE_DIR, a_id, reader)
                         for reader in readers]
 
+    log('Opened %d readers' % len(readers))
+
     # Set $TERM = dumb
     os.putenv("TERM", "dumb")
+
+    log('Forking child process for command')
 
     (shell_pid, shell_fd) = pty.fork()
     if shell_pid == 0:
@@ -107,6 +121,17 @@ if __name__ == "__main__":
             os.execv("/bin/sh", ["/bin/sh", "-c", command])
     else:
         # Parent process
+
+        log('Writing child pid to %s' % shell_pid_filename)
+
+        # Write shell PID to file
+        fileobj = open(shell_pid_filename, "w")
+        fileobj.write(str(shell_pid))
+        fileobj.close()
+
+        log('Acquiring server lock on %s' % lock_server_running_filename)
+
+        # Earliest possible time after child is running
         lock_server_running = _lock(lock_server_running_filename)
 
         # Set terminal echo on/off and disable pre- and post-processing
@@ -121,100 +146,95 @@ if __name__ == "__main__":
             attr[3] &= ~termios.ECHO
         termios.tcsetattr(shell_fd, termios.TCSANOW, attr)
 
+        # Don't allow pipes to cause buffer/block problems
+        sys.stdin.close()
+
+        log('Opening output file %s' % output_filename)
         # Open output file
         output_file = open(output_filename, "w")
+
+
+        log('Opening input pipe %s' % inpipe_filename)
         # Open input pipe
         os.mkfifo(inpipe_filename)
         inpipe_fd = os.open(inpipe_filename, os.O_RDWR)
+
         # Open output pipes (readers)
         reader_fds = []
         for filename in reader_filenames:
+            log('Opening reader file %s' % filename)
             os.mkfifo(filename)
             reader_fds.append(os.open(filename, os.O_RDWR))
-
-        # Write shell PID to file
-        fileobj = open(shell_pid_filename, "w")
-        fileobj.write(str(shell_pid))
-        fileobj.close()
-
-        # Print something to stdout so the client can start working
-        print "Server %s ready" % a_id
-        sys.stdout.flush()
 
         # Initialize buffers
         buffers = ["" for reader in readers]
 
-        # Read from child and write to files/pipes
-        while True:
-            check_termination = False
-            # Make a list of reader pipes whose buffers are not empty
-            fds = [fd for (i, fd) in enumerate(reader_fds) if buffers[i]]
-            # Wait until there's something to do
-            r, w, x = select.select([shell_fd, inpipe_fd], fds, [], 0.5)
-            # If a reader pipe is ready for writing --
-            for (i, fd) in enumerate(reader_fds):
-                if fd in w:
-                    bytes_written = os.write(fd, buffers[i])
-                    buffers[i] = buffers[i][bytes_written:]
-            # If there's data to read from the child process --
-            if shell_fd in r:
-                try:
-                    data = os.read(shell_fd, 16384)
-                except OSError:
-                    data = ""
-                if not data:
-                    check_termination = True
-                # Remove carriage returns from the data -- they often cause
-                # trouble and are normally not needed
-                data = data.replace("\r", "")
-                output_file.write(data)
-                output_file.flush()
-                for i in range(len(readers)):
-                    buffers[i] += data
-            # If os.read() raised an exception or there was nothing to read --
-            if check_termination or shell_fd not in r:
-                pid, status = os.waitpid(shell_pid, os.WNOHANG)
-                if pid:
-                    status = os.WEXITSTATUS(status)
-                    break
-            # If there's data to read from the client --
-            if inpipe_fd in r:
-                data = os.read(inpipe_fd, 1024)
-                os.write(shell_fd, data)
+        # Signal for read-loop problem
+        status = -1
 
-        # Write the exit status to a file
-        fileobj = open(status_filename, "w")
-        fileobj.write(str(status))
-        fileobj.close()
+        log('Entering read loop')
 
-        # Wait for the client to finish initializing
-        _wait(lock_client_starting_filename)
+        try:
+            # Read from child and write to files/pipes
+            while True:
+                check_termination = False
+                # Make a list of reader pipes whose buffers are not empty
+                fds = [fd for (i, fd) in enumerate(reader_fds) if buffers[i]]
+                # Wait until there's something to do
+                r, w, x = select.select([shell_fd, inpipe_fd], fds, [], 0.5)
+                # If a reader pipe is ready for writing --
+                for (i, fd) in enumerate(reader_fds):
+                    if fd in w:
+                        bytes_written = os.write(fd, buffers[i])
+                        buffers[i] = buffers[i][bytes_written:]
+                # If there's data to read from the child process --
+                if shell_fd in r:
+                    try:
+                        data = os.read(shell_fd, 16384)
+                    except OSError:
+                        data = ""
+                    if not data:
+                        check_termination = True
+                    # Remove carriage returns from the data -- they often cause
+                    # trouble and are normally not needed
+                    data = data.replace("\r", "")
+                    output_file.write(data)
+                    output_file.flush()
+                    for i in range(len(readers)):
+                        buffers[i] += data
+                # If os.read() raised an exception or there was nothing to read
+                if check_termination or shell_fd not in r:
+                    pid, status = os.waitpid(shell_pid, os.WNOHANG)
+                    if pid:
+                        status = os.WEXITSTATUS(status)
+                        break
+                # If there's data to read from the client --
+                if inpipe_fd in r:
+                    data = os.read(inpipe_fd, 1024)
+                    os.write(shell_fd, data)
+        finally:
+            log('Exited read loop with status %d' % int(status))
+            # Write the exit status to a file
+            fileobj = open(status_filename, "w")
+            fileobj.write(str(status))
+            fileobj.close()
 
-        # Delete FIFOs
-        for filename in [inpipe_filename]:
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
-
-        # Close all files and pipes
-        output_file.close()
-        os.close(inpipe_fd)
-        for fd in reader_fds:
-            os.close(fd)
-
-        _unlock(lock_server_running)
-        sys.exit(0)
+            log('Status written to file %s' % status_filename)
+            log('Closing output and reader files')
+            # Close all files and pipes
+            output_file.close()
+            os.close(inpipe_fd)
+            for fd in reader_fds:
+                os.close(fd)
+            log('Releasing server lock')
+            _unlock(lock_server_running)
+            log('exiting normally')
+            sys.exit(0)
 
 
 # The following is the client part of the module.
 
-import subprocess
-import time
-import signal
-import re
-import threading
-import logging
+import subprocess, time, signal, re, threading, logging, datetime
 import utils_misc
 
 
@@ -410,7 +430,7 @@ class Spawn(object):
     """
 
     def __init__(self, command=None, a_id=None, auto_close=False, echo=False,
-                 linesep="\n"):
+                 linesep="\n", starttimeout=5):
         """
         Initialize the class and run command as a child process.
 
@@ -425,6 +445,7 @@ class Spawn(object):
                 parameter has an effect only when starting a new server.
         :param linesep: Line separator to be appended to strings sent to the
                 child process by sendline().
+        @param starttimeout: Max time in seconds for server start
         """
         self.a_id = a_id or utils_misc.generate_random_string(8)
         self.log_file = None
@@ -439,8 +460,7 @@ class Spawn(object):
          self.output_filename,
          self.inpipe_filename,
          self.lock_server_running_filename,
-         self.lock_client_starting_filename) = _get_filenames(BASE_DIR,
-                                                              self.a_id)
+         self.server_log_filename) = _get_filenames(BASE_DIR, self.a_id)
 
         # Remember some attributes
         self.auto_close = auto_close
@@ -458,38 +478,34 @@ class Spawn(object):
             (reader, _get_reader_filename(BASE_DIR, self.a_id, reader))
             for reader in self.readers)
 
-        # Let the server know a client intends to open some pipes;
-        # if the executed command terminates quickly, the server will wait for
-        # the client to release the lock before exiting
-        lock_client_starting = _lock(self.lock_client_starting_filename)
-
         # Start the server (which runs the command)
         if command:
             sub = subprocess.Popen("%s %s" % (sys.executable, __file__),
                                    shell=True,
                                    stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
+                                   stdout=None,
+                                   stderr=None)
             # Send parameters to the server
             sub.stdin.write("%s\n" % self.a_id)
             sub.stdin.write("%s\n" % echo)
             sub.stdin.write("%s\n" % ",".join(self.readers))
             sub.stdin.write("%s\n" % command)
-            # Wait for the server to complete its initialization
-            while not "Server %s ready" % self.a_id in sub.stdout.readline():
-                pass
+
+        start = datetime.datetime.now()
+        starttimeout = datetime.timedelta(seconds=starttimeout)
+        while not _locked(self.lock_server_running_filename):
+            delta = datetime.datetime.now() - start
+            if delta > starttimeout:
+                raise RuntimeError("Aexpect server did not start in timeout %s"
+                                   % str(starttimeout))
 
         # Open the reading pipes
         self.reader_fds = {}
         try:
-            assert(_locked(self.lock_server_running_filename))
             for reader, filename in self.reader_filenames.items():
                 self.reader_fds[reader] = os.open(filename, os.O_RDONLY)
         except Exception:
             pass
-
-        # Allow the server to continue
-        _unlock(lock_client_starting)
 
     # The following two functions are defined to make sure the state is set
     # exclusively by the constructor call as specified in __getinitargs__().
@@ -508,9 +524,12 @@ class Spawn(object):
         return (None, self.a_id, self.auto_close, self.echo, self.linesep)
 
     def __del__(self):
-        self._close_reader_fds()
-        if self.auto_close:
-            self.close()
+        try:
+            self._close_reader_fds()
+            if self.auto_close:
+                self.close()
+        except AttributeError:
+            pass # no reader FD's is not a problem
 
     def _add_reader(self, reader):
         """
