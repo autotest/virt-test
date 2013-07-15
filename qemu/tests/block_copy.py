@@ -189,7 +189,7 @@ class BlockCopy(object):
             session = self.get_session()
             return self.vm.reboot(session=session,
                                   timeout=timeout, method=method)
-        if self.monitor.protocol == "qmp":
+        if self.vm.monitor.protocol == "qmp":
             error.context("reset guest via system_reset", logging.info)
             self.vm.monitor.clear_event("RESET")
             self.vm.monitor.cmd("system_reset")
