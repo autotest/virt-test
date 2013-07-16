@@ -1419,6 +1419,24 @@ class QMPMonitor(Monitor):
         self._lock.release()
 
 
+    def clear_event(self, name):
+        """
+        Clear a kinds of events in events list only.
+
+        @raise MonitorLockError: Raised if the lock cannot be acquired
+        """
+        if not self._acquire_lock():
+            raise MonitorLockError("Could not acquire exclusive lock to clear "
+                                   "QMP event list")
+        while True:
+            event = self.get_event(name)
+            if event:
+                self._events.remove(event)
+            else:
+                break
+        self._lock.release()
+
+
     def get_greeting(self):
         """
         Return QMP greeting message.
