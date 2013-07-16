@@ -258,7 +258,8 @@ class QStringDevice(QBaseDevice):
     def cmdline(self):
         """ @return: cmdline command to define this device """
         try:
-            return self._cmdline % self.params
+            if self._cmdline:
+                return self._cmdline % self.params
         except KeyError, details:
             raise KeyError("Param %s required for cmdline is not present in %s"
                            % (details, self.str_long()))
@@ -1285,8 +1286,9 @@ class DevContainer(object):
         """
         out = ""
         for device in self.__devices:
-            if device.cmdline():
-                out += " %s" % device.cmdline()
+            _out = device.cmdline()
+            if _out:
+                out += " %s" % _out
         if out:
             return out[1:]
 
