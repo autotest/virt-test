@@ -464,14 +464,13 @@ def run_qemu_img(test, params, env):
             os.remove(sn1)
 
         _rebase(cmd, sn2, base_img, image_format, mode=rebase_mode)
-        # Boot base image after rebase
-        img_suffix = ".%s" % image_format
-        img_name = base_img.split(img_suffix)[0]
-        _boot(img_name, image_format)
+        # Boot snapshot image after rebase
+        img_name, img_format = sn2.split('.')
+        _boot(img_name, img_format)
 
         # Check sn2's format and backing_file
         actual_base_img = _info(cmd, sn2, "backing file")
-        base_img_name = os.path.basename(params.get("image_name"))
+        base_img_name = os.path.basename(base_img)
         if not base_img_name in actual_base_img:
             raise error.TestFail("After rebase the backing_file of 'sn2' is "
                                  "'%s' which is not expected as '%s'"
