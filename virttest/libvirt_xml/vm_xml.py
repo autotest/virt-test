@@ -326,10 +326,7 @@ class VMXML(VMXMLBase):
                                        virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
-        try:
-            vmxml.undefine()
-            # All failures trip a single exception
-        except error.CmdError, detail:
+        if not vmxml.undefine():
             del vmxml # clean up temporary files
             raise xcepts.LibvirtXMLError("Error reported while undefining VM:\n"
                                          "%s" % detail)
@@ -344,14 +341,17 @@ class VMXML(VMXMLBase):
             vm.uuid = uuid
         # Re-define XML to libvirt
         logging.debug("Rename %s to %s.", vm.name, new_name)
+        # error message for failed define
+        error_msg = "Error reported while defining VM:\n"
         try:
-            vmxml.define()
+            if not vmxml.define():
+                raise xcepts.LibvirtXMLError(error_msg + "%s"
+                                             % vmxml.get('xml'))
         except error.CmdError, detail:
             del vmxml # clean up temporary files
             # Allow exceptions thrown here since state will be undefined
             backup.define()
-            raise xcepts.LibvirtXMLError("Error reported while defining VM:\n%s"
-                                   % detail)
+            raise xcepts.LibvirtXMLError(error_msg + "%s" % detail)
         # Keep names uniform
         vm.name = new_name
         return vm
