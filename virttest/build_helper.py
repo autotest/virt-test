@@ -75,8 +75,7 @@ class GitRepoParamHelper(git.GitRepoHelper):
         else:
             logging.debug('Git repo %s tag: %s' % (self.name, self.tag))
 
-        self.key_id = None
-        self.key_server = None
+        self.key_file = None
         tag_signed = self.params.get('%s_tag_signed' % config_prefix)
         if tag_signed is None:
             logging.warning('Git repo %s tag is not signed' % self.name)
@@ -84,10 +83,15 @@ class GitRepoParamHelper(git.GitRepoHelper):
                             'made by whomever claims to have made it '
                             '(dangerous)')
         else:
-            self.key_server, self.key_id = tag_signed.split(":")
-            logging.debug('Git repo %s tag %s was signed with GPG key ID %s '
-                          'present on key server %s', self.name, self.tag,
-                          self.key_id, self.key_server)
+            self.key_file = os.path.join(data_dir.get_data_dir(), 'gpg',
+                                         tag_signed)
+            if os.path.isfile(self.key_file):
+                logging.debug('Git repo %s tag %s will be verified with public '
+                              'key file %s', self.name, self.tag, self.key_file)
+            else:
+                raise error.TestError('GPG public key file %s not found, will '
+                                      'not proceed with testing' %
+                                      self.key_file)
 
         self.cmd = os_dep.command('git')
 
@@ -106,12 +110,14 @@ class GitRepoParamHelper(git.GitRepoHelper):
 
         if self.tag:
             utils.system('git checkout %s' % self.tag)
-            if self.key_server is not None and self.key_id is not None:
+            if self.key_file is not None:
                 try:
-                    logging.debug('Downloading GPG key ID %s from key server '
-                                  '%s', self.key_id, self.key_server)
-                    utils.system('gpg --batch --keyserver %s --recv-keys %s' %
-                                 (self.key_server, self.key_id))
+                    gnupg_home = os.path.join(os.path.dirname(self.key_file),
+                                              'gnupg')
+                    if not os.path.isdir(gnupg_home):
+                        os.makedirs(gnupg_home)
+                    os.environ['GNUPGHOME'] = gnupg_home
+                    utils.system('gpg --import %s' % self.key_file)
                     logging.debug('Verifying if tag is actually signed with '
                                   'GPG key ID %s' % self.key_id)
                     utils.system('git tag -v %s' % self.tag)
