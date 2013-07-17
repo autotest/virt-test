@@ -238,8 +238,8 @@ def run_virsh_numatune(test, params, env):
             # and will start the guest after restarting libvirtd service
             if vm.is_alive():
                 vm.destroy()
-            if utils_cgroup.service_cgconfig_control("status"):
-                utils_cgroup.service_cgconfig_control("stop")
+            if utils_cgroup.cgconfig_is_running():
+                utils_cgroup.cgconfig_stop()
         # Refresh libvirtd service to get latest cgconfig service change
         if libvirtd == "restart":
             utils_libvirtd.libvirtd_restart()
@@ -253,8 +253,8 @@ def run_virsh_numatune(test, params, env):
             else:
                 set_numa_parameter(params)
         # Recover cgconfig and libvirtd service
-        if not utils_cgroup.service_cgconfig_control("status"):
-            utils_cgroup.service_cgconfig_control("start")
+        if not utils_cgroup.cgconfig_is_running():
+            utils_cgroup.cgconfig_start()
             utils_libvirtd.libvirtd_restart()
     finally:
         vm.destroy()
