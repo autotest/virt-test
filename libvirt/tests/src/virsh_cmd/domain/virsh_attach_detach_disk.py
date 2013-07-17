@@ -145,7 +145,7 @@ def run_virsh_attach_detach_disk(test, params, env):
         if bus_type == "ide" and vm.is_alive():
             vm.destroy(gracefully=False)
         s_attach = virsh.attach_disk(vm_name, device_source, device_target,
-                                     "--driver qemu --config").exit_status
+                                     "--driver qemu --persistent").exit_status
         if s_attach != 0:
             logging.error("Attaching device failed before testing detach-disk")
         if vm.is_dead():
