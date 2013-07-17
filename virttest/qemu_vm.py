@@ -692,7 +692,7 @@ class VM(virt_vm.BaseVM):
                 dev = QDevice('ide-drive')
                 dev.set_param('bus', 'ahci.%s' % index)
                 dev.set_param('drive', blkdev_id)
-                dev.set_param("id", name)
+                dev.set_param("id", tmp)
                 fmt = "none"
                 index = None
             elif fmt in ['usb1', 'usb2', 'usb3']:
