@@ -88,7 +88,17 @@ def run_usb_host(test, params, env):
 
     repeat_times = int(params.get("usb_repeat_times", "1"))
     for i in range(repeat_times):
-        error.context("Hotplug (iteration %i)" % (i + 1), logging.info)
+        if params.get("usb_check_isobufs", "no") == "no":
+            error.context("Hotplug (iteration %i)" % (i + 1), logging.info)
+        else:
+            # The value of isobufs could only be in '4, 8, 16'
+            isobufs = (2 << (i % 3 + 1))
+            monitor_add  = "device_add usb-host,bus=usbtest.0,id=usbhostdev"
+            monitor_add += ",vendorid=%s" % vendorid
+            monitor_add += ",productid=%s" % productid
+            monitor_add += ",isobufs=%d" % isobufs
+            error.context("Hotplug (iteration %i), with 'isobufs' option"
+                          " set to %d" % ((i + 1), isobufs), logging.info)
         usb_dev_hotplug()
         usb_dev_verify()
         usb_dev_unplug()
