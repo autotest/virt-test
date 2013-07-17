@@ -2360,6 +2360,46 @@ class VM(virt_vm.BaseVM):
         return self.spice_options.get(spice_var, None)
 
     @error.context_aware
+    def hotplug_vcpu(self, cpu_id=None, plug_command=""):
+        """
+        Hotplug a vcpu, if not assign the cpu_id, will use the minimum unused.
+        the function will use the plug_command if you assigned it, else the
+        function will use the command automatically generated based on the
+        type of monitor
+
+        @param: cpu_id  the cpu_id you want hotplug.
+        """
+        vcpu_threads_count = len(self.vcpu_threads)
+        id = cpu_id
+        if id is None:
+            id = vcpu_threads_count
+        if plug_command:
+            vcpu_add_cmd = plug_command % id
+        else:
+            if self.monitor.protocol == 'human':
+                vcpu_add_cmd = "cpu_set %s online" % id
+            elif self.monitor.protocol == 'qmp':
+                vcpu_add_cmd =  "cpu-add id=%s" % id
+
+        try:
+            self.monitor.verify_supported_cmd(vcpu_add_cmd.split()[0])
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            raise error.TestNAError("%s monitor not support cmd '%s'" %
+                                    (self.monitor.protocol, vcpu_add_cmd))
+        try:
+            cmd_output = self.monitor.send_args_cmd(vcpu_add_cmd)
+        except qemu_monitor.QMPCmdError, e:
+            return (False, str(e))
+
+        vcpu_thread_pattern = self.params.get("vcpu_thread_pattern",
+                                              r"thread_id.?[:|=]\s*(\d+)")
+        self.vcpu_threads = self.get_vcpu_pids(vcpu_thread_pattern)
+        if len(self.vcpu_threads) == vcpu_threads_count + 1:
+            return(True, id)
+        else:
+            return(False, cmd_output)
+
+    @error.context_aware
     def hotplug_nic(self, **params):
         """
         Convenience method wrapper for add_nic() and add_netdev().
