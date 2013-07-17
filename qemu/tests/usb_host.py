@@ -1,4 +1,4 @@
-import logging, re, uuid
+import logging
 from autotest.client.shared import error
 from autotest.client import utils
 
@@ -11,6 +11,37 @@ def run_usb_host(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
+    @error.context_aware
+    def usb_dev_hotplug():
+        error.context("Plugin usb device", logging.info)
+        session.cmd_status("dmesg -c")
+        vm.monitor.cmd(monitor_add)
+        session.cmd_status("sleep 1")
+        session.cmd_status("udevadm settle")
+        messages_add = session.cmd("dmesg -c")
+        for line in messages_add.splitlines():
+            logging.debug("[dmesg add] %s" % line)
+        if messages_add.find(match_add) == -1:
+            raise error.TestFail("kernel didn't detect plugin")
+
+
+    @error.context_aware
+    def usb_dev_verify():
+        error.context("Check usb device %s in guest" % device, logging.info)
+        session.cmd(lsusb_cmd)
+
+
+    @error.context_aware
+    def usb_dev_unplug():
+        error.context("Unplug usb device", logging.info)
+        vm.monitor.cmd(monitor_del)
+        session.cmd_status("sleep 1")
+        messages_del = session.cmd("dmesg -c")
+        for line in messages_del.splitlines():
+            logging.debug("[dmesg del] %s" % line)
+        if messages_del.find(match_del) == -1:
+            raise error.TestFail("kernel didn't detect unplug")
+
 
     if params.get("usb_negative_test", "no") != "no":
         # Negative test.
@@ -54,28 +85,12 @@ def run_usb_host(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
-    session.cmd_status("dmesg -c")
 
-    error.context("Plugin usb device", logging.info)
-    vm.monitor.cmd(monitor_add)
-    session.cmd_status("sleep 1")
-    session.cmd_status("udevadm settle")
-    messages_add = session.cmd("dmesg -c")
-    for line in messages_add.splitlines():
-        logging.debug("[dmesg add] %s" % line)
-    if messages_add.find(match_add) == -1:
-        raise error.TestFail("kernel didn't detect plugin")
-
-    error.context("Check usb device %s in guest" % device, logging.info)
-    session.cmd(lsusb_cmd)
-
-    error.context("Unplug usb device", logging.info)
-    vm.monitor.cmd(monitor_del)
-    session.cmd_status("sleep 1")
-    messages_del = session.cmd("dmesg -c")
-    for line in messages_del.splitlines():
-        logging.debug("[dmesg del] %s" % line)
-    if messages_del.find(match_del) == -1:
-        raise error.TestFail("kernel didn't detect unplug")
+    repeat_times = int(params.get("usb_repeat_times", "1"))
+    for i in range(repeat_times):
+        error.context("Hotplug (iteration %i)" % (i + 1), logging.info)
+        usb_dev_hotplug()
+        usb_dev_verify()
+        usb_dev_unplug()
 
     session.close()
