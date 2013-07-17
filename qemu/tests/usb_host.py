@@ -12,6 +12,25 @@ def run_usb_host(test, params, env):
     @param env: Dictionary with test environment.
     """
 
+    if params.get("usb_negative_test", "no") != "no":
+        # Negative test.
+        vm = env.get_vm(params["main_vm"])
+        vm.verify_alive()
+        session = vm.wait_for_login()
+        usb_host_device_list = params["usb_host_device_list"].split(",")
+        for dev in  usb_host_device_list:
+            vid, pid = dev.split(":")
+            monitor_add  = "device_add usb-host,bus=usbtest.0,id=usbhostdev"
+            monitor_add += ",vendorid=%s" % vid
+            monitor_add += ",productid=%s" % pid
+            reply = vm.monitor.cmd(monitor_add)
+            if params["usb_reply_msg"] not in reply:
+                raise error.TestFail("Could not get expected warning"
+                                     " msg in negative test, monitor"
+                                     " returns: '%s'" % reply)
+        vm.reboot()
+        return
+
     device = params["usb_host_device"]
     (vendorid,productid) = device.split(":")
 
