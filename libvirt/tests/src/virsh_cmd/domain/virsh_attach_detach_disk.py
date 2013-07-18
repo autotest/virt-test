@@ -148,6 +148,15 @@ def run_virsh_attach_detach_disk(test, params, env):
                                      "--driver qemu --persistent").exit_status
         if s_attach != 0:
             logging.error("Attaching device failed before testing detach-disk")
+        if test_twice:
+            device_target2 = params.get("at_dt_disk_device_target2",
+                                        device_target)
+            create_device_file(device_source)
+            s_attach = virsh.attach_disk(vm_name, device_source, device_target2,
+                                         "--driver qemu --persistent").exit_status
+            if s_attach != 0:
+                logging.error("Attaching device failed before testing "
+                              "detach-disk test_twice")
         if vm.is_dead():
             vm.start()
 
