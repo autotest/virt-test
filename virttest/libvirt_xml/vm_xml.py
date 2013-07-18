@@ -328,8 +328,7 @@ class VMXML(VMXMLBase):
         # can't do in-place rename, must operate on XML
         if not vmxml.undefine():
             del vmxml # clean up temporary files
-            raise xcepts.LibvirtXMLError("Error reported while undefining VM:\n"
-                                         "%s" % detail)
+            raise xcepts.LibvirtXMLError("Error reported while undefining VM")
         # Alter the XML
         vmxml.vm_name = new_name
         if uuid is None:
