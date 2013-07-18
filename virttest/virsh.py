@@ -1398,13 +1398,7 @@ def pool_info(name, **dargs):
     @param: dargs: standardized virsh function API keywords
     """
     cmd = "pool-info %s" % name
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Pool %s doesn't exist:\n%s", name, detail)
-        return False
+    return command(cmd, **dargs)
 
 
 def pool_destroy(name, **dargs):
