@@ -26,7 +26,10 @@ except ImportError:
         @warning: This is not the full OrderedDict implementation!
         """
         def itervalues(self, *args, **kwargs):
-            return sorted(dict.itervalues(self, *args, **kwargs),
+            return (_[1] for _ in sorted(dict.iteritems(self, *args, **kwargs)))
+
+        def iteritems(self, *args, **kwargs):
+            return sorted(dict.iteritems(self, *args, **kwargs),
                           key=lambda item: item[0])
 
 
