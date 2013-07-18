@@ -2401,11 +2401,9 @@ class VM(virt_vm.BaseVM):
                 raise e
 
             logging.debug("VM appears to be alive with PID %s", self.get_pid())
-
-            o = self.monitor.info("cpus")
-            vcpu_thread_pattern = params.get("vcpu_thread_pattern",
-                                               "thread_id=(\d+)")
-            self.vcpu_threads = re.findall(vcpu_thread_pattern, str(o))
+            vcpu_thread_pattern = self.params.get("vcpu_thread_pattern",
+                                                  r"thread_id.?[:|=]\s*(\d+)")
+            self.vcpu_threads = self.get_vcpu_pids(vcpu_thread_pattern)
             o = commands.getoutput("ps aux")
             self.vhost_threads = re.findall("\w+\s+(\d+)\s.*\[vhost-%s\]" %
                                             self.get_pid(), o)
@@ -2755,18 +2753,14 @@ class VM(virt_vm.BaseVM):
         return self.vnc_port
 
 
-    def get_vcpu_pids(self, params):
+    def get_vcpu_pids(self, vcpu_thread_pattern):
         """
         Return the list of vcpu PIDs
 
         @return: the list of vcpu PIDs
         """
-        vcpu_thread_pattern = params.get("vcpu_thread_pattern",
-                                         "thread_id=(\d+)")
         return [int(_) for _ in re.findall(vcpu_thread_pattern,
                                            str(self.monitor.info("cpus")))]
-
-
 
 
     def get_shared_meminfo(self):
