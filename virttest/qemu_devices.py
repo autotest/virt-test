@@ -752,6 +752,9 @@ class QSparseBus(object):
 
 
 class QUSBBus(QSparseBus):
+    """
+    USB bus representation including usb-hub handling.
+    """
     def __init__(self, length, busid, bus_type, aobject=None,
                  port_prefix=None):
         """
