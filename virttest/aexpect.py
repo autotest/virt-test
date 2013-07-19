@@ -598,15 +598,22 @@ class Spawn(object):
         return _locked(self.lock_server_running_filename)
 
 
+    def kill(self, sig=signal.SIGKILL):
+        """
+        Kill the child process if alive
+        """
+        # Kill it if it's alive
+        if self.is_alive():
+            utils_misc.kill_process_tree(self.get_pid(), sig)
+
+
     def close(self, sig=signal.SIGKILL):
         """
         Kill the child process if it's alive and remove temporary files.
 
         @param sig: The signal to send the process when attempting to kill it.
         """
-        # Kill it if it's alive
-        if self.is_alive():
-            utils_misc.kill_process_tree(self.get_pid(), sig)
+        self.kill(sig=sig)
         # Wait for the server to exit
         _wait(self.lock_server_running_filename)
         # Call all cleanup routines
