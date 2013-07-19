@@ -10,6 +10,7 @@ Call the stress control file, only with custom params
 to heavily stress a machine's memory.
 '''
 
+import os
 from autotest.client import utils
 
 # Assemble the parameters specially to stress memory
@@ -20,15 +21,17 @@ threads = 2 * utils.count_cpus()
 mem = utils.memtotal() / 1024 / 512
 memory_per_thread = 256 * 1024
 
-free_disk = utils.freespace(self.srcdir)
+free_disk = utils.freespace(os.getcwd())
 file_size_per_thread = 1024 ** 2
 if (0.9 * free_disk) < file_size_per_thread * threads:
     file_size_per_thread = (0.9 * free_disk) / threads
 
+stress_length = 60
+
 # Number of CPU workers spinning on sqrt()
 args = '--cpu %d ' % threads
 # Number of IO workers spinning on sync()
-args += '--io %d ' % threadsfrom autotest.client import utils
+args += '--io %d ' % threads
 # Number of Memory workers spinning on malloc()/free()
 args += '--vm %d ' % mem
 # Amount of memory used per each worker
@@ -42,5 +45,4 @@ args += '--timeout %d ' % stress_length
 # Verbose flag
 args += '--verbose'
 
-
-job.run_test('stress_memory_heavy', args=args)
+job.run_test('stress', args=args)
