@@ -600,6 +600,77 @@ Slots:
         self.assertEqual(out, exp, "Long representation corrupted:\n%s\n%s"
                          % (repr(out), exp))
 
+    def test_usb_bus(self):
+        """ Tests the specific handlings of QUSBBus """
+        usbc1 = qemu_devices.QUSBBus(2, 'usb1.0', 'uhci')
+
+        # Insert device into usb controller, default port
+        self.assertTrue(usbc1.insert(qemu_devices.QDevice('usb-kbd',
+                                          parent_bus={'type': 'uhci'})))
+
+        # Insert usb-hub into usb controller, default port
+        dev = qemu_devices.QDevice('usb-hub', parent_bus={'type': 'uhci'})
+        self.assertTrue(usbc1.insert(dev))
+        hub1 = dev.child_bus[-1]
+
+        # Insert usb-hub into usb-hub, exact port
+        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4'},
+                                   parent_bus={'type': 'uhci'})
+        self.assertTrue(hub1.insert(dev))
+        hub2 = dev.child_bus[-1]
+
+        # Insert usb-hub into usb-hub in usb-hub, exact port
+        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3'},
+                                   parent_bus={'type': 'uhci'})
+        self.assertTrue(hub2.insert(dev))
+        hub3 = dev.child_bus[-1]
+        # verify that port is updated correctly
+        self.assertEqual("2.4.3", dev.get_param("port"))
+
+        # Insert usb-device into usb-hub in usb-hub in usb-hub, exact port
+        self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.4.3.1'},
+                                         parent_bus={'type': 'uhci'})))
+        # Insert usb-device into usb-hub in usb-hub in usb-hub, default port
+        self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
+                                         parent_bus={'type': 'uhci'})))
+
+        # Try to insert device into specific port which belongs to inferior bus
+        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.4.3.3'},
+                                         parent_bus={'type': 'uhci'})))
+
+        # Try to insert device into specific port which belongs to superior bus
+        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.4'},
+                                         parent_bus={'type': 'uhci'})))
+
+        # Try to insert device into specific port which belongs to same level
+        # but different port
+        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.3.4'},
+                                         parent_bus={'type': 'uhci'})))
+
+        # Force insert device with port which belongs to other hub
+        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3.4'},
+                                   parent_bus={'type': 'uhci'})
+        out = hub2.insert(dev, force=True)
+        res = bool("BusId" in out and "BasicAddress" in out)
+        self.assertTrue(res, "Incorrect output of force insert:\n%s\nOutput"
+                        "have to contain BusId and BasicAddress (err)" % (out))
+        # verify that port is updated correctly
+        self.assertEqual("2.4.1", dev.get_param("port"))
+
+        # Check the overall buses correctness
+        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-hub'}  {}",
+                         usbc1.str_short())
+        self.assertEqual("usb1.0(uhci): {4:a'usb-hub'}  {}",
+                         hub1.str_short())
+        self.assertEqual("usb1.0(uhci): {1:a'usb-hub',3:a'usb-hub'}  {}",
+                         hub2.str_short())
+        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-kbd'}  {}",
+                         hub3.str_short())
+
 
 class Container(unittest.TestCase):
     """ Tests related to the abstract representation of qemu machine """
