@@ -751,6 +751,91 @@ class QSparseBus(object):
         return False
 
 
+class QUSBBus(QSparseBus):
+    def __init__(self, length, busid, bus_type, aobject=None,
+                 port_prefix=None):
+        """
+        Bus type have to be generalized and parsed from original bus type:
+        (usb-ehci == ehci, ich9-usb-uhci1 == uhci, ...)
+        """
+        # There are various usb devices for the same bus type, use only portion
+        for bus in ('uhci', 'ehci', 'ohci', 'xhci'):
+            if bus in bus_type:
+                bus_type = bus
+                break
+        # Usb ports are counted from 1 so the lenght have to be +1
+        super(QUSBBus, self).__init__('bus', [['port'], [length + 1]], busid,
+                                      bus_type, aobject)
+        self.__port_prefix = port_prefix
+
+    def _set_first_addr(self, addr_pattern):
+        """ First addr is not 0 but 1 """
+        use_reserved = True
+        if addr_pattern is None:
+            addr_pattern = [None] * len(self.addr_lengths)
+        # set first usable addr
+        last_addr = addr_pattern[:]
+        if None in last_addr:  # Address is not fully specified
+            use_reserved = False    # Use only free address
+            for i in xrange(len(last_addr)):
+                if last_addr[i] is None:
+                    last_addr[i] = 1
+        return last_addr, use_reserved
+
+    def _check_bus(self, device):
+        """ Check port prefix in order to match addresses in usb-hubs """
+        if not super(QUSBBus, self)._check_bus(device):
+            return False
+        port = device.get_param('port')   # 2.1.6
+        if port or port == 0:   # If port is specified
+            idx = str(port).rfind('.')
+            if idx != -1:   # Strip last number and compare with port_prefix
+                return port[:idx] == self.__port_prefix
+            # Port is number, match only root usb bus
+            elif self.__port_prefix != "":
+                return False
+        return True
+
+    def _dev2addr(self, device):
+        """
+        Parse the internal address out of the device
+        @param device: QBaseDevice device
+        @return: internal address  [addr1, addr2, ...]
+        """
+        value = device.get_param('port')
+        if value is None:
+            addr = [None]
+        else:
+            addr = [int(value[len(self.__port_prefix) + 1:])]
+        return addr
+
+    def __hook_child_bus(self, device, addr):
+        """ If this is usb-hub, add child bus """
+        if device.get_param('driver') != 'usb-hub':    # only usb hub needs customization
+            return
+        _bus = [_ for _ in device.child_bus if not isinstance(_, QUSBBus)]
+        _bus.append(QUSBBus(8, self.busid, self.type, device.get_aid(),
+                            str(addr[0])))
+        device.child_bus = _bus
+
+    def _set_device_props(self, device, addr):
+        """ in case this is usb-hub update the child port_prefix """
+        if addr[0] or addr[0] is 0:
+            if self.__port_prefix:
+                addr = ['%s.%s' % (self.__port_prefix, addr[0])]
+        self.__hook_child_bus(device, addr)
+        super(QUSBBus, self)._set_device_props(device, addr)
+
+    def _update_device_props(self, device, addr):
+        """ in case this is usb-hub update the child port_prefix """
+        if addr[0] or addr[0] is 0:
+            if self.__port_prefix:
+                addr = ['%s.%s' % (self.__port_prefix, addr[0])]
+        self.__hook_child_bus(device, addr)
+        device['bus'] = True    # Force bus item to be updated
+        super(QUSBBus, self)._update_device_props(device, addr)
+
+
 class QDenseBus(QSparseBus):
     """
     Dense bus representation. The only difference from SparseBus is the output
@@ -1398,3 +1483,118 @@ class DevContainer(object):
                              "i440FX.")
                 devices = machine_i440FX(False)
         return devices
+
+    # USB Controller related methods
+    def usbc_by_variables(self, usb_id, usb_type, multifunction=False,
+                          masterbus=None, firstport=None, freq=None,
+                          max_ports=6, pci_addr=None):
+        """
+        Creates usb-controller devices by variables
+        @param usb_id: Usb bus name
+        @param usb_type: Usb bus type
+        @param multifunction: Is the bus multifunction
+        @param masterbus: Is this bus master?
+        @param firstport: Offset of the first port
+        @param freq: Bus frequency
+        @param max_ports: How many ports this bus have [6]
+        @param pci_addr: Desired PCI address
+        @return: List of QDev devices
+        """
+        if not self.has_option("device"):
+            # Okay, for the archaic qemu which has not device parameter,
+            # just return a usb uhci controller.
+            # If choose this kind of usb controller, it has no name/id,
+            # and only can be created once, so give it a special name.
+            usb = QStringDevice("oldusb", cmdline="-usb",
+                                child_bus=QUSBBus(2, 'usb.0', 'uhci', usb_id))
+            return [usb]
+
+        if not self.has_device(usb_type):
+            raise error.TestNAError("usb controller %s not available"
+                                        % usb_type)
+
+        usb = QDevice(usb_type, {}, usb_id, {'type': 'pci'},
+                      QUSBBus(max_ports, '%s.0' % usb_id, usb_type, usb_id))
+        new_usbs = [usb]    # each usb dev might compound of multiple devs
+        # TODO: Add 'bus' property (it was not in the original version)
+        usb.set_param('id', usb_id)
+        usb.set_param('masterbus', masterbus)
+        usb.set_param('multifunction', multifunction)
+        usb.set_param('firstport', firstport)
+        usb.set_param('freq', freq)
+        usb.set_param('addr', pci_addr)
+
+        if usb_type == "ich9-usb-ehci1":
+            # this slot is composed in PCI so it won't go to internal repr
+            usb.parent_bus = ()
+            usb.set_param('addr', '1d.7')
+            usb.set_param('multifunction', 'on')
+            for i in xrange(3):
+                new_usbs.append(QDevice('ich9-usb-uhci%d' % (i + 1), {},
+                                        usb_id))
+                new_usbs[-1].set_param('id', '%s.%d' % (usb_id, i))
+                new_usbs[-1].set_param('multifunction', 'on')
+                new_usbs[-1].set_param('masterbus', '%s.0' % usb_id)
+                new_usbs[-1].set_param('addr', '1d.%d' % i)
+                new_usbs[-1].set_param('firstport', 2 * i)
+        return new_usbs
+
+    def usbc_by_params(self, usb_name, params):
+        """
+        Wrapper for creating usb bus from autotest usb params.
+        @param usb_name: Name of the usb bus
+        @param params: USB params (params.object_params(usb_name))
+        @return: List of QDev devices
+        """
+        return self.usbc_by_variables(usb_name,
+                                      params.get('usb_type'),
+                                      params.get('multifunction'),
+                                      params.get('masterbus'),
+                                      params.get('firstport'),
+                                      params.get('freq'),
+                                      params.get('max_ports', 6),
+                                      params.get('pci_addr'))
+
+    # USB Device related methods
+    def usb_by_variables(self, usb_name, usb_type, controller_type, bus=None,
+                         port=None):
+        """
+        Creates usb-devices by variables.
+        @param usb_name: usb name
+        @param usb_type: usb type (usb-tablet, usb-serial, ...)
+        @param controller_type: type of the controller (uhci, ehci, xhci, ...)
+        @param bus: the bus name (my_bus.0, ...)
+        @param port: port specifiacation (4, 4.1.2, ...)
+        @return: QDev device
+        """
+        if not self.has_device(usb_type):
+            raise error.TestNAError("usb device %s not available"
+                                        % usb_type)
+        if self.has_option('device'):
+            device = QDevice(usb_type, aobject=usb_name)
+            device.set_param('id', 'usb-%s' % usb_name)
+            device.set_param('bus', bus)
+            device.set_param('port', port)
+            device.parent_bus += ({'type': controller_type},)
+        else:
+            if "tablet" in usb_type:
+                device = QStringDevice('usb-%s' % usb_name,
+                                       cmdline='-usbdevice %s' % usb_name)
+            else:
+                device = QStringDevice('missing-usb-%s' % usb_name)
+                logging.error("This qemu supports only tablet device; ignoring"
+                              " %s", usb_name)
+        return device
+
+    def usb_by_params(self, usb_name, params):
+        """
+        Wrapper for creating usb devices from autotest params.
+        @param usb_name: Name of the usb
+        @param params: USB device's params
+        @return: QDev device
+        """
+        return self.usb_by_variables(usb_name,
+                                     params.get("usb_type"),
+                                     params.get("usb_controller"),
+                                     params.get("bus"),
+                                     params.get("port"))
