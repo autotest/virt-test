@@ -1250,12 +1250,13 @@ def get_host_cpu_models():
     vendor_re = "vendor_id\s+:\s+(\w+)"
     cpu_flags_re = "flags\s+:\s+([\w\s]+)\n"
 
-    cpu_types = {"AuthenticAMD": ["Opteron_G4", "Opteron_G3", "Opteron_G2",
-                                 "Opteron_G1"],
+    cpu_types = {"AuthenticAMD": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
+                                  "Opteron_G2", "Opteron_G1"],
                  "GenuineIntel": ["SandyBridge", "Westmere", "Nehalem",
                                   "Penryn", "Conroe"]}
-    cpu_type_re = {"Opteron_G4":
-                  "avx,xsave,aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3,sse4a",
+    cpu_type_re = {"Opteron_G5": "f16c,fma,tbm",
+                   "Opteron_G4":
+                 "avx,xsave,aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3,sse4a",
                    "Opteron_G3": "cx16,sse4a",
                    "Opteron_G2": "cx16",
                    "Opteron_G1": "",
