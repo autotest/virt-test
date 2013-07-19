@@ -1337,9 +1337,21 @@ def get_qemu_binary(params):
     """
     Get the path to the qemu binary currently in use.
     """
-    return get_path(os.path.join(data_dir.get_root_dir(),
-                                 params.get("vm_type")),
-                                 params.get("qemu_binary", "qemu"))
+    # Update LD_LIBRARY_PATH for built libraries (libspice-server)
+    qemu_binary_path = get_path(os.path.join(data_dir.get_root_dir(),
+                                              params.get("vm_type")),
+                                   params.get("qemu_binary", "qemu"))
+    
+    library_path = os.path.join(data_dir.get_root_dir(), params.get('vm_type'), 'install_root', 'lib')
+    logging.info(library_path)
+    if os.path.isdir(library_path):
+       logging.info(library_path)
+       library_path = os.path.abspath(library_path)
+       qemu_binary = "LD_LIBRARY_PATH=%s %s" % (library_path, qemu_binary_path)
+    else:   
+       qemu_binary = qemu_binary_path
+
+    return qemu_binary
 
 
 def get_qemu_img_binary(params):
