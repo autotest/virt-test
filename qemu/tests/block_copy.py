@@ -20,6 +20,7 @@ class BlockCopy(object):
     sessions = []
     trash = []
 
+
     def __init__(self, test, params, env, tag):
         self.test = test
         self.env = env
@@ -66,28 +67,6 @@ class BlockCopy(object):
         return device
 
 
-    def get_image_file(self):
-        """
-        return file associated with $device device
-        """
-        blocks = self.vm.monitor.info("block")
-        image_file = None
-        if isinstance(blocks, str):
-            image_file = re.findall('%s: .*file=(\S*) ' % self.device, blocks)
-            if not image_file:
-                return None
-            else:
-                image_file = image_file[0]
-        else:
-            for block in blocks:
-                if block['device'] == self.device:
-                    try:
-                        image_file = block['inserted']['file']
-                    except KeyError:
-                        continue
-        return image_file
-
-
     def get_session(self):
         """
         get a session object;
@@ -132,7 +111,6 @@ class BlockCopy(object):
         error.context("cancel block copy job", logging.info)
         params = self.parser_test_args()
         timeout = params.get("cancel_timeout")
-
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
         self.vm.cancel_block_job(self.device)
@@ -237,11 +215,12 @@ class BlockCopy(object):
         return session.cmd(cmd, timeout=120)
 
 
-    def get_block_file(self):
+    def get_image_file(self):
         """
         return file associated with $device device
         """
         blocks = self.vm.monitor.info("block")
+        image_file = None
         if isinstance(blocks, str):
             image_file = re.findall('%s.*\s+file=(\S*)' % self.device, blocks)
             if image_file:
