@@ -53,7 +53,7 @@ class BlockStream(block_copy.BlockCopy):
         error.context("create live snapshots", logging.info)
         for sn in snapshots:
             sn = utils_misc.get_path(data_dir.get_data_dir(), sn)
-            image_file = self.get_block_file()
+            image_file = self.get_image_file()
             device = self.vm.live_snapshot(image_file, sn, format)
             if device != self.device:
                 image_file = self.get_image_file()
@@ -86,6 +86,7 @@ class BlockStream(block_copy.BlockCopy):
                                        text="wait job finshed in %ss"% timeout)
         if not finished:
             raise error.TestFail("Wait job finished timeout in %s" % timeout)
+        logging.info("Block stream job done.")
 
 
     def action_before_start(self):
