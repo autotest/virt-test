@@ -81,7 +81,7 @@ def run_netperf(test, params, env):
     """
     def env_setup(session, ip, user, port, password):
         error.context("Setup env for %s" % ip)
-        ssh_cmd(session, "service iptables stop")
+        ssh_cmd(session, "service iptables stop; true")
         ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
         netperf_dir = os.path.join(data_dir.get_root_dir(), "shared/deps")
