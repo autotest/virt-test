@@ -1344,7 +1344,6 @@ def get_qemu_binary(params):
                                    params.get("qemu_binary", "qemu"))
     
     library_path = os.path.join(data_dir.get_root_dir(), params.get('vm_type'), 'install_root', 'lib')
-    logging.info(library_path)
     if os.path.isdir(library_path):
        logging.info(library_path)
        library_path = os.path.abspath(library_path)
