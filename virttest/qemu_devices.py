@@ -62,6 +62,18 @@ def _convert_args(arg_dict):
     return ",".join("%s=%s" % (key, val) for key, val in arg_dict.iteritems())
 
 
+def none_or_int(value):
+    """ Helper fction which returns None or int() """
+    if isinstance(value, int):
+        return value
+    elif not value:   # "", None, False
+        return None
+    elif isinstance(value, str) and value.isdigit():
+        return int(value)
+    else:
+        raise TypeError("This parameter have to be int or none")
+
+
 ##############################################################################
 # Device objects
 ##############################################################################
@@ -531,11 +543,7 @@ class QSparseBus(object):
         """
         addr = []
         for key in self.addr_items:
-            value = device.get_param(key)
-            if value is None:
-                addr.append(None)
-            else:
-                addr.append(int(value))
+            addr.append(none_or_int(device.get_param(key)))
         return addr
 
     def _set_first_addr(self, addr_pattern):
