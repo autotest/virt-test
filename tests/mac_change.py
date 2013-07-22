@@ -15,18 +15,6 @@ def run_mac_change(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    def get_drive_num(session, path):
-        """
-        return file path drive
-        """
-        cmd = "wmic datafile where \"path='%s'\" get drive" % path
-        info = session.cmd_output(cmd, timeout=360).strip()
-        drive_num = re.search(r'(\w):', info, re.M)
-        if not drive_num:
-            raise error.TestError("No path %s in your guest" % path)
-        return drive_num.group()
-
-
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -47,6 +35,10 @@ def run_mac_change(test, params, env):
     logging.info("The initial MAC address is %s", old_mac)
     if os_type == "linux":
         interface = utils_net.get_linux_ifname(session_serial, old_mac)
+        if params.get("shutdown_int", "yes") == "yes":
+            int_shutdown_cmd = params.get("int_shutdown_cmd",
+                                          "ifconfig %s down")
+            session_serial.cmd(int_shutdown_cmd % interface)
     else:
 
         connection_id = utils_net.get_windows_nic_attribute(session,
@@ -62,17 +54,14 @@ def run_mac_change(test, params, env):
                                                             "netconnectionid",
                                                              connection_id,
                                                              "pnpdeviceid")
-            devcon_path = r"\\devcon\\wxp_x86\\"
-            cd_drive = get_drive_num(session, devcon_path)
-
-            copy_cmd = r"xcopy %s\devcon\wxp_x86\devcon.exe c:\ " % cd_drive
+            cd_drive = utils_misc.get_winutils_vol(session)
+            copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_drive
             session.cmd(copy_cmd)
 
     # Start change MAC address
     error.context("Changing MAC address to %s" % new_mac, logging.info)
     if os_type == "linux":
-        change_cmd = change_cmd_pattern % (interface,
-                                           interface, new_mac, interface)
+        change_cmd = change_cmd_pattern % (interface, new_mac)
     else:
         change_cmd = change_cmd_pattern % (int(nic_index),
                                            "".join(new_mac.split(":")))
@@ -83,6 +72,10 @@ def run_mac_change(test, params, env):
         error.context("Verify the new mac address, and restart the network",
                       logging.info)
         if os_type == "linux":
+            if params.get("shutdown_int", "yes") == "yes":
+                int_activate_cmd = params.get("int_activate_cmd",
+                                              "ifconfig %s up")
+                session_serial.cmd(int_activate_cmd % interface)
             session_serial.cmd("ifconfig | grep -i %s" % new_mac)
             logging.info("Mac address change successfully, net restart...")
             dhclient_cmd = "dhclient -r && dhclient %s" % interface
