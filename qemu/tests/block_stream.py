@@ -1,6 +1,6 @@
 import re, os, logging, time
 from autotest.client.shared import utils, error
-from virttest import qemu_monitor, env_process, data_dir
+from virttest import qemu_monitor, env_process, data_dir, storage
 
 
 @error.context_aware
@@ -17,53 +17,48 @@ def run_block_stream(test, params, env):
     7) TODO(extra): Block job completion can be check in QMP
     """
     image_format = params["image_format"]
-    image_name = params.get("image_name", "image")
-    if not os.path.isabs(image_name):
-        image_name = os.path.join(data_dir.get_data_dir(), image_name)
-    drive_format = params["drive_format"]
-    backing_file_name = "%s_bak" % (image_name)
+    image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+    backing_file_name = "%s_bak" % image_name
+    snapshot_format = params.get("snapshot_format", "qcow2")
     qemu_img = params["qemu_img_binary"]
-    block_stream_cmd = "block-stream"
 
 
-    def check_block_jobs_info():
+    def check_block_jobs_info(device_id):
         """
         Verify the status of block-jobs reported by monitor command info block-jobs.
         @return: parsed output of info block-jobs
         """
         fail = 0
-
+        status = {}
         try:
-            output = vm.monitor.info("block-jobs")
+            status = vm.get_job_status(device_id)
         except qemu_monitor.MonitorError, e:
             logging.error(e)
             fail += 1
-            return None, None
-        return (re.match("\w+", str(output)), re.findall("\d+", str(output)))
+            return status
+        return status
 
     try:
-        # Remove the existing backing file
         backing_file = "%s.%s" % (backing_file_name, image_format)
+        # Remove the existing backing file
         if os.path.isfile(backing_file):
             os.remove(backing_file)
 
         # Create the new backing file
-        create_cmd = "%s create -b %s.%s -f %s %s.%s" % (qemu_img,
-                                                         image_name,
-                                                         image_format,
-                                                         image_format,
-                                                         backing_file_name,
-                                                         image_format)
+        create_cmd = "%s create -b %s -f %s %s" % (qemu_img,
+                                                   image_name,
+                                                   snapshot_format,
+                                                   backing_file)
         error.context("Creating backing file")
         utils.system(create_cmd)
 
-        info_cmd = "%s info %s.%s" % (qemu_img,image_name,image_format)
+        info_cmd = "%s info %s" % (qemu_img, image_name)
         error.context("Image file can not be find")
         results = utils.system_output(info_cmd)
         logging.info("Infocmd output of basefile: %s" ,results)
 
         # Set the qemu harddisk to the backing file
-        logging.info("Original image_name is: %s", params['image_name'])
+        logging.info("Original image file is: %s", image_name)
         params['image_name'] = backing_file_name
         logging.info("Param image_name changed to: %s", params['image_name'])
 
@@ -71,11 +66,11 @@ def run_block_stream(test, params, env):
         vm_name = params['main_vm']
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
-        vm.create()
+        vm.verify_alive()
         timeout = int(params.get("login_timeout", 360))
         session = vm.wait_for_login(timeout=timeout)
 
-        info_cmd = "%s info %s.%s" % (qemu_img, backing_file_name, image_format)
+        info_cmd = "%s info %s" % (qemu_img, backing_file)
         error.context("Image file can not be find")
         results = utils.system_output(info_cmd)
         logging.info("Infocmd output of backing file before block streaming: "
@@ -85,32 +80,22 @@ def run_block_stream(test, params, env):
             raise error.TestFail("Backing file is not available in the "
                                  "backdrive image")
 
-        if vm.monitor.protocol == "human":
-            block_stream_cmd = "block_stream"
-
-        # Start streaming in qemu-cmd line
-        if 'ide' in drive_format:
-            error.context("Block streaming on qemu monitor (ide drive)")
-            vm.monitor.cmd("%s ide0-hd0" % block_stream_cmd)
-        elif 'virtio' in drive_format:
-            error.context("Block streaming on qemu monitor (virtio drive)")
-            vm.monitor.cmd("%s virtio0" % block_stream_cmd)
-        else:
-            raise error.TestError("The drive format is not supported")
+        device_id = vm.get_block({"file": backing_file})
+        vm.block_stream(device_id, speed=0)
 
         while True:
-            blkjobout, blkjobstatus = check_block_jobs_info()
-            if 'Streaming' in blkjobout.group(0):
+            info = check_block_jobs_info(device_id)
+            if info.get("type","") == "stream":
                 logging.info("[(Completed bytes): %s (Total bytes): %s "
-                             "(Speed in bytes/s): %s]", blkjobstatus[-3],
-                             blkjobstatus[-2], blkjobstatus[-1])
+                             "(Speed in bytes/s): %s]", info["len"],
+                             info["offset"], info["speed"])
                 time.sleep(10)
                 continue
-            if 'No' in blkjobout.group(0):
+            if not info:
                 logging.info("Block job completed")
                 break
 
-        info_cmd = "%s info %s.%s" % (qemu_img,backing_file_name,image_format)
+        info_cmd = "%s info %s" % (qemu_img, backing_file)
         error.context("Image file can not be find")
         results = utils.system_output(info_cmd)
         logging.info("Infocmd output of backing file after block streaming: %s",
@@ -124,9 +109,10 @@ def run_block_stream(test, params, env):
 
         # Shutdown the virtual machine
         vm.destroy()
-
         # Relogin with the backup-harddrive
-        vm.create()
+        env_process.preprocess_vm(test, params, env, vm_name)
+        vm = env.get_vm(vm_name)
+        vm.verify_alive()
         timeout = int(params.get("login_timeout", 360))
         session = vm.wait_for_login(timeout=timeout)
         logging.info("Checking whether the guest with backup-harddrive boot "

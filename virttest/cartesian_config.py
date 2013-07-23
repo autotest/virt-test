@@ -535,6 +535,9 @@ class Node(object):
                 child.dump(indent + 3, recurse)
 
 
+match_subtitute = re.compile("\$\{(.+)\}")
+
+
 def _subtitution(value, d):
     """
     Only optimization string Template subtitute is quite expensive operation.
@@ -545,8 +548,19 @@ def _subtitution(value, d):
     @return: Substituted string
     """
     if "$" in value:
-        st = string.Template(value)
-        return st.safe_substitute(d)
+        start = 0
+        st = ""
+        try:
+            match = match_subtitute.search(value, start)
+            while match:
+                val = eval(match.group(1), None, d)
+                st += value[start:match.start()] + str(val)
+                start = match.end()
+                match = match_subtitute.search(value, start)
+        except:
+            pass
+        st += value[start:len(value)]
+        return st
     else:
         return value
 
@@ -677,7 +691,7 @@ class LColon(Token):
 
 
 class LVariants(Token):
-    identifier = "variatns"
+    identifier = "variants"
 
 
 class LDot(Token):

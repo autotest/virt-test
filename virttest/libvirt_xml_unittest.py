@@ -649,13 +649,16 @@ class testNodedevXML(LibvirtXMLTestBase):
 
     def test_get_key2value_dict(self):
         NodedevXML = nodedev_xml.NodedevXML
-        result = NodedevXML.get_key2value_dict('pci_0000_00_00_0')
+        xml = NodedevXML.new_from_dumpxml('pci_0000_00_00_0')
+        result = xml.get_key2value_dict()
+
         self.assertTrue(isinstance(result, dict))
 
 
     def test_get_key2syspath_dict(self):
         NodedevXML = nodedev_xml.NodedevXML
-        result = NodedevXML.get_key2syspath_dict('pci_0000_00_00_0')
+        xml = NodedevXML.new_from_dumpxml('pci_0000_00_00_0')
+        result = xml.get_key2syspath_dict()
         self.assertTrue(isinstance(result, dict))
 
 

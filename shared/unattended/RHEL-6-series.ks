@@ -13,12 +13,17 @@ timezone --utc America/New_York
 firstboot --disable
 bootloader --location=mbr --append="console=tty0 console=ttyS0,115200"
 zerombr
+#partitioning
 clearpart --all --initlabel
-autopart
+part /boot --fstype=ext4 --size=500
+part pv.01  --grow --size=1
+volgroup VolGroup --pesize=131072  pv.01
+logvol swap --name=LogVol_swap --vgname=VolGroup --size=4096
+logvol / --fstype=ext4 --name=LogVol_root --vgname=VolGroup --size=1 --grow
 poweroff
 KVM_TEST_LOGGING
 
-%packages
+%packages --ignoremissing
 @base
 @core
 @development
@@ -30,13 +35,17 @@ ntpdate
 watchdog
 coreutils
 usbutils
+qemu-guest-agent
+sg3_utils
 
-%post --interpreter /usr/bin/python
-import os
-os.system('grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)')
-os.system('dhclient')
-os.system('chkconfig sshd on')
-os.system('iptables -F')
-os.system('echo 0 > /selinux/enforce')
-os.system('echo Post set up finished > /dev/ttyS0')
-os.system('echo Post set up finished > /dev/hvc0')
+%post
+echo "OS install is completed" > /dev/ttyS0
+grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
+dhclient
+chkconfig sshd on
+iptables -F
+echo 0 > /selinux/enforce
+chkconfig NetworkManager on
+sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0

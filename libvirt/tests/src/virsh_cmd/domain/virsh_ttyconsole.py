@@ -17,12 +17,11 @@ def xml_console_recover(vmxml):
     """
     Recover older xml config with backup vmxml.
     """
-    try:
-        vmxml.undefine()
-        vmxml.define()
+    vmxml.undefine()
+    if vmxml.define():
         return True
-    except xcepts.LibvirtXMLError, detail:
-        logging.error("Recover older serial failed:%s.", detail)
+    else:
+        logging.error("Recover older serial failed:%s.", vmxml.get('xml'))
         return False
 
 

@@ -296,14 +296,18 @@ class VMXML(VMXMLBase):
 
     def undefine(self):
         """Undefine this VM with libvirt retaining XML in instance"""
-        # Allow any exceptions to propigate up
-        self.virsh.remove_domain(self.vm_name)
+        return self.virsh.remove_domain(self.vm_name)
 
 
     def define(self):
         """Define VM with virsh from this instance"""
-        # Allow any exceptions to propigate up
-        self.virsh.define(self.xml)
+        result = self.virsh.define(self.xml)
+        if result.exit_status:
+            logging.debug("Define %s failed.\n"
+                          "Detail: %s."
+                          % (self.vm_name, result.stderr))
+            return False
+        return True
 
 
     @staticmethod
@@ -322,13 +326,9 @@ class VMXML(VMXMLBase):
                                        virsh_instance=virsh_instance)
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
-        try:
-            vmxml.undefine()
-            # All failures trip a single exception
-        except error.CmdError, detail:
+        if not vmxml.undefine():
             del vmxml # clean up temporary files
-            raise xcepts.LibvirtXMLError("Error reported while undefining VM:\n"
-                                         "%s" % detail)
+            raise xcepts.LibvirtXMLError("Error reported while undefining VM")
         # Alter the XML
         vmxml.vm_name = new_name
         if uuid is None:
@@ -340,14 +340,17 @@ class VMXML(VMXMLBase):
             vm.uuid = uuid
         # Re-define XML to libvirt
         logging.debug("Rename %s to %s.", vm.name, new_name)
+        # error message for failed define
+        error_msg = "Error reported while defining VM:\n"
         try:
-            vmxml.define()
+            if not vmxml.define():
+                raise xcepts.LibvirtXMLError(error_msg + "%s"
+                                             % vmxml.get('xml'))
         except error.CmdError, detail:
             del vmxml # clean up temporary files
             # Allow exceptions thrown here since state will be undefined
             backup.define()
-            raise xcepts.LibvirtXMLError("Error reported while defining VM:\n%s"
-                                   % detail)
+            raise xcepts.LibvirtXMLError(error_msg + "%s" % detail)
         # Keep names uniform
         vm.name = new_name
         return vm
@@ -370,6 +373,19 @@ class VMXML(VMXMLBase):
         vmxml.define()
         # Temporary files for vmxml cleaned up automatically
         # when it goes out of scope here.
+
+
+    def check_cpu_mode(self, mode):
+        """
+        Check input cpu mode invalid or not.
+
+        @param mode: the mode of cpu:'host-model'...
+        """
+        # Possible values for the mode attribute are:
+        # "custom", "host-model", "host-passthrough"
+        cpu_mode = ["custom", "host-model", "host-passthrough"]
+        if mode.strip() not in cpu_mode:
+            raise xcepts.LibvirtXMLError("The cpu mode '%s' is invalid!" % mode)
 
 
     def get_disk_all(self):
@@ -529,17 +545,31 @@ class VMXML(VMXMLBase):
             return None
 
 
-    def check_cpu_mode(self, mode):
+    def get_net_all(self):
         """
-        Check input cpu mode invalid or not.
+        Return VM's net from XML definition, None if not set
+        """
+        xmltreefile = self.dict_get('xml')
+        net_nodes = xmltreefile.find('devices').findall('interface')
+        nets = {}
+        for node in net_nodes:
+            dev = node.find('target').get('dev')
+            nets[dev] = node
+        return nets
 
-        @param mode: the mode of cpu:'host-model'...
+    #TODO re-visit this method after the libvirt_xml.devices.interface module is implemented
+    @staticmethod
+    def get_net_dev(vm_name):
         """
-        # Possible values for the mode attribute are:
-        # "custom", "host-model", "host-passthrough"
-        cpu_mode = ["custom", "host-model", "host-passthrough"]
-        if mode.strip() not in cpu_mode:
-            raise xcepts.LibvirtXMLError("The cpu mode '%s' is invalid!" % mode)
+        Get net device of a defined VM's nets.
+
+        @param: vm_name: Name of defined vm.
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+        nets = vmxml.get_net_all()
+        if nets != None:
+            return nets.keys()
+        return None
 
 
     @staticmethod
@@ -683,5 +713,3 @@ class VMCPUXML(VMXML):
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
-    #TODO: Add function to create from xml_utils.TemplateXML()
-    # def new_from_template(...)

@@ -1,7 +1,7 @@
 import logging, re
 from  xml.dom.minidom import parseString
 from autotest.client.shared import utils, error
-from virttest import libvirt_vm, virsh
+from virttest import libvirt_vm, virsh, utils_libvirtd
 
 def run_virsh_capabilities(test, params, env):
     """
@@ -72,7 +72,7 @@ def run_virsh_capabilities(test, params, env):
     if params.has_key("libvirtd"):
         libvirtd = params.get("libvirtd")
         if libvirtd == "off":
-            libvirt_vm.service_libvirtd_control("stop")
+            utils_libvirtd.libvirtd_stop()
 
     # Run test case
     option = params.get("virsh_cap_options")
@@ -86,7 +86,7 @@ def run_virsh_capabilities(test, params, env):
 
     # Recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.libvirtd_start()
 
     # Check status_error
     status_error = params.get("status_error")

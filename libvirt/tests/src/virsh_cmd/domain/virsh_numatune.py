@@ -1,7 +1,11 @@
 import re, logging
 from autotest.client.shared import error, utils
-from virttest import libvirt_vm, libvirt_xml, virsh
-from virttest import utils_cgroup
+from virttest import libvirt_xml, virsh, utils_libvirtd
+try:
+    from autotest.client.shared import utils_cgroup
+except ImportError:
+    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
+    from virttest import utils_cgroup
 
 
 def num_numa_nodes():
@@ -238,7 +242,7 @@ def run_virsh_numatune(test, params, env):
                 utils_cgroup.service_cgconfig_control("stop")
         # Refresh libvirtd service to get latest cgconfig service change
         if libvirtd == "restart":
-            libvirt_vm.service_libvirtd_control("restart")
+            utils_libvirtd.libvirtd_restart()
         # Recover previous running guest
         if cgconfig == "off" and libvirtd == "restart" \
             and not vm.is_alive() and start_vm == "yes":
@@ -251,7 +255,7 @@ def run_virsh_numatune(test, params, env):
         # Recover cgconfig and libvirtd service
         if not utils_cgroup.service_cgconfig_control("status"):
             utils_cgroup.service_cgconfig_control("start")
-            libvirt_vm.service_libvirtd_control("restart")
+            utils_libvirtd.libvirtd_restart()
     finally:
         vm.destroy()
         # Restore guest, first remove existing

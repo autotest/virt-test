@@ -69,6 +69,30 @@ class GitRepoParamHelper(git.GitRepoHelper):
         else:
             logging.debug('Git repo %s commit: %s' % (self.name, self.commit))
 
+        self.tag = self.params.get('%s_tag' % config_prefix)
+        if self.tag is None:
+            logging.debug('Git repo %s tag is not set' % self.name)
+        else:
+            logging.debug('Git repo %s tag: %s' % (self.name, self.tag))
+
+        self.key_file = None
+        tag_signed = self.params.get('%s_tag_signed' % config_prefix)
+        if tag_signed is None:
+            logging.warning('Git repo %s tag is not signed' % self.name)
+            logging.warning('This means we will not verify if the key was '
+                            'made by whomever claims to have made it '
+                            '(dangerous)')
+        else:
+            self.key_file = os.path.join(data_dir.get_data_dir(), 'gpg',
+                                         tag_signed)
+            if os.path.isfile(self.key_file):
+                logging.debug('Git repo %s tag %s will be verified with public '
+                              'key file %s', self.name, self.tag, self.key_file)
+            else:
+                raise error.TestError('GPG public key file %s not found, will '
+                                      'not proceed with testing' %
+                                      self.key_file)
+
         self.cmd = os_dep.command('git')
 
         self.recursive = self.params.get('%s_recursive', 'yes')
@@ -76,12 +100,31 @@ class GitRepoParamHelper(git.GitRepoHelper):
 
     def execute(self):
         super(GitRepoParamHelper, self).execute()
+
         cwd = os.path.curdir
         os.chdir(self.destination_dir)
-        utils.system('git remote add origin %s' % self.uri)
+        utils.system('git remote add origin %s' % self.uri, ignore_status=True)
         if self.recursive == 'yes':
             utils.system('git submodule init')
             utils.system('git submodule update')
+
+        if self.tag:
+            utils.system('git checkout %s' % self.tag)
+            if self.key_file is not None:
+                try:
+                    gnupg_home = os.path.join(os.path.dirname(self.key_file),
+                                              'gnupg')
+                    if not os.path.isdir(gnupg_home):
+                        os.makedirs(gnupg_home)
+                    os.environ['GNUPGHOME'] = gnupg_home
+                    utils.system('gpg --import %s' % self.key_file)
+                    logging.debug('Verifying if tag is actually signed with '
+                                  'GPG key ID %s' % self.key_id)
+                    utils.system('git tag -v %s' % self.tag)
+                except error.CmdError:
+                    raise error.TestError("GPG signature check for git repo "
+                                          "%s failed" % self.name)
+
         os.chdir(cwd)
 
 

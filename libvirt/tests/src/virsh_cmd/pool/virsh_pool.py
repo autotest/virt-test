@@ -1,6 +1,6 @@
 import logging, re, os, shutil
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_pool(test, params, env):
@@ -191,9 +191,9 @@ def run_virsh_pool(test, params, env):
                                  "instead of yes" % pool_name)
 
         # Step (7.a)
-        libvirt_vm.service_libvirtd_control("stop")
+        utils_libvirtd.libvirtd_stop()
         # TODO: Add more negative cases after libvirtd stopped
-        libvirt_vm.service_libvirtd_control("start")
+        utils_libvirtd.libvirtd_start()
 
         # Step (7.b)
         if not check_list_state(pool_name, "active"):

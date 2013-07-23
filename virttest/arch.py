@@ -58,16 +58,3 @@ def get_kvm_module_list():
         return ["kvm", "kvm-%s" % utils_misc.get_cpu_vendor(verbose=False)]
     elif ARCH == 'ppc64':
         return ["kvm"]
-
-
-def get_qemu_pci_bus_name():
-    """
-    Get the bus name, different arches have different PCI bus names.
-
-    In x86, qemu creates bus: pci.0
-    In ppc64, qemu creates bus: pci
-    """
-    if ARCH == 'ppc64':
-        return 'pci'
-    else:
-        return 'pci.0'

@@ -1,6 +1,6 @@
 import os, time
 from autotest.client.shared import error
-from virttest import libvirt_vm, virsh, aexpect
+from virttest import virsh, aexpect, utils_libvirtd
 
 
 def run_virsh_edit(test, params, env):
@@ -77,7 +77,7 @@ def run_virsh_edit(test, params, env):
     virsh.dumpxml(vm_name, extra="", to_file=xml_file)
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     try:
         if vm_ref == "id":
@@ -100,7 +100,7 @@ def run_virsh_edit(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #Recover VM
     if vm.is_alive():

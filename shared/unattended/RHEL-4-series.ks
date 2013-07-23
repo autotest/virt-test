@@ -7,7 +7,7 @@ langsupport --default=en_US.UTF-8 en_US.UTF-9
 keyboard us
 network --bootproto dhcp
 rootpw 123456
-firewall --enabled --ssh
+firewall --disabled
 selinux --enforcing
 timezone --utc America/New_York
 firstboot --disable
@@ -19,15 +19,34 @@ poweroff
 
 %packages
 @ base
-@ development-libs
-@ development-tools
+@development-libs
+@development-tools
+gcc4
+gcc4-gfortran
+patch
+make
+nc
 ntp
+redhat-lsb
 
-%post --interpreter /usr/bin/python
-import os
-os.system('dhclient')
-os.system('chkconfig sshd on')
-os.system('iptables -F')
-os.system('echo 0 > /selinux/enforce')
-os.system('echo Post set up finished > /dev/ttyS0')
-os.system('echo Post set up finished > /dev/hvc0')
+%post
+echo "OS install is completed" > /dev/ttyS0
+cd home
+dhclient
+chkconfig sshd on
+iptables -F
+echo 0 > selinux/enforce
+sed -i '/^HWADDR/d' /etc/sysconfig/network-scripts/ifcfg-eth0
+echo "s0:2345:respawn:/sbin/agetty -L -f /etc/issue 115200 ttyS0 vt100" >> /etc/inittab
+echo "ttyS0" >> /etc/securetty
+wget http://www.python.org/ftp/python/2.6.6/Python-2.6.6.tar.bz2
+tar xjf Python-2.6.6.tar.bz2
+cd Python-2.6.6
+./configure --prefix=/usr/local --exec-prefix=/usr/local
+make
+make install
+ln -sf /usr/local/bin/python /usr/bin/python
+sleep 10
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0
+%end

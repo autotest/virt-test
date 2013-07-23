@@ -949,17 +949,9 @@ def start(name, **dargs):
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    @return: CmdResult object.
     """
-    if is_alive(name, **dargs):
-        return True
-    dargs['ignore_status'] = False
-    try:
-        command("start %s" % (name), **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Start VM %s failed:\n%s", name, detail)
-        return False
+    return command("start %s" % name, **dargs)
 
 
 def shutdown(name, **dargs):
@@ -999,7 +991,7 @@ def define(xml_path, **dargs):
 
 def undefine(name, **dargs):
     """
-    Return True on successful domain undefine (after shutdown/destroy).
+    Return cmd result of domain undefine (after shutdown/destroy).
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
@@ -1406,13 +1398,7 @@ def pool_info(name, **dargs):
     @param: dargs: standardized virsh function API keywords
     """
     cmd = "pool-info %s" % name
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Pool %s doesn't exist:\n%s", name, detail)
-        return False
+    return command(cmd, **dargs)
 
 
 def pool_destroy(name, **dargs):
@@ -2066,7 +2052,6 @@ def ttyconsole(name, **dargs):
     """
     return command("ttyconsole %s" % name, **dargs)
 
-
 def nodedev_dumpxml(name, options="", to_file=None, **dargs):
     """
     Do dumpxml for node device.
@@ -2086,7 +2071,6 @@ def nodedev_dumpxml(name, options="", to_file=None, **dargs):
 
     return result
 
-
 def connect(connect_uri="", options="", **dargs):
     """
     Run a connect command to the uri.
@@ -2096,3 +2080,81 @@ def connect(connect_uri="", options="", **dargs):
     @return: CmdResult object.
     """
     return command("connect %s %s" % (connect_uri, options), **dargs)
+
+def domif_setlink(name, interface, state, options=None, **dargs):
+    """
+    Set network interface stats for a running domain.
+
+    @param: name: Name of domain
+    @param: interface: interface device
+    @param: state: new state of the device  up or down
+    @param: options: command options.
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    cmd = "domif-setlink %s %s %s " % (name, interface, state)
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
+
+def domif_getlink(name, interface, options=None, **dargs):
+    """
+    Get network interface stats for a running domain.
+
+    @param: name: Name of domain
+    @param: interface: interface device
+    @param: options: command options.
+    @param: dargs: standardized virsh function API keywords
+    @return: domif state
+    """
+    cmd = "domif-getlink %s %s " % (name, interface)
+    if options:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
+
+def nodedev_list(options="", **dargs):
+    """
+    List the node devices.
+
+    @return: CmdResult object.
+    """
+    cmd = "nodedev-list %s" % (options)
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
+
+def nodedev_detach(name, options="", **dargs):
+    """
+    Detach node device from host.
+
+    @return: cmdresult object.
+    """
+    cmd = ("nodedev-detach --device %s %s" % (name, options))
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
+
+def nodedev_dettach(name, options="", **dargs):
+    """
+    Detach node device from host.
+
+    @return: nodedev_detach(name).
+    """
+    return nodedev_detach(name, options, **dargs)
+
+
+def nodedev_reattach(name, options="", **dargs):
+    """
+    If node device is detached, this action will
+    reattach it to its device driver.
+
+    @return: cmdresult object.
+    """
+    cmd = ("nodedev-reattach --device %s %s" % (name, options))
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult

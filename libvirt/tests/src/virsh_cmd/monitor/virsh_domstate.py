@@ -1,6 +1,6 @@
 import re
 from autotest.client.shared import error
-from virttest import libvirt_vm, remote, virsh
+from virttest import libvirt_vm, remote, virsh, utils_libvirtd
 
 def run_virsh_domstate(test, params, env):
     """
@@ -34,7 +34,7 @@ def run_virsh_domstate(test, params, env):
         vm_ref = domuuid
 
     if libvirtd == "off":
-        libvirt_vm.libvirtd_stop()
+        utils_libvirtd.libvirtd_stop()
 
     if vm_ref == "remote":
         remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
@@ -61,7 +61,7 @@ def run_virsh_domstate(test, params, env):
 
     #recover libvirtd service start
     if libvirtd == "off":
-        libvirt_vm.libvirtd_start()
+        utils_libvirtd.libvirtd_start()
 
     #check status_error
     if status_error == "yes":

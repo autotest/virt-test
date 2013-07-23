@@ -25,13 +25,14 @@ ntpdate
 dmidecode
 %end
 
-%post --interpreter /usr/bin/python
-import os
-os.system('grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)')
-os.system('dhclient')
-os.system('chkconfig sshd on')
-os.system('iptables -F')
-os.system('echo 0 > /selinux/enforce')
-os.system('echo Post set up finished > /dev/ttyS0')
-os.system('echo Post set up finished > /dev/hvc0')
+%post
+echo "OS install is completed" > /dev/ttyS0
+grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
+dhclient
+chkconfig sshd on
+iptables -F
+echo 0 > /selinux/enforce
+sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
+echo 'Post set up finished' > /dev/ttyS0
+echo Post set up finished > /dev/hvc0
 %end

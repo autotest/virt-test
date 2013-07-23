@@ -77,7 +77,7 @@ def run_pci_hotplug(test, params, env):
                                   (cmd_type, dev))
 
 
-    def device_add_nic(pci_num):
+    def device_add_nic(pci_num, queues=1):
         device_id = pci_type + "-" + utils_misc.generate_random_id()
         pci_info.append([device_id, device_id])
 
@@ -87,6 +87,8 @@ def run_pci_hotplug(test, params, env):
         verify_supported_device(pci_model)
         pci_add_cmd = "device_add id=%s,driver=%s" % (pci_info[pci_num][1],
                                                       pci_model)
+        if queues > 1 and "virtio" in pci_model:
+            pci_add_cmd += ",mq=on"
         return device_add(pci_num, pci_add_cmd)
 
 
@@ -151,7 +153,7 @@ def run_pci_hotplug(test, params, env):
 
 
     # Hot add a pci device
-    def add_device(pci_num):
+    def add_device(pci_num, queues=1):
         info_pci_ref = vm.monitor.info("pci")
         reference = session.cmd_output(reference_cmd)
 
@@ -164,7 +166,7 @@ def run_pci_hotplug(test, params, env):
         after_add = None
         if add_fuction:
             # Do add pci device.
-            after_add = add_fuction(pci_num)
+            after_add = add_fuction(pci_num, queues)
 
         try:
             # Define a helper function to compare the output
@@ -278,6 +280,7 @@ def run_pci_hotplug(test, params, env):
     local_functions = locals()
 
     pci_num_range = int(params.get("pci_num"))
+    queues = int(params.get("queues"))
     rp_times = int(params.get("repeat_times"))
     img_list = params.get("images").split()
     context_msg = "Running sub test '%s' %s"
@@ -297,7 +300,7 @@ def run_pci_hotplug(test, params, env):
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
 
             error.context("Start hot-adding pci device, repeat %d" % j)
-            add_device(pci_num)
+            add_device(pci_num, queues)
 
             sub_type = params.get("sub_type_after_plug")
             if sub_type:

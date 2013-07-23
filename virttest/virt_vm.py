@@ -228,8 +228,15 @@ class VMMigrateCancelError(VMMigrateError):
 class VMMigrateFailedError(VMMigrateError):
     pass
 
-class VMMigrateProtoUnsupportedError(VMMigrateError):
-    pass
+
+class VMMigrateProtoUnknownError(error.TestNAError):
+    def __init__(self, protocol):
+        self.protocol = protocol
+
+    def __str__(self):
+        return ("Virt Test doesn't know migration protocol '%s'. "
+                "You would have to add it to the list of known protocols" %
+                self.protocol)
 
 
 class VMMigrateStateMismatchError(VMMigrateError):
@@ -288,8 +295,10 @@ class VMPCIOutOfRangeError(VMPCIDeviceError):
 class VMUSBError(VMError):
     pass
 
+
 class VMUSBControllerError(VMUSBError):
     pass
+
 
 class VMUSBControllerMissingError(VMUSBControllerError):
     def __init__(self, name, controller_type):
@@ -301,13 +310,23 @@ class VMUSBControllerMissingError(VMUSBControllerError):
         return ("Could not find '%s' USB Controller on vm '%s'. Please "
                 "check config files." % (self.controller_type, self.name))
 
+
 class VMUSBControllerPortFullError(VMUSBControllerError):
-    def __init__(self, name):
-        VMUSBControllerError.__init__(self, name)
+    def __init__(self, name, usb_dev_dict):
+        VMUSBControllerError.__init__(self, name, usb_dev_dict)
         self.name = name
+        self.usb_dev_dict = usb_dev_dict
 
     def __str__(self):
-        return ("No available USB Controller port left for VM %s." % self.name)
+        output = ""
+        try:
+            for ctl, dev_list in self.usb_dev_dict.iteritems():
+                output += "%s: %s\n" %(ctl, dev_list)
+        except Exception:
+            pass
+
+        return ("No available USB port left on VM %s.\n"
+                "USB devices map is: \n%s" % (self.name, output))
 
 
 class VMUSBPortInUseError(VMUSBError):

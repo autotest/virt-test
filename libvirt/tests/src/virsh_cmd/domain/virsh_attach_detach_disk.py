@@ -145,9 +145,18 @@ def run_virsh_attach_detach_disk(test, params, env):
         if bus_type == "ide" and vm.is_alive():
             vm.destroy(gracefully=False)
         s_attach = virsh.attach_disk(vm_name, device_source, device_target,
-                                     "--driver qemu --config").exit_status
+                                     "--driver qemu --persistent").exit_status
         if s_attach != 0:
             logging.error("Attaching device failed before testing detach-disk")
+        if test_twice:
+            device_target2 = params.get("at_dt_disk_device_target2",
+                                        device_target)
+            create_device_file(device_source)
+            s_attach = virsh.attach_disk(vm_name, device_source, device_target2,
+                                         "--driver qemu --persistent").exit_status
+            if s_attach != 0:
+                logging.error("Attaching device failed before testing "
+                              "detach-disk test_twice")
         if vm.is_dead():
             vm.start()
 
@@ -248,31 +257,32 @@ def run_virsh_attach_detach_disk(test, params, env):
         if status != 0:
             raise error.TestFail("virsh %s failed." % test_cmd)
         if test_cmd == "attach-disk":
-            if not check_count_after_cmd:
-                raise error.TestFail("Cannot see deivce in xml file"
-                                      " after attach.")
-            if not check_vm_after_cmd:
-                raise error.TestFail("Cannot see deivce in VM after attach.")
             if at_options.count("config"):
                 if not check_count_after_shutdown:
-                    raise error.TestFail("Cannot see config attached "
-                                    "device in xml file after VM shutdown.")
+                    raise error.TestFail("Cannot see config attached device "
+                                         "in xml file after VM shutdown.")
             else:
+                if not check_count_after_cmd:
+                    raise error.TestFail("Cannot see device in xml file"
+                                         " after attach.")
+                if not check_vm_after_cmd:
+                    raise error.TestFail("Cannot see device in VM after"
+                                         " attach.")
                 if check_count_after_shutdown:
-                    raise error.TestFail("See non-config attached deivce"
-                                            "in xml file after VM shutdown.")
+                    raise error.TestFail("See non-config attached device"
+                                         "in xml file after VM shutdown.")
         elif test_cmd == "detach-disk":
-            if check_count_after_cmd:
-                raise error.TestFail("See deivce in xml file after detach.")
-            if check_vm_after_cmd:
-                raise error.TestFail("See deivce in VM after detach.")
             if dt_options.count("config"):
                 if check_count_after_shutdown:
-                    raise error.TestFail("See config detached device in"
-                                             " xml file after VM shutdown.")
+                    raise error.TestFail("See config detached device in "
+                                         "xml file after VM shutdown.")
             else:
+                if check_count_after_cmd:
+                    raise error.TestFail("See device in xml file after detach.")
+                if check_vm_after_cmd:
+                    raise error.TestFail("See device in VM after detach.")
                 if not check_count_after_shutdown:
-                    raise error.TestFail("Cannot see non-config detached"
-                                     " device in xml file after VM shutdown.")
+                    raise error.TestFail("Cannot see non-config detached "
+                                         "device in xml file after VM shutdown.")
         else:
             raise error.TestError("Unknown command %s." % test_cmd)

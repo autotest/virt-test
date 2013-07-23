@@ -189,6 +189,7 @@ service sshd restart
       <package>autoyast2-installation</package>
       <package>dhcp-client</package>
       <package>dhcp-tools</package>
+      <package>sg3_utils</package>
       <package>autoyast2-installation</package>
       <package>autoyast2-installation</package>
       <package>autoyast2-installation</package>

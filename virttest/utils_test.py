@@ -28,8 +28,14 @@ from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from autotest.client.tools import scan_results
 from autotest.client.shared.syncdata import SyncData, SyncListenServer
-import aexpect, utils_misc, virt_vm, remote, storage, env_process, utils_cgroup
+import aexpect, utils_misc, virt_vm, remote, storage, env_process
 import virttest
+
+try:
+    from autotest.client.shared import utils_cgroup
+except ImportError:
+    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
+    from virttest import utils_cgroup
 
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
@@ -284,11 +290,11 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
 
     try:
         try:
-            if mig_protocol == "tcp":
+            if mig_protocol in [ "tcp", "rdma", "x-rdma" ]:
                 if dest_host == 'localhost':
-                    uri = "tcp:0:%d" % dest_vm.migration_port
+                    uri = mig_protocol + ":0:%d" % dest_vm.migration_port
                 else:
-                    uri = 'tcp:%s:%d' % (dest_host, mig_port)
+                    uri = mig_protocol + ':%s:%d' % (dest_host, mig_port)
             elif mig_protocol == "unix":
                 uri = "unix:%s" % dest_vm.migration_file
             elif mig_protocol == "exec":
