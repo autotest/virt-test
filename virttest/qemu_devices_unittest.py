@@ -756,11 +756,14 @@ PIIX3
         self.assertNotEqual(re.match(exp, out), None, 'Long representation is'
                             'corrupted:\n%s\n%s' % (out, exp))
 
-        exp = (r"Buses of vm1\n  pci.0\(pci\): \[t'i440FX',t'PIIX3'%s\]  {}"
-                % (',None' * 30))
+        exp = ("Buses of vm1\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3'%s]  {}"
+               % (',None' * 30))
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, "Bus representation is ocrrupted:\n%s\n%s" % (out,
+                                                                         exp)
 
         # Insert some good devices
         qdevice = qemu_devices.QDevice
@@ -793,18 +796,22 @@ PIIX3
                          % (out, qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',hba1,a'dev',"
-               "a'dev',a'dev']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
+               "hba1,a'dev',a'dev',a'dev']")
         out = qdev.str_short()
         self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
                          % (out, exp))
-        exp = (r"Buses of vm1"
-               r"\n  hba1.0\(hba\): {0:a'dev',1:a'dev',2:a'dev'}  {}"
-               r"\n  pci.0\(pci\): \[t'i440FX',t'PIIX3'%s,hba1%s\]  {}"
-               % (',None' * 8, ',None' * 21))
+        exp = ("Buses of vm1\n"
+               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3',None,None,None,None,None,"
+               "None,None,None,hba1,None,None,None,None,None,None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None]  {}")
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, 'Bus representation iscorrupted:\n%s\n%s' % (out,
+                                                                        exp)
 
         # Force insert bad devices: No matching bus
         dev = qdevice('baddev', {}, 'badbus', {'type': 'missing_bus'})
@@ -835,24 +842,27 @@ PIIX3
                          "ret=%s\n%s" % (out, qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',hba1,a'dev',"
-               "a'dev',a'dev',a'baddev',a'baddev',hba1__0]")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
+               "hba1,a'dev',a'dev',a'dev',a'baddev',a'baddev',hba1__0]")
         out = qdev.str_short()
-        self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
-                         % (out, exp))
-        exp = (r"Buses of vm1"
-               r"\n  hba1.0\(hba\): {0:a'dev',1:a'dev',2:a'dev'}  {}"
-               r"\n  pci.0\(pci\): \[t'i440FX',t'PIIX3',a'baddev'%s,hba1%s\]  "
-               r"{}" % (',None' * 7, ',None' * 21))
+        assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
+                                                                           exp)
+        exp = ("Buses of vm1\n"
+               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "None,None,None,None,hba1,None,None,None,None,None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None,None]  {}")
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
+                                                                         exp)
 
         # Now representation contains some devices, play with it a bit
         # length
         out = len(qdev)
-        self.assertEqual(out, 10, "Length of qdev is incorrect: %s != %s"
-                         % (out, 10))
+        assert out == 12, "Length of qdev is incorrect: %s != %s" % (out, 10)
 
         # compare
         qdev2 = self.create_qdev('vm1')
@@ -892,17 +902,21 @@ PIIX3
                          % ('hba1', qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',a'baddev',"
-               "a'baddev']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
+               "a'baddev',a'baddev']")
         out = qdev.str_short()
-        self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
-                         % (out, exp))
-        exp = (r"Buses of vm1"
-               r"\n  pci.0\(pci\): \[t'i440FX',t'PIIX3',a'baddev'%s\]  "
-               r"{}" % (',None' * 29))
+        assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
+                                                                           exp)
+        exp = ("Buses of vm1\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None,None]  {}")
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
+                                                                         exp)
 
     # pylint: disable=W0212
     def test_qdev_low_level(self):
