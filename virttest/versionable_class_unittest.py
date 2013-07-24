@@ -1,13 +1,283 @@
 #!/usr/bin/python
 
-import unittest, logging
+import unittest, cPickle, sys
 try:
     import autotest.common as common
 except ImportError:
     import common
 from autotest.client.shared import base_utils
 from autotest.client.shared.test_utils import mock
-import versionable_class
+from versionable_class import Manager, factory, VersionableClass
+man = Manager(__name__)
+
+# pylint: disable=E1003
+
+
+def qemu_verison():
+    return 2
+
+
+class VM(object):
+    __slot__ = ["cls"]
+
+    test_class_vm1 = None
+
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "qemu_version" in kargs:
+            ver = kargs['qemu_version']
+        else:
+            ver = qemu_verison()
+        if ver < 1:
+            return True
+        else:
+            return False
+
+
+    def __new__(cls, *args, **kargs):
+        return super(VM, cls).__new__(cls, *args, **kargs)
+
+
+    def __init__(self, *args, **kargs):
+        super(VM, self).__init__()
+        self.cls = self.__class__.__name__
+
+
+    def __str__(self):
+        return "%s" % self.cls
+
+
+    def func1(self):
+        print "VM_func1"
+
+
+    def func3(self):
+        pass
+
+
+class VM1(VM):
+    __slot__ = ["VM1_cls"]
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "qemu_version" in kargs:
+            ver = kargs['qemu_version']
+        else:
+            ver = qemu_verison()
+        if ver > 1:
+            return True
+        else:
+            return False
+
+    def __init__(self, *args, **kargs):
+        super(VM1, self).__init__(*args, **kargs)
+        self.cls = self.__class__.__name__
+        self.VM1_cls = "VM1"
+
+
+    def __str__(self):
+        return "%s" % self.cls
+
+
+    def func1(self):
+        super(VM1, self).func1()
+
+
+    def func2(self):
+        print "func2"
+
+
+    def func3(self):
+        pass
+
+
+class VM_container(VersionableClass):
+    __master__ = VM1
+
+    def __new__(cls, *args, **kargs):
+        return super(man[cls, VM_container], cls).__new__(cls, *args, **kargs)
+
+
+class BB(VM_container):
+    test_class_bb = None
+
+    def __new__(cls, *args, **kargs):
+        return super(man[cls, BB], cls).__new__(cls, *args, **kargs)
+
+
+    def func1(self):
+        super(man[self.__class__, BB], self).func1()
+
+
+    def func2(self):
+        super(man[self.__class__, BB], self).func2()
+
+
+def system_version():
+    return 2
+
+
+class System(object):
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "system_version" in kargs:
+            ver = kargs['system_version']
+        else:
+            ver = system_version()
+        if ver < 1:
+            return True
+        else:
+            return False
+
+
+    def __init__(self, *args, **kargs):
+        super(System, self).__init__()
+        self.aa = self.__class__.__name__
+
+
+    def __str__(self):
+        return "VM1 %s" % self.aa
+
+
+
+class System1(System):
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "system_version" in kargs:
+            ver = kargs['system_version']
+        else:
+            ver = system_version()
+        if ver > 1:
+            return True
+        else:
+            return False
+
+    def __init__(self, *args, **kargs):
+        super(System1, self).__init__(*args, **kargs)
+        self.aa = self.__class__.__name__
+
+
+    def __str__(self):
+        return "VM1 %s" % self.aa
+
+
+class System_Container(VersionableClass):
+    __master__ = System1
+
+    def __new__(cls, *args, **kargs):
+        return super(man[cls, System_Container], cls).__new__(cls, *args, **kargs)
+
+
+class Q(object):
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "q_version" in kargs:
+            ver = kargs['q_version']
+        else:
+            ver = system_version()
+        if ver < 1:
+            return True
+        else:
+            return False
+
+
+    def __init__(self, *args, **kargs):
+        super(Q, self).__init__()
+        self.cls = self.__class__.__name__
+
+
+    def __str__(self):
+        return "%s" % self.cls
+
+
+
+class Q1(Q):
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "q_version" in kargs:
+            ver = kargs['q_version']
+        else:
+            ver = system_version()
+        if ver > 1:
+            return True
+        else:
+            return False
+
+    def __init__(self, *args, **kargs):
+        super(man[self.__class__, Q1], self).__init__(*args, **kargs)
+        self.cls = self.__class__.__name__
+
+
+    def __str__(self):
+        return "%s" % self.cls
+
+
+class Q_Container(VersionableClass):
+    __master__ = Q1
+
+
+class Sys(Q_Container):
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "system_version" in kargs:
+            ver = kargs['system_version']
+        else:
+            ver = system_version()
+        if ver < 1:
+            return True
+        else:
+            return False
+
+
+    def __init__(self, *args, **kargs):
+        super(man[self.__class__, Sys], self).__init__(*args, **kargs)
+        self.cls = self.__class__.__name__
+
+
+    def __str__(self):
+        return "%s" % self.cls
+
+
+
+class Sys1(Sys):
+    @classmethod
+    def _is_right_ver(cls, *args, **kargs):
+        ver = None
+        if "system_version" in kargs:
+            ver = kargs['system_version']
+        else:
+            ver = system_version()
+        if ver > 1:
+            return True
+        else:
+            return False
+
+    def __init__(self, *args, **kargs):
+        super(man[self.__class__, Sys1], self).__init__(*args, **kargs)
+        self.cls = self.__class__.__name__
+
+
+    def __str__(self):
+        return "%s" % self.cls
+
+
+class Sys_Container(VersionableClass):
+    __master__ = Sys1
+
+    def __new__(cls, *args, **kargs):
+        return super(man[cls, Sys_Container], cls).__new__(cls, *args, **kargs)
+
+
+class AA(Sys_Container, BB, System_Container):
+    def __new__(cls, *args, **kargs):
+        return super(man[cls, AA], cls).__new__(cls, *args, **kargs)
+
 
 class TestVersionableClass(unittest.TestCase):
     def setUp(self):
@@ -21,225 +291,134 @@ class TestVersionableClass(unittest.TestCase):
         self.god.unstub_all()
 
 
-    class FooC(object):
-        pass
-
-    #Not implemented get_version -> not used for versioning.
-    class VCP(FooC, versionable_class.VersionableClass):
-        def __new__(cls, *args, **kargs):
-            TestVersionableClass.VCP.version = 1       # Only for unittesting.
-            TestVersionableClass.VCP.master_class = TestVersionableClass.VCP
-            return (super(TestVersionableClass.VCP, cls)
-                                                .__new__(cls, *args, **kargs))
-
-
-        def foo(self):
-            pass
-
-    class VC2(VCP, versionable_class.VersionableClass):
-        @classmethod
-        def get_version(cls):
-            return cls.version
-
-        @classmethod
-        def is_right_version(cls, version):
-            if version is not None:
-                if version == 1:
-                    return True
-            return False
-
-        def func1(self):
-            logging.info("func1")
-
-        def func2(self):
-            logging.info("func2")
-
-    # get_version could be inherited.
-    class VC3(VC2, versionable_class.VersionableClass):
-        @classmethod
-        def is_right_version(cls, version):
-            if version is not None:
-                if version == 2:
-                    return True
-            return False
-
-        def func2(self):
-            logging.info("func2_2")
-
-    class PP(versionable_class.VersionableClass):
-        def __new__(cls, *args, **kargs):
-            TestVersionableClass.PP.version = 1       # Only for unittesting.
-            TestVersionableClass.PP.master_class = TestVersionableClass.PP
-            return (super(TestVersionableClass.PP, cls)
-                                                 .__new__(cls, *args, **kargs))
-
-    class PP2(PP, versionable_class.VersionableClass):
-        @classmethod
-        def get_version(cls):
-            return cls.version
-
-        @classmethod
-        def is_right_version(cls, version):
-            if version is not None:
-                if cls.version == 1:
-                    return True
-            return False
-
-        def func1(self):
-            print "PP func1"
-
-
-    class WP(versionable_class.VersionableClass):
-        def __new__(cls, *args, **kargs):
-            TestVersionableClass.WP.version = 1       # Only for unittesting.
-            TestVersionableClass.WP.master_class = TestVersionableClass.WP
-            return (super(TestVersionableClass.WP, cls)
-                                                 .__new__(cls, *args, **kargs))
-
-    class WP2(WP, versionable_class.VersionableClass):
-        @classmethod
-        def get_version(cls):
-            return cls.version
-
-        def func1(self):
-            print "WP func1"
-
-
-    class N(VCP, PP):
-        pass
-
-    class NN(N):
-        pass
-
-    class M(VCP):
-        pass
-
-    class MM(M):
-        pass
-
-    class W(WP):
-        pass
-
-
     def test_simple_versioning(self):
-        self.god.stub_function(TestVersionableClass.VCP, "foo")
-        self.god.stub_function(TestVersionableClass.VC2, "func1")
-        self.god.stub_function(TestVersionableClass.VC2, "func2")
-        self.god.stub_function(TestVersionableClass.VC3, "func2")
+        self.god.stub_function(VM, "func1")
+        self.god.stub_function(VM1, "func2")
 
-        TestVersionableClass.VC2.func2.expect_call()
-        TestVersionableClass.VC2.func1.expect_call()
-        TestVersionableClass.VCP.foo.expect_call()
-        TestVersionableClass.VC3.func2.expect_call()
+        VM1.func2.expect_call()
+        VM.func1.expect_call()
 
-        TestVersionableClass.VC2.func2.expect_call()
-        TestVersionableClass.VC2.func1.expect_call()
-        TestVersionableClass.VCP.foo.expect_call()
-        TestVersionableClass.VC3.func2.expect_call()
-
-        m = TestVersionableClass.M()
-        m.func2()   # call VC3.func2(m)
-        m.func1()   # call VC2.func1(m)
-        m.foo()     # call VC1.foo(m)
-        m.version = 2
-        m.check_repair_versions()
-        m.func2()
-
-        #m.version = 1
-        #m.check_repair_versions()
-
-        mm = TestVersionableClass.MM()
-        mm.func2()   # call VC3.func2(m)
-        mm.func1()   # call VC2.func1(m)
-        mm.foo()     # call VC1.foo(m)
-        mm.version = 2
-        mm.check_repair_versions()
-        mm.func2()
-
-        self.god.check_playback()
-
-    def test_set_class_priority(self):
-        self.god.stub_function(TestVersionableClass.VC2, "func1")
-        self.god.stub_function(TestVersionableClass.VC2, "func2")
-        self.god.stub_function(TestVersionableClass.VC3, "func2")
-        self.god.stub_function(TestVersionableClass.PP2, "func1")
-
-        TestVersionableClass.VC2.func1.expect_call()
-        TestVersionableClass.PP2.func1.expect_call()
-        TestVersionableClass.VC3.func2.expect_call()
-        TestVersionableClass.PP2.func1.expect_call()
-        TestVersionableClass.VC2.func1.expect_call()
-        TestVersionableClass.VC2.func2.expect_call()
-
-        m = TestVersionableClass.N()
-        m.func1()
-        m.set_priority_class(TestVersionableClass.PP,
-                             [TestVersionableClass.PP,
-                              TestVersionableClass.VCP])
-        m.func1()
-
-        m.version = 2
-        m.check_repair_versions()
-        m.func2()
-        m.func1()
-
-        m.set_priority_class(TestVersionableClass.VCP,
-                             [TestVersionableClass.PP,
-                              TestVersionableClass.VCP])
-
-        m.func1()
-
-        m.version = 1
-        m.check_repair_versions()
-        m.func2()
+        mm = factory(BB)()
+        # check class name.
+        self.assertEqual(str(mm), "managed_BB_VM1")
+        mm.func2()   # call BB.func2(m) -> VM1.func2
+        mm.func1()   # call VM1.func1(m) -> VM.func1
 
         self.god.check_playback()
 
 
-    def test_set_class_priority_deep(self):
-        self.god.stub_function(TestVersionableClass.VC2, "func1")
-        self.god.stub_function(TestVersionableClass.VC2, "func2")
-        self.god.stub_function(TestVersionableClass.VC3, "func2")
-        self.god.stub_function(TestVersionableClass.PP2, "func1")
+    def test_simple_create_by_params_v0(self):
+        def wrap(mm):
+            mm.VM1_cls
 
-        TestVersionableClass.VC2.func1.expect_call()
-        TestVersionableClass.PP2.func1.expect_call()
-        TestVersionableClass.VC3.func2.expect_call()
-        TestVersionableClass.PP2.func1.expect_call()
-        TestVersionableClass.VC2.func1.expect_call()
-        TestVersionableClass.VC2.func2.expect_call()
+        self.god.stub_function(VM, "func3")
+        self.god.stub_function(VM1, "func3")
 
-        m = TestVersionableClass.NN()
-        m.func1()
-        m.set_priority_class(TestVersionableClass.PP,
-                             [TestVersionableClass.PP,
-                              TestVersionableClass.VCP])
-        m.func1()
+        VM.func3.expect_call()
 
-        m.version = 2
-        m.check_repair_versions()
-        m.func2()
-        m.func1()
-
-        m.set_priority_class(TestVersionableClass.VCP,
-                             [TestVersionableClass.PP,
-                              TestVersionableClass.VCP])
-
-        m.func1()
-
-        m.version = 1
-        m.check_repair_versions()
-        m.func2()
+        mm = factory(BB, qemu_version=0)()
+        # check class name.
+        self.assertEqual(str(mm), "managed_BB_VM")
+        mm.func3()   # call VM1.func1(m) -> VM.func1
+        self.assertRaises(AttributeError, wrap, mm)
 
         self.god.check_playback()
 
 
-    def test_check_not_implemented(self):
-        m = TestVersionableClass.W()
-        self.assertEqual(m.__class__.__bases__,
-                      tuple([TestVersionableClass.WP2]),
-                      "Class should be WP2 (last defined class in class"
-                      " hierarchy).")
+    def test_simple_create_by_params_v1(self):
+        self.god.stub_function(VM, "func3")
+        self.god.stub_function(VM1, "func3")
+
+        VM1.func3.expect_call()
+
+        mm = factory(BB, qemu_version=2)()
+        # check class name.
+        self.assertEqual(str(mm), "managed_BB_VM1")
+        mm.func3()   # call VM1.func1(m) -> VM.func1
+        self.assertEqual(mm.VM1_cls, "VM1")
+
+        self.god.check_playback()
+
+
+    def test_sharing_data_in_same_version(self):
+        mm = factory(BB)()
+        bb = factory(BB)()
+        cc = factory(BB, qemu_version=0)()
+
+
+        # Get corespond class in versionable class
+        man[bb.__class__, VM].test_class_vm1 = 1
+        man[bb.__class__, BB].test_class_bb = 2
+        man[cc.__class__, BB].test_class_bb = 3
+        # check class name.
+        self.assertEqual(bb.__class__.test_class_vm1,
+                         mm.__class__.test_class_vm1)
+        self.assertEqual(bb.__class__.test_class_bb,
+                            mm.__class__.test_class_bb)
+
+        # In class hierarchy is class which don't have to be versioned
+        # because that first value should be equal and second one shouldn't.
+        self.assertEqual(bb.__class__.test_class_vm1,
+                         cc.__class__.test_class_vm1)
+        self.assertNotEqual(bb.__class__.test_class_bb,
+                            cc.__class__.test_class_bb)
+
+
+
+    def test_complicated_versioning(self):
+        self.god.stub_function(VM, "func3")
+        self.god.stub_function(VM1, "func3")
+
+        VM1.func3.expect_call()
+
+        mm = factory(AA)()
+        # check class name.
+        self.assertEqual(str(mm), "managed_AA_Sys1_Q1_VM1_System1")
+        mm.func3()   # call VM1.func1(m) -> VM.func1
+
+        self.god.check_playback()
+
+
+    def test_complicated_multiple_create_params(self):
+        self.god.stub_function(VM, "func3")
+        self.god.stub_function(VM1, "func3")
+
+        VM1.func3.expect_call()
+
+        mm = factory(AA, qemu_version=0, system_version=2, q_version=0)()
+        # check class name.
+        self.assertEqual(str(mm), "managed_AA_Sys1_Q_VM_System1")
+        mm.func3()   # call VM1.func1(m) -> VM.func1
+
+        self.god.check_playback()
+
+
+    def test_pickleing(self):
+        """
+        Test pickling for example save vm env.
+        """
+        m = factory(AA, system_version=0, qemu_version=0)()
+        mm = factory(BB, qemu_version=3)()
+
+        f = open("/tmp/pick", "w+")
+        cPickle.dump(m, f, cPickle.HIGHEST_PROTOCOL)
+        cPickle.dump(mm, f, cPickle.HIGHEST_PROTOCOL)
+        f.close()
+
+        # Delete classes for ensure that pickel works correctly.
+        name = m.__class__.__name__
+        del m
+        del globals()[name]
+
+        name = mm.__class__.__name__
+        del mm
+        del globals()[name]
+
+        f = open("/tmp/pick", "r+")
+        c = cPickle.load(f)
+        cc = cPickle.load(f)
+        f.close()
+
 
 if __name__ == "__main__":
     unittest.main()

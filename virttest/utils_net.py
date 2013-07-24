@@ -4,6 +4,7 @@ import shelve, commands
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 import propcan, utils_misc, arch, aexpect
+from versionable_class import factory
 
 CTYPES_SUPPORT = True
 try:
@@ -579,7 +580,7 @@ def __init_openvswitch(func):
         global __ovs
         if __ovs is None:
             try:
-                __ovs = openvswitch.OpenVSwitchSystem()
+                __ovs = factory(openvswitch.OpenVSwitchSystem)()
                 __ovs.init_system()
                 if (not __ovs.check()):
                     raise Exception("Check of OpenVSwitch failed.")
