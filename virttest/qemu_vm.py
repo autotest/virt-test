@@ -3415,7 +3415,9 @@ class VM(virt_vm.BaseVM):
         self.monitor.migrate("exec:cat>%s" % path, wait=False)
         utils_misc.wait_for(
             # no monitor.migrate-status method
-            lambda : "status: completed" in self.monitor.info("migrate"),
+            lambda :
+                re.search("(status.*completed)",
+                          str(self.monitor.info("migrate")), re.M),
             self.MIGRATE_TIMEOUT, 2, 2,
             "Waiting for save to %s to complete" % path)
         # Restore the speed and downtime to default values
