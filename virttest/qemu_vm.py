@@ -1247,12 +1247,7 @@ class VM(virt_vm.BaseVM):
                                   parent_bus={'type': 'pci'}))
 
         # When old scsi fmt is used, new device with lowest pci_addr is created
-        i = 6   # We are going to divide it by 7 so 6 will result in 0
-        for image_name in params.objects("images"):
-            if params.object_params(image_name).get('drive_format') == 'scsi':
-                i += 1
-        for _ in xrange(i / 7):     # Autocreated lsi hba
-            devices.insert(StrDev('FAKE_SCSI_HBA', parent_bus={'type': 'pci'}))
+        devices.hook_fill_scsi_hbas(params)
 
         # -soundhw addresses are always the lowest after scsi
         soundhw = params.get("soundcards")
@@ -1350,7 +1345,9 @@ class VM(virt_vm.BaseVM):
             for dev in devices.usbc_by_params(usb_name, usb_params):
                 devices.insert(dev)
 
+        # Add images (harddrives)
         for image_name in params.objects("images"):
+            # FIXME: Use qemu_devices for handling indexes
             image_params = params.object_params(image_name)
             if image_params.get("boot_drive") == "no":
                 continue
@@ -1364,27 +1361,6 @@ class VM(virt_vm.BaseVM):
                     index_global += 1
             else:
                 index = None
-            if image_params.get("drive_format") == "ahci" and not have_ahci:
-                dev = QDevice('ahci', parent_bus={'type': 'pci'})
-                dev.set_param('id', 'ahci')
-                devices.insert(dev)
-                have_ahci = True
-
-            bus = None
-            port = None
-            if image_params.get("drive_format").startswith("scsi-"):
-                try:
-                    bus = int(image_params.get("drive_bus", 0))
-                except ValueError:
-                    raise virt_vm.VMError("cfg: drive_bus have to be an "
-                                          "integer. (%s)" % image_name)
-                for i in range(len(virtio_scsi_pcis), bus + 1):
-                    hba = params.get("scsi_hba", "virtio-scsi-pci")
-                    dev = QDevice(hba, parent_bus={'type': 'pci'})
-                    dev.set_param('id', 'virtio_scsi_pci%d' % i)
-                    devices.insert(dev)
-                    virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
-
             image_bootindex = None
             image_boot = image_params.get("image_boot")
             if not re.search("boot=on\|off", devices.get_help_text(),
@@ -1400,52 +1376,14 @@ class VM(virt_vm.BaseVM):
                     if global_image_bootindex > 0:
                         image_boot = False
                     global_image_bootindex += 1
-
-            base_dir = image_params.get("images_base_dir",
-                                        data_dir.get_data_dir())
-
-            shared_dir = os.path.join(self.root_dir, "shared")
-            add_drive(devices,
-                      storage.get_image_filename(image_params,
-                                                 base_dir),
-                      index,
-                      image_params.get("drive_format"),
-                      image_params.get("drive_cache"),
-                      image_params.get("drive_werror"),
-                      image_params.get("drive_rerror"),
-                      image_params.get("drive_serial"),
-                      image_params.get("image_snapshot"),
-                      image_boot,
-                      storage.get_image_blkdebug_filename(image_params,
-                                                          shared_dir),
-                      bus,
-                      port,
-                      image_bootindex,
-                      image_params.get("removable"),
-                      image_params.get("min_io_size"),
-                      image_params.get("opt_io_size"),
-                      image_params.get("physical_block_size"),
-                      image_params.get("logical_block_size"),
-                      image_params.get("image_readonly"),
-                      image_params.get("drive_scsiid"),
-                      image_params.get("drive_lun"),
-                      image_params.get("image_format"),
-                      image_params.get("image_aio", "native"),
-                      "disk", ide_bus, ide_unit, vdisk, scsi_disk,
-                      image_params.get("drive_pci_addr"),
-                      scsi=image_params.get("virtio-blk-pci_scsi"),
-                      x_data_plane=image_params.get("x-data-plane"),
-                      blk_extra_params=image_params.get("blk_extra_params"))
-            # increase the bus and unit no for ide device
-            format = image_params.get("drive_format")
-            if format == "ide":
-                if ide_unit == 1:
-                    ide_bus += 1
-                ide_unit ^= 1
-            elif format == "virtio":
-                vdisk += 1
-            elif format.startswith("scsi-"):
-                scsi_disk += 1
+            img_params = params.object_params(image_name)
+            if img_params.get("boot_drive") == "no":
+                continue
+            devs = devices.images_define_by_params(image_name, img_params,
+                                                   'disk', index, image_boot,
+                                                   image_bootindex)
+            for _ in devs:
+                devices.insert(_)
 
         # Networking
         redirs = []
@@ -1584,36 +1522,14 @@ class VM(virt_vm.BaseVM):
             cmd = add_cpu_flags(devices, cpu_model, flags, vendor, family)
             devices.insert(StrDev('cpu', cmdline=cmd))
 
+        # Add cdroms
         for cdrom in params.objects("cdroms"):
-            cdrom_params = params.object_params(cdrom)
-            cd_format = cdrom_params.get("cd_format", "")
-            iso = cdrom_params.get("cdrom")
-            bus = None
-            port = None
-            bootindex = cdrom_params.get("bootindex")
-            if cd_format == "ahci" and not have_ahci:
-                dev = QDevice('ahci', parent_bus={'type': 'pci'})
-                dev.set_param('id', 'ahci')
-                devices.insert(dev)
-                have_ahci = True
-            if cd_format and cd_format.startswith("scsi-"):
-                try:
-                    bus = int(cdrom_params.get("drive_bus", 0))
-                except ValueError:
-                    raise virt_vm.VMError("cfg: drive_bus have to be an "
-                                          "integer. (%s)" % cdrom)
-                for i in range(len(virtio_scsi_pcis), bus + 1):
-                    hba = params.get("scsi_hba", "virtio-scsi-pci")
-                    dev = QDevice(hba, parent_bus={'type': 'pci'})
-                    dev.set_param('id', 'virtio_scsi_pci%d' % i)
-                    devices.insert(dev)
-                    virtio_scsi_pcis.append("virtio_scsi_pci%d" % i)
-            if iso:
-                iso = utils_misc.get_path(data_dir.get_data_dir(), iso)
-            elif cdrom_params.get("cdrom_without_file") != "yes":
+            img_params = params.object_params(cdrom)
+            # FIXME: Use qemu_devices for handling indexes
+            if img_params.get("boot_drive") == "no":
                 continue
-            if cdrom_params.get("index_enable") == "yes":
-                drive_index = cdrom_params.get("drive_index")
+            if params.get("index_enable") == "yes":
+                drive_index = img_params.get("drive_index")
                 if drive_index:
                     index = drive_index
                 else:
@@ -1622,47 +1538,54 @@ class VM(virt_vm.BaseVM):
                     index_global += 1
             else:
                 index = None
-            if devices.has_option("device"):
-                if not cd_format.startswith("scsi-"):
-                    cd_format = "ide"
-                add_drive(devices, iso, index, cd_format,
-                          bootindex=bootindex,
-                          media="cdrom",
-                          ide_bus=ide_bus,
-                          ide_unit=ide_unit,
-                          bus=bus,
-                          scsi_disk=scsi_disk)
+            image_bootindex = None
+            image_boot = img_params.get("image_boot")
+            if not re.search("boot=on\|off", devices.get_help_text(),
+                             re.MULTILINE):
+                if image_boot in ['yes', 'on', True]:
+                    image_bootindex = str(global_image_bootindex)
+                    global_image_bootindex += 1
+                image_boot = "unused"
+                image_bootindex = image_params.get('bootindex', image_bootindex)
             else:
-                cmd = add_cdrom(devices, iso, index)
-                devices.insert(StrDev('cd-%s' % cdrom, cmdline=cmd))
-            if cd_format == "ide":
-                if ide_unit == 1:
-                    ide_bus += 1
-                ide_unit ^= 1
-            elif cd_format.startswith("scsi-"):
-                scsi_disk += 1
+                if image_boot in ['yes', 'on', True]:
+                    if global_image_bootindex > 0:
+                        image_boot = False
+                    global_image_bootindex += 1
+            iso = img_params.get("cdrom")
+            if iso or img_params.get("cdrom_without_file") == "yes":
+                if iso:
+                    # TODO: Unify image, cdrom, floppy params
+                    img_params['drive_format'] = img_params.get('cd_format')
+                    # Use the absolute patch with cdroms (pure *.iso)
+                    img_params['image_raw_device'] = 'yes'
+                    img_params['image_name'] = utils_misc.get_path(
+                                                    data_dir.get_data_dir(),
+                                                    img_params.get('cdrom'))
+                devs = devices.images_define_by_params(cdrom, img_params,
+                                                       'cdrom', index,
+                                                       image_boot,
+                                                       image_bootindex)
+                for _ in devs:
+                    devices.insert(_)
 
         # We may want to add {floppy_otps} parameter for -fda, -fdb
         # {fat:floppy:}/path/. However vvfat is not usually recommended.
-        for index, floppy_name in enumerate(params.objects("floppies")):
-            if index > 1:
-                logging.warn("At most support two floppy in qemu-kvm")
-            else:
-                floppy_params = params.object_params(floppy_name)
-                floppy_readonly = floppy_params.get("floppy_readonly", "no")
-                floppy_readonly = floppy_readonly == "yes"
-                floppy = utils_misc.get_path(data_dir.get_data_dir(),
-                                             floppy_params.get("floppy_name"))
-                if devices.has_option("global"):
-                    add_drive(devices, floppy,
-                              fmt="floppy",
-                              index=index,
-                              readonly=floppy_readonly,
-                              imgfmt=params.get("floppy_format",
-                                                "raw"))
-                else:
-                    cmd = add_floppy(devices, floppy, index)
-                    devices.insert(StrDev('fd-%s' % floppy_name, cmdline=cmd))
+        for floppy_name in params.objects('floppies'):
+            img_params = params.object_params(floppy_name)
+            # TODO: Unify image, cdrom, floppy params
+            img_params['drive_format'] = 'floppy'
+            img_params['image_readonly'] = img_params.get("floppy_readonly",
+                                                          "no")
+            # Use the absolute patch with floppies (pure *.vfd)
+            img_params['image_raw_device'] = 'yes'
+            img_params['image_name'] = utils_misc.get_path(
+                                            data_dir.get_data_dir(),
+                                            img_params["floppy_name"])
+            devs = devices.images_define_by_params(floppy_name, img_params,
+                                                   'floppy')
+            for _ in devs:
+                devices.insert(_)
 
         # Add usb devices
         for usb_dev in params.objects("usb_devices"):
