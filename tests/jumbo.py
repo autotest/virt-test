@@ -1,4 +1,4 @@
-import logging, commands, random, re
+import logging, commands, random
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_misc, utils_test, utils_net
@@ -23,19 +23,6 @@ def run_jumbo(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-    def get_drive_num(session, path):
-
-        """
-        return file path drive
-        """
-        cmd = "wmic datafile where \"path='%s'\" get drive" % path
-        info = session.cmd_output(cmd, timeout=360).strip()
-        drive_num = re.search(r'(\w):', info, re.M)
-        if not drive_num:
-            raise error.TestError("No path %s in your guest" % path)
-        return drive_num.group()
-
-
     timeout = int(params.get("login_timeout", 360))
     mtu = params.get("mtu", "1500")
     max_icmp_pkt_size = int(mtu) - 28
@@ -75,9 +62,8 @@ def run_jumbo(test, params, env):
                                                             "netconnectionid",
                                                              connection_id,
                                                              "pnpdeviceid")
-                devcon_path = r"\\devcon\\wxp_x86\\"
-                cd_num = get_drive_num(session, devcon_path)
-                copy_cmd = r"xcopy %s\devcon\wxp_x86\devcon.exe c:\ " % cd_num
+                cd_num = utils_misc.get_winutils_vol(session)
+                copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_num
                 session.cmd(copy_cmd)
 
 
@@ -180,5 +166,6 @@ def run_jumbo(test, params, env):
         # Environment clean
         if session:
             session.close()
-        logging.info("Removing the temporary ARP entry")
-        utils.run("arp -d %s -i %s" % (ip, ifname))
+        if utils.system("grep '%s.*%s' /proc/net/arp" % (ip, ifname)) == '0':
+            utils.run("arp -d %s -i %s" % (ip, ifname))
+            logging.info("Removing the temporary ARP entry successfully")
