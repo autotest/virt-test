@@ -1327,11 +1327,6 @@ class VM(virt_vm.BaseVM):
         # Set the X11 display parameter if requested
         if params.get("x11_display"):
             cmd += "DISPLAY=%s " % params.get("x11_display")
-        # Update LD_LIBRARY_PATH for built libraries (libspice-server)
-        library_path = os.path.join(self.root_dir, 'build', 'lib')
-        if os.path.isdir(library_path):
-            library_path = os.path.abspath(library_path)
-            cmd += "LD_LIBRARY_PATH=%s " % library_path
         if params.get("qemu_audio_drv"):
             cmd += "QEMU_AUDIO_DRV=%s " % params.get("qemu_audio_drv")
         # Add command prefix for qemu-kvm. like taskset, valgrind and so on
