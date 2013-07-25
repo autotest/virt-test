@@ -297,6 +297,16 @@ class VMXML(VMXMLBase):
             return False
         return True
 
+    def sync(self):
+        """Rebuild VM with the config file."""
+        backup = self.new_from_dumpxml(self.vm_name)
+        if not self.undefine():
+            raise xcepts.LibvirtXMLError("Failed to undefine %s.", self.vm_name)
+        if not self.define():
+            backup.define()
+            raise xcepts.LibvirtXMLError("Failed to define %s, from %s."
+                                         % (self.vm_name, self.xml))
+
     @staticmethod
     def vm_rename(vm, new_name, uuid=None, virsh_instance=base.virsh):
         """
