@@ -37,6 +37,7 @@ coreutils
 usbutils
 qemu-guest-agent
 sg3_utils
+xfsprogs
 
 %post
 echo "OS install is completed" > /dev/ttyS0
