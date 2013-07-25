@@ -553,6 +553,9 @@ service network restart
     <packages config:type="list">
       <package>dhcp-client</package>
       <package>sg3_utils</package>
+      <package>lsscsi</package>
+      <package>libaio-devel</package>
+      <package>perl-Time-HiRes</package>
     </packages>
     <patterns config:type="list">
       <pattern>Basis-Devel</pattern>
