@@ -3,7 +3,7 @@ Module to control libvirtd service.
 """
 import logging, re
 from virttest import remote, aexpect
-from autotest.client.shared import error
+from autotest.client.shared import error, service
 from autotest.client import utils, os_dep
 
 
@@ -80,7 +80,13 @@ def service_libvirtd_control(action, remote_ip=None,
             if session:
                 session.cmd(service_cmd)
             else:
-                utils.run(service_cmd)
+                if action.find('-') != -1:
+                    action = action.replace('-', '_')
+                    extend_cmd_dict = {action:True}
+                init_name = service.get_name_of_init()
+                service.COMMANDS_SERVICE[init_name].update(extend_cmd_dict)
+                libvirtd_service = service.SpecificServiceManager(libvirtd)
+                eval("libvirtd_service.%s()" % action)
         except (error.CmdError, aexpect.ShellError), detail:
             raise LibvirtdActionError(action, detail)
 
@@ -93,7 +99,9 @@ def service_libvirtd_control(action, remote_ip=None,
             if status:
                 raise LibvirtdActionError(action, output)
         else:
-            cmd_result = utils.run(service_cmd, ignore_status=True)
+            libvirtd_service = service.SpecificServiceManager(libvirtd)
+            cmd_result = eval("libvirtd_service.%s(ignore_status=True)"
+                              % action)
             if cmd_result.exit_status:
                 raise LibvirtdActionError(action, cmd_result.stderr)
             output = cmd_result.stdout
@@ -142,6 +150,32 @@ def libvirtd_start():
         return True
     except LibvirtdActionError, detail:
         logging.debug("Failed to start libvirtd:\n%s", detail)
+        return False
+
+
+def libvirtd_force_reload():
+    """
+    Force-reload libvirt daemon.
+    """
+    try:
+        service_libvirtd_control('force-reload')
+        logging.debug("Force-reload libvirtd successfuly")
+        return True
+    except LibvirtdActionError, detail:
+        logging.debug("Failed to force-reload libvirtd:\n%s", detail)
+        return False
+
+
+def libvirtd_try_restart():
+    """
+    Try-restart libvirt daemon.
+    """
+    try:
+        service_libvirtd_control('try-restart')
+        logging.debug("Try-restart libvirtd successfuly")
+        return True
+    except LibvirtdActionError, detail:
+        logging.debug("Failed to try-restart libvirtd:\n%s", detail)
         return False
 
 
