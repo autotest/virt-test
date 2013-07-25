@@ -1907,4 +1907,9 @@ def run_virtio_console(test, params, env):
                       "".join(traceback.format_exception(
                                               exc_type, exc_value,
                                               exc_traceback.tb_next)))
-            raise error.TestFail('%s failed: %s' % (_fce, details))
+            if isinstance(details, error.TestError):
+                raise error.TestError('%s error: %s' % (_fce, details))
+            elif isinstance(details, error.TestNAError):
+                raise error.TestNAError('%s skipped: %s' % (_fce, details))
+            else:
+                raise error.TestFail('%s failed: %s' % (_fce, details))
