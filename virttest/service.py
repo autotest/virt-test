@@ -1,7 +1,24 @@
-import common, os
-from autotest.client.shared import service as client_service
+import common
+import os
+
+from autotest.client import utils
+from autotest.client.shared import service as shared_service
 from autotest.client.shared import error
 from virttest import remote
+
+
+def get_remote_runner(session):
+    def run(command):
+        """
+        Execute command with session and return a utils.CmdResult object.
+
+        """
+        status, output = session.cmd_status_output(command)
+        return utils.CmdResult(command=command,
+                               exit_status=status,
+                               stdout=output,
+                               stderr=output)
+    return run
 
 
 def get_name_of_init(remote_session=None):
@@ -23,6 +40,18 @@ def get_name_of_init(remote_session=None):
         return os.path.basename(output.strip())
 
 
+def _get_service_result_parser(remote_session=None):
+    """
+    Get the ServiceResultParser using the auto-detect init command.
+
+    :return: ServiceResultParser fro the current init command.
+    :rtype: _ServiceResultParser
+    """
+    result_parser = shared_service._result_parsers[get_name_of_init()]
+    _service_result_parser = shared_service._ServiceResultParser(result_parser)
+    return _service_result_parser
+
+
 def _get_service_command_generator(remote_session=None):
     """
     Lazy initializer for ServiceCommandGenerator using the auto-detect init command.
@@ -31,8 +60,8 @@ def _get_service_command_generator(remote_session=None):
     :rtype: _ServiceCommandGenerator
     """
     init_name = get_name_of_init(remote_session)
-    command_generator = client_service._command_generators[init_name]
-    return client_service._ServiceCommandGenerator(command_generator)
+    command_generator = shared_service._command_generators[init_name]
+    return shared_service._ServiceCommandGenerator(command_generator)
 
 
 def ServiceManager(remote_ip=None, remote_user="root",
@@ -73,20 +102,37 @@ def ServiceManager(remote_ip=None, remote_user="root",
 
         if remote_ip is None:
             # Service manager for local host.
-            service_manager = client_service._service_managers[get_name_of_init()]
+            service_manager = shared_service._service_managers[get_name_of_init()]
             _service_managers_dict[None] = service_manager(
-                                            _get_service_command_generator())
+                                            _get_service_command_generator(),
+                                            _get_service_result_parser())
         else:
             # service manager for remote host (guest).
             session = remote.wait_for_login('ssh', remote_ip, '22',
                                             remote_user, remote_pwd,
                                             r"[\#\$]\s*$")
-            service_manager = client_service._service_managers[get_name_of_init(session)]
+            service_manager = shared_service._service_managers[get_name_of_init(session)]
             command_generator = _get_service_command_generator(session)
+            result_parser = _get_service_result_parser(session)
             _service_managers_dict[remote_ip] = service_manager(command_generator,
-                                                                run=session.cmd)
+                                                                result_parser,
+                                                                run=get_remote_runner(session))
 
         return _service_managers_dict[remote_ip]
+
+
+def _auto_create_specific_service_result_parser(remote_session=None):
+    """
+    Create a class that will create partial functions that generate result_parser
+    for the current init command.
+
+    :return: A ServiceResultParser for the auto-detected init command.
+    :rtype: _ServiceResultParser
+    """
+    result_parser = shared_service._result_parsers[get_name_of_init(remote_session)]
+    # remove list method
+    command_list = [c for c in shared_service.COMMANDS if c not in ["list", "set_target"]]
+    return shared_service._ServiceResultParser(result_parser, command_list)
 
 
 def _auto_create_specific_service_command_generator(remote_session=None):
@@ -103,10 +149,10 @@ def _auto_create_specific_service_command_generator(remote_session=None):
     :rtype: _ServiceCommandGenerator
     """
     init_name = get_name_of_init(remote_session)
-    command_generator = client_service._command_generators[init_name]
+    command_generator = shared_service._command_generators[init_name]
     # remove list method
-    command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
-    return client_service._ServiceCommandGenerator(command_generator, command_list)
+    command_list = [c for c in shared_service.COMMANDS if c not in ["list", "set_target"]]
+    return shared_service._ServiceCommandGenerator(command_generator, command_list)
 
 
 def SpecificServiceManager(service_name, remote_ip=None,
@@ -134,13 +180,16 @@ def SpecificServiceManager(service_name, remote_ip=None,
     :rtype: _SpecificServiceManager
     """
     if remote_ip is None:
-        return _SpecificServiceManager(service_name,
-                                       _auto_create_specific_service_command_generator())
+        return shared_service._SpecificServiceManager(service_name,
+                     _auto_create_specific_service_command_generator(),
+                     _auto_create_specific_service_result_parser())
     else:
         session = remote.wait_for_login('ssh', remote_ip, '22',
                                         remote_user, remote_pwd,
                                         r"[\#\$]\s*$")
         command_generator = _auto_create_specific_service_command_generator(session)
-        return _SpecificServiceManager(service_name,
+        result_parser = _auto_create_specific_service_result_parser(session)
+        return shared_service._SpecificServiceManager(service_name,
                                        command_generator,
-                                       run=session.cmd)
+                                       result_parser,
+                                       run=get_remote_runner(session))
