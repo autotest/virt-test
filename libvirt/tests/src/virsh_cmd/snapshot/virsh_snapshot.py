@@ -20,6 +20,7 @@ def run_virsh_snapshot(test, params, env):
             try:
                 virsh.snapshot_delete(vm,snap)
             except error.CmdError:
+                logging.debug("Can not remove snapshot %s.", snaps)
                 remove_failed = remove_failed + 1
 
         return remove_failed
@@ -66,7 +67,8 @@ def run_virsh_snapshot(test, params, env):
 
     snl = virsh.snapshot_list(vm_name)
     if len(snl) != 0:
-        raise error.TestFail("Guest has existing snapshots - %s" % str(snl))
+        if bool(remove_snapshots(vm_name)):
+            raise error.TestFail("Snapshot on guest can not be removed.")
 
     logging.info("Create snapshot hierarchy for %s", vm_name)
     snapshot_info = [ {"Domain":vm_name, "State": normalize_state("running"),
@@ -129,8 +131,13 @@ def run_virsh_snapshot(test, params, env):
     logging.info("Test snapshot switching")
     for sni in snapshot_info:
         try:
-            virsh.snapshot_revert(vm_name,sni["Name"])
-            state = normalize_state(virsh.domstate(vm_name))
+            # Assure VM is shut off before revert.
+            virsh.destroy(vm_name)
+            result = virsh.snapshot_revert(vm_name, sni["Name"])
+            if result.exit_status:
+                raise error.TestFail("Snapshot revert failed.\n"
+                                     "Error: %s." % result.stderr)
+            state = normalize_state(virsh.domstate(vm_name).stdout.strip())
             if state != sni["State"]:
                 raise error.TestFail("Incorrect state after revert - %s"
                                      % (sni["Name"]))
