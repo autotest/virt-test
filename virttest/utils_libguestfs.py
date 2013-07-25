@@ -162,7 +162,7 @@ class Guestfish(LibguestfsBase):
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None):
+                 uri=None, mount_options=None):
         """
         Initialize guestfish command with options.
 
@@ -171,6 +171,8 @@ class Guestfish(LibguestfsBase):
         @param: libvirt_domain: if it is not None, use option '-d domain'.
         @param: inspector: guestfish mounts vm's disks automatically
         @param: uri: guestfish's connect uri
+        @param: mount_options: Mount the named partition or logical volume
+                               on the given mountpoint.
         """
         guestfs_exec = "guestfish"
         if lgf_cmd_check(guestfs_exec) is None:
@@ -187,6 +189,8 @@ class Guestfish(LibguestfsBase):
             guestfs_exec += " --ro"
         if inspector:
             guestfs_exec += " -i"
+        if mount_options is not None:
+            guestfs_exec += " --mount %s" % mount_options
 
         super(Guestfish, self).__init__(guestfs_exec)
 
@@ -280,9 +284,10 @@ class GuestfishPersistent(Guestfish):
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
-                 uri=None):
+                 uri=None, mount_options=None):
         super(GuestfishPersistent, self).__init__(disk_img, ro_mode,
-                                        libvirt_domain, inspector, uri)
+                                                  libvirt_domain, inspector,
+                                                  uri, mount_options)
         if self.get('session_id') is None:
             # set_uri does not call when INITIALIZED = False
             # and no session_id passed to super __init__
@@ -570,6 +575,27 @@ class GuestfishPersistent(Guestfish):
         looking for operating systems.
         """
         return self.inner_cmd("inspect-os")
+
+
+    def list_filesystems(self):
+        """
+        list-filesystems - list filesystems
+
+        This inspection command looks for filesystems on partitions, block
+        devices and logical volumes, returning a list of devices containing
+        filesystems and their type.
+        """
+        return self.inner_cmd("list-filesystems")
+
+
+    def list_devices(self):
+        """
+        list-devices - list the block devices
+
+        List all the block devices.
+        """
+        return self.inner_cmd("list-devices")
+
 
 
 ##### libguestfs module functions follow #####
