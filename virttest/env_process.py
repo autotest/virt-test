@@ -426,7 +426,9 @@ def preprocess(test, params, env):
 
     if params.get("setup_hugepages") == "yes":
         h = test_setup.HugePageConfig(params)
-        h.setup()
+        suggest_mem = h.setup()
+        if suggest_mem is not None:
+            params['mem'] = suggest_mem
         if params.get("vm_type") == "libvirt":
             utils_libvirtd.libvirtd_restart()
 
