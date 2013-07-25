@@ -130,6 +130,16 @@ class Target(object):
         return options
 
 
+    def _get_libvirtxml_options(self):
+        """
+        Return command options.
+        """
+        options = " -os %s -b %s %s " % (self.params.get('storage'),
+                  self.params.get('network'),
+                  self.params.get('vms'))
+        return options
+
+
     def _get_ovirt_options(self):
         """
         Return command options.
