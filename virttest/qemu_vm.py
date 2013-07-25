@@ -3480,7 +3480,7 @@ class VM(virt_vm.BaseVM):
         self.monitor.set_link(netdev_name, up)
 
 
-    def get_block(self, p_dict={}):
+    def get_block_old(self, blocks_info, p_dict={}):
         """
         Get specified block device from monitor's info block command.
         The block device is defined by parameter in p_dict.
@@ -3488,9 +3488,10 @@ class VM(virt_vm.BaseVM):
         @param p_dict: Dictionary that contains parameters and its value used
                        to define specified block device.
 
+        @blocks_info: the results of monitor command 'info block'
+
         @return: Matched block device name, None when not find any device.
         """
-        blocks_info = self.monitor.info("block")
         if isinstance(blocks_info, str):
             for block in blocks_info.splitlines():
                 match = True
@@ -3521,6 +3522,24 @@ class VM(virt_vm.BaseVM):
                     return block['device']
         return None
 
+    def get_block(self, p_dict={}):
+        """
+        Get specified block device from monitor's info block command.
+        The block device is defined by parameter in p_dict.
+
+        @param p_dict: Dictionary that contains parameters and its value used
+                       to define specified block device.
+
+        @return: Matched block device name, None when not find any device.
+        """
+        blocks_info = self.monitor.info("block")
+        for block in blocks_info.splitlines():
+            if block:
+                for key, value in p_dict.iteritems():
+                    if key == 'file' and value in block:
+                        return block.split(":")[0]
+        # fallback to old qemu
+        return self.get_block_old(blocks_info, p_dict)
 
     def check_block_locked(self, value):
         """
@@ -3543,9 +3562,23 @@ class VM(virt_vm.BaseVM):
 
         if isinstance(blocks_info, str):
             lock_str = "locked=1"
+            lock_str_new = "locked"
+            no_lock_str = "not locked"
+            tmp_block = ""
             for block in blocks_info.splitlines():
                 if (value in block) and (lock_str in block):
                     return True
+            # deal with new qemu
+            for block_new in blocks_info.splitlines():
+                if tmp_block and "Removable device" in block_new:
+                    if no_lock_str in block_new:
+                        return False
+                    elif lock_str_new in block_new:
+                        return True
+                if value in block_new:
+                    tmp_block = block_new
+                else:
+                    tmp_block = ""
         else:
             for block in blocks_info:
                 if value in str(block):
