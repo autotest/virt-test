@@ -3582,7 +3582,8 @@ class VM(virt_vm.BaseVM):
         @param speed: limited speed, default unit B/s;
         @param base: base file;
         """
-        return self.monitor.block_stream(device, speed, base)
+        cmd = self.params.get("block_stream_cmd", "block-stream")
+        return self.monitor.block_stream(device, speed, base, cmd)
 
 
     def block_mirror(self, device, target, speed, sync,
@@ -3598,7 +3599,7 @@ class VM(virt_vm.BaseVM):
         @param mode: new image open mode
         @param format: target image format
         """
-        cmd = self.params.get("block_mirror_cmd", "__com.redhat_drive-mirror")
+        cmd = self.params.get("block_mirror_cmd", "drive-mirror")
         return self.monitor.block_mirror(device, target, speed,
                                          sync, format, mode, cmd)
 
@@ -3611,7 +3612,7 @@ class VM(virt_vm.BaseVM):
         @param new_image: new image filename
         @param format: new image format
         """
-        cmd = self.params.get("block_reopen_cmd", "__com.redhat_drive-reopen")
+        cmd = self.params.get("block_reopen_cmd", "block-job-complete")
         return self.monitor.block_reopen(device, new_image, format, cmd)
 
 
@@ -3622,7 +3623,8 @@ class VM(virt_vm.BaseVM):
         @param device: device ID
         @param timeout: seconds wait job cancel timeout, default is 3s
         """
-        return self.monitor.cancel_block_job(device)
+        cmd = self.params.get("block_job_cancel_cmd", "block-job-cancel")
+        return self.monitor.cancel_block_job(device, cmd)
 
 
     def set_job_speed(self, device, speed="0"):
@@ -3632,7 +3634,8 @@ class VM(virt_vm.BaseVM):
         @param device: device ID
         @param speed: max speed of block job
         """
-        return self.monitor.set_block_job_speed(device, speed)
+        cmd = self.params.get("set_block_job_speed", "block-job-set-speed")
+        return self.monitor.set_block_job_speed(device, speed, cmd)
 
 
     def get_job_status(self, device):
