@@ -1,13 +1,12 @@
 install
 KVM_TEST_MEDIUM
 text
-reboot
 lang en_US.UTF-8
 langsupport --default=en_US.UTF-8 en_US.UTF-9
 keyboard us
 network --bootproto dhcp
 rootpw 123456
-firewall --disabled
+firewall --enabled --ssh
 selinux --enforcing
 timezone --utc America/New_York
 firstboot --disable
@@ -31,6 +30,8 @@ redhat-lsb
 
 %post
 echo "OS install is completed" > /dev/ttyS0
+grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
+grubby --args="divider=10" --update-kernel=$(grubby --default-kernel)
 cd home
 dhclient
 chkconfig sshd on
