@@ -804,7 +804,7 @@ def run_tests(parser, options):
 
         # Add kvm module status
         dct["kvm_default"] = utils_misc.get_module_params(
-                                             dct.get("sysfs_dir", "sys"), "kvm")
+                                           dct.get("sysfs_dir", "/sys"), "kvm")
 
         if dct.get("skip") == "yes":
             continue
