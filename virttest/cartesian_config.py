@@ -1029,10 +1029,11 @@ class Lexer(object):
                     elif char in tokens_map:
                         token = tokens_map[char]()
                     elif char == "\"":
-                        pos, char = li.next()
                         chars = ""
+                        pos, char = li.next()
                         while char != "\"":
                             chars += char
+                            pos, char = li.next()
                         yield LString(chars)
                     elif char == "#":
                         break
