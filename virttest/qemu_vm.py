@@ -3574,20 +3574,22 @@ class VM(virt_vm.BaseVM):
         return current_file
 
 
-    def block_stream(self, device, speed, base=None):
+    def block_stream(self, device, speed, base=None, correct=True):
         """
         start to stream block device, aka merge snapshot;
 
         @param device: device ID;
         @param speed: limited speed, default unit B/s;
         @param base: base file;
+        @param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_stream_cmd", "block-stream")
-        return self.monitor.block_stream(device, speed, base, cmd)
+        return self.monitor.block_stream(device, speed, base,
+                                         cmd, correct=correct)
 
 
     def block_mirror(self, device, target, speed, sync,
-                     format, mode="absolute-paths"):
+                     format, mode="absolute-paths", correct=True):
         """
         Mirror block device to target file;
 
@@ -3598,44 +3600,49 @@ class VM(virt_vm.BaseVM):
                      destination;
         @param mode: new image open mode
         @param format: target image format
+        @param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_mirror_cmd", "drive-mirror")
-        return self.monitor.block_mirror(device, target, speed,
-                                         sync, format, mode, cmd)
+        return self.monitor.block_mirror(device, target, speed, sync,
+                                         format, mode, cmd, correct=correct)
 
 
-    def block_reopen(self, device, new_image, format="qcow2"):
+    def block_reopen(self, device, new_image, format="qcow2", correct=True):
         """
         Reopen a new image, no need to do this step in rhel7 host
 
         @param device: device ID
         @param new_image: new image filename
         @param format: new image format
+        @param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_reopen_cmd", "block-job-complete")
-        return self.monitor.block_reopen(device, new_image, format, cmd)
+        return self.monitor.block_reopen(device, new_image,
+                                         format, cmd, correct=correct)
 
 
-    def cancel_block_job(self, device):
+    def cancel_block_job(self, device, correct=True):
         """
         cancel active job on the image_file
 
         @param device: device ID
-        @param timeout: seconds wait job cancel timeout, default is 3s
+        @param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_job_cancel_cmd", "block-job-cancel")
-        return self.monitor.cancel_block_job(device, cmd)
+        return self.monitor.cancel_block_job(device, cmd, correct=correct)
 
 
-    def set_job_speed(self, device, speed="0"):
+    def set_job_speed(self, device, speed="0", correct=True):
         """
         set max speed of block job;
 
         @param device: device ID
         @param speed: max speed of block job
+        @param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("set_block_job_speed", "block-job-set-speed")
-        return self.monitor.set_block_job_speed(device, speed, cmd)
+        return self.monitor.set_block_job_speed(device, speed,
+                                                cmd, correct=correct)
 
 
     def get_job_status(self, device):
