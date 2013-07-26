@@ -186,7 +186,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
 
 
 def run_steps(test, params, env):
-    vm = env.get_vm(params["main_vm"])
+    vm = env.get_vm(params.get("vms", "main_vm").split(" ")[0])
     vm.verify_alive()
 
     steps_filename = params.get("steps")
