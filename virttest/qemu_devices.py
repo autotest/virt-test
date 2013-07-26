@@ -869,7 +869,8 @@ class DevContainer(object):
     Device container class
     """
     # General methods
-    def __init__(self, qemu_binary, vmname, strict_mode=False):
+    def __init__(self, qemu_binary, vmname, strict_mode=False,
+                 workaround_qemu_qmp_crash=False):
         """
         @param qemu_binary: qemu binary
         @param vm: related VM
@@ -891,9 +892,11 @@ class DevContainer(object):
                     hmp_cmds.extend(cmd.split('|'))
             return hmp_cmds
 
-        def get_qmp_cmds(qemu_binary):
+        def get_qmp_cmds(qemu_binary, workaround_qemu_qmp_crash=False):
             """ @return: list of qmp commands """
-            cmds = utils.system_output('echo -e \''
+            cmds = None
+            if not workaround_qemu_qmp_crash:
+                cmds = utils.system_output('echo -e \''
                             '{ "execute": "qmp_capabilities" }\n'
                             '{ "execute": "query-commands", "id": "RAND91" }\n'
                             '{ "execute": "quit" }\''
@@ -923,7 +926,7 @@ class DevContainer(object):
         self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
                                 timeout=10, ignore_status=True, verbose=False)
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
-        self.__qmp_cmds = get_qmp_cmds(qemu_binary)
+        self.__qmp_cmds = get_qmp_cmds(qemu_binary, workaround_qemu_qmp_crash)
         self.vmname = vmname
         self.strict_mode = strict_mode == 'yes'
         self.__devices = []
