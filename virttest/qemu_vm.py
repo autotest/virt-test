@@ -1348,7 +1348,8 @@ class VM(virt_vm.BaseVM):
 
         # Start constructing devices representation
         devices = qemu_devices.DevContainer(qemu_binary, self.name,
-                                            params.get('strict_mode'))
+                        params.get('strict_mode'),
+                        params.get('workaround_qemu_qmp_crash') == "always")
         StrDev = qemu_devices.QStringDevice
         QDevice = qemu_devices.QDevice
 
