@@ -1407,8 +1407,6 @@ def net_info(options, extra="", **dargs):
     @return: CmdResult object
     """
     return command("net-info %s" % (options), **dargs)
-
-
 def iface_list(options, extra="", **dargs):
     """
     List interfaces on host.
@@ -1514,11 +1512,6 @@ def iface_unbridge(options, extra="", **dargs):
     @return: CmdResult object
     """
     return command("iface-unbridge %s" % (options), **dargs)
-
-
-
-
-
 
 
 
