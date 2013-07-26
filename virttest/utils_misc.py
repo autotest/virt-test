@@ -429,7 +429,7 @@ def run_tests(parser, job):
         index += 1
 
         # Add kvm module status
-        sysfs_dir = param_dict.get("sysfs_dir", "sys")
+        sysfs_dir = param_dict.get("sysfs_dir", "/sys")
         param_dict["kvm_default"] = get_module_params(sysfs_dir, 'kvm')
 
         if param_dict.get("skip") == "yes":
