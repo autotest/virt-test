@@ -22,6 +22,8 @@ from virttest import utils_misc, cartesian_config
 
 # set English environment (command output might be localized, need to be safe)
 os.environ['LANG'] = 'en_US.UTF-8'
+# set editor environment (some command will use default editor "vi")
+os.environ['EDITOR'] = 'vi'
 
 libvirt_test_dir = os.path.join(os.environ['AUTODIR'],'tests/virt/libvirt')
 
