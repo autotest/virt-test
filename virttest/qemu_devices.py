@@ -333,6 +333,11 @@ class QDrive(QCustomDevice):
         if option == 'id':
             raise KeyError("Drive ID is automatically created from aobject. %s"
                            % self)
+        elif option == 'bus':
+            # Workaround inconsistency between -drive and -device
+            value = re.findall(r'(\d+)', value)
+            if value is not None:
+                value = value[0]
         super(QDrive, self).set_param(option, value, option_type)
 
 
@@ -2223,6 +2228,59 @@ class DevContainer(object):
                           image_params.get("strict_mode"),
                           media,
                           image_params.get("image_format"),
+                          image_params.get("drive_pci_addr"),
+                          image_params.get("scsi_hba"),
+                          image_params.get("x-data-plane"),
+                          image_params.get("blk_extra_params"),
+                          image_params.get("virtio-blk-pci_scsi"))
+
+    def cdroms_define_by_params(self, name, image_params, media=None,
+                                index=None, image_boot=None,
+                                image_bootindex=None):
+        """
+        Wrapper for creating cdrom and related hbas from autotest image params.
+        @note: To skip the argument use None, to disable it use False
+        @note: Strictly bool options accept "yes", "on" and True ("no"...)
+        @note: Options starting with '_' are optional and used only when
+               strict_mode == True
+        @param name: Name of the new disk
+        @param params: Disk params (params.object_params(name))
+        """
+        iso = image_params.get('cdrom')
+        if iso:
+            image_params['image_name'] = os.path.join(data_dir.get_data_dir(),
+                                                    image_params.get('cdrom'))
+        image_params['image_format'] = None
+        shared_dir = os.path.join(data_dir.get_data_dir(), "shared")
+        return self.images_define_by_variables(name,
+                          storage.get_image_filename(image_params,
+                                                     data_dir.get_data_dir()),
+                          index,
+                          image_params.get('cd_format'),
+                          '',     # skip drive_cache
+                          image_params.get("drive_werror"),
+                          image_params.get("drive_rerror"),
+                          image_params.get("drive_serial"),
+                          image_params.get("image_snapshot"),
+                          image_boot,
+                          storage.get_image_blkdebug_filename(image_params,
+                                                                shared_dir),
+                          image_params.get("drive_bus"),
+                          image_params.get("drive_unit"),
+                          image_params.get("drive_port"),
+                          image_bootindex,
+                          image_params.get("removable"),
+                          image_params.get("min_io_size"),
+                          image_params.get("opt_io_size"),
+                          image_params.get("physical_block_size"),
+                          image_params.get("logical_block_size"),
+                          image_params.get("image_readonly"),
+                          image_params.get("drive_scsiid"),
+                          image_params.get("drive_lun"),
+                          image_params.get("image_aio"),
+                          image_params.get("strict_mode"),
+                          media,
+                          None,     # skip img_fmt
                           image_params.get("drive_pci_addr"),
                           image_params.get("scsi_hba"),
                           image_params.get("x-data-plane"),

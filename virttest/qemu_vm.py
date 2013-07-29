@@ -1554,15 +1554,7 @@ class VM(virt_vm.BaseVM):
                     global_image_bootindex += 1
             iso = img_params.get("cdrom")
             if iso or img_params.get("cdrom_without_file") == "yes":
-                if iso:
-                    # TODO: Unify image, cdrom, floppy params
-                    img_params['drive_format'] = img_params.get('cd_format')
-                    # Use the absolute patch with cdroms (pure *.iso)
-                    img_params['image_raw_device'] = 'yes'
-                    img_params['image_name'] = utils_misc.get_path(
-                                                    data_dir.get_data_dir(),
-                                                    img_params.get('cdrom'))
-                devs = devices.images_define_by_params(cdrom, img_params,
+                devs = devices.cdroms_define_by_params(cdrom, img_params,
                                                        'cdrom', index,
                                                        image_boot,
                                                        image_bootindex)
