@@ -221,7 +221,7 @@ def run_autotest_regression(test, params, env):
             # Wait for the session to become unresponsive
             if not utils_misc.wait_for(lambda: not session_client.is_responsive(),
                                        timeout=300):
-                raise error.ValueError("Client machine did not reboot")
+                raise ValueError("Client machine did not reboot")
 
             # Establish a new client session
             session_client = vm_client.wait_for_login(timeout=timeout)
