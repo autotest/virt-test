@@ -67,12 +67,12 @@ def run_autotest_regression(test, params, env):
         if autotest_commit:
             install_cmd += " -c %s" % autotest_commit
         session_server.cmd(install_cmd, timeout=autotest_install_timeout)
-        vm_server.copy_files_from(guest_path="/tmp/install-autotest-server*log",
-                                  host_path=test.resultsdir)
     except aexpect.ShellCmdError, e:
         for line in e.output.splitlines():
             logging.error(line)
         step_failures.append(step1)
+    vm_server.copy_files_from(guest_path="/tmp/install-autotest-server*log",
+                              host_path=test.resultsdir)
 
     top_commit = None
     try:
