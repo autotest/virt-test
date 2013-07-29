@@ -201,7 +201,7 @@ def run_autotest_regression(test, params, env):
                         return False
                 else:
                     raise ValueError("Job %s does not show in the "
-                                     "output of %s" % list_jobs_cmd)
+                                     "output of %s" % (job_name, list_jobs_cmd))
 
             def job_is_completed():
                 return job_is_status("Completed")
