@@ -39,12 +39,14 @@ def run_virsh_domiflist(test, params, env):
         return ifaces_cmd
 
 
-    def check_output(output, vm_name, vm):
+    def check_output(output, vm):
         """
         1. Get the interface details of the command output
         2. Get the interface details from xml file
         3. Check command output agaist xml and guest output
         """
+        vm_name =vm.name
+
         try:
             session = vm.wait_for_login()
         except Exception, detail:
@@ -107,14 +109,9 @@ def run_virsh_domiflist(test, params, env):
     domuuid = vm.get_uuid()
 
     # Get the virsh domiflist
-    options = params.get("domname_options", "id")
-    additional_options = params.get("extra_options", "")
+    options = params.get("domiflist_domname_options", "id")
+    additional_options = params.get("domiflist_extra_options", "")
     status_error = params.get("status_error", "no")
-
-    #Prepare libvirtd status
-    libvirtd = params.get("libvirtd", "on")
-    if libvirtd == "off":
-        utils_libvirtd.service_libvirtd_control("stop")
 
     if options == "id":
         options = domid
@@ -125,14 +122,10 @@ def run_virsh_domiflist(test, params, env):
 
     result = virsh.domiflist(options, additional_options, ignore_status=True)
 
-    #Recover libvirtd service to start
-    if libvirtd == "off":
-        utils_libvirtd.service_libvirtd_control("start")
-
     if status_error == "yes":
         if result.exit_status == 0:
-            raise error.TestFail("Run passed for incorrect command \nCommand:"
+            raise error.TestFail("Run passed for incorrect command \nCommand: "
                                  "virsh domiflist %s\nOutput Status:%s\n"
                                  % (options, result.exit_status))
     else:
-        check_output(result.stdout, vm_name, vm)
+        check_output(result.stdout, vm)
