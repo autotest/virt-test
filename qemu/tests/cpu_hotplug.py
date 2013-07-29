@@ -35,6 +35,7 @@ def run_cpu_hotplug(test, params, env):
     maxcpus = int(params.get("maxcpus", 160))
     current_cpus = int(params.get("smp", 1))
     onoff_iterations = int(params.get("onoff_iterations", 20))
+    cpu_hotplug_cmd = params['cpu_hotplug_cmd']
 
     if n_cpus_add + current_cpus > maxcpus:
         logging.warn("CPU quantity more than maxcpus, set it to %s", maxcpus)
@@ -49,7 +50,7 @@ def run_cpu_hotplug(test, params, env):
 
     for i in range(current_cpus, total_cpus):
         error.context("hot-pluging vCPU %s" % i, logging.info)
-        vm.monitor.send_args_cmd("cpu_set %s online" % i)
+        vm.monitor.send_args_cmd(cpu_hotplug_cmd % i)
 
     output = vm.monitor.send_args_cmd("info cpus")
     logging.debug("Output of info CPUs:\n%s", output)
