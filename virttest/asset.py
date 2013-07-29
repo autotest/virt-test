@@ -1,6 +1,6 @@
 import urllib2, logging, os, glob, ConfigParser
 from autotest.client import utils
-import data_dir, re
+import data_dir, re, utils_misc
 
 def get_all_assets():
     asset_data_list = []
@@ -73,10 +73,36 @@ def get_asset_info(asset):
             'downloaded': asset_exists}
 
 
+def check_uncompress_cmds():
+    """
+    Check uncompress commands exist or not
+    """
+    failed_cmds = []
+    for cmd in ['gzip', 'xz', 'bzip2', '7za' ]:
+        try:
+            logging.info(utils_misc.find_command(cmd))
+        except ValueError:
+            logging.error("Required command %s is missing. You must "
+                          "install it", cmd)
+            failed_cmds.append(cmd)
+    return failed_cmds
+
+
 def uncompress_asset(asset_info, force=False):
     destination = asset_info['destination']
     uncompress_cmd = asset_info['uncompress_cmd']
     destination_uncompressed = asset_info['destination_uncompressed']
+
+    failed_cmds = check_uncompress_cmds()
+    if failed_cmds:
+        answer = utils.ask("Missing cmds: %s. You must intall them then enter 'y'"
+                           " to try again" % " ".join(failed_cmds))
+    if answer == 'y':
+        failed_cmds = check_uncompress_cmds()
+        if failed_cmds:
+            raise ValueError('Missing cmds: %s' % " ".join(failed_cmds))
+    else:
+        raise ValueError('Missing cmds: %s' % " ".join(failed_cmds))
 
     archive_re = re.compile(r".*\.(gz|xz|7z|bz2)$")
     if destination_uncompressed is not None:
