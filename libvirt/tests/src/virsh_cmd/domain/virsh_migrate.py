@@ -1,6 +1,7 @@
 import logging, os, re, time, codecs
 from autotest.client.shared import error
 from virttest import utils_test, virsh, utils_libvirtd
+from virttest.libvirt_xml import vm_xml
 
 
 def run_virsh_migrate(test, params, env):
@@ -98,9 +99,30 @@ def run_virsh_migrate(test, params, env):
     src_state = params.get("virsh_migrate_src_state", "running")
     new_nic_mac = "ff:ff:ff:ff:ff:ff"
     dest_xmlfile = ""
+    shared_storage_nfs = params.get("shared_storage_nfs", "")
+    device_target = "vda"
 
     exception = False
     try:
+        # To migrate you need to have a shared disk between hosts
+        if shared_storage_nfs == "":
+            raise error.TestError("For migration you need to have a shared "
+                                  "storage on NFS.")
+
+        if vm.is_alive():
+            vm.destroy(gracefully=False)
+        s_detach = virsh.detach_disk(vm_name, device_target,  "--config", debug=True)
+        if not s_detach:
+            logging.error("Detach vda failed before test.")
+        s_attach = virsh.attach_disk(vm_name, shared_storage_nfs, device_target,
+                                     "--config --driver qemu --subdriver qcow2 "
+                                     "--cache none", debug=True)
+        if not s_attach:
+            logging.error("Attach vda failed before test.")
+
+        vm.start()
+        vm.wait_for_login()
+
         # Confirm VM can be accessed through network.
         time.sleep(delay)
         vm_ip = vm.get_address()
