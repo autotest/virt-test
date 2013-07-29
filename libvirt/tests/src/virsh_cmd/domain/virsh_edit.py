@@ -35,7 +35,6 @@ def run_virsh_edit(test, params, env):
         """
         session = aexpect.ShellSession("sudo -s")
         try:
-            session.sendline("export EDITOR=vi")
             session.sendline("virsh edit %s" % source)
             session.sendline(edit_cmd)
             session.send('\x1b')
