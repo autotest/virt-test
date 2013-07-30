@@ -42,6 +42,9 @@ nc
 ntp
 redhat-lsb
 sg3_utils
+lsscsi
+libaio-devel
+perl-Time-HiRes
 
 %post
 echo "OS install is completed" > /dev/ttyS0

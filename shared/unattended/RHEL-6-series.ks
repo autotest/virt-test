@@ -52,6 +52,9 @@ usbutils
 qemu-guest-agent
 sg3_utils
 xfsprogs
+lsscsi
+libaio-devel
+perl-Time-HiRes
 
 %post
 echo "OS install is completed" > /dev/ttyS0
