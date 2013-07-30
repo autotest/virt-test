@@ -101,6 +101,12 @@ def run_virsh_migrate(test, params, env):
     shared_storage_nfs = params.get("shared_storage_nfs", "")
     device_target = "vda"
 
+    #Direct migration is supported only for Xen in libvirt
+    if options.count("direct") or extra.count("direct"):
+        if params.get("driver_type") is not "xen":
+            raise error.TestNAError("Direct migration is supported only for "
+                                    "Xen in libvirt.")
+
     exception = False
     try:
         # To migrate you need to have a shared disk between hosts
