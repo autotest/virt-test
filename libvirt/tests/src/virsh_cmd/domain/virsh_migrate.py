@@ -102,6 +102,12 @@ def run_virsh_migrate(test, params, env):
     src_state = params.get("virsh_migrate_src_state", "running")
     dest_xmlfile = ""
 
+    # Direct migration is supported only for Xen in libvirt
+    if options.count("direct") or extra.count("direct"):
+        if params.get("driver_type") is not "xen":
+            raise error.TestNAError("Direct migration is supported only for "
+                                    "Xen in libvirt.")
+
     exception = False
     try:
         # Confirm VM can be accessed through network.
