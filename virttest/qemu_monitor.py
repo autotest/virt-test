@@ -277,6 +277,22 @@ class Monitor:
             pass
 
 
+    def correct(self, cmd):
+        """
+        Automatic conversion "-" and "_" in commands if the translate command
+        is supported commands;
+        """
+        def translate(cmd):
+            return "-".join( re.split("[_-]", cmd))
+
+        if not self._has_command(cmd):
+            for _cmd in self._supported_cmds:
+                if translate(_cmd) == translate(cmd):
+                    logging.info("Convert command %s -> %s", cmd, _cmd)
+                    return _cmd
+        return cmd
+
+
     def is_responsive(self):
         """
         Return True iff the monitor is responsive.
@@ -696,46 +712,61 @@ class HumanMonitor(Monitor):
         return self.cmd(cmd)
 
 
-    def block_stream(self, device, speed=None, base=None):
+    def block_stream(self, device, speed=None, base=None,
+                     cmd="block_stream", correct=True):
         """
         Start block-stream job;
 
         @param device: device ID
         @param speed: int type, lmited speed(B/s)
         @param base: base file
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
-        cmd = "block_stream %s" % device
+        if correct:
+            cmd = self.correct(cmd)
+        self.verify_supported_cmd(cmd)
+        cmd += " %s" % device
         if speed is not None:
-            cmd = "%s %sB" % (cmd, speed)
+            cmd += " %sB" % speed
         if base:
-            cmd = "%s %s" % (cmd, base)
+            cmd += " %s" % base
         return self.cmd(cmd)
 
 
-    def set_block_job_speed(self, device, speed=0):
+    def set_block_job_speed(self, device, speed=0,
+                            cmd="block_job_set_speed", correct=True):
         """
         Set limited speed for runnig job on the device
 
         @param device: device ID
         @param speed: int type, limited speed(B/s)
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
-        cmd = "block-job-set-speed %s %sB" % (device, speed)
+        if correct:
+            cmd = self.correct(cmd)
+        self.verify_supported_cmd(cmd)
+        cmd += " %s %sB" % (device, speed)
         return self.cmd(cmd)
 
 
-    def cancel_block_job(self, device):
+    def cancel_block_job(self, device, cmd="block_job_cancel", correct=True):
         """
         Cancel running block stream/mirror job on the device
 
         @param device: device ID
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
-        return self.send_args_cmd("block-job-cancel %s" % device)
+        if correct:
+            cmd = self.correct(cmd)
+        self.verify_supported_cmd(cmd)
+        cmd += " %s" % device
+        return self.send_args_cmd(cmd)
 
 
     def query_block_job(self, device):
@@ -783,7 +814,7 @@ class HumanMonitor(Monitor):
 
 
     def block_mirror(self, device, target, speed, sync, format, mode,
-            cmd="__com.redhat_drive-mirror"):
+            cmd="drive_mirror", correct=True):
         """
         Start mirror type block device copy job
 
@@ -794,25 +825,27 @@ class HumanMonitor(Monitor):
         @param mode: target image create mode, 'absolute-paths' or 'existing'
         @param format: target image format
         @param cmd: block mirror command
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
+        if correct:
+            cmd = self.correct(cmd)
         self.verify_supported_cmd(cmd)
-        args = " ".join([device, target, format])
-        if cmd.startswith("__com.redhat"):
-            if mode == "existing":
-                args = "-n %s" % args
-            if sync == "full":
-                args ="-f %s" % args
-        else:
-            if speed:
-                args = "%s %sB" % (args, speed)
+        args = " %s %s %s" % (device, target, format)
+        info = str(self.cmd("help %s" % cmd))
+        if (mode == "existing") and "-n" in info:
+            args = "-n %s" % args
+        if (sync == "full") and "-f" in info:
+            args ="-f %s" % args
+        if (speed is not None) and ("speed" in info):
+            args = "%s %s" % (args, speed)
         cmd = "%s %s" % (cmd, args)
         return self.cmd(cmd)
 
 
     def block_reopen(self, device, new_image_file, image_format,
-            cmd="__com.redhat_drive-reopen"):
+                     cmd="block_job_complete", correct=True):
         """
         Reopen new target image
 
@@ -820,13 +853,17 @@ class HumanMonitor(Monitor):
         @param new_image_file: new image file name
         @param image_format: new image file format
         @param cmd: image reopen command
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
+        if correct:
+            cmd = self.correct(cmd)
         self.verify_supported_cmd(cmd)
-        args = device
-        if cmd.startswith("__com.redhat"):
-            args += " ".join([new_image_file, image_format])
+        args = "%s" % device
+        info = str(self.cmd("help %s" % cmd))
+        if "format" in info:
+            args += " %s %s" % (new_image_file, image_format)
         cmd = "%s %s" % (cmd, args)
         return self.cmd(cmd)
 
@@ -1419,6 +1456,24 @@ class QMPMonitor(Monitor):
         self._lock.release()
 
 
+    def clear_event(self, name):
+        """
+        Clear a kinds of events in events list only.
+
+        @raise MonitorLockError: Raised if the lock cannot be acquired
+        """
+        if not self._acquire_lock():
+            raise MonitorLockError("Could not acquire exclusive lock to clear "
+                                   "QMP event list")
+        while True:
+            event = self.get_event(name)
+            if event:
+                self._events.remove(event)
+            else:
+                break
+        self._lock.release()
+
+
     def get_greeting(self):
         """
         Return QMP greeting message.
@@ -1621,48 +1676,62 @@ class QMPMonitor(Monitor):
         return self.cmd("blockdev-snapshot-sync", args)
 
 
-    def block_stream(self, device, speed=None, base=None):
+    def block_stream(self, device, speed=None, base=None,
+                     cmd="block-stream", correct=True):
         """
         Start block-stream job;
 
         @param device: device ID
         @param speed: int type, limited speed(B/s)
         @param base: base file
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
+        if correct:
+            cmd = self.correct(cmd)
+        self.verify_supported_cmd(cmd)
         args = {"device": device}
         if speed is not None:
             args["speed"] = speed
         if base:
             args["base"] = base
-        return self.cmd("block-stream", args)
+        return self.cmd(cmd, args)
 
 
-    def set_block_job_speed(self, device, speed=0):
+    def set_block_job_speed(self, device, speed=0,
+                            cmd="block-job-set-speed", correct=True):
         """
         Set limited speed for runnig job on the device
 
         @param device: device ID
         @param speed: int type, limited speed(B/s)
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
+        if correct:
+            cmd = self.correct(cmd)
+        self.verify_supported_cmd(cmd)
         args = {"device": device,
                 "speed": speed}
-        return self.cmd("block-job-set-speed", args)
+        return self.cmd(cmd, args)
 
 
-    def cancel_block_job(self, device):
+    def cancel_block_job(self, device, cmd="block-job-cancel", correct=True):
         """
         Cancel running block stream/mirror job on the device
 
         @param device: device ID
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
+        if correct:
+            cmd = self.correct(cmd)
+        self.verify_supported_cmd(cmd)
         args = {"device": device}
-        return self.cmd("block-job-cancel", args)
+        return self.cmd(cmd, args)
 
 
     def query_block_job(self, device):
@@ -1702,7 +1771,7 @@ class QMPMonitor(Monitor):
 
 
     def block_mirror(self, device, target, speed, sync, format, mode,
-            cmd="__com.redhat_drive-mirror"):
+            cmd="drive-mirror", correct=True):
         """
         Start mirror type block device copy job
 
@@ -1714,9 +1783,12 @@ class QMPMonitor(Monitor):
         @param mode: 'absolute-paths' or 'existing'
         @param format: target image format
         @param cmd: block mirror command
+        @param correct: auto correct command, correct by default
 
         @return: The command's output
         """
+        if correct:
+            cmd = self.correct(cmd)
         self.verify_supported_cmd(cmd)
         args = {"device": device,
                 "target": target}
@@ -1734,7 +1806,7 @@ class QMPMonitor(Monitor):
 
 
     def block_reopen(self, device, new_image_file, image_format,
-            cmd="__com.redhat_drive-reopen"):
+            cmd="block-job-complete", correct=True):
         """
         Reopen new target image;
 
@@ -1742,12 +1814,15 @@ class QMPMonitor(Monitor):
         @param new_image_file: new image file name
         @param image_format: new image file format
         @param cmd: image reopen command
+        @param correct: auto correct command, correct by default
 
         @return: the command's output
         """
+        if correct:
+            cmd = self.correct(cmd)
         self.verify_supported_cmd(cmd)
         args = {"device": device}
-        if cmd.startswith("__com.redhat"):
+        if cmd.startswith("__"):
             args["new-image-file"] = new_image_file
             args["format"] = image_format
         return self.cmd(cmd, args)
