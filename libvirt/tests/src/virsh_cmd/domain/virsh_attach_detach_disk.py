@@ -126,10 +126,6 @@ def run_virsh_attach_detach_disk(test, params, env):
     # Create virtual device file.
     create_device_file(device_source)
 
-    # Add acpiphp module before testing if VM's os type is rhle5.*
-    if not acpiphp_module_modprobe(vm, os_type):
-        raise error.TestError("Add acpiphp module failed before test.")
-
     if vm.is_alive():
         vm.destroy(gracefully=False)
 
@@ -150,6 +146,10 @@ def run_virsh_attach_detach_disk(test, params, env):
 
     vm.start()
     vm.wait_for_login()
+
+    # Add acpiphp module before testing if VM's os type is rhle5.*
+    if not acpiphp_module_modprobe(vm, os_type):
+        raise error.TestError("Add acpiphp module failed before test.")
 
     # Turn VM into certain state.
     if pre_vm_state == "paused":
