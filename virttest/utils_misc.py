@@ -1683,3 +1683,34 @@ def get_winutils_vol(session, label="WIN_UTILS"):
     if not device:
         return ""
     return device.group(1)
+
+
+def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
+    """
+    Divide the valued options into key and value
+
+    @param options: the valued options get from cfg
+    @param split_pattern: patten used to split options
+    @param dict_split: patten used to split sub options and insert into dict
+    @param start_count: the start_count to insert option_dict
+    @return: dict include option and its value
+    """
+    option_dict = {}
+    if options.strip() is not None:
+        pat = re.compile(split_pattern)
+        option_list = pat.split(options.lstrip(split_pattern))
+        logging.debug("option_list is %s", option_list)
+
+        for match in option_list[start_count:]:
+            match_list = match.split(dict_split)
+            if len(match_list) == 2:
+                key = match_list[0]
+                value = match_list[1]
+                if not key in option_dict:
+                    option_dict[key] = value
+                else:
+                    logging.debug("key %s in option_dict", key)
+                    option_dict[key] = option_dict[key].split()
+                    option_dict[key].append(value)
+
+    return option_dict
