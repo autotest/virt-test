@@ -1028,7 +1028,7 @@ def define(xml_path, **dargs):
     return command(cmd, **dargs)
 
 
-def undefine(name, **dargs):
+def undefine(name, options=None, **dargs):
     """
     Return cmd result of domain undefine (after shutdown/destroy).
 
@@ -1037,11 +1037,14 @@ def undefine(name, **dargs):
     @return: CmdResult object
     """
     cmd = "undefine %s" % name
+    if options is not None:
+        cmd += " %s" % options
+
     logging.debug("Undefine VM %s", name)
     return command(cmd, **dargs)
 
 
-def remove_domain(name, **dargs):
+def remove_domain(name, options=None, **dargs):
     """
     Return True after forcefully removing a domain if it exists.
 
@@ -1054,7 +1057,7 @@ def remove_domain(name, **dargs):
             destroy(name, **dargs)
         try:
             dargs['ignore_status'] = False
-            undefine(name, **dargs)
+            undefine(name, options, **dargs)
         except error.CmdError, detail:
             logging.error("Undefine VM %s failed:\n%s", name, detail)
             return False
@@ -1978,6 +1981,23 @@ def snapshot_create(name, **dargs):
     return snapshot_number
 
 
+def snapshot_create_as(name, options="", **dargs):
+    """
+    Create snapshot of domain with options.
+
+    @param name: name of domain
+    @param options: options of snapshot-create-as
+    @param: dargs: standardized virsh function API keywords
+    @return: name of snapshot
+    """
+    # CmdResult is handled here, force ignore_status
+    cmd = "snapshot-create-as %s" % name
+    if options is not None:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
+
+
 def snapshot_current(name, **dargs):
     """
     Create snapshot of domain.
@@ -1996,11 +2016,12 @@ def snapshot_current(name, **dargs):
     return sc_output.stdout.strip()
 
 
-def snapshot_list(name, **dargs):
+def snapshot_list(name, options=None, **dargs):
     """
     Get list of snapshots of domain.
 
     @param name: name of domain
+    @param options: options of snapshot_list
     @param: dargs: standardized virsh function API keywords
     @return: list of snapshot names
     """
@@ -2008,18 +2029,37 @@ def snapshot_list(name, **dargs):
     dargs['ignore_status'] = True
     ret = []
     cmd = "snapshot-list %s" % name
+    if options is not None:
+        cmd += " %s" % options
+
     sc_output = command(cmd, **dargs)
     if sc_output.exit_status != 0:
         raise error.CmdError(cmd, sc_output, "Failed to get list of snapshots")
 
-    data = re.findall("\w* *\d*-\d*-\d* \d*:\d*:\d* [+-]\d* \w*",
+    data = re.findall("\S* *\d*-\d*-\d* \d*:\d*:\d* [+-]\d* \w*",
                       sc_output.stdout)
     for rec in data:
         if not rec:
             continue
-        ret.append(re.match("\w*", rec).group())
+        ret.append(re.match("\S*", rec).group())
 
     return ret
+
+
+def snapshot_dumpxml(name, snapshot, options=None, **dargs):
+    """
+    Get dumpxml of snapshot
+
+    @param name: name of domain
+    @param snapshot: name of snapshot
+    @param dargs: standardized virsh function API keywords
+    @return: standard output from command
+    """
+    cmd = "snapshot-dumpxml %s %s" % (name, snapshot)
+    if options is not None:
+        cmd += " %s" % options
+
+    return command(cmd, **dargs)
 
 
 def snapshot_info(name, snapshot, **dargs):
