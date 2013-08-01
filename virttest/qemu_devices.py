@@ -2150,8 +2150,6 @@ class DevContainer(object):
         devices[-1].set_param('bootindex', bootindex)
         devices[-1].set_param('serial', serial)
         devices[-1].set_param('x-data-plane', x_data_plane, bool)
-        if fmt not in  ('ide', 'virtio'):
-            devices[-1].set_param('removable', removable, bool)
         if fmt in ("ide", "ahci"):
             if media == 'cdrom':
                 devices[-1].set_param('driver', 'ide-cd')
@@ -2162,6 +2160,7 @@ class DevContainer(object):
             devices[-1].set_param('driver', fmt)
             devices[-1].set_param('scsi-id', unit)
             devices[-1].set_param('lun', port)
+            devices[-1].set_param('removable', removable, bool)
             if strict_mode:
                 devices[-1].set_param('channel', 0)
         elif fmt == 'virtio':
@@ -2172,6 +2171,7 @@ class DevContainer(object):
         elif fmt in ('usb1', 'usb2', 'usb3'):
             devices[-1].set_param('driver', 'usb-storage')
             devices[-1].set_param('port', unit)
+            devices[-1].set_param('removable', removable, bool)
         elif fmt == 'floppy':
             # Overwrite QDevice with QFloppy
             devices[-1] = QFloppy(unit, 'drive_%s' % name, name,
