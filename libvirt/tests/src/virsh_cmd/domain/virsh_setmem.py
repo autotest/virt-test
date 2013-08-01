@@ -208,11 +208,11 @@ def run_virsh_setmem(test, params, env):
 
     if status is 0:  # Restore original memory
         restore_status = virsh.setmem(domainarg=vm_name,
-                                      sizearg=original_inside_mem,
+                                      sizearg=original_outside_mem,
                                       ignore_status=True).exit_status
         if restore_status is not 0:
             logging.warning("Failed to restore VM's original memory to %s KiB"
-                            % original_inside_mem)
+                            % original_outside_mem)
     else:
         # virsh setmem failed, no need to restore
         pass
