@@ -2,7 +2,13 @@
 connection tools to manage kinds of connection.
 """
 
-import logging, time, os, shutil, re
+import logging
+import time
+import os
+import shutil
+import re
+import tempfile
+
 from autotest.client import utils, os_dep
 from virttest import propcan, remote, utils_libvirtd
 from virttest import data_dir, aexpect
@@ -55,6 +61,7 @@ class ConnNotImplementedError(ConnectionError):
         return ('Method %s is not implemented in class %s\n'
                 % (self.method_type, self.class_type))
 
+
 class ConnLoginError(ConnectionError):
     """
     Error in login.
@@ -67,6 +74,7 @@ class ConnLoginError(ConnectionError):
     def __str__(self):
         return ("Got a error when login to %s.\n"
                "Error: %s\n" % (self.dest, self.e))
+
 
 class ConnToolNotFoundError(ConnectionError):
     """
@@ -178,6 +186,7 @@ class ConnServerRestartError(ConnectionError):
     def __init__(self, output):
         ConnectionError.__init__(self)
         self.output = output
+
     def __str__(self):
         return ("Failed to restart libvirtd service on server.\n"
                "output: %s.\n" % (self.output))
@@ -186,6 +195,18 @@ class ConnServerRestartError(ConnectionError):
 class ConnectionBase(propcan.PropCanBase):
     """
     Base class of a connection between server and client.
+
+    Connection is build to from client to server. And there are
+    some information for server and client in ConnectionBase.
+
+    server_ip: Ip of server.
+    server_user: Username to login server.
+    server_pwd: Password for server_user.
+    client_ip: IP of client.
+    client_user: Username to login client.
+    client_pwd: Password for client_user.
+
+    tmp_dir: A tmp dir to store some tmp file.
     """
     __slots__ = ('server_ip', 'server_user', 'server_pwd',
                  'client_ip', 'client_user', 'client_pwd',
@@ -203,21 +224,16 @@ class ConnectionBase(propcan.PropCanBase):
         init_dict['client_ip'] = init_dict.get('client_ip', 'CLIENT.IP')
         init_dict['client_user'] = init_dict.get('client_user', 'root')
         init_dict['client_pwd'] = init_dict.get('client_pwd', None)
-        init_dict['tmp_dir'] = init_dict.get('tmp_dir', None)
         super(ConnectionBase, self).__init__(init_dict)
 
         self.dict_set('client_session', None)
         self.dict_set('server_session', None)
 
         #make a tmp dir as a workspace
-        tmp_dir = self.dict_get('tmp_dir')
-        if tmp_dir is None:
-            tmp_dir = data_dir.get_tmp_dir()
-            if not os.path.isdir(tmp_dir):
-                os.makedirs(tmp_dir)
-
-            self.tmp_dir = tmp_dir
-
+        tmp_dir = tempfile.mkdtemp(dir=data_dir.get_tmp_dir())
+        if not os.path.isdir(tmp_dir):
+            os.makedirs(tmp_dir)
+        self.tmp_dir = tmp_dir
 
     def __del__(self):
         """
@@ -232,7 +248,6 @@ class ConnectionBase(propcan.PropCanBase):
         tmp_dir = self.tmp_dir
         if (tmp_dir is not None) and (os.path.exists(tmp_dir)):
             shutil.rmtree(tmp_dir)
-
 
     def close_session(self):
         """
@@ -287,7 +302,6 @@ class ConnectionBase(propcan.PropCanBase):
             raise ConnLoginError("Some error occurs login to client failed.")
 
         return client_session
-
 
     def get_client_session(self):
         """
@@ -345,7 +359,6 @@ class ConnectionBase(propcan.PropCanBase):
 
         return server_session
 
-
     def get_server_session(self):
         """
         If the server session exists,return it.
@@ -361,7 +374,6 @@ class ConnectionBase(propcan.PropCanBase):
         self.dict_set('server_session', server_session)
         return server_session
 
-
     def set_server_session(self, value=None):
         """
         Set server session to value.
@@ -373,7 +385,6 @@ class ConnectionBase(propcan.PropCanBase):
 
         raise ConnForbiddenError(message)
 
-
     def del_server_session(self):
         """
         Delete server session.
@@ -384,6 +395,13 @@ class ConnectionBase(propcan.PropCanBase):
 class SSHConnection(ConnectionBase):
     """
     Connection of SSH transport.
+
+    Some specific varaibles in SSHConnection class.
+
+    ssh_rsa_pub_path: Path of id_rsa.pub, default is /root/.ssh/id_rsa.pub.
+    ssh_id_rsa_path: Path of id_rsa, default is /root/.ssh/id_rsa.
+    SSH_KEYGEN, SSH_ADD, SSH_COPY_ID, SSH_AGENT, SHELL, SSH: tools to build
+    a non-pwd connection.
     """
     __slots__ = ConnectionBase.__slots__ + ('ssh_rsa_pub_path',
                                             'ssh_id_rsa_path', 'SSH_KEYGEN',
@@ -404,12 +422,12 @@ class SSHConnection(ConnectionBase):
                                                     '/root/.ssh/id_rsa')
         super(SSHConnection, self).__init__(init_dict)
         #set the tool for ssh setup.
-        tool_dict = {'SSH_KEYGEN':'ssh-keygen',
-                     'SSH_ADD':'ssh-add',
-                     'SSH_COPY_ID':'ssh-copy-id',
-                     'SSH_AGENT':'ssh-agent',
-                     'SHELL':'sh',
-                     'SSH':'ssh'}
+        tool_dict = {'SSH_KEYGEN': 'ssh-keygen',
+                     'SSH_ADD': 'ssh-add',
+                     'SSH_COPY_ID': 'ssh-copy-id',
+                     'SSH_AGENT': 'ssh-agent',
+                     'SHELL': 'sh',
+                     'SSH': 'ssh'}
 
         for key in tool_dict:
             toolName = tool_dict[key]
@@ -421,7 +439,6 @@ class SSHConnection(ConnectionBase):
                               (toolName))
                 tool = '/bin/true'
             self.dict_set(key, tool)
-
 
     def conn_check(self):
         """
@@ -445,7 +462,6 @@ class SSHConnection(ConnectionBase):
             client_session.close()
             raise SSHCheckError(server_ip, detail)
         logging.debug("Check the SSH to %s OK." % server_ip)
-
 
     def conn_finish(self):
         """
@@ -475,11 +491,11 @@ class SSHConnection(ConnectionBase):
         ssh_agent = self.SSH_AGENT
         shell = self.SHELL
 
-        tool_dict = {'ssh_keygen':ssh_keygen,
-                     'ssh_add':ssh_add,
-                     'ssh_copy_id':ssh_copy_id,
-                     'ssh_agent':ssh_agent,
-                     'shell':shell}
+        tool_dict = {'ssh_keygen': ssh_keygen,
+                     'ssh_add': ssh_add,
+                     'ssh_copy_id': ssh_copy_id,
+                     'ssh_agent': ssh_agent,
+                     'shell': shell}
         for tool_name in tool_dict:
             tool = tool_dict[tool_name]
             if tool is '/bin/true':
@@ -509,7 +525,7 @@ class SSHConnection(ConnectionBase):
         client_session.sendline(cmd)
         try:
             remote.handle_prompts(client_session, server_user,
-                                  server_pwd, prompt = r"[\#\$]\s*$")
+                                  server_pwd, prompt=r"[\#\$]\s*$")
         except remote.LoginError, e:
             raise ConnCmdClientError(cmd, e)
 
@@ -520,6 +536,14 @@ class SSHConnection(ConnectionBase):
 class TCPConnection(ConnectionBase):
     """
     Connection class for TCP transport.
+
+    Some specific varaibles for TCPConnection class.
+
+    tcp_port: Port of tcp connection, default is 16509.
+    sysconfig_libvirtd_path: Path of libvirtd file, default is
+                             /etc/sysconfig/libvirtd.
+    libvirtd_conf_path: Path of libvirtd.conf, default is
+                        /etc/libvirt/libvirtd.conf.
     """
     __slots__ = ConnectionBase.__slots__ + ('tcp_port',
                                             'remote_syslibvirtd',
@@ -548,6 +572,7 @@ class TCPConnection(ConnectionBase):
                                       password=self.server_pwd,
                                       port='22',
                                       remote_path='/etc/libvirt/libvirtd.conf')
+
     def conn_finish(self):
         """
         Clean up for TCP connection.
@@ -574,7 +599,6 @@ class TCPConnection(ConnectionBase):
 
         logging.debug("TCP connection recover successfully.")
 
-
     def conn_setup(self):
         """
         Enable tcp connect of libvirtd on server.
@@ -597,9 +621,9 @@ class TCPConnection(ConnectionBase):
 
         #edit the /etc/libvirt/libvirtd.conf
         #listen_tcp=1, tcp_port=$tcp_port, auth_tcp="none"
-        pattern2repl = {r".*listen_tcp\s*=.*":'listen_tcp=1',
-                        r".*tcp_port\s*=.*":'tcp_port="%s"' % (tcp_port),
-                        r'.*auth_tcp\s*=.*':'auth_tcp="none"'}
+        pattern2repl = {r".*listen_tcp\s*=.*": 'listen_tcp=1',
+                        r".*tcp_port\s*=.*": 'tcp_port="%s"' % (tcp_port),
+                        r'.*auth_tcp\s*=.*': 'auth_tcp="none"'}
         self.remote_libvirtdconf.sub_else_add(pattern2repl)
 
         #restart libvirtd service on server
@@ -613,9 +637,19 @@ class TCPConnection(ConnectionBase):
 
         logging.debug("TCP connection setup successfully.")
 
+
 class TLSConnection(ConnectionBase):
     """
     Connection of TLS transport.
+
+    Some specific varaibles for TLSConnection class.
+
+    server_cn, client_cn: Info to build pki key.
+    CERTOOL: tool to build key for TLS connection.
+    pki_CA_dir: Dir to store CA key.
+    libvirt_pki_dir, libvirt_pki_private_dir: Dir to store pki in libvirt.
+    sysconfig_libvirtd_path, libvirtd_conf_path: Path of libvirt config file.
+    hosts_path: /etc/hosts
     """
     __slots__ = ConnectionBase.__slots__ + ('server_cn', 'client_cn',
                                             'CERTTOOL', 'pki_CA_dir',
@@ -714,65 +748,24 @@ class TLSConnection(ConnectionBase):
             raise ConnToolNotFoundError('certtool',
                     "certtool executable not set or found on path.")
 
-        self.CA_setup()
+        build_CA(self.tmp_dir, self.CERTTOOL)
         self.server_setup()
         self.client_setup()
 
         logging.debug("TLS connection setup successfully.")
-
-
-    def CA_setup(self):
-        """
-        setup private key and certificate file which are needed to build.
-        certificate file for client and server.
-        (1).initialization for variables.
-        (2).make a private key with certtool command.
-        (3).prepare a info file.
-        (4).make a certificate file with certtool command.
-        """
-        #initialize variables
-        certtool = self.CERTTOOL
-        tmp_dir = self.tmp_dir
-        cakey_path = '%s/tcakey.pem' % tmp_dir
-        cainfo_path = '%s/ca.info' % tmp_dir
-        cacert_path = '%s/cacert.pem' % tmp_dir
-
-        #make a private key
-        cmd = "%s --generate-privkey > %s " % (certtool, cakey_path)
-        CmdResult = utils.run(cmd, ignore_status=True)
-        if CmdResult.exit_status:
-            raise ConnPrivKeyError(CmdResult.stderr)
-        #prepare a info file to build certificate file
-        cainfo_file = open(cainfo_path,"w")
-        cainfo_file.write("cn = AUTOTEST.VIRT\n")
-        cainfo_file.write("ca\n")
-        cainfo_file.write("cert_signing_key\n")
-        cainfo_file.close()
-
-        #make a certificate file to build clientcert and servercert
-        cmd = ("%s --generate-self-signed --load-privkey %s\
-               --template %s --outfile %s" %
-               (certtool, cakey_path, cainfo_path, cacert_path))
-        CmdResult = utils.run(cmd, ignore_status=True)
-        if CmdResult.exit_status:
-            raise ConnCertError(CmdResult.stderr)
-
 
     def server_setup(self):
         """
         setup private key and certificate file for server.
 
         (1).initialization for variables.
-        (2).make a private key with certtool command.
-        (3).prepare a info file.
-        (4).make a certificate file with certtool command.
-        (5).copy files to server.
-        (6).edit /etc/sysconfig/libvirtd on server.
-        (7).edit /etc/libvirt/libvirtd.conf on server.
-        (8).restart libvirtd service on server.
+        (2).build server key.
+        (3).copy files to server.
+        (4).edit /etc/sysconfig/libvirtd on server.
+        (5).edit /etc/libvirt/libvirtd.conf on server.
+        (6).restart libvirtd service on server.
         """
         #initialize variables
-        certtool = self.CERTTOOL
         tmp_dir = self.tmp_dir
         cakey_path = '%s/tcakey.pem' % tmp_dir
         cacert_path = '%s/cacert.pem' % tmp_dir
@@ -783,30 +776,8 @@ class TLSConnection(ConnectionBase):
         server_user = self.server_user
         server_pwd = self.server_pwd
 
-        #make a private key
-        cmd = "%s --generate-privkey > %s" % (certtool, serverkey_path)
-        CmdResult = utils.run(cmd, ignore_status=True)
-        if CmdResult.exit_status:
-            raise ConnPrivKeyError(CmdResult.stderr)
-
-        #prepare a info file to build servercert and serverkey
-        serverinfo_file = open(serverinfo_path, "w")
-        serverinfo_file.write("organization = AUTOTEST.VIRT\n")
-        serverinfo_file.write("cn = %s\n" % (self.server_cn))
-        serverinfo_file.write("tls_www_server\n")
-        serverinfo_file.write("encryption_key\n")
-        serverinfo_file.write("signing_key\n")
-        serverinfo_file.close()
-
-        #make a server certificate file and a server key file
-        cmd = ("%s --generate-certificate --load-privkey %s \
-               --load-ca-certificate %s --load-ca-privkey %s \
-               --template %s --outfile %s" %
-               (certtool, serverkey_path, cacert_path,
-                cakey_path, serverinfo_path, servercert_path))
-        CmdResult = utils.run(cmd, ignore_status=True)
-        if CmdResult.exit_status:
-            raise ConnCertError(CmdResult.stderr)
+        #build a server key.
+        build_server_key(tmp_dir, self.server_cn, self.CERTTOOL)
 
         #scp cacert.pem, servercert.pem and serverkey.pem to server.
         server_session = self.server_session
@@ -815,9 +786,9 @@ class TLSConnection(ConnectionBase):
         if status:
             raise ConnMkdirError(self.libvirt_pki_private_dir, output)
 
-        scp_dict = {cacert_path:self.pki_CA_dir,
-                    servercert_path:self.libvirt_pki_dir,
-                    serverkey_path:self.libvirt_pki_private_dir}
+        scp_dict = {cacert_path: self.pki_CA_dir,
+                    servercert_path: self.libvirt_pki_dir,
+                    serverkey_path: self.libvirt_pki_private_dir}
 
         for key in scp_dict:
             local_path = key
@@ -835,7 +806,7 @@ class TLSConnection(ConnectionBase):
         self.server_syslibvirtd.sub_else_add(pattern2repl)
 
         #edit the /etc/libvirt/libvirtd.conf to add listen_tls=1
-        pattern2repl = {r".*listen_tls\s*=\s*.*":"listen_tls=1"}
+        pattern2repl = {r".*listen_tls\s*=\s*.*": "listen_tls=1"}
         self.server_libvirtdconf.sub_else_add(pattern2repl)
 
         #restart libvirtd service on server
@@ -852,14 +823,11 @@ class TLSConnection(ConnectionBase):
         setup private key and certificate file for client.
 
         (1).initialization for variables.
-        (2).make a private key with certtool command.
-        (3).prepare a info file.
-        (4).make a certificate file with certtool command.
-        (5).copy files to client.
-        (6).edit /etc/hosts on client.
+        (2).build a key for client.
+        (3).copy files to client.
+        (4).edit /etc/hosts on client.
         """
         #initialize variables
-        certtool = self.CERTTOOL
         tmp_dir = self.tmp_dir
         cakey_path = '%s/tcakey.pem' % tmp_dir
         cacert_path = '%s/cacert.pem' % tmp_dir
@@ -870,30 +838,9 @@ class TLSConnection(ConnectionBase):
         client_user = self.client_user
         client_pwd = self.client_pwd
 
-        #make a private key.
-        cmd = "%s --generate-privkey > %s" % (certtool, clientkey_path)
-        CmdResult = utils.run(cmd, ignore_status=True)
-        if CmdResult.exit_status:
-            raise ConnPrivKeyError(CmdResult.stderr)
+        #build a client key.
+        build_client_key(tmp_dir, self.client_cn, self.CERTTOOL)
 
-        #prepare a info file to build clientcert.
-        clientinfo_file = open(clientinfo_path, "w")
-        clientinfo_file.write("organization = AUTOTEST.VIRT\n")
-        clientinfo_file.write("cn = %s\n" % (self.client_cn))
-        clientinfo_file.write("tls_www_client\n")
-        clientinfo_file.write("encryption_key\n")
-        clientinfo_file.write("signing_key\n")
-        clientinfo_file.close()
-
-        #make a client certificate file and a client key file.
-        cmd = ("%s --generate-certificate --load-privkey %s \
-               --load-ca-certificate %s --load-ca-privkey %s \
-               --template %s --outfile %s" %
-               (certtool, clientkey_path, cacert_path,
-                cakey_path, clientinfo_path, clientcert_path))
-        CmdResult = utils.run(cmd, ignore_status=True)
-        if CmdResult.exit_status:
-            raise ConnCertError(CmdResult.stderr)
         #scp cacert.pem, clientcert.pem and clientkey.pem to client.
         client_session = self.client_session
         cmd = "mkdir -p %s" % self.libvirt_pki_private_dir
@@ -901,9 +848,9 @@ class TLSConnection(ConnectionBase):
         if status:
             raise ConnMkdirError(self.libvirt_pki_private_dir, output)
 
-        scp_dict = {cacert_path:self.pki_CA_dir,
-                    clientcert_path:self.libvirt_pki_dir,
-                    clientkey_path:self.libvirt_pki_private_dir}
+        scp_dict = {cacert_path: self.pki_CA_dir,
+                    clientcert_path: self.libvirt_pki_dir,
+                    clientkey_path: self.libvirt_pki_private_dir}
 
         for key in scp_dict:
             local_path = key
@@ -919,3 +866,119 @@ class TLSConnection(ConnectionBase):
         pattern2repl = {r".*%s.*" % self.server_cn:
                         "%s %s" % (self.server_ip, self.server_cn)}
         self.client_hosts.sub_else_add(pattern2repl)
+
+
+def build_client_key(tmp_dir, client_cn="TLSClient", certtool="certtool"):
+    """
+    (1).initialization for variables.
+    (2).make a private key with certtool command.
+    (3).prepare a info file.
+    (4).make a certificate file with certtool command.
+    """
+    # Initialize variables
+    cakey_path = '%s/tcakey.pem' % tmp_dir
+    cacert_path = '%s/cacert.pem' % tmp_dir
+    clientkey_path = '%s/clientkey.pem' % tmp_dir
+    clientcert_path = '%s/clientcert.pem' % tmp_dir
+    clientinfo_path = '%s/client.info' % tmp_dir
+
+    #make a private key.
+    cmd = "%s --generate-privkey > %s" % (certtool, clientkey_path)
+    CmdResult = utils.run(cmd, ignore_status=True)
+    if CmdResult.exit_status:
+        raise ConnPrivKeyError(CmdResult.stderr)
+
+    #prepare a info file to build clientcert.
+    clientinfo_file = open(clientinfo_path, "w")
+    clientinfo_file.write("organization = AUTOTEST.VIRT\n")
+    clientinfo_file.write("cn = %s\n" % (client_cn))
+    clientinfo_file.write("tls_www_client\n")
+    clientinfo_file.write("encryption_key\n")
+    clientinfo_file.write("signing_key\n")
+    clientinfo_file.close()
+
+    #make a client certificate file and a client key file.
+    cmd = ("%s --generate-certificate --load-privkey %s \
+           --load-ca-certificate %s --load-ca-privkey %s \
+           --template %s --outfile %s" %
+           (certtool, clientkey_path, cacert_path,
+            cakey_path, clientinfo_path, clientcert_path))
+    CmdResult = utils.run(cmd, ignore_status=True)
+    if CmdResult.exit_status:
+        raise ConnCertError(clientinfo_path, CmdResult.stderr)
+
+
+def build_server_key(tmp_dir, server_cn="TLSServer", certtool="certtool"):
+    """
+    (1).initialization for variables.
+    (2).make a private key with certtool command.
+    (3).prepare a info file.
+    (4).make a certificate file with certtool command.
+    """
+    #initialize variables
+    cakey_path = '%s/tcakey.pem' % tmp_dir
+    cacert_path = '%s/cacert.pem' % tmp_dir
+    serverkey_path = '%s/serverkey.pem' % tmp_dir
+    servercert_path = '%s/servercert.pem' % tmp_dir
+    serverinfo_path = '%s/server.info' % tmp_dir
+
+    #make a private key
+    cmd = "%s --generate-privkey > %s" % (certtool, serverkey_path)
+    CmdResult = utils.run(cmd, ignore_status=True)
+    if CmdResult.exit_status:
+        raise ConnPrivKeyError(CmdResult.stderr)
+
+    #prepare a info file to build servercert and serverkey
+    serverinfo_file = open(serverinfo_path, "w")
+    serverinfo_file.write("organization = AUTOTEST.VIRT\n")
+    serverinfo_file.write("cn = %s\n" % (server_cn))
+    serverinfo_file.write("tls_www_server\n")
+    serverinfo_file.write("encryption_key\n")
+    serverinfo_file.write("signing_key\n")
+    serverinfo_file.close()
+
+    #make a server certificate file and a server key file
+    cmd = ("%s --generate-certificate --load-privkey %s \
+           --load-ca-certificate %s --load-ca-privkey %s \
+           --template %s --outfile %s" %
+           (certtool, serverkey_path, cacert_path,
+            cakey_path, serverinfo_path, servercert_path))
+    CmdResult = utils.run(cmd, ignore_status=True)
+    if CmdResult.exit_status:
+        raise ConnCertError(serverinfo_path, CmdResult.stderr)
+
+
+def build_CA(tmp_dir, certtool="certtool"):
+    """
+    setup private key and certificate file which are needed to build.
+    certificate file for client and server.
+
+    (1).initialization for variables.
+    (2).make a private key with certtool command.
+    (3).prepare a info file.
+    (4).make a certificate file with certtool command.
+    """
+    #initialize variables
+    cakey_path = '%s/tcakey.pem' % tmp_dir
+    cainfo_path = '%s/ca.info' % tmp_dir
+    cacert_path = '%s/cacert.pem' % tmp_dir
+
+    #make a private key
+    cmd = "%s --generate-privkey > %s " % (certtool, cakey_path)
+    CmdResult = utils.run(cmd, ignore_status=True)
+    if CmdResult.exit_status:
+        raise ConnPrivKeyError(CmdResult.stderr)
+    #prepare a info file to build certificate file
+    cainfo_file = open(cainfo_path, "w")
+    cainfo_file.write("cn = AUTOTEST.VIRT\n")
+    cainfo_file.write("ca\n")
+    cainfo_file.write("cert_signing_key\n")
+    cainfo_file.close()
+
+    #make a certificate file to build clientcert and servercert
+    cmd = ("%s --generate-self-signed --load-privkey %s\
+           --template %s --outfile %s" %
+           (certtool, cakey_path, cainfo_path, cacert_path))
+    CmdResult = utils.run(cmd, ignore_status=True)
+    if CmdResult.exit_status:
+        raise ConnCertError(cainfo_path, CmdResult.stderr)

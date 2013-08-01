@@ -1,4 +1,8 @@
-import logging, os, re, shutil
+import logging
+import os
+import re
+import shutil
+
 from autotest.client.shared import error
 from virttest import libvirt_vm, utils_libvirtd, virsh, utils_conn
 
@@ -47,7 +51,7 @@ def run_virsh_connect(test, params, env):
 
         libvirtdconf_file = open(libvirtd_conf_path, 'r')
         line_list = libvirtdconf_file.readlines()
-        conf_dict = {r'auth_unix_rw\s*=':'auth_unix_rw="none"\n',}
+        conf_dict = {r'auth_unix_rw\s*=': 'auth_unix_rw="none"\n', }
         for key in conf_dict:
             pattern = key
             conf_line = conf_dict[key]
@@ -143,8 +147,7 @@ def run_virsh_connect(test, params, env):
             ssh_connection = utils_conn.SSHConnection(server_ip=server_ip,
                                         server_pwd=server_pwd,
                                         client_ip=client_ip,
-                                        client_pwd=client_pwd,
-                                        tmp_dir=test.tmpdir)
+                                        client_pwd=client_pwd)
             try:
                 ssh_connection.conn_check()
             except utils_conn.ConnectionError:
@@ -159,9 +162,8 @@ def run_virsh_connect(test, params, env):
                                         server_pwd=server_pwd,
                                         client_ip=client_ip,
                                         client_pwd=client_pwd,
-                                        server_cn = server_cn,
-                                        client_cn=client_cn,
-                                        tmp_dir=test.tmpdir)
+                                        server_cn=server_cn,
+                                        client_cn=client_cn)
             tls_connection.conn_setup()
 
             connect_uri = libvirt_vm.get_uri_with_transport(
@@ -170,14 +172,14 @@ def run_virsh_connect(test, params, env):
         elif transport == "tcp":
             tcp_connection = utils_conn.TCPConnection(server_ip=server_ip,
                                         server_pwd=server_pwd,
-                                        tcp_port=tcp_port,
-                                        tmp_dir=test.tmpdir)
+                                        tcp_port=tcp_port)
             tcp_connection.conn_setup()
 
             connect_uri = libvirt_vm.get_uri_with_transport(
                                         uri_type=canonical_uri_type,
                                         transport=transport,
-                                        dest_ip="%s:%s" % (server_ip, tcp_port))
+                                        dest_ip="%s:%s"
+                                        % (server_ip, tcp_port))
         elif transport == "unix":
             unix_transport_setup()
             connect_uri = libvirt_vm.get_uri_with_transport(
