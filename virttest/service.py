@@ -13,6 +13,8 @@ def get_remote_runner(session):
         Execute command with session and return a utils.CmdResult object.
 
         """
+        # Use a pipo to drop the color of output.
+        command = ("%s | cat" % command)
         status, output = session.cmd_status_output(command)
         return utils.CmdResult(command=command,
                                exit_status=status,
