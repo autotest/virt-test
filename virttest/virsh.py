@@ -1406,7 +1406,8 @@ def net_info(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("net-info %s" % (options), **dargs)
+    return command("net-info %s %s" % (options, extra), **dargs)
+
 def iface_list(options, extra="", **dargs):
     """
     List interfaces on host.
@@ -1416,7 +1417,7 @@ def iface_list(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-list %s" % (options), **dargs)
+    return command("iface-list %s %s" % (options, extra), **dargs)
 
 def iface_dumpxml(name, extra="", **dargs):
     """
@@ -1449,7 +1450,7 @@ def iface_mac(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-mac %s" % (options), **dargs)
+    return command("iface-mac %s %s" % (options,extra), **dargs)
 
 def iface_name(options, extra="", **dargs):
     """
@@ -1459,7 +1460,7 @@ def iface_name(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-name %s" % (options), **dargs)
+    return command("iface-name %s %s" % (options,extra), **dargs)
 
 def iface_start(options, extra="", **dargs):
     """
@@ -1470,7 +1471,8 @@ def iface_start(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-start %s" % (options), **dargs)
+    return command("iface-start %s %s" % (options,extra), **dargs)
+
 def iface_destroy(options, extra="", **dargs):
     """
     destroy interfaces on host.
@@ -1480,7 +1482,8 @@ def iface_destroy(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-destroy %s" % (options), **dargs)
+    return command("iface-destroy %s %s" % (options, extra), **dargs)
+
 def iface_define(xml_file, extra="", **dargs):
     """
     define interfaces on host.
@@ -1490,7 +1493,8 @@ def iface_define(xml_file, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-define %s" % (xml_file), **dargs)
+    return command("iface-define %s %s" % (xml_file, extra), **dargs)
+
 def iface_undefine(options, extra="", **dargs):
     """
     undefine interfaces on host.
@@ -1500,8 +1504,9 @@ def iface_undefine(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-undefine %s" % (options), **dargs)
-def iface_bridge(option, option1, **dargs):
+    return command("iface-undefine %s %s" % (options, extra), **dargs)
+
+def iface_bridge(option, option1, extra="", **dargs):
     """
     bridge interfaces on host.E.g create br0 from eth0
 
@@ -1511,7 +1516,8 @@ def iface_bridge(option, option1, **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-bridge %s %s" % (option,option1), **dargs)
+    return command("iface-bridge %s %s %s" % (option, option1, extra), **dargs)
+
 def iface_unbridge(options, extra="", **dargs):
     """
     unbridge interfaces on host.E.g. convert to eth0 from br0
@@ -1521,9 +1527,7 @@ def iface_unbridge(options, extra="", **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-unbridge %s" % (options), **dargs)
-
-
+    return command("iface-unbridge %s %s" % (options, extra), **dargs)
 
 
 def pool_info(name, **dargs):
