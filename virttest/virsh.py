@@ -1778,10 +1778,10 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     cmd = "setmem"
     if domainarg is not None: # Allow testing of ""
         cmd += " %s" % domainarg
-    if sizearg is not None: # Allow testing of 0 and ""
-        cmd += " %s" % sizearg
     if domain is not None: # Allow testing of --domain ""
         cmd += " --domain %s" % domain
+    if sizearg is not None: # Allow testing of 0 and ""
+        cmd += " %s" % sizearg
     if size is not None: # Allow testing of --size "" or --size 0
         if use_kilobytes:
             cmd += " --kilobytes %s" % size
