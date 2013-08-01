@@ -1418,7 +1418,7 @@ def iface_list(options, extra="", **dargs):
     """
     return command("iface-list %s" % (options), **dargs)
 
-def iface_dumpxml(options, extra="", **dargs):
+def iface_dumpxml(name, extra="", **dargs):
     """
     Return the domain information as an XML dump.
 
