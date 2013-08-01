@@ -73,7 +73,7 @@ def run_virsh_iface_bridge_unbridge(test, params, env):
         if iface.is_bridge(br) == False:
             if iface.is_bridged(eth)==False:
                 if avail_vir_dbl_ifaces(eth,br) == False:
-                    logging.debug("verification of % and %s are failed"%(br,eth))
+                    logging.debug("verification of %s and %s are failed"%(br,eth))
                     error_cnt+=1
             else:
                 logging.debug("%s is still bridged"%(eth))
@@ -99,7 +99,7 @@ def run_virsh_iface_bridge_unbridge(test, params, env):
                 err_count+=1
             else:
                 logging.debug("iface-unbridge is passed for %s"%br)
-            virsh.iface_bridge("%s"%eth,"%s"%br, ignore_status=True)
+            virsh.iface_bridge("%s %s" %(eth,br), "",ignore_status=True)
             if chk_eth_bridgd(eth,br) == False:
                 logging.debug("iface-bridge is failed from %s to %s"%(eth,br))
                 err_count+=1
@@ -109,7 +109,7 @@ def run_virsh_iface_bridge_unbridge(test, params, env):
             logging.debug("%s is not a bridge"%opt)
             eth=opt
             br="br-%s"%opt
-            virsh.iface_bridge("%s"%eth,"%s"%br, ignore_status=True)
+            virsh.iface_bridge("%s %s" %(eth,br),"", ignore_status=True)
             if chk_eth_bridgd(eth,br) == False:
                 logging.debug("iface-bridge is failed from %s to %s"%(eth,br))
                 err_count+=1
@@ -156,10 +156,10 @@ def run_virsh_iface_bridge_unbridge(test, params, env):
         for ind_iface in iface.input_ifaces():
             if iface.is_ipaddr(ind_iface) == False:
                 if chk_virsh_brd_unbrd_str_des_df_undf(ind_iface) == False:
-                    logging.debug("start destroy is failed for  %s"%ind_iface)
+                    logging.debug("Bridge/Unbridge is failed for  %s"%ind_iface)
                     error += 1
                 else:
-                    logging.debug("start destroy is passed for %s"%ind_iface)
+                    logging.debug("Bridge/Unbridge is passed for %s"%ind_iface)
             else: 
                 logging.debug("Bridge/Unbridge testing is ruled out")
                 logging.debug("as %s is hosting an ipaddress"%ind_iface)
