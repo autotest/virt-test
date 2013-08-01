@@ -239,13 +239,13 @@ def run_virsh_setmem(test, params, env):
             raise error.TestFail(msg)
 
         return # Normal test passed
-
+    elif status_error == "no" and old_libvirt_fail == "yes":
+        if status is 0:
+            if old_libvirt:
+                raise error.TestFail("Error test did not result in an error")
+        else:
+            if not old_libvirt:
+                raise error.TestFail("Newer libvirt failed when it should not")
     else: # Verify an error test resulted in error
         if status is 0:
             raise error.TestFail("Error test did not result in an error")
-        else: # status != 0
-            if not old_libvirt: # new libvirt should not have returnd error
-                raise error.TestFail("Newer libvirt failed when it should not")
-            else:
-                # Test passes for old_libvirt == True
-                pass
