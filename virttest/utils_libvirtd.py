@@ -2,7 +2,7 @@
 Module to control libvirtd service.
 """
 import logging, re
-from virttest import remote, aexpect
+from virttest import remote, aexpect, virsh, utils_misc
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
 
@@ -83,6 +83,9 @@ def service_libvirtd_control(action, remote_ip=None,
                 utils.run(service_cmd)
         except (error.CmdError, aexpect.ShellError), detail:
             raise LibvirtdActionError(action, detail)
+        if action is not 'stop':
+            if not libvirtd_wait_for_start(session=session):
+                raise LibvirtdActionError(action, "Libvirtd doesn't started.")
 
     elif action == "status":
         if session:
@@ -113,7 +116,7 @@ def libvirtd_restart():
     try:
         service_libvirtd_control('restart')
         logging.debug("Restarted libvirtd successfuly")
-        return True
+        return libvirtd_wait_for_start()
     except LibvirtdActionError, detail:
         logging.debug("Failed to restart libvirtd:\n%s", detail)
         return False
@@ -139,7 +142,7 @@ def libvirtd_start():
     try:
         service_libvirtd_control('start')
         logging.debug("Start libvirtd successfuly")
-        return True
+        return libvirtd_wait_for_start()
     except LibvirtdActionError, detail:
         logging.debug("Failed to start libvirtd:\n%s", detail)
         return False
@@ -154,3 +157,20 @@ def libvirtd_is_running():
     except LibvirtdActionError, detail:
         logging.debug("Failed to get status of libvirtd:\n%s", detail)
         return False
+
+
+def libvirtd_wait_for_start(timeout=10, session=None):
+    """
+    Wait n seconds for libvirt to start. Default is 10 seconds.
+    """
+    def _check_start():
+        virsh_cmd = "virsh list"
+        try:
+            if session:
+                session.cmd(virsh_cmd, timeout=2)
+            else:
+                utils.run(virsh_cmd, timeout=2)
+            return True
+        except:
+            return False
+    return utils_misc.wait_for(_check_start, timeout=timeout)
