@@ -1420,14 +1420,24 @@ def iface_list(options, extra="", **dargs):
 
 def iface_dumpxml(options, extra="", **dargs):
     """
-    dumps the xml interfaces on host.
+    Return the domain information as an XML dump.
 
-    @param: options: options to pass to command
-    @param: extra: extra parameters to pass to command
+    @param: name: VM name
+    @param: to_file: optional file to write XML output to
     @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    @return: standard output from command
     """
-    return command("iface-dumpxml %s" % (options), **dargs)
+    dargs['ignore_status'] = True
+    cmd = "dumpxml %s %s" % (name, extra)
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                                 "Virsh dumpxml returned non-zero exit status")
+    return result.stdout.strip()
 
 
 def iface_mac(options, extra="", **dargs):
