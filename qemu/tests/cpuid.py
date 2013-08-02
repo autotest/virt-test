@@ -1,11 +1,15 @@
 """
 Group of cpuid tests for X86 CPU
 """
-import logging, re, sys, traceback, os, string
+import re, sys, traceback, os, string
 from autotest.client.shared import error, utils
 from autotest.client.shared import test as test_module
 from virttest import utils_misc, env_process
 
+import logging
+logger = logging.getLogger(__name__)
+dbg = logger.debug
+info = logger.info
 
 def run_cpuid(test, params, env):
     """
