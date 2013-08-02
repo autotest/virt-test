@@ -540,18 +540,13 @@ def run_cpuid(test, params, env):
 
     # subtests runner
     test_type = params["test_type"]
-    failed = []
     if test_type in locals():
         tests_group = locals()[test_type]
         try:
             tests_group()
         except:
             print_exception(tests_group)
-            failed.append(test_type)
+            raise
     else:
         raise error.TestError("Test group '%s' is not defined in"
                               " test" % test_type)
-
-    if failed != []:
-        raise error.TestFail("Test of cpu models %s failed." %
-                              (str(failed)))
