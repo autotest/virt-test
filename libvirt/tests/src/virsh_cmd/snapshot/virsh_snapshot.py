@@ -97,7 +97,11 @@ def run_virsh_snapshot(test, params, env):
         elif sni["State"] == normalize_state("paused"):
             vm.pause()
 
-        last_snapshot = virsh.snapshot_create(vm_name)
+        snapshot_result = virsh.snapshot_create(vm_name)
+        if snapshot_result.exit_status:
+            raise error.TestFail("Failed to create snapshot. Error:%s."
+                                 % snapshot_result.stderr.strip())
+        last_snapshot = re.search("\d+", snapshot_result.stdout.strip()).group(0)
         sni["Name"] = last_snapshot
 
         if sni["State"] == normalize_state("paused"):
