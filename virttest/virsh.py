@@ -1960,7 +1960,7 @@ def setmaxmem(domainarg=None, sizearg=None, domain=None,
     return command(cmd, **dargs)
 
 
-def snapshot_create(name, **dargs):
+def snapshot_create(name, options="", **dargs):
     """
     Create snapshot of domain.
 
@@ -1968,15 +1968,8 @@ def snapshot_create(name, **dargs):
     @param: dargs: standardized virsh function API keywords
     @return: name of snapshot
     """
-    # CmdResult is handled here, force ignore_status
-    dargs['ignore_status'] = True
-    cmd = "snapshot-create %s" % name
-    sc_output = command(cmd, **dargs)
-    if sc_output.exit_status != 0:
-        raise error.CmdError(cmd, sc_output, "Failed to create snapshot")
-    snapshot_number = re.search("\d+", sc_output.stdout.strip()).group(0)
-
-    return snapshot_number
+    cmd = "snapshot-create %s %s" % (name, options)
+    return command(cmd, **dargs)
 
 
 def snapshot_create_as(name, options="", **dargs):
