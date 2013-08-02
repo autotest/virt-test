@@ -117,6 +117,46 @@ def run_cpuid(test, params, env):
             if added:
                 logging.info("Extra CPU models in QEMU CPU listing: %s", added)
 
+    def compare_cpuid_output(a, b):
+        """
+        Generates a list of (register, bit, va, vb) tuples for
+        each bit that is different between a and b.
+        """
+        for reg in ('eax', 'ebx', 'ecx', 'edx'):
+            for bit in range(32):
+                ba = (a[reg] & (1 << bit)) >> bit
+                bb = (b[reg] & (1 << bit)) >> bit
+                if ba <> bb:
+                    yield (reg, bit, ba, bb)
+
+    def parse_cpuid_dump(output):
+        dbg("parsing cpuid dump: %r", output)
+        cpuid_re = re.compile("^ *(0x[0-9a-f]+) +0x([0-9a-f]+): +eax=0x([0-9a-f]+) ebx=0x([0-9a-f]+) ecx=0x([0-9a-f]+) edx=0x([0-9a-f]+)$")
+        out_lines = output.splitlines()
+        if out_lines[0] <> '==START TEST==' or out_lines[-1] <> '==END TEST==':
+            dbg("cpuid dump doesn't have expected delimiters")
+            return None
+        if out_lines[1] <> 'CPU:':
+            dbg("cpuid dump doesn't start with 'CPU:' line")
+            return None
+        result = {}
+        for l in out_lines[2:-1]:
+            m = cpuid_re.match(l)
+            if m is None:
+                dbg("invalid cpuid dump line: %r", l)
+                return None
+            in_eax = int(m.group(1), 16)
+            in_ecx = int(m.group(2), 16)
+            out = {
+                'eax':int(m.group(3), 16),
+                'ebx':int(m.group(4), 16),
+                'ecx':int(m.group(5), 16),
+                'edx':int(m.group(6), 16),
+            }
+            result[(in_eax, in_ecx)] = out
+        return result
+
+
     def get_guest_cpuid(self, cpu_model, feature=None):
         test_kernel_dir = os.path.join(test.virtdir, "deps",
                                        "cpuid_test_kernel")
@@ -141,39 +181,15 @@ def run_cpuid(test, params, env):
         if not utils_misc.wait_for(f, timeout, 1):
             raise error.TestFail("Could not get test complete message.")
 
-        test_sig = re.compile("==START TEST==\n((?:.*\n)*)\n*==END TEST==")
-        test_output = test_sig.search(vm.serial_console.get_output())
-        if test_output == None:
+        test_output = parse_cpuid_dump(vm.serial_console.get_output())
+        if test_output is None:
             raise error.TestFail("Test output signature not found in "
                                  "output:\n %s", vm.serial_console.get_output())
         self.clean()
-        return test_output.group(1)
-
-    def cpuid_regs_to_dic(level_count, cpuid_dump):
-        """
-            @param level_count: is CPUID level and count string in format
-                                'LEVEL COUNT', where:
-                                      LEVEL - CPUID level in hex format
-                                            8 chracters width
-                                      COUNT - input ECX value of cpuid in
-                                            hex format 2 charaters width
-                                example: '0x00000001 0x00'
-            @cpuid_dump: string: output of 'cpuid' utility or provided with
-                                 this test simple kernel that dumps cpuid
-                                 in a similar format.
-            @return: dictionary of register values indexed by register name
-        """
-        grp = '\w*=(\w*)\s*'
-        regs = re.search('\s+%s:.*%s%s%s%s' % (level_count, grp, grp, grp, grp),
-                         cpuid_dump)
-        if regs == None:
-            raise error.TestFail("Could not find %s in cpuid output:\n%s",
-                                 level_count, cpuid_dump)
-        return {'eax': int(regs.group(1), 16), 'ebx': int(regs.group(2), 16),
-                'ecx': int(regs.group(3), 16), 'edx': int(regs.group(4), 16) }
+        return test_output
 
     def cpuid_to_vendor(cpuid_dump, idx):
-        r = cpuid_regs_to_dic(idx + ' 0x00', cpuid_dump)
+        r = cpuid_dump[idx, 0]
         dst =  []
         map(lambda i:
             dst.append((chr(r['ebx'] >> (8 * i) & 0xff))), range(0, 4))
@@ -202,7 +218,7 @@ def run_cpuid(test, params, env):
 
             for cpu_model in cpu_models:
                 out = get_guest_cpuid(self, cpu_model)
-                guest_vendor = cpuid_to_vendor(out, '0x00000000')
+                guest_vendor = cpuid_to_vendor(out, 0x00000000)
                 logging.debug("Guest's vendor: " + guest_vendor)
                 if guest_vendor != vendor:
                     raise error.TestFail("Guest vendor [%s], doesn't match "
@@ -219,8 +235,8 @@ def run_cpuid(test, params, env):
 
             try:
                 out = get_guest_cpuid(self, cpu_model, "vendor=" + vendor)
-                guest_vendor0 = cpuid_to_vendor(out, '0x00000000')
-                guest_vendor80000000 = cpuid_to_vendor(out, '0x80000000')
+                guest_vendor0 = cpuid_to_vendor(out, 0x00000000)
+                guest_vendor80000000 = cpuid_to_vendor(out, 0x80000000)
                 logging.debug("Guest's vendor[0]: " + guest_vendor0)
                 logging.debug("Guest's vendor[0x80000000]: " +
                               guest_vendor80000000)
@@ -242,7 +258,7 @@ def run_cpuid(test, params, env):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_level(cpuid_dump):
-        r = cpuid_regs_to_dic('0x00000000 0x00', cpuid_dump)
+        r = cpuid_dump[0, 0]
         return r['eax']
 
     class custom_level(MiniSubtest):
@@ -270,7 +286,7 @@ def run_cpuid(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_regs_to_dic('0x00000001 0x00', cpuid_dump)['eax']
+        eax = cpuid_dump[1, 0]['eax']
         family = (eax >> 8) & 0xf
         if family  == 0xf:
             # extract extendend family
@@ -302,7 +318,7 @@ def run_cpuid(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_regs_to_dic('0x00000001 0x00', cpuid_dump)['eax']
+        eax = cpuid_dump[1, 0]['eax']
         model = (eax >> 4) & 0xf
         # extended model
         model |= (eax >> 12) & 0xf0
@@ -333,7 +349,7 @@ def run_cpuid(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_regs_to_dic('0x00000001 0x00', cpuid_dump)['eax']
+        eax = cpuid_dump[1, 0]['eax']
         stepping = eax & 0xf
         return stepping
 
@@ -362,7 +378,7 @@ def run_cpuid(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.2.1 Largest Extendend Function # (Function 80000000h)
-        return cpuid_regs_to_dic('0x80000000 0x00', cpuid_dump)['eax']
+        return cpuid_dump[0x80000000, 0x00]['eax']
 
     class custom_xlevel(MiniSubtest):
         """
@@ -395,8 +411,8 @@ def run_cpuid(test, params, env):
         # 5.2.3 Processor Brand String (Functions 80000002h, 80000003h,
         # 80000004h)
         m_id = ""
-        for idx in ('0x80000002', '0x80000003', '0x80000004'):
-            regs = cpuid_regs_to_dic('%s 0x00' % idx, cpuid_dump)
+        for idx in (0x80000002, 0x80000003, 0x80000004):
+            regs = cpuid_dump[idx, 0]
             for name in ('eax', 'ebx', 'ecx', 'edx'):
                 for shift in range(4):
                     c = ((regs[name] >> (shift * 8)) & 0xff)
@@ -429,7 +445,7 @@ def run_cpuid(test, params, env):
                 raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_regs_to_string(cpuid_dump, leaf, idx, regs):
-        r = cpuid_regs_to_dic('%s %s' % (leaf, idx), cpuid_dump)
+        r = cpuid_dump[leaf, idx]
         signature = ""
         for i in regs:
             for shift in range(0, 4):
@@ -449,8 +465,8 @@ def run_cpuid(test, params, env):
         def test(self):
             has_error = False
             flags = params.get("flags","")
-            leaf = params.get("leaf","0x40000000")
-            idx = params.get("index","0x00")
+            leaf = int(params.get("leaf","0x40000000"), 0)
+            idx = int(params.get("index","0x00"), 0)
             regs = params.get("regs","ebx ecx edx").split()
             signature = params["signature"]
             try:
@@ -474,13 +490,13 @@ def run_cpuid(test, params, env):
         def test(self):
             has_error = False
             flags = params.get("flags","")
-            leaf = params.get("leaf","0x40000000")
-            idx = params.get("index","0x00")
+            leaf = int(params.get("leaf","0x40000000"), 0)
+            idx = int(params.get("index","0x00"), 0)
             reg = params.get("reg","eax")
             bits = params["bits"].split()
             try:
                 out = get_guest_cpuid(self, cpu_model, flags)
-                r = cpuid_regs_to_dic('%s %s' % (leaf, idx), out)[reg]
+                r = out[leaf, idx][reg]
                 logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
                 for i in bits:
                     if (r & (1 << int(i))) == 0:
@@ -500,13 +516,13 @@ def run_cpuid(test, params, env):
         def test(self):
             has_error = False
             flags = params.get("flags","")
-            leaf = params.get("leaf")
-            idx = params.get("index","0x00")
+            leaf = int(params.get("leaf", "0x00"), 0)
+            idx = int(params.get("index","0x00"), 0)
             reg = params.get("reg","eax")
-            val = int(params["value"])
+            val = int(params["value"], 0)
             try:
                 out = get_guest_cpuid(self, cpu_model, flags)
-                r = cpuid_regs_to_dic('%s %s' % (leaf, idx), out)[reg]
+                r = out[leaf, idx][reg]
                 logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
                 if r != val:
                     raise error.TestFail("CPUID(%s.%s).%s is not 0x%08x" %
