@@ -4,7 +4,7 @@ Group of cpuid tests for X86 CPU
 import re, sys, os, string
 from autotest.client.shared import error, utils
 from autotest.client.shared import test as test_module
-from virttest import utils_misc, env_process
+from virttest import utils_misc, env_process, virt_vm
 
 import logging
 logger = logging.getLogger(__name__)
@@ -480,6 +480,73 @@ def run_cpuid(test, params, env):
         if (has_error is False) and (xfail is True):
             raise error.TestFail("Test was expected to fail, but it didn't")
 
+    def check_cpuid_dump(self):
+        """
+        Compare full CPUID dump data
+        """
+        machine_type = params.get("machine_type_to_check","")
+        kvm_enabled = params.get("enable_kvm", "yes") == "yes"
+
+        ignore_cpuid_leaves = params.get("ignore_cpuid_leaves", "")
+        ignore_cpuid_leaves = ignore_cpuid_leaves.split()
+        whitelist = []
+        for l in ignore_cpuid_leaves:
+            l = l.split(',')
+            # syntax of ignore_cpuid_leaves:
+            # <in_eax>[,<in_ecx>[,<register>[ ,<bit>]]] ...
+            for i in 0,1,3: # integer fields:
+                if len(l) > i:
+                    l[i] = int(l[i], 0)
+            whitelist.append(tuple(l))
+
+        if not machine_type:
+            raise error.TestNAError("No machine_type_to_check defined")
+        ref_file = os.path.join(test.virtdir, "deps",
+                                "cpuid_dumps",
+                                kvm_enabled and "kvm" or "nokvm",
+                                machine_type, '%s-dump.txt' % (cpu_model))
+        if not os.path.exists(ref_file):
+            raise error.TestNAError("no cpuid dump file: %s" % (ref_file))
+        reference = open(ref_file, 'r').read()
+        if not reference:
+            raise error.TestNAError("no cpuid dump data on file: %s" % (ref_file))
+        reference = parse_cpuid_dump(reference)
+        if reference is None:
+            raise error.TestNAError("couldn't parse reference cpuid dump from file; %s" % (ref_file))
+        try:
+            out = get_guest_cpuid(self, cpu_model, 'enforce',
+                                  extra_params=dict(machine_type=machine_type, smp=1))
+        except virt_vm.VMCreateError,e:
+            if "host doesn't support requested feature:" in e.output \
+                or ("host cpuid" in e.output and \
+                    "lacks requested flag" in e.output):
+                raise error.TestNAError("Can't run CPU model %s on this host" % (cpu_model))
+            else:
+                raise
+        dbg('ref_file: %r', ref_file)
+        dbg('ref: %r', reference)
+        dbg('out: %r', out)
+        ok = True
+        for k in reference.keys():
+            in_eax,in_ecx = k
+            if k not in out:
+                info("Missing CPUID data from output: CPUID[0x%x,0x%x]", in_eax, in_ecx)
+                ok = False
+                continue
+            diffs = compare_cpuid_output(reference[k], out[k])
+            for d in diffs:
+                reg, bit, vreference, vout =d
+                whitelisted = (in_eax,) in whitelist \
+                    or (in_eax, in_ecx) in whitelist \
+                    or (in_eax, in_ecx, reg) in whitelist \
+                    or (in_eax, in_ecx, reg, bit) in whitelist
+                info("Non-matching bit: CPUID[0x%x,0x%x].%s[%d]: found %s instead of %s%s",
+                     in_eax, in_ecx, reg, bit, vout, vreference,
+                     whitelisted and " (whitelisted)" or "")
+                if not whitelisted:
+                    ok = False
+        if not ok:
+            raise error.TestFail("Unexpected CPUID data")
 
     # subtests runner
     test_type = params["test_type"]
