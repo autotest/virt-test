@@ -16,6 +16,7 @@
 *.so
 .settings
 shared/data
+shared/deps/cpuid_test_kernel/cpuid_dump_kernel.bin
 qemu/env
 logs
 qemu/unittests
