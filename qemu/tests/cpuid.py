@@ -27,38 +27,6 @@ def run_cpuid(test, params, env):
     if (params.get("xfail") is not None) and (params.get("xfail") == "yes"):
         xfail = True
 
-    class MiniSubtest(test_module.Subtest):
-        """
-        subtest base class for actual tests
-        """
-        def __new__(cls, *args, **kargs):
-            self = test.__new__(cls)
-            ret = None
-            if args is None:
-                args = []
-            try:
-                ret = self.test(*args, **kargs)
-            finally:
-                if hasattr(self, "clean"):
-                    self.clean()
-            return ret
-
-        def clean(self):
-            """
-            cleans up running VM instance
-            """
-            if (hasattr(self, "vm")):
-                vm = getattr(self, "vm")
-                if vm.is_alive():
-                    vm.pause()
-                    vm.destroy(gracefully=False)
-
-        def test(self):
-            """
-            stub for actual test code
-            """
-            raise error.TestFail("test() must be redifined in subtest")
-
     def cpu_models_to_test():
         """Return the list of CPU models to be tested, based on the
         cpu_models and cpu_model config options.
@@ -87,22 +55,21 @@ def run_cpuid(test, params, env):
 
         return cpu_models
 
-    class test_qemu_cpu_models_list(MiniSubtest):
+    def test_qemu_cpu_models_list(self):
         """
         check CPU models returned by <qemu> -cpu '?' are what is expected
         """
-        def test(self):
-            """
-            test method
-            """
-            cpu_models = cpu_models_to_test()
-            qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
-            missing = set(cpu_models) - set(qemu_models)
-            if missing:
-                raise error.TestFail("Some CPU models not in QEMU CPU model list: %s")
-            added = set(qemu_models) - set(cpu_models)
-            if added:
-                logging.info("Extra CPU models in QEMU CPU listing: %s", added)
+        """
+        test method
+        """
+        cpu_models = cpu_models_to_test()
+        qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
+        missing = set(cpu_models) - set(qemu_models)
+        if missing:
+            raise error.TestFail("Some CPU models not in QEMU CPU model list: %s")
+        added = set(qemu_models) - set(cpu_models)
+        if added:
+            logging.info("Extra CPU models in QEMU CPU listing: %s", added)
 
     def compare_cpuid_output(a, b):
         """
@@ -162,6 +129,7 @@ def run_cpuid(test, params, env):
             params_b.update(extra_params)
         env_process.preprocess_vm(self, params_b, env, vm_name)
         vm = env.get_vm(vm_name)
+        dbg('is dead: %r', vm.is_dead())
         vm.create()
         self.vm = vm
         vm.resume()
@@ -175,7 +143,7 @@ def run_cpuid(test, params, env):
         if test_output is None:
             raise error.TestFail("Test output signature not found in "
                                  "output:\n %s", vm.serial_console.get_output())
-        self.clean()
+        vm.destroy(gracefully=False)
         return test_output
 
     def cpuid_to_vendor(cpuid_dump, idx):
@@ -189,88 +157,85 @@ def run_cpuid(test, params, env):
             dst.append((chr(r['ecx'] >> (8 * i) & 0xff))), range(0, 4))
         return ''.join(dst)
 
-    class default_vendor(MiniSubtest):
+    def default_vendor(self):
         """
         Boot qemu with specified cpu models and
         verify that CPU vendor matches requested
         """
-        def test(self):
-            cpu_models = cpu_models_to_test()
+        cpu_models = cpu_models_to_test()
 
-            vendor = params.get("vendor")
-            if vendor is None or vendor == "host":
-                cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
-                cmd_result = utils.run(cmd, ignore_status=True)
-                vendor = cmd_result.stdout.strip()
+        vendor = params.get("vendor")
+        if vendor is None or vendor == "host":
+            cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
+            cmd_result = utils.run(cmd, ignore_status=True)
+            vendor = cmd_result.stdout.strip()
 
-            ignore_cpus = set(params.get("ignore_cpu_models","").split(' '))
-            cpu_models = cpu_models - ignore_cpus
+        ignore_cpus = set(params.get("ignore_cpu_models","").split(' '))
+        cpu_models = cpu_models - ignore_cpus
 
-            for cpu_model in cpu_models:
-                out = get_guest_cpuid(self, cpu_model)
-                guest_vendor = cpuid_to_vendor(out, 0x00000000)
-                logging.debug("Guest's vendor: " + guest_vendor)
-                if guest_vendor != vendor:
-                    raise error.TestFail("Guest vendor [%s], doesn't match "
-                                         "required vendor [%s] for CPU [%s]" %
-                                         (guest_vendor, vendor, cpu_model))
+        for cpu_model in cpu_models:
+            out = get_guest_cpuid(self, cpu_model)
+            guest_vendor = cpuid_to_vendor(out, 0x00000000)
+            logging.debug("Guest's vendor: " + guest_vendor)
+            if guest_vendor != vendor:
+                raise error.TestFail("Guest vendor [%s], doesn't match "
+                                     "required vendor [%s] for CPU [%s]" %
+                                     (guest_vendor, vendor, cpu_model))
 
-    class custom_vendor(MiniSubtest):
+    def custom_vendor(self):
         """
         Boot qemu with specified vendor
         """
-        def test(self):
-            has_error = False
-            vendor = params["vendor"]
+        has_error = False
+        vendor = params["vendor"]
 
-            try:
-                out = get_guest_cpuid(self, cpu_model, "vendor=" + vendor)
-                guest_vendor0 = cpuid_to_vendor(out, 0x00000000)
-                guest_vendor80000000 = cpuid_to_vendor(out, 0x80000000)
-                logging.debug("Guest's vendor[0]: " + guest_vendor0)
-                logging.debug("Guest's vendor[0x80000000]: " +
-                              guest_vendor80000000)
-                if guest_vendor0 != vendor:
-                    raise error.TestFail("Guest vendor[0] [%s], doesn't match "
-                                         "required vendor [%s] for CPU [%s]" %
-                                         (guest_vendor0, vendor, cpu_model))
-                if guest_vendor80000000 != vendor:
-                    raise error.TestFail("Guest vendor[0x80000000] [%s], "
-                                         "doesn't match required vendor "
-                                         "[%s] for CPU [%s]" %
-                                         (guest_vendor80000000, vendor,
-                                          cpu_model))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        try:
+            out = get_guest_cpuid(self, cpu_model, "vendor=" + vendor)
+            guest_vendor0 = cpuid_to_vendor(out, 0x00000000)
+            guest_vendor80000000 = cpuid_to_vendor(out, 0x80000000)
+            logging.debug("Guest's vendor[0]: " + guest_vendor0)
+            logging.debug("Guest's vendor[0x80000000]: " +
+                          guest_vendor80000000)
+            if guest_vendor0 != vendor:
+                raise error.TestFail("Guest vendor[0] [%s], doesn't match "
+                                     "required vendor [%s] for CPU [%s]" %
+                                     (guest_vendor0, vendor, cpu_model))
+            if guest_vendor80000000 != vendor:
+                raise error.TestFail("Guest vendor[0x80000000] [%s], "
+                                     "doesn't match required vendor "
+                                     "[%s] for CPU [%s]" %
+                                     (guest_vendor80000000, vendor,
+                                      cpu_model))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_level(cpuid_dump):
         r = cpuid_dump[0, 0]
         return r['eax']
 
-    class custom_level(MiniSubtest):
+    def custom_level(self):
         """
         Boot qemu with specified level
         """
-        def test(self):
-            has_error = False
-            level = params["level"]
-            try:
-                out = get_guest_cpuid(self, cpu_model, "level=" + level)
-                guest_level = str(cpuid_to_level(out))
-                if guest_level != level:
-                    raise error.TestFail("Guest's level [%s], doesn't match "
-                                         "required level [%s]" %
-                                         (guest_level, level))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        has_error = False
+        level = params["level"]
+        try:
+            out = get_guest_cpuid(self, cpu_model, "level=" + level)
+            guest_level = str(cpuid_to_level(out))
+            if guest_level != level:
+                raise error.TestFail("Guest's level [%s], doesn't match "
+                                     "required level [%s]" %
+                                     (guest_level, level))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_family(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -283,26 +248,25 @@ def run_cpuid(test, params, env):
             return family + ((eax >> 20) & 0xff)
         return family
 
-    class custom_family(MiniSubtest):
+    def custom_family(self):
         """
         Boot qemu with specified family
         """
-        def test(self):
-            has_error = False
-            family = params["family"]
-            try:
-                out = get_guest_cpuid(self, cpu_model, "family=" + family)
-                guest_family = str(cpuid_to_family(out))
-                if guest_family != family:
-                    raise error.TestFail("Guest's family [%s], doesn't match "
-                                         "required family [%s]" %
-                                         (guest_family, family))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        has_error = False
+        family = params["family"]
+        try:
+            out = get_guest_cpuid(self, cpu_model, "family=" + family)
+            guest_family = str(cpuid_to_family(out))
+            if guest_family != family:
+                raise error.TestFail("Guest's family [%s], doesn't match "
+                                     "required family [%s]" %
+                                     (guest_family, family))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_model(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -314,26 +278,25 @@ def run_cpuid(test, params, env):
         model |= (eax >> 12) & 0xf0
         return model
 
-    class custom_model(MiniSubtest):
+    def custom_model(self):
         """
         Boot qemu with specified model
         """
-        def test(self):
-            has_error = False
-            model = params["model"]
-            try:
-                out = get_guest_cpuid(self, cpu_model, "model=" + model)
-                guest_model = str(cpuid_to_model(out))
-                if guest_model != model:
-                    raise error.TestFail("Guest's model [%s], doesn't match "
-                                         "required model [%s]" %
-                                         (guest_model, model))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        has_error = False
+        model = params["model"]
+        try:
+            out = get_guest_cpuid(self, cpu_model, "model=" + model)
+            guest_model = str(cpuid_to_model(out))
+            if guest_model != model:
+                raise error.TestFail("Guest's model [%s], doesn't match "
+                                     "required model [%s]" %
+                                     (guest_model, model))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_stepping(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -343,26 +306,25 @@ def run_cpuid(test, params, env):
         stepping = eax & 0xf
         return stepping
 
-    class custom_stepping(MiniSubtest):
+    def custom_stepping(self):
         """
         Boot qemu with specified stepping
         """
-        def test(self):
-            has_error = False
-            stepping = params["stepping"]
-            try:
-                out = get_guest_cpuid(self, cpu_model, "stepping=" + stepping)
-                guest_stepping = str(cpuid_to_stepping(out))
-                if guest_stepping != stepping:
-                    raise error.TestFail("Guest's stepping [%s], doesn't match "
-                                         "required stepping [%s]" %
-                                         (guest_stepping, stepping))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        has_error = False
+        stepping = params["stepping"]
+        try:
+            out = get_guest_cpuid(self, cpu_model, "stepping=" + stepping)
+            guest_stepping = str(cpuid_to_stepping(out))
+            if guest_stepping != stepping:
+                raise error.TestFail("Guest's stepping [%s], doesn't match "
+                                     "required stepping [%s]" %
+                                     (guest_stepping, stepping))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_xlevel(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -370,30 +332,29 @@ def run_cpuid(test, params, env):
         # 5.2.1 Largest Extendend Function # (Function 80000000h)
         return cpuid_dump[0x80000000, 0x00]['eax']
 
-    class custom_xlevel(MiniSubtest):
+    def custom_xlevel(self):
         """
         Boot qemu with specified xlevel
         """
-        def test(self):
-            has_error = False
-            xlevel = params["xlevel"]
-            if params.get("expect_xlevel") is not None:
-                xlevel = params.get("expect_xlevel")
+        has_error = False
+        xlevel = params["xlevel"]
+        if params.get("expect_xlevel") is not None:
+            xlevel = params.get("expect_xlevel")
 
-            try:
-                out = get_guest_cpuid(self, cpu_model, "xlevel=" +
-                                      params.get("xlevel"))
-                guest_xlevel = str(cpuid_to_xlevel(out))
-                if guest_xlevel != xlevel:
-                    raise error.TestFail("Guest's xlevel [%s], doesn't match "
-                                         "required xlevel [%s]" %
-                                         (guest_xlevel, xlevel))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        try:
+            out = get_guest_cpuid(self, cpu_model, "xlevel=" +
+                                  params.get("xlevel"))
+            guest_xlevel = str(cpuid_to_xlevel(out))
+            if guest_xlevel != xlevel:
+                raise error.TestFail("Guest's xlevel [%s], doesn't match "
+                                     "required xlevel [%s]" %
+                                     (guest_xlevel, xlevel))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_model_id(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -411,28 +372,27 @@ def run_cpuid(test, params, env):
                     m_id += chr(c)
         return m_id
 
-    class custom_model_id(MiniSubtest):
+    def custom_model_id(self):
         """
         Boot qemu with specified model_id
         """
-        def test(self):
-            has_error = False
-            model_id = params["model_id"]
+        has_error = False
+        model_id = params["model_id"]
 
-            try:
-                out = get_guest_cpuid(self, cpu_model, "model_id='%s'" %
-                                      model_id)
-                guest_model_id = cpuid_to_model_id(out)
-                if guest_model_id != model_id:
-                    raise error.TestFail("Guest's model_id [%s], doesn't match "
-                                         "required model_id [%s]" %
-                                         (guest_model_id, model_id))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        try:
+            out = get_guest_cpuid(self, cpu_model, "model_id='%s'" %
+                                  model_id)
+            guest_model_id = cpuid_to_model_id(out)
+            if guest_model_id != model_id:
+                raise error.TestFail("Guest's model_id [%s], doesn't match "
+                                     "required model_id [%s]" %
+                                     (guest_model_id, model_id))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_regs_to_string(cpuid_dump, leaf, idx, regs):
         r = cpuid_dump[leaf, idx]
@@ -448,88 +408,85 @@ def run_cpuid(test, params, env):
                                                     signature))
         return signature
 
-    class cpuid_signature(MiniSubtest):
+    def cpuid_signature(self):
         """
         test signature in specified leaf:index:regs
         """
-        def test(self):
-            has_error = False
-            flags = params.get("flags","")
-            leaf = int(params.get("leaf","0x40000000"), 0)
-            idx = int(params.get("index","0x00"), 0)
-            regs = params.get("regs","ebx ecx edx").split()
-            signature = params["signature"]
-            try:
-                out = get_guest_cpuid(self, cpu_model, flags)
-                _signature = cpuid_regs_to_string(out, leaf, idx, regs)
-                if _signature != signature:
-                    raise error.TestFail("Guest's signature [%s], doesn't"
-                                         "match required signature [%s]" %
-                                         (_signature, signature))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        has_error = False
+        flags = params.get("flags","")
+        leaf = int(params.get("leaf","0x40000000"), 0)
+        idx = int(params.get("index","0x00"), 0)
+        regs = params.get("regs","ebx ecx edx").split()
+        signature = params["signature"]
+        try:
+            out = get_guest_cpuid(self, cpu_model, flags)
+            _signature = cpuid_regs_to_string(out, leaf, idx, regs)
+            if _signature != signature:
+                raise error.TestFail("Guest's signature [%s], doesn't"
+                                     "match required signature [%s]" %
+                                     (_signature, signature))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
-    class cpuid_bit_test(MiniSubtest):
+    def cpuid_bit_test(self):
         """
         test bits in specified leaf:func:reg
         """
-        def test(self):
-            has_error = False
-            flags = params.get("flags","")
-            leaf = int(params.get("leaf","0x40000000"), 0)
-            idx = int(params.get("index","0x00"), 0)
-            reg = params.get("reg","eax")
-            bits = params["bits"].split()
-            try:
-                out = get_guest_cpuid(self, cpu_model, flags)
-                r = out[leaf, idx][reg]
-                logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
-                for i in bits:
-                    if (r & (1 << int(i))) == 0:
-                        raise error.TestFail("CPUID(%s.%s).%s[%s] is not set" %
-                                             (leaf, idx, reg, i))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        has_error = False
+        flags = params.get("flags","")
+        leaf = int(params.get("leaf","0x40000000"), 0)
+        idx = int(params.get("index","0x00"), 0)
+        reg = params.get("reg","eax")
+        bits = params["bits"].split()
+        try:
+            out = get_guest_cpuid(self, cpu_model, flags)
+            r = out[leaf, idx][reg]
+            logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
+            for i in bits:
+                if (r & (1 << int(i))) == 0:
+                    raise error.TestFail("CPUID(%s.%s).%s[%s] is not set" %
+                                         (leaf, idx, reg, i))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
-    class cpuid_reg_test(MiniSubtest):
+    def cpuid_reg_test(self):
         """
         test register value in specified leaf:index:reg
         """
-        def test(self):
-            has_error = False
-            flags = params.get("flags","")
-            leaf = int(params.get("leaf", "0x00"), 0)
-            idx = int(params.get("index","0x00"), 0)
-            reg = params.get("reg","eax")
-            val = int(params["value"], 0)
-            try:
-                out = get_guest_cpuid(self, cpu_model, flags)
-                r = out[leaf, idx][reg]
-                logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
-                if r != val:
-                    raise error.TestFail("CPUID(%s.%s).%s is not 0x%08x" %
-                                         (leaf, idx, reg, val))
-            except:
-                has_error = True
-                if xfail is False:
-                    raise
-            if (has_error is False) and (xfail is True):
-                raise error.TestFail("Test was expected to fail, but it didn't")
+        has_error = False
+        flags = params.get("flags","")
+        leaf = int(params.get("leaf", "0x00"), 0)
+        idx = int(params.get("index","0x00"), 0)
+        reg = params.get("reg","eax")
+        val = int(params["value"], 0)
+        try:
+            out = get_guest_cpuid(self, cpu_model, flags)
+            r = out[leaf, idx][reg]
+            logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
+            if r != val:
+                raise error.TestFail("CPUID(%s.%s).%s is not 0x%08x" %
+                                     (leaf, idx, reg, val))
+        except:
+            has_error = True
+            if xfail is False:
+                raise
+        if (has_error is False) and (xfail is True):
+            raise error.TestFail("Test was expected to fail, but it didn't")
 
 
     # subtests runner
     test_type = params["test_type"]
-    if test_type in locals():
-        tests_group = locals()[test_type]
-        tests_group()
-    else:
-        raise error.TestError("Test group '%s' is not defined in"
+    if test_type not in locals():
+        raise error.TestError("Test function '%s' is not defined in"
                               " test" % test_type)
+
+    test_func = locals()[test_type]
+    return test_func(test)
