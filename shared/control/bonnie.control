@@ -18,4 +18,4 @@ throughput, %CPU rand seeks per second. Not sure if the the CPU numbers
 are trustworthy.
 """
 
-job.run_test('bonnie')
+job.run_test('bonnie', extra_args="-n 500 -s 2048M -r 1024M")
