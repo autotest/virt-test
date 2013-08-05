@@ -1,7 +1,7 @@
 """
 Group of cpuid tests for X86 CPU
 """
-import re, sys, traceback, os, string
+import re, sys, os, string
 from autotest.client.shared import error, utils
 from autotest.client.shared import test as test_module
 from virttest import utils_misc, env_process
@@ -58,19 +58,6 @@ def run_cpuid(test, params, env):
             stub for actual test code
             """
             raise error.TestFail("test() must be redifined in subtest")
-
-    def print_exception(called_object):
-        """
-        print error including stack trace
-        """
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        logging.error("In function (" + called_object.__name__ + "):")
-        logging.error("Call from:\n" +
-                      traceback.format_stack()[-2][:-1])
-        logging.error("Exception from:\n" +
-                      "".join(traceback.format_exception(
-                                              exc_type, exc_value,
-                                              exc_traceback.tb_next)))
 
     def cpu_models_to_test():
         """Return the list of CPU models to be tested, based on the
@@ -542,11 +529,7 @@ def run_cpuid(test, params, env):
     test_type = params["test_type"]
     if test_type in locals():
         tests_group = locals()[test_type]
-        try:
-            tests_group()
-        except:
-            print_exception(tests_group)
-            raise
+        tests_group()
     else:
         raise error.TestError("Test group '%s' is not defined in"
                               " test" % test_type)
