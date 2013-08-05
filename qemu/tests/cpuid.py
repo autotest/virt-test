@@ -158,7 +158,7 @@ def run_cpuid(test, params, env):
         return result
 
 
-    def get_guest_cpuid(self, cpu_model, feature=None):
+    def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None):
         test_kernel_dir = os.path.join(test.virtdir, "deps",
                                        "cpuid_test_kernel")
         os.chdir(test_kernel_dir)
@@ -171,6 +171,8 @@ def run_cpuid(test, params, env):
         params_b["cpu_model_flags"] = feature
         del params_b["images"]
         del params_b["nics"]
+        if extra_params:
+            params_b.update(extra_params)
         env_process.preprocess_vm(self, params_b, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.create()
