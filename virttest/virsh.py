@@ -1389,6 +1389,136 @@ def net_autostart(network, extra="", **dargs):
     """
     return command("net-autostart %s %s" % (network, extra), **dargs)
 
+def net_info(network, extra="", **dargs):
+    """
+    List networks on host.
+
+    @param: network: options to pass to command
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("net-info %s %s" % (network, extra), **dargs)
+
+
+def iface_list(ifc_name, extra="", **dargs):
+    """
+    List interfaces on host.
+
+    @param: ifc_name: interface name to be passed
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-list %s %s" % (ifc_name, extra), **dargs)
+
+def iface_dumpxml(ifc_name, to_file=None, extra="", **dargs):
+    """
+    Dumps iface details in xml
+    @param: ifc_name: interface name to be passed
+    @param: options: options to pass to command
+    @param: to_file: capture the output to a optional file
+    @return: CmdResult object
+    """
+    cmd = ('iface-dumpxml %s %s %s' %(ifc_name,to_file,extra))
+    result = command(cmd, **dargs)
+    if to_file is not None:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    return result
+
+
+def iface_mac(ifc_name, extra="", **dargs):
+    """
+    provide mac address of the interface on host.
+
+    @param: ifc_name: interface name to be passed
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-mac %s %s" % (ifc_name,extra), **dargs)
+
+def iface_name(ifc_mac, extra="", **dargs):
+    """
+    provide name of the interface on host
+
+    @param: ifc_mac: mac of interface to be passed
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-name %s %s" % (ifc_mac, extra), **dargs)
+
+def iface_start(ifc_name, extra="", **dargs):
+    """
+    start interfaces on host.
+
+    @param: ifc_name: interface name to be passed
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-start %s %s" % (ifc_name, extra), **dargs)
+
+def iface_destroy(ifc_name, extra="", **dargs):
+    """
+    destroy interfaces on host.
+
+    @param: ifc_name: interface name to be passed
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-destroy %s %s" % (ifc_name, extra), **dargs)
+
+def iface_define(xml_file, extra="", **dargs):
+    """
+    define interfaces on host.
+
+    @param: xml_file: xml file to pass to command
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-define %s %s" % (xml_file, extra), **dargs)
+
+def iface_undefine(ifc_name, extra="", **dargs):
+    """
+    undefine interfaces on host.
+
+    @param: ifc_name: interface name to be passed
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-undefine %s %s" % (ifc_name, extra), **dargs)
+
+def iface_bridge(eth_ifc, br_ifc, extra="", **dargs):
+    """
+    bridge interfaces on host.E.g create br0 from eth0
+
+    @param: eth_ifc: option for ethernet device e.g eth0
+    @param: br_ifc: option for bridge device e.g br0
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-bridge %s %s %s" % (eth_ifc, br_ifc, extra), **dargs)
+
+
+def iface_unbridge(br_ifc, extra="", **dargs):
+    """
+    unbridge interfaces on host.E.g. convert to eth0 from br0
+
+    @param: br_ifc: options for bridge 
+    @param: extra: extra parameters to pass to command
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    return command("iface-unbridge %s %s" % (br_ifc, extra), **dargs)
+
 
 def pool_info(name, **dargs):
     """
