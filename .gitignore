@@ -34,9 +34,9 @@ libvirt/cfg/guest-os.cfg
 libvirt/cfg/machines.cfg
 libvirt/cfg/subtests.cfg
 libvirt/cfg/virtio-win.cfg
-sandbox/cfg/subtests.cfg
-sandbox/env
 libvirt/env
+lvsb/cfg/subtests.cfg
+lvsb/env
 v2v/cfg/base.cfg
 v2v/cfg/cdkeys.cfg
 v2v/cfg/guest-hw.cfg
