@@ -1,4 +1,4 @@
-import re, glob, math
+import re, glob, math, logging
 from autotest.client import utils
 
 
