@@ -1164,6 +1164,8 @@ class VM(virt_vm.BaseVM):
                 if vendor_id:
                     cmd += ",vendor=\"%s\"" % vendor_id
                 if flags:
+                    if not flags.startswith(","):
+                        cmd += ","
                     cmd += "%s" % flags
                 if family is not None:
                     cmd += ",family=%s" % family
@@ -2245,6 +2247,10 @@ class VM(virt_vm.BaseVM):
                 logging.debug(self.devices.str_short())
                 logging.debug(self.devices.str_bus_short())
                 qemu_command = self.devices.cmdline()
+            except error.TestNAError:
+                # TestNAErrors should be kept as-is so we generate SKIP
+                # results instead of bogus FAIL results
+                raise
             except Exception:
                 for nic in self.virtnet:
                     self._nic_tap_remove_helper(nic)
