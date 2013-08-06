@@ -1,7 +1,12 @@
 import logging, time, commands, os, re
 from autotest.client.shared import error
-from autotest.client import utils
 from virttest import utils_test
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
+
 
 def run_trans_hugepage_relocated(test, params, env):
     """
@@ -20,7 +25,7 @@ def run_trans_hugepage_relocated(test, params, env):
     def nr_hugepage_check(sleep_time, wait_time):
         time_last = 0
         while True:
-            value = int(utils.read_from_meminfo("AnonHugePages"))
+            value = int(utils_memory.read_from_meminfo("AnonHugePages"))
             nr_hugepages.append(value)
             time_stamp = time.time()
             if time_last != 0:
@@ -39,8 +44,8 @@ def run_trans_hugepage_relocated(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
 
-    free_memory = utils.read_from_meminfo("MemFree")
-    hugepage_size = utils.read_from_meminfo("Hugepagesize")
+    free_memory = utils_memory.read_from_meminfo("MemFree")
+    hugepage_size = utils_memory.read_from_meminfo("Hugepagesize")
     mem = params.get("mem")
     vmsm =  int(mem) + 128
     hugetlbfs_path = params.get("hugetlbfs_path", "/proc/sys/vm/nr_hugepages")

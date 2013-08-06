@@ -1,7 +1,13 @@
 import logging, re, os, commands, string, math
 from autotest.client.shared import error
 from virttest import virsh, libvirt_vm
-from autotest.client import utils, cgroup_utils
+from autotest.client import cgroup_utils
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
+
 
 def run_virsh_memtune(test, params, env):
     """
@@ -151,7 +157,7 @@ def run_virsh_memtune(test, params, env):
     # By default set 1GB less than the total memory
     # In case of total memory is less than 1GB set to 256MB
     # visit subtests.cfg to change these default values
-    Memtotal = utils.read_from_meminfo('MemTotal')
+    Memtotal = utils_memory.read_from_meminfo('MemTotal')
     base_mem = params.get("memtune_base_mem")
 
     if int(Memtotal) < int(base_mem):

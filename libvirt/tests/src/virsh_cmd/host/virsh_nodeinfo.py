@@ -3,6 +3,11 @@ from autotest.client import utils
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
 
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
+
 
 def run_virsh_nodeinfo(test, params, env):
     """
@@ -66,7 +71,7 @@ def run_virsh_nodeinfo(test, params, env):
 
         # Check Memory size
         memory_size_nodeinfo = int(_check_nodeinfo(nodeinfo_output, 'Memory size', 3))
-        memory_size_os = utils.memtotal()
+        memory_size_os = utils_memory.memtotal()
         if memory_size_nodeinfo != memory_size_os:
             raise error.TestFail("Virsh nodeinfo output didn't match "
                                  "Memory size")
