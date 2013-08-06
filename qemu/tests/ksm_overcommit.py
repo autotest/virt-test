@@ -2,6 +2,8 @@ import logging, time, random, math, os
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
 
+from autotest.client.shared import utils
+
 try:
     from autotest.client.shared import utils_memory
 except ImportError:
