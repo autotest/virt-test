@@ -4,7 +4,7 @@ Simple test that executes date command in a sanbox and verifies it is correct
 
 import datetime
 from autotest.client.shared import error
-from virttest.sandbox import make_sandboxes
+from virttest.lvsb import make_sandboxes
 
 
 def verify_datetime(start_time, stop_time, result_list):
@@ -36,7 +36,7 @@ def some_failed(failed_list):
     return False
 
 
-def run_virt_sandbox_date(test, params, env):
+def run_lvsb_date(test, params, env):
     """
     Executes date command in a sanbox and verifies it is correct
 
@@ -48,7 +48,7 @@ def run_virt_sandbox_date(test, params, env):
     # Record time for comparison when finished
     start_time = datetime.datetime.now()
     status_error = bool('yes' == params.get('status_error', 'no'))
-    # list of sandbox agregate managers (containing list of sandboxes)
+    # list of sandbox agregation managers (list of lists of list of sandboxes)
     sb_agg_list = make_sandboxes(params, env)
     # Number of sandboxes for each aggregate type
     agg_count = [agg.count for agg in sb_agg_list]

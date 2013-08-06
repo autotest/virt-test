@@ -1,5 +1,5 @@
 """
-Base classes for sandboxe/container testing
+Base classes supporting Libvirt Sandbox (lxc) container testing
 
 @copyright: 2013 Red Hat Inc.
 """
@@ -161,30 +161,39 @@ class SandboxBase(object):
     Base class for connection to a single new or existing sandboxed command
     """
 
-    # Number of instances created of this class
+    # Provide unique instance number for each sandbox
+    # guaranteeing names will never clash between tests
     instances = None
+
 
     def __init__(self, params):
         """
         Create a new sandbox interface instance based on this type from params
         """
+        # Un-pickling instances doesn't call init again
         if self.__class__.instances is None:
             self.__class__.instances = 1
         else:
             self.__class__.instances += 1
-        # store a copy
+        # store a copy for use to avoid referencing class attribute
         self.identifier = self.__class__.instances
+        # Allow global 'lvsb_*' keys to be overridden for specific subclass
         self.params = params.object_params(self.__class__.__name__)
         self.options = None # opaque value consumed by make_command()
-        self._session = SandboxSession() # private so can be changed later
+        # Aexpect has some well hidden bugs, private atribute hides
+        # interface in case it changes from fixes or gets swapped out
+        # entirely.
+        self._session = SandboxSession()
 
 
+    # Allow running sandboxes to persist across multiple tests if needed
     def __getstate__(self):
         """Serialize instance for pickling"""
         # Regular dictionary format for now, but could change later
         state = {'params':self.params,
                  'identifier':self.identifier,
                  'options':self.options}
+        # Critical info. to re-connect to session when un-pickle
         if self._session.connected:
             state['session_id'] = self._session.session_id
         return state
@@ -202,9 +211,16 @@ class SandboxBase(object):
     @property
     def name(self):
         """
-        Represent a unique sandbox name based on the class and identifier
+        Represent a unique sandbox name generated from class and identifier
         """
-        return "%s__%d" % (self.__class__.__name__, self.identifier)
+        # Use shortest possible unique names for instances to be easier
+        # to track and make name-comparison fast when there are 10000's
+        # of sandboxes. Only use upper-case letters from class name along
+        # with instance identifier attribute.
+        class_name = self.__class__.__name__
+        class_initials = class_name.translate(None,
+                             'abcdefghijklmnopqrstuvwxyz')
+        return "%s_%d" % (class_initials, self.identifier)
 
 
     def run(self):
@@ -222,6 +238,8 @@ class SandboxBase(object):
         """
         Finalize asynchronous background sandbox process (destroys state!)
         """
+        self._session.close_session()
+
 
     def send(self, data):
         """Send data to asynchronous background sandbox process"""
@@ -270,11 +288,11 @@ class SandboxBase(object):
         self._session.auto_clean(boolean)
 
 
-    # These are the abstract methods subclasses must override
     def make_sandbox_command_line(self):
         """
         Return the fully formed command-line for the sandbox using self.options
         """
+        # These are the abstract methods subclasses must override
         raise NotImplementedError
 
 
@@ -307,7 +325,8 @@ class SandboxCommandBase(SandboxBase):
 
 
     def make_sandbox_command_line(self):
-        command = self.params['virt_sandbox_binary'] # mandatory
+        """Return entire command-line string needed to start sandbox"""
+        command = self.params['virt_sandbox_binary'] # mandatory param
         if self.options is not None:
             command += self.flaten_options(self.options)
         return command
@@ -326,6 +345,7 @@ class SandboxCommandBase(SandboxBase):
         """
         Add a flag into the list of command line options
         """
+        # Tuple encoding required for flaten_options()
         self.add_optarg(option, None)
 
 
@@ -333,6 +353,7 @@ class SandboxCommandBase(SandboxBase):
         """
         Add a positional option into the list of command line options
         """
+        # Tuple encoding required for flaten_options()
         self.add_optarg(None, argument)
 
 
@@ -378,6 +399,8 @@ class SandboxCommandBase(SandboxBase):
         return [arg for opt, arg in self.options if opt is None]
 
 
+# Instances are similar to a list-of-lists- multiple kinds (classes) of
+# multiple sandobx executions.
 class TestSandboxes(object):
     """
     Aggregate manager class of SandboxCommandBase or subclass instances
@@ -390,15 +413,20 @@ class TestSandboxes(object):
         """
         Create instance(s) of sandbox from a command
         """
+        # public attribute for access to each sandbox execution
         self.sandboxes = []
         # Each sandbox type will object_params() itself
         self.params = params
+        # In case a subclass wants to interface with tests before/after
         self.env = env
-        # Parse out aggregate manager-specific params
+        # Parse out aggregate manager class-specific params
         pop = self.params.object_params(self.__class__.__name__)
-        self.count = int(pop.get('sandbox_count', '1')) # Common key
-        self.uri = pop.get('sandbox_uri', 'lxc:///') # Common key
-        self.command = pop.get('sandbox_command') # Common key
+        # Allows iterating over all sandboxes e.g. with for_each()
+        self.count = int(pop.get('lvsb_count', '1'))
+        # Simple-case is all sandboxes on the local host
+        self.uri = pop.get('lvsb_uri', 'lxc:///')
+        # The command to run inside the sandbox
+        self.command = pop.get('lvsb_command')
 
 
     def init_sandboxes(self):
@@ -407,7 +435,7 @@ class TestSandboxes(object):
         """
         # self.sandboxes probably empty, can't use for_each()
         for index in xrange(0, self.count):
-            del index # not used
+            del index # Keep pylint happy
             self.sandboxes.append(self.SANDBOX_TYPE(self.params))
 
 
@@ -417,6 +445,7 @@ class TestSandboxes(object):
 
         @param: do_sometihng: Called with the item and *args, **dargs
         """
+        # Simplify making the same call to every running sandbox
         return [do_something(sandbox, *args, **dargs)
                 for sandbox in self.sandboxes]
 
@@ -430,6 +459,7 @@ class TestSandboxes(object):
             if is_running:
                 running += 1
         return running
+
 
     def are_failed(self):
         """
