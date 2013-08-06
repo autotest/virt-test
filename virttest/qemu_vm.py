@@ -3542,7 +3542,7 @@ class VM(virt_vm.BaseVM):
         self.monitor.set_link(netdev_name, up)
 
 
-    def get_block(self, p_dict={}):
+    def get_block_old(self, blocks_info, p_dict={}):
         """
         Get specified block device from monitor's info block command.
         The block device is defined by parameter in p_dict.
@@ -3550,9 +3550,10 @@ class VM(virt_vm.BaseVM):
         @param p_dict: Dictionary that contains parameters and its value used
                        to define specified block device.
 
+        @blocks_info: the results of monitor command 'info block'
+
         @return: Matched block device name, None when not find any device.
         """
-        blocks_info = self.monitor.info("block")
         if isinstance(blocks_info, str):
             for block in blocks_info.splitlines():
                 match = True
@@ -3583,6 +3584,60 @@ class VM(virt_vm.BaseVM):
                     return block['device']
         return None
 
+    def process_info_block(self, blocks_info):
+        """
+        process the info block, so that can deal with
+        the new and old qemu formart.
+        @param blocks_info: the output of qemu command
+                            'info block'
+        """
+        block_list = []
+        block_entry = []
+        for block in blocks_info.splitlines():
+            if block:
+                block_entry.append(block.strip())
+            else:
+                block_list.append(' '.join(block_entry))
+                block_entry = []
+        # don't forget the last one
+        block_list.append(' '.join(block_entry))
+        return block_list
+
+
+    def get_block(self, p_dict={}):
+        """
+        Get specified block device from monitor's info block command.
+        The block device is defined by parameter in p_dict.
+
+        @param p_dict: Dictionary that contains parameters and its value used
+                       to define specified block device.
+
+        @return: Matched block device name, None when not find any device.
+        """
+        blocks_info = self.monitor.info("block")
+        block = self.get_block_old(blocks_info, p_dict)
+        if block:
+            return block
+
+        block_list = self.process_info_block(blocks_info)
+        for block in block_list:
+            for key, value in p_dict.iteritems():
+                    # for new qemu we just deal with key = [removable,
+                    # file,backing_file], for other types key, we should
+                    # fixup later
+                logging.info("block = %s" % block)
+                if key == 'removable':
+                    if value == False:
+                        if not 'Removable device' in block:
+                            return block.split(":")[0]
+                    elif value == True:
+                        if 'Removable device' in block:
+                            return block.split(":")[0]
+                # file in key means both file and backing_file
+                if ('file' in key) and (value in block):
+                    return block.split(":")[0]
+
+        return None
 
     def check_block_locked(self, value):
         """
@@ -3605,9 +3660,19 @@ class VM(virt_vm.BaseVM):
 
         if isinstance(blocks_info, str):
             lock_str = "locked=1"
+            lock_str_new = "locked"
+            no_lock_str = "not locked"
             for block in blocks_info.splitlines():
                 if (value in block) and (lock_str in block):
                     return True
+            # deal with new qemu
+            block_list = self.process_info_block(blocks_info)
+            for block_new in block_list:
+                if (value in block_new) and ("Removable device" in block_new):
+                    if no_lock_str in block_new:
+                        return False
+                    elif lock_str_new in block_new:
+                        return True
         else:
             for block in blocks_info:
                 if value in str(block):
