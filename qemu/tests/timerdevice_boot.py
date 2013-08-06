@@ -1,4 +1,4 @@
-import logging, re
+import logging, re, time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, storage, utils_disk, utils_test, env_process
@@ -14,6 +14,10 @@ def run_timerdevice_boot(test, params, env):
     4) Do some file operation on guest (Optional)
     5) Check the system time on guest and host (Optional)
     6) Check the hardware time on guest and host (Optional)
+    7) Sleep period of time before reboot (Optional)
+    8) Reboot guest (Optional)
+    9) Check the system time on guest and host (Optional)
+    10) Check the hardware time on guest and host (Optional)
 
     @param test: QEMU test object.
     @param params: Dictionary with test parameters.
@@ -125,3 +129,32 @@ def run_timerdevice_boot(test, params, env):
             raise error.TestFail("The guest's hardware time is different with"
                                  " host's. Host time: '%s', guest time:"
                                  " '%s'" % (host_time, guest_time))
+
+    if params.get("timerdevice_reboot_test") == "yes":
+        sleep_time = params.get("timerdevice_sleep_time")
+        if sleep_time:
+            error.context("Sleep '%s' secs before reboot" % sleep_time,
+                          logging.info)
+            sleep_time = int(sleep_time)
+            time.sleep(sleep_time)
+
+        session = vm.reboot()
+        error.context("Check the system time on guest and host", logging.info)
+        (host_time, guest_time) = utils_test.get_time(session, time_command,
+                                                  time_filter_re, time_format)
+        drift = abs(float(host_time) - float(guest_time))
+        if drift > timerdevice_drift_threshold:
+            raise error.TestFail("The guest's system time is different with"
+                                 " host's. Host time: '%s', guest time:"
+                                 " '%s'" % (host_time, guest_time))
+
+        get_hw_time_cmd = params.get("get_hw_time_cmd")
+        if get_hw_time_cmd:
+            error.context("Check the hardware time on guest and host", logging.info)
+            host_time = utils.system_output(get_hw_time_cmd)
+            guest_time = session.cmd(get_hw_time_cmd)
+            drift = abs(float(host_time) - float(guest_time))
+            if drift > timerdevice_drift_threshold:
+                raise error.TestFail("The guest's hardware time is different with"
+                                     " host's. Host time: '%s', guest time:"
+                                     " '%s'" % (host_time, guest_time))
