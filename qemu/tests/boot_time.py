@@ -1,7 +1,11 @@
 import logging, time, re, os
 from autotest.client.shared import error
-from autotest.client import utils
 from virttest import utils_misc, utils_test, env_process, storage, data_dir
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
 
 
 @error.context_aware
@@ -34,7 +38,7 @@ def run_boot_time(test, params, env):
         vm.destroy()
 
         error.context("Boot up guest and measure the boot time", logging.info)
-        utils.drop_caches()
+        utils_memory.drop_caches()
         vm.create()
         vm.verify_alive()
         session = vm.wait_for_serial_login(timeout=timeout)

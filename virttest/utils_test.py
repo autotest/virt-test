@@ -37,6 +37,11 @@ except ImportError:
     # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
     from virttest import utils_cgroup
 
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
+
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
 try:
@@ -1442,9 +1447,9 @@ def get_memory_info(lvms):
 
     try:
         meminfo = "Host: memfree = "
-        meminfo += str(int(utils.freememtotal()) / 1024) + "M; "
+        meminfo += str(int(utils_memory.freememtotal()) / 1024) + "M; "
         meminfo += "swapfree = "
-        mf = int(utils.read_from_meminfo("SwapFree")) / 1024
+        mf = int(utils_system.read_from_meminfo("SwapFree")) / 1024
         meminfo += str(mf) + "M; "
     except Exception, e:
         raise error.TestFail("Could not fetch host free memory info, "
