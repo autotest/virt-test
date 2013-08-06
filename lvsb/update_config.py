@@ -9,7 +9,7 @@ import common
 from autotest.client.shared import logging_manager
 from virttest import data_dir, bootstrap, utils_misc
 
-test_name = "sandbox"
+test_name = "lvsb"
 test_dir = os.path.dirname(sys.modules[__name__].__file__)
 test_dir = os.path.abspath(test_dir)
 t_type = os.path.basename(test_dir)
