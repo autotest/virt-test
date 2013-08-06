@@ -1,4 +1,6 @@
-import os, time
+import os
+import time
+
 from autotest.client.shared import error
 from virttest import virsh, aexpect, utils_libvirtd
 
@@ -59,10 +61,10 @@ def run_virsh_edit(test, params, env):
         @param: guest_name : vm's name.
         @return: True if edit successed,False if edit failed.
         """
-        dic_mode = {"edit" : ":%s /[0-9]*<\/vcpu>/"+expected_vcpu+"<\/vcpu>",
-                    "recover" : ":%s /[0-9]*<\/vcpu>/"+original_vcpu+"<\/vcpu>"}
+        dic_mode = {"edit": ":%s /[0-9]*<\/vcpu>/"+expected_vcpu+"<\/vcpu>",
+                    "recover": ":%s /[0-9]*<\/vcpu>/"+original_vcpu+"<\/vcpu>"}
         status = modify_vcpu(source, dic_mode["edit"])
-        if not status :
+        if not status:
             return status
         if params.get("paused_after_start_vm") == "yes":
             virsh.resume(guest_name, ignore_status=True)
@@ -72,7 +74,7 @@ def run_virsh_edit(test, params, env):
         vcpus = vm.dominfo()["CPU(s)"]
         #Recover cpuinfo
         status = modify_vcpu(source, dic_mode["recover"])
-        if status  and vcpus != expected_vcpu:
+        if status and vcpus != expected_vcpu:
             return False
         return status
 
