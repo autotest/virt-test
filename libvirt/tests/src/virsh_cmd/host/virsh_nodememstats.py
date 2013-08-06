@@ -1,7 +1,13 @@
 import logging, re
 from autotest.client.shared import error
-from autotest.client import utils
 from virttest import virsh, utils_libvirtd
+
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
+
 
 def run_virsh_nodememstats(test, params, env):
     """
@@ -102,10 +108,10 @@ def run_virsh_nodememstats(test, params, env):
                         expected[name] = int(value) / 1024
 
                 # Get the actual value from /proc/meminfo and normalise to MBs
-                actual['total'] = int(utils.memtotal()) / 1024
-                actual['free'] = int(utils.freememtotal()) / 1024
-                actual['buffers'] = int(utils.read_from_meminfo('Buffers'))/1024
-                actual['cached'] = int(utils.read_from_meminfo('Cached')) / 1024
+                actual['total'] = int(utils_memory.memtotal()) / 1024
+                actual['free'] = int(utils_memory.freememtotal()) / 1024
+                actual['buffers'] = int(utils_memory.read_from_meminfo('Buffers'))/1024
+                actual['cached'] = int(utils_memory.read_from_meminfo('Cached')) / 1024
 
                 # Currently the delta value is kept at 200 MB this can be
                 # tuned based on the accuracy

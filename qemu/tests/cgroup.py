@@ -21,6 +21,12 @@ except ImportError:
     from virttest.utils_cgroup import CgroupModules
     from virttest.utils_cgroup import get_load_per_cpu
 
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
+
+
 @error.context_aware
 def run_cgroup(test, params, env):
     """
@@ -1768,7 +1774,7 @@ def run_cgroup(test, params, env):
                 err = "Hugepages can't be used in this test."
                 logging.error(err)
                 raise error.TestNAError(err)
-            if utils.read_from_meminfo('SwapFree') < (mem * 0.1):
+            if utils_memory.read_from_meminfo('SwapFree') < (mem * 0.1):
                 err = "Not enough free swap space"
                 logging.error(err)
                 raise error.TestNAError(err)
