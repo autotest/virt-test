@@ -2,6 +2,7 @@ import logging, re, time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, storage, utils_disk, utils_test, env_process
+from virttest import funcatexit
 
 @error.context_aware
 def run_timerdevice_boot(test, params, env):
@@ -9,15 +10,16 @@ def run_timerdevice_boot(test, params, env):
     Timer device boot guest:
 
     1) Sync the host system time with ntp server
-    2) Boot the guest with specific clock source
-    3) Check the clock source currently used on guest
-    4) Do some file operation on guest (Optional)
-    5) Check the system time on guest and host (Optional)
-    6) Check the hardware time on guest and host (Optional)
-    7) Sleep period of time before reboot (Optional)
-    8) Reboot guest (Optional)
-    9) Check the system time on guest and host (Optional)
-    10) Check the hardware time on guest and host (Optional)
+    2) Add some load on host (Optional)
+    3) Boot the guest with specific clock source
+    4) Check the clock source currently used on guest
+    5) Do some file operation on guest (Optional)
+    6) Check the system time on guest and host (Optional)
+    7) Check the hardware time on guest and host (Optional)
+    8) Sleep period of time before reboot (Optional)
+    9) Reboot guest (Optional)
+    10) Check the system time on guest and host (Optional)
+    11) Check the hardware time on guest and host (Optional)
 
     @param test: QEMU test object.
     @param params: Dictionary with test parameters.
@@ -33,6 +35,14 @@ def run_timerdevice_boot(test, params, env):
 
     error.context("Sync the host system time with ntp server", logging.info)
     utils.system("ntpdate clock.redhat.com")
+
+    timerdevice_host_load_cmd = params.get("timerdevice_host_load_cmd")
+    if timerdevice_host_load_cmd:
+        error.context("Add some load on host", logging.info)
+        utils.system(timerdevice_host_load_cmd)
+        host_load_stop_cmd = params["timerdevice_host_load_stop_cmd"]
+        funcatexit.register(env, params["type"], utils.system,
+                            host_load_stop_cmd)
 
     error.context("Boot a guest with kvm-clock", logging.info)
     vm = env.get_vm(params["main_vm"])
