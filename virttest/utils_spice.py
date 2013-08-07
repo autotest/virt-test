@@ -2,7 +2,7 @@
 Common spice test utility functions.
 
 """
-import os, logging, time
+import os, logging, time, sys
 from autotest.client.shared import error
 from aexpect import ShellCmdError, ShellStatusError, ShellTimeoutError
 
@@ -131,6 +131,26 @@ def verify_vdagent(guest_session, test_timeout):
                      " is available ------------")
     wait_timeout(3)
 
+def get_vdagent_status(vm_session, test_timeout):
+    """
+    Return the status of vdagent
+    @param vm_session:  ssh session of the VM
+    @param test_timeout: timeout time for the cmd
+    """
+    output = ""
+    cmd = "service spice-vdagentd status"
+
+    wait_timeout(3)
+    try:
+        output = vm_session.cmd(cmd, print_func=logging.info, timeout=test_timeout)
+    except ShellCmdError:
+        #getting the status of vdagent stopped returns 3, which results in a ShellCmdError
+        return("stopped")
+    except:
+        print "Unexpected error:", sys.exc_info()[0]
+        raise error.TestFail("Failed attempting to get status of spice-vdagentd")
+    wait_timeout(3)
+    return(output)
 
 def verify_virtio(guest_session, test_timeout):
     """
