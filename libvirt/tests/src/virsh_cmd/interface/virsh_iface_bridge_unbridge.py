@@ -1,11 +1,10 @@
 #!/usr/bin/python
-import os,logging, fileinput, re, os.path
-from autotest.client.shared import utils,error
-from virttest import virsh, libvirt_vm, iface
-from virttest.libvirt_xml import vm_xml
+import os,logging
+from autotest.client.shared import error
+from virttest import virsh,iface
 """
 Test case:
-If a network bridge is available for the interface then, for virsh 
+If a network bridge is available for the interface then, for virsh
 it is bridge or else ethernet. Verify iface-bridge and iface-
 unbridge
 
@@ -14,7 +13,7 @@ Steps:
 Before testing network scripts would be backed up and restored back after
 testing
 
-2.For ethernet inetrface, bridge followed by unbridge would be checked 
+2.For ethernet inetrface, bridge followed by unbridge would be checked
 For bridge one new xml would be created, which would be deleted at the
  end of the testing
 
@@ -22,87 +21,59 @@ For bridge one new xml would be created, which would be deleted at the
 and try step 1 and 2.
 
 Input:
-All the interfaces available in the host other than bridged intercace
-virsh internal network interface (virbr0,vnet0...) and the interfaces
+All the interfaces available in the host other than bridged intercace,
+ virsh internal network interface (virbr0,vnet0...) and the interfaces
 where ipaddresses are configured
 
 
 """
 
 def run_virsh_iface_bridge_unbridge(test, params, env):
-    
-    def avail_vir_dbl_ifaces(opt1,opt2):
-        err_cnt=0
-        if iface.avail_vir_iface(opt1):
-            if iface.chk_mac_vir_iface(opt1) != False and iface.state_vir_iface(opt1)=='active':
-                logging.debug("%s is defined with proper mac and active"%opt1) 
-            else: 
-                logging.debug("%s is neither defined with proper mac nor active"%opt1) 
-                err_cnt+=1
-        else: 
-            logging.debug("%s is not defined"%opt1) 
-            err_cnt+=1
-        if iface.avail_vir_iface(opt2):
-            logging.debug("%s is defined"%opt2)                   
-            err_cnt+=1
-        if err_cnt > 0:
-            return False
+    def avail_vir_dbl_ifaces(iface_y,iface_n):
+        if iface.avail_vir_iface(iface_y):
+            if iface.chk_mac_vir_iface(iface_y) and iface.state_vir_iface(iface_y)=='active':
+                logging.debug("%s is defined with proper mac and active"%iface_y)
+            else:
+                raise error.TestFail("%s is neither defined with proper mac nor active"%iface_y)
         else:
-            return True
-    #print avail_vir_dbl_ifaces('br0','eth0') 
+            raise error.TestFail("%s is not defined"%iface_y)
+        if iface.avail_vir_iface(iface_n):
+            raise error.TestFail("%s is defined"%iface_n)
+
     def chk_eth_bridgd(eth,br):
-        error_cnt=0
         if iface.is_bridge(br):
-            if iface.eth_of_brdg(br) == eth: 
-                if avail_vir_dbl_ifaces(br,eth) == False:
-                    logging.debug("verification of % & %s are failed"%(br,eth))
-                    error_cnt+=1
+            if iface.eth_of_brdg(br) == eth:
+                if avail_vir_dbl_ifaces(br,eth) is False:
+                    raise error.TestFail("verification of % & %s are failed"%(br,eth))
             else:
-                logging.debug("%s is not the ethernet of %s"%(eth,br))
-                error_cnt+=1
+                raise error.TestFail("%s is not the ethernet of %s"%(eth,br))
         else:
-            logging.debug("%s is not a bridge"%br)
-            error_cnt+=1
-        if error_cnt > 0:
-            return False
-        else:
-            return True
-    #print chk_eth_bridgd('lo','br0')
+            raise error.TestFail("%s is not a bridge"%br)
+
     def chk_br_unbridgd(br,eth):
-        error_cnt=0
-        if iface.is_bridge(br) == False:
-            if iface.is_bridged(eth)==False:
-                if avail_vir_dbl_ifaces(eth,br) == False:
-                    logging.debug("verification of %s and %s are failed"%(br,eth))
-                    error_cnt+=1
+        if iface.is_bridge(br) is False:
+            if iface.is_bridged(eth) is False:
+                if avail_vir_dbl_ifaces(eth,br) is False:
+                    raise error.TestFail("verification of %s and %s are failed"%(br,eth))
             else:
-                logging.debug("%s is still bridged"%(eth))
-                error_cnt+=1
+                raise error.TestFail("%s is still bridged"%(eth))
         else:
-            logging.debug("%s is still a bridge"%br)
-            error_cnt+=1
-        if error_cnt > 0:
-            return False
-        else:
-            return True
-    #print chk_br_unbridgd('br0','lo')
-    def chk_virsh_bridged_unbridged(opt): 
-        err_count=0
+            raise error.TestFail("%s is still a bridge"%br)
+
+    def chk_virsh_bridged_unbridged(opt):
         org_state=iface.state_vir_iface(opt)
-        if iface.is_bridge(opt): 
+        if iface.is_bridge(opt):
             logging.debug("%s is a bridge"%opt)
             br=opt
-            eth=iface.eth_of_brdg(opt) 
+            eth=iface.eth_of_brdg(opt)
             virsh.iface_unbridge("%s" %br, ignore_status=True)
-            if chk_br_unbridgd(br,eth) == False:
-                logging.debug("iface-unbridge is failed for %s"%br)
-                err_count+=1
+            if chk_br_unbridgd(br,eth) is False:
+                raise error.TestFail("iface-unbridge is failed for %s"%br)
             else:
                 logging.debug("iface-unbridge is passed for %s"%br)
             virsh.iface_bridge("%s %s" %(eth,br), "",ignore_status=True)
-            if chk_eth_bridgd(eth,br) == False:
-                logging.debug("iface-bridge is failed from %s to %s"%(eth,br))
-                err_count+=1
+            if chk_eth_bridgd(eth,br) is False:
+                raise error.TestFail("iface-bridge is failed from %s to %s"%(eth,br))
             else:
                 logging.debug("iface-bridge is passed from %s to %s"%(eth,br))
         else:
@@ -110,62 +81,40 @@ def run_virsh_iface_bridge_unbridge(test, params, env):
             eth=opt
             br="br-%s"%opt
             virsh.iface_bridge("%s %s" %(eth,br),"", ignore_status=True)
-            if chk_eth_bridgd(eth,br) == False:
-                logging.debug("iface-bridge is failed from %s to %s"%(eth,br))
-                err_count+=1
+            if chk_eth_bridgd(eth,br) is False:
+                raise error.TestFail("iface-bridge is failed from %s to %s"%(eth,br))
             else:
                 logging.debug("iface-bridge is passed from %s to %s"%(eth,br))
             virsh.iface_unbridge("%s" %br, ignore_status=True)
-            if chk_br_unbridgd(br,eth) == False:
-                logging.debug("iface-unbridge is failed for %s"%br)
-                err_count+=1
+            if chk_br_unbridgd(br,eth) is False:
+                raise error.TestFail("iface-unbridge is failed for %s"%br)
             else:
                 logging.debug("iface-unbridge is passed for %s"%br)
         if org_state=='inactive':
-            iface.ifdown(opt) 
-        if err_count > 0:
-            return False
-        else:
-            return True
-    #print chk_virsh_bridged_unbridged('eth1')
-    def chk_virsh_brd_unbrd_str_des_df_undf(opt):
-        err_count_2=0
+            iface.ifdown(opt)
+
+    def chk_virsh_brd_unbrd_df_undf(opt):
         if iface.avail_vir_iface(opt):
             iface.network_scripts_backup(opt)
-            if chk_virsh_bridged_unbridged(opt)==False:
-                err_count_2+=1
+            chk_virsh_bridged_unbridged(opt) 
             iface.network_scripts_restore(opt)
         else:
             iface.create_iface_xml(opt)
             virsh.iface_define("tmp-%s.xml" %opt, ignore_status=True)
-            if chk_virsh_bridged_unbridged(opt) == False:
-                err_count_2+=1
+            chk_virsh_bridged_unbridged(opt) 
             virsh.iface_undefine("%s" %opt, ignore_status=True)
             iface.destroy_iface_xml(opt)
-        if err_count_2 >0:
-           return False
-        else:
-           return True
-    #print chk_virsh_brd_unbrd_str_des_df_undf('eth1')
-    
-    def chk_virsh_brd_unbrd_str_des_df_undf_all():
-        error_count=0
-        logging.debug("Bridge/Unbridge test would be run on")
-        logging.debug("following interfaces")
-        logging.debug("%s"%iface.input_ifaces())
+
+    def chk_virsh_brd_unbrd_df_undf_all():
+        logging.debug("Bridge/Unbridge test would be run on "
+        "following interfaces "
+        "%s"%iface.input_ifaces())
         for ind_iface in iface.input_ifaces():
-            if iface.is_ipaddr(ind_iface) == False:
-                if chk_virsh_brd_unbrd_str_des_df_undf(ind_iface) == False:
-                    logging.debug("Bridge/Unbridge is failed for  %s"%ind_iface)
-                    error += 1
-                else:
-                    logging.debug("Bridge/Unbridge is passed for %s"%ind_iface)
-            else: 
-                logging.debug("Bridge/Unbridge testing is ruled out")
-                logging.debug("as %s is hosting an ipaddress"%ind_iface)
-        if error_count >0:
-           return False
-        else:
-           return True
-    logging.debug("%s"%chk_virsh_brd_unbrd_str_des_df_undf_all())
-    
+            if iface.is_ipaddr(ind_iface) is False:
+                chk_virsh_brd_unbrd_df_undf(ind_iface)
+            else:
+                logging.debug("Bridge/Unbridge testing is ruled out "
+                "as %s is hosting an ipaddress"%ind_iface)
+
+    chk_virsh_brd_unbrd_df_undf_all()
+
