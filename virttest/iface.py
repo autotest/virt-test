@@ -1,12 +1,11 @@
 #!/usr/bin/python
-import os,logging, fileinput, re, os.path
+import os,logging, fileinput, re
 from autotest.client.shared import utils,error
-from virttest import virsh, libvirt_vm
-from virttest.libvirt_xml import vm_xml
+from virttest import virsh
 
 def net_list():
     """
-    @return: returns all the libvirt network bridge names e.g. default,virbr1 
+    @return: returns all the libvirt network bridge names e.g. default,virbr1
     Name                 State      Autostart     Persistent
     --------------------------------------------------
     default              active     no            yes
@@ -21,17 +20,17 @@ def net_list():
     for line in op:
         netlist=line.split(None,3)
         nets.append(netlist[0])
-    return nets 
+    return nets
 
 def vir_brdg():
     """
-    @return: returns all the libvirt network bridges e.g. virbr0,virbr1 
+    @return: returns all the libvirt network bridges e.g. virbr0,virbr1
     """
     v_brdgs=[]
     v_nets=net_list()
     for v_net in v_nets:
         op=virsh.net_info("%s"%v_net, ignore_status=True)
-        op=op.stdout.strip().splitlines()    
+        op=op.stdout.strip().splitlines()
         op=op[5:]
         for line in op:
             v_brdglist=line.split(None,2)
@@ -45,7 +44,7 @@ def int_faces():
     """
 
     i_faces=[]
-    op=utils.run("netstat -i -a")
+    op=utils.run("netstat -i -a", ignore_status=True)
     op=op.stdout.strip().splitlines()
     op=op[2:]
     for line in op:
@@ -54,25 +53,25 @@ def int_faces():
     return i_faces
 
 def bridged_ifaces():
-    """   
-    @return: returns al the interfaces which are bridged
+    """
+    @return: returns all the interfaces which are bridged
     Below is brctl show output
-    bridge name	bridge id		STP enabled	interfaces
-    br0		8000.e41f13180acc	yes		eth0
-							vnet1
-    virbr0	8000.525400895d70	yes		virbr0-nic
-							vnet0
-							vnet2
-							vnet3
+    bridge name bridge id               STP enabled     interfaces
+    br0         8000.e41f13180acc       yes             eth0
+                                                        vnet1
+    virbr0      8000.525400895d70       yes             virbr0-nic
+                                                        vnet0
+                                                        vnet2
+                                                        vnet3
     returns eth0,vnet1,vribr0-nic...vnet3
     """
 
     brgd_ifaces=[]
-    op=utils.run("brctl show")
+    op=utils.run("brctl show",ignore_status=True)
     op=op.stdout.splitlines()
     op=op[1:]
     for line in op:
-        brgd_ifacelist=line.split('\t')  
+        brgd_ifacelist=line.split('\t')
         if brgd_ifacelist[-1] != '':
             brgd_ifaces.append(brgd_ifacelist[-1])
         else:
@@ -84,7 +83,7 @@ def bridge_ifaces():
     From the above commented brctl show output, it returns br0,virbr0
     """
     brg_ifaces=[]
-    op=utils.run("brctl show")
+    op=utils.run("brctl show",ignore_status=True)
     op=op.stdout.strip().splitlines()
     op=op[1:]
     for line in op:
@@ -98,9 +97,9 @@ def bridge_ifaces():
 def brg_details():
     """
     In "brctl show" does not show the bridge info of all subnetwork interface
-    underneath the bridge. for example in the brctl output of bridged_ifaces 
-    method,bridge name of vnet0,vnet1,vnet2. Ideally it should be virbr0 in 
-    this case. This method create a list  by mapping proper bridge values for 
+    underneath the bridge. for example in the brctl output of bridged_ifaces
+    method,bridge name of vnet0,vnet1,vnet2. Ideally it should be virbr0 in
+    this case. This method create a list  by mapping proper bridge values for
     all the bridged interface
     """
     cur_bridge=''
@@ -111,7 +110,7 @@ def brg_details():
     bridges=bridge_ifaces()
     interfaces=bridged_ifaces()
     for ind in range(len(interfaces)):
-        if bridges[ind] != cur_bridge: 
+        if bridges[ind] != cur_bridge:
             if cur_bridge != '':
                 brg_int_nic['name']=cur_bridge
                 brg_int_nic['interface']=cur_interface
@@ -120,23 +119,23 @@ def brg_details():
                 brg_int_nic={}
             cur_bridge=bridges[ind]
             cur_interface=[]
-            cur_interface.append(interfaces[ind]) 
+            cur_interface.append(interfaces[ind])
             cur_nic=interfaces[ind]
         else:
-            cur_interface.append(interfaces[ind]) 
+            cur_interface.append(interfaces[ind])
     brg_int_nic['name']=cur_bridge
     brg_int_nic['interface']=cur_interface
     brg_int_nic['nic']=cur_nic
     brg_int_nic_all.append(brg_int_nic)
-    return brg_int_nic_all               
+    return brg_int_nic_all
 
 def is_bridged(opt):
     """
     @return: Is it bridged?
     """
-    if opt in bridged_ifaces(): 
+    if opt in bridged_ifaces():
         return True
-    else:	
+    else:
         return False
 def is_bridge(opt):
     """
@@ -148,27 +147,27 @@ def is_bridge(opt):
         return False
 def eth_of_brdg(opt):
     """
-    @return: the nic interface of the bridge device e.g. eth0 for br0 
+    @return: the nic interface of the bridge device e.g. eth0 for br0
     """
     found=0
     all_bridges=brg_details()
     for line in all_bridges:
         if found == 0:
-           if line['name'] == opt:
-               found=1
-               return line['nic']
+            if line['name'] == opt:
+                found=1
+                return line['nic']
 def brdg_of_eth(opt):
     """
-    @return: the bridge name of the bridged device e.g. br0 for eth0 or 
-    virbr0 for vnet0 
+    @return: the bridge name of the bridged device e.g. br0 for eth0 or
+    virbr0 for vnet0
     """
     found=0
     all_bridges=brg_details()
     for line in all_bridges:
         if found == 0:
-           if line['nic'] == opt:
-               found=1
-               return line['name']
+            if line['nic'] == opt:
+                found=1
+                return line['name']
 
 
 
@@ -193,8 +192,8 @@ def input_ifaces():
         if iface not in vbridges and iface not in brgdifaces:
             in_ifaces.append(iface)
     return in_ifaces
-    
-    
+
+
 def is_suse():
     """
     @return:Is it a suse?
@@ -206,7 +205,7 @@ def is_suse():
         return True
     else:
         return False
-    
+
 def net_scr():
     """
     @return: network script path
@@ -220,14 +219,14 @@ def network_scripts_backup(opt):
     @return: Take the backup of network script files
     """
     utils.run("cp %s%s ifcfg-%s-org" %(net_scr(),opt,opt))
-    if is_bridge(opt) == True:
+    if is_bridge(opt) is True:
         utils.run("cp %s%s ifcfg-%s-org"%(net_scr(),eth_of_brdg(opt),eth_of_brdg(opt)))
 def network_scripts_restore(opt):
     """
     @return: Restore the backup scipt files
     """
     utils.run("mv ifcfg-%s-org %s%s" %(opt,net_scr(),opt))
-    if is_bridge(opt) == True:
+    if is_bridge(opt) is True:
         utils.run("mv ifcfg-%s-org %s%s"%(eth_of_brdg(opt),net_scr(),eth_of_brdg(opt)))
 
 
@@ -235,30 +234,30 @@ def network_scripts_restore(opt):
 
 def is_scr_avail(opt):
     """
-    @return:If the network script is available for the interface 
+    @return:If the network script is available for the interface
     """
     return os.path.exists("%s%s"%(net_scr(),opt))
 def mac_of_iface(opt):
     """
     @return: Get the mac address from ifconfig
     """
-    ifconf=utils.run("ifconfig %s"%opt)
+    ifconf=utils.run("ifconfig %s"%opt,ignore_status=True)
     ifconf=ifconf.stdout.strip().splitlines()
     first_line=ifconf[0].split(None,5)
     return first_line[4]
-    
+
 
 def create_iface_xml(opt):
     """
     @return:create iface-xml file
     """
-    utils.run("touch tmp-%s.xml"%opt) 
+    utils.run("touch tmp-%s.xml"%opt)
     f = open('tmp-%s.xml'%opt,'rw+')
-    
+
     if is_bridge(opt) is False:
         f.write('<interface type=\'ethernet\' name=\'%s\'>\n'%opt)
         f.write('  <start mode=\'none\'/>\n')
-        if opt != 'lo': 
+        if opt != 'lo':
             f.write('  <mac address=\'%s\'/>\n'%mac_of_iface(opt))
         f.write('</interface>\n')
     else:
@@ -266,7 +265,7 @@ def create_iface_xml(opt):
         f.write('  <start mode=\'none\'/>\n')
         f.write('  <bridge>\n')
         f.write('    <interface type=\'ethernet\' name=\'%s\'>\n'%eth_of_brdg(opt))
-        if eth_of_brdg(opt) != 'lo': 
+        if eth_of_brdg(opt) != 'lo':
             f.write('      <mac address=\'%s\'/>\n'%mac_of_iface(eth_of_brdg(opt)))
         f.write('    </interface>\n')
         f.write('  </bridge>\n')
@@ -296,26 +295,26 @@ def edit_iface_xml(opt):
     if start_mode is True:
         xml_param.insert(1,'  <start mode=\'onboot\'/>')
     else:
-        xml_param.insert(1,'  <start mode=\'none\'/>')   
+        xml_param.insert(1,'  <start mode=\'none\'/>')
     utils.run("touch tmp-%s.xml"%opt)
     f = open('tmp-%s.xml'%opt,'rw+')
     for line in xml_param:
         f.write("%s\n"%line)
-    f.close() 
+    f.close()
 
 def destroy_iface_xml(opt):
     """
     remove the iface-dumpxml file
     """
     utils.run("rm -f tmp-%s.xml"%opt)
-    
+
 
 def is_ipaddr_ifcon(opt):
     """
     Is ipaddress available to the interface thru ifconfig. If yes,
     iface start/destroy and bridge/unbridge is not allowed
     """
-    op=utils.run("ifconfig %s"%opt)
+    op=utils.run("ifconfig %s"%opt,ignore_status=True)
     op=op.stdout.strip()
     rs=re.search(r'\binet\b',op)
     if rs is not None:
@@ -329,7 +328,7 @@ def is_ipaddr_scr(opt):
     """
 
     found=False
-    if is_scr_avail(opt) == True:
+    if is_scr_avail(opt) is True:
         scr_file=open("%s%s"%(net_scr(),opt),'r')
         for line in scr_file:
             line=re.sub(r'\n','',line)
@@ -360,15 +359,15 @@ def ifup(opt):
     """
     utils.run("ifup %s"%opt)
 def ifdown(opt):
-    """ 
+    """
     Make the inetrface down
-    """ 
+    """
     utils.run("ifdown %s"%opt)
 def is_up(opt):
     """
     Check if the interface is up
     """
-    op=utils.run("ifconfig %s"%opt)
+    op=utils.run("ifconfig %s"%opt,ignore_status=True)
     op=op.stdout.strip()
     rs=re.search(r'\bUP\b',op)
     if rs is not None:
@@ -426,7 +425,7 @@ def iface_vir_mac(opt):
                 found=1
                 iface_name=line['name']
     return iface_name
-    
+
 def avail_vir_iface(opt):
     """
     check the presence of the inetrface in the virsh iface-list --all
@@ -447,26 +446,26 @@ def state_vir_iface(opt):
     return vir_iface_detail['state']
 def avail_vir_iface_active(opt):
     """
-    check the presence of the inetrface in the virsh iface-list 
-    """ 
+    check the presence of the inetrface in the virsh iface-list
+    """
     vir_iface_detail=check_vir_iface(opt,'')
     return vir_iface_detail['avail']
 def mac_vir_iface_active(opt):
     """
-    get the mac of the inetrface in the virsh iface-list 
+    get the mac of the inetrface in the virsh iface-list
     """
     vir_iface_detail=check_vir_iface(opt,'')
     return vir_iface_detail['mac']
 def state_vir_iface_active(opt):
     """
-    get the state of the inetrface in the virsh iface-list 
+    get the state of the inetrface in the virsh iface-list
     """
     vir_iface_detail=check_vir_iface(opt,'')
     return vir_iface_detail['state']
 def avail_vir_iface_inactive(opt):
     """
     check the presence of the inetrface in the virsh iface-list --inactive
-    """ 
+    """
     vir_iface_detail=check_vir_iface(opt,'--inactive')
     return vir_iface_detail['avail']
 def mac_vir_iface_inactive(opt):
@@ -506,19 +505,19 @@ def chk_mac_vir_iface(opt):
     if opt != 'lo':
         if mac_vir_iface(opt) !=  mac_of_iface(opt).lower():
             return False
-        else: 
+        else:
             return True
     else:
         if is_suse() is True:
             if mac_vir_iface(opt) != '':
-                return False 
-            else: 
-                return True 
+                return False
+            else:
+                return True
         else:
             if mac_vir_iface(opt) != '00:00:00:00:00:00':
                 return False
             else:
-                return True 
+                return True
 
 def chk_state_vir_iface_inactive(opt):
     """
@@ -527,15 +526,15 @@ def chk_state_vir_iface_inactive(opt):
     """
 
     if is_up(opt) is True:
-        if state_vir_iface_inactive(opt) is not 'active':
-           return False
+        if state_vir_iface_inactive(opt) != 'active':
+            return False
         else:
-           return True
+            return True
     else:
-        if state_vir_iface_inactive(opt) is not 'inactive':
-           return False
+        if state_vir_iface_inactive(opt) != 'inactive':
+            return False
         else:
-           return True
+            return True
 def chk_mac_vir_iface_inactive(opt):
     """
     check the mac of the inetrface in the virsh iface-list --inactive
@@ -560,30 +559,30 @@ def chk_mac_vir_iface_inactive(opt):
                 return True
 def chk_state_vir_iface_active(opt):
     """
-    check the state of the inetrface in the virsh iface-list 
+    check the state of the inetrface in the virsh iface-list
     with respect to ofconfig
     """
 
     if is_up(opt) is True:
-        if state_vir_iface_active(opt) is not 'active':
-           return False
+        if state_vir_iface_active(opt) != 'active':
+            return False
         else:
-           return True
+            return True
     else:
-        if state_vir_iface_active(opt) is not 'inactive':
-           return False
+        if state_vir_iface_active(opt) != 'inactive':
+            return False
         else:
-           return True
+            return True
 def chk_mac_vir_iface_active(opt):
     """
-    check the mac of the inetrface in the virsh iface-list 
+    check the mac of the inetrface in the virsh iface-list
     with respect to ofconfig. For lo, virsh returns diffrent values
     """
 
     if opt != 'lo':
         if mac_vir_iface_active(opt) !=  mac_of_iface(opt).lower():
             return False
-        else: 
+        else:
             return True
     else:
         if is_suse() is True:
@@ -596,4 +595,3 @@ def chk_mac_vir_iface_active(opt):
                 return False
             else:
                 return True
-
