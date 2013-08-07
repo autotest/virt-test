@@ -179,8 +179,8 @@ def set_numa_parameter(params):
     elif status_error == "no":
         if status:
             if len(nodeset_parser(nodeset)) > num_numa_nodes():
-                raise error.TestNAError(
-                    "Host does not support requested nodeset")
+                raise error.TestNAError("Host does not support requested"
+                                        " nodeset")
             else:
                 raise error.TestFail(result.stderr)
         else:
@@ -217,6 +217,7 @@ def run_virsh_numatune(test, params, env):
     vm_name = params.get("vms")
     vm = env.get_vm(vm_name)
     original_vm_xml = libvirt_xml.VMXML.new_from_dumpxml(vm_name)
+    cgconfig_service = utils_cgroup.CgconfigService()
     status_error = params.get("status_error", "no")
     libvirtd = params.get("libvirtd", "on")
     cgconfig = params.get("cgconfig", "on")
@@ -240,14 +241,14 @@ def run_virsh_numatune(test, params, env):
             # and will start the guest after restarting libvirtd service
             if vm.is_alive():
                 vm.destroy()
-            if utils_cgroup.cgconfig_is_running():
-                utils_cgroup.cgconfig_stop()
+            if cgconfig_service.cgconfig_is_running():
+                cgconfig_service.cgconfig_stop()
         # Refresh libvirtd service to get latest cgconfig service change
         if libvirtd == "restart":
             utils_libvirtd.libvirtd_restart()
         # Recover previous running guest
-        if cgconfig == "off" and libvirtd == "restart" \
-                and not vm.is_alive() and start_vm == "yes":
+        if (cgconfig == "off" and libvirtd == "restart"
+            and not vm.is_alive() and start_vm == "yes"):
             vm.start()
         if status_error == "yes":
             if change_parameters == "no":
@@ -255,8 +256,8 @@ def run_virsh_numatune(test, params, env):
             else:
                 set_numa_parameter(params)
         # Recover cgconfig and libvirtd service
-        if not utils_cgroup.cgconfig_is_running():
-            utils_cgroup.cgconfig_start()
+        if not cgconfig_service.cgconfig_is_running():
+            cgconfig_service.cgconfig_start()
             utils_libvirtd.libvirtd_restart()
     finally:
         vm.destroy()
