@@ -20,8 +20,7 @@ import os
 import re
 import logging
 
-import common
-import error
+from autotest.client.shared import error
 from tempfile import mktemp
 from autotest.client import utils
 
