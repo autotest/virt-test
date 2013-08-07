@@ -19,7 +19,7 @@ def launch_totem(guest_session, params):
     """
 
     totem_version = guest_session.cmd('totem --version')
-    logging.info("Totem version", totem_version)
+    logging.info("Totem version: %s", totem_version)
 
     #repeat parameters for totem
     logging.info("Set up video repeat to '%s' to the Totem.",
