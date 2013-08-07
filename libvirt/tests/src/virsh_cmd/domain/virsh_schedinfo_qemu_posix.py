@@ -1,4 +1,4 @@
-import re, logging
+import re, logging, os.path
 from autotest.client import cgroup_utils
 from autotest.client.shared import utils, error
 from virttest import virsh
@@ -37,8 +37,14 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
         except IndexError:
             return None
         if ctl_mount is not False:
-            get_value_cmd = "cat %s/%s/%s/%s" % (ctl_mount,
-                                 libvirt_cgroup_path, domname, parameter)
+            cgroup_path = os.path.join(ctl_mount, libvirt_cgroup_path,
+                                       domname, parameter)
+            if not os.path.exists(cgroup_path):
+                cgroup_path = os.path.join(ctl_mount, "machine", domname
+                                           + ".libvirt-qemu", parameter)
+            if not os.path.exists(cgroup_path):
+                raise error.TestNAError("Unknown path to cgroups")
+            get_value_cmd = "cat %s" % cgroup_path
             result = utils.run(get_value_cmd, ignore_status=True)
             return result.stdout.strip()
         else:
