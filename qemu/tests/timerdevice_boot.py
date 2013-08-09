@@ -11,8 +11,9 @@ def run_timerdevice_boot(test, params, env):
     1) Sync the host system time with ntp server
     2) Boot the guest with specific clock source
     3) Check the clock source currently used on guest
-    4) Check the system time on guest and host
-    5) Check the hardware time on guest and host (Optional)
+    4) Do some file operation on guest (Optional)
+    5) Check the system time on guest and host (Optional)
+    6) Check the hardware time on guest and host (Optional)
 
     @param test: QEMU test object.
     @param params: Dictionary with test parameters.
@@ -91,6 +92,11 @@ def run_timerdevice_boot(test, params, env):
         error.context("Kill all ntp related processes")
         session.cmd("pkill ntp; true")
 
+
+    if params.get("timerdevice_file_operation") == "yes":
+        error.context("Do some file operation on guest", logging.info)
+        session.cmd("dd if=/dev/zero of=/tmp/timer-test-file bs=1M count=100")
+        return
 
     # Command to run to get the current time
     time_command = params["time_command"]
