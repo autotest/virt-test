@@ -1023,7 +1023,7 @@ class VM(virt_vm.BaseVM):
             numa_node = int(params.get("numa_node"))
             if numa_node < 0:
                 p = utils_misc.NumaNode(numa_node)
-                n = int(p.get_node_num()) + numa_node
+                n = int(utils_misc.get_node_count()) + numa_node
                 cmd += "numactl -m %s " % n
             else:
                 n = numa_node - 1

@@ -2152,6 +2152,58 @@ def pin_vm_threads(vm, node):
         logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
 
 
+def get_qemu_numa_status(numa_node_info, qemu_pid, debug=True):
+    """
+    Get the qemu process memory use status and the cpu list in each node.
+
+    :param numa_node_info: Host numa node information
+    :type numa_node_info: NumaInfo object
+    :param qemu_pid: process id of qemu
+    :type numa_node_info: string
+    :param debug: Print the debug info or not
+    :type debug: bool
+    :return: memory and cpu list in each node
+    :rtype: tuple
+    """
+    node_list = numa_node_info.online_nodes
+    qemu_memory = []
+    qemu_cpu = []
+    cpus = utils_misc.get_pid_cpu(qemu_pid)
+    for node_id in node_list:
+        qemu_memory_status = utils_memory.read_from_numa_maps(qemu_pid,
+                                                              "N%d" % node_id)
+        memory = sum([int(_) for _ in qemu_memory_status.values()])
+        qemu_memory.append(memory)
+        cpu = [_ for _ in cpus if _ in numa_node_info.nodes[node_id].cpus]
+        qemu_cpu.append(cpu)
+        if debug:
+            logging.debug("qemu-kvm process using %s pages and cpu %s in "
+                          "node %s" % (memory, " ".join(cpu), node_id))
+    return (qemu_memory, qemu_cpu)
+
+
+def max_mem_map_node(host_numa_node, qemu_pid):
+    """
+    Find the numa node which qemu process memory maps to it the most.
+
+    :param numa_node_info: Host numa node information
+    :type numa_node_info: NumaInfo object
+    :param qemu_pid: process id of qemu
+    :type numa_node_info: string
+    :return: The node id and how many pages are mapped to it
+    :rtype: tuple
+    """
+    node_list = host_numa_node.online_nodes
+    memory_status, _ = get_qemu_numa_status(host_numa_node, qemu_pid)
+    node_map_most = 0
+    memory_sz_map_most = 0
+    for index in range(len(node_list)):
+        if memory_sz_map_most < memory_status[index]:
+            memory_sz_map_most = memory_status[index]
+            node_map_most = node_list[index]
+    return (node_map_most, memory_sz_map_most)
+
+
 def service_setup(vm, session, directory):
 
     params = vm.get_params()
