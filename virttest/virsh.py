@@ -2158,3 +2158,15 @@ def nodedev_reattach(name, options="", **dargs):
     CmdResult = command(cmd, **dargs)
 
     return CmdResult
+
+
+def vcpucount(name, options, **dargs):
+    """
+    Get the vcpu count of guest.
+
+    @param name: name of domain.
+    @param options: options for vcpucoutn command.
+    @return: CmdResult object.
+    """
+    cmd = "vcpucount %s %s" % (name, options)
+    return command(cmd, **dargs)
