@@ -67,12 +67,12 @@ def run_autotest_regression(test, params, env):
         if autotest_commit:
             install_cmd += " -c %s" % autotest_commit
         session_server.cmd(install_cmd, timeout=autotest_install_timeout)
-        vm_server.copy_files_from(guest_path="/tmp/install-autotest-server*log",
-                                  host_path=test.resultsdir)
     except aexpect.ShellCmdError, e:
         for line in e.output.splitlines():
             logging.error(line)
         step_failures.append(step1)
+    vm_server.copy_files_from(guest_path="/tmp/install-autotest-server*log",
+                              host_path=test.resultsdir)
 
     top_commit = None
     try:
@@ -201,7 +201,7 @@ def run_autotest_regression(test, params, env):
                         return False
                 else:
                     raise ValueError("Job %s does not show in the "
-                                     "output of %s" % list_jobs_cmd)
+                                     "output of %s" % (job_name, list_jobs_cmd))
 
             def job_is_completed():
                 return job_is_status("Completed")
@@ -221,7 +221,7 @@ def run_autotest_regression(test, params, env):
             # Wait for the session to become unresponsive
             if not utils_misc.wait_for(lambda: not session_client.is_responsive(),
                                        timeout=300):
-                raise error.ValueError("Client machine did not reboot")
+                raise ValueError("Client machine did not reboot")
 
             # Establish a new client session
             session_client = vm_client.wait_for_login(timeout=timeout)
