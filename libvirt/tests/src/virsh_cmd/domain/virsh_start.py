@@ -106,6 +106,7 @@ def run_virsh_start(test, params, env):
             utils_libvirtd.libvirtd_start()
 
         if (pre_operation == "undefine") and (not vmxml.xml == None):
-            vmxml.define()
+            if not vmxml.define():
+                raise error.TestError("Restore vm failed.")
         elif pre_operation == "rename":
             libvirt_xml.VMXML.vm_rename(vm, backup_name)

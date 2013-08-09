@@ -1,5 +1,6 @@
 import time, logging
 from autotest.client.shared import error
+from autotest.client import utils
 from virttest import utils_misc
 from qemu.tests import blk_stream
 
@@ -20,11 +21,36 @@ class BlockStreamStress(blk_stream.BlockStream):
         return params
 
     @error.context_aware
+    def install_stress_app(self):
+        params = self.parser_test_args()
+        session = self.get_session()
+        if session.cmd_status(params.get("app_check_cmd","true")) == 0:
+            return True
+        error.context("install stress app in guest", logging.info)
+        link = params.get("download_link")
+        md5sum = params.get("md5sum")
+        tmp_dir = params.get("tmp_dir")
+        install_cmd = params.get("install_cmd")
+        config_cmd = params.get("config_cmd")
+        logging.info("Fetch package: %s" % link)
+        pkg = utils.unmap_url_cache(self.test.tmpdir, link, md5sum)
+        self.vm.copy_files_to(pkg, tmp_dir)
+        logging.info("Install app: %s" % install_cmd)
+        s, o = session.cmd_status_output(install_cmd, timeout=300)
+        if s != 0:
+            raise error.TestError("Fail to install stress app(%s)"  % o)
+        logging.info("Configure app: %s" % config_cmd)
+        s, o = session.cmd_status_output(config_cmd, timeout=300)
+        if s != 0:
+            raise error.TestError("Fail to conifg stress app(%s)"  % o)
+
+    @error.context_aware
     def load_stress(self):
         """
         load IO/CPU/Memoery stress in guest;
         """
         params = self.parser_test_args()
+        self.install_stress_app()
         cmd = params.get("start_cmd")
         session = self.get_session()
         error.context("Load stress in guest(%s)" % cmd, logging.info)

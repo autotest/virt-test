@@ -2,7 +2,7 @@ import os, time, commands, re, logging, glob, threading, shutil, sys
 from autotest.client import utils
 from autotest.client.shared import error
 import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
-import libvirt_vm, video_maker, utils_misc, storage, qemu_storage, utils_libvirtd
+import video_maker, utils_misc, storage, qemu_storage, utils_libvirtd
 import remote, data_dir, utils_net, utils_disk
 
 
@@ -73,6 +73,8 @@ def preprocess_vm(test, params, env, name):
     start_vm = False
 
     if params.get("restart_vm") == "yes":
+        if vm.is_alive():
+            vm.destroy(gracefully=True, free_mac_addresses=False)
         start_vm = True
     elif params.get("migration_mode"):
         start_vm = True
@@ -105,7 +107,10 @@ def preprocess_vm(test, params, env, name):
             if params.get("mac_changeable") == "yes":
                 utils_net.update_mac_ip_address(vm, params)
     else:
-        # Don't start the VM, just update its params
+        # Update params of VM.
+        if params.get("kill_vm_before_test") == "yes":
+            # Destroy the VM if kill_vm_before_test = "yes".
+            vm.destroy(gracefully=True, free_mac_addresses=False)
         vm.devices = None
         vm.params = params
 
@@ -114,7 +119,7 @@ def preprocess_vm(test, params, env, name):
     if params.get("paused_after_start_vm") == "yes":
         pause_vm = True
         # Check the status of vm
-        if not vm.is_alive():
+        if (not vm.is_alive()) or (vm.is_paused()):
             pause_vm = False
 
     if pause_vm:

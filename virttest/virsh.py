@@ -991,7 +991,7 @@ def define(xml_path, **dargs):
 
 def undefine(name, **dargs):
     """
-    Return True on successful domain undefine (after shutdown/destroy).
+    Return cmd result of domain undefine (after shutdown/destroy).
 
     @param: name: VM name
     @param: dargs: standardized virsh function API keywords
@@ -1398,13 +1398,7 @@ def pool_info(name, **dargs):
     @param: dargs: standardized virsh function API keywords
     """
     cmd = "pool-info %s" % name
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Pool %s doesn't exist:\n%s", name, detail)
-        return False
+    return command(cmd, **dargs)
 
 
 def pool_destroy(name, **dargs):
@@ -1553,8 +1547,8 @@ def pool_undefine(name, extra="", **dargs):
     return command("pool-undefine %s %s" % (name, extra), **dargs)
 
 
-def vol_create_as(vol_name, pool_name, capacity, allocation, frmt, \
-                      extra="", **dargs):
+def vol_create_as(vol_name, pool_name, capacity, allocation,
+                  frmt, extra="", **dargs):
     """
     To create the volumes on different available pool
 
@@ -2197,3 +2191,15 @@ def nodedev_reattach(name, options="", **dargs):
     CmdResult = command(cmd, **dargs)
 
     return CmdResult
+
+
+def vcpucount(name, options, **dargs):
+    """
+    Get the vcpu count of guest.
+
+    @param name: name of domain.
+    @param options: options for vcpucoutn command.
+    @return: CmdResult object.
+    """
+    cmd = "vcpucount %s %s" % (name, options)
+    return command(cmd, **dargs)

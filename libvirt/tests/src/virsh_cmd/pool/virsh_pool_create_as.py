@@ -28,7 +28,7 @@ def run_virsh_pool_create_as(test, params, env):
         else:
             os.makedirs(pool_target)
 
-    logging.info('Creating a %s type pool %s' % (pool_type, pool_name))
+    logging.info('Creating a %s type pool %s', pool_type, pool_name)
     status = virsh.pool_create_as(pool_name, pool_type, pool_target,
                                   extra=pool_options, uri=virsh.canonical_uri())
 
@@ -36,15 +36,18 @@ def run_virsh_pool_create_as(test, params, env):
     status_error = params.get('status_error')
     if status_error == 'yes':
         if status:
-            raise error.TestFail("%d not a expected command return value" % status)
+            raise error.TestFail("%d not a expected command return value"
+                                 % status)
         else:
             logging.info("It's an expected error")
     elif status_error == 'no':
-        if not virsh.pool_info(pool_name, uri=virsh.canonical_uri()):
+        result = virsh.pool_info(pool_name, uri=virsh.canonical_uri())
+        if result.exit_status:
             raise error.TestFail('Failed to check pool information')
         else:
-            logging.info('Pool %s is running' % pool_name)
+            logging.info('Pool %s is running', pool_name)
         if not status:
-            raise error.TestFail('%d not a expected command return value' % status)
+            raise error.TestFail('%d not a expected command return value'
+                                 % status)
         else:
-            logging.info('Succeed to create pool %s' % pool_name)
+            logging.info('Succeed to create pool %s', pool_name)

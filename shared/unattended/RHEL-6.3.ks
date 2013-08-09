@@ -29,6 +29,8 @@ KVM_TEST_LOGGING
 @network-tools
 @x11
 @basic-desktop
+@fonts
+@Smart Card Support
 NetworkManager
 ntpdate
 watchdog
@@ -39,6 +41,7 @@ virt-viewer
 spice-vdagent
 usbredir
 SDL
+totem
 %end
 
 %post
@@ -52,9 +55,22 @@ chkconfig NetworkManager on
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
 echo 'Post set up finished' > /dev/ttyS0
 echo Post set up finished > /dev/hvc0
-cat > '/mnt/sysimage/etc/gdm/custom.conf' << EOF
+cat > '/etc/gdm/custom.conf' << EOF
 [daemon]
 AutomaticLogin=test
 AutomaticLoginEnable=True
 EOF
+cat >> '/etc/sudoers' << EOF
+test ALL = NOPASSWD: /sbin/shutdown -r now,/sbin/shutdown -h now
+EOF
+cat >> '/home/test/.bashrc' << EOF
+alias shutdown='sudo shutdown'
+EOF
+cat >> '/etc/rc.modules' << EOF
+modprobe snd-aloop
+modprobe snd-pcm-oss
+modprobe snd-mixer-oss
+modprobe snd-seq-oss
+EOF
+chmod +x /etc/rc.modules
 %end

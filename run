@@ -291,8 +291,10 @@ class VirtTestRunParser(optparse.OptionParser):
 DEFAULT_MACHINE_TYPE = "i440fx"
 DEFAULT_GUEST_OS = "JeOS"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
-LIBVIRT_DEFAULT_SET = ("unattended_install.import.import, virsh_domname, "
-                       "remove_guest.without_disk")
+LIBVIRT_DEFAULT_SET = (
+                "unattended_install.import.import.default_install.aio_native, "
+                "virsh_domname, "
+                "remove_guest.without_disk")
 
 class VirtTestApp(object):
     """

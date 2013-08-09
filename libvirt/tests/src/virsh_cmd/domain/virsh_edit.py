@@ -1,4 +1,6 @@
-import os, time
+import os
+import time
+
 from autotest.client.shared import error
 from virttest import virsh, aexpect, utils_libvirtd
 
@@ -14,12 +16,17 @@ def run_virsh_edit(test, params, env):
     4.Recover test environment.
     5.Confirm the test result.
     """
-
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
 
     domid = vm.get_id()
     domuuid = vm.get_uuid()
+    vcpucount_result = virsh.vcpucount(vm_name, options="--config")
+    if vcpucount_result.exit_status:
+        raise error.TestError("Failed to get vcpucount. Detail:\n%s"
+                              % vcpucount_result)
+    original_vcpu = vcpucount_result.stdout.strip()
+    expected_vcpu = str(int(original_vcpu)+1)
 
     libvirtd = params.get("libvirtd", "on")
     vm_ref = params.get("edit_vm_ref")
@@ -35,7 +42,6 @@ def run_virsh_edit(test, params, env):
         """
         session = aexpect.ShellSession("sudo -s")
         try:
-            session.sendline("export EDITOR=vi")
             session.sendline("virsh edit %s" % source)
             session.sendline(edit_cmd)
             session.send('\x1b')
@@ -55,10 +61,10 @@ def run_virsh_edit(test, params, env):
         @param: guest_name : vm's name.
         @return: True if edit successed,False if edit failed.
         """
-        dic_mode = {"edit" : ":%s /1<\/vcpu>/2<\/vcpu>",
-                    "recover" : ":%s /2<\/vcpu>/1<\/vcpu>"}
+        dic_mode = {"edit": ":%s /[0-9]*<\/vcpu>/"+expected_vcpu+"<\/vcpu>",
+                    "recover": ":%s /[0-9]*<\/vcpu>/"+original_vcpu+"<\/vcpu>"}
         status = modify_vcpu(source, dic_mode["edit"])
-        if not status :
+        if not status:
             return status
         if params.get("paused_after_start_vm") == "yes":
             virsh.resume(guest_name, ignore_status=True)
@@ -68,7 +74,7 @@ def run_virsh_edit(test, params, env):
         vcpus = vm.dominfo()["CPU(s)"]
         #Recover cpuinfo
         status = modify_vcpu(source, dic_mode["recover"])
-        if status  and vcpus != '2':
+        if status and vcpus != expected_vcpu:
             return False
         return status
 

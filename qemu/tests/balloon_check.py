@@ -219,4 +219,14 @@ def run_balloon_check(test, params, env):
             ballooned_mem = 0
         memory_check("after subtest when enlarging memory", ballooned_mem,
                     monitor_boot_mem , guest_boot_mem, ratio)
+
+    # we should reset the memory to the origin value, so that next
+    # iterations can pass when check memory before test
+    error.context("Reset the memory to monitor boot memory", logging.info)
+
+    balloon_memory(monitor_boot_mem)
+    ballooned_mem = vm_assigned_mem - monitor_boot_mem
+    memory_check("after reset memory", ballooned_mem,
+                 monitor_boot_mem, guest_boot_mem, ratio)
+
     session.close()

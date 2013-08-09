@@ -1,7 +1,14 @@
 import logging, re, os, commands, string, math
 from autotest.client.shared import error
 from virttest import virsh, libvirt_vm
-from autotest.client import utils, cgroup_utils
+
+try:
+    from autotest.client.shared import utils_memory
+    from autotest.client.shared import utils_cgroup
+except ImportError:
+    from virttest.staging import utils_memory
+    from virttest.staging import utils_cgroup
+
 
 def run_virsh_memtune(test, params, env):
     """
@@ -145,13 +152,13 @@ def run_virsh_memtune(test, params, env):
     logging.info("Verify valid cgroup path for VM pid: %s", pid)
 
     # Resolve the memory cgroup path for a domain
-    path = cgroup_utils.resolve_task_cgroup_path(int(pid), "memory")
+    path = utils_cgroup.resolve_task_cgroup_path(int(pid), "memory")
 
     # Set the initial memory starting value for test case
     # By default set 1GB less than the total memory
     # In case of total memory is less than 1GB set to 256MB
     # visit subtests.cfg to change these default values
-    Memtotal = utils.read_from_meminfo('MemTotal')
+    Memtotal = utils_memory.read_from_meminfo('MemTotal')
     base_mem = params.get("memtune_base_mem")
 
     if int(Memtotal) < int(base_mem):

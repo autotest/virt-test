@@ -429,7 +429,7 @@ def run_tests(parser, job):
         index += 1
 
         # Add kvm module status
-        sysfs_dir = param_dict.get("sysfs_dir", "sys")
+        sysfs_dir = param_dict.get("sysfs_dir", "/sys")
         param_dict["kvm_default"] = get_module_params(sysfs_dir, 'kvm')
 
         if param_dict.get("skip") == "yes":
@@ -1103,6 +1103,39 @@ def create_x509_dir(path, cacert_subj, server_subj, passphrase,
         utils.run(cmd)
         logging.info(cmd)
 
+def convert_ipv4_to_ipv6(ipv4):
+    """
+    Translates a passed in string of an ipv4 address to an ipv6 address.
+
+    @param ipv4: a string of an ipv4 address
+    """
+
+    converted_ip = "::ffff:"
+    split_ipaddress = ipv4.split('.')
+    try:
+        socket.inet_aton(ipv4)
+    except socket.error:
+        raise ValueError("ipv4 to be converted is invalid")
+    if (len(split_ipaddress) != 4):
+        raise ValueError("ipv4 address is not in dotted quad format")
+
+    for index, string in enumerate(split_ipaddress):
+        if index != 1:
+            test = str(hex(int(string)).split('x')[1])
+            if len(test) == 1:
+                final = "0"
+                final+=test
+                test = final
+        else:
+            test = str(hex(int(string)).split('x')[1])
+            if len(test) == 1:
+                final = "0"
+                final+=test+":"
+                test = final
+            else:
+                test += ":"
+        converted_ip += test
+    return converted_ip
 
 class NumaNode(object):
     """
@@ -1250,12 +1283,13 @@ def get_host_cpu_models():
     vendor_re = "vendor_id\s+:\s+(\w+)"
     cpu_flags_re = "flags\s+:\s+([\w\s]+)\n"
 
-    cpu_types = {"AuthenticAMD": ["Opteron_G4", "Opteron_G3", "Opteron_G2",
-                                 "Opteron_G1"],
+    cpu_types = {"AuthenticAMD": ["Opteron_G5", "Opteron_G4", "Opteron_G3",
+                                  "Opteron_G2", "Opteron_G1"],
                  "GenuineIntel": ["SandyBridge", "Westmere", "Nehalem",
                                   "Penryn", "Conroe"]}
-    cpu_type_re = {"Opteron_G4":
-                  "avx,xsave,aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3,sse4a",
+    cpu_type_re = {"Opteron_G5": "f16c,fma,tbm",
+                   "Opteron_G4":
+                 "avx,xsave,aes,sse4.2|sse4_2,sse4.1|sse4_1,cx16,ssse3,sse4a",
                    "Opteron_G3": "cx16,sse4a",
                    "Opteron_G2": "cx16",
                    "Opteron_G1": "",
@@ -1337,9 +1371,19 @@ def get_qemu_binary(params):
     """
     Get the path to the qemu binary currently in use.
     """
-    return get_path(os.path.join(data_dir.get_root_dir(),
-                                 params.get("vm_type")),
-                                 params.get("qemu_binary", "qemu"))
+    # Update LD_LIBRARY_PATH for built libraries (libspice-server)
+    qemu_binary_path = get_path(os.path.join(data_dir.get_root_dir(),
+                                              params.get("vm_type")),
+                                   params.get("qemu_binary", "qemu"))
+
+    library_path = os.path.join(data_dir.get_root_dir(), params.get('vm_type'), 'install_root', 'lib')
+    if os.path.isdir(library_path):
+        library_path = os.path.abspath(library_path)
+        qemu_binary = "LD_LIBRARY_PATH=%s %s" % (library_path, qemu_binary_path)
+    else:
+        qemu_binary = qemu_binary_path
+
+    return qemu_binary
 
 
 def get_qemu_img_binary(params):

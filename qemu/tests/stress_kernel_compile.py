@@ -1,7 +1,11 @@
 import logging, os
 from autotest.client.shared import error
-from autotest.client import utils
 from virttest import utils_test, utils_misc, env_process
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
 
 
 def run_stress_kernel_compile(tests, params, env):
@@ -54,7 +58,7 @@ def run_stress_kernel_compile(tests, params, env):
     for tag in range(1, guest_number):
         params["vms"] += " stress_guest_%s" % tag
 
-    mem_host = utils.memtotal() / 1024
+    mem_host = utils_memory.memtotal() / 1024
     vmem = int(mem_host * over_c / guest_number)
 
     if vmem < 256:

@@ -1,7 +1,13 @@
 import logging, time, random, math, os
 from autotest.client.shared import error
-from autotest.client import utils
 from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
+
+from autotest.client.shared import utils
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
 
 
 def run_ksm_overcommit(test, params, env):
@@ -215,10 +221,10 @@ def run_ksm_overcommit(test, params, env):
                         e_msg = ("VM %d died while executing "
                                  "static_random_fill on allocator loop" % i)
                         raise error.TestFail(e_msg)
-                    free_mem = int(utils.read_from_meminfo("MemFree"))
+                    free_mem = int(utils_memory.read_from_meminfo("MemFree"))
                     if (ksm_swap):
                         free_mem = (free_mem +
-                                    int(utils.read_from_meminfo("SwapFree")))
+                                    int(utils_memory.read_from_meminfo("SwapFree")))
                     logging.debug("Free memory on host: %d", free_mem)
 
                     # We need to keep some memory for python to run.
@@ -422,7 +428,8 @@ def run_ksm_overcommit(test, params, env):
     if (host_reserve == -1):
         # default host_reserve = MemAvailable + one_minimal_guest(128MB)
         # later we add 64MB per additional guest
-        host_reserve = ((utils.memtotal() - utils.read_from_meminfo("MemFree"))
+        host_reserve = ((utils_memory.memtotal()
+                         - utils_memory.read_from_meminfo("MemFree"))
                         / 1024 + 128)
         # using default reserve
         _host_reserve = True
@@ -455,7 +462,7 @@ def run_ksm_overcommit(test, params, env):
             host_reserve += vmsc * 64
             _host_reserve = vmsc
 
-    host_mem = (int(utils.memtotal()) / 1024 - host_reserve)
+    host_mem = (int(utils_memory.memtotal()) / 1024 - host_reserve)
 
     ksm_swap = False
     if params.get("ksm_swap") == "yes":
@@ -523,7 +530,7 @@ def run_ksm_overcommit(test, params, env):
     if _guest_reserve:
         guest_reserve += math.ceil(mem * 0.055)
 
-    swap = int(utils.read_from_meminfo("SwapTotal")) / 1024
+    swap = int(utils_memory.read_from_meminfo("SwapTotal")) / 1024
 
     logging.debug("Overcommit = %f", overcommit)
     logging.debug("True overcommit = %f ", (float(vmsc * mem) /

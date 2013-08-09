@@ -5,11 +5,14 @@ except ImportError:
     import common
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-from versionable_class import VersionableClass
+from versionable_class import VersionableClass, Manager, factory
 import utils_misc
 
+# Register to class manager.
+man = Manager(__name__)
 
-class ServiceManagerInterface(VersionableClass):
+
+class ServiceManagerInterface(object):
     def __new__(cls, *args, **kargs):
         ServiceManagerInterface.master_class = ServiceManagerInterface
         return super(ServiceManagerInterface, cls).__new__(cls, *args, **kargs)
@@ -42,9 +45,31 @@ class ServiceManagerInterface(VersionableClass):
                                   " implemented in child class")
 
 
-class ServiceManagerSystemD(ServiceManagerInterface, VersionableClass):
+class ServiceManagerSysvinit(ServiceManagerInterface):
     @classmethod
-    def is_right_version(cls, version):
+    def _is_right_ver(cls):
+        version = cls.get_version()
+        if version == "init":
+            return True
+        return False
+
+
+    def stop(self, service_name):
+        utils.run("/etc/init.d/%s stop" % (service_name))
+
+
+    def start(self, service_name):
+        utils.run("/etc/init.d/%s start" % (service_name))
+
+
+    def restart(self, service_name):
+        utils.run("/etc/init.d/%s restart" % (service_name))
+
+
+class ServiceManagerSystemD(ServiceManagerSysvinit):
+    @classmethod
+    def _is_right_ver(cls):
+        version = cls.get_version()
         if version == "systemd":
             return True
         return False
@@ -65,28 +90,8 @@ class ServiceManagerSystemD(ServiceManagerInterface, VersionableClass):
         utils.run("systemctl show %s.service" % (service_name))
 
 
-class ServiceManagerSysvinit(ServiceManagerInterface, VersionableClass):
-    @classmethod
-    def is_right_version(cls, version):
-        if version == "init":
-            return True
-        return False
-
-
-    def stop(self, service_name):
-        utils.run("/etc/init.d/%s stop" % (service_name))
-
-
-    def start(self, service_name):
-        utils.run("/etc/init.d/%s start" % (service_name))
-
-
-    def restart(self, service_name):
-        utils.run("/etc/init.d/%s restart" % (service_name))
-
-
-class ServiceManager(ServiceManagerInterface):
-    pass
+class ServiceManager(VersionableClass):
+    __master__ = ServiceManagerSystemD
 
 
 class OpenVSwitchControl(object):
@@ -219,75 +224,48 @@ class OpenVSwitchControl(object):
         raise NotImplementedError()
 
 
-class OpenVSwitchControlCli(OpenVSwitchControl, VersionableClass):
-    """
-    Class select the best matches control class for installed version
-    of OpenVSwitch.
-    """
-    def __new__(cls, db_path=None, db_socket=None, db_pidfile=None,
-                ovs_pidfile=None, dbschema=None, install_prefix=None):
-        OpenVSwitchControlCli.master_class = OpenVSwitchControlCli
-        return super(OpenVSwitchControlCli, cls).__new__(cls, db_path,
-                                                         db_socket,
-                                                         db_pidfile,
-                                                         ovs_pidfile,
-                                                         dbschema,
-                                                         install_prefix)
-
-
-class OpenVSwitchControlDB(OpenVSwitchControl, VersionableClass):
-    """
-    Class select the best matches control class for installed version
-    of OpenVSwitch.
-    """
-
-    def __new__(cls, db_path=None, db_socket=None, db_pidfile=None,
-                 ovs_pidfile=None, dbschema=None, install_prefix=None):
-        OpenVSwitchControlDB.master_class = OpenVSwitchControlDB
-        return super(OpenVSwitchControlDB, cls).__new__(cls, db_path,
-                                                        db_socket,
-                                                        db_pidfile,
-                                                        ovs_pidfile,
-                                                        dbschema,
-                                                        install_prefix)
-
-
-class OpenVSwitchControlDB_140(OpenVSwitchControlDB, VersionableClass):
+class OpenVSwitchControlDB_140(OpenVSwitchControl):
     """
     Don't use this class directly. This class is automatically selected by
     OpenVSwitchControl.
     """
     @classmethod
-    def is_right_version(cls, version):
+    def _is_right_ver(cls):
         """
         Check condition for select control class.
 
         @param version: version of OpenVSwtich
         """
+        version = cls.get_version()
         if version is not None:
             int_ver = cls.convert_version_to_int(version)
-            if int_ver <= 140:
+            if int_ver >= 140:
                 return True
         return False
 
     #TODO: implement database manipulation methods.
 
 
-class OpenVSwitchControlCli_140(OpenVSwitchControlCli, VersionableClass):
+class OpenVSwitchControlDB_CNT(VersionableClass):
+    __master__ = OpenVSwitchControlDB_140
+
+
+class OpenVSwitchControlCli_140(OpenVSwitchControl):
     """
     Don't use this class directly. This class is automatically selected by
     OpenVSwitchControl.
     """
     @classmethod
-    def is_right_version(cls, version):
+    def _is_right_ver(cls):
         """
         Check condition for select control class.
 
         @param version: version of OpenVSwtich
         """
+        version = cls.get_version()
         if version is not None:
             int_ver = cls.convert_version_to_int(version)
-            if int_ver <= 140:
+            if int_ver >= 140:
                 return True
         return False
 
@@ -378,17 +356,14 @@ class OpenVSwitchControlCli_140(OpenVSwitchControlCli, VersionableClass):
         return bridge
 
 
-class OpenVSwitchSystem(OpenVSwitchControlCli, OpenVSwitchControlDB):
+class OpenVSwitchControlCli_CNT(VersionableClass):
+    __master__ = OpenVSwitchControlCli_140
+
+
+class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
     """
     OpenVSwtich class.
     """
-    def __new__(cls, db_path=None, db_socket=None, db_pidfile=None,
-                 ovs_pidfile=None, dbschema=None, install_prefix=None):
-        return super(OpenVSwitchSystem, cls).__new__(cls, db_path, db_socket,
-                                                db_pidfile, ovs_pidfile,
-                                                dbschema, install_prefix)
-
-
     def __init__(self, db_path=None, db_socket=None, db_pidfile=None,
                  ovs_pidfile=None, dbschema=None, install_prefix=None):
         """
@@ -400,9 +375,9 @@ class OpenVSwitchSystem(OpenVSwitchControlCli, OpenVSwitchControlDB):
         @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
         @param install_prefix: Path where is openvswitch installed.
         """
-        super(OpenVSwitchSystem, self).__init__(self, db_path, db_socket,
-                                                db_pidfile, ovs_pidfile,
-                                                dbschema, install_prefix)
+        sup = super(man[self.__class__, OpenVSwitchSystem], self)
+        sup.__init__(self, db_path, db_socket, db_pidfile, ovs_pidfile,
+                           dbschema, install_prefix)
 
         self.cleanup = False
         self.pid_files_path = None
@@ -473,7 +448,7 @@ class OpenVSwitchSystem(OpenVSwitchControlCli, OpenVSwitchControlDB):
         """
         Create new dbfile without any configuration.
         """
-        sm = ServiceManager()
+        sm = factory(ServiceManager)()
         try:
             if utils.load_module("openvswitch"):
                 sm.restart("openvswitch")
@@ -495,13 +470,6 @@ class OpenVSwitch(OpenVSwitchSystem):
     """
     OpenVSwtich class.
     """
-    def __new__(cls, tmpdir, db_path=None, db_socket=None, db_pidfile=None,
-                 ovs_pidfile=None, dbschema=None, install_prefix=None):
-        return super(OpenVSwitch, cls).__new__(cls, db_path, db_socket,
-                                                db_pidfile, ovs_pidfile,
-                                                dbschema, install_prefix)
-
-
     def __init__(self, tmpdir, db_path=None, db_socket=None, db_pidfile=None,
                  ovs_pidfile=None, dbschema=None, install_prefix=None):
         """
@@ -514,8 +482,9 @@ class OpenVSwitch(OpenVSwitchSystem):
         @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
         @param install_prefix: Path where is openvswitch installed.
         """
-        super(OpenVSwitch, self).__init__(db_path, db_socket, db_pidfile,
-                                        ovs_pidfile, dbschema, install_prefix)
+        super(man[self, OpenVSwitch], self).__init__(db_path, db_socket,
+                                                      db_pidfile, ovs_pidfile,
+                                                      dbschema, install_prefix)
         self.tmpdir = "/%s/openvswitch" % (tmpdir)
         try:
             os.mkdir(self.tmpdir)

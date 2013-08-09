@@ -35,7 +35,12 @@ try:
     from autotest.client.shared import utils_cgroup
 except ImportError:
     # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from virttest import utils_cgroup
+    from virttest.staging import utils_cgroup
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
 
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
@@ -1442,9 +1447,9 @@ def get_memory_info(lvms):
 
     try:
         meminfo = "Host: memfree = "
-        meminfo += str(int(utils.freememtotal()) / 1024) + "M; "
+        meminfo += str(int(utils_memory.freememtotal()) / 1024) + "M; "
         meminfo += "swapfree = "
-        mf = int(utils.read_from_meminfo("SwapFree")) / 1024
+        mf = int(utils_memory.read_from_meminfo("SwapFree")) / 1024
         meminfo += str(mf) + "M; "
     except Exception, e:
         raise error.TestFail("Could not fetch host free memory info, "
@@ -1629,12 +1634,12 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         """
         basename = os.path.basename(remote_path)
         logging.debug("Extracting %s on VM %s", basename, vm.name)
-        session.cmd("rm -rf %s" % dest_dir)
+        session.cmd("rm -rf %s" % dest_dir, timeout=240)
         dirname = os.path.dirname(remote_path)
         session.cmd("cd %s" % dirname)
         session.cmd("mkdir -p %s" % os.path.dirname(dest_dir))
         e_cmd = "tar xjvf %s -C %s" % (basename, os.path.dirname(dest_dir))
-        output = session.cmd(e_cmd, timeout=120)
+        output = session.cmd(e_cmd, timeout=240)
         autotest_dirname = ""
         for line in output.splitlines()[1:]:
             autotest_dirname = line.split("/")[0]
@@ -1656,9 +1661,25 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         except OSError, detail:
             if detail.errno != errno.EEXIST:
                 raise
-        vm.copy_files_from("%s/results/default/*" % base_results_dir,
-                           guest_results_dir)
-
+        # result info tarball to host result dir
+        session = vm.wait_for_login(timeout=360)
+        results_dir = "%s/results/default" % base_results_dir
+        results_tarball = "/tmp/results.tgz"
+        compress_cmd = "cd %s && " % results_dir
+        compress_cmd += "tar cjvf %s ./* --exclude=*core*" % results_tarball
+        session.cmd(compress_cmd, timeout=600)
+        vm.copy_files_from(results_tarball, guest_results_dir)
+        # cleanup autotest subprocess which not terminated, change PWD to
+        # avoid current connection kill by fuser command;
+        clean_cmd = "cd /tmp && fuser -k %s" % results_dir
+        session.sendline(clean_cmd)
+        session.cmd("rm -f %s" % results_tarball, timeout=240)
+        results_tarball = os.path.basename(results_tarball)
+        results_tarball = os.path.join(guest_results_dir, results_tarball)
+        uncompress_cmd = "tar xjvf %s -C %s" % (results_tarball,
+                                                guest_results_dir)
+        utils.run(uncompress_cmd)
+        utils.run("rm -f %s" % results_tarball)
 
     def get_results_summary():
         """
@@ -1724,7 +1745,7 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
            (autotest_parentdir, compressed_autotest_path, autotest_basename))
     # Until we have nested virtualization, we don't need the virt test :)
     cmd += " --exclude=%s/tests/virt" % autotest_basename
-    cmd += " --exclude=%s/results" % autotest_basename
+    cmd += " --exclude=%s/results*" % autotest_basename
     cmd += " --exclude=%s/tmp" % autotest_basename
     cmd += " --exclude=%s/control*" % autotest_basename
     cmd += " --exclude=*.pyc"
@@ -2227,7 +2248,7 @@ def find_substring(string, pattern1, pattern2=None):
 
 def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
                            storage_path="/tmp/prewhql.iso",
-                           re_hw_id="(PCI.{14,50})\r\n", run_cmd=True):
+                           re_hw_id="(PCI.{14,50})", run_cmd=True):
     """
     Get windows driver's hardware id from inf files.
 
@@ -2246,6 +2267,7 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
         utils.system("mount %s %s -o loop" % (storage_path, mount_point),
                      timeout=60)
     driver_link = os.path.join(mount_point, driver_path)
+    txt_file = ""
     try:
         txt_file = open(driver_link, "r")
         txt = txt_file.read()
@@ -2257,7 +2279,9 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
         return hwid
     except Exception, e:
         logging.error("Fail to get hardware id with exception: %s" % e)
-        utils.system("umount %s" % mount_point)
+        if txt_file:
+            txt_file.close()
+        utils.system("umount %s" % mount_point, ignore_status=True)
         return ""
 
 

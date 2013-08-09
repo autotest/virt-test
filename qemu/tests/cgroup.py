@@ -17,9 +17,15 @@ try:
     from autotest.client.shared.utils_cgroup import get_load_per_cpu
 except ImportError:
     # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from virttest.utils_cgroup import Cgroup
-    from virttest.utils_cgroup import CgroupModules
-    from virttest.utils_cgroup import get_load_per_cpu
+    from virttest.staging.utils_cgroup import Cgroup
+    from virttest.staging.utils_cgroup import CgroupModules
+    from virttest.staging.utils_cgroup import get_load_per_cpu
+
+try:
+    from autotest.client.shared import utils_memory
+except ImportError:
+    from virttest.staging import utils_memory
+
 
 @error.context_aware
 def run_cgroup(test, params, env):
@@ -606,7 +612,10 @@ def run_cgroup(test, params, env):
         timeout = 1.5 * int(params.get("login_timeout", 360))
         # First one
         vms.append(env.get_all_vms()[0])
-        cpu_pids = vms[0].get_vcpu_pids(params)
+        vcpu_thread_pattern = params.get("vcpu_thread_pattern",
+                                         r"thread_id.?[:|=]\s*(\d+)")
+        cpu_pids = vms[0].get_vcpu_pids(vcpu_thread_pattern)
+
         smp = len(cpu_pids)
         cgroup.mk_cgroup()
         cgroup.set_property("cpu.cfs_period_us", 100000, 0)
@@ -637,7 +646,10 @@ def run_cgroup(test, params, env):
             # Total quota is for ALL vCPUs
             cgroup.set_property("cpu.cfs_quota_us", 50000 * smp, -1)
             assign_vm_into_cgroup(vms[-1], cgroup, -1)
-            cpu_pids = vms[-1].get_vcpu_pids(params)
+            vcpu_thread_pattern = params.get("vcpu_thread_pattern",
+                                             r"thread_id.?[:|=]\s*(\d+)")
+            cpu_pids = vms[-1].get_vcpu_pids(vcpu_thread_pattern)
+
             for j in range(smp):
                 cgroup.mk_cgroup(pwd)
                 cgroup.set_property("cpu.cfs_period_us", 100000, -1)
@@ -1081,7 +1093,10 @@ def run_cgroup(test, params, env):
             params['smp'] = vm_cpus
             vm.create(params=params)
         # Verify vcpus matches prescription
-        vcpus = vm.get_vcpu_pids(params)
+        vcpu_thread_pattern = params.get("vcpu_thread_pattern",
+                                         r"thread_id.?[:|=]\s*(\d+)")
+        vcpus = vm.get_vcpu_pids(vcpu_thread_pattern)
+
         if len(vcpus) != vm_cpus:
             raise error.TestFail("Incorrect number of vcpu PIDs; smp=%s vcpus="
                                  "%s" % (vm_cpus, vcpus))
@@ -1759,7 +1774,7 @@ def run_cgroup(test, params, env):
                 err = "Hugepages can't be used in this test."
                 logging.error(err)
                 raise error.TestNAError(err)
-            if utils.read_from_meminfo('SwapFree') < (mem * 0.1):
+            if utils_memory.read_from_meminfo('SwapFree') < (mem * 0.1):
                 err = "Not enough free swap space"
                 logging.error(err)
                 raise error.TestNAError(err)

@@ -1,5 +1,6 @@
 import logging
 from autotest.client.shared import error
+from virttest import utils_misc
 from qemu.tests import blk_stream
 
 class BlockStreamCheckBackingfile(blk_stream.BlockStream):
@@ -40,6 +41,7 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
         """
         params = self.parser_test_args()
         exp_img_file = params["expected_image_file"]
+        exp_img_file = utils_misc.get_path(self.data_dir, exp_img_file)
         error.context("Check image file is '%s'" % exp_img_file, logging.info)
         img_file = self.get_image_file()
         if exp_img_file != img_file:

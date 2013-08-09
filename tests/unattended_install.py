@@ -1,11 +1,13 @@
 import logging, time, re, os, tempfile, ConfigParser
-import threading
+import threading, shutil
 import xml.dom.minidom
+import errno
 from autotest.client.shared import error, iso9660
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, utils_disk
 from virttest import qemu_monitor, remote, syslog_server
-from virttest import http_server, data_dir, utils_net
+from virttest import http_server, data_dir, utils_net, utils_test
+from virttest import funcatexit
 
 
 # Whether to print all shell commands called
@@ -118,6 +120,7 @@ class UnattendedInstallConfig(object):
         root_dir = data_dir.get_data_dir()
         self.deps_dir = os.path.join(test.virtdir, 'deps')
         self.unattended_dir = os.path.join(test.virtdir, 'unattended')
+        self.results_dir = test.debugdir
         self.params = params
 
         self.attributes = ['kernel_args', 'finish_program', 'cdrom_cd1',
@@ -126,17 +129,24 @@ class UnattendedInstallConfig(object):
                            'floppy_name', 'cdrom_unattended', 'boot_path',
                            'kernel_params', 'extra_params', 'qemu_img_binary',
                            'cdkey', 'finish_program', 'vm_type',
-                           'process_check', 'vfd_size']
+                           'process_check', 'vfd_size', 'cdrom_mount_point',
+                           'floppy_mount_point', 'cdrom_virtio',
+                           'virtio_floppy', 're_driver_match',
+                           're_hardware_id', 'driver_in_floppy']
 
         for a in self.attributes:
             setattr(self, a, params.get(a, ''))
 
-        if self.install_virtio == 'yes':
-            v_attributes = ['virtio_floppy', 'virtio_storage_path',
-                            'virtio_network_path', 'virtio_oemsetup_id',
-                            'virtio_network_installer_path']
-            for va in v_attributes:
-                setattr(self, va, params.get(va, ''))
+        # Will setup the virtio attributes
+        v_attributes = ['virtio_floppy', 'virtio_storage_path',
+                        'virtio_network_path', 'virtio_oemsetup_id',
+                        'virtio_network_installer_path',
+                        'virtio_balloon_installer_path',
+                        'virtio_qxl_installer_path',
+                        'virtio_scsi_cdrom']
+
+        for va in v_attributes:
+            setattr(self, va, params.get(va, ''))
 
         self.tmpdir = test.tmpdir
 
@@ -162,6 +172,13 @@ class UnattendedInstallConfig(object):
         if getattr(self, 'cdrom_unattended'):
             self.cdrom_unattended = os.path.join(root_dir,
                                                  self.cdrom_unattended)
+
+        if getattr(self, 'virtio_floppy'):
+            self.virtio_floppy = os.path.join(root_dir, self.virtio_floppy)
+
+        if getattr(self, 'cdrom_virtio'):
+            self.cdrom_virtio = os.path.join(root_dir, self.cdrom_virtio)
+
         if getattr(self, 'kernel'):
             self.kernel = os.path.join(root_dir, self.kernel)
         if getattr(self, 'initrd'):
@@ -201,6 +218,91 @@ class UnattendedInstallConfig(object):
                                             'tcp') == 'tcp'
 
         self.vm = vm
+
+
+    @error.context_aware
+    def get_driver_hardware_id(self, driver, run_cmd=True):
+        """
+        Get windows driver's hardware id from inf files.
+
+        @param dirver: Configurable driver name.
+        @param run_cmd:  Use hardware id in windows cmd command or not.
+        @param return: Windows driver's hardware id
+        """
+        if not os.path.exists(self.cdrom_mount_point):
+            os.mkdir(self.cdrom_mount_point)
+        if not os.path.exists(self.floppy_mount_point):
+            os.mkdir(self.floppy_mount_point)
+        if not os.path.ismount(self.cdrom_mount_point):
+            utils.system("mount %s %s -o loop" % (self.cdrom_virtio,
+                                         self.cdrom_mount_point), timeout=60)
+        if not os.path.ismount(self.floppy_mount_point):
+            utils.system("mount %s %s -o loop" % (self.virtio_floppy,
+                                        self.floppy_mount_point), timeout=60)
+        drivers_d = []
+        driver_link = None
+        if self.driver_in_floppy is not None:
+            driver_in_floppy = self.driver_in_floppy
+            drivers_d = driver_in_floppy.split()
+        else:
+            drivers_d.append('qxl.inf')
+        for driver_d in drivers_d:
+            if driver_d in driver:
+                driver_link = os.path.join(self.floppy_mount_point, driver)
+        if driver_link is None:
+            driver_link = os.path.join(self.cdrom_mount_point, driver)
+        try:
+            txt = open(driver_link, "r").read()
+            hwid = re.findall(self.re_hardware_id, txt)[-1].rstrip()
+            if run_cmd:
+                hwid = '^&'.join(hwid.split('&'))
+            return hwid
+        except Exception, e:
+            logging.error("Fail to get hardware id with exception: %s" % e)
+
+
+    @error.context_aware
+    def update_driver_hardware_id(self, driver):
+        """
+        Update driver string with the hardware id get from inf files
+
+        @driver: driver string
+        @return new driver string
+        """
+        if 'hwid' in driver:
+            if 'hwidcmd' in driver:
+                run_cmd = True
+            else:
+                run_cmd = False
+            if self.re_driver_match is not None:
+                d_str = self.re_driver_match
+            else:
+                d_str = "(\S+)\s*hwid"
+
+            drivers_in_floppy = []
+            if self.driver_in_floppy is not None:
+                drivers_in_floppy = self.driver_in_floppy.split()
+
+
+            mount_point = self.cdrom_mount_point
+            storage_path = self.cdrom_virtio
+            for driver_in_floppy in drivers_in_floppy:
+                if driver_in_floppy in driver:
+                    mount_point = self.floppy_mount_point
+                    storage_path = self.virtio_floppy
+                    break
+
+            d_link = re.findall(d_str, driver)[0].split(":")[1]
+            d_link = "/".join(d_link.split("\\\\")[1:])
+            hwid = utils_test.get_driver_hardware_id(d_link, mount_point,
+                                                     storage_path,
+                                                     run_cmd=run_cmd)
+            if hwid:
+                driver = driver.replace("hwidcmd", hwid.strip())
+            else:
+                raise error.TestError("Can not find hwid from the driver"
+                                      " inf file")
+        return driver
 
 
     def answer_kickstart(self, answer_path):
@@ -266,28 +368,39 @@ class UnattendedInstallConfig(object):
         else:
             parser.remove_option('Unattended', 'OemPnPDriversPath')
 
-        # Replace the virtio installer command
-        if self.install_virtio == 'yes':
-            driver = self.virtio_network_installer_path
-        else:
-            driver = 'dir'
-
-        dummy_re = 'KVM_TEST_VIRTIO_NETWORK_INSTALLER'
-        installer = parser.get('GuiRunOnce', 'Command0')
-        if dummy_re in installer:
-            installer = re.sub(dummy_re, driver, installer)
-        parser.set('GuiRunOnce', 'Command0', installer)
+        dummy_re_dirver = {'KVM_TEST_VIRTIO_NETWORK_INSTALLER':
+                 'virtio_network_installer_path',
+                 'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
+                 'virtio_balloon_installer_path',
+                 'KVM_TEST_VIRTIO_QXL_INSTALLER':
+                 'virtio_qxl_installer_path'}
+        dummy_re = ""
+        for dummy in dummy_re_dirver:
+            if dummy_re:
+                dummy_re += "|%s" % dummy
+            else:
+                dummy_re = dummy
 
         # Replace the process check in finish command
         dummy_process_re = r'\bPROCESS_CHECK\b'
         for opt in parser.options('GuiRunOnce'):
-            process_check = parser.get('GuiRunOnce', opt)
-            if re.search(dummy_process_re, process_check):
+            check = parser.get('GuiRunOnce', opt)
+            if re.search(dummy_process_re, check):
                 process_check = re.sub(dummy_process_re,
-                              "%s" % self.process_check,
-                              process_check)
+                                       "%s" % self.process_check,
+                                       check)
                 parser.set('GuiRunOnce', opt, process_check)
-
+            elif re.findall(dummy_re, check):
+                dummy = re.findall(dummy_re, check)[0]
+                driver = getattr(self, dummy_re_dirver[dummy])
+                if driver.endswith("msi"):
+                    driver = 'msiexec /passive /package ' + driver
+                elif 'INSTALLER' in dummy:
+                    driver = self.update_driver_hardware_id(driver)
+                elif driver is None:
+                    driver = 'dir'
+                check = re.sub(dummy, driver, check)
+                parser.set('GuiRunOnce', opt, check)
         # Now, writing the in memory config state to the unattended file
         fp = open(answer_path, 'w')
         parser.write(fp)
@@ -308,8 +421,12 @@ class UnattendedInstallConfig(object):
         if self.cdkey:
             # First, replacing the CDKEY
             product_key = doc.getElementsByTagName('ProductKey')[0]
-            key = product_key.getElementsByTagName('Key')[0]
-            key_text = key.childNodes[0]
+            if product_key.getElementsByTagName('Key'):
+                key = product_key.getElementsByTagName('Key')[0]
+                key_text = key.childNodes[0]
+            else:
+                key_text = product_key.childNodes[0]
+
             assert key_text.nodeType == doc.TEXT_NODE
             key_text.data = self.cdkey
         else:
@@ -320,6 +437,8 @@ class UnattendedInstallConfig(object):
         # component PnpCustomizationsWinPE Element Node
         if self.install_virtio == 'yes':
             paths = doc.getElementsByTagName("Path")
+            if self.virtio_scsi_cdrom == 'yes':
+                self.virtio_network_path = self.virtio_storage_path
             values = [self.virtio_storage_path, self.virtio_network_path]
             for path, value in zip(paths, values):
                 path_text = path.childNodes[0]
@@ -336,22 +455,36 @@ class UnattendedInstallConfig(object):
         # Last but not least important, replacing the virtio installer command
         # And process check in finish command
         command_lines = doc.getElementsByTagName("CommandLine")
+        dummy_re_dirver = {'KVM_TEST_VIRTIO_NETWORK_INSTALLER':
+                 'virtio_network_installer_path',
+                 'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
+                 'virtio_balloon_installer_path',
+                 'KVM_TEST_VIRTIO_QXL_INSTALLER':
+                 'virtio_qxl_installer_path'}
+        process_check_re = 'PROCESS_CHECK'
+        dummy_re = ""
+        for dummy in dummy_re_dirver:
+            if dummy_re:
+                dummy_re += "|%s" % dummy
+            else:
+                dummy_re = dummy
+
         for command_line in command_lines:
             command_line_text = command_line.childNodes[0]
             assert command_line_text.nodeType == doc.TEXT_NODE
-            dummy_re = 'KVM_TEST_VIRTIO_NETWORK_INSTALLER'
-            process_check_re = 'PROCESS_CHECK'
-            if (self.install_virtio == 'yes' and
-                hasattr(self, 'virtio_network_installer_path')):
-                driver = self.virtio_network_installer_path
-            else:
-                driver = 'dir'
-            if driver.endswith("msi"):
-                driver = 'msiexec /passive /package ' + driver
-            if dummy_re in command_line_text.data:
+
+            if re.findall(dummy_re, command_line_text.data):
+                dummy = re.findall(dummy_re, command_line_text.data)[0]
+                driver = getattr(self, dummy_re_dirver[dummy])
+
+                if driver.endswith("msi"):
+                    driver = 'msiexec /passive /package ' + driver
+                elif 'INSTALLER' in dummy:
+                    driver = self.update_driver_hardware_id(driver)
                 t = command_line_text.data
                 t = re.sub(dummy_re, driver, t)
                 command_line_text.data = t
+
             if process_check_re in command_line_text.data:
                 t = command_line_text.data
                 t = re.sub(process_check_re, self.process_check, t)
@@ -785,6 +918,12 @@ class UnattendedInstallConfig(object):
                              self.medium)
         if self.unattended_file and (self.floppy or self.cdrom_unattended):
             self.setup_boot_disk()
+            if self.params.get("store_boot_disk") == "yes":
+                logging.info("Sotre the boot disk to result directory for"
+                             " further debug")
+                src_dir = self.floppy or self.cdrom_unattended
+                dst_dir = self.results_dir
+                shutil.copy(src_dir, dst_dir)
 
         # Update params dictionary as some of the values could be updated
         for a in self.attributes:
@@ -820,6 +959,15 @@ def terminate_syslog_server_thread():
     return False
 
 
+def copy_file_from_nfs(src, dst, mount_point, image_name):
+    logging.info("Test failed before the install process start."
+                " So just copy a good image from nfs for following tests.")
+    utils_misc.mount(src, mount_point, "nfs", perm="ro")
+    image_src = utils_misc.get_path(mount_point, image_name)
+    shutil.copy(image_src, dst)
+    utils_misc.umount(src, mount_point, "nfs")
+
+
 @error.context_aware
 def run_unattended_install(test, params, env):
     """
@@ -831,7 +979,54 @@ def run_unattended_install(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    @error.context_aware
+    def copy_images():
+        error.base_context("Copy image from NFS after installation failure")
+        image_copy_on_error = params.get("image_copy_on_error", "yes")
+        if "yes" in image_copy_on_error:
+            try:
+                error.context("Quit qemu-kvm before copying guest image")
+                vm.monitor.quit()
+            except Exception, e:
+                logging.warn(e)
+            from autotest.client.virt.tests import image_copy
+            error.context("Copy image from NFS Server")
+            image_copy.run_image_copy(test, params, env)
+
+    image = '%s.%s' % (params['image_name'], params['image_format'])
+    image_name = os.path.basename(image)
+    src = params.get('images_good')
+    dst = '%s/%s' % (data_dir.get_data_dir(), image)
+    mount_point = params.get("dst_dir")
+    if mount_point and src:
+        funcatexit.register(env, params.get("type"), copy_file_from_nfs, src,
+                            dst, mount_point, image_name)
+
     vm = env.get_vm(params["main_vm"])
+    local_dir = params.get("local_dir")
+    if local_dir:
+        local_dir = utils_misc.get_path(test.bindir, local_dir)
+    else:
+        local_dir = test.bindir
+    if params.get("copy_to_local"):
+        for param in params.get("copy_to_local").split():
+            l_value = params.get(param)
+            if l_value:
+                need_copy = True
+                nfs_link = utils_misc.get_path(test.bindir, l_value)
+                i_name = os.path.basename(l_value)
+                local_link = os.path.join(local_dir, i_name)
+                if os.path.isfile(local_link):
+                    file_hash = utils.hash_file(local_link, "md5")
+                    expected_hash = utils.hash_file(nfs_link, "md5")
+                    if file_hash == expected_hash:
+                        need_copy = False
+                if need_copy:
+                    msg = "Copy %s to %s in local host." % (i_name, local_link)
+                    error.context(msg, logging.info)
+                    utils.get_file(nfs_link, local_link)
+                    params[param] = local_link
+
     unattended_install_config = UnattendedInstallConfig(test, params, vm)
     unattended_install_config.setup()
 
@@ -841,7 +1036,7 @@ def run_unattended_install(test, params, env):
 
     post_finish_str = params.get("post_finish_str",
                                  "Post set up finished")
-    install_timeout = int(params.get("timeout", 3000))
+    install_timeout = int(params.get("install_timeout", 3000))
 
     migrate_background = params.get("migrate_background") == "yes"
     if migrate_background:
@@ -853,6 +1048,27 @@ def run_unattended_install(test, params, env):
     error.context("waiting for installation to finish")
 
     start_time = time.time()
+
+    try:
+        serial_name = vm.serial_ports[0]
+    except IndexError:
+        raise virt_vm.VMConfigMissingError(vm.name, "isa_serial")
+    except AttributeError:
+        serial_name = "libvirt"
+
+    log_file = utils_misc.get_path(test.debugdir,
+                                   "serial-%s-%s.log" % (serial_name,
+                                                         vm.name))
+    serial_log_msg = ""
+    serial_log_file = None
+
+    # As the the install process start. We may need collect informations from
+    # the image. So use the test case instead this simple function in the
+    # following code.
+    if mount_point and src:
+        funcatexit.unregister(env, params.get("type"), copy_file_from_nfs,
+                              src, dst, mount_point, image_name)
+
     while (time.time() - start_time) < install_timeout:
         try:
             vm.verify_alive()
@@ -862,11 +1078,38 @@ def run_unattended_install(test, params, env):
             if params.get("wait_no_ack", "no") == "yes":
                 break
             else:
+                # Print out the original exception before copying images.
+                logging.error(e)
+                copy_images()
                 raise e
-        test.verify_background_errors()
-        finish_signal = vm.serial_console.get_output()
+
+        try:
+            test.verify_background_errors()
+        except Exception, e:
+            copy_images()
+            raise e
+
+        # To ignore the try:except:finally problem in old version of python
+        try:
+            try:
+                serial_log_file = open(log_file, 'r')
+                serial_log_msg = serial_log_file.read()
+            except Exception, e:
+                if e.errno == errno.ENOENT:
+                    logging.warn("Log file '%s' doesn't exist,"
+                                 " just create it.", log_file)
+                    try:
+                        open(log_file, 'w').close()
+                    except Exception:
+                        pass
+                else:
+                    logging.warn("Can not read from serail log file: %s", e)
+        finally:
+            if serial_log_file and not serial_log_file.closed:
+                serial_log_file.close()
+
         if (params.get("wait_no_ack", "no") == "no" and
-            (post_finish_str in finish_signal)):
+            (post_finish_str in serial_log_msg)):
             break
 
         # Due to libvirt automatically start guest after import
@@ -883,6 +1126,9 @@ def run_unattended_install(test, params, env):
         else:
             time.sleep(1)
     else:
+        logging.warn("Timeout elapsed while waiting for install to finish."
+                     "Will run image_copy to copy image from NFS.")
+        copy_images()
         raise error.TestFail("Timeout elapsed while waiting for install to "
                              "finish")
 

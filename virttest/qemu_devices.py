@@ -26,7 +26,10 @@ except ImportError:
         @warning: This is not the full OrderedDict implementation!
         """
         def itervalues(self, *args, **kwargs):
-            return sorted(dict.itervalues(self, *args, **kwargs),
+            return (_[1] for _ in sorted(dict.iteritems(self, *args, **kwargs)))
+
+        def iteritems(self, *args, **kwargs):
+            return sorted(dict.iteritems(self, *args, **kwargs),
                           key=lambda item: item[0])
 
 
@@ -258,7 +261,8 @@ class QStringDevice(QBaseDevice):
     def cmdline(self):
         """ @return: cmdline command to define this device """
         try:
-            return self._cmdline % self.params
+            if self._cmdline:
+                return self._cmdline % self.params
         except KeyError, details:
             raise KeyError("Param %s required for cmdline is not present in %s"
                            % (details, self.str_long()))
@@ -865,7 +869,8 @@ class DevContainer(object):
     Device container class
     """
     # General methods
-    def __init__(self, qemu_binary, vmname, strict_mode=False):
+    def __init__(self, qemu_binary, vmname, strict_mode=False,
+                 workaround_qemu_qmp_crash=False):
         """
         @param qemu_binary: qemu binary
         @param vm: related VM
@@ -887,9 +892,11 @@ class DevContainer(object):
                     hmp_cmds.extend(cmd.split('|'))
             return hmp_cmds
 
-        def get_qmp_cmds(qemu_binary):
+        def get_qmp_cmds(qemu_binary, workaround_qemu_qmp_crash=False):
             """ @return: list of qmp commands """
-            cmds = utils.system_output('echo -e \''
+            cmds = None
+            if not workaround_qemu_qmp_crash:
+                cmds = utils.system_output('echo -e \''
                             '{ "execute": "qmp_capabilities" }\n'
                             '{ "execute": "query-commands", "id": "RAND91" }\n'
                             '{ "execute": "quit" }\''
@@ -919,7 +926,7 @@ class DevContainer(object):
         self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
                                 timeout=10, ignore_status=True, verbose=False)
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
-        self.__qmp_cmds = get_qmp_cmds(qemu_binary)
+        self.__qmp_cmds = get_qmp_cmds(qemu_binary, workaround_qemu_qmp_crash)
         self.vmname = vmname
         self.strict_mode = strict_mode == 'yes'
         self.__devices = []
@@ -1285,8 +1292,9 @@ class DevContainer(object):
         """
         out = ""
         for device in self.__devices:
-            if device.cmdline():
-                out += " %s" % device.cmdline()
+            _out = device.cmdline()
+            if _out:
+                out += " %s" % _out
         if out:
             return out[1:]
 

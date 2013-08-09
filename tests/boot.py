@@ -17,21 +17,28 @@ def run_boot(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-    error.context("Try to log into guest.", logging.info)
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
-    session = vm.wait_for_login(timeout=timeout)
+    vms = env.get_all_vms()
+    for vm in vms:
+        error.context("Try to log into guest '%s'." % vm.name, logging.info)
+        session = vm.wait_for_login(timeout=timeout)
+        session.close()
 
     if params.get("rh_perf_envsetup_script"):
-        utils_test.service_setup(vm, session, test.virtdir)
-
+        for vm in vms:
+            session = vm.wait_for_login(timeout=timeout)
+            utils_test.service_setup(vm, session, test.virtdir)
+            session.close()
     if params.get("reboot_method"):
-        error.context("Reboot guest.", logging.info)
-        if params["reboot_method"] == "system_reset":
-            time.sleep(int(params.get("sleep_before_reset", 10)))
+        for vm in vms:
+            error.context("Reboot guest '%s'." % vm.name, logging.info)
+            if params["reboot_method"] == "system_reset":
+                time.sleep(int(params.get("sleep_before_reset", 10)))
             # Reboot the VM
-        for i in range(int(params.get("reboot_count", 1))):
-            session = vm.reboot(session, params["reboot_method"], 0, timeout)
-
-    session.close()
+            session = vm.wait_for_login(timeout=timeout)
+            for i in range(int(params.get("reboot_count", 1))):
+                session = vm.reboot(session,
+                                    params["reboot_method"],
+                                    0,
+                                    timeout)
+            session.close()
