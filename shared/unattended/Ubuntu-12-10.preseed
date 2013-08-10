@@ -34,6 +34,7 @@ d-i pkgsel/include string openssh-server build-essential lvm2 ethtool sg3-utils 
 
 d-i grub-installer/only_debian boolean true
 d-i grub-installer/with_other_os boolean true
+d-i debian-installer/add-kernel-opts string console=ttyS0,115200 console=tty0
 
 d-i apt-setup/security_host string
 base-config apt-setup/security-updates boolean false
@@ -43,3 +44,8 @@ ubiquity ubiquity/reboot boolean true
 
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
+d-i preseed/late_command string \
+echo "start on stopped rc or RUNLEVEL=[2345]" > /target/etc/init/ttyS0.conf; \
+echo "stop on runlevel [!2345]" >> /target/etc/init/ttyS0.conf; \
+echo "respawn" >> /target/etc/init/ttyS0.conf; \
+echo "exec /sbin/getty -L 115200 ttyS0 vt102" >> /target/etc/init/ttyS0.conf
