@@ -99,13 +99,26 @@ class QBaseDevice(object):
         if parent_bus is None:
             parent_bus = tuple()
         self.parent_bus = parent_bus   # list of buses into which this dev fits
+        self.child_bus = []            # list of buses which this dev provides
         if child_bus is None:
-            child_bus = tuple()
-        self.child_bus = child_bus     # list of buses which this dev provides
+            child_bus = []
+        elif not isinstance(child_bus, (list, tuple)):
+            self.add_child_bus(child_bus)
+        else:
+            for bus in child_bus:
+                self.add_child_bus(bus)
         self.params = OrderedDict()    # various device params (id, name, ...)
         if params:
             for key, value in params.iteritems():
                 self.set_param(key, value)
+
+    def add_child_bus(self, bus):
+        self.child_bus.append(bus)
+        bus.set_device(self)
+
+    def rm_child_bus(self, bus):
+        self.child_bus.remove(bus)
+        bus.set_device(None)
 
     def set_param(self, option, value, option_type=None):
         """
@@ -1585,10 +1598,6 @@ class DevContainer(object):
                 err += "ParentBus(%s): %s\n" % (parent_bus, _err)
                 continue
         # 4
-        if device.child_bus is not None and not isinstance(device.child_bus,
-                                                           (list, tuple)):
-            # it have to be list of parent buses
-            device.child_bus = (device.child_bus,)
         for bus in device.child_bus:
             self.__buses.insert(0, bus)
             _added_buses.append(bus)
