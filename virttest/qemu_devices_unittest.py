@@ -5,6 +5,7 @@ This is a unittest for qemu_devices library.
 @author: Lukas Doktor <ldoktor@redhat.com>
 @copyright: 2012 Red Hat, Inc.
 """
+import qemu_monitor
 __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 
 import re, unittest, os
@@ -25,6 +26,15 @@ QEMU_HELP = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__help")).read()
 QEMU_DEVICES = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__devices_help")).read()
 # qemu-1.5.0 -M ?
 QEMU_MACHINE = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__machine_help")).read()
+
+
+class MockHMPMonitor(qemu_monitor.HumanMonitor):
+    """ Dummy class inherited from qemu_monitor.HumanMonitor """
+    def __init__(self):     # pylint: disable=W0231
+        pass
+
+    def __del__(self):
+        pass
 
 
 class Devices(unittest.TestCase):
@@ -681,7 +691,8 @@ class Container(unittest.TestCase):
     def tearDown(self):
         self.god.unstub_all()
 
-    def create_qdev(self, vm_name='vm1'):
+    def create_qdev(self, vm_name='vm1', strict_mode="no",
+                    allow_hotplugged_vm="yes"):
         """ @return: Initialized qemu_devices.DevContainer object """
         qemu_cmd = '/usr/bin/qemu_kvm'
         qemu_devices.utils.system_output.expect_call('%s -help' % qemu_cmd,
@@ -716,7 +727,8 @@ class Container(unittest.TestCase):
                                              ignore_status=True, verbose=False
                                              ).and_return(QEMU_QMP)
 
-        qdev = qemu_devices.DevContainer(qemu_cmd, vm_name, False)
+        qdev = qemu_devices.DevContainer(qemu_cmd, vm_name, strict_mode, 'no',
+                                         allow_hotplugged_vm)
 
         self.god.check_playback()
         return qdev
@@ -928,21 +940,28 @@ PIIX3
         qdev = self.create_qdev('vm1')
 
         # Representation state (used for hotplug or other nasty things)
-        qdev._set_dirty()
+        out = qdev.get_state()
+        assert out == -1, "qdev state is incorrect %s != %s" % (out, 1)
+
+        qdev.set_dirty()
         out = qdev.get_state()
         self.assertEqual(out, 1, "qdev state is incorrect %s != %s" % (out, 1))
 
-        qdev._set_dirty()
+        qdev.set_dirty()
         out = qdev.get_state()
         self.assertEqual(out, 2, "qdev state is incorrect %s != %s" % (out, 1))
 
-        qdev._set_clean()
+        qdev.set_clean()
         out = qdev.get_state()
         self.assertEqual(out, 1, "qdev state is incorrect %s != %s" % (out, 1))
 
-        qdev._set_clean()
+        qdev.set_clean()
         out = qdev.get_state()
         self.assertEqual(out, 0, "qdev state is incorrect %s != %s" % (out, 1))
+
+        qdev.reset_state()
+        out = qdev.get_state()
+        assert out == -1, "qdev state is incorrect %s != %s" % (out, 1)
 
         # __create_unique_aid
         dev = qemu_devices.QDevice()
@@ -1005,7 +1024,8 @@ PIIX3
 
         # Add some buses
         bus1 = qemu_devices.QPCIBus('pci.0', 'pci', 'a_pci0')
-        qdev.insert(qemu_devices.QDevice(child_bus=bus1))
+        qdev.insert(qemu_devices.QDevice(params={'id': 'pci0'},
+                                         child_bus=bus1))
         bus2 = qemu_devices.QPCIBus('pci.1', 'pci', 'a_pci1')
         qdev.insert(qemu_devices.QDevice(child_bus=bus2))
         bus3 = qemu_devices.QPCIBus('pci.2', 'pci', 'a_pci2')
@@ -1042,7 +1062,69 @@ PIIX3
         out = qdev.idx_of_next_named_bus('pci.')
         self.assertEqual(out, 3, 'Incorrect idx of next named bus: %s !='
                          ' %s' % (out, 3))
+
+        # get_children
+        dev = qemu_devices.QDevice(parent_bus={'aobject': 'a_pci0'})
+        bus = qemu_devices.QPCIBus('test1', 'test', 'a_test1')
+        dev.add_child_bus(bus)
+        bus = qemu_devices.QPCIBus('test2', 'test', 'a_test2')
+        dev.add_child_bus(bus)
+        qdev.insert(dev)
+        qdev.insert(qemu_devices.QDevice(parent_bus={'aobject': 'a_test1'}))
+        qdev.insert(qemu_devices.QDevice(parent_bus={'aobject': 'a_test2'}))
+        out = dev.get_children()
+        assert len(out) == 2, ("Not all children were listed %d != 2:\n%s"
+                               % (len(out), out))
+
+        out = bus.get_device()
+        assert out == dev, ("bus.get_device() returned different device "
+                            "than the one in which it was plugged:\n"
+                            "%s\n%s\n%s" % (out.str_long(), dev.str_long(),
+                                            qdev.str_long()))
     # pylint: enable=W0212
+
+    def test_qdev_equal(self):
+        qdev1 = self.create_qdev('vm1', allow_hotplugged_vm='no')
+        qdev2 = self.create_qdev('vm1', allow_hotplugged_vm='no')
+        qdev3 = self.create_qdev('vm1', allow_hotplugged_vm='yes')
+        monitor = MockHMPMonitor()
+
+        assert qdev1 == qdev2, ("Init qdevs are not alike\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        # Insert a device to qdev1
+        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        qdev1.insert(dev)
+
+        assert qdev1 != qdev2, ("Different qdevs match:\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        # Insert similar device to qdev2
+        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        qdev2.insert(dev)
+
+        assert qdev1 == qdev2, ("Similar qdevs are not alike\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        # Hotplug similar device to qdev3
+        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        dev.hotplug = lambda _monitor: ""   # override the hotplug method
+        qdev3.hotplug(dev, monitor, False, False)
+        assert qdev1 != qdev3, ("Similar hotplugged qdevs match even thought "
+                                "qdev3 has different state\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+        qdev3.hotplug_verified()
+        assert qdev1 == qdev3, ("Similar hotplugged qdevs are not alike\n%s\n"
+                                "%s" % (qdev1.str_long(), qdev2.str_long()))
+
+        # Eq. is not symetrical, qdev1 doesn't allow hotplugged VMs.
+        assert qdev3 != qdev1, ("Similar hotplugged qdevs match even thought "
+                                "qdev1 doesn't allow hotplugged VM\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        qdev2.__qemu_help = "I support only this :-)"  # pylint: disable=W0212
+        assert qdev1 == qdev2, ("qdevs of different qemu versions match:\n%s\n"
+                                "%s" % (qdev1.str_long(), qdev2.str_long()))
 
 
 if __name__ == "__main__":

@@ -49,11 +49,33 @@ class DeviceInsertError(DeviceError):
         self.device = device
         self.reason = reason
         self.vmdev = vmdev
+        self.issue = "insert"
 
     def __str__(self):
-        return ("Failed to insert device:\n%s\nBecause:\n%s\nList of VM"
-                "devices:\n%s\n%s" % (self.device.str_long(), self.reason,
-                                      self.vmdev, self.vmdev.str_bus_long()))
+        return ("Failed to %s device:\n%s\nBecause:\n%s\nList of VM devices:\n"
+                "%s\n%s" % (self.issue, self.device.str_long(), self.reason,
+                            self.vmdev.str_short(), self.vmdev.str_bus_long()))
+
+
+class DeviceRemoveError(DeviceInsertError):
+    """ Fail to remove device """
+    def __init__(self, device, reason, vmdev):
+        super(DeviceRemoveError, self).__init__(device, reason, vmdev)
+        self.issue = "remove"
+
+
+class DeviceHotplugError(DeviceInsertError):
+    """ Fail to hotplug device """
+    def __init__(self, device, reason, vmdev):
+        super(DeviceHotplugError, self).__init__(device, reason, vmdev)
+        self.issue = "hotplug"
+
+
+class DeviceUnplugError(DeviceHotplugError):
+    """ Fail to unplug device """
+    def __init__(self, device, reason, vmdev):
+        super(DeviceUnplugError, self).__init__(device, reason, vmdev)
+        self.issue = "unplug"
 
 
 def _convert_args(arg_dict):
@@ -77,6 +99,23 @@ def none_or_int(value):
         return int(value)
     else:
         raise TypeError("This parameter have to be int or none")
+
+
+def _build_cmd(cmd, args=None, q_id=None):
+    """
+    Format QMP command from cmd and args
+
+    @param cmd: Command ('device_add', ...)
+    @param q_id: queue id; True = generate random, None = None, str = use str
+    """
+    obj = {"execute": cmd}
+    if args is not None:
+        obj["arguments"] = args
+    if q_id is True:
+        obj["id"] = utils_misc.generate_random_string(8)
+    elif q_id is not None:
+        obj["id"] = q_id
+    return obj
 
 
 ##############################################################################
@@ -232,6 +271,13 @@ class QBaseDevice(object):
         """@param aid: new autotest id for this device"""
         self.aid = aid
 
+    def get_children(self):
+        """ @return: List of all childrens (recursive) """
+        childrens = []
+        for bus in self.child_bus:
+            childrens.extend(bus)
+        return childrens
+
     def cmdline(self):
         """ @return: cmdline command to define this device """
         raise NotImplementedError
@@ -258,12 +304,49 @@ class QBaseDevice(object):
         """ @return: tuple(hotplug qemu command, arguments)"""
         raise DeviceError("Hotplug is not supported by this device %s", self)
 
+    def unplug_hook(self):
+        """ Modification prior to unplug can be made here """
+        pass
+
+    def unplug_unhook(self):
+        """ Roll back the modification made before unplug """
+        pass
+
+    def unplug(self, monitor):
+        """ @return: the output of monitor.cmd() unplug command """
+        if isinstance(monitor, qemu_monitor.QMPMonitor):
+            try:
+                cmd, args = self.unplug_qmp()
+                return monitor.cmd(cmd, args)
+            except DeviceError:     # qmp command not supported
+                return monitor.human_monitor_cmd(self.unplug_hmp())
+        elif isinstance(monitor, qemu_monitor.HumanMonitor):
+            return monitor.cmd(self.unplug_hmp())
+        else:
+            raise TypeError("Invalid monitor object: %s(%s)" % (monitor,
+                                                                type(monitor)))
+
+    def unplug_hmp(self):
+        """ @return: the unplug monitor command """
+        raise DeviceError("Unplug is not supported by this device %s", self)
+
+    def unplug_qmp(self):
+        """ @return: tuple(unplug qemu command, arguments)"""
+        raise DeviceError("Unplug is not supported by this device %s", self)
+
     def verify_hotplug(self, out, monitor):
         """
         @param out: Output of the hotplug command
         @param monitor: Monitor used for hotplug
         @return: True when successful, False when unsuccessful, string/None
                  when can't decide.
+        """
+        return out
+
+    def verify_unplug(self, out, monitor):      # pylint: disable=W0613,R0201
+        """
+        @param out: Output of the unplug command
+        @param monitor: Monitor used for unplug
         """
         return out
 
@@ -315,11 +398,10 @@ class QCustomDevice(QBaseDevice):
         """ @return: cmdline command to define this device """
         out = "-%s " % self.type
         for key, value in self.params.iteritems():
-            if value == "NO_EQUAL_STRING":
-                out += "%s," % key
-        for key, value in self.params.iteritems():
             if value != "NO_EQUAL_STRING":
                 out += "%s=%s," % (key, value)
+            else:
+                out += "%s," % key
         if out[-1] == ',':
             out = out[:-1]
         return out
@@ -365,6 +447,7 @@ class QDevice(QCustomDevice):
                                       child_bus)
         if driver:
             self['driver'] = driver
+        self.hook_drive_bus = None
 
     def _get_alternative_name(self):
         """ @return: alternative object name """
@@ -378,6 +461,27 @@ class QDevice(QCustomDevice):
     def hotplug_qmp(self):
         """ @return: the hotplug monitor command """
         return "device_add", self.params
+
+    def get_children(self):
+        """ Device bus should be removed too """
+        devices = super(QDevice, self).get_children()
+        if self.hook_drive_bus:
+            devices.append(self.hook_drive_bus)
+        return devices
+
+    def unplug_hmp(self):
+        """ @return: the unplug monitor command """
+        if self.get_qid():
+            return "device_del %s" % self.get_qid()
+        else:
+            raise DeviceError("Device has no qemu_id.")
+
+    def unplug_qmp(self):
+        """ @return: the unplug monitor command """
+        if self.get_qid():
+            return "device_del", self.get_qid()
+        else:
+            raise DeviceError("Device has no qemu_id.")
 
 
 class QGlobal(QBaseDevice):
@@ -863,6 +967,14 @@ class QSparseBus(object):
                 return True
         return False
 
+    def set_device(self, device):
+        """ Set the device in which this bus belongs """
+        self.__device = device
+
+    def get_device(self):
+        """ Get device in which this bus is present """
+        return self.__device
+
 
 class QUSBBus(QSparseBus):
     """
@@ -978,9 +1090,12 @@ class QDriveBus(QSparseBus):
 
     def _update_device_props(self, device, addr):
         """
-        Always set -drive property, it's mandatory.
+        Always set -drive property, it's mandatory. Also for hotplug purposes
+        store this bus device into hook variable of the device.
         """
         self._set_device_props(device, addr)
+        if hasattr(device, 'hook_drive_bus'):
+            device.hook_drive_bus = self.get_device()
 
 
 class QDenseBus(QSparseBus):
@@ -1235,8 +1350,8 @@ class DevContainer(object):
     Device container class
     """
     # General methods
-    def __init__(self, qemu_binary, vmname, strict_mode=False,
-                 workaround_qemu_qmp_crash=False):
+    def __init__(self, qemu_binary, vmname, strict_mode="no",
+                 workaround_qemu_qmp_crash="no", allow_hotplugged_vm="yes"):
         """
         @param qemu_binary: qemu binary
         @param vm: related VM
@@ -1283,7 +1398,7 @@ class DevContainer(object):
             if cmds:    # If no mathes, return None
                 return cmds
 
-        self.__state = 0    # is representation sync with VM (0 = synchronized)
+        self.__state = -1    # is representation sync with VM (0 = synchronized)
         self.__qemu_help = utils.system_output("%s -help" % qemu_binary,
                                 timeout=10, ignore_status=True, verbose=False)
         self.__device_help = utils.system_output("%s -device ? 2>&1"
@@ -1292,11 +1407,13 @@ class DevContainer(object):
         self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
                                 timeout=10, ignore_status=True, verbose=False)
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
-        self.__qmp_cmds = get_qmp_cmds(qemu_binary, workaround_qemu_qmp_crash)
+        self.__qmp_cmds = get_qmp_cmds(qemu_binary,
+                                       workaround_qemu_qmp_crash == 'always')
         self.vmname = vmname
         self.strict_mode = strict_mode == 'yes'
         self.__devices = []
         self.__buses = []
+        self.allow_hotplugged_vm = allow_hotplugged_vm == 'yes'
 
     def __getitem__(self, item):
         """
@@ -1383,8 +1500,24 @@ class DevContainer(object):
         """ Are the VM representation alike? """
         if len(qdev2) != len(self):
             return False
+        if qdev2.get_state() != self.get_state():
+            if qdev2.allow_hotplugged_vm:
+                if qdev2.get_state() > 0 or self.get_state() > 0:
+                    return False
+            else:
+                return False
         for dev in self:
             if dev not in qdev2:
+                return False
+
+        # state, buses and devices are handled earlier
+        qdev2 = qdev2.__dict__
+        for key, value in self.__dict__.iteritems():
+            if key in ("_DevContainer__devices", "_DevContainer__buses",
+                       "_DevContainer__state",
+                       "allow_hotplugged_vm"):
+                continue
+            if key not in qdev2 or qdev2[key] != value:
                 return False
         return True
 
@@ -1392,13 +1525,26 @@ class DevContainer(object):
         """ Are the VM representation different? """
         return not self.__eq__(qdev2)
 
-    def _set_dirty(self):
-        """ Mark representation as dirty (not synchronized with VM) """
-        self.__state += 1
+    def set_dirty(self):
+        """ Increase VM dirtiness (not synchronized with VM) """
+        if self.__state >= 0:
+            self.__state += 1
+        else:
+            self.__state = 1
 
-    def _set_clean(self):
-        """ Mark representation as clean (synchronized with VM) """
-        self.__state -= 1
+    def set_clean(self):
+        """ Decrease VM dirtiness (synchronized with VM) """
+        if self.__state > 0:
+            self.__state -= 1
+        else:
+            raise DeviceError("Trying to clean clear VM (probably calling "
+                              "hotplug_clean() twice).\n%s" % self.str_long())
+
+    def reset_state(self):
+        """
+        Mark representation as completely clean, without hotplugged devices.
+        """
+        self.__state = -1
 
     def get_state(self):
         """ Get the current state (0 = synchronized with VM) """
@@ -1420,7 +1566,11 @@ class DevContainer(object):
         """ Short string representation of all devices """
         out = "Devices of %s" % self.vmname
         dirty = self.get_state()
-        if dirty:
+        if dirty == -1:
+            pass
+        elif dirty == 0:
+            out += "(H)"
+        else:
             out += "(DIRTY%s)" % dirty
         out += ": ["
         for device in self:
@@ -1433,8 +1583,12 @@ class DevContainer(object):
         """ Long string representation of all devices """
         out = "Devices of %s" % self.vmname
         dirty = self.get_state()
-        if dirty:
-            out += " (DIRTY%s)" % dirty
+        if dirty == -1:
+            pass
+        elif dirty == 0:
+            out += "(H)"
+        else:
+            out += "(DIRTY%s)" % dirty
         out += ":\n"
         for device in self:
             out += device.str_long()
@@ -1613,6 +1767,68 @@ class DevContainer(object):
         if err:
             return ("Errors occured while adding device %s into %s:\n%s"
                     % (device, self, err))
+
+    def hotplug(self, device, monitor, verify=True, force=False):
+        """
+        @return: output of the monitor.cmd() or True/False if device
+                 supports automatic verification and verify=True
+        """
+        self.set_dirty()
+        try:
+            out = self.insert(device, force)
+            if out is not None:
+                logging.error('According to qemu_devices hotplug of %s'
+                              'is impossible (%s).\n Forcing', device, out)
+        except DeviceError, exc:
+            self.set_clean()  # qdev remains consistent
+            raise DeviceHotplugError(device, 'According to qemu_device: %s'
+                                     % exc, self)
+        out = device.hotplug(monitor)
+
+        if verify:
+            out = device.verify_hotplug(out, monitor)
+            if out is True:
+                self.set_clean()
+
+        return out
+
+    def unplug(self, device, monitor, verify=True):
+        """
+        @return: output of the monitor.cmd() or True/False if device
+                 supports automatic verification and verify=True
+                 In case you use step_by_step it returns list of returns.
+        """
+        device = self[device]
+        self.set_dirty()
+        device.unplug_hook()
+        # Remove all devices, which are removed together with this dev
+        try:
+            self.remove(device, True)
+        except KeyError, exc:
+            device.unplug_unhook()
+            raise DeviceUnplugError(device, exc, self)
+        except DeviceError, exc:
+            device.unplug_unhook()
+            raise DeviceUnplugError(device, exc, self)
+
+        out = device.unplug(monitor)
+
+        if verify:
+            out = device.verify_unplug(out, monitor)
+            if out is True:
+                self.set_clean()
+
+        return out
+
+    def hotplug_verified(self):
+        """
+        This function should be used after you verify, that hotplug was
+        successfull. For each hotplug call, hotplug_verified have to be
+        executed in order to mark VM as clear.
+        @warning: If you can't verify, that hotplug was successful, don't
+                  use this function! You could screw-up following tests.
+        """
+        self.set_clean()
 
     def list_missing_named_buses(self, bus_pattern, bus_type, bus_count):
         """
@@ -2237,7 +2453,7 @@ class DevContainer(object):
                           image_params.get("drive_scsiid"),
                           image_params.get("drive_lun"),
                           image_params.get("image_aio"),
-                          image_params.get("strict_mode"),
+                          image_params.get("strict_mode") == "yes",
                           media,
                           image_params.get("image_format"),
                           image_params.get("drive_pci_addr"),
@@ -2290,7 +2506,7 @@ class DevContainer(object):
                           image_params.get("drive_scsiid"),
                           image_params.get("drive_lun"),
                           image_params.get("image_aio"),
-                          image_params.get("strict_mode"),
+                          image_params.get("strict_mode") == "yes",
                           media,
                           None,     # skip img_fmt
                           image_params.get("drive_pci_addr"),
