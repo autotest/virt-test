@@ -1,4 +1,3 @@
-import logging
 from autotest.client.shared import error, utils
 from qemu.tests import blk_stream
 
@@ -11,20 +10,13 @@ class BlockStreamReboot(blk_stream.BlockStream):
 
 
     @error.context_aware
-    def start_reset(self):
+    def reboot(self):
         """
-        Reset guest with system_reset in loop;
+        Reset guest with system_reset;
         """
-        error.context("reset guest in loop", logging.info)
-        count = 0
-        while True:
-            self.reboot(method="system_reset", boot_check=False)
-            count +=1
-            status = self.get_status()
-            # if block stream job really started, stop reset loop
-            if status.get("offset", 0) > 0:
-                break
-        logging.info("has reset %s times, when start stream job" % count)
+        params = self.parser_test_args()
+        method = params.get("reboot_method", "system_reset")
+        return super(BlockStreamReboot, self).reboot(method=method)
 
 
     def action_before_start(self):
@@ -53,10 +45,9 @@ class BlockStreamReboot(blk_stream.BlockStream):
 def run_block_stream_reboot(test, params, env):
     """
     block_stream_reboot test:
-    1). boot up vm and create snapshots;
-    2). reboot guest, then start block steam job;
-    3). destroy live vm and create it, then start block stream job(optonal);
-    4). after stream done, then reboot guest and check it's alived
+    1). boot guest, then reboot guest with system_reset;
+    2). create snapshots and start stream job immediately;
+    3). waiting stream done and check guest is alive;
 
     @param test: Kvm test object
     @param params: Dictionary with the test parameters
