@@ -984,6 +984,7 @@ def run_unattended_install(test, params, env):
         error.base_context("Copy image from NFS after installation failure")
         image_copy_on_error = params.get("image_copy_on_error", "no")
         if image_copy_on_error == "yes":
+            logging.info("Running image_copy to copy pristine image from NFS.")
             try:
                 error.context("Quit qemu-kvm before copying guest image")
                 vm.monitor.quit()
@@ -1126,8 +1127,7 @@ def run_unattended_install(test, params, env):
         else:
             time.sleep(1)
     else:
-        logging.warn("Timeout elapsed while waiting for install to finish."
-                     "Will run image_copy to copy image from NFS.")
+        logging.warn("Timeout elapsed while waiting for install to finish ")
         copy_images()
         raise error.TestFail("Timeout elapsed while waiting for install to "
                              "finish")
