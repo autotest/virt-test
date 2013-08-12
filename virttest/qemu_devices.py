@@ -1858,8 +1858,8 @@ class DevContainer(object):
                 continue
             buses = self.get_buses(parent_bus)
             if not buses:
+                err += "ParentBus(%s): No matching bus\n" % parent_bus
                 if force:
-                    err += "ParentBus(%s): No matching bus\n" % parent_bus
                     continue
                 else:
                     clean()
@@ -1873,6 +1873,7 @@ class DevContainer(object):
             if bus_returns[-1] is True:
                 continue
             elif not force:
+                err += "ParentBus(%s): No free matching bus\n" % parent_bus
                 clean()
                 raise DeviceInsertError(device, err, self)
             if None in bus_returns:  # 3a
@@ -1892,11 +1893,10 @@ class DevContainer(object):
             _added_buses.append(bus)
         # 5
         if device.get_qid() and self.get_by_qid(device.get_qid()):
+            err += "Devices qid %s already used in VM\n" % device.get_qid()
             if not force:
                 clean()
                 raise DeviceInsertError(device, err, self)
-            else:
-                err += "Devices qid %s already used in VM\n" % device.get_qid()
         device.set_aid(self.__create_unique_aid(device.get_qid()))
         self.__devices.append(device)
         if err:
