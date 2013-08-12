@@ -892,7 +892,8 @@ PIIX3
         # cmdline
         exp = ("-M pc -device id=hba1,addr=0xa,driver=HBA -device driver=dev "
                "-device driver=dev -device driver=dev -device driver=baddev "
-               "-device addr=0x2,driver=baddev -device id=hba1,driver=baddev")
+               "-device addr=0x2,driver=baddev,bus=pci.0 "
+               "-device id=hba1,driver=baddev")
         out = qdev.cmdline()
         self.assertEqual(out, exp, 'Corrupted qdev.cmdline() output:\n%s\n%s'
                          % (out, exp))
