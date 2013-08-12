@@ -110,6 +110,12 @@ def run_cdrom(test, params, env):
             file_list = re.findall(tmp_re_str, blocks)
             if file_list:
                 cdfile = file_list[0]
+            else:
+            # try to deal with new qemu
+                tmp_re_str = r'%s: (\S*) \(.*\)' % qemu_cdrom_device
+                file_list = re.findall(tmp_re_str, blocks)
+                if file_list:
+                    cdfile = file_list[0]
         else:
             for block in blocks:
                 if block['device'] == qemu_cdrom_device:
@@ -135,6 +141,18 @@ def run_cdrom(test, params, env):
                         is_open, checked = (True, True)
                     elif "tray-open=0" in block:
                         is_open, checked = (False, True)
+            # fallback to new qemu
+            tmp_block = ""
+            for block_new in blocks.splitlines():
+                if tmp_block and "Removable device" in block_new:
+                    if "tray open" in block_new:
+                        is_open, checked = (True, True)
+                    elif "tray closed" in block_new:
+                        is_open, checked = (False, True)
+                if qemu_cdrom_device in block_new:
+                    tmp_block = block_new
+                else:
+                    tmp_block = ""
         else:
             for block in blocks:
                 if block['device'] == qemu_cdrom_device:
@@ -201,6 +219,20 @@ def run_cdrom(test, params, env):
                         return True
                     elif "locked=0" in block:
                         return False
+            # deal with new qemu
+            lock_str_new = "locked"
+            no_lock_str = "not locked"
+            tmp_block = ""
+            for block_new in blocks.splitlines():
+                if tmp_block and "Removable device" in block_new:
+                    if no_lock_str in block_new:
+                        return False
+                    elif lock_str_new in block_new:
+                        return True
+                if cdrom in block_new:
+                    tmp_block = block_new
+                else:
+                    tmp_block = ""
         else:
             for block in blocks:
                 if block['device'] == cdrom and 'locked' in block.keys():
