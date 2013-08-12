@@ -896,7 +896,11 @@ PIIX3
         self.assertEqual(out, None, 'Failed to remove device:\n%s\nRepr:\n%s'
                          % ('hba1__0', qdev.str_long()))
 
-        # Remove device which contains other devices
+        # Remove device which contains other devices (without recursive)
+        self.assertRaises(qemu_devices.DeviceRemoveError, qdev.remove, 'hba1',
+                          False)
+
+        # Remove device which contains other devices (recursive)
         out = qdev.remove('hba1')
         self.assertEqual(out, None, 'Failed to remove device:\n%s\nRepr:\n%s'
                          % ('hba1', qdev.str_long()))
