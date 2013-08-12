@@ -1318,27 +1318,30 @@ class DevContainer(object):
         if self.remove(item):
             raise KeyError(item)
 
-    def remove(self, item):
+    def remove(self, device, recursive=True):
         """
         Remove device from this representation
-        @param item: autotest id or QObject-like object
+        @param device: autotest id or QObject-like object
+        @param recursive: remove childrens recursively
         @return: None on success, -1 when the device is not present
         """
-        # Remove child_buses including devices
-        item = self.get(item)
-        if item is None:
-            return -1
-        for bus in item.child_bus:
-            remove = [dev for dev in bus]
-            for dev in remove:
-                del(self[dev])
-            self.__buses.remove(bus)
-        # Remove from parent_buses
-        for bus in self.__buses:
-            if item in bus:
-                del(bus[item])
-        # Remove from list of devices
-        self.__devices.remove(self[item])
+        device = self[device]
+        if not recursive:   # Check if there are no childrens
+            for bus in device.child_bus:
+                if len(bus) != 0:
+                    raise DeviceRemoveError(device, "Children bus contains "
+                                            "devices", self)
+        else:               # Recursively remove all devices
+            for dev in device.get_children():
+                # One child might be already removed from other child's bus
+                if dev in self:
+                    self.remove(dev, True)
+        if device in self.__devices:    # It might be removed from child bus
+            for bus in self.__buses:        # Remove from parent_buses
+                bus.remove(device)
+            for bus in device.child_bus:    # Remove child buses from vm buses
+                self.__buses.remove(bus)
+            self.__devices.remove(device)   # Remove from list of devices
 
     def __len__(self):
         """ @return: Number of inserted devices """
