@@ -47,7 +47,7 @@ class Devices(unittest.TestCase):
   aid = None
   aobject = Object1
   parent_bus = {'type': 'pci'}
-  child_bus = ()
+  child_bus = []
   params:
     ParamA = ValueB
     BoolTrue = on
@@ -230,7 +230,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 0
@@ -242,7 +242,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr1 = 1
@@ -252,7 +252,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 1
@@ -264,7 +264,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 1
@@ -276,7 +276,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       driver = dev6
@@ -285,7 +285,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 0
@@ -297,7 +297,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       driver = devB3
@@ -306,7 +306,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev7
 
@@ -315,7 +315,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 6
@@ -327,7 +327,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 0
@@ -487,7 +487,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev1
       bus = pci.0
@@ -497,7 +497,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev2
       bus = pci.0
@@ -507,7 +507,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev3
       bus = pci.0
@@ -535,7 +535,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       addr = 0xc
       driver = dev1
@@ -579,7 +579,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       addr = 0x1e
       driver = dev1
@@ -589,7 +589,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       addr = 0x1f
       driver = dev1
@@ -736,20 +736,20 @@ machine
   aid = __0
   aobject = None
   parent_bus = \(\)
-  child_bus = \(.*QPCIBus.*\)
+  child_bus = \[.*QPCIBus.*\]
   params:
 i440FX
   aid = __1
   aobject = None
   parent_bus = \({'type': 'pci'},\)
-  child_bus = \(\)
+  child_bus = \[\]
   params:
     addr = 0x0
 PIIX3
   aid = __2
   aobject = None
   parent_bus = \({'type': 'pci'},\)
-  child_bus = \(\)
+  child_bus = \[\]
   params:
     addr = 0x1"""
         out = qdev.str_long()
