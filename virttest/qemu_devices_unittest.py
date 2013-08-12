@@ -934,6 +934,96 @@ PIIX3
         assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
                                                                          exp)
 
+    def test_qdev_hotplug(self):
+        """ Test the hotplug/unplug functionality """
+        qdev = self.create_qdev('vm1', False, True)
+        devs = qdev.machine_by_params({'machine_type': 'pc'})
+        for dev in devs:
+            qdev.insert(dev)
+        monitor = MockHMPMonitor()
+
+        out = qdev.get_state()
+        assert out == -1, ("Status after init is not -1"
+                                       " (%s)" % out)
+        out = len(qdev)
+        assert out == 5, "Number of devices of this VM is not 5 (%s)" % out
+
+        dev1, dev2 = qdev.images_define_by_variables('disk', '/tmp/a',
+                                                     fmt="virtio")
+
+        out = dev1.hotplug_hmp()
+        exp = "drive_add auto id=drive_disk,if=none,file=/tmp/a"
+        assert out == exp, ("Hotplug command of drive is incorrect:\n%s\n%s"
+                            % (exp, out))
+
+        # hotplug of drive will return "  OK" (pass)
+        dev1.hotplug = lambda _monitor: "OK"
+        out = qdev.hotplug(dev1, monitor, True, False)
+        assert out, "Return value of hotplug is not True (%s)" % out
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+
+        # hotplug of virtio-blk-pci will return ""
+        out = dev2.hotplug_hmp()
+        exp = "device_add id=disk,drive=drive_disk,driver=virtio-blk-pci"
+        assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
+                            % (exp, out))
+        dev2.hotplug = lambda _monitor: ""
+        out = qdev.hotplug(dev2, monitor, True, False)
+        # automatic verification is not supported, hotplug returns the original
+        # monitor message ("")
+        assert out == "", 'Return value of hotplug is not "" (%s)' % out
+        out = qdev.get_state()
+        assert out == 1, "Status after unverified hotplug is not 1 (%s)" % out
+        # I verified, that device was hotpluged successfully
+        qdev.hotplug_verified()
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+
+        out = len(qdev)
+        assert out == 7, "Number of devices of this VM is not 7 (%s)" % out
+
+        # Hotplug is expected to pass but monitor reports failure
+        dev3 = qemu_devices.QDrive('a_dev1')
+        dev3.hotplug = lambda _monitor: ("could not open disk image /tmp/qqq: "
+                                         "No such file or directory")
+        out = qdev.hotplug(dev3, monitor, True, False)
+        exp = "could not open disk image /tmp/qqq: No such file or directory"
+        assert out, "Return value of hotplug is incorrect:\n%s\n%s" % (out,
+                                                                       exp)
+        out = qdev.get_state()
+        assert out == 1, ("Status after failed hotplug is not 1 (%s)" % out)
+        # device is still in qdev, but is not in qemu, we should remove it
+        qdev.remove(dev3, recursive=False)
+        # now qdev is synced, we might proclame the hotplug as verified
+        qdev.hotplug_verified()
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+
+        # Hotplug is expected to fail, qdev should stay unaffected
+        self.assertRaises(qemu_devices.DeviceHotplugError, qdev.hotplug, dev2,
+                          True, False)
+        out = qdev.get_state()
+        assert out == 0, "Status after impossible hotplug is not 0 (%s)" % out
+
+        # Unplug
+        # Unplug used drive (automatic verification not supported)
+        out = dev1.unplug_hmp()
+        exp = "drive_del drive_disk"
+        assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
+                            % (exp, out))
+        dev1.unplug = lambda _monitor: ""
+        out = qdev.unplug(dev1, monitor, True)
+        # I verified, that device was unplugged successfully
+        qdev.hotplug_verified()
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+        out = len(qdev)
+        assert out == 6, "Number of devices of this VM is not 6 (%s)" % out
+        # Removal of drive shoould also set drive of the disk device to None
+        out = dev2.get_param('drive')
+        assert out == None, "Drive was not removed from disk device"
+
     # pylint: disable=W0212
     def test_qdev_low_level(self):
         """ Test low level functions """
