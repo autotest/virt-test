@@ -1877,12 +1877,12 @@ class DevContainer(object):
                 clean()
                 raise DeviceInsertError(device, err, self)
             if None in bus_returns:  # 3a
-                _err = buses[bus_returns.index(None)].insert(device,
-                                                    self.strict_mode, True)
+                _err = buses[bus_returns.index(None)].insert(device, True,
+                                                             True)
                 if _err:
                     err += "ParentBus(%s): %s\n" % (parent_bus, _err)
                     continue
-            _err = buses[0].insert(device, self.strict_mode, True)
+            _err = buses[0].insert(device, True, True)
             _used_buses.append(buses[0])
             if _err:
                 err += "ParentBus(%s): %s\n" % (parent_bus, _err)
