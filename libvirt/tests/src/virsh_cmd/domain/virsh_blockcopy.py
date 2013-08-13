@@ -264,7 +264,7 @@ def run_virsh_blockcopy(test, params, env):
     except Exception, detail:
         logging.error(detail)
 
-    if not utils_libvirtd.service_libvirtd_control("status"):
+    if not utils_libvirtd.libvirtd_is_running():
         raise error.TestFail("Libvirtd service is dead.")
     #check_result
     try:
