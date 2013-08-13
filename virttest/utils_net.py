@@ -1864,7 +1864,7 @@ def get_host_ip_address(params):
     return host_ip
 
 
-def get_linux_ifname(session, mac_address):
+def get_linux_ifname(session, mac_address=""):
     """
     Get the interface name through the mac address.
 
@@ -1874,56 +1874,34 @@ def get_linux_ifname(session, mac_address):
     @raise error.TestError in case it was not possible to determine the
             interface name.
     """
-    def ifconfig_method():
+    def _process_output(cmd, reg_pattern):
         try:
-            output = session.cmd("ifconfig -a")
-            return re.findall("(\w+)\s+Link.*%s" % mac_address, output,
-                              re.IGNORECASE)[0]
-        except IndexError:
+            output = session.cmd(cmd)
+            ifname_list = re.findall(reg_pattern, output, re.I)
+            if not ifname_list:
+                return None
+            if mac_address:
+                return ifname_list[0]
+            if "lo" in ifname_list:
+                ifname_list.remove("lo")
+            return ifname_list
+        except aexpect.ShellCmdError:
             return None
-
-    def iplink_method():
-        try:
-            output = session.cmd("ip link | grep -B1 '%s' -i" % mac_address)
-            return re.findall("\d+:\s+(\w+):\s+.*", output, re.IGNORECASE)[0]
-        except (aexpect.ShellCmdError, IndexError):
-            return None
-
-    def sys_method():
-        try:
-            interfaces = session.cmd('ls --color=never /sys/class/net')
-        except error.CmdError, e:
-            logging.debug("Error listing /sys/class/net: %s" % e)
-            return None
-
-        interfaces = interfaces.strip()
-        for interface in interfaces.split(" "):
-            if interface:
-                try:
-                    i_cmd = "cat /sys/class/net/%s/address" % interface
-                    mac_address_interface = session.cmd(i_cmd)
-                    mac_address_interface = mac_address_interface.strip()
-                    if mac_address_interface == mac_address:
-                        return interface
-                except aexpect.ShellCmdError:
-                    pass
-
-        # If after iterating through interfaces (or no interfaces found)
-        # no interface name was found, just return None
-        return None
 
     # Try ifconfig first
-    i = ifconfig_method()
+    i = _process_output("ifconfig -a", "(\w+)\s+Link.*%s" % mac_address)
     if i is not None:
         return i
 
     # No luck, try ip link
-    i = iplink_method()
+    i = _process_output("ip link | grep -B1 '%s' -i" % mac_address,
+                        r"\d+:\s+(\w+):\s+.*")
     if i is not None:
         return i
 
     # No luck, look on /sys
-    i = sys_method()
+    cmd = r"grep '%s' /sys/class/net/*/address " % mac_address
+    i = _process_output(cmd, r"net/(\w+)/address:%s" % mac_address)
     if i is not None:
         return i
 

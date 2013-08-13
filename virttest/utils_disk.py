@@ -316,7 +316,7 @@ class GuestFSModiDisk(object):
                         msg = "Mount dev '%s' partitions '%s' to '%s'"
                         logging.info(msg % (root, mp_dev[1], mp_dev[0]))
                         self.g.mount(mp_dev[1], mp_dev[0])
-                    except RuntimeError as err_msg:
+                    except RuntimeError, err_msg:
                         logging.info("%s (ignored)" % err_msg)
         else:
             raise error.TestError("inspect_vm: no operating systems found")

@@ -1,0 +1,20 @@
+#!/bin/bash
+DUMP_DIR="$1"
+QEMU_DIR="$2"
+VERSION="$3"
+
+INSTALL_DIR="$QEMU_DIR/install"
+
+set -e
+
+pushd "$QEMU_DIR"
+git clean -dfx
+git checkout "$VERSION"
+git clean -dfx
+./configure --disable-werror --prefix="$INSTALL_DIR" --enable-kvm \
+        --target-list=x86_64-softmmu --disable-docs
+make -j20 && make install || exit
+popd
+
+
+"$(dirname "$0")"/dump-cpus-from-qemu "$INSTALL_DIR/bin/qemu-system-x86_64" "$DUMP_DIR/$VERSION"

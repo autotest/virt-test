@@ -1,7 +1,7 @@
-import logging, os, re
+import logging, os, time
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_test, utils_net
+from virttest import utils_test, utils_net, aexpect
 
 @error.context_aware
 def run_nic_promisc(test, params, env):
@@ -16,10 +16,25 @@ def run_nic_promisc(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
+    def send_cmd_safe(session, cmd, timeout=60):
+        logging.debug("Sending command: %s", cmd)
+        session.sendline(cmd)
+        output = ""
+        start_time = time.time()
+        # Wait for shell prompt until timeout.
+        while (time.time() - start_time) < timeout:
+            session.sendline()
+            try:
+                output += session.read_up_to_prompt(0.5)
+                break
+            except aexpect.ExpectTimeoutError:
+                pass
+        return output
+
     def set_nic_promisc_onoff(session):
         if os_type == "linux":
-            session.cmd("ip link set %s promisc on" % ethname)
-            session.cmd("ip link set %s promisc off" % ethname)
+            send_cmd_safe(session, "ip link set %s promisc on" % ethname)
+            send_cmd_safe(session, "ip link set %s promisc off" % ethname)
         else:
             cmd = "c:\\set_win_promisc.py"
             session.cmd(cmd)

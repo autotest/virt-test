@@ -802,7 +802,7 @@ def umount(src, mount_point, fstype):
     """
 
     mount_string = "%s %s %s" % (src, mount_point, fstype)
-    if mount_string in file("/etc/mtab").read():
+    if is_mounted(src, mount_point, fstype):
         umount_cmd = "umount %s" % mount_point
         try:
             utils.system(umount_cmd)
@@ -826,7 +826,7 @@ def mount(src, mount_point, fstype, perm="rw"):
     umount(src, mount_point, fstype)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
 
-    if mount_string in file("/etc/mtab").read():
+    if is_mounted(src, mount_point, fstype, perm):
         logging.debug("%s is already mounted in %s with %s",
                       src, mount_point, perm)
         return True
@@ -837,8 +837,26 @@ def mount(src, mount_point, fstype, perm="rw"):
     except error.CmdError:
         return False
 
-    logging.debug("Verify the mount through /etc/mtab")
-    if mount_string in file("/etc/mtab").read():
+    return is_mounted(src, mount_point, fstype, perm)
+
+
+def is_mounted(src, mount_point, fstype, perm=""):
+    """
+    Check mount status from /etc/mtab
+
+    :param src: mount source
+    :type src: string
+    :param mount_point: mount point
+    :type mount_point: string
+    :param fstype: file system type
+    :type fstype: string
+    :param perm: mount premission
+    :type perm: string
+    :return: if the src is mounted as expect
+    :rtype: Boolean
+    """
+    mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
+    if mount_string.strip() in file("/etc/mtab").read():
         logging.debug("%s is successfully mounted", src)
         return True
     else:
