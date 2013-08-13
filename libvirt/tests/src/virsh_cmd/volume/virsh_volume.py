@@ -29,18 +29,17 @@ def run_virsh_volume(test, params, env):
         if 'dir' in pool_type:
             if not os.path.isdir(pool_target):
                 os.makedirs(pool_target)
-            result = virsh.pool_define_as(pool_name, pool_type, pool_target,
-                                          ignore_status=False)
+            result = virsh.pool_define_as(pool_name, pool_type, pool_target)
             if result.exit_status != 0:
                 raise error.TestFail("Command virsh pool-define-as"
-                                     "failed:\n%s" % result.stdout)
+                                     "failed:\n%s" % result.stderr)
             else:
                 logging.debug("%s type pool: %s defined successfully"
                               , pool_type, pool_name)
             result = virsh.pool_start(pool_name, ignore_status=True)
             if result.exit_status != 0:
                 raise error.TestFail("Command virsh pool-start failed:\n%s" %
-                                 result.stdout)
+                                 result.stderr)
             else:
                 logging.debug("Pool: %s successfully started", pool_name)
         else:
@@ -59,7 +58,7 @@ def run_virsh_volume(test, params, env):
         result = virsh.pool_undefine(pool_name, ignore_status=True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh pool-undefine failed:\n%s" %
-                                     result.stdout)
+                                 result.stderr)
         try:
             logging.debug("Deleting the pool target: %s directory", pool_target)
             shutil.rmtree(pool_target)
@@ -81,7 +80,7 @@ def run_virsh_volume(test, params, env):
                                      ignore_status = True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh vol-create-as failed:\n%s" %
-                                 result.stdout)
+                                 result.stderr)
         else:
             logging.info("Volume: %s successfully created on pool: %s",
                           expected_vol['name'], expected_vol['pool_name'])
@@ -98,7 +97,7 @@ def run_virsh_volume(test, params, env):
                                   ignore_status = True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh vol-delete failed:\n%s" %
-                                 result.stdout)
+                                 result.stderr)
         else:
             logging.debug("Volume: %s sucessfully created on pool: %s",
                           expected_vol['name'], expected_vol['pool_name'])
@@ -212,16 +211,18 @@ def run_virsh_volume(test, params, env):
         reg_list = re.compile(r'(\S+)\s(\S+)')
         match_list = re.search(reg_list, capacity['list'])
         if match_list is not None:
-            norm_capacity['list'] = int(float(match_list.group(1)) \
-                                        * val[des[match_list.group(2)]])
+            mem_value = float(match_list.group(1))
+            norm = val[des[match_list.group(2)]]
+            norm_capacity['list'] = int(mem_value * norm)
         else:
             raise error.TestFail("Error in parsing capacity value in"
                                  " virsh vol-list")
 
         match_info = re.search(reg_list, capacity['info'])
         if match_info is not None:
-            norm_capacity['info'] = int(float(match_info.group(1)) \
-                                        * val[des[match_list.group(2)]])
+            mem_value = float(match_info.group(1))
+            norm = val[des[match_list.group(2)]]
+            norm_capacity['info'] = int(mem_value * norm)
         else:
             raise error.TestFail("Error in parsing capacity value "
                                  "in virsh vol-info")
