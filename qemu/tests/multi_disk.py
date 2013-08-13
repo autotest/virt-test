@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process, qemu_monitor
+from virttest import qemu_qtree, env_process
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -84,32 +84,16 @@ def run_multi_disk(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-    def _add_param(name, value):
-        """ Converts name+value to stg_params string """
-        if value:
-            value = re.sub(' ', '\\ ', value)
-            return " %s:%s " % (name, value)
-        else:
-            return ''
-
-
     def _do_post_cmd(session):
         cmd = params.get("post_cmd")
         if cmd:
             session.cmd_status_output(cmd)
         session.close()
 
+
     error.context("Parsing test configuration", logging.info)
     stg_image_num = 0
     stg_params = params.get("stg_params", "")
-    # Compatibility
-    stg_params += _add_param("image_size", params.get("stg_image_size"))
-    stg_params += _add_param("image_format", params.get("stg_image_format"))
-    stg_params += _add_param("image_boot", params.get("stg_image_boot", "no"))
-    stg_params += _add_param("drive_format", params.get("stg_drive_format"))
-    if params.get("stg_assign_index") != "no":
-        # Assume 0 and 1 are already occupied (hd0 and cdrom)
-        stg_params += _add_param("drive_index", 'range(2,n)')
     param_matrix = {}
 
     stg_params = stg_params.split(' ')
