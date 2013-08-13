@@ -1570,8 +1570,8 @@ def pool_undefine(name, extra="", **dargs):
     return command("pool-undefine %s %s" % (name, extra), **dargs)
 
 
-def vol_create_as(vol_name, pool_name, capacity, allocation,
-                  frmt, extra="", **dargs):
+def vol_create_as(volume_name, pool_name, capacity,
+                  allocation, frmt, extra="", **dargs):
     """
     To create the volumes on different available pool
 
@@ -1585,11 +1585,12 @@ def vol_create_as(vol_name, pool_name, capacity, allocation,
     @return: True if pool undefine command was successful
     """
 
-    cmd = "vol-create-as --pool %s  %s --capacity %s" % (pool_name, vol_name, capacity)
+    cmd = "vol-create-as --pool %s" % pool_name
+    cmd += " %s --capacity %s" % (volume_name, capacity)
 
     if allocation:
         cmd += " --allocation %s" % (allocation)
-    if frmt:
+    if format:
         cmd += " --format %s" % (frmt)
     if extra:
         cmd += " %s" % (extra)
@@ -1607,7 +1608,59 @@ def vol_delete(vol_name, pool_name, extra="", **dargs):
     """
     Delete a given volume
     """
-    return command("vol-delete %s %s %s" % (vol_name, pool_name, extra), **dargs)
+    return command("vol-delete %s %s %s" % 
+                   (vol_name, pool_name, extra), **dargs)
+
+
+def vol_key(volume_name, pool_name, extra="", **drags):
+    """
+    Prints the key of the given volume name
+    """
+    return command("vol-key --vol %s --pool %s %s" %
+                   (volume_name, pool_name, extra), **drags)
+
+
+def vol_info(volume_name, extra="", **drags):
+    """
+    Prints the given volume info
+    """
+    return command("vol-info --vol %s %s" % (volume_name, extra), **drags)
+
+
+def vol_name(volume_key, extra="", **drags):
+    """
+    Prints the given volume name
+    """
+    return command("vol-name --vol %s %s" % (volume_key, extra), **drags)
+
+
+def vol_path(volume_name, pool_name, extra="", **dargs):
+    """
+    Prints the give volume path
+    """
+    return command("vol-path --vol %s --pool %s %s" %
+                   (volume_name, pool_name, extra), **dargs)
+
+
+def vol_dumpxml(volume_name, pool_name, to_file=None, options="", **dargs):
+    """
+    Dumps volume details in xml
+    """
+    cmd = ('vol-dumpxml --vol %s --pool %s %s' %
+           (volume_name, pool_name, options))
+    result = command(cmd, **dargs)
+    if to_file is not None:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    return result
+
+
+def vol_pool(volume_name, extra="", **dargs):
+    """
+    Returns pool name for a given vol-key
+    """
+    return command("vol-pool %s %s" % (volume_name, extra), **dargs)
 
 
 def capabilities(option='', **dargs):
