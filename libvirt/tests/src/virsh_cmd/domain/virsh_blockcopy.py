@@ -57,19 +57,20 @@ def xml_check(vm_name, target, dest_path, blk_options):
     disk_list = vm_xml.VMXML.get_disk_source(vm_name)
     dev_index = 0
     try:
-        dev_index = blk_list.index(target)
-        disk_src = disk_list[dev_index].find('source').get('file')
-        if disk_src == dest_path:
-            logging.debug("Disk source change to %s", dest_path)
-            re1 = 1
-        disk_mirror = disk_list[dev_index].find('mirror')
-        if disk_mirror is not None:
-            disk_mirror_src = disk_mirror.get('file')
-            if disk_mirror_src == dest_path:
-                logging.debug("Find %s in <mirror> element", dest_path)
-                re2 = 2
-    except Exception, detail:
-        logging.error(detail)
+        try:
+            dev_index = blk_list.index(target)
+            disk_src = disk_list[dev_index].find('source').get('file')
+            if disk_src == dest_path:
+                logging.debug("Disk source change to %s", dest_path)
+                re1 = 1
+            disk_mirror = disk_list[dev_index].find('mirror')
+            if disk_mirror is not None:
+                disk_mirror_src = disk_mirror.get('file')
+                if disk_mirror_src == dest_path:
+                    logging.debug("Find %s in <mirror> element", dest_path)
+                    re2 = 2
+        except Exception, detail:
+            logging.error(detail)
     finally:
         if re1 + re2 == expect_re:
             logging.debug("Domain XML check pass")
@@ -114,16 +115,12 @@ def blockjob_check(vm_name, target, check_point, value):
     if not len(value) and not value.isdigit():
         raise error.TestFail("Invalid value")
 
-    try:
-        options = "--info"
-        cmd_result = virsh.blockjob(vm_name, target, options,
-                                    ignore_status=True, debug=True)
-        output = cmd_result.stdout.strip()
-        err = cmd_result.stderr.strip()
-        status = cmd_result.exit_status
-
-    except Exception, detail:
-        logging.error(detail)
+    options = "--info"
+    cmd_result = virsh.blockjob(vm_name, target, options,
+                                ignore_status=True, debug=True)
+    output = cmd_result.stdout.strip()
+    err = cmd_result.stderr.strip()
+    status = cmd_result.exit_status
 
     if status == 0:
         if len(err) == 0:
@@ -165,7 +162,7 @@ def run_virsh_blockcopy(test, params, env):
 
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
-    target = params.get("target_disk")
+    target = params.get("target_disk", "")
     # check the source disk
     if len(target) == 0:
         raise error.TestFail("Need target disk to copy")
@@ -174,7 +171,7 @@ def run_virsh_blockcopy(test, params, env):
     dest_path = params.get("dest_path")
     if len(dest_path) == 0:
         tmp_file = time.strftime("%Y-%m-%d-%H.%M.%S.img")
-        dest_path = os.path.join("/tmp", tmp_file)
+        dest_path = os.path.join(test.tmpdir, tmp_file)
     options = params.get("blockcopy_options", "")
     dest_format = params.get("dest_format", "")
     bandwidth = params.get("blockcopy_bandwidth", "")
@@ -197,7 +194,7 @@ def run_virsh_blockcopy(test, params, env):
         # Set rerun_flag=1 to do blockcopy twice, and the first time created
         # file can be reused in the second time, if no dest_path given
         if dest_path == "/path/non-exist":
-            if os.path.exists(dest_path):
+            if os.path.exists(dest_path) and not os.path.isdir(dest_path):
                 os.remove(dest_path)
         else:
             rerun_flag = 1
@@ -271,25 +268,26 @@ def run_virsh_blockcopy(test, params, env):
         raise error.TestFail("Libvirtd service is dead.")
     #check_result
     try:
-        if status_error == "no":
-            if status == 0:
-                xml_check(vm_name, target, dest_path, options)
-                if options.count("--bandwidth"):
-                    blockjob_check(vm_name, target, "bandwidth",
-                                   bandwidth)
-                if options.count("pivot") + options.count("finish") == 0:
-                    finish_job(vm_name, target, timeout)
-                if options.count("--raw"):
-                    format_check(dest_path, "raw")
-            else:
-                raise error.TestFail(cmd_result.stderr)
-        if status_error == "yes":
-            if status:
-                logging.debug("Expect error: %s", cmd_result.stderr)
-            else:
-                raise error.TestFail("Expect command fail, but run successfully!")
-    except JobTimeout, excpt:
-        if status_error == "no":
-            raise error.TestFail("Run failed with right command: %s", excpt)
+        try:
+            if status_error == "no":
+                if status == 0:
+                    xml_check(vm_name, target, dest_path, options)
+                    if options.count("--bandwidth"):
+                        blockjob_check(vm_name, target, "bandwidth",
+                                       bandwidth)
+                    if options.count("pivot") + options.count("finish") == 0:
+                        finish_job(vm_name, target, timeout)
+                    if options.count("--raw"):
+                        format_check(dest_path, "raw")
+                else:
+                    raise error.TestFail(cmd_result.stderr)
+            if status_error == "yes":
+                if status:
+                    logging.debug("Expect error: %s", cmd_result.stderr)
+                else:
+                    raise error.TestFail("Expect fail, but run successfully!")
+        except JobTimeout, excpt:
+            if status_error == "no":
+                raise error.TestFail("Run failed with right command: %s", excpt)
     finally:
         cleanup(original_xml, dest_path)
