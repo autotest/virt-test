@@ -357,14 +357,15 @@ class GuestFSModiDisk(object):
         """
 
         try:
-            self.mount_all()
-            if w_append:
-                self.g.write_append(file_name, content)
-            else:
-                self.g.write(file_name, content)
-        except Exception:
-            raise error.TestError("write '%s' to file '%s' error!"
-                                  % (content, file_name ))
+            try:
+                self.mount_all()
+                if w_append:
+                    self.g.write_append(file_name, content)
+                else:
+                    self.g.write(file_name, content)
+            except Exception:
+                raise error.TestError("write '%s' to file '%s' error!"
+                                      % (content, file_name ))
         finally:
             self.umount_all()
 
