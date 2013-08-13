@@ -817,7 +817,7 @@ class VM(virt_vm.BaseVM):
                 dev.set_param("bootindex", bootindex)
             else:
                 dev = qemu_devices.QCustomDevice('net')
-                dev.set_param('type', 'nic')
+                dev.set_param('nic', 'NO_EQUAL_STRING')
                 dev.set_param('model', model)
                 dev.set_param('macaddr', mac, 'NEED_QUOTE')
             dev.set_param('id', device_id, 'NEED_QUOTE')

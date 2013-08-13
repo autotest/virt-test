@@ -285,10 +285,11 @@ class QCustomDevice(QBaseDevice):
         """ @return: cmdline command to define this device """
         out = "-%s " % self.type
         for key, value in self.params.iteritems():
+            if value == "NO_EQUAL_STRING":
+                out += "%s," % key
+        for key, value in self.params.iteritems():
             if value != "NO_EQUAL_STRING":
                 out += "%s=%s," % (key, value)
-            else:
-                out += "%s," % key
         if out[-1] == ',':
             out = out[:-1]
         return out
