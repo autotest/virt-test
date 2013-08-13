@@ -59,4 +59,9 @@ def download_assets():
 
 if __name__ == "__main__":
     logging_manager.configure_logging(utils_misc.VirtLoggingConfig())
-    download_assets()
+    try:
+        download_assets()
+    except KeyboardInterrupt:
+        print
+        logging.info("Cancelling...")
+        sys.exit(0)
