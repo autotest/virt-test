@@ -39,7 +39,7 @@ def download_assets():
                 logging.info("    %s = %s" % (k, asset_info[k]))
             logging.info("")
     indexes = raw_input("%s INFO | Type the index for the assets you want to "
-                        "download (comma separated): " %
+                        "download (comma separated, Ctrl+C to abort): " %
                         time.strftime("%H:%M:%S", time.localtime()))
 
     index_list = []
@@ -63,5 +63,5 @@ if __name__ == "__main__":
         download_assets()
     except KeyboardInterrupt:
         print
-        logging.info("Cancelling...")
+        logging.info("Aborting...")
         sys.exit(0)
