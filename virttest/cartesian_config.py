@@ -508,12 +508,14 @@ class Label(object):
 
 
 class Node(object):
-    __slots__ = ["var_name", "name", "dep", "content", "children", "labels",
-                 "append_to_shortname", "failed_cases", "default", "q_dict"]
+    __slots__ = ["var_name", "name", "filename", "dep", "content", "children",
+                 "labels", "append_to_shortname", "failed_cases", "default",
+                 "q_dict"]
 
     def __init__(self):
         self.var_name = []
         self.name = []
+        self.filename = ""
         self.dep = []
         self.content = []
         self.children = []
@@ -913,6 +915,32 @@ class LApplyPreDict(LOperators):
 
     def __repr__(self):
         return "Apply_pre_dict: %s" % self.value
+
+
+class LUpdateFileMap(LOperators):
+    __slots__ = ["filename", "shortname"]
+    identifier = "update_file_map"
+
+    def set_operands(self, filename, name):
+        # pylint: disable=W0201
+        self.name = name
+        # pylint: disable=W0201
+        self.filename = filename
+        if filename == "<string>":
+            self.shortname = filename
+        else:
+            self.shortname = os.path.basename(filename)
+        return self
+
+    def apply_to_dict(self, d):
+        if not "_name_map_file" in d:
+            d["_name_map_file"] = {}
+
+        if self.shortname in d["_name_map_file"]:
+            old_name = d["_name_map_file"][self.shortname][1]
+            d["_name_map_file"][self.shortname][1] = self.name + "." + old_name
+        else:
+            d["_name_map_file"][self.shortname] = [self.filename, self.name]
 
 
 spec_iden = "_-"
@@ -1357,6 +1385,7 @@ class Parser(object):
 
         @param filename: Path of the configuration file.
         """
+        self.node.filename = filename
         self.node = self._parse(Lexer(FileReader(filename)), self.node)
         self.filename = filename
 
@@ -1367,6 +1396,7 @@ class Parser(object):
 
         @param s: String to parse.
         """
+        self.node.filename = StrReader("").filename
         self.node = self._parse(Lexer(StrReader(s)), self.node)
 
 
@@ -1591,6 +1621,14 @@ class Parser(object):
                                                             for n in name]
                         else:
                             node3.name = [Label(str(n)) for n in name]
+
+                        # Update mapping name to file
+                        op = LUpdateFileMap()
+                        op.set_operands(lexer.filename,
+                                        ".".join(str(x) for x in node3.name))
+                        node3.content += [(lexer.filename,
+                                           lexer.linenum,
+                                           op)]
 
                         node3.dep = deps
 
@@ -1861,6 +1899,7 @@ class Parser(object):
         labels = node.labels
         # Get the current name
         name = ".".join([str(label) for label in ctx])
+
         if node.name:
             self._debug("checking out %r", name)
 
