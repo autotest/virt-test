@@ -294,9 +294,9 @@ class VMXML(VMXMLBase):
         return librarian.get(type_name)
 
 
-    def undefine(self):
+    def undefine(self, options=None):
         """Undefine this VM with libvirt retaining XML in instance"""
-        return self.virsh.remove_domain(self.vm_name)
+        return self.virsh.remove_domain(self.vm_name, options)
 
 
     def define(self):
@@ -504,6 +504,34 @@ class VMXML(VMXMLBase):
         vmxml.set_xml(xmltreefile.name)
         vmxml.undefine()
         vmxml.define()
+
+
+    def set_agent_channel(self, vm_name):
+        """
+        Add channel for guest agent running
+
+        @param vm_name: Name of defined vm to set agent channel
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+
+        try:
+            exist = vmxml.dict_get('xml').find('devices').findall('channel')
+            findc = 0
+            for ec in exist:
+                if ec.find('target').get('name') == "org.qemu.guest_agent.0":
+                    findc = 1
+                    break
+            if findc == 0:
+                raise AttributeError("Cannot find guest agent channel")
+        except AttributeError:
+            channel = vmxml.get_device_class('channel')(type_name='unix')
+            channel.add_source(**{'mode': 'bind',
+                                  'path': '/var/lib/libvirt/qemu/guest.agent'})
+            channel.add_target(**{'type': 'virtio',
+                                  'name': 'org.qemu.guest_agent.0'})
+
+            vmxml.devices = vmxml.devices.append(channel)
+            vmxml.define()
 
 
     def get_iface_all(self):
