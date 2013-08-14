@@ -86,7 +86,7 @@ class Devices(unittest.TestCase):
         self.assertEqual(str(qdevice), "q'ahci1'", "Id name error %s "
                          "!= %s" % (str(qdevice), "q'ahci1'"))
 
-        exp = "device_add addr=0x7,driver=ahci,id=ahci1"
+        exp = "device_add ahci,addr=0x7,id=ahci1"
         out = qdevice.hotplug_hmp()
         self.assertEqual(out, exp, "HMP command corrupted:\n%s\n%s"
                          % (out, exp))
@@ -890,10 +890,9 @@ PIIX3
                             % (qdev, qdev2))
 
         # cmdline
-        exp = ("-M pc -device id=hba1,addr=0xa,driver=HBA -device driver=dev "
-               "-device driver=dev -device driver=dev -device driver=baddev "
-               "-device addr=0x2,driver=baddev,bus=pci.0 "
-               "-device id=hba1,driver=baddev")
+        exp = ("-M pc -device HBA,id=hba1,addr=0xa -device dev -device dev "
+               "-device dev -device baddev -device baddev,addr=0x2,bus=pci.0 "
+               "-device baddev,id=hba1")
         out = qdev.cmdline()
         self.assertEqual(out, exp, 'Corrupted qdev.cmdline() output:\n%s\n%s'
                          % (out, exp))
@@ -966,7 +965,7 @@ PIIX3
 
         # hotplug of virtio-blk-pci will return ""
         out = dev2.hotplug_hmp()
-        exp = "device_add id=disk,drive=drive_disk,driver=virtio-blk-pci"
+        exp = "device_add virtio-blk-pci,id=disk,drive=drive_disk"
         assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
                             % (exp, out))
         dev2.hotplug = lambda _monitor: ""
