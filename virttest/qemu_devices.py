@@ -20,7 +20,7 @@ import data_dir
 import qemu_monitor
 import storage
 import virt_vm
-
+import utils_misc
 
 try:
     from collections import OrderedDict
