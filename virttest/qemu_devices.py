@@ -387,17 +387,27 @@ class QCustomDevice(QBaseDevice):
     This representation handles only cmdline.
     """
     def __init__(self, dev_type, params=None, aobject=None,
-                 parent_bus=None, child_bus=None):
+                 parent_bus=None, child_bus=None, backend=None):
         """
         @param dev_type: The desired -$option parameter (device, chardev, ..)
         """
         super(QCustomDevice, self).__init__(dev_type, params, aobject,
                                             parent_bus, child_bus)
+        if backend:
+            self.__backend = backend
+        else:
+            self.__backend = None
 
     def cmdline(self):
         """ @return: cmdline command to define this device """
-        out = "-%s " % self.type
-        for key, value in self.params.iteritems():
+        if self.__backend and self.params.get(self.__backend):
+            out = "-%s %s," % (self.type, self.params.get(self.__backend))
+            params = self.params.copy()
+            del params[self.__backend]
+        else:
+            out = "-%s " % self.type
+            params = self.params
+        for key, value in params.iteritems():
             if value != "NO_EQUAL_STRING":
                 out += "%s=%s," % (key, value)
             else:
@@ -579,9 +589,9 @@ class QDevice(QCustomDevice):
     def __init__(self, driver=None, params=None, aobject=None,
                  parent_bus=None, child_bus=None):
         super(QDevice, self).__init__("device", params, aobject, parent_bus,
-                                      child_bus)
+                                      child_bus, 'driver')
         if driver:
-            self['driver'] = driver
+            self.set_param('driver', driver)
         self.hook_drive_bus = None
 
     def _get_alternative_name(self):
@@ -591,7 +601,15 @@ class QDevice(QCustomDevice):
 
     def hotplug_hmp(self):
         """ @return: the hotplug monitor command """
-        return "device_add %s" % _convert_args(self.params)
+        if self.params.get('driver'):
+            params = self.params.copy()
+            out = "device_add %s" % params.pop('driver')
+            params = _convert_args(params)
+            if params:
+                out += ",%s" % params
+        else:
+            out = "device_add %s" % _convert_args(self.params)
+        return out
 
     def hotplug_qmp(self):
         """ @return: the hotplug monitor command """

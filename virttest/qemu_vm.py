@@ -463,7 +463,7 @@ class VM(virt_vm.BaseVM):
             vioser_id = "anacondalog_vioser_%s" % self.instance
             filename = "/tmp/anaconda-%s" % self.instance
             self.logs["anaconda"] = filename
-            dev = qemu_devices.QCustomDevice('chardev')
+            dev = qemu_devices.QCustomDevice('chardev', backend='backend')
             dev.set_param('backend', 'socket')
             dev.set_param('id', chardev_id)
             dev.set_param("path", filename)
@@ -706,8 +706,8 @@ class VM(virt_vm.BaseVM):
                         dev.set_param(key, val)
                 dev.set_param("bootindex", bootindex)
             else:
-                dev = qemu_devices.QCustomDevice('net')
-                dev.set_param('nic', 'NO_EQUAL_STRING')
+                dev = qemu_devices.QCustomDevice('net', backend='type')
+                dev.set_param('type', 'nic')
                 dev.set_param('model', model)
                 dev.set_param('macaddr', mac, 'NEED_QUOTE')
             dev.set_param('id', device_id, 'NEED_QUOTE')
