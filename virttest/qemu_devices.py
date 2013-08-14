@@ -98,7 +98,7 @@ def none_or_int(value):
     elif isinstance(value, str) and value.isdigit():
         return int(value)
     else:
-        raise TypeError("This parameter have to be int or none")
+        raise TypeError("This parameter has to be int or none")
 
 
 def _build_cmd(cmd, args=None, q_id=None):
@@ -272,11 +272,11 @@ class QBaseDevice(object):
         self.aid = aid
 
     def get_children(self):
-        """ @return: List of all childrens (recursive) """
-        childrens = []
+        """ @return: List of all children (recursive) """
+        children = []
         for bus in self.child_bus:
-            childrens.extend(bus)
-        return childrens
+            children.extend(bus)
+        return children
 
     def cmdline(self):
         """ @return: cmdline command to define this device """
@@ -1605,14 +1605,14 @@ class DevContainer(object):
         """
         Remove device from this representation
         @param device: autotest id or QObject-like object
-        @param recursive: remove childrens recursively
+        @param recursive: remove children recursively
         @return: None on success, -1 when the device is not present
         """
         device = self[device]
-        if not recursive:   # Check if there are no childrens
+        if not recursive:   # Check if there are no children
             for bus in device.child_bus:
                 if len(bus) != 0:
-                    raise DeviceRemoveError(device, "Children bus contains "
+                    raise DeviceRemoveError(device, "Child bus contains "
                                             "devices", self)
         else:               # Recursively remove all devices
             for dev in device.get_children():
