@@ -77,7 +77,7 @@ class QemuImgTest(qemu_storage.QemuImg):
             return False
         login_timeout = int(self.params.get("login_timeout", 360))
         session = self.vm.wait_for_login(timeout=login_timeout)
-        md5bin = self.params["md5sum"]
+        md5bin = self.params["md5sum_bin"]
         cmd = "%s %s" % (md5bin, cmd)
         s, o = session.cmd_status_output(cmd)
         if s != 0:
