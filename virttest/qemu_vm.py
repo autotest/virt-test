@@ -1191,10 +1191,10 @@ class VM(virt_vm.BaseVM):
                     if global_image_bootindex > 0:
                         image_boot = False
                     global_image_bootindex += 1
-            img_params = params.object_params(image_name)
-            if img_params.get("boot_drive") == "no":
+            image_params = params.object_params(image_name)
+            if image_params.get("boot_drive") == "no":
                 continue
-            devs = devices.images_define_by_params(image_name, img_params,
+            devs = devices.images_define_by_params(image_name, image_params,
                                                    'disk', index, image_boot,
                                                    image_bootindex)
             for _ in devs:
@@ -1339,12 +1339,12 @@ class VM(virt_vm.BaseVM):
 
         # Add cdroms
         for cdrom in params.objects("cdroms"):
-            img_params = params.object_params(cdrom)
+            image_params = params.object_params(cdrom)
             # FIXME: Use qemu_devices for handling indexes
-            if img_params.get("boot_drive") == "no":
+            if image_params.get("boot_drive") == "no":
                 continue
             if params.get("index_enable") == "yes":
-                drive_index = img_params.get("drive_index")
+                drive_index = image_params.get("drive_index")
                 if drive_index:
                     index = drive_index
                 else:
@@ -1354,7 +1354,7 @@ class VM(virt_vm.BaseVM):
             else:
                 index = None
             image_bootindex = None
-            image_boot = img_params.get("image_boot")
+            image_boot = image_params.get("image_boot")
             if not re.search("boot=on\|off", devices.get_help_text(),
                              re.MULTILINE):
                 if image_boot in ['yes', 'on', True]:
@@ -1367,9 +1367,9 @@ class VM(virt_vm.BaseVM):
                     if global_image_bootindex > 0:
                         image_boot = False
                     global_image_bootindex += 1
-            iso = img_params.get("cdrom")
-            if iso or img_params.get("cdrom_without_file") == "yes":
-                devs = devices.cdroms_define_by_params(cdrom, img_params,
+            iso = image_params.get("cdrom")
+            if iso or image_params.get("cdrom_without_file") == "yes":
+                devs = devices.cdroms_define_by_params(cdrom, image_params,
                                                        'cdrom', index,
                                                        image_boot,
                                                        image_bootindex)
@@ -1379,17 +1379,17 @@ class VM(virt_vm.BaseVM):
         # We may want to add {floppy_otps} parameter for -fda, -fdb
         # {fat:floppy:}/path/. However vvfat is not usually recommended.
         for floppy_name in params.objects('floppies'):
-            img_params = params.object_params(floppy_name)
+            image_params = params.object_params(floppy_name)
             # TODO: Unify image, cdrom, floppy params
-            img_params['drive_format'] = 'floppy'
-            img_params['image_readonly'] = img_params.get("floppy_readonly",
+            image_params['drive_format'] = 'floppy'
+            image_params['image_readonly'] = image_params.get("floppy_readonly",
                                                           "no")
             # Use the absolute patch with floppies (pure *.vfd)
-            img_params['image_raw_device'] = 'yes'
-            img_params['image_name'] = utils_misc.get_path(
+            image_params['image_raw_device'] = 'yes'
+            image_params['image_name'] = utils_misc.get_path(
                                             data_dir.get_data_dir(),
-                                            img_params["floppy_name"])
-            devs = devices.images_define_by_params(floppy_name, img_params,
+                                            image_params["floppy_name"])
+            devs = devices.images_define_by_params(floppy_name, image_params,
                                                    'floppy')
             for _ in devs:
                 devices.insert(_)
