@@ -160,6 +160,7 @@ class BlockCopy(object):
         """
         reboot VM, alias of vm.reboot();
         """
+        error.context("reboot vm", logging.info)
         params = self.parser_test_args()
         timeout = params["login_timeout"]
 
