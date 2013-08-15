@@ -1,34 +1,37 @@
-import wx
+import gtk
+import logging
 
-
-class TestForm(wx.Frame):
+class TestForm(gtk.Window):
 
     def __init__(self):
-        wx.Frame.__init__(self, None, wx.ID_ANY, "Test")
+        super(TestForm, self).__init__()
 
-        # Add a panel so it looks correct on all platforms
-        panel = wx.Panel(self, wx.ID_ANY)
-        btn = wx.TextCtrl(panel, value="")
+        self.set_title("Key test")
+        self.set_size_request(200, 200)
+        self.set_position(gtk.WIN_POS_CENTER)
 
-        btn.Bind(wx.EVT_CHAR, self.on_char_event)
-        btn.SetFocus()
+        fixed = gtk.Fixed()
 
-        # Clean text file
+        entry = gtk.Entry()
+        fixed.put(entry, 10, 10)
+
+        entry.connect("key_press_event", self.on_key_press_event)
+
+        self.connect("destroy", gtk.main_quit)
+        self.add(fixed)
+        self.show_all()
+
+        # Clean the text file:
         input_file = open("/tmp/autotest-rv_input", "w")
-        input_file.write("")
         input_file.close()
 
-    def on_char_event(self, event):
-        keycode = event.GetKeyCode()
 
+    def on_key_press_event(self, widget, event):
         # Store caught keycodes into text file
         input_file = open("/tmp/autotest-rv_input", "a")
-        input_file.write("%s," % str(keycode))
+        input_file.write("{0} ".format(event.keyval))
         input_file.close()
-        event.Skip()
 
 if __name__ == "__main__":
-    APP = wx.PySimpleApp()
-    FRAME = TestForm()
-    FRAME.Show()
-    APP.MainLoop()
+    TestForm()
+    gtk.main()
