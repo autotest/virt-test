@@ -2979,7 +2979,12 @@ class VM(virt_vm.BaseVM):
         if nic.has_key('netdev_extra_params'):
             attach_cmd += nic.netdev_extra_params
         error.context("Hotplugging " + msg_sfx + attach_cmd, logging.debug)
-        self.monitor.send_args_cmd(attach_cmd)
+
+        if self.monitor.protocol == 'qmp':
+            self.monitor.send_args_cmd(attach_cmd)
+        else:
+            self.monitor.send_args_cmd(attach_cmd, convert=False)
+
         network_info = self.monitor.info("network")
         if nic.device_id not in network_info:
             # Don't leave resources dangling
@@ -3013,7 +3018,12 @@ class VM(virt_vm.BaseVM):
             device_add_cmd += ",romfile=%s" % nic.romfile
         error.context("Activating nic on VM %s with monitor command %s" % (
                     self.name, device_add_cmd))
-        self.monitor.send_args_cmd(device_add_cmd)
+
+        if self.monitor.protocol == 'qmp':
+            self.monitor.send_args_cmd(device_add_cmd)
+        else:
+            self.monitor.send_args_cmd(device_add_cmd, convert=False)
+
         error.context("Verifying nic %s shows in qtree" % nic.nic_name)
         qtree = self.monitor.info("qtree")
         if not nic.nic_name in qtree:
@@ -3035,7 +3045,12 @@ class VM(virt_vm.BaseVM):
         error.context("Removing nic %s from VM %s" % (nic_index_or_name,
                                         self.name))
         nic_del_cmd = "device_del id=%s" % (nic.nic_name)
-        self.monitor.send_args_cmd(nic_del_cmd)
+
+        if self.monitor.protocol == 'qmp':
+            self.monitor.send_args_cmd(nic_del_cmd)
+        else:
+            self.monitor.send_args_cmd(nic_del_cmd, convert=False)
+
         if wait:
             logging.info("waiting for the guest to finish the unplug")
             if not utils_misc.wait_for(lambda: nic.nic_name not in
@@ -3057,7 +3072,13 @@ class VM(virt_vm.BaseVM):
         # FIXME: Need to down interface & remove from bridge????
         error.context("removing netdev id %s from vm %s" %
                       (netdev_id, self.name))
-        self.monitor.send_args_cmd("netdev_del id=%s" % netdev_id)
+        nic_del_cmd = "netdev_del id=%s" % netdev_id
+
+        if self.monitor.protocol == 'qmp':
+            self.monitor.send_args_cmd(nic_del_cmd)
+        else:
+            self.monitor.send_args_cmd(nic_del_cmd, convert=False)
+
         network_info = self.monitor.info("network")
         if netdev_id in network_info:
             raise virt_vm.VMDelNetDevError("Fail to remove netdev %s" %
