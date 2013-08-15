@@ -49,6 +49,78 @@ except ImportError:
     settings_value = settings.get_value
 
 
+def parse_output_to_list(output, splitter=None):
+    """
+    Parse output like below to a list.
+     Id      Name        State
+    -----------------------------
+     -      Jeos        shut off
+
+    And the list is:
+    [dict1, dict2....]
+    With dict like this:
+    {'Id': "-", 'Name': "Jeos", 'State': "shut off"}
+
+    @param output: lines to be parsed.
+    @param splitter for context: the regex to split context.
+                                 Default is None.
+                                 Advice: virsh list: "\s\s+"
+    TODO: support snapshot-list.
+    """
+    def remove_space(l):
+        """Remove space elements for list"""
+        return [x for x in l if x.strip()]
+
+    parsed_list = []
+    lines = output.strip().splitlines()
+    head = lines[0].strip()
+    if len(lines) > 2:
+        lines = lines[2:]
+    else:
+        return parsed_list
+
+    for line in lines:
+        head_iter = enumerate(remove_space(re.split('\s\s+', head)))
+        if splitter is not None:
+            details = remove_space(re.split(splitter, line.strip()))
+        else:
+            details = line.split()
+        details_dict = {}
+        while True:
+            try:
+                (index, column) = head_iter.next()
+            except StopIteration:
+                break
+            try:
+                details_dict[column] = details[index]
+            except IndexError:
+                details_dict[column] = None
+        parsed_list.append(details_dict)
+    return parsed_list
+
+
+def parse_output_to_dict(output, key="Name", splitter=None):
+    """
+    Parse output like below to a dict with provided key.
+     Id      Name        State
+    -----------------------------
+     -      Jeos        shut off
+
+    @param output:lines to be parsed.
+    @param key: To be key of outputed dict.
+                If it is None, default is "Name"
+    @return: a dict with features-dict in:
+             {key: {feature: value, feature: value...}, ...}
+    """
+    parsed_list = parse_output_to_list(output, splitter)
+    parsed_dict = {}
+
+    for d in parsed_list:
+        if d.has_key(key) and not parsed_dict.has_key(d[key]):
+            parsed_dict[d[key]] = d
+    return parsed_dict
+
+
 def get_living_vm(env, vm_name):
     """
     Get a VM object from the environment and make sure it's alive.
