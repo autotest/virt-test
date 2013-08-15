@@ -84,10 +84,7 @@ def run_virsh_vol_create_from(test, params, env):
             if pool_name in pool[0]:
                 logging.debug("Find active pool %s", pool_name)
                 find_pool = True
-        if find_pool:
-            return True
-        else:
-            return False
+        return find_pool
 
     def get_vol_list(pool_name):
         """
@@ -100,22 +97,14 @@ def run_virsh_vol_create_from(test, params, env):
             raise error.TestFail("Virsh vol-list command failed:\n%s" %
                                  output.stderr)
         vol_list = re.findall(r"\n(.+\S+)\ +\S+", str(output.stdout))
-        if vol_list:
-            return vol_list
-        else:
-            return ""
+        return vol_list
 
     def check_vol(vol_name, pool_name):
         """
         Check if vol_name exist in the given pool
         """
 
-        vol_list = get_vol_list(pool_name)
-        if vol_name in vol_list:
-            logging.debug("Find volume %s from pool %s", vol_name, pool_name)
-            return True
-        else:
-            return False
+        return (vol_name in get_vol_list(pool_name))
 
     def cleanup_pool(pool_name, pool_type, pool_target):
         """
@@ -125,7 +114,7 @@ def run_virsh_vol_create_from(test, params, env):
             vols = get_vol_list(pool_name)
             for vol in vols:
                 result = virsh.vol_delete(vol, pool_name)
-                if result.exit_status != 0:
+                if result.exit_status:
                     raise error.TestFail("Command virsh vol-delete failed:\n%s"
                                          % result.stderr)
             else:
@@ -287,8 +276,10 @@ def run_virsh_vol_create_from(test, params, env):
         src_vol_name = "src_vol"
         pre_vol(src_vol_name, src_vol_format, vol_size, src_pool_name)
     else:
-        src_vol_name = get_vol_list(src_pool_name)[0]
-        if src_vol_name == "":
+        src_vols = get_vol_list(src_pool_name):
+        if src_vols:
+            src_vol_name = src_vols[0]
+        else:
             raise error.TestFail("No volume in pool: %s", src_pool_name)
     #Prepare vol xml file
     dest_vol_name = "dest_vol"
@@ -322,23 +313,25 @@ def run_virsh_vol_create_from(test, params, env):
                                        src_pool_name, prealloc_option,
                                        ignore_status=True, debug=True)
     status = cmd_result.exit_status
-    #Check result
-    if status_error == "no":
-        if status == 0:
-            if not check_vol(dest_vol_name, dest_pool_name):
-                raise error.TestFail("Can't find volume: % from pool: %s",
-                                     dest_vol_name, dest_pool_name)
+    try:
+        #Check result
+        if status_error == "no":
+            if status == 0:
+                if not check_vol(dest_vol_name, dest_pool_name):
+                    raise error.TestFail("Can't find volume: % from pool: %s",
+                                         dest_vol_name, dest_pool_name)
+            else:
+                raise error.TestFail(cmd_result.stderr)
         else:
-            raise error.TestFail(cmd_result.stderr)
-    else:
-        if status:
-            logging.debug("Expect error: %s", cmd_result.stderr)
-        else:
-            raise error.TestFail("Expect command fail, but run successfully!")
-    #Cleanup
-    cleanup_pool(src_pool_name, src_pool_type, src_pool_target)
-    if src_pool_type != dest_pool_type:
-        cleanup_pool(dest_pool_name, dest_pool_type, dest_pool_target)
-    if src_pool_type or dest_pool_type in ["disk", "logical", "fs", "iscsi",
+            if status:
+                logging.debug("Expect error: %s", cmd_result.stderr)
+            else:
+                raise error.TestFail("Expect fail, but run successfully!")
+    finally:
+        #Cleanup
+        cleanup_pool(src_pool_name, src_pool_type, src_pool_target)
+        if src_pool_type != dest_pool_type:
+            cleanup_pool(dest_pool_name, dest_pool_type, dest_pool_target)
+        if src_pool_type or dest_pool_type in ["disk", "logical", "fs", "iscsi",
                                            "scsi"]:
         cleanup_iscsi()

@@ -1584,7 +1584,8 @@ def vol_create_from(pool_name, vol_file, input_vol, input_pool, extra="", **darg
     @param: extra: Free-form string of options
     @return: True if volume create successfully
     """
-    cmd = "vol-create-from --pool %s --file %s --vol %s --inputpool %s" % (pool_name, vol_file, input_vol, input_pool)
+    cmd = "vol-create-from --pool %s --file %s --vol %s --inputpool
+           %s" % (pool_name, vol_file, input_vol, input_pool)
     if extra:
         cmd += " %s" % (extra)
     return command(cmd, **dargs)
