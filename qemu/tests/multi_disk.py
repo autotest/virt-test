@@ -3,7 +3,7 @@ multi_disk test for Autotest framework.
 
 @copyright: 2011-2012 Red Hat Inc.
 """
-import logging, re, random, string
+import logging, re, random, string, threading
 from autotest.client.shared import error, utils
 from virttest import qemu_qtree, env_process
 
@@ -92,6 +92,37 @@ def run_multi_disk(test, params, env):
 
 
     @error.context_aware
+    def _monitor_host_cpu_load(func):
+        cpu_load_list = []
+        t = threading.Thread(target=_do_get_host_cpu_load,
+                             name="CPU-load-thread", args=(cpu_load_list,))
+        t.start()
+
+        try:
+            if func and callable(func):
+                func()
+        finally:
+            utils.system("pkill -2 sar", ignore_status=True)
+            error.context("Wait monitor thread to join")
+            t.join(cmd_timeout)
+
+        if (not cpu_load_list) or (len(cpu_load_list) == 0):
+            raise error.TestError("Couldn't get host cpu load.")
+
+        return cpu_load_list[0]
+
+
+    def _do_get_host_cpu_load(cpu_load_list):
+        output = utils.system_output("sar -u ALL 2", timeout=(cmd_timeout * 16))
+        out = [l for l in output.splitlines() if "Average" in l]
+        if not out:
+            raise error.TestError("Couldn't get host cpu load."
+                                  " Output: '%s'" % output)
+
+        cpu_load_list.insert(0, float(out[-1].split()[-1]))
+
+
+    @error.context_aware
     def _format_single_disk(disk):
         disk = disk.strip()
         # Random select one file system from file_system
@@ -114,6 +145,24 @@ def run_multi_disk(test, params, env):
         error.context("Format disks in guest", logging.info)
         for disk in disks:
             _format_single_disk(disk)
+
+
+    @error.context_aware
+    def _format_disks_parallel():
+        thread_list = []
+        for disk in disks:
+            t = threading.Thread(target=_format_single_disk,
+                                 name="Format-thread-%s" % disk, args=(disk,))
+            thread_list.append(t)
+
+        error.context("Format disks in guest parallel", logging.info)
+        for t in thread_list:
+            t.start()
+
+        for t in thread_list:
+            error.context("Wait for '%s' process to join" % t.name,
+                          logging.info)
+            t.join(cmd_timeout)
 
 
     @error.context_aware
@@ -141,6 +190,24 @@ def run_multi_disk(test, params, env):
         error.context("Cope file into/outof disks", logging.info)
         for disk in disks:
             _copy_file(disk)
+
+
+    @error.context_aware
+    def _copy_files_parallel():
+        thread_list = []
+        for disk in disks:
+            t = threading.Thread(target=_copy_file,
+                                 name="Copy-thread-%s" % disk, args=(disk,))
+            thread_list.append(t)
+
+        error.context("Cope file into/outof disks", logging.info)
+        for t in thread_list:
+            t.start()
+
+        for t in thread_list:
+            error.context("Wait for '%s' process to join" % t.name,
+                          logging.info)
+            t.join(cmd_timeout)
 
 
     @error.context_aware
@@ -333,8 +400,28 @@ def run_multi_disk(test, params, env):
     try:
         for i in range(n_repeat):
             error.context("Iterations: %s" % (i + 1))
-            _format_disks()
-            _copy_files()
+            if params.get("multi_disk_parallel_test") != "yes":
+                _format_disks()
+                _copy_files()
+                _umount_disks()
+                continue
+
+            load_parallel = _monitor_host_cpu_load(_format_disks_parallel)
+            _umount_disks()
+            load_normal = _monitor_host_cpu_load(_format_disks)
+            if (load_parallel / load_normal) < 0.9:
+                raise error.TestFail("The cpu load during formatting operation"
+                                     " is higher than expected. The cpu load"
+                                     " is: (parallel vs. sequence)"
+                                     " %f / %f" % (load_parallel, load_normal))
+
+            load_parallel = _monitor_host_cpu_load(_copy_files_parallel)
+            load_normal = _monitor_host_cpu_load(_copy_files)
+            if (load_parallel / load_normal) < 0.9:
+                raise error.TestFail("The cpu load during copying operation"
+                                     " is higher than expected. The cpu load"
+                                     " is: (parallel vs. sequence)"
+                                     " %f / %f" % (load_parallel, load_normal))
             _umount_disks()
     finally:
         _umount_disks(ignore_error=True)
