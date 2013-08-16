@@ -595,7 +595,7 @@ class PrivateBridgeConfig(object):
         ip_fwd = open(ip_fwd_path, "w")
         ip_fwd.write("1\n")
         utils.system("brctl stp %s on" % self.brname)
-        utils.system("brctl setfd %s 0" % self.brname)
+        utils.system("brctl setfd %s 4" % self.brname)
         if self.physical_nic:
             utils.system("brctl addif %s %s" % (self.brname,
                                                 self.physical_nic))
