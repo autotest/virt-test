@@ -1,6 +1,6 @@
 import time, logging
 from autotest.client.shared import error
-from virttest import utils_misc, utils_test
+from virttest import utils_test
 from tests import file_transfer
 
 def run_live_snapshot(test, params, env):
@@ -16,6 +16,7 @@ def run_live_snapshot(test, params, env):
     @param env: Dictionary with test environment.
     """
 
+    @error.context_aware
     def create_snapshot(vm):
         """
         Create live snapshot:
@@ -23,25 +24,15 @@ def run_live_snapshot(test, params, env):
         2). Get device info
         3). Create snapshot
         """
-
-        cmd = params.get("create_sn_cmd")
-
+        error.context("Creating live snapshot ...", logging.info)
         block_info = vm.monitor.info("block")
         if vm.monitor.protocol == 'qmp':
             device = block_info[0]["device"]
         else:
-            string = ""
-            device = string.join(block_info).split(":")[0]
-        cmd += " %s" % device
-
+            device = "".join(block_info).split(":")[0]
         snapshot_name = params.get("snapshot_name")
-        cmd += " %s" % snapshot_name
-
-        format = params.get("snapshot_format")
-        if format:
-            cmd += " %s" % format
-        logging.info("Creating live snapshot ...")
-        vm.monitor.send_args_cmd(cmd)
+        format = params.get("snapshot_format", "qcow2")
+        vm.monitor.live_snapshot(device, snapshot_name, format)
 
         logging.info("Check snapshot is created ...")
         snapshot_info = str(vm.monitor.info("block"))
