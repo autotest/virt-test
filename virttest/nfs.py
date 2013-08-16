@@ -20,8 +20,8 @@ def nfs_exported():
         return {}
 
     nfs_exported_dict = {}
-    for line in exportfs.strip().splitlines():
-        fs_info = line.split()
+    for fs_info in re.findall("[/\w+]+.*?\(.*?\)", exportfs, re.S):
+        fs_info = fs_info.strip().split()
         if len(fs_info) == 2:
             nfs_src = fs_info[0]
             access_ip = re.findall(r"(.*)\(", fs_info[1])[0]
