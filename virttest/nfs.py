@@ -183,11 +183,13 @@ class Nfs(object):
                 self.nfs_service.restart()
 
             if not os.path.isdir(self.export_dir):
-                os.mkdir(self.export_dir)
+                os.makedirs(self.export_dir)
             self.exportfs.export()
             self.unexportfs_in_clean = not self.exportfs.already_exported
 
         logging.debug("Mount %s to %s" % (self.mount_src, self.mount_dir))
+        if  not os.path.isdir(self.mount_dir):
+            os.makedirs(self.mount_dir)
         utils_misc.mount(self.mount_src, self.mount_dir, "nfs",
                          perm=self.mount_options)
 
