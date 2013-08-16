@@ -91,6 +91,79 @@ def run_multi_disk(test, params, env):
         session.close()
 
 
+    @error.context_aware
+    def _format_single_disk(disk):
+        disk = disk.strip()
+        # Random select one file system from file_system
+        index = random.randint(0, (len(file_system) - 1))
+        fs = file_system[index].strip()
+        cmd = params["format_command"] % (fs, disk)
+        error.context("Format test disk '%s' to '%s'" % (disk, fs))
+        session = vm.wait_for_login(timeout=login_timeout)
+        session.cmd(cmd, timeout=cmd_timeout)
+        cmd = params.get("mount_command")
+        if cmd:
+            error.context("Mount test disk '%s'" % disk)
+            cmd = cmd % (disk, disk, disk)
+            session.cmd(cmd)
+        session.close()
+
+
+    @error.context_aware
+    def _format_disks():
+        error.context("Format disks in guest", logging.info)
+        for disk in disks:
+            _format_single_disk(disk)
+
+
+    @error.context_aware
+    def _copy_file(disk):
+        disk = disk.strip()
+        error.context("Performing I/O on disk '%s'" % disk)
+        cmd_list = params["cmd_list"].split()
+        session = vm.wait_for_login(timeout=login_timeout)
+        for cmd_l in cmd_list:
+            cmd = params.get(cmd_l)
+            if cmd:
+                session.cmd(cmd % disk, timeout=cmd_timeout)
+
+        cmd = params["compare_command"]
+        key_word = params["check_result_key_word"]
+        output = session.cmd_output(cmd)
+        session.close()
+        if key_word not in output:
+            raise error.TestFail("Files on guest os root fs and disk "
+                                 "are different")
+
+
+    @error.context_aware
+    def _copy_files():
+        error.context("Cope file into/outof disks", logging.info)
+        for disk in disks:
+            _copy_file(disk)
+
+
+    @error.context_aware
+    def _umount_disks(ignore_error=False):
+        cmd = params.get("show_mount_cmd")
+        if not cmd:
+            return
+
+        try:
+            output = session.cmd_output(cmd)
+            disks = re.findall(re_str, output)
+            disks.sort()
+            umount_cmd = params["umount_command"]
+            for disk in disks:
+                error.context("Unmounting disk '%s'" % disk)
+                cmd = umount_cmd % (disk, disk)
+                session.cmd(cmd)
+        except Exception, err:
+            logging.warn("Get error when cleanup, '%s'", err)
+            if not ignore_error:
+                raise
+
+
     error.context("Parsing test configuration", logging.info)
     stg_image_num = 0
     stg_params = params.get("stg_params", "")
@@ -178,7 +251,8 @@ def run_multi_disk(test, params, env):
     error.context("Start the guest with those disks", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.create(timeout=max(10, stg_image_num), params=params)
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    login_timeout = int(params.get("login_timeout", 360))
+    session = vm.wait_for_login(timeout=login_timeout)
 
     n_repeat = int(params.get("n_repeat", "1"))
     file_system = [_.strip() for _ in params.get("file_system").split()]
@@ -258,64 +332,10 @@ def run_multi_disk(test, params, env):
 
     try:
         for i in range(n_repeat):
-            logging.info("iterations: %s", (i + 1))
-            error.context("Format those disks in guest", logging.info)
-            for disk in disks:
-                disk = disk.strip()
-                error.context("Preparing disk: %s..." % disk)
-
-                # Random select one file system from file_system
-                index = random.randint(0, (len(file_system) - 1))
-                fs = file_system[index].strip()
-                cmd = params["format_command"] % (fs, disk)
-                error.context("formatting test disk")
-                session.cmd(cmd, timeout=cmd_timeout)
-                cmd = params.get("mount_command")
-                if cmd:
-                    cmd = cmd % (disk, disk, disk)
-                    session.cmd(cmd)
-
-            error.context("Cope file into / out of those disks", logging.info)
-            for disk in disks:
-                disk = disk.strip()
-
-                error.context("Performing I/O on disk: %s..." % disk)
-                cmd_list = params["cmd_list"].split()
-                for cmd_l in cmd_list:
-                    cmd = params.get(cmd_l)
-                    if cmd:
-                        session.cmd(cmd % disk, timeout=cmd_timeout)
-
-                cmd = params["compare_command"]
-                key_word = params["check_result_key_word"]
-                output = session.cmd_output(cmd)
-                if key_word not in output:
-                    raise error.TestFail("Files on guest os root fs and disk "
-                                         "differ")
-
-            if params.get("umount_command"):
-                cmd = params.get("show_mount_cmd")
-                output = session.cmd_output(cmd)
-                disks = re.findall(re_str, output)
-                disks.sort()
-                for disk in disks:
-                    disk = disk.strip()
-                    error.context("Unmounting disk: %s..." % disk)
-                    cmd = params.get("umount_command") % (disk, disk)
-                    session.cmd(cmd)
+            error.context("Iterations: %s" % (i + 1))
+            _format_disks()
+            _copy_files()
+            _umount_disks()
     finally:
-        cmd = params.get("show_mount_cmd")
-        if cmd:
-            try:
-                output = session.cmd_output(cmd)
-                disks = re.findall(re_str, output)
-                disks.sort()
-                for disk in disks:
-                    error.context("Unmounting disk: %s..." % disk)
-                    cmd = params["umount_command"] % (disk, disk)
-                    session.cmd(cmd)
-            except Exception, err:
-                logging.warn("Get error when cleanup, '%s'", err)
-
+        _umount_disks(ignore_error=True)
         _do_post_cmd(session)
-        session.close()
