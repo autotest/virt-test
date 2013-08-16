@@ -512,7 +512,7 @@ def print_test_list(options, cartesian_parser):
         supported_virt_backends = virt_test_type.split(" ")
         if options.type in supported_virt_backends:
             index += 1
-            shortname = get_tag(params, tag_index)
+            shortname = params.get("_name_map_file")["subtests.cfg"][1]
             needs_root = ((params.get('requires_root', 'no') == 'yes')
                           or (params.get('vm_type') != 'qemu'))
             basic_out = (bcolors.blue + str(index) + bcolors.end + " " +
