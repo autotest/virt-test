@@ -110,6 +110,7 @@ def run_virsh_change_media(test, params, env):
     init_iso_name = params.get("change_media_init_iso")
     old_iso_name = params.get("change_media_old_iso")
     new_iso_name = params.get("change_media_new_iso")
+    source_path = params.get("change_media_source_path", "yes")
     cdrom_dir = os.path.join(test.tmpdir, "tmp")
 
     old_iso = os.path.join(cdrom_dir, old_iso_name)
@@ -151,10 +152,20 @@ def run_virsh_change_media(test, params, env):
         source = ""
     else:
         source = os.path.join(cdrom_dir, source_name)
+        if source_path == "no":
+            source = source_name
 
     all_options = action + options + " " + source
     result = virsh.change_media(vm_ref, disk_device,
                                 all_options, ignore_status=True, debug=True)
+    if status_error == "yes":
+        if start_vm == "no" and vm.is_dead():
+            try:
+                vm.start()
+            except Exception, detail:
+                result.exit_status = 1
+                result.stderr = str(detail)
+
     status = result.exit_status
 
     if status_error == "no":
