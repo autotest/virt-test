@@ -150,12 +150,6 @@ class Nfs(object):
             os_dep.command("service")
             os_dep.command("exportfs")
             self.nfs_service = service.SpecificServiceManager("nfs")
-            self.enable_pattern = r"nfsd.*?running"
-            self.disable_pattern = r"nfsd.*?stopped"
-            if "Loaded: error" in self.nfs_service.status():
-                self.nfs_service = service.SpecificServiceManager("nfs-server")
-                self.enable_pattern = r"Active: active"
-                self.disable_pattern = r"Active: inactive"
 
             self.export_dir = (params.get("export_dir")
                                or self.mount_src.split(":")[-1])
@@ -164,23 +158,6 @@ class Nfs(object):
             self.exportfs = Exportfs(self.export_dir, self.export_ip,
                                      self.export_options)
             self.mount_src = "127.0.0.1:%s" % self.export_dir
-
-
-    def service_status(self):
-        """
-        Check nfs service status.
-
-        :return: The status of nfs service. It should be one of these:
-                 enabled, disabled or unknown status.
-        :rtype: string
-        """
-        output = self.nfs_service.status()
-        logging.debug("NFS sevice status is %s" % output)
-        if re.findall(self.enable_pattern, output):
-            return "enabled"
-        if re.findall(self.disable_pattern, output):
-            return "disabled"
-        return "unknown status"
 
 
     def is_mounted(self):
@@ -201,7 +178,7 @@ class Nfs(object):
         service and exportfs too.
         """
         if self.nfs_setup:
-            if self.service_status() != "enabled":
+            if not self.nfs_service.status():
                 logging.debug("Restart NFS service.")
                 self.nfs_service.restart()
 
