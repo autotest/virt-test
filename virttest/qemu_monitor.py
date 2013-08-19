@@ -378,6 +378,123 @@ class Monitor:
         r = self.human_monitor_cmd("info numa")
         return self.parse_info_numa(r)
 
+    def info(self, what, debug=True):
+        """
+        Request info about something and return the response.
+        """
+        raise NotImplementedError
+
+    def info_block(self, debug=True):
+        """
+        Request info about blocks and return dict of parsed results
+        @return: Dict of disk parameters
+        """
+        info = self.info('block', debug)
+        if isinstance(info, str):
+            try:
+                return self._parse_info_block_old(info)
+            except ValueError:
+                return self._parse_info_block_1_5(info)
+        else:
+            return self._parse_info_block_qmp(info)
+
+    @staticmethod
+    def _parse_info_block_old(info):
+        """
+        Parse output of "info block" into dict of disk params (qemu < 1.5.0)
+        """
+        blocks = {}
+        info = info.split('\n')
+        for line in info:
+            if not line.strip():
+                continue
+            line = line.split(':', 1)
+            name = line[0].strip()
+            blocks[name] = {}
+            if line[1].endswith('[not inserted]'):
+                blocks[name]['not-inserted'] = 1
+                line[1] = line[1][:-14]
+            for _ in line[1].strip().split(' '):
+                (prop, value) = _.split('=', 1)
+                if value.isdigit():
+                    value = int(value)
+                blocks[name][prop] = value
+        return blocks
+
+    @staticmethod
+    def _parse_info_block_1_5(info):
+        """
+        Parse output of "info block" into dict of disk params (qemu >= 1.5.0)
+        """
+        blocks = {}
+        info = info.split('\n')
+        for line in info:
+            if not line.strip():
+                continue
+            if not line.startswith(' '):   # new block device
+                line = line.split(':', 1)
+                name = line[0].strip()
+                line = line[1][1:]
+                blocks[name] = {}
+                if line == "[not inserted]":
+                    blocks[name]['not-inserted'] = 1
+                    continue
+                line = line.rsplit(' (', 1)
+                if len(line) == 1:       # disk_name
+                    blocks[name]['file'] = line
+                else:       # disk_name (options)
+                    blocks[name]['file'] = line[0]
+                    options = (_.strip() for _ in line[1][:-1].split(','))
+                    _ = False
+                    for option in options:
+                        if not _:   # First argument is driver (qcow2, raw, ..)
+                            blocks[name]['drv'] = option
+                            _ = True
+                        elif option == 'read-only':
+                            blocks[name]['ro'] = 1
+                        elif option == 'encrypted':
+                            blocks[name]['encrypted'] = 1
+                        else:
+                            err = ("_parse_info_block_1_5 got option '%s' "
+                                   "which is not yet mapped in autotest. "
+                                   "Please contact developers on github.com/"
+                                   "autotest." % option)
+                            raise NotImplementedError(err)
+            else:
+                option, line = line.split(':', 1)
+                option, line = option.strip(), line.strip()
+                if option == "Backing file":
+                    line = line.rsplit(' (chain depth: ')
+                    blocks[name]['backing_file'] = line[0]
+                    blocks[name]['backing_file_depth'] = int(line[1][:-1])
+                elif option == "Removable device":
+                    blocks[name]['removable'] = 1
+                    if 'not locked' not in line:
+                        blocks[name]['locked'] = 1
+                    if 'try open' in line:
+                        blocks[name]['try-open'] = 1
+        return blocks
+
+    @staticmethod
+    def _parse_info_block_qmp(info):
+        """
+        Parse output of "query block" into dict of disk params
+        """
+        blocks = {}
+        for item in info:
+            if not item.get('device'):
+                raise ValueError("Incorrect QMP respone, device not set in"
+                                 "info block: %s" % info)
+            name = item.pop('device')
+            blocks[name] = {}
+            if 'inserted' not in item:
+                blocks[name]['not-inserted'] = True
+            else:
+                for key, value in item.pop('inserted', {}).iteritems():
+                    blocks[name][key] = value
+            for key, value in item.iteritems():
+                blocks[name][key] = value
+        return blocks
 
     def close(self):
         """
