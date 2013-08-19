@@ -372,26 +372,17 @@ class QtreeDisksContainer(object):
         """
         additional = 0
         missing = 0
-        names = []
-        for disk in self.disks:
-            names.append(disk.get_qname())
-        info = info.split('\n')
-        for line in info:
-            if not line.strip():
-                continue
-            line = line.split(':', 1)
-            name = line[0].strip()
-            if name not in names:
+        for i in xrange(len(self.disks)):
+            disk = self.disks[i]
+            name = disk.get_qname()
+            if name not in info:
                 logging.error("disk %s is in block but not in qtree", name)
                 missing += 1
                 continue
-            else:
-                disk = self.disks[names.index(name)]
-            for _ in line[1].strip().split(' '):
-                (prop, value) = _.split('=', 1)
+            for prop, value in info[name].iteritems():
                 disk.set_block_prop(prop, value)
         for disk in self.disks:
-            if isinstance(disk, QtreeDisk) and disk.get_block() == {}:
+            if disk.get_block() == {}:
                 logging.error("disk in qtree but not in info block\n%s", disk)
                 additional += 1
         return (additional, missing)
