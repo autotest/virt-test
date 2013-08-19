@@ -274,18 +274,61 @@ class VirshPersistent(Virsh):
     # Help detect leftover sessions
     SESSION_COUNTER = 0
 
+    # B/c the auto_close of VirshSession is False, we
+    # need to manager the ref-count of it manully.
+    COUNTERS = {}
+
     def __init__(self, *args, **dargs):
         super(VirshPersistent, self).__init__(*args, **dargs)
         if self.get('session_id') is None:
             # set_uri does not call when INITIALIZED = False
             # and no session_id passed to super __init__
             self.new_session()
+        # increase the counter of session_id in COUNTERS.
+        self.counter_increase()
 
     def __del__(self):
         """
         Clean up any leftover sessions
         """
         self.close_session()
+
+    def counter_increase(self):
+        """
+        Method to increase the counter to self.a_id in COUNTERS.
+        """
+        session_id = self.dict_get("session_id")
+        try:
+            counter = self.__class__.COUNTERS[session_id]
+        except KeyError, e:
+            VirshPersistent.COUNTERS[session_id] = 1
+            return
+        # increase the counter of session_id.
+        VirshPersistent.COUNTERS[session_id] += 1
+
+    def counter_decrease(self):
+        """
+        Method to decrease the counter to self.a_id in COUNTERS.
+        If the counter is less than 1, it means there is no more
+        VirshSession instance refering to the session. So close
+        this session, and return True.
+        Else, decrease the counter in COUNTERS and return False.
+        """
+        session_id = self.dict_get("session_id")
+        self.__class__.COUNTERS[session_id] -= 1
+        counter = self.__class__.COUNTERS[session_id]
+        if counter <= 0:
+            # The last reference to this session. Closing it.
+            session = VirshSession(a_id=session_id)
+            # try nicely first
+            session.close()
+            if session.is_alive():
+                # Be mean, incase it's hung
+                session.close(sig=signal.SIGTERM)
+            del self.__class__.COUNTERS[session_id]
+            return True
+        else:
+            return False
 
     def close_session(self):
         """
@@ -296,25 +339,17 @@ class VirshPersistent(Virsh):
             if session_id:
                 try:
                     existing = VirshSession(a_id=session_id)
-                    # except clause exits function
-                    self.dict_del('session_id')
+                    if existing.is_alive():
+                        if self.counter_decrease():
+                            # Keep count
+                            self.__class__.SESSION_COUNTER -= 1
                 except aexpect.ShellStatusError:
                     # session was already closed
-                    self.dict_del('session_id')
-                    return # don't check is_alive or update counter
-                if existing.is_alive():
-                    # try nicely first
-                    existing.close()
-                    if existing.is_alive():
-                        # Be mean, incase it's hung
-                        existing.close(sig=signal.SIGTERM)
-                    # Keep count:
-                    self.__class__.SESSION_COUNTER -= 1
-                    self.dict_del('session_id')
+                    pass # don't check is_alive or update counter
+                self.dict_del("session_id")
         except KeyError:
             # Allow other exceptions to be raised
             pass # session was closed already
-
 
     def new_session(self):
         """
@@ -330,7 +365,6 @@ class VirshPersistent(Virsh):
         self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
         self.dict_set('session_id', session_id)
-
 
     def set_uri(self, uri):
         """
