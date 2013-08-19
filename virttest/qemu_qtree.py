@@ -479,6 +479,8 @@ class QtreeDisksContainer(object):
             except AttributeError:
                 logging.error("Failed to check drive format, can't get parent"
                               "of:\n%s", node)
+            if actual == 'virtio-scsi-device':  # new name for virtio-scsi
+                actual = 'virtio-scsi-pci'
             if expected not in actual:
                 return ("drive format in qemu is %s, in autotest %s"
                         % (actual, expected))
