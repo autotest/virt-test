@@ -204,7 +204,7 @@ def run_multi_disk(test, params, env):
     black_list = params["black_list"].split()
 
     have_qtree = True
-    out = vm.monitor.human_monitor_cmd("qtree", debug=False)
+    out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
     if "unknown command" in str(out):
         have_qtree = False
 
@@ -214,7 +214,7 @@ def run_multi_disk(test, params, env):
         qtree = qemu_qtree.QtreeContainer()
         qtree.parse_info_qtree(vm.monitor.info('qtree'))
         disks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
-        (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
+        (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info_block())
         err += tmp1 + tmp2
         err += disks.generate_params()
         err += disks.check_disk_params(params)
