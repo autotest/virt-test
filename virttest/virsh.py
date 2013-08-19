@@ -95,7 +95,7 @@ class VirshSession(aexpect.ShellSession):
 
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
                  prompt=r"virsh\s*[\#\>]\s*", remote_ip=None,
-                 remote_user=None, remote_pwd=None):
+                 remote_user=None, remote_pwd=None, auto_close=False):
         """
         Initialize virsh session server, or client if id set.
 
@@ -107,6 +107,16 @@ class VirshSession(aexpect.ShellSession):
         @param: remote_ip: Hostname/IP of remote system to ssh into (if any)
         @param: remote_user: Username to ssh in as (if any)
         @param: remote_pwd: Password to use, or None for host/pubkey
+        @param: auto_close: Param to init ShellSession.
+
+        Because the VirshSession is designed for class VirshPersistent, so
+        the default value of auto_close is False, and we manage the reference
+        to VirshSession in VirshPersistent manually with counter_increase and
+        counter_decrease. If you really want to use it directly over VirshPe-
+        rsistent, please init it with auto_close=True, then the session will
+        be closed in __del__.
+
+            * session = VirshSession(virsh.VIRSH_EXEC, auto_close=True)
         """
 
         self.uri = uri
@@ -134,7 +144,7 @@ class VirshSession(aexpect.ShellSession):
 
         # aexpect tries to auto close session because no clients connected yet
         aexpect.ShellSession.__init__(self, self.virsh_exec, a_id,
-                                      prompt=prompt, auto_close=False)
+                                      prompt=prompt, auto_close=auto_close)
 
         if ssh_cmd is not None: # this is a remote session
             # Handle ssh / password prompts
