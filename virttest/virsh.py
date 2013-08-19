@@ -271,20 +271,11 @@ class VirshPersistent(Virsh):
             # and no session_id passed to super __init__
             self.new_session()
 
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """
-        Clean up any leftover sessions
-        """
-        self.close_session()
-        super(VirshPersistent, self).__exit__(exc_type, exc_value, traceback)
-
-
     def __del__(self):
         """
         Clean up any leftover sessions
         """
-        self.__exit__(None, None, None)
+        self.close_session()
 
     def close_session(self):
         """
