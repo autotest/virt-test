@@ -1550,23 +1550,23 @@ class QMPMonitor(Monitor):
         return self.cmd("quit")
 
 
-    def info(self, what):
+    def info(self, what, debug=True):
         """
         Request info about something and return the response.
         """
         cmd = "query-%s" % what
         if not self._has_command(cmd):
             cmd = "info %s" % what
-            return self.human_monitor_cmd(cmd)
+            return self.human_monitor_cmd(cmd, debug=debug)
 
-        return self.cmd(cmd)
+        return self.cmd(cmd, debug=debug)
 
 
-    def query(self, what):
+    def query(self, what, debug=True):
         """
         Alias for info.
         """
-        return self.info(what)
+        return self.info(what, debug)
 
 
     def screendump(self, filename, debug=True):
