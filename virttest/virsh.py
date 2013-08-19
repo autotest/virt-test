@@ -231,14 +231,27 @@ class Virsh(VirshBase):
         @param: *args: Initial property keys/values
         @param: **dargs: Initial property keys/values
         """
+        # Set closure_args as a dict. This dict will be passed
+        # to init VirshClosure objects.
+        self.super_set("closure_args", dict())
         super(Virsh, self).__init__(*args, **dargs)
+        # Init the closure_args for VirshClosure.
+        for key, value in self.items():
+            self.super_get("closure_args")[key] = value
         # Define the instance callables from the contents of this module
         # to avoid using class methods and hand-written aliases
         for sym, ref in globals().items():
             if sym not in NOCLOSE and callable(ref):
                 # Adding methods, not properties, so avoid special __slots__
                 # handling.  __getattribute__ will still find these.
-                self.super_set(sym, VirshClosure(ref, self))
+                self.super_set(sym, VirshClosure(ref, self.super_get("closure_args")))
+
+    def __setitem__(self, key, value):
+        """
+        Overwrite this method to update closure_args in setting item.
+        """
+        self.super_get("closure_args")[key] = value
+        return super(Virsh, self).__setitem__(key, value)
 
 
 class VirshPersistent(Virsh):
