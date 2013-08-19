@@ -296,6 +296,7 @@ class QtreeContainer(object):
                         new.set_parent(current)
                     current = new
                     line = line[5:].split(',')
+                    line[1] = line[1].strip()
                     q_id = line[1][5:-1]
                     if len(q_id) > 0:
                         current.set_qtree_prop('id', line[1][5:-1])
