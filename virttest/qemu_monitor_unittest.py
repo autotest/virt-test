@@ -3,7 +3,7 @@ from qemu_monitor import Monitor
 
 class InfoNumaTests(unittest.TestCase):
     def testZeroNodes(self):
-        d =  "0 nodes\n"
+        d = "0 nodes\n"
         r = Monitor.parse_info_numa(d)
         self.assertEquals(r, [])
 

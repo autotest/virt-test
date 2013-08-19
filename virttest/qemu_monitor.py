@@ -283,7 +283,7 @@ class Monitor:
         is supported commands;
         """
         def translate(cmd):
-            return "-".join( re.split("[_-]", cmd))
+            return "-".join(re.split("[_-]", cmd))
 
         if not self._has_command(cmd):
             for _cmd in self._supported_cmds:
@@ -353,7 +353,7 @@ class Monitor:
         nodes = int(nodes.group(1))
 
         data = [[0, set()] for i in range(nodes)]
-        for nodenr,field,value in cls.re_numa_node_info.findall(r):
+        for nodenr, field, value in cls.re_numa_node_info.findall(r):
             nodenr = int(nodenr)
             if nodenr > nodes:
                 raise Exception("Invalid node number on 'info numa' output: %d", nodenr)
@@ -780,7 +780,7 @@ class HumanMonitor(Monitor):
         job = dict()
         output = str(self.info("block-jobs"))
         for line in output.split("\n"):
-            if "No" in re.match("\w+",output).group(0):
+            if "No" in re.match("\w+", output).group(0):
                 continue
             if device in line:
                 if "Streaming" in re.match("\w+", output).group(0):
@@ -837,7 +837,7 @@ class HumanMonitor(Monitor):
         if (mode == "existing") and "-n" in info:
             args = "-n %s" % args
         if (sync == "full") and "-f" in info:
-            args ="-f %s" % args
+            args = "-f %s" % args
         if (speed is not None) and ("speed" in info):
             args = "%s %s" % (args, speed)
         cmd = "%s %s" % (cmd, args)
@@ -1655,7 +1655,7 @@ class QMPMonitor(Monitor):
 
         @return: The command's output
         """
-        val = value * 10**9
+        val = value * 10 ** 9
         args = {"value": val}
         return self.cmd("migrate_set_downtime", args)
 
