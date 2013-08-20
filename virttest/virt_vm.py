@@ -1,6 +1,6 @@
 import logging, time, glob, os, re
 from autotest.client.shared import error
-import utils_misc, utils_net, remote
+import utils_misc, utils_net, remote, aexpect
 
 
 class VMError(Exception):
@@ -952,6 +952,20 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         status_test_command = self.params.get("status_test_command", "")
+
+        #Some times need recreate the serial_console.
+        if not os.path.exists(self.serial_console.inpipe_filename):
+            try:
+                tmp_serial = self.serial_ports[0]
+            except IndexError:
+                raise self.VMConfigMissingError(self.name, "isa_serial")
+            self.serial_console = aexpect.ShellSession(
+                "nc -U %s" % self.get_serial_console_filename(tmp_serial),
+                auto_close=False,
+                output_func=utils_misc.log_line,
+                output_params=("serial-%s-%s.log" % (tmp_serial, self.name),),
+                prompt=self.params.get("shell_prompt", "[\#\$]"))
+            del tmp_serial
 
         self.serial_console.set_linesep(linesep)
         self.serial_console.set_status_test_command(status_test_command)
