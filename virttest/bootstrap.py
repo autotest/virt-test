@@ -313,7 +313,7 @@ def create_subtests_cfg(t_type):
     subtests_file = open(subtests_cfg, 'w')
     subtests_file.write(
         "# Do not edit, auto generated file from subtests config\n")
-    subtests_file.write("variants:\n")
+    subtests_file.write("variants subtest:\n")
     write_subtests_files(first_subtest_file, subtests_file)
     write_subtests_files(specific_file_list, subtests_file, t_type)
     write_subtests_files(shared_file_list, subtests_file)
