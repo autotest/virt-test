@@ -227,6 +227,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("List of space separated no filters to be "
                                  "passed to the config parser. If -c is "
                                  "provided, this will be ignored"))
+        general.add_option("--type-specific", action="store_true",
+                           dest="only_type_specific", default=False,
+                           help=("Enable only type specific tests. Shared"
+                                 " tests will not be tested."))
 
         self.add_option_group(general)
 
@@ -577,6 +581,12 @@ class VirtTestApp(object):
                 self.cartesian_parser.no_filter(no_filter)
 
 
+    def _process_only_type_specific(self):
+        if not self.options.config:
+            if self.options.only_type_specific:
+                self.cartesian_parser.only_filter("(subtest=type_specific)")
+
+
     def _process_general_options(self):
         """
         Calls for processing all generic options.
@@ -591,6 +601,7 @@ class VirtTestApp(object):
         self._process_mem()
         self._process_tcpdump()
         self._process_no_filter()
+        self._process_only_type_specific()
 
 
     def _process_options(self):
