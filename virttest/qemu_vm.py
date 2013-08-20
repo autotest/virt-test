@@ -2765,7 +2765,7 @@ class VM(virt_vm.BaseVM):
             error.context()
 
         try:
-            if (self.params["display"] == "spice" and
+            if (self.params["display"] == "spice" and local and
                 not (protocol == "exec" and "gzip" in migration_exec_cmd_src)):
                 host_ip = utils_net.get_host_ip_address(self.params)
                 dest_port = clone.spice_options.get('spice_port', '')

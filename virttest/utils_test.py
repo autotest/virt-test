@@ -519,6 +519,7 @@ class MultihostMigration(object):
         self.mig_timeout = int(params.get("mig_timeout"))
         # Port used to communicate info between source and destination
         self.regain_ip_cmd = params.get("regain_ip_cmd", None)
+        self.not_login_after_mig = params.get("not_login_after_mig", None)
 
         self.vm_lock = threading.Lock()
 
@@ -630,7 +631,7 @@ class MultihostMigration(object):
         if mig_data.params.get("host_mig_offline") != "yes":
             sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
                             mig_data.mig_id, self.sync_server)
-            mig_data.vm_ports = sync.sync(timeout=120)[mig_data.dst]
+            mig_data.vm_ports = sync.sync(timeout=240)[mig_data.dst]
             logging.info("Received from destination the migration port %s",
                          str(mig_data.vm_ports))
 
@@ -645,7 +646,7 @@ class MultihostMigration(object):
         if mig_data.params.get("host_mig_offline") != "yes":
             SyncData(self.master_id(), self.hostid,
                      mig_data.hosts, mig_data.mig_id,
-                     self.sync_server).sync(mig_data.vm_ports, timeout=120)
+                     self.sync_server).sync(mig_data.vm_ports, timeout=240)
 
 
     def _prepare_params(self, mig_data):
@@ -732,7 +733,9 @@ class MultihostMigration(object):
                 #serial console and IP renew command block test. Because
                 #there must be added "sleep" in IP renew command.
                 session_serial.cmd(self.regain_ip_cmd)
-            vm.wait_for_login(timeout=self.login_timeout)
+
+            if not self.not_login_after_mig:
+                vm.wait_for_login(timeout=self.login_timeout)
 
 
     def check_vms_src(self, mig_data):
