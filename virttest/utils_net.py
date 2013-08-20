@@ -1788,18 +1788,13 @@ def parse_arp():
 
 def verify_ip_address_ownership(ip, macs, timeout=10.0):
     """
-    Use arping and the ARP cache to make sure a given IP address belongs to one
+    Use arping to make sure a given IP address belongs to one
     of the given MAC addresses.
 
     @param ip: An IP address.
     @param macs: A list or tuple of MAC addresses.
     @return: True if ip is assigned to a MAC address in macs.
     """
-    ip_map = parse_arp()
-    for mac in macs:
-        if ip_map.get(mac) == ip:
-            return True
-
     # Compile a regex that matches the given IP address and any of the given
     # MAC addresses
     mac_regex = "|".join("(%s)" % mac for mac in macs)

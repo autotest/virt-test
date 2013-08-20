@@ -554,6 +554,27 @@ class BaseVM(object):
             raise VMMACAddressMissingError(nic_index)
 
 
+    def update_mac_address(self, nic_index=0):
+        """
+        Update the MAC address of a NIC or guest.
+
+        @param nic_index: Name or index of the NIC whose address is requested.
+        @return: True if update success, False if update failed.
+        @raise: whatever libvirt_vm.get_virsh_mac_address() raises.
+        """
+        mac = None
+        if self.params.get('vm_type') == 'libvirt':
+            mac = self.get_virsh_mac_address(nic_index)
+        # else TODO: Look up mac from existing qemu-kvm process.
+
+        if mac:
+            nic = self.virtnet[nic_index]
+            nic.mac = mac
+            return True
+        else:
+            return False
+
+
     def get_address(self, index=0):
         """
         Return the IP address of a NIC or guest (in host space).
@@ -663,6 +684,8 @@ class BaseVM(object):
             try:
                 return self.get_address(nic_index_or_name)
             except (VMIPAddressMissingError, VMAddressVerificationError):
+                # Maybe the mac of nic is outdated.
+                self.update_mac_address(nic_index_or_name)
                 return False
         if not utils_misc.wait_for(_get_address, timeout, internal_timeout):
             raise VMIPAddressMissingError(self.virtnet[nic_index_or_name].mac)
@@ -807,13 +830,13 @@ class BaseVM(object):
         prompt = self.params.get("shell_prompt", "[\#\$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
-        address = self.get_address(nic_index)
+        address = self.wait_for_get_address(nic_index)
         port = self.get_port(int(self.params.get("shell_port")))
         log_filename = ("session-%s-%s.log" %
                         (self.name, utils_misc.generate_random_string(4)))
         session = remote.remote_login(client, address, port, username,
-                                           password, prompt, linesep,
-                                           log_filename, timeout)
+                                      password, prompt, linesep,
+                                      log_filename, timeout)
         session.set_status_test_command(self.params.get("status_test_command",
                                                         ""))
         self.remote_sessions.append(session)
@@ -890,7 +913,7 @@ class BaseVM(object):
         if not password:
             password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
-        address = self.get_address(nic_index)
+        address = self.wait_for_get_address(nic_index)
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-to-%s-%s.log" %
                         (self.name, address,
@@ -922,7 +945,7 @@ class BaseVM(object):
         if not password:
             password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
-        address = self.get_address(nic_index)
+        address = self.wait_for_get_address(nic_index)
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-from-%s-%s.log" %
                         (self.name, address,
