@@ -373,6 +373,18 @@ class VirtTestApp(object):
             self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
             self.cartesian_parser.assign("qemu_io_binary", qemu_io_path)
 
+    def _process_qemu_img(self):
+        """
+        Puts the value of the qemu bin option in the cartesian parser command.
+        """
+        if self.options.config and self.options.qemu is None:
+            logging.info("Config provided and no --qemu-bin set. Not trying "
+                         "to automatically set qemu bin.")
+        else:
+            (_, qemu_img_path,
+             _) = _find_default_qemu_paths(self.options.qemu)
+            self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
+
     def _process_qemu_accel(self):
         """
         Puts the value of the qemu bin option in the cartesian parser command.
@@ -504,7 +516,6 @@ class VirtTestApp(object):
 
         self._process_qemu_bin()
         self._process_qemu_accel()
-        self._process_bridge_mode()
         self._process_monitor()
         self._process_smp()
         self._process_image_type()
@@ -593,6 +604,11 @@ class VirtTestApp(object):
                 no_filter = ", ".join(self.options.no_filter.split(' '))
                 self.cartesian_parser.no_filter(no_filter)
 
+    def _process_only_type_specific(self):
+        if not self.options.config:
+            if self.options.only_type_specific:
+                self.cartesian_parser.only_filter("(subtest=type_specific)")
+
     def _process_general_options(self):
         """
         Calls for processing all generic options.
@@ -607,6 +623,10 @@ class VirtTestApp(object):
         self._process_mem()
         self._process_tcpdump()
         self._process_no_filter()
+        self._process_qemu_img()
+        self._process_bridge_mode()
+        self._process_only_type_specific()
+
 
     def _process_options(self):
         """
