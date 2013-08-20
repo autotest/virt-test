@@ -271,9 +271,6 @@ class VirshPersistent(Virsh):
 
     __slots__ = Virsh.__slots__ + ('session_id', )
 
-    # Help detect leftover sessions
-    SESSION_COUNTER = 0
-
     # B/c the auto_close of VirshSession is False, we
     # need to manager the ref-count of it manully.
     COUNTERS = {}
@@ -340,9 +337,7 @@ class VirshPersistent(Virsh):
                 try:
                     existing = VirshSession(a_id=session_id)
                     if existing.is_alive():
-                        if self.counter_decrease():
-                            # Keep count
-                            self.__class__.SESSION_COUNTER -= 1
+                        self.counter_decrease()
                 except aexpect.ShellStatusError:
                     # session was already closed
                     pass # don't check is_alive or update counter
@@ -361,8 +356,6 @@ class VirshPersistent(Virsh):
         self.close_session()
         # Always create new session
         new_session = VirshSession(virsh_exec, uri, a_id=None)
-        # Keep count
-        self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
         self.dict_set('session_id', session_id)
 
@@ -410,8 +403,6 @@ class VirshConnectBack(VirshPersistent):
                                    remote_ip=remote_ip,
                                    remote_user=remote_user,
                                    remote_pwd=remote_pwd)
-        # Keep count
-        self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
         self.dict_set('session_id', session_id)
 
