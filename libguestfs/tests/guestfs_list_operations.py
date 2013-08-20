@@ -8,7 +8,7 @@ class GuestfishTools(lgf.GuestfishPersistent):
 
     """Useful Tools for Guestfish class."""
 
-    __slots__ = lgf.GuestfishPersistent.__slots__ + ('params', )
+    __slots__ = ['params']
 
     def __init__(self, params):
         """
@@ -44,6 +44,7 @@ def test_list_with_mount(vm, params):
     """
     params['libvirt_domain'] = vm.name
     params['inspector'] = False
+
     gf = GuestfishTools(params)
 
     # Launch
