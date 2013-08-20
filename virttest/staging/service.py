@@ -382,40 +382,6 @@ class _ServiceCommandGenerator(object):
             setattr(self, command, command_generator(command))
 
 
-def _get_name_of_init(run=utils.run):
-    """
-    Internal function to determine what executable is PID 1,
-    aka init by checking /proc/1/exe
-    :return: executable name for PID 1, aka init
-    :rtype:  str
-    """
-    # /proc/1/comm was added in 2.6.33 and is not in RHEL6.x, so use cmdline
-    # Non-root can read cmdline
-    # return os.path.basename(open("/proc/1/cmdline").read().split(chr(0))[0])
-    # readlink /proc/1/exe requires root
-    # inspired by openvswitch.py:ServiceManagerInterface.get_version()
-    output = run("readlink /proc/1/exe").stdout.strip()
-    return os.path.basename(output)
-
-
-def get_name_of_init(run=utils.run):
-    """
-    Determine what executable is PID 1, aka init by checking /proc/1/exe
-    This init detection will only run once and cache the return value.
-
-    :return: executable name for PID 1, aka init
-    :rtype:  str
-    """
-    # _init_name is explicitly undefined so that we get the NameError on first access
-    # pylint: disable=W0601
-    global _init_name
-    try:
-        return _init_name
-    except (NameError, AttributeError):
-        _init_name = _get_name_of_init(run)
-        return _init_name
-
-
 class _SpecificServiceManager(object):
 
     def __init__(self, service_name, service_command_generator, service_result_parser, run=utils.run):
@@ -658,141 +624,183 @@ class _SystemdServiceManager(_GenericServiceManager):
         os.rename(tmp_symlink, "/etc/systemd/system/default.target")
 
 
-_command_generators = {"init": sys_v_init_command_generator,
-                       "systemd": systemd_command_generator}
-
-_result_parsers = {"init": sys_v_init_result_parser,
-                   "systemd": systemd_result_parser}
-
-_service_managers = {"init": _SysVInitServiceManager,
-                     "systemd": _SystemdServiceManager}
-
-
-def _get_service_result_parser(run=utils.run):
+class Factory(object):
     """
-    Get the ServiceResultParser using the auto-detect init command.
+    Class to create different kinds of ServiceManager.
+    The all interfaces to create manager are staticmethod,
+    so we do not have to create an instance of factory
+    when create manager.
 
-    :return: ServiceResultParser fro the current init command.
-    :rtype: _ServiceResultParser
-    """
-    # pylint: disable=W0601
-    global _service_result_parser
-    try:
-        return _service_result_parser
-    except NameError:
-        result_parser = _result_parsers[get_name_of_init(run)]
-        _service_result_parser = _ServiceResultParser(result_parser)
-        return _service_result_parser
-
-
-def _get_service_command_generator(run=utils.run):
-    """
-    Lazy initializer for ServiceCommandGenerator using the auto-detect init command.
-
-    :return: ServiceCommandGenerator for the current init command.
-    :rtype: _ServiceCommandGenerator
-    """
-    # _service_command_generator is explicitly undefined so that we get the NameError on first access
-    # pylint: disable=W0601
-    global _service_command_generator
-    try:
-        return _service_command_generator
-    except NameError:
-        command_generator = _command_generators[get_name_of_init(run)]
-        _service_command_generator = _ServiceCommandGenerator(
-            command_generator)
-        return _service_command_generator
-
-
-def ServiceManager(run=utils.run):
-    """
-    Detect which init program is being used, init or systemd and return a
-    class has methods to start/stop services.
-
-    # Get the system service manager
-    service_manager = ServiceManager()
-
-    # Stating service/unit "sshd"
-    service_manager.start("sshd")
-
-    # Getting a list of available units
-    units = service_manager.list()
-
-    # Disabling and stopping a list of services
-    services_to_disable = ['ntpd', 'httpd']
-    for s in services_to_disable:
-        service_manager.disable(s)
-        service_manager.stop(s)
-
-    :return: SysVInitServiceManager or SystemdServiceManager
-    :rtype: _GenericServiceManager
-    """
-    service_manager = _service_managers[get_name_of_init(run)]
-    # _service_command_generator is explicitly undefined so that we get the NameError on first access
-    # pylint: disable=W0601
-    global _service_manager
-    try:
-        return _service_manager
-    except NameError:
-        _service_manager = service_manager(_get_service_command_generator(run),
-                                           _get_service_result_parser(run))
-        return _service_manager
-
-
-def _auto_create_specific_service_result_parser(run=utils.run):
-    """
-    Create a class that will create partial functions that generate result_parser
-    for the current init command.
-
-    :return: A ServiceResultParser for the auto-detected init command.
-    :rtype: _ServiceResultParser
-    """
-    result_parser = _result_parsers[get_name_of_init(run)]
-    # remove list method
-    command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
-    return _ServiceResultParser(result_parser, command_list)
-
-
-def _auto_create_specific_service_command_generator(run=utils.run):
-    """
-    Create a class that will create partial functions that generate commands
-    for the current init command.
-
-    lldpad = SpecificServiceManager("lldpad",
-     auto_create_specific_service_command_generator())
-    lldpad.start()
-    lldpad.stop()
-
-    :return: A ServiceCommandGenerator for the auto-detected init command.
-    :rtype: _ServiceCommandGenerator
-    """
-    command_generator = _command_generators[get_name_of_init(run)]
-    # remove list method
-    command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
-    return _ServiceCommandGenerator(command_generator, command_list)
-
-
-def SpecificServiceManager(service_name, run=utils.run):
+    * ServiceManager:
+        * Interface: create_generic_service()
+        * Description: Object to manage the all services(lldp, sshd and so on).
+    * SpecificServiceManager:
+        * interface: create_specific_service()
+        * description: Object to manage specific service(such as sshd).
     """
 
-    # Get the specific service manager for sshd
-    sshd = SpecificServiceManager("sshd")
-    sshd.start()
-    sshd.stop()
-    sshd.reload()
-    sshd.restart()
-    sshd.condrestart()
-    sshd.status()
-    sshd.enable()
-    sshd.disable()
-    sshd.is_enabled()
+    class FactoryHelper(object):
+        """
+        Internal class to help create service manager.
 
-    :param service_name: systemd unit or init.d service to manager
-    :type service_name: str
-    :return: SpecificServiceManager that has start/stop methods
-    :rtype: _SpecificServiceManager
-    """
-    return _SpecificServiceManager(service_name,
-                                   _auto_create_specific_service_command_generator(
-                                       run),
-                                   _get_service_result_parser(run), run)
+        Provide some functions to auto detect system type.
+        And auto create command_generator and result_parser.
+        """
+        _command_generators = {"init": sys_v_init_command_generator,
+                               "systemd": systemd_command_generator}
+
+        _result_parsers = {"init": sys_v_init_result_parser,
+                           "systemd": systemd_result_parser}
+
+        _service_managers = {"init": _SysVInitServiceManager,
+                             "systemd": _SystemdServiceManager}
+
+        def __init__(self, run=utils.run):
+            """
+            Init a helper to create service manager.
+
+            :param run: Funtion to run command.
+            :type: utils.run-like function.
+            """
+            result = run("true")
+            if not isinstance(result, utils.CmdResult):
+                raise ValueError("Param run is a/an %s, "
+                                 "but not an instance of utils.CmdResult."
+                                 % (type(result)))
+            self.run = run
+            self.init_name = self.get_name_of_init()
+
+        def get_name_of_init(self):
+            """
+            Internal function to determine what executable is PID 1,
+            aka init by checking /proc/1/exe
+            :return: executable name for PID 1, aka init
+            :rtype:  str
+            """
+            # /proc/1/comm was added in 2.6.33 and is not in RHEL6.x, so use cmdline
+            # Non-root can read cmdline
+            # return os.path.basename(open("/proc/1/cmdline").read().split(chr(0))[0])
+            # readlink /proc/1/exe requires root
+            # inspired by openvswitch.py:ServiceManagerInterface.get_version()
+            output = self.run("readlink /proc/1/exe").stdout.strip()
+            return os.path.basename(output)
+
+        def get_generic_service_manager_type(self):
+            """
+            Get the ServiceManager type using the auto-detect init command.
+
+            :return: Subclass type of _GenericServiceManager fro the current init command.
+            :rtype: _SysVInitServiceManager or _SystemdServiceManager.
+            """
+            return self._service_managers[self.init_name]
+
+        def get_generic_service_result_parser(self):
+            """
+            Get the ServiceResultParser using the auto-detect init command.
+
+            :return: ServiceResultParser fro the current init command.
+            :rtype: _ServiceResultParser
+            """
+            result_parser = self._result_parsers[self.init_name]
+            return _ServiceResultParser(result_parser)
+
+        def get_generic_service_command_generator(self):
+            """
+            Lazy initializer for ServiceCommandGenerator using the auto-detect init command.
+
+            :return: ServiceCommandGenerator for the current init command.
+            :rtype: _ServiceCommandGenerator
+            """
+            command_generator = self._command_generators[self.init_name]
+            return _ServiceCommandGenerator(command_generator)
+
+        def get_specific_service_result_parser(self):
+            """
+            Create a class that will create partial functions that generate result_parser
+            for the current init command.
+
+            :return: A ServiceResultParser for the auto-detected init command.
+            :rtype: _ServiceResultParser
+            """
+            result_parser = self._result_parsers[self.init_name]
+            # remove list method
+            command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
+            return _ServiceResultParser(result_parser, command_list)
+
+        def get_specific_service_command_generator(self):
+            """
+            Create a class that will create partial functions that generate commands
+            for the current init command.
+
+            lldpad = SpecificServiceManager("lldpad",
+             auto_create_specific_service_command_generator())
+            lldpad.start()
+            lldpad.stop()
+
+            :return: A ServiceCommandGenerator for the auto-detected init command.
+            :rtype: _ServiceCommandGenerator
+            """
+            command_generator = self._command_generators[self.init_name]
+            # remove list method
+            command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
+            return _ServiceCommandGenerator(command_generator, command_list)
+
+    @staticmethod
+    def create_generic_service(run=utils.run):
+        """
+        Detect which init program is being used, init or systemd and return a
+        class has methods to start/stop services.
+
+        # Get the system service manager
+        service_manager = Factory.create_generic_service()
+
+        # Stating service/unit "sshd"
+        service_manager.start("sshd")
+
+        # Getting a list of available units
+        units = service_manager.list()
+
+        # Disabling and stopping a list of services
+        services_to_disable = ['ntpd', 'httpd']
+        for s in services_to_disable:
+            service_manager.disable(s)
+            service_manager.stop(s)
+
+        :return: SysVInitServiceManager or SystemdServiceManager
+        :rtype: _GenericServiceManager
+        """
+        helper = Factory.FactoryHelper(run)
+        service_manager = helper.get_generic_service_manager_type()
+        command_generator = helper.get_generic_service_command_generator()
+        result_parser = helper.get_generic_service_result_parser()
+        return service_manager(command_generator, result_parser, run)
+
+    @staticmethod
+    def create_specific_service(service_name, run=utils.run):
+        """
+
+        # Get the specific service manager for sshd
+        sshd = Factory.create_specific_service("sshd")
+        sshd.start()
+        sshd.stop()
+        sshd.reload()
+        sshd.restart()
+        sshd.condrestart()
+        sshd.status()
+        sshd.enable()
+        sshd.disable()
+        sshd.is_enabled()
+
+        :param service_name: systemd unit or init.d service to manager
+        :type service_name: str
+        :return: SpecificServiceManager that has start/stop methods
+        :rtype: _SpecificServiceManager
+        """
+        helper = Factory.FactoryHelper(run)
+        command_generator = helper.get_specific_service_command_generator()
+        result_parser = helper.get_specific_service_result_parser()
+
+        return _SpecificServiceManager(service_name,
+                                       command_generator,
+                                       result_parser,
+                                       run)
