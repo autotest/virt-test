@@ -148,9 +148,7 @@ class ConstructorsTest(ModuleLoad):
         else:
             logging.disable(logging.INFO)
             vp = self.virsh.VirshPersistent()
-            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 1)
             vp.close_session() # Make sure session gets cleaned up
-            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 0)
 
 
     def TestVirshClosure(self):
@@ -295,9 +293,7 @@ class VirshPersistentClassHasHelpCommandTest(VirshHasHelpCommandTest):
         logging.disable(logging.INFO)
         super(VirshPersistentClassHasHelpCommandTest, self).setUp()
         self.VirshPersistent = self.virsh.VirshPersistent
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
         self.virsh = self.VirshPersistent(debug=False)
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
         self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
 
 
@@ -308,10 +304,8 @@ class VirshPersistentClassHasHelpCommandTest(VirshHasHelpCommandTest):
 
 
     def tearDown(self):
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
         self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
         self.virsh.close_session()
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
         self.assertFalse(utils.process_is_alive(self.virsh.virsh_exec))
 
 
