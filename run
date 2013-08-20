@@ -307,7 +307,7 @@ class VirtTestRunParser(optparse.OptionParser):
 
 
 DEFAULT_MACHINE_TYPE = "i440fx"
-DEFAULT_GUEST_OS = "JeOS"
+DEFAULT_GUEST_OS = "JeOS.19"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
 LIBVIRT_DEFAULT_SET = (
     "unattended_install.import.import.default_install.aio_native, "
