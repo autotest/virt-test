@@ -1148,6 +1148,7 @@ class QUSBBus(QSparseBus):
         super(QUSBBus, self).__init__('bus', [['port'], [length + 1]], busid,
                                       bus_type, aobject)
         self.__port_prefix = port_prefix
+        self.__length = length
 
     def _set_first_addr(self, addr_pattern):
         """ First addr is not 0 but 1 """
@@ -1214,6 +1215,9 @@ class QUSBBus(QSparseBus):
                 addr = ['%s.%s' % (self.__port_prefix, addr[0])]
         self.__hook_child_bus(device, addr)
         device['bus'] = True    # Force bus item to be updated
+        if addr[0] == self.__length:
+            # Force port on the last device, otherwise qemu adds usb-hub
+            device['port'] = True
         super(QUSBBus, self)._update_device_props(device, addr)
 
 
