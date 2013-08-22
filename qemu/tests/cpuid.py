@@ -519,7 +519,8 @@ def run_cpuid(test, params, env):
         except virt_vm.VMCreateError,e:
             if "host doesn't support requested feature:" in e.output \
                 or ("host cpuid" in e.output and \
-                    "lacks requested flag" in e.output):
+                    ("lacks requested flag" in e.output or
+                     "flag restricted to guest" in e.output)):
                 raise error.TestNAError("Can't run CPU model %s on this host" % (cpu_model))
             else:
                 raise
