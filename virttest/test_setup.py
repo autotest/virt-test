@@ -842,7 +842,7 @@ class PciAssignable(object):
                 return []
         self.setup = None
         cmd = "lspci | awk '/%s/ {print $1}'" % self.vf_filter_re
-        return utils.system_output(cmd, verbose=False).split()
+        return utils.run(cmd).stdout.split()
 
 
     def get_pf_devs(self):
@@ -913,7 +913,7 @@ class PciAssignable(object):
         # 'virtual function' belongs to which physical card considering
         # that if the host has more than one 82576 card. PCI_ID?
         cmd = "lspci | grep '%s' | wc -l" % self.vf_filter_re
-        return int(utils.system_output(cmd, verbose=False))
+        return int(utils.run(cmd, verbose=False).stdout)
 
 
     def check_vfs_count(self):
