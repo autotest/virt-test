@@ -6,12 +6,11 @@ from virttest import utils_misc, utils_test, aexpect, utils_net
 @error.context_aware
 def run_vlan(test, params, env):
     """
-    Test 802.1Q vlan of NIC, config it by vconfig command.
+    Test 802.1Q vlan of NIC, config it by vconfig/ip command.
 
     1) Create two VMs.
-    2) load 8021q module in guest for vconfig.
-    3) Setup vlans by vconfig in guest and using hard-coded
-       ip address.
+    2) load 8021q module in guest.
+    3) Setup vlans by vconfig/ip in guest and using hard-coded ip address.
     4) Enable arp_ignore for all ipv4 device in guest.
     5) Repeat steps 2 - 4 in every guest.
     6) Test by ping between same and different vlans of two VMs.
@@ -24,35 +23,64 @@ def run_vlan(test, params, env):
     @param params: Dictionary with the test parameters.
     @param env: Dictionary with test environment.
     """
-
-
-    def add_vlan(session, v_id, iface="eth0"):
+    def add_vlan(session, v_id, iface="eth0", cmd_type="ip"):
+        """
+        Creates a vlan-device on iface by cmd that assigned by cmd_type
+        now only support 'ip' and 'vconfig'
+        """
         txt = "Create a vlan-device on interface %s with vlan id %s" % (iface,
                                                                         v_id)
         error.context(txt, logging.info)
-        session.cmd("vconfig add %s %s" % (iface, v_id))
+        if cmd_type == "vconfig":
+            cmd = "vconfig add %s %s" % (iface, v_id)
+        elif cmd_type == "ip":
+            v_name = "%s.%s" % (iface, v_id)
+            cmd = "ip link add link %s %s type vlan id %s " % (iface,
+                                                               v_name, v_id)
+        else:
+            err_msg = "Unexpected vlan operation command: %s" %  cmd_type
+            err_msg += "only support 'ip' and 'vconfig' now"
+            raise error.TestError(err_msg)
+        session.cmd(cmd)
 
 
     def set_ip_vlan(session, v_id, ip, iface="eth0"):
+        """
+        Set ip address of vlan interface
+        """
         iface = "%s.%s" % (iface, v_id)
         txt = "Set ip to '%s' for interface '%s'" % (iface, ip)
         error.context(txt, logging.info)
         session.cmd("ifconfig %s %s" % (iface, ip))
 
 
-    def set_arp_ignore(session, iface="eth0"):
-        error.context("Enable arp_ignore for all ipv4 device  in guest",
+    def set_arp_ignore(session):
+        """
+        Enable arp_ignore for all ipv4 device in guest
+        """
+        error.context("Enable arp_ignore for all ipv4 device in guest",
                        logging.info)
         ignore_cmd = "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore"
         session.cmd(ignore_cmd)
 
 
-    def rem_vlan(session, v_id, iface="eth0"):
-        rem_vlan_cmd = "if [[ -e /proc/net/vlan/%s ]];then vconfig rem %s;fi"
-        iface = "%s.%s" % (iface, v_id)
-        error.context("Remove the named vlan-device '%s'." % iface,
-                       logging.info)
-        return session.cmd_status(rem_vlan_cmd % (iface, iface))
+    def rem_vlan(session, v_id, iface="eth0", cmd_type="ip"):
+        """
+        Removes the named vlan interface(iface+v_id)
+        """
+        v_iface = '%s.%s' % (iface, v_id)
+        if cmd_type == "vconfig":
+            rem_vlan_cmd = "vconfig rem %s" % v_iface
+        elif cmd_type == "ip":
+            rem_vlan_cmd = "ip link delete %s" % v_iface
+        else:
+            err_msg = "Unexpected vlan operation command: %s" %  cmd_type
+            err_msg += "only support 'ip' and 'vconfig' now"
+            raise error.TestError(err_msg)
+
+        send_cmd = "[ -e /proc/net/vlan/%s ] && %s" % (v_iface, rem_vlan_cmd)
+        error.context("Remove the vlan-device '%s'." % v_iface, logging.info)
+        return session.cmd_status(send_cmd)
 
 
     def nc_transfer(src, dst):
@@ -81,7 +109,7 @@ def run_vlan(test, params, env):
             logging.info("digest_origin is  %s", digest_origin[src])
             logging.info("digest_receive is %s", digest_receive)
             raise error.TestFail("File transfered differ from origin")
-        session[dst].cmd_output("rm -f receive")
+        session[dst].cmd("rm -f receive")
 
 
     def flood_ping(src, dst):
@@ -104,10 +132,12 @@ def run_vlan(test, params, env):
     digest_origin = []
     vlan_ip = ['', '']
     ip_unit = ['1', '2']
-    subnet = params.get("subnet")
-    vlan_num = int(params.get("vlan_num"))
+    subnet = params.get("subnet", "192.168")
+    vlan_num = int(params.get("vlan_num", 5))
     maximal = int(params.get("maximal"))
-    file_size = params.get("file_size")
+    file_size = params.get("file_size", 4094)
+    cmd_type = params.get("cmd_type", "ip")
+    login_timeout = int(params.get("login_timeout", 360))
 
     vm.append(env.get_vm(params["main_vm"]))
     vm.append(env.get_vm("vm2"))
@@ -115,11 +145,10 @@ def run_vlan(test, params, env):
         vm_.verify_alive()
 
     for i in range(2):
-        session.append(vm[i].wait_for_login(
-            timeout=int(params.get("login_timeout", 360))))
+        session.append(vm[i].wait_for_login(timeout=login_timeout))
         if not session[i] :
-            raise error.TestError("Could not log into guest(vm%d)" % i)
-        logging.info("Logged in")
+            raise error.TestError("Could not log into guest %s" % vm[i].name)
+        logging.info("Logged in %s successfull" % vm[i].name)
 
         ifname.append(utils_net.get_linux_ifname(session[i],
                       vm[i].get_mac_address()))
@@ -134,22 +163,23 @@ def run_vlan(test, params, env):
         digest_origin.append(re.findall(r'(\w+)', output)[0])
 
         #stop firewall in vm
-        session[i].cmd_output("/etc/init.d/iptables stop")
+        session[i].cmd("service iptables stop; true")
 
-        error.context("load 8021q module in guest for vconfig", logging.info)
+        error.context("load 8021q module in guest %s" % vm[i].name,
+                      logging.info)
         session[i].cmd("modprobe 8021q")
 
     try:
         for i in range(2):
             logging.info("Setup vlan environment in guest %s" % vm[i].name)
             for vlan_i in range(1, vlan_num+1):
-                add_vlan(session[i], vlan_i, ifname[i])
-                set_ip_vlan(session[i], vlan_i, "%s.%s.%s" %
-                            (subnet, vlan_i, ip_unit[i]), ifname[i])
-            set_arp_ignore(session[i], ifname[i])
+                add_vlan(session[i], vlan_i, ifname[i], cmd_type)
+                v_ip = "%s.%s.%s" % (subnet, vlan_i, ip_unit[i])
+                set_ip_vlan(session[i], vlan_i, v_ip, ifname[i])
+            set_arp_ignore(session[i])
 
         for vlan in range(1, vlan_num+1):
-            logging.info("Test for vlan %s", vlan)
+            error.context("Test for vlan %s" % vlan, logging.info)
 
             error.context("Ping test between vlans", logging.info)
             interface = ifname[0] + '.' + str(vlan)
@@ -177,8 +207,8 @@ def run_vlan(test, params, env):
     finally:
         for vlan in range(1, vlan_num+1):
             logging.info("rem vlan: %s", vlan)
-            rem_vlan(session[0], vlan, ifname[0])
-            rem_vlan(session[1], vlan, ifname[1])
+            rem_vlan(session[0], vlan, ifname[0], cmd_type)
+            rem_vlan(session[1], vlan, ifname[1], cmd_type)
 
     # Plumb/unplumb maximal number of vlan interfaces
     i = 1
@@ -186,10 +216,10 @@ def run_vlan(test, params, env):
     try:
         error.context("Testing the plumb of vlan interface", logging.info)
         for i in range (1, maximal+1):
-            add_vlan(session[0], i, ifname[0])
+            add_vlan(session[0], i, ifname[0], cmd_type)
     finally:
         for j in range (1, i+1):
-            s = s or rem_vlan(session[0], j, ifname[0])
+            s = s or rem_vlan(session[0], j, ifname[0], cmd_type)
         if s == 0:
             logging.info("maximal interface plumb test done")
         else:
