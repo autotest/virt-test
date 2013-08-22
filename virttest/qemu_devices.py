@@ -2541,7 +2541,9 @@ class DevContainer(object):
         devices[-1].set_param('serial', serial)
         devices[-1].set_param('x-data-plane', x_data_plane, bool)
         if fmt in ("ide", "ahci"):
-            if media == 'cdrom':
+            if not self.has_device('ide-hd'):
+                devices[-1].set_param('driver', 'ide-drive')
+            elif media == 'cdrom':
                 devices[-1].set_param('driver', 'ide-cd')
             else:
                 devices[-1].set_param('driver', 'ide-hd')
