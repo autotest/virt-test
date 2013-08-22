@@ -158,7 +158,9 @@
     <script>
       <chrooted config:type="boolean">true</chrooted>
       <source>
-        <![CDATA[insserv autoyast]]>
+        <![CDATA[insserv autoyast
+sed -i 's/^#S0\(.*\)9600\(.*\)/S0\1115200\2/g' /etc/inittab
+echo ttyS0 >> /etc/securetty]]>
       </source>
     </script>
   </chroot-scripts>

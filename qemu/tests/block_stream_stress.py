@@ -28,7 +28,7 @@ class BlockStreamStress(blk_stream.BlockStream):
             return True
         error.context("install stress app in guest", logging.info)
         link = params.get("download_link")
-        md5sum = params.get("md5sum")
+        md5sum = params.get("pkg_md5sum")
         tmp_dir = params.get("tmp_dir")
         install_cmd = params.get("install_cmd")
         config_cmd = params.get("config_cmd")
