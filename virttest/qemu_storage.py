@@ -389,8 +389,8 @@ class QemuImg(storage.QemuImg):
         image_filename = self.image_filename
         logging.debug("Checking image file %s", image_filename)
         qemu_img_cmd = self.image_cmd
-        image_is_qcow2 = self.image_format == 'qcow2'
-        if os.path.exists(image_filename) and image_is_qcow2:
+        image_is_checkable = self.image_format in ['qcow2', 'qed']
+        if os.path.exists(image_filename) and image_is_checkable:
             check_img = self.support_cmd("check") and self.support_cmd("info")
             if not check_img:
                 logging.debug("Skipping image check "
@@ -398,14 +398,14 @@ class QemuImg(storage.QemuImg):
             else:
                 try:
                     utils.run("%s info %s" % (qemu_img_cmd, image_filename),
-                              verbose=False)
+                              verbose=True)
                 except error.CmdError:
                     logging.error("Error getting info from image %s",
                                   image_filename)
 
                 cmd_result = utils.run("%s check %s" %
                                        (qemu_img_cmd, image_filename),
-                                       ignore_status=True, verbose=False)
+                                       ignore_status=True, verbose=True)
                 # Error check, large chances of a non-fatal problem.
                 # There are chances that bad data was skipped though
                 if cmd_result.exit_status == 1:
@@ -445,9 +445,9 @@ class QemuImg(storage.QemuImg):
             if not os.path.exists(image_filename):
                 logging.debug("Image file %s not found, skipping check",
                               image_filename)
-            elif not image_is_qcow2:
-                logging.debug("Image file %s not qcow2, skipping check",
-                              image_filename)
+            elif not image_is_checkable:
+                logging.debug("Image format %s is not checkable, skipping check",
+                              self.image_format)
 
 
 class Iscsidev(storage.Iscsidev):
