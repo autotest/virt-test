@@ -86,4 +86,4 @@ def run_stop_continue(test, params, env):
         if clean_op:
             error.context("Do clean operation: '%s'" % clean_op, logging.info)
             op_timeout = float(params.get("clean_op_timeout", 60))
-            session.cmd(clean_op, timeout=op_timeout)
+            session.cmd(clean_op, timeout=op_timeout, ignore_status=True)

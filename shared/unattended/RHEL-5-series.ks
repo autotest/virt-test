@@ -45,6 +45,7 @@ sg3_utils
 lsscsi
 libaio-devel
 perl-Time-HiRes
+NetworkManager
 
 %post
 echo "OS install is completed" > /dev/ttyS0
@@ -52,6 +53,7 @@ grubby --remove-args="rhgb quiet" --update-kernel=$(grubby --default-kernel)
 grubby --args="divider=10 crashkernel=128M@16M" --update-kernel=$(grubby --default-kernel)
 dhclient
 chkconfig sshd on
+chkconfig NetworkManager on
 iptables -F
 echo 0 > /selinux/enforce
 sed -i "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth0
