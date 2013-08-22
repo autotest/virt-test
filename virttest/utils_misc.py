@@ -800,7 +800,6 @@ def umount(src, mount_point, fstype):
     @mount_point: mount point
     @type: file system type
     """
-
     mount_string = "%s %s %s" % (src, mount_point, fstype)
     if is_mounted(src, mount_point, fstype):
         umount_cmd = "umount %s" % mount_point
@@ -855,6 +854,8 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :return: if the src is mounted as expect
     :rtype: Boolean
     """
+    mount_point = os.path.realpath(mount_point)
+    src = os.path.realpath(src)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
     if mount_string.strip() in file("/etc/mtab").read():
         logging.debug("%s is successfully mounted", src)
