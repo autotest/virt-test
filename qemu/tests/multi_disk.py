@@ -3,9 +3,9 @@ multi_disk test for Autotest framework.
 
 @copyright: 2011-2012 Red Hat Inc.
 """
-import logging, re, random, string
+import logging, re, random, string, threading
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process, qemu_monitor
+from virttest import qemu_qtree, env_process
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -84,32 +84,156 @@ def run_multi_disk(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-    def _add_param(name, value):
-        """ Converts name+value to stg_params string """
-        if value:
-            value = re.sub(' ', '\\ ', value)
-            return " %s:%s " % (name, value)
-        else:
-            return ''
-
-
     def _do_post_cmd(session):
         cmd = params.get("post_cmd")
         if cmd:
             session.cmd_status_output(cmd)
         session.close()
 
+
+    @error.context_aware
+    def _monitor_host_cpu_load(func):
+        cpu_load_list = []
+        t = threading.Thread(target=_do_get_host_cpu_load,
+                             name="CPU-load-thread", args=(cpu_load_list,))
+        t.start()
+
+        try:
+            if func and callable(func):
+                func()
+        finally:
+            utils.system("pkill -2 sar", ignore_status=True)
+            error.context("Wait monitor thread to join")
+            t.join(cmd_timeout)
+
+        if (not cpu_load_list) or (len(cpu_load_list) == 0):
+            raise error.TestError("Couldn't get host cpu load.")
+
+        return cpu_load_list[0]
+
+
+    def _do_get_host_cpu_load(cpu_load_list):
+        output = utils.system_output("sar -u ALL 2", timeout=(cmd_timeout * 16))
+        out = [l for l in output.splitlines() if "Average" in l]
+        if not out:
+            raise error.TestError("Couldn't get host cpu load."
+                                  " Output: '%s'" % output)
+
+        cpu_load_list.insert(0, float(out[-1].split()[-1]))
+
+
+    @error.context_aware
+    def _format_single_disk(disk):
+        disk = disk.strip()
+        # Random select one file system from file_system
+        index = random.randint(0, (len(file_system) - 1))
+        fs = file_system[index].strip()
+        cmd = params["format_command"] % (fs, disk)
+        error.context("Format test disk '%s' to '%s'" % (disk, fs))
+        session = vm.wait_for_login(timeout=login_timeout)
+        session.cmd(cmd, timeout=cmd_timeout)
+        cmd = params.get("mount_command")
+        if cmd:
+            error.context("Mount test disk '%s'" % disk)
+            cmd = cmd % (disk, disk, disk)
+            session.cmd(cmd)
+        session.close()
+
+
+    @error.context_aware
+    def _format_disks():
+        error.context("Format disks in guest", logging.info)
+        for disk in disks:
+            _format_single_disk(disk)
+
+
+    @error.context_aware
+    def _format_disks_parallel():
+        thread_list = []
+        for disk in disks:
+            t = threading.Thread(target=_format_single_disk,
+                                 name="Format-thread-%s" % disk, args=(disk,))
+            thread_list.append(t)
+
+        error.context("Format disks in guest parallel", logging.info)
+        for t in thread_list:
+            t.start()
+
+        for t in thread_list:
+            error.context("Wait for '%s' process to join" % t.name,
+                          logging.info)
+            t.join(cmd_timeout)
+
+
+    @error.context_aware
+    def _copy_file(disk):
+        disk = disk.strip()
+        error.context("Performing I/O on disk '%s'" % disk)
+        cmd_list = params["cmd_list"].split()
+        session = vm.wait_for_login(timeout=login_timeout)
+        for cmd_l in cmd_list:
+            cmd = params.get(cmd_l)
+            if cmd:
+                session.cmd(cmd % disk, timeout=cmd_timeout)
+
+        cmd = params["compare_command"]
+        key_word = params["check_result_key_word"]
+        output = session.cmd_output(cmd)
+        session.close()
+        if key_word not in output:
+            raise error.TestFail("Files on guest os root fs and disk "
+                                 "are different")
+
+
+    @error.context_aware
+    def _copy_files():
+        error.context("Cope file into/outof disks", logging.info)
+        for disk in disks:
+            _copy_file(disk)
+
+
+    @error.context_aware
+    def _copy_files_parallel():
+        thread_list = []
+        for disk in disks:
+            t = threading.Thread(target=_copy_file,
+                                 name="Copy-thread-%s" % disk, args=(disk,))
+            thread_list.append(t)
+
+        error.context("Cope file into/outof disks", logging.info)
+        for t in thread_list:
+            t.start()
+
+        for t in thread_list:
+            error.context("Wait for '%s' process to join" % t.name,
+                          logging.info)
+            t.join(cmd_timeout)
+
+
+    @error.context_aware
+    def _umount_disks(ignore_error=False):
+        cmd = params.get("show_mount_cmd")
+        if not cmd:
+            return
+
+        try:
+            output = session.cmd_output(cmd)
+            disks = re.findall(re_str, output)
+            disks.sort()
+            umount_cmd = params["umount_command"]
+            for disk in disks:
+                error.context("Unmounting disk '%s'" % disk)
+                cmd = umount_cmd % (disk, disk)
+                session.cmd(cmd)
+        except Exception, err:
+            logging.warn("Get error when cleanup, '%s'", err)
+            if not ignore_error:
+                raise
+
+
     error.context("Parsing test configuration", logging.info)
     stg_image_num = 0
     stg_params = params.get("stg_params", "")
-    # Compatibility
-    stg_params += _add_param("image_size", params.get("stg_image_size"))
-    stg_params += _add_param("image_format", params.get("stg_image_format"))
-    stg_params += _add_param("image_boot", params.get("stg_image_boot", "no"))
-    stg_params += _add_param("drive_format", params.get("stg_drive_format"))
-    if params.get("stg_assign_index") != "no":
-        # Assume 0 and 1 are already occupied (hd0 and cdrom)
-        stg_params += _add_param("drive_index", 'range(2,n)')
     param_matrix = {}
 
     stg_params = stg_params.split(' ')
@@ -194,7 +318,8 @@ def run_multi_disk(test, params, env):
     error.context("Start the guest with those disks", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.create(timeout=max(10, stg_image_num), params=params)
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    login_timeout = int(params.get("login_timeout", 360))
+    session = vm.wait_for_login(timeout=login_timeout)
 
     n_repeat = int(params.get("n_repeat", "1"))
     file_system = [_.strip() for _ in params.get("file_system").split()]
@@ -274,64 +399,30 @@ def run_multi_disk(test, params, env):
 
     try:
         for i in range(n_repeat):
-            logging.info("iterations: %s", (i + 1))
-            error.context("Format those disks in guest", logging.info)
-            for disk in disks:
-                disk = disk.strip()
-                error.context("Preparing disk: %s..." % disk)
+            error.context("Iterations: %s" % (i + 1))
+            if params.get("multi_disk_parallel_test") != "yes":
+                _format_disks()
+                _copy_files()
+                _umount_disks()
+                continue
 
-                # Random select one file system from file_system
-                index = random.randint(0, (len(file_system) - 1))
-                fs = file_system[index].strip()
-                cmd = params["format_command"] % (fs, disk)
-                error.context("formatting test disk")
-                session.cmd(cmd, timeout=cmd_timeout)
-                cmd = params.get("mount_command")
-                if cmd:
-                    cmd = cmd % (disk, disk, disk)
-                    session.cmd(cmd)
+            load_parallel = _monitor_host_cpu_load(_format_disks_parallel)
+            _umount_disks()
+            load_normal = _monitor_host_cpu_load(_format_disks)
+            if (load_parallel / load_normal) < 0.9:
+                raise error.TestFail("The cpu load during formatting operation"
+                                     " is higher than expected. The cpu load"
+                                     " is: (parallel vs. sequence)"
+                                     " %f / %f" % (load_parallel, load_normal))
 
-            error.context("Cope file into / out of those disks", logging.info)
-            for disk in disks:
-                disk = disk.strip()
-
-                error.context("Performing I/O on disk: %s..." % disk)
-                cmd_list = params["cmd_list"].split()
-                for cmd_l in cmd_list:
-                    cmd = params.get(cmd_l)
-                    if cmd:
-                        session.cmd(cmd % disk, timeout=cmd_timeout)
-
-                cmd = params["compare_command"]
-                key_word = params["check_result_key_word"]
-                output = session.cmd_output(cmd)
-                if key_word not in output:
-                    raise error.TestFail("Files on guest os root fs and disk "
-                                         "differ")
-
-            if params.get("umount_command"):
-                cmd = params.get("show_mount_cmd")
-                output = session.cmd_output(cmd)
-                disks = re.findall(re_str, output)
-                disks.sort()
-                for disk in disks:
-                    disk = disk.strip()
-                    error.context("Unmounting disk: %s..." % disk)
-                    cmd = params.get("umount_command") % (disk, disk)
-                    session.cmd(cmd)
+            load_parallel = _monitor_host_cpu_load(_copy_files_parallel)
+            load_normal = _monitor_host_cpu_load(_copy_files)
+            if (load_parallel / load_normal) < 0.9:
+                raise error.TestFail("The cpu load during copying operation"
+                                     " is higher than expected. The cpu load"
+                                     " is: (parallel vs. sequence)"
+                                     " %f / %f" % (load_parallel, load_normal))
+            _umount_disks()
     finally:
-        cmd = params.get("show_mount_cmd")
-        if cmd:
-            try:
-                output = session.cmd_output(cmd)
-                disks = re.findall(re_str, output)
-                disks.sort()
-                for disk in disks:
-                    error.context("Unmounting disk: %s..." % disk)
-                    cmd = params["umount_command"] % (disk, disk)
-                    session.cmd(cmd)
-            except Exception, err:
-                logging.warn("Get error when cleanup, '%s'", err)
-
+        _umount_disks(ignore_error=True)
         _do_post_cmd(session)
-        session.close()
