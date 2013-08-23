@@ -57,6 +57,8 @@ xfsprogs
 lsscsi
 libaio-devel
 perl-Time-HiRes
+glibc-devel
+glibc-static
 
 %post
 echo "OS install is completed" > /dev/ttyS0
