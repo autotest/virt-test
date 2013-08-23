@@ -8,5 +8,7 @@ DIR="$(dirname "$0")"
 set -e
 while read m v comment;do
 	mkdir -p $DIR/../$TYPE/$m
-	cp -a "$SRC/$v/$m"/*-dump.txt $DIR/../$TYPE/$m/ || :
+	for f in "$SRC/$v/$m"/*-dump.txt;do
+		[ -s "$f" ] && cp "$f" "$DIR/../$TYPE/$m/"
+	done
 done < $DIR/machines-versions
