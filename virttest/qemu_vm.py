@@ -2370,16 +2370,16 @@ class VM(virt_vm.BaseVM):
         @param: cpu_id  the cpu_id you want hotplug.
         """
         vcpu_threads_count = len(self.vcpu_threads)
-        id = cpu_id
-        if id is None:
-            id = vcpu_threads_count
+        plug_cpu_id = cpu_id
+        if plug_cpu_id is None:
+            plug_cpu_id = vcpu_threads_count
         if plug_command:
-            vcpu_add_cmd = plug_command % id
+            vcpu_add_cmd = plug_command % plug_cpu_id
         else:
             if self.monitor.protocol == 'human':
-                vcpu_add_cmd = "cpu_set %s online" % id
+                vcpu_add_cmd = "cpu_set %s online" % plug_cpu_id
             elif self.monitor.protocol == 'qmp':
-                vcpu_add_cmd =  "cpu-add id=%s" % id
+                vcpu_add_cmd =  "cpu-add id=%s" % plug_cpu_id
 
         try:
             self.monitor.verify_supported_cmd(vcpu_add_cmd.split()[0])
@@ -2395,7 +2395,7 @@ class VM(virt_vm.BaseVM):
                                               r"thread_id.?[:|=]\s*(\d+)")
         self.vcpu_threads = self.get_vcpu_pids(vcpu_thread_pattern)
         if len(self.vcpu_threads) == vcpu_threads_count + 1:
-            return(True, id)
+            return(True, plug_cpu_id)
         else:
             return(False, cmd_output)
 
