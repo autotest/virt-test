@@ -459,10 +459,10 @@ class VirtTestApp(object):
             if self.options.nettype == "bridge":
                 if self.options.vhost == "on":
                     self.cartesian_parser.assign("netdev_extra_params",
-                                                 '"vhost=on"')
+                                                 '",vhost=on"')
                 elif self.options.vhost == "force":
                     self.cartesian_parser.assign("netdev_extra_params",
-                                                 '"vhostforce=on"')
+                                                 '",vhostforce=on"')
             else:
                 if self.options.vhost in ["on", "force"]:
                     _restore_stdout()
