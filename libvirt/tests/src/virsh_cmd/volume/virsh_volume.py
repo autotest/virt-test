@@ -32,7 +32,7 @@ def run_virsh_volume(test, params, env):
             result = virsh.pool_define_as(pool_name, pool_type, pool_target)
             if result.exit_status != 0:
                 raise error.TestFail("Command virsh pool-define-as"
-                                     "failed:\n%s" % result.stderr)
+                                     " failed:\n%s" % result.stderr.strip())
             else:
                 logging.debug("%s type pool: %s defined successfully"
                               , pool_type, pool_name)
@@ -43,8 +43,8 @@ def run_virsh_volume(test, params, env):
             else:
                 logging.debug("Pool: %s successfully started", pool_name)
         else:
-            raise error.TestFail("pool type %s has not yet been"
-                                 "supported in the test" % pool_type)
+            raise error.TestNAError("pool type %s has not yet been"
+                                 " supported in the test" % pool_type)
         return True
 
 
@@ -58,7 +58,7 @@ def run_virsh_volume(test, params, env):
         result = virsh.pool_undefine(pool_name, ignore_status=True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh pool-undefine failed:\n%s" %
-                                 result.stderr)
+                                 result.stderr.strip())
         try:
             logging.debug("Deleting the pool target: %s directory", pool_target)
             shutil.rmtree(pool_target)
@@ -80,7 +80,7 @@ def run_virsh_volume(test, params, env):
                                      ignore_status = True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh vol-create-as failed:\n%s" %
-                                 result.stderr)
+                                 result.stderr.strip())
         else:
             logging.info("Volume: %s successfully created on pool: %s",
                           expected_vol['name'], expected_vol['pool_name'])
@@ -97,7 +97,7 @@ def run_virsh_volume(test, params, env):
                                   ignore_status = True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh vol-delete failed:\n%s" %
-                                 result.stderr)
+                                 result.stderr.strip())
         else:
             logging.debug("Volume: %s sucessfully created on pool: %s",
                           expected_vol['name'], expected_vol['pool_name'])
@@ -457,9 +457,9 @@ def run_virsh_volume(test, params, env):
     if os.path.dirname(pool_target) is "":
         pool_target = os.path.join(test.tmpdir, pool_target)
     vol_name = params.get("volume_name")
-    vol_number = int(params.get("number_of_volumes"))
-    capacity = int(params.get("volume_size"))
-    allocation = int(params.get("volume_allocation"))
+    vol_number = int(params.get("number_of_volumes", "2"))
+    capacity = int(params.get("volume_size", "1048576"))
+    allocation = int(params.get("volume_allocation", "1048576"))
     vol_format = params.get("volume_format")
     expected_vol = {}
     if pool_type == 'dir':
