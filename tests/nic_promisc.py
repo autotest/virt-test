@@ -69,7 +69,5 @@ def run_nic_promisc(test, params, env):
         raise
     else:
         transfer_thread.join()
-        if session_serial:
-            session_serial.close()
         if session:
             session.close()
