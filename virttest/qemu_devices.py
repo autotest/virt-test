@@ -1573,6 +1573,7 @@ class DevContainer(object):
         self.strict_mode = strict_mode == 'yes'
         self.__devices = []
         self.__buses = []
+        self.__qemu_binary = qemu_binary
         self.allow_hotplugged_vm = allow_hotplugged_vm == 'yes'
 
     def __getitem__(self, item):
@@ -1819,6 +1820,20 @@ class DevContainer(object):
         @return: Is the desired command supported by this qemu's QMP monitor?
         """
         return cmd in self.__qmp_cmds
+
+    def execute_qemu(self, options, timeout=5):
+        """
+        Execute this qemu and return the stdout+stderr output.
+        :param options: additional qemu options
+        :type options: string
+        :param timeout: execution timeout
+        :type timeout: int
+        :return: Output of the qemu
+        :rtype: string
+        """
+        return str(utils.run("%s %s 2>&1" % (self.__qemu_binary, options),
+                         timeout=timeout, ignore_status=True,
+                         verbose=False).stdout)
 
     def get_buses(self, bus_spec):
         """
