@@ -2049,7 +2049,8 @@ class DevContainer(object):
                            == 'scsi')
             _scsi_without_device = (not self.has_option('device') and
                                     params.object_params(image_name)
-                                    .get('drive_format').startswith('scsi'))
+                                    .get('drive_format', 'virtio_blk')
+                                    .startswith('scsi'))
             if _is_oldscsi or _scsi_without_device:
                 i += 1
 
@@ -2058,7 +2059,8 @@ class DevContainer(object):
                            == 'scsi')
             _scsi_without_device = (not self.has_option('device') and
                                     params.object_params(image_name)
-                                    .get('cd_format').startswith('scsi'))
+                                    .get('cd_format', 'virtio_blk')
+                                    .startswith('scsi'))
             if _is_oldscsi or _scsi_without_device:
                 i += 1
 
