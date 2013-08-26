@@ -74,6 +74,10 @@ class SearchResults(object):
         self.raw_data = stuff
 
 
+    def __str__(self):
+        return str(self.raw_data)
+
+
 class GithubCache(object):
     """
     Auto-refreshing github.GithubObject.GithubObject from dict
@@ -87,14 +91,14 @@ class GithubCache(object):
         github.GitCommit.GitCommit:datetime.timedelta(days=30),
         github.NamedUser.NamedUser:datetime.timedelta(days=30),
         github.Commit.Commit:datetime.timedelta(days=30),
-        github.Issue.Issue:datetime.timedelta(minutes=30),
-        github.PullRequest.PullRequest:datetime.timedelta(hours=1),
+        github.Issue.Issue:datetime.timedelta(days=1),
+        github.PullRequest.PullRequest:datetime.timedelta(days=1),
         # Special case for github.Issue.Issue
-        'closed':datetime.timedelta(days=30),
-        SearchResults:datetime.timedelta(minutes=10),
-        github.NamedUser.NamedUser:datetime.timedelta(hours=2),
-        github.GitAuthor.GitAuthor:datetime.timedelta(days=999),
-        'total_issues':datetime.timedelta(days=999)
+        'closed':datetime.timedelta(days=180),
+        SearchResults:datetime.timedelta(hours=1), # less than default
+        github.NamedUser.NamedUser:datetime.timedelta(days=90),
+        github.GitAuthor.GitAuthor:datetime.timedelta(days=180),
+        'total_issues':datetime.timedelta(days=999) # special case
     }
 
 
@@ -243,7 +247,7 @@ class HourRateLimiter(object):
             self.reset = reset
         self.limit = limit
         self.remaining = remaining
-        self.duration = 0
+        self.duration = 0.0
         self.__update__() # Set self.duration
 
 
@@ -262,6 +266,7 @@ class HourRateLimiter(object):
         if now >= self.reset:
             self.remaining = self.limit
             self.__next_reset__()
+        self.remaining -= 1
         if self.remaining < 1:
             raise ValueError("Rate limit exceeded: Check for unaccounted "
                              "requests or inaccurate reset time")
@@ -276,11 +281,11 @@ class HourRateLimiter(object):
         """Sleep for self.duration"""
         # Deduct request and update self.duration
         self.__update__()
-        if self.duration > 5:
-            raise ValueError("Sleeping too long: %0.4fseconds" % self.duration)
-        time.sleep(self.duration)
-        # Deduct this request
-        self.remaining -= 1
+        # Never sleep more than 2 seconds
+        if self.duration > 2:
+            time.sleep(2)
+        else:
+            time.sleep(self.duration)
 
 
 class GithubIssuesBase(list):
