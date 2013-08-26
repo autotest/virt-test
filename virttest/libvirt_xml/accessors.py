@@ -45,6 +45,7 @@ def py24_bin(number):
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
     bin_wrapper = py24_bin
 else:
+    # pylint: disable=E0602
     bin_wrapper = bin
 
 
