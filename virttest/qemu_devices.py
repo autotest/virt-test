@@ -23,6 +23,7 @@ import virt_vm
 import utils_misc
 
 try:
+    # pylint: disable=E0611
     from collections import OrderedDict
 except ImportError:
     class OrderedDict(dict):
