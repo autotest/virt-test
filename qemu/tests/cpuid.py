@@ -66,7 +66,7 @@ def run_cpuid(test, params, env):
         qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
         missing = set(cpu_models) - set(qemu_models)
         if missing:
-            raise error.TestFail("Some CPU models not in QEMU CPU model list: %s")
+            raise error.TestFail("Some CPU models not in QEMU CPU model list: %r" % (missing))
         added = set(qemu_models) - set(cpu_models)
         if added:
             logging.info("Extra CPU models in QEMU CPU listing: %s", added)
