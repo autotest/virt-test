@@ -2551,16 +2551,6 @@ class DevContainer(object):
         #######################################################################
         devices.append(QDevice(params={}, aobject=name))
         devices[-1].parent_bus += ({'busid': 'drive_%s' % name}, dev_parent)
-        devices[-1].set_param('id', name)
-        devices[-1].set_param('bus', bus)
-        devices[-1].set_param('drive', 'drive_%s' % name)
-        devices[-1].set_param('logical_block_size', logical_block_size)
-        devices[-1].set_param('physical_block_size', physical_block_size)
-        devices[-1].set_param('min_io_size', min_io_size)
-        devices[-1].set_param('opt_io_size', opt_io_size)
-        devices[-1].set_param('bootindex', bootindex)
-        devices[-1].set_param('serial', serial)
-        devices[-1].set_param('x-data-plane', x_data_plane, bool)
         if fmt in ("ide", "ahci"):
             if not self.has_device('ide-hd'):
                 devices[-1].set_param('driver', 'ide-drive')
@@ -2592,6 +2582,20 @@ class DevContainer(object):
         else:
             logging.warn('Using default device handling (disk %s)', name)
             devices[-1].set_param('driver', fmt)
+        # Get the supported options
+        options = self.execute_qemu("-device %s,?" % devices[-1]['driver'])
+        devices[-1].set_param('id', name)
+        devices[-1].set_param('bus', bus)
+        devices[-1].set_param('drive', 'drive_%s' % name)
+        devices[-1].set_param('logical_block_size', logical_block_size)
+        devices[-1].set_param('physical_block_size', physical_block_size)
+        devices[-1].set_param('min_io_size', min_io_size)
+        devices[-1].set_param('opt_io_size', opt_io_size)
+        devices[-1].set_param('bootindex', bootindex)
+        devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        if 'serial' in options:
+            devices[-1].set_param('serial', serial)
+            devices[-2].set_param('serial', None)   # remove serial from drive
 
         return devices
 
