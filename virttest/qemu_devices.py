@@ -1571,6 +1571,8 @@ class DevContainer(object):
         self.__devices = []
         self.__buses = []
         self.__qemu_binary = qemu_binary
+        self.__execute_qemu_last = None
+        self.__execute_qemu_out = ""
         self.allow_hotplugged_vm = allow_hotplugged_vm == 'yes'
 
     def __getitem__(self, item):
@@ -1828,9 +1830,12 @@ class DevContainer(object):
         :return: Output of the qemu
         :rtype: string
         """
-        return str(utils.run("%s %s 2>&1" % (self.__qemu_binary, options),
-                         timeout=timeout, ignore_status=True,
-                         verbose=False).stdout)
+        if self.__execute_qemu_last != options:
+            cmd = "%s %s 2>&1" % (self.__qemu_binary, options)
+            self.__execute_qemu_out = str(utils.run(cmd, timeout=timeout,
+                                                    ignore_status=True,
+                                                    verbose=False).stdout)
+        return self.__execute_qemu_out
 
     def get_buses(self, bus_spec):
         """
