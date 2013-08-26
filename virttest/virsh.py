@@ -504,38 +504,38 @@ def domname(dom_id_or_uuid, **dargs):
     return command("domname --domain %s" % dom_id_or_uuid, **dargs)
 
 
-def qemu_monitor_command(vm_name, cmd, **dargs):
+def qemu_monitor_command(name, cmd, **dargs):
     """
     This helps to execute the qemu monitor command through virsh command.
 
-    @param: vm_name: Name of monitor domain
+    @param: name: Name of monitor domain
     @param: cmd: monitor command to execute
     @param: dargs: standardized virsh function API keywords
     """
 
-    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (vm_name, cmd)
+    cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (name, cmd)
     return command(cmd_qemu_monitor, **dargs)
 
 
-def setvcpus(vm_name, count, extra="", **dargs):
+def setvcpus(name, count, extra="", **dargs):
     """
     Change the number of virtual CPUs in the guest domain.
 
-    @oaram vm_name: name of vm to affect
+    @oaram name: name of vm to affect
     @param count: value for vcpu parameter
     @param options: any extra command options.
     @param dargs: standardized virsh function API keywords
     @return: CmdResult object from command
     """
-    cmd = "setvcpus %s %s %s" % (vm_name, count, extra)
+    cmd = "setvcpus %s %s %s" % (name, count, extra)
     return command(cmd, **dargs)
 
 
-def vcpupin(vm_name, vcpu, cpu, **dargs):
+def vcpupin(name, vcpu, cpu, **dargs):
     """
     Changes the cpu affinity for respective vcpu.
 
-    @param: vm_name: name of domain
+    @param: name: name of domain
     @param: vcpu: virtual CPU to modify
     @param: cpu: physical CPU specification (string)
     @param: dargs: standardized virsh function API keywords
@@ -543,25 +543,25 @@ def vcpupin(vm_name, vcpu, cpu, **dargs):
     """
     dargs['ignore_status'] = False
     try:
-        cmd_vcpupin = "vcpupin %s %s %s" % (vm_name, vcpu, cpu)
+        cmd_vcpupin = "vcpupin %s %s %s" % (name, vcpu, cpu)
         command(cmd_vcpupin, **dargs)
 
     except error.CmdError, detail:
-        logging.error("Virsh vcpupin VM %s failed:\n%s", vm_name, detail)
+        logging.error("Virsh vcpupin VM %s failed:\n%s", name, detail)
         return False
 
 
-def vcpuinfo(vm_name, **dargs):
+def vcpuinfo(name, **dargs):
     """
     Retrieves the vcpuinfo command result if values not "N/A"
 
-    @param: vm_name: name of domain
+    @param: name: name of domain
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
     # Guarantee cmdresult object created
     dargs['ignore_status'] = True
-    cmdresult = command("vcpuinfo %s" % vm_name, **dargs)
+    cmdresult = command("vcpuinfo %s" % name, **dargs)
     if cmdresult.exit_status == 0:
         # Non-running vm makes virsh exit(0) but have "N/A" info.
         # on newer libvirt.  Treat this as an error.
@@ -571,16 +571,16 @@ def vcpuinfo(vm_name, **dargs):
     return cmdresult
 
 
-def vcpucount_live(vm_name, **dargs):
+def vcpucount_live(name, **dargs):
     """
     Prints the vcpucount of a given domain.
 
-    @param: vm_name: name of a domain
+    @param: name: name of a domain
     @param: dargs: standardized virsh function API keywords
     @return: standard output from command
     """
 
-    cmd_vcpucount = "vcpucount --live --active %s" % vm_name
+    cmd_vcpucount = "vcpucount --live --active %s" % name
     return command(cmd_vcpucount, **dargs).stdout.strip()
 
 
@@ -709,37 +709,37 @@ def domstate(name, **dargs):
     return command("domstate %s" % name, **dargs)
 
 
-def domid(vm_name, **dargs):
+def domid(name_or_uuid, **dargs):
     """
     Return VM's ID.
 
-    @param vm_name: VM name or uuid
+    @param name_or_uuid: VM name or uuid
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult instance
     """
-    return command("domid %s" % (vm_name), **dargs)
+    return command("domid %s" % (name_or_uuid), **dargs)
 
 
-def dominfo(vm_name, **dargs):
+def dominfo(name, **dargs):
     """
     Return the VM information.
 
-    @param: vm_name: VM's name or id,uuid.
+    @param: name: VM's name or id,uuid.
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult instance
     """
-    return command("dominfo %s" % (vm_name), **dargs)
+    return command("dominfo %s" % (name), **dargs)
 
 
-def domuuid(name, **dargs):
+def domuuid(name_or_id, **dargs):
     """
     Return the Converted domain name or id to the domain UUID.
 
-    @param name: VM name
+    @param name_or_id: VM name or id
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult instance
     """
-    return command("domuuid %s" % name, **dargs)
+    return command("domuuid %s" % name_or_id, **dargs)
 
 
 def screenshot(name, filename, **dargs):
@@ -833,54 +833,54 @@ def edit(options, **dargs):
     return command("edit %s" % options, **dargs)
 
 
-def domjobabort(vm_name, **dargs):
+def domjobabort(name, **dargs):
     """
     Aborts the currently running domain job.
 
-    @param vm_name: VM's name, id or uuid.
+    @param name: VM's name, id or uuid.
     @param dargs: standardized virsh function API keywords
     @return: result from command
     """
-    return command("domjobabort %s" % vm_name, **dargs)
+    return command("domjobabort %s" % name, **dargs)
 
 
-def domxml_from_native(format, file, options=None, **dargs):
+def domxml_from_native(info_format, native_file, options=None, **dargs):
     """
     Convert native guest configuration format to domain XML format.
 
-    @param format:The command's options. For exmple:qemu-argv.
-    @param file:Native infomation file.
+    @param info_format:The command's options. For exmple:qemu-argv.
+    @param native_file:Native infomation file.
     @param options:extra param.
     @param dargs: standardized virsh function API keywords.
     @return: result from command
     """
-    cmd = "domxml-from-native %s %s %s" % (format, file, options)
+    cmd = "domxml-from-native %s %s %s" % (info_format, native_file, options)
     return command(cmd, **dargs)
 
 
-def domxml_to_native(format, file, options, **dargs):
+def domxml_to_native(info_format, xml_file, options, **dargs):
     """
     Convert domain XML config to a native guest configuration format.
 
-    @param format:The command's options. For exmple:qemu-argv.
-    @param file:XML config file.
+    @param info_format:The command's options. For exmple:qemu-argv.
+    @param xml_file:XML config file.
     @param options:extra param.
     @param dargs: standardized virsh function API keywords
     @return: result from command
     """
-    cmd = "domxml-to-native %s %s %s" % (format, file, options)
+    cmd = "domxml-to-native %s %s %s" % (info_format, xml_file, options)
     return command(cmd, **dargs)
 
 
-def vncdisplay(vm_name,  **dargs):
+def vncdisplay(name, **dargs):
     """
     Output the IP address and port number for the VNC display.
 
-    @param vm_name: VM's name or id,uuid.
+    @param name: VM's name or id,uuid.
     @param dargs: standardized virsh function API keywords.
     @return: result from command
     """
-    return command("vncdisplay %s" % vm_name, **dargs)
+    return command("vncdisplay %s" % name, **dargs)
 
 
 def is_alive(name, **dargs):
@@ -1251,17 +1251,17 @@ def detach_interface(name, option="", **dargs):
     return command(cmd, **dargs)
 
 
-def net_dumpxml(net_name, extra="", to_file="", **dargs):
+def net_dumpxml(name, extra="", to_file="", **dargs):
     """
-    Dump XML from network named net_name.
+    Dump XML from network named param name.
 
-    @param: net_name: Name of a network
+    @param: name: Name of a network
     @param: extra: Extra parameters to pass to command
     @param: to_file: Send result to a file
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    cmd = "net-dumpxml %s %s" % (net_name, extra)
+    cmd = "net-dumpxml %s %s" % (name, extra)
     result = command(cmd, **dargs)
     if to_file:
         result_file = open(to_file, 'w')
@@ -1393,16 +1393,16 @@ def net_undefine(network, extra="", **dargs):
     return command("net-undefine %s %s" % (network, extra), **dargs)
 
 
-def net_name(net_uuid, extra="", **dargs):
+def net_name(uuid, extra="", **dargs):
     """
     Get network name on host.
 
-    @param: net_uuid: network UUID.
+    @param: uuid: network UUID.
     @param: extra: extra parameters to pass to command.
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("net-name %s %s" % (net_uuid, extra), **dargs)
+    return command("net-name %s %s" % (uuid, extra), **dargs)
 
 
 def net_uuid(network, extra="", **dargs):
@@ -1643,26 +1643,26 @@ def nodememstats(option='', **dargs):
     return command('nodememstats %s' % option, **dargs)
 
 
-def memtune_set(vm_name, options, **dargs):
+def memtune_set(name, options, **dargs):
     """
     Set the memory controller parameters
 
     @param: domname: VM Name
     @param: options: contains the values limit, state and value
     """
-    return command("memtune %s %s" % (vm_name, options), **dargs)
+    return command("memtune %s %s" % (name, options), **dargs)
 
 
-def memtune_list(vm_name, **dargs):
+def memtune_list(name, **dargs):
     """
     List the memory controller value of a given domain
 
     @param: domname: VM Name
     """
-    return command("memtune %s" % (vm_name), **dargs)
+    return command("memtune %s" % (name), **dargs)
 
 
-def memtune_get(vm_name, key):
+def memtune_get(name, key):
     """
     Get the specific memory controller value
 
@@ -1670,7 +1670,7 @@ def memtune_get(vm_name, key):
     @param: key: memory controller limit for which the value needed
     @return: the memory value of a key in Kbs
     """
-    memtune_output = memtune_list(vm_name)
+    memtune_output = memtune_list(name)
     memtune_value = re.findall(r"%s\s*:\s+(\S+)" % key, str(memtune_output))
     if memtune_value:
         return int(memtune_value[0])
@@ -1981,16 +1981,16 @@ def snapshot_delete(name, snapshot, **dargs):
     return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
 
 
-def domblkinfo(vm_name, device, **dargs):
+def domblkinfo(name, device, **dargs):
     """
     Get block device size info for a domain.
 
-    @param: vm_name: VM's name or id,uuid.
+    @param: name: VM's name or id,uuid.
     @param: device: device of VM.
     @param: dargs: standardized virsh function API keywords.
     @return: CmdResult object.
     """
-    return command("domblkinfo %s %s" % (vm_name, device), **dargs)
+    return command("domblkinfo %s %s" % (name, device), **dargs)
 
 
 def domblklist(name, options=None, **dargs):
