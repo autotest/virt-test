@@ -1590,7 +1590,7 @@ def vol_create_as(volume_name, pool_name, capacity,
 
     if allocation:
         cmd += " --allocation %s" % (allocation)
-    if format:
+    if frmt:
         cmd += " --format %s" % (frmt)
     if extra:
         cmd += " %s" % (extra)
@@ -1600,21 +1600,37 @@ def vol_create_as(volume_name, pool_name, capacity,
 def vol_list(pool_name, extra="", **dargs):
     """
     List the volumes for a given pool
+
+    @param: pool_name: Name of the pool
+    @param: extra: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
     return command("vol-list %s %s" % (pool_name, extra), **dargs)
 
 
-def vol_delete(vol_name, pool_name, extra="", **dargs):
+def vol_delete(volume_name, pool_name, extra="", **dargs):
     """
     Delete a given volume
+
+    @param: volume_name: Name of the volume
+    @param: pool_name: Name of the pool
+    @param: extra: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
-    return command("vol-delete %s %s %s" % 
-                   (vol_name, pool_name, extra), **dargs)
+    return command("vol-delete %s %s %s" %
+                   (volume_name, pool_name, extra), **dargs)
 
 
 def vol_key(volume_name, pool_name, extra="", **drags):
     """
     Prints the key of the given volume name
+
+    @param: volume_name: Name of the volume
+    @param: extra: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
     return command("vol-key --vol %s --pool %s %s" %
                    (volume_name, pool_name, extra), **drags)
@@ -1623,6 +1639,11 @@ def vol_key(volume_name, pool_name, extra="", **drags):
 def vol_info(volume_name, extra="", **drags):
     """
     Prints the given volume info
+
+    @param: volume_name: Name of the volume
+    @param: extra: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
     return command("vol-info --vol %s %s" % (volume_name, extra), **drags)
 
@@ -1630,6 +1651,11 @@ def vol_info(volume_name, extra="", **drags):
 def vol_name(volume_key, extra="", **drags):
     """
     Prints the given volume name
+
+    @param: volume_name: Name of the volume
+    @param: extra: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
     return command("vol-name --vol %s %s" % (volume_key, extra), **drags)
 
@@ -1637,6 +1663,12 @@ def vol_name(volume_key, extra="", **drags):
 def vol_path(volume_name, pool_name, extra="", **dargs):
     """
     Prints the give volume path
+
+    @param: volume_name: Name of the volume
+    @param: pool_name: Name of the pool
+    @param: extra: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
     return command("vol-path --vol %s --pool %s %s" %
                    (volume_name, pool_name, extra), **dargs)
@@ -1645,6 +1677,13 @@ def vol_path(volume_name, pool_name, extra="", **dargs):
 def vol_dumpxml(volume_name, pool_name, to_file=None, options="", **dargs):
     """
     Dumps volume details in xml
+
+    @param: volume_name: Name of the volume
+    @param: pool_name: Name of the pool
+    @param: to_file: path of the file to store the output
+    @param: options: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
     cmd = ('vol-dumpxml --vol %s --pool %s %s' %
            (volume_name, pool_name, options))
@@ -1659,6 +1698,11 @@ def vol_dumpxml(volume_name, pool_name, to_file=None, options="", **dargs):
 def vol_pool(volume_name, extra="", **dargs):
     """
     Returns pool name for a given vol-key
+
+    @param: volume_name: Name of the volume
+    @param: extra: Free-form string options
+    @param: dargs: standardized virsh function API keywords
+    @return: returns the output of the command
     """
     return command("vol-pool %s %s" % (volume_name, extra), **dargs)
 

@@ -3,9 +3,7 @@ Module simplifying manipulation of XML described at
 http://libvirt.org/
 """
 
-import logging
-from virttest import virsh, xml_utils
-from virttest.libvirt_xml import base, xcepts, accessors
+from virttest.libvirt_xml import base, accessors
 
 class VolXMLBase(base.LibvirtXMLBase):
     """
@@ -27,16 +25,16 @@ class VolXMLBase(base.LibvirtXMLBase):
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
-    __schema_name__ = "volume"
+    __schema_name__ = "storagevol"
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText('name', self, parent_xpath='/',
                                  tag_name='name')
         accessors.XMLElementText('key', self, parent_xpath='/',
                                  tag_name='key')
-        accessors.XMLElementText('capacity', self, parent_xpath='/',
+        accessors.XMLElementInt('capacity', self, parent_xpath='/',
                                  tag_name='capacity')
-        accessors.XMLElementText('allocation', self, parent_xpath='/',
+        accessors.XMLElementInt('allocation', self, parent_xpath='/',
                                  tag_name='allocation')
         accessors.XMLAttribute('format', self, parent_xpath='/target',
                                  tag_name='format', attribute='type')
@@ -71,10 +69,10 @@ class VolXML(VolXMLBase):
         @param: virsh_instance: virsh module or instance to use
         @return: New initialized VolXML instance
         """
-        netxml = VolXML(virsh_instance=virsh_instance)
-        netxml['xml'] = virsh_instance.vol_dumpxml(vol_name, pool_name)\
+        volxml = VolXML(virsh_instance=virsh_instance)
+        volxml['xml'] = virsh_instance.vol_dumpxml(vol_name, pool_name)\
                                       .stdout.strip()
-        return netxml
+        return volxml
 
 
     @staticmethod
@@ -94,12 +92,3 @@ class VolXML(VolXMLBase):
         volume_xml['capacity'] = vol_xml.capacity
         volume_xml['allocation'] = vol_xml.allocation
         return volume_xml
-
-
-    def debug_xml(self):
-        """
-        Dump contents of XML file for debugging
-        """
-        xml = str(self) # LibvirtXMLBase.__str__ returns XML content
-        for debug_line in str(xml).splitlines():
-            logging.debug("Vol XML: %s", debug_line)
