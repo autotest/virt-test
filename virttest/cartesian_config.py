@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-# pylint: disable=W1401,E0012
 """
 Cartesian configuration format file parser.
 
