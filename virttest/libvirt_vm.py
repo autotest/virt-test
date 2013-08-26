@@ -63,20 +63,16 @@ def get_uri_with_transport(uri_type='qemu', transport="", dest_ip=""):
         raise ValueError("Param uri_type = %s is not supported." % (uri_type))
 
     #For example:
-    #   ("qemu:///system")-->("qemu", ":", "///system")
-    origin_uri_partitions = origin_uri.partition(":")
-    origin_uri_driver = origin_uri_partitions[0]
-    origin_uri_colon = origin_uri_partitions[1]
-    origin_uri_dest = origin_uri_partitions[2]
+    #   ("qemu:///system")-->("qemu", "system")
+    #   ("lxc:///")-->("lxc", "")
+    origin_uri_elems = origin_uri.split(":///")
+    transport_uri_driver = origin_uri_elems[0]
+    transport_uri_dest = origin_uri_elems[-1]
+    if transport:
+        transport_uri_driver = ("%s+%s" % (transport_uri_driver, transport))
 
-    transport_uri_driver = ("%s+%s" % (origin_uri_driver, transport))
-    transport_uri_colon = origin_uri_colon
-    #For example:
-    #   ("///system")-->("", "//", "/system")
-    transport_dest_partitions = origin_uri_dest.partition("//")
-    transport_uri_dest = (transport_dest_partitions[0]+transport_dest_partitions[1]+
-                      dest_ip+transport_dest_partitions[2])
-    return ("%s%s%s" % (transport_uri_driver, transport_uri_colon, transport_uri_dest))
+    transport_uri_dest = ("://%s/%s" % (dest_ip, transport_uri_dest))
+    return ("%s%s" % (transport_uri_driver, transport_uri_dest))
 
 
 class VM(virt_vm.BaseVM):
