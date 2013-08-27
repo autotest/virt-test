@@ -3,10 +3,8 @@ connection tools to manage kinds of connection.
 """
 
 import logging
-import time
 import os
 import shutil
-import re
 import tempfile
 
 from autotest.client import utils, os_dep
@@ -205,13 +203,36 @@ class ConnectionBase(propcan.PropCanBase):
     client_ip: IP of client.
     client_user: Username to login client.
     client_pwd: Password for client_user.
-
+    server_session: Session to server and execute command on
+                    server.
+    client_session: Session to client and execute command on
+                    client.
     tmp_dir: A tmp dir to store some tmp file.
+    auto_recover: If it is False same as the default,
+                  conn_recover() will not called by __del__()
+                  If it is True, Connection class will call
+                  conn_recover() in __del__(), then user need not
+                  call it manully. But the errors in conn_recover()
+                  will be ignored.
+    Then we sugguest *not* to pass auto_recover=True to __init__(),
+    and call conn_recover() manually when you don't need this
+    connection any more.
+
+    e.g:
+          connection = ConnectionBase(server_ip=server_ip,
+                                      server_user=server_user,
+                                      server_pwd=server_pwd,
+                                      client_ip=client_ip,
+                                      client_user=client_user,
+                                      client_pwd=client_pwd)
+          connection.conn_setup()
+          virsh.connect(URI)
+          connection.conn_recover()
     """
     __slots__ = ('server_ip', 'server_user', 'server_pwd',
                  'client_ip', 'client_user', 'client_pwd',
                  'server_session', 'client_session',
-                 'tmp_dir')
+                 'tmp_dir', 'auto_recover')
 
     def __init__(self, *args, **dargs):
         """
@@ -224,6 +245,7 @@ class ConnectionBase(propcan.PropCanBase):
         init_dict['client_ip'] = init_dict.get('client_ip', 'CLIENT.IP')
         init_dict['client_user'] = init_dict.get('client_user', 'root')
         init_dict['client_pwd'] = init_dict.get('client_pwd', None)
+        init_dict['auto_recover'] = init_dict.get('auto_recover', False)
         super(ConnectionBase, self).__init__(init_dict)
 
         self.dict_set('client_session', None)
@@ -240,11 +262,11 @@ class ConnectionBase(propcan.PropCanBase):
         Clean up any leftover sessions and tmp_dir.
         """
         self.close_session()
-        try:
-            self.conn_finish()
-        except ConnNotImplementedError:
-            pass
-
+        if self.auto_recover:
+            try:
+                self.conn_recover()
+            except ConnNotImplementedError:
+                pass
         tmp_dir = self.tmp_dir
         if (tmp_dir is not None) and (os.path.exists(tmp_dir)):
             shutil.rmtree(tmp_dir)
@@ -273,11 +295,11 @@ class ConnectionBase(propcan.PropCanBase):
         """
         raise ConnNotImplementedError('conn_check', self.__class__)
 
-    def conn_finish(self):
+    def conn_recover(self):
         """
         waiting for implemented by subclass.
         """
-        raise ConnNotImplementedError('conn_finish', self.__class__)
+        raise ConnNotImplementedError('conn_recover', self.__class__)
 
     def _new_client_session(self):
         """
@@ -463,7 +485,7 @@ class SSHConnection(ConnectionBase):
             raise SSHCheckError(server_ip, detail)
         logging.debug("Check the SSH to %s OK." % server_ip)
 
-    def conn_finish(self):
+    def conn_recover(self):
         """
         It's ok to ignore finish work for ssh connection.
         """
@@ -573,7 +595,7 @@ class TCPConnection(ConnectionBase):
                                       port='22',
                                       remote_path='/etc/libvirt/libvirtd.conf')
 
-    def conn_finish(self):
+    def conn_recover(self):
         """
         Clean up for TCP connection.
 
@@ -621,7 +643,8 @@ class TCPConnection(ConnectionBase):
 
         #edit the /etc/libvirt/libvirtd.conf
         #listen_tcp=1, tcp_port=$tcp_port, auth_tcp="none"
-        pattern2repl = {r".*listen_tcp\s*=.*": 'listen_tcp=1',
+        pattern2repl = {r".*listen_tls\s*=.*": 'listen_tls=0',
+                        r".*listen_tcp\s*=.*": 'listen_tcp=1',
                         r".*tcp_port\s*=.*": 'tcp_port="%s"' % (tcp_port),
                         r'.*auth_tcp\s*=.*': 'auth_tcp="none"'}
         self.remote_libvirtdconf.sub_else_add(pattern2repl)
@@ -708,7 +731,7 @@ class TLSConnection(ConnectionBase):
                                       port='22',
                                       remote_path='/etc/libvirt/libvirtd.conf')
 
-    def conn_finish(self):
+    def conn_recover(self):
         """
         Do the clean up work.
 
@@ -965,7 +988,7 @@ def build_CA(tmp_dir, certtool="certtool"):
 
     #make a private key
     cmd = "%s --generate-privkey > %s " % (certtool, cakey_path)
-    CmdResult = utils.run(cmd, ignore_status=True)
+    CmdResult = utils.run(cmd, ignore_status=True, timeout=10)
     if CmdResult.exit_status:
         raise ConnPrivKeyError(CmdResult.stderr)
     #prepare a info file to build certificate file
