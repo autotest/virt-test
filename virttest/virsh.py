@@ -1579,6 +1579,16 @@ def pool_undefine(name, extra="", **dargs):
     return command("pool-undefine %s %s" % (name, extra), **dargs)
 
 
+def pool_build(name, options="", **dargs):
+    """
+    Build pool.
+
+    @param name: Name of the pool to be built
+    @param options: options for pool-build
+    """
+    return command("pool-build %s %s" % (name, options), **dargs)
+
+
 def vol_create_as(vol_name, pool_name, capacity, allocation,
                   frmt, extra="", **dargs):
     """
