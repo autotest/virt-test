@@ -3,12 +3,12 @@ import os
 import re
 import shutil
 
+from autotest.client import os_dep
 from autotest.client.shared import error
 from virttest import libvirt_vm, utils_libvirtd, virsh, utils_conn
 
 
-def do_virsh_connect(uri, options, username=None,
-                     password=None, prompt=r"virsh\s*[\#\>]\s*"):
+def do_virsh_connect(uri, options):
     """
     Execute connect command in a virsh session and return the uri
     of this virsh session after connect.
@@ -17,11 +17,6 @@ def do_virsh_connect(uri, options, username=None,
 
     @param uri: argument of virsh connect command.
     @param options: options pass to command connect.
-    @param username: username to login remote host, it's necessary to connect
-                   to remote uri.
-    @param password: username to login remote host, it's necessary to connect
-                   to remote uri.
-    @param prompt: prompt of virsh session.
 
     @return: the uri of the virsh session after connect.
 
@@ -123,25 +118,21 @@ def run_virsh_connect(test, params, env):
         raise error.TestNAError("Parameter local_pwd is not configured"
                                                     "in remote test.")
     if (connect_arg.count("lxc") and
-                (not os.path.exists("/var/run/libvirt/lxc"))):
+                (not os.path.exists("/usr/libexec/libvirt_lxc"))):
         raise error.TestNAError("Connect test of lxc:/// is not suggested on "
-                                    "the host with no lxc driver.")
+                                "the host with no lxc driver.")
     if connect_arg.count("xen") and (not os.path.exists("/var/run/xend")):
         raise error.TestNAError("Connect test of xen:/// is not suggested on "
-                                    "the host with no xen driver.")
-    if (connect_arg.count("qemu") and
-                (not os.path.exists("/var/run/libvirt/qemu"))):
-        raise error.TestNAError("Connect test of qemu:/// is not suggested on "
+                                "the host with no xen driver.")
+    if connect_arg.count("qemu"):
+        try:
+            os_dep.command("qemu-kvm")
+        except ValueError:
+            raise error.TestNAError("Connect test of qemu:/// is not suggested on "
                                     "the host with no qemu driver.")
 
     if connect_arg == "transport":
-        #get the canonical uri on remote host.
-        virsh_instance = virsh.VirshConnectBack(remote_ip=server_ip,
-                                          remote_pwd=server_pwd)
-
-        canonical_uri_type = virsh_instance.driver()
-
-        del virsh_instance
+        canonical_uri_type = virsh.driver()
 
         if transport == "ssh":
             ssh_connection = utils_conn.SSHConnection(server_ip=server_ip,
@@ -194,8 +185,7 @@ def run_virsh_connect(test, params, env):
 
     try:
         try:
-            uri = do_virsh_connect(connect_uri, connect_opt, "root",
-                                   server_pwd)
+            uri = do_virsh_connect(connect_uri, connect_opt)
             #connect sucessfully
             if status_error == "yes":
                 raise error.TestFail("Connect sucessfully in the "
