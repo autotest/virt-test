@@ -1519,8 +1519,7 @@ class DevContainer(object):
             """ @return: list of human monitor commands """
             _ = utils.system_output("echo -e 'help\nquit' | %s -monitor "
                                     "stdio -vnc none" % qemu_binary,
-                                    timeout=10, ignore_status=True,
-                                    verbose=False)
+                                    timeout=10, ignore_status=True)
             _ = re.findall(r'^([^\| \[\n]+\|?\w+)', _, re.M)
             hmp_cmds = []
             for cmd in _:
@@ -1541,7 +1540,7 @@ class DevContainer(object):
                             '{ "execute": "quit" }\''
                             '| %s -qmp stdio -vnc none | grep return |'
                             ' grep RAND91' % qemu_binary, timeout=10,
-                            ignore_status=True, verbose=False).splitlines()
+                            ignore_status=True).splitlines()
             if not cmds:
                 # Some qemu versions crashes when qmp used too early; add sleep
                 cmds = utils.system_output('echo -e \''
@@ -1550,7 +1549,7 @@ class DevContainer(object):
                             '{ "execute": "quit" }\' | (sleep 1; cat )'
                             '| %s -qmp stdio -vnc none | grep return |'
                             ' grep RAND91' % qemu_binary, timeout=10,
-                            ignore_status=True, verbose=False).splitlines()
+                            ignore_status=True).splitlines()
             if cmds:
                 cmds = re.findall(r'{\s*"name"\s*:\s*"([^"]+)"\s*}', cmds[0])
             if cmds:    # If no mathes, return None
@@ -1558,12 +1557,12 @@ class DevContainer(object):
 
         self.__state = -1    # is representation sync with VM (0 = synchronized)
         self.__qemu_help = utils.system_output("%s -help" % qemu_binary,
-                                timeout=10, ignore_status=True, verbose=False)
+                                timeout=10, ignore_status=True)
         self.__device_help = utils.system_output("%s -device ? 2>&1"
                                             % qemu_binary, timeout=10,
-                                            ignore_status=True, verbose=False)
+                                            ignore_status=True)
         self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
-                                timeout=10, ignore_status=True, verbose=False)
+                                timeout=10, ignore_status=True)
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
         self.__qmp_cmds = get_qmp_cmds(qemu_binary,
                                        workaround_qemu_qmp_crash == 'always')
