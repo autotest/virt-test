@@ -501,10 +501,13 @@ def add_nic_macvtap(nic, base_interface=None):
                    "belong to any bridge.")
         raise TAPCreationError(nic.ifname, err_msg)
 
+    tapfds = []
     tap = Macvtap(nic.ifname)
     tap.create(tap_base_device)
     tap.set_mac(nic.mac)
-    nic.tapfd = tap.open()
+    for queue in range(int(nic.queues)):
+        tapfds.append(str(tap.open()))
+    nic.tapfds = ":".join(tapfds)
     time.sleep(3)
     tap.up()
 
