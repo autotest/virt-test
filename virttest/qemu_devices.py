@@ -1570,6 +1570,9 @@ class DevContainer(object):
         self.strict_mode = strict_mode == 'yes'
         self.__devices = []
         self.__buses = []
+        self.__qemu_binary = qemu_binary
+        self.__execute_qemu_last = None
+        self.__execute_qemu_out = ""
         self.allow_hotplugged_vm = allow_hotplugged_vm == 'yes'
 
     def __getitem__(self, item):
@@ -1816,6 +1819,23 @@ class DevContainer(object):
         @return: Is the desired command supported by this qemu's QMP monitor?
         """
         return cmd in self.__qmp_cmds
+
+    def execute_qemu(self, options, timeout=5):
+        """
+        Execute this qemu and return the stdout+stderr output.
+        :param options: additional qemu options
+        :type options: string
+        :param timeout: execution timeout
+        :type timeout: int
+        :return: Output of the qemu
+        :rtype: string
+        """
+        if self.__execute_qemu_last != options:
+            cmd = "%s %s 2>&1" % (self.__qemu_binary, options)
+            self.__execute_qemu_out = str(utils.run(cmd, timeout=timeout,
+                                                    ignore_status=True,
+                                                    verbose=False).stdout)
+        return self.__execute_qemu_out
 
     def get_buses(self, bus_spec):
         """
@@ -2536,16 +2556,6 @@ class DevContainer(object):
         #######################################################################
         devices.append(QDevice(params={}, aobject=name))
         devices[-1].parent_bus += ({'busid': 'drive_%s' % name}, dev_parent)
-        devices[-1].set_param('id', name)
-        devices[-1].set_param('bus', bus)
-        devices[-1].set_param('drive', 'drive_%s' % name)
-        devices[-1].set_param('logical_block_size', logical_block_size)
-        devices[-1].set_param('physical_block_size', physical_block_size)
-        devices[-1].set_param('min_io_size', min_io_size)
-        devices[-1].set_param('opt_io_size', opt_io_size)
-        devices[-1].set_param('bootindex', bootindex)
-        devices[-1].set_param('serial', serial)
-        devices[-1].set_param('x-data-plane', x_data_plane, bool)
         if fmt in ("ide", "ahci"):
             if not self.has_device('ide-hd'):
                 devices[-1].set_param('driver', 'ide-drive')
@@ -2577,6 +2587,20 @@ class DevContainer(object):
         else:
             logging.warn('Using default device handling (disk %s)', name)
             devices[-1].set_param('driver', fmt)
+        # Get the supported options
+        options = self.execute_qemu("-device %s,?" % devices[-1]['driver'])
+        devices[-1].set_param('id', name)
+        devices[-1].set_param('bus', bus)
+        devices[-1].set_param('drive', 'drive_%s' % name)
+        devices[-1].set_param('logical_block_size', logical_block_size)
+        devices[-1].set_param('physical_block_size', physical_block_size)
+        devices[-1].set_param('min_io_size', min_io_size)
+        devices[-1].set_param('opt_io_size', opt_io_size)
+        devices[-1].set_param('bootindex', bootindex)
+        devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        if 'serial' in options:
+            devices[-1].set_param('serial', serial)
+            devices[-2].set_param('serial', None)   # remove serial from drive
 
         return devices
 
