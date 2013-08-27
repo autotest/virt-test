@@ -217,3 +217,7 @@ def run_virsh_connect(test, params, env):
     finally:
         if transport == "unix":
             unix_transport_recover()
+        if transport == "tcp":
+            tcp_connection.conn_recover()
+        if transport == "tls":
+            tls_connection.conn_recover()
