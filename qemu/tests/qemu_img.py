@@ -34,8 +34,7 @@ def run_qemu_img(test, params, env):
         error.context("Checking image '%s' by command '%s'" % (img, cmd),
                       logging.info)
         try:
-            cmd_result = utils.run(cmd)
-            output = cmd_result.stdout
+            output = utils.system_output(cmd, verbose=False)
         except error.CmdError, err:
             if "does not support checks" in str(err):
                 return (True, "")
@@ -59,7 +58,7 @@ def run_qemu_img(test, params, env):
         create_image_cmd = create_image_cmd % test_image
         msg = " Create image %s by command %s" % (test_image, create_image_cmd)
         error.context(msg, logging.info)
-        utils.run(create_image_cmd)
+        utils.system(create_image_cmd, verbose=False)
         status, output = _check(cmd, test_image)
         if not status:
             raise error.TestFail("Check image '%s' failed with error: %s" %
@@ -106,7 +105,7 @@ def run_qemu_img(test, params, env):
             cmd += " -o cluster_size=%s" % cluster_size
         msg = "Creating image %s by command %s" % (img_name, cmd)
         error.context(msg, logging.info)
-        utils.run(cmd)
+        utils.system(cmd, verbose=False)
         status, out = _check(qemu_img_binary, img_name)
         if not status:
             raise error.TestFail("Check image '%s' got error: %s" %
@@ -323,7 +322,7 @@ def run_qemu_img(test, params, env):
             msg = "Create backing file by command: %s" % create_cmd
             error.context(msg, logging.info)
             try:
-                utils.run(create_cmd)
+                utils.system(create_cmd, verbose=False)
             except error.CmdError:
                 raise error.TestFail("Could not create a backing file!")
             logging.info("backing_file created!")
@@ -385,7 +384,7 @@ def run_qemu_img(test, params, env):
             error.context("Commiting image by command %s" % cmitcmd,
                           logging.info)
             try:
-                utils.run(cmitcmd)
+                utils.system(cmitcmd, verbose=False)
             except error.CmdError:
                 raise error.TestFail("Could not commit the backing file")
 
