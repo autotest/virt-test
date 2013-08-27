@@ -537,7 +537,7 @@ class VM(virt_vm.BaseVM):
         def add_net(devices, vlan, nettype, ifname=None, tftp=None,
                     bootfile=None, hostfwd=[], netdev_id=None,
                     netdev_extra_params=None, tapfds=None, script=None,
-                    downscript=None, vhost=None, queues=None):
+                    downscript=None, vhost=None, queues=None, vhostfds=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -550,10 +550,21 @@ class VM(virt_vm.BaseVM):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if vhost:
                     cmd += ",%s" % vhost
-                    enable_vhostfd = params.get("enable_vhostfd", "yes")
-                    if vhost == 'vhost=on' and enable_vhostfd == 'yes':
-                        vhostfd = os.open("/dev/vhost-net", os.O_RDWR)
-                        cmd += ",vhostfd=%s" % vhostfd
+                    if vhostfds:
+                        if (int(queues) > 1 and
+                             'vhostfds=' in devices.get_help_text()):
+                            cmd += ",vhostfds=%s" % vhostfds
+                        else:
+                            txt = ""
+                            if int(queues) > 1:
+                                txt = "qemu do not support vhost multiqueue,"
+                                txt += " Fall back to single queue."
+                            if 'vhostfd=' in devices.get_help_text():
+                                cmd += ",vhostfd=%s" % vhostfds.split(":")[0]
+                            else:
+                                txt += " qemu do not support vhostfd."
+                            if txt:
+                                logging.warn(txt)
                 if netdev_extra_params:
                     cmd += "%s" % netdev_extra_params
             else:
@@ -1243,6 +1254,10 @@ class VM(virt_vm.BaseVM):
                     tapfds = nic.tapfds
                 else:
                     tapfds = None
+                if nic.has_key('vhostfds'):
+                    vhostfds = nic.vhostfds
+                else:
+                    vhostfds = None
                 ifname = nic.get('ifname')
                 queues = nic.get("queues", 1)
                 # Handle the '-net nic' part
@@ -1256,7 +1271,8 @@ class VM(virt_vm.BaseVM):
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
                                bootp, redirs, netdev_id, netdev_extra,
-                               tapfds, script, downscript, vhost, queues)
+                               tapfds, script, downscript, vhost, queues,
+                               vhostfds)
                 # TODO: Is every NIC a PCI device?
                 devices.insert(StrDev("NET-%s" % nettype, cmdline=cmd))
             else:
@@ -1625,6 +1641,9 @@ class VM(virt_vm.BaseVM):
                 if nic.tapfds:
                     for i in nic.tapfds.split(':'):
                         os.close(int(i))
+                if nic.vhostfds:
+                    for i in nic.tapfds.split(':'):
+                        os.close(int(i))
         except TypeError:
             pass
 
@@ -1769,6 +1788,13 @@ class VM(virt_vm.BaseVM):
                         self.virtnet.generate_ifname(nic.nic_name)
                     if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
+                    if ((nic_params.get("vhost") == 'vhost=on') and
+                        (nic_params.get("enable_vhostfd", "yes") == "yes")):
+                        vhostfds = []
+                        for i in xrange(int(nic.queues)):
+                            vhostfds.append(str(os.open("/dev/vhost-net",
+                                                         os.O_RDWR)))
+                        nic.vhostfds = ':'.join(vhostfds)
                     elif nic.nettype == 'user':
                         logging.info("Assuming dependencies met for "
                                      "user mode nic %s, and ready to go"
@@ -1884,6 +1910,13 @@ class VM(virt_vm.BaseVM):
                         # vm instance must support cloning.
                         del nic['tapfds']
                     # File descriptor is already closed
+                    except OSError:
+                        pass
+                if nic.has_key('vhostfds'):
+                    try:
+                        for i in nic.vhostfds.split(':'):
+                            os.close(int(i))
+                        del nic['vhostfds']
                     except OSError:
                         pass
 
