@@ -5,13 +5,12 @@ This is a unittest for qemu_devices library.
 @author: Lukas Doktor <ldoktor@redhat.com>
 @copyright: 2012 Red Hat, Inc.
 """
-import qemu_monitor
 __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 
 import re, unittest, os
 import common
 from autotest.client.shared.test_utils import mock
-import qemu_devices, data_dir
+import qemu_devices, data_dir, qemu_monitor
 
 UNITTEST_DATA_DIR = os.path.join(data_dir.get_root_dir(), "virttest", "unittest_data")
 
@@ -696,18 +695,18 @@ class Container(unittest.TestCase):
         """ @return: Initialized qemu_devices.DevContainer object """
         qemu_cmd = '/usr/bin/qemu_kvm'
         qemu_devices.utils.system_output.expect_call('%s -help' % qemu_cmd,
-                                 timeout=10, ignore_status=True, verbose=False
+                                 timeout=10, ignore_status=True
                                  ).and_return(QEMU_HELP)
         qemu_devices.utils.system_output.expect_call("%s -device ? 2>&1"
                                             % qemu_cmd, timeout=10,
-                                            ignore_status=True, verbose=False
+                                            ignore_status=True
                                             ).and_return(QEMU_DEVICES)
         qemu_devices.utils.system_output.expect_call("%s -M ?" % qemu_cmd,
-                                 timeout=10, ignore_status=True, verbose=False
+                                 timeout=10, ignore_status=True
                                  ).and_return(QEMU_MACHINE)
         cmd = "echo -e 'help\nquit' | %s -monitor stdio -vnc none" % qemu_cmd
         qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                             ignore_status=True, verbose=False
+                                             ignore_status=True
                                              ).and_return(QEMU_HMP)
         cmd = ('echo -e \'{ "execute": "qmp_capabilities" }\n'
                '{ "execute": "query-commands", "id": "RAND91" }\n'
@@ -715,7 +714,7 @@ class Container(unittest.TestCase):
                '| %s -qmp stdio -vnc none | grep return |'
                ' grep RAND91' % qemu_cmd)
         qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                             ignore_status=True, verbose=False
+                                             ignore_status=True
                                              ).and_return('')
 
         cmd = ('echo -e \'{ "execute": "qmp_capabilities" }\n'
@@ -724,7 +723,7 @@ class Container(unittest.TestCase):
                '| %s -qmp stdio -vnc none | grep return |'
                ' grep RAND91' % qemu_cmd)
         qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                             ignore_status=True, verbose=False
+                                             ignore_status=True
                                              ).and_return(QEMU_QMP)
 
         qdev = qemu_devices.DevContainer(qemu_cmd, vm_name, strict_mode, 'no',
