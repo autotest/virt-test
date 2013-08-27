@@ -1174,7 +1174,8 @@ class QemuIface(VirtIface):
     __slots__ = VirtIface.__slots__ + ['vlan', 'device_id', 'ifname', 'tapfds',
                                        'tapfd_ids', 'netdev_id', 'tftp',
                                        'romfile', 'nic_extra_params',
-                                       'netdev_extra_params', 'queues']
+                                       'netdev_extra_params', 'queues',
+                                       'vhostfds']
 
 
 class VMNet(list):
