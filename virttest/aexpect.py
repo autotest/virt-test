@@ -6,6 +6,7 @@ A class and functions used for running and controlling child processes.
 """
 
 import os, sys, pty, select, termios, fcntl
+import tempfile
 
 BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
 
@@ -80,7 +81,16 @@ if __name__ == "__main__":
     (shell_pid, shell_fd) = pty.fork()
     if shell_pid == 0:
         # Child process: run the command in a subshell
-        os.execv("/bin/sh", ["/bin/sh", "-c", command])
+        if len(command) > 255:
+            tmp_file = tempfile.mktemp(suffix='.sh',
+                                        prefix='autotest', dir="/tmp")
+            fd_cmd = open(tmp_file, "w")
+            fd_cmd.write(command)
+            fd_cmd.close()
+            os.execv("/bin/sh", ["/bin/sh", "-c", "source %s" % tmp_file])
+            os.remove(tmp_file)
+        else:
+            os.execv("/bin/sh", ["/bin/sh", "-c", command])
     else:
         # Parent process
         lock_server_running = _lock(lock_server_running_filename)
