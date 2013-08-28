@@ -40,7 +40,7 @@ class TestVirshClosure(ModuleLoad):
     def test_args(self):
         # save some typing
         VC = self.virsh.VirshClosure
-        tcinst = {}
+        tcinst = self.SomeClass()
         vcinst = VC(self.somefunc, tcinst)
         args, dargs = vcinst('foo')
         self.assertEqual(len(args), 1)
@@ -51,7 +51,7 @@ class TestVirshClosure(ModuleLoad):
     def test_dargs(self):
         # save some typing
         VC = self.virsh.VirshClosure
-        tcinst = {'foo':'bar'}
+        tcinst = self.SomeClass(foo='bar')
         vcinst = VC(self.somefunc, tcinst)
         args, dargs = vcinst()
         self.assertEqual(len(args), 0)
@@ -63,7 +63,7 @@ class TestVirshClosure(ModuleLoad):
     def test_args_and_dargs(self):
         # save some typing
         VC = self.virsh.VirshClosure
-        tcinst = {'foo':'bar'}
+        tcinst = self.SomeClass(foo='bar')
         vcinst = VC(self.somefunc, tcinst)
         args, dargs = vcinst('foo')
         self.assertEqual(len(args), 1)
