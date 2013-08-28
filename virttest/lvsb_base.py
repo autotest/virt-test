@@ -158,13 +158,11 @@ class SandboxSession(object):
 
 class SandboxBase(object):
     """
-    Base class for connection to a single new or existing sandboxed command
+    Base operations for sandboxed command
     """
 
     # Provide unique instance number for each sandbox
-    # guaranteeing names will never clash between tests
     instances = None
-
 
     def __init__(self, params):
         """
@@ -208,25 +206,14 @@ class SandboxBase(object):
             self._session.open_session(state['session_id'])
 
 
-    @property
-    def name(self):
+    def run(self, extra=None):
         """
-        Represent a unique sandbox name generated from class and identifier
+        Launch new sandbox as asynchronous background sandbox process
+
+        @param: extra: String of extra command-line to use but not store
         """
-        # Use shortest possible unique names for instances to be easier
-        # to track and make name-comparison fast when there are 10000's
-        # of sandboxes. Only use upper-case letters from class name along
-        # with instance identifier attribute.
-        class_name = self.__class__.__name__
-        class_initials = class_name.translate(None,
-                             'abcdefghijklmnopqrstuvwxyz')
-        return "%s_%d" % (class_initials, self.identifier)
-
-
-    def run(self):
-        """Launch new sandbox as asynchronous background sandbox process"""
         logging.debug("Launching %s", self.make_sandbox_command_line())
-        self._session.new_session(self.make_sandbox_command_line())
+        self._session.new_session(self.make_sandbox_command_line(extra))
 
 
     def stop(self):
@@ -288,7 +275,7 @@ class SandboxBase(object):
         self._session.auto_clean(boolean)
 
 
-    def make_sandbox_command_line(self):
+    def make_sandbox_command_line(self, extra=None):
         """
         Return the fully formed command-line for the sandbox using self.options
         """
@@ -297,7 +284,67 @@ class SandboxBase(object):
 
 
 class SandboxCommandBase(SandboxBase):
-    """Connection to a single new or existing sandboxed command"""
+    """
+    Connection to a single new or existing sandboxed command
+    """
+
+    BINARY_PATH_PARAM = 'virt_sandbox_binary'
+
+    # Cache generated name first time it is requested
+    _name = None
+
+
+    def __init__(self, params, name=None):
+        """
+        Initialize sandbox-command with params and name, autogenerate if None
+        """
+        if name is not None:
+            self._name = name
+        super(SandboxCommandBase, self).__init__(params)
+
+
+    def __getstate__(self):
+        """Serialize instance for pickling"""
+        state = super(SandboxCommandBase, self).__getstate__()
+        state['name'] = self._name
+        return state
+
+
+    def __setstate__(self, state):
+        """Actualize instance from state"""
+        self._name = state.pop('name')
+        super(SandboxCommandBase, self).__setstate__(state)
+
+
+    def __get_name__(self):
+        """
+        Represent a unique sandbox name generated from class and identifier
+        """
+        # Use shortest possible unique names for instances to be easier
+        # to track and make name-comparison fast when there are 10000's
+        # of sandboxes. Only use upper-case letters from class name along
+        # with instance identifier attribute.
+        if self._name is None:
+            class_name = self.__class__.__name__
+            class_initials = class_name.translate(None,
+                                 'abcdefghijklmnopqrstuvwxyz')
+            self._name = "%s_%d" % (class_initials, self.identifier)
+        return self._name
+
+
+    @staticmethod
+    def __set_name__(value):
+        del value # not used
+        raise SandboxException("Name is read-only")
+
+
+    @staticmethod
+    def __del_name__():
+        raise SandboxException("Name is read-only")
+
+
+    name = property(__get_name__, __set_name__, __del_name__)
+
 
     @staticmethod
     def flaten_options(options):
@@ -324,11 +371,13 @@ class SandboxCommandBase(SandboxBase):
             return ""
 
 
-    def make_sandbox_command_line(self):
+    def make_sandbox_command_line(self, extra=None):
         """Return entire command-line string needed to start sandbox"""
-        command = self.params['virt_sandbox_binary'] # mandatory param
+        command = self.params[self.BINARY_PATH_PARAM] # mandatory param
         if self.options is not None:
             command += self.flaten_options(self.options)
+        if extra is not None:
+            command += ' ' + extra
         return command
 
 
