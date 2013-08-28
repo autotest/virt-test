@@ -171,4 +171,3 @@ def run_virsh_domiftune(test, params, env):
             get_domiftune_parameter(test_dict)
         else:
             set_domiftune_parameter(test_dict)
-
