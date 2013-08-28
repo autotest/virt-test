@@ -403,7 +403,6 @@ class FileChecker(object):
         if "python" in self.first_line:
             self.is_python = True
 
-        self.corrective_actions = []
         self.indent_exceptions = INDENT_BLACKLIST.get(PROJECT_NAME, [])
         self.check_exceptions = FILE_BLACKLIST.get(PROJECT_NAME, [])
 
