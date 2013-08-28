@@ -960,6 +960,21 @@ class VM(virt_vm.BaseVM):
 
             return sc_cmd
 
+        def add_numa_node(devices, mem=None, cpus=None, nodeid=None):
+            """
+            This function used to add numa node to guest command line
+            """
+            if not devices.has_option("numa"):
+                return ""
+            numa_cmd = " -numa node"
+            if mem is not None:
+                numa_cmd += ",mem=%s" % mem
+            if cpus is not None:
+                numa_cmd += ",cpus=%s" % cpus
+            if nodeid is not None:
+                numa_cmd += ",nodeid=%s" % nodeid
+            return numa_cmd
+
         # End of command line option wrappers
 
         # If nothing changed and devices exists, return imediatelly
@@ -1023,7 +1038,7 @@ class VM(virt_vm.BaseVM):
             numa_node = int(params.get("numa_node"))
             if numa_node < 0:
                 p = utils_misc.NumaNode(numa_node)
-                n = int(p.get_node_num()) + numa_node
+                n = int(utils_misc.get_node_count()) + numa_node
                 cmd += "numactl -m %s " % n
             else:
                 n = numa_node - 1
@@ -1323,6 +1338,30 @@ class VM(virt_vm.BaseVM):
         self.cpuinfo.threads = vcpu_threads
         self.cpuinfo.sockets = vcpu_sockets
         devices.insert(StrDev('smp', cmdline=add_smp(devices)))
+
+        numa_total_cpus = 0
+        numa_total_mem = 0
+        for numa_node in params.objects("guest_numa_nodes"):
+            numa_params = params.object_params(numa_node)
+            numa_mem = numa_params.get("numa_mem")
+            numa_cpus = numa_params.get("numa_cpus")
+            numa_nodeid = numa_params.get("numa_nodeid")
+            if numa_mem is not None:
+                numa_total_mem += int(numa_mem)
+            if numa_cpus is not None:
+                numa_total_cpus += len(utils_misc.cpu_str_to_list(numa_cpus))
+            devices.insert(StrDev('numa', cmdline=add_numa_node(devices)))
+
+        if params.get("numa_consistency_check_cpu_mem", "no") == "yes":
+            if (numa_total_cpus > int(smp) or numa_total_mem > int(mem)
+                or len(params.objects("guest_numa_nodes")) > int(smp)):
+                logging.debug("-numa need %s vcpu and %s memory. It is not "
+                              "matched the -smp and -mem. The vcpu number "
+                              "from -smp is %s, and memory size from -mem is"
+                              " %s" % (numa_total_cpus, numa_total_mem, smp,
+                                       mem))
+                raise virt_vm.VMDeviceError("The numa node cfg can not fit"
+                                            " smp and memory cfg.")
 
         cpu_model = params.get("cpu_model")
         use_default_cpu_model = True
