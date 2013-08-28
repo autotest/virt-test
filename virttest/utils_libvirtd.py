@@ -2,7 +2,7 @@
 Module to control libvirtd service.
 """
 import logging, re
-from virttest import remote, aexpect, virsh, utils_misc
+from virttest import remote, aexpect, utils_misc
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
 
@@ -159,7 +159,7 @@ def libvirtd_is_running():
         return False
 
 
-def libvirtd_wait_for_start(timeout=10, session=None):
+def libvirtd_wait_for_start(timeout=60, session=None):
     """
     Wait n seconds for libvirt to start. Default is 10 seconds.
     """
