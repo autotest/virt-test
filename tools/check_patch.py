@@ -16,7 +16,7 @@ The workflow is as follows:
 Usage: check_patch.py -p [/path/to/patch]
        check_patch.py -i [patchwork id]
        check_patch.py -g [github pull request id]
-       check_patch.py --full --yes [check all the virt-tests tree]
+       check_patch.py --full --yes [check the entire tree]
 
 @copyright: Red Hat Inc, 2009.
 @author: Lucas Meneghel Rodrigues <lmr@redhat.com>
@@ -37,6 +37,52 @@ PWHOST = "patchwork.virt.bos.redhat.com"
 
 TMP_FILE_DIR = tempfile.gettempdir()
 LOG_FILE_PATH = os.path.join(TMP_FILE_DIR, 'check-patch.log')
+
+
+def project_dir_name():
+    '''
+    Returns the project name by using the project top level directory
+    '''
+    path = os.path.abspath(__file__)
+    return os.path.basename(os.path.dirname(os.path.dirname(path)))
+
+
+PROJECT_NAME = project_dir_name()
+
+
+EXTENSION_BLACKLIST = {
+    'autotest': ["common.py", ".java", ".html", ".png", ".css",
+                 ".xml", ".pyc", ".orig", ".rej", ".bak", ".so"],
+    'virt-test': ["common.py", ".svn", ".git", ".pyc", ".orig",
+                  ".rej", ".bak", ".so", ".cfg", ".ks", ".preseed",
+                  ".steps", ".c", ".xml", ".sif", ".cs", ".ini",
+                  ".exe", "logs", "shared/data"]
+}
+
+
+DIR_BLACKLIST = {
+    'autotest': [".svn", ".git", "logs", "virt", "site-packages",
+                 "ExternalSource"],
+    'virt-test': [".svn", ".git", "data", "logs"]
+}
+
+
+FILE_BLACKLIST = {
+    'autotest': ['client/tests/virt/qemu/tests/stepmaker.py',
+                 'utils/run_pylint.py', 'Makefile', '.travis.yml'],
+}
+
+
+PY24_BLACKLIST = {
+    'virt-test': ['qemu/tests/stepmaker.py', 'virttest/step_editor.py',
+                  'shared/scripts/cb.py']
+}
+
+
+INDENT_BLACKLIST = {
+    'autotest': ['cli/job_unittest.py', 'Makefile', '.travis.yml']
+}
+
 
 class CheckPatchLoggingConfig(logging_config.LoggingConfig):
     def configure_logging(self, results_dir=None, verbose=True):
@@ -358,14 +404,12 @@ class FileChecker(object):
             self.is_python = True
 
         self.corrective_actions = []
+        self.indent_exceptions = INDENT_BLACKLIST.get(PROJECT_NAME, [])
+        self.check_exceptions = FILE_BLACKLIST.get(PROJECT_NAME, [])
 
-        self.indent_exceptions = []
         version = sys.version_info[0:2]
-        self.check_exceptions = []
         if version < (2, 5):
-            self.check_exceptions = ['qemu/tests/stepmaker.py',
-                                     'virttest/step_editor.py',
-                                     'shared/scripts/cb.py']
+            self.check_exceptions += PY24_BLACKLIST.get(PROJECT_NAME, [])
 
         if self.is_python:
             logging.debug("Checking file %s", self.path)
@@ -613,7 +657,8 @@ class PatchChecker(object):
 
         @param gh_id: Patchwork patch id.
         """
-        url_template = "https://github.com/autotest/virt-test/pull/%s.patch"
+        url_template = "https://github.com/autotest/%s" % PROJECT_NAME
+        url_template += "/pull/%s.patch"
         patch_url = url_template % gh_id
         patch_dest = os.path.join(self.base_dir, 'github-%s.patch' % gh_id)
         urllib.urlretrieve(patch_url, patch_dest)
@@ -703,18 +748,28 @@ if __name__ == "__main__":
         vcs = None
 
     logging_manager.configure_logging(CheckPatchLoggingConfig(), verbose=debug)
+    logging.info("Detected project name: %s", PROJECT_NAME)
     logging.info("Log saved to file: %s", LOG_FILE_PATH)
-    extension_blacklist = ["common.py", ".svn", ".git", ".pyc", ".orig",
-                           ".rej", ".bak", ".so", ".cfg", ".ks", ".preseed",
-                           ".steps", ".c", ".xml", ".sif", ".cs", ".ini",
-                           ".exe", "logs", "shared/data"]
-    dir_blacklist = [".svn", ".git", "data", "logs"]
+    extension_blacklist = EXTENSION_BLACKLIST.get(PROJECT_NAME, [])
+    dir_blacklist = DIR_BLACKLIST.get(PROJECT_NAME, [])
 
     if full_check:
         failed_paths = []
         run_pylint.set_verbosity(False)
-        logging.info("Virt Tests full tree check")
+        logging.info("%s full tree check", PROJECT_NAME)
         logging.info("")
+
+        if PROJECT_NAME == 'autotest' and os.path.isfile("tko/Makefile"):
+            proto_cmd = "make -C tko"
+            try:
+                utils.system(proto_cmd)
+            except error.CmdError:
+                doc = "https://github.com/autotest/autotest/wiki/UnittestSuite"
+                logging.error("Command %s failed. Please check if you have "
+                              "the google protocol buffer compiler, refer to "
+                              "%s for more info", proto_cmd, doc)
+                sys.exit(1)
+
         file_checker = FileChecker()
         for root, dirs, files in os.walk("."):
             dirs[:] = [d for d in dirs if d not in dir_blacklist]
