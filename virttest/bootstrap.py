@@ -5,15 +5,17 @@ import utils_misc, data_dir, asset, cartesian_config
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
-recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',), ('qemu-io',)],
-                        'libvirt': [('virsh',), ('virt-install',), ('fakeroot',)],
-                        'openvswitch': [],
-                        'v2v': [],
+recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',),
+                                 ('qemu-io',)],
+                        'libvirt': [('virsh',), ('virt-install',),
+                                    ('fakeroot',)],
+                        'lvsb':[],
                         'libguestfs': [('perl',)]}
 
 mandatory_programs = {'qemu': basic_program_requirements + ['gcc'],
                       'libvirt': basic_program_requirements,
                       'openvswitch': basic_program_requirements,
+                      'lvsb': ['virt-sandbox', 'virt-sandbox-service', 'virsh'],
                       'v2v': basic_program_requirements,
                       'libguestfs': basic_program_requirements}
 
@@ -21,19 +23,22 @@ mandatory_headers = {'qemu': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
                      'libvirt': [],
                      'openvswitch': [],
                      'v2v': [],
+                     'lvsb':[],
                      'libguestfs': []}
 
 first_subtest = {'qemu': ['unattended_install', 'steps'],
                 'libvirt': ['unattended_install'],
                 'openvswitch': ['unattended_install'],
                 'v2v': ['unattended_install'],
-                'libguestfs': ['unattended_install']}
+                'libguestfs': ['unattended_install'],
+                'lvsb':[]}
 
 last_subtest = {'qemu': ['shutdown'],
                 'libvirt': ['shutdown', 'remove_guest'],
                 'openvswitch': ['shutdown'],
                 'v2v': ['shutdown'],
-                'libguestfs': ['shutdown']}
+                'libguestfs': ['shutdown'],
+                'lvsb':[]}
 
 test_filter = ['__init__', 'cfg']
 config_filter = ['__init__',]
@@ -191,9 +196,12 @@ def create_subtests_cfg(t_type):
                                                  '*.py',
                                                  test_filter)
     shared_test = os.path.join(root_dir, 'tests')
-    shared_test_list = data_dir.SubdirGlobList(shared_test,
-                                               '*.py',
-                                               test_filter)
+    if t_type == 'lvsb':
+        shared_test_list = []
+    else:
+        shared_test_list = data_dir.SubdirGlobList(shared_test,
+                                                   '*.py',
+                                                   test_filter)
     all_specific_test_list = []
     for test in specific_test_list:
         basename = os.path.basename(test)
@@ -213,9 +221,13 @@ def create_subtests_cfg(t_type):
                                    'tests', 'cfg')
     shared_test_cfg = os.path.join(root_dir, 'tests', 'cfg')
 
-    shared_file_list = data_dir.SubdirGlobList(shared_test_cfg,
-                                               "*.cfg",
-                                               config_filter)
+    # lvsb tests can't use VM shared tests
+    if t_type == 'lvsb':
+        shared_file_list = []
+    else:
+        shared_file_list = data_dir.SubdirGlobList(shared_test_cfg,
+                                                   "*.cfg",
+                                                   config_filter)
     first_subtest_file = []
     last_subtest_file = []
     non_dropin_tests = []
@@ -421,9 +433,13 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
             logging.debug("Dir %s exists, not creating",
                           sub_dir_path)
 
-    create_config_files(test_dir, shared_dir, interactive, step)
-    create_subtests_cfg(test_name)
-    create_guest_os_cfg(test_name)
+    # lvsb test doesn't use any shared configs
+    if test_name == 'lvsb':
+        create_subtests_cfg(test_name)
+    else:
+        create_config_files(test_dir, shared_dir, interactive, step)
+        create_subtests_cfg(test_name)
+        create_guest_os_cfg(test_name)
 
     if download_image or restore_image:
         logging.info("")
