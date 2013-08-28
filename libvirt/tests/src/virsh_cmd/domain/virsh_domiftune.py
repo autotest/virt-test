@@ -47,20 +47,20 @@ def check_domiftune(params):
 
     if vm and vm.is_alive() and options != "config":
         if inbound and inbound != inbound_from_cmd_output:
-            logging.error("To expect inbound %s: %s", (inbound,
-                           inbound_from_cmd_output))
+            logging.error("To expect inbound %s: %s", inbound,
+                          inbound_from_cmd_output)
             return False
         if outbound and outbound != outbound_from_cmd_output:
-            logging.error("To expect inbound %s: %s", (outbound,
-                           outbound_from_cmd_output))
+            logging.error("To expect inbound %s: %s", outbound,
+                          outbound_from_cmd_output)
             return False
         if inbound and inbound_from_xml and inbound != inbound_from_xml:
-            logging.error("To expect outbound %s: %s", (inbound,
-                           inbound_from_xml))
+            logging.error("To expect outbound %s: %s", inbound,
+                          inbound_from_xml)
             return False
         if outbound and outbound_from_xml and outbound != outbound_from_xml:
-            logging.error("To expect outbound %s: %s", (outbound,
-                           outbound_from_xml))
+            logging.error("To expect outbound %s: %s", outbound,
+                          outbound_from_xml)
             return False
 
     return True
