@@ -23,7 +23,7 @@ for non-existant keys.
 @copyright: 2012 Red Hat Inc.
 """
 
-import signal, logging, urlparse, re
+import signal, logging, urlparse, re, weakref
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
 from virttest import aexpect, propcan, remote
@@ -200,20 +200,18 @@ class VirshSession(aexpect.ShellSession):
 # across different versions of python
 class VirshClosure(object):
     """
-    Callable that uses dict-like 'self' argument to augment **dargs
+    Callable with weak ref. to override **dargs when calling reference_function
     """
-
 
     def __init__(self, reference_function, dict_like_instance):
         """
-        Initialize callable for reference_function on dict_like_instance
+        Callable reference_function with weak ref dict_like_instance
         """
         if not issubclass(dict_like_instance.__class__, dict):
             raise ValueError("dict_like_instance %s must be dict or subclass"
                              % dict_like_instance.__class__.__name__)
         self.reference_function = reference_function
-        self.dict_like_instance = dict_like_instance
-
+        self.dict_like_weakref = weakref.ref(dict_like_instance)
 
     def __call__(self, *args, **dargs):
         """
@@ -222,8 +220,11 @@ class VirshClosure(object):
         @param: *args: Passthrough to reference_function
         @param: **dargs: Updates dict_like_instance copy before call
         """
-        dargs.update(self.dict_like_instance)
-        return self.reference_function(*args, **dargs)
+        new_dargs = self.dict_like_weakref()
+        if new_dargs is None:
+            new_dargs = {}
+        new_dargs.update(dargs)
+        return self.reference_function(*args, **new_dargs)
 
 
 class Virsh(VirshBase):
@@ -241,27 +242,14 @@ class Virsh(VirshBase):
         @param: *args: Initial property keys/values
         @param: **dargs: Initial property keys/values
         """
-        # Set closure_args as a dict. This dict will be passed
-        # to init VirshClosure objects.
-        self.super_set("closure_args", dict())
         super(Virsh, self).__init__(*args, **dargs)
-        # Init the closure_args for VirshClosure.
-        for key, value in self.items():
-            self.super_get("closure_args")[key] = value
         # Define the instance callables from the contents of this module
         # to avoid using class methods and hand-written aliases
         for sym, ref in globals().items():
             if sym not in NOCLOSE and callable(ref):
                 # Adding methods, not properties, so avoid special __slots__
                 # handling.  __getattribute__ will still find these.
-                self.super_set(sym, VirshClosure(ref, self.super_get("closure_args")))
-
-    def __setitem__(self, key, value):
-        """
-        Overwrite this method to update closure_args in setting item.
-        """
-        self.super_get("closure_args")[key] = value
-        return super(Virsh, self).__setitem__(key, value)
+                self.super_set(sym, VirshClosure(ref, self))
 
 
 class VirshPersistent(Virsh):
