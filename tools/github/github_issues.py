@@ -7,6 +7,60 @@ import datetime, time, shelve
 # Requires PyGithub version >= 1.13 for access to raw_data attribute
 import github
 
+# Github deals only in UTC, need way to convert date/time
+class UTC(datetime.tzinfo):
+    """UTC"""
+
+    def utcoffset(self, dt):
+        return datetime.timedelta(0)
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return datetime.timedelta(0)
+
+
+class LocalTimezone(datetime.tzinfo):
+    """Represents the local timezone automatically"""
+
+    def __init__(self):
+        self.STDOFFSET = datetime.timedelta(seconds = -time.timezone)
+        if time.daylight:
+            self.DSTOFFSET = datetime.timedelta(seconds = -time.altzone)
+        else:
+            self.DSTOFFSET = self.STDOFFSET
+        self.DSTDIFF = self.DSTOFFSET - self.STDOFFSET
+        self.ZERO = datetime.timedelta(0)
+
+
+    def utcoffset(self, dt):
+        if self._isdst(dt):
+            return self.DSTOFFSET
+        else:
+            return self.STDOFFSET
+
+
+    def dst(self, dt):
+        if self._isdst(dt):
+            return self.DSTDIFF
+        else:
+            return self.ZERO
+
+
+    def tzname(self, dt):
+        return time.tzname[self._isdst(dt)]
+
+
+    def _isdst(self, dt):
+        tt = (dt.year, dt.month, dt.day,
+              dt.hour, dt.minute, dt.second,
+              dt.weekday(), 0, 0)
+        stamp = time.mktime(tt)
+        tt = time.localtime(stamp)
+        return tt.tm_isdst > 0
+
+
 
 # Needed to not confuse cached 'None' objects
 class Nothing(object):
@@ -18,6 +72,10 @@ class SearchResults(object):
 
     def __init__(self, *stuff):
         self.raw_data = stuff
+
+
+    def __str__(self):
+        return str(self.raw_data)
 
 
 class GithubCache(object):
@@ -33,14 +91,14 @@ class GithubCache(object):
         github.GitCommit.GitCommit:datetime.timedelta(days=30),
         github.NamedUser.NamedUser:datetime.timedelta(days=30),
         github.Commit.Commit:datetime.timedelta(days=30),
-        github.Issue.Issue:datetime.timedelta(minutes=30),
-        github.PullRequest.PullRequest:datetime.timedelta(hours=1),
+        github.Issue.Issue:datetime.timedelta(days=1),
+        github.PullRequest.PullRequest:datetime.timedelta(days=1),
         # Special case for github.Issue.Issue
-        'closed':datetime.timedelta(days=30),
-        SearchResults:datetime.timedelta(minutes=10),
-        github.NamedUser.NamedUser:datetime.timedelta(hours=2),
-        github.GitAuthor.GitAuthor:datetime.timedelta(days=9999),
-        'total_issues':datetime.timedelta(days=9999)
+        'closed':datetime.timedelta(days=180),
+        SearchResults:datetime.timedelta(hours=1), # less than default
+        github.NamedUser.NamedUser:datetime.timedelta(days=90),
+        github.GitAuthor.GitAuthor:datetime.timedelta(days=180),
+        'total_issues':datetime.timedelta(days=999) # special case
     }
 
 
@@ -169,10 +227,75 @@ class GithubCache(object):
             self.cache_del()
             raise
 
+class HourRateLimiter(object):
+    """
+    Objects that sleep when called, based on per-hour rate limiting.
+    """
+
+    def __init__(self, limit, remaining, reset=None):
+        """
+        Initialize rate-limiter callable based on current external state
+
+        @param: limit: Number of requests per period
+        @param: remaining: Number of requests remaining for this period
+        @param: period: datetime.TimeDelta describing reset period
+        @param: reset: datetime of current period end (None for bottom of hour)
+        """
+        if reset is None:
+            self.__next_reset__()
+        else:
+            self.reset = reset
+        self.limit = limit
+        self.remaining = remaining
+        self.duration = 0.0
+        self.__update__() # Set self.duration
+
+
+    def __next_reset__(self):
+        """Calculate and set reset time from now"""
+        now = datetime.datetime.utcnow()
+        hour_top = datetime.datetime(year=now.year, month=now.month,
+                                     day=now.day, hour=now.hour,
+                                     minute=0, second=0, microsecond=0)
+        self.reset = hour_top + datetime.timedelta(hours=1)
+
+
+    def __update__(self):
+        """Update counters and timers, deducting one request"""
+        now = datetime.datetime.utcnow()
+        if now >= self.reset:
+            self.remaining = self.limit
+            self.__next_reset__()
+        self.remaining -= 1
+        if self.remaining < 1:
+            raise ValueError("Rate limit exceeded: Check for unaccounted "
+                             "requests or inaccurate reset time")
+        # Seconds until next reset
+        delta = self.reset - now
+        reset_seconds = delta.seconds + (delta.microseconds / 1000000.0)
+        # Divide remaining requests into available time
+        self.duration = reset_seconds / self.remaining
+
+
+    def __call__(self):
+        """Sleep for self.duration"""
+        # Deduct request and update self.duration
+        self.__update__()
+        # Never sleep more than 2 seconds
+        if self.duration > 2:
+            time.sleep(2)
+        else:
+            time.sleep(self.duration)
+
+
 class GithubIssuesBase(list):
     """
-    Base class for cached list of github issues
+    Cached list of github issues in pygithub format
     """
+
+    # Storage for property values
+    _cache_hits = 0   # Tracks temporary cache instances
+    _cache_misses = 0 # Tracks temporary cache instances
 
     # Force static pickle protocol version
     protocol = 2
@@ -180,23 +303,20 @@ class GithubIssuesBase(list):
     # Class to use for cache management
     cache_class = GithubCache
 
-    def __init__(self, github_obj, repo_full_name, cache_filename):
+    def __init__(self, github_obj, repo_full_name):
         """
         Initialize cache and reference github repository issues
         """
 
         self.github = github_obj
         self.repo_full_name = repo_full_name
-        self.shelf = shelve.open(filename=cache_filename,
+        self.shelf = shelve.open(filename='GithubIssues.cache',
                                  protocol=self.protocol,
                                  writeback=True)
 
-        # Avoid exceeding rate-limit per hour
-        requests = self.github.rate_limiting[1] # requests per hour
-        period = 60.0 * 60.0 # one hour in seconds
-        sleeptime = period / requests
-        self.pre_fetch_partial = Partial(time.sleep, sleeptime)
-        # self.pre_fetch_partial = None # cheat-mode enable (no delays)
+        # Initialize sleeptime
+        remaining, limit = self.github.rate_limiting
+        self.ratelimit = HourRateLimiter(limit, remaining)
 
         repo_cache_key = 'repo_%s' % self.repo_full_name
         # get_repo called same way throughout instance life
@@ -210,7 +330,7 @@ class GithubIssuesBase(list):
                                          cache_get_partial,
                                          cache_set_partial,
                                          cache_del_partial,
-                                         self.pre_fetch_partial,
+                                         self.ratelimit,
                                          fetch_partial)
         super(GithubIssuesBase, self).__init__()
 
@@ -219,6 +339,8 @@ class GithubIssuesBase(list):
         """
         Make sure cache is saved
         """
+ 
+        self.vacuum()
         try:
             self.shelf.close()
         except AttributeError:
@@ -253,8 +375,7 @@ class GithubIssuesBase(list):
 
 
     def __iter__(self):
-        for key in self.keys():
-            yield self[key]
+        return (self[key] for key in self.keys())
 
 
     def __setitem__(self, key, value):
@@ -280,74 +401,14 @@ class GithubIssuesBase(list):
         return item
 
 
-    def get_issue_cache_key(self, number):
-        return 'repo_%s_issue_%s' % (self.repo_full_name, str(int(number)))
+    @property
+    def cache_hits(self):
+        return self.get_repo.cache_hits + self._cache_hits
 
 
-    def has_key(self, key):
-        return self.__contains__(key)
-
-
-    def items(self):
-        # Iterator comprehension
-        return (self[key] for key in self.keys())
-
-
-    def keys(self):
-        # Iterators are simply better
-        return xrange(1, self.__len__() + 1)
-
-
-    def values(self):
-        # Iterator comprehension
-        return (value for (key, value) in self.items())
-
-
-class GithubIssues(GithubIssuesBase, object):
-    """
-    Read-only List-like interface to cached github issues in standardized format
-    """
-
-    # Marshal callables for key to github.Issue.Issue value
-    marshal_map = {
-        'number':lambda gh_obj:getattr(gh_obj, 'number'),
-        'summary':lambda gh_obj:getattr(gh_obj, 'title'),
-        'description':lambda gh_obj:getattr(gh_obj, 'body'),
-        'modified':lambda gh_obj:getattr(gh_obj, 'updated_at'),
-        'commits':NotImplementedError, # setup in __init__
-        'opened':lambda gh_obj:getattr(gh_obj, 'created_at'),
-        'closed':lambda gh_obj:getattr(gh_obj, 'closed_at'),
-        'assigned':lambda gh_obj:getattr(gh_obj, 'assignee'),
-        'author':lambda gh_obj:getattr(gh_obj, 'user').login,
-        'commit_authors':NotImplementedError, # setup in __init__
-        'comments':lambda gh_obj:getattr(gh_obj, 'comments'),
-        'comment_authors':NotImplementedError, # setup in __init__
-        'labels':lambda gh_obj:[label.name for label in gh_obj.labels],
-        'url':lambda gh_obj:getattr(gh_obj, 'html_url'),
-        'github_issue':lambda gh_obj:gh_obj
-    }
-
-    # Storage for property values
-    _cache_hits = 0   # Tracks temporary cache instances
-    _cache_misses = 0 # Tracks temporary cache instances
-
-    def __init__(self, github_obj, repo_full_name):
-        """
-        Initialize cache and reference github repository issues
-        """
-        cache_filename = self.__class__.__name__ + '.cache'
-        super(GithubIssues, self).__init__(github_obj,
-                                           repo_full_name,
-                                           cache_filename)
-        # These marshal functions require state
-        self.marshal_map['commits'] = self.gh_pr_commits
-        self.marshal_map['commit_authors'] = self.gh_pr_commit_authors
-        self.marshal_map['comment_authors'] = self.gh_issue_comment_authors
-
-
-    def __del__(self):
-        self.vacuum()
-        super(GithubIssues, self).__del__()
+    @property
+    def cache_misses(self):
+        return self.get_repo.cache_misses + self._cache_misses
 
 
     def vacuum(self):
@@ -363,23 +424,322 @@ class GithubIssues(GithubIssuesBase, object):
             del self.shelf[key]
 
 
-    @property
-    def cache_hits(self):
-        return self.get_repo.cache_hits + self._cache_hits
+    def get_gh_label(self, name):
+        repo = self.get_repo()
+        cache_key = str('repo_%s_label_%s' % (self.repo_full_name, name))
+        fetch_partial = Partial(repo.get_label, name)
+        try:
+            return self.get_gh_obj(cache_key, fetch_partial)
+        except KeyError:
+            raise ValueError('label %s is not valid for repo %s' % (name,
+                                                           self.repo_full_name))
+
+
+    def get_pull(self, gh_issue):
+        """Return possibly cached pull-request info"""
+        num = gh_issue.number
+        repo = self.get_repo()
+        cache_key = 'repo_%s_pull_%s' % (self.repo_full_name, str(num))
+        fetch_partial = Partial(repo.get_pull, num)
+        return = self.get_gh_obj(cache_key, fetch_partial)
+
+
+
+    def get_pull_commits(self, pull_request):
+        """Return a list of pygithub commit objects"""
+            cache_key = 'repo_%s_pull_%s_commits' % (self.repo_full_name,
+                                                     str(num))
+            fetch_partial = Partial(pull.get_commits)
+            return self.get_gh_obj(cache_key, fetch_partial)
+
+
+    def _fetch_pr_author_set(self, pull_request):
+        # Don't count duplicates
+        authors = set()
+        for commit in get_pull_commits(pull_request):
+            # pagination flip triggers a extra request
+            self.ratelimit()
+            # When not github user, use e-mail from git commit object
+            if commit.author is None:
+                # pagination flip triggers a extra request
+                self.ratelimit()
+                authors.add(commit.commit.author.email)
+            else: # Author is a github user
+                authors.add(commit.author)
+        return authors
+
+
+    def get_pull_commit_authors(self, pull_request):
+        """Return set of unique commit author names/emails"""
+        cache_key = 'repo_%s_pull_%s_commit_authors' % (
+            self.repo_full_name, pull_request.number)
+        fetch_partial = Partial(self._fetch_pr_author_set, pull_request)
+        return self.get_gh_obj(cache_key, fetch_partial)
+
+
+
+    def _fetch_issue_comment_authors(self, gh_issue):
+        authors = set()
+        for comment in gh_issue.get_comments:
+            # pagination flip triggers a extra request
+            self.ratelimit()
+            authors.add(comment.user.login)
+        return authors
+
+
+    def get_issue_comment_authors(self, gh_issue):
+        """Return set of unique comment author names"""
+        cache_key = ('repo_%s_issue_%s_comments'
+                     % (self.repo_full_name, gh_issue.number))
+        fetch_partial = Partial(_fetch_issue_comment_authors, gh_issue)
+        return self.get_gh_obj(cache_key, fetch_partial)
+
+
+    def get_gh_obj(self, cache_key, fetch_partial):
+        """
+        Helper to get object possibly from cache and update counters
+        """
+        cache_get_partial = Partial(self.shelf.__getitem__,
+                                    cache_key)
+        cache_set_partial = Partial(self.shelf.__setitem__,
+                                    cache_key)
+        cache_del_partial = Partial(self.shelf.__delitem__,
+                                    cache_key)
+        # Callable instance could change every time
+        get_obj = GithubCache(self.github,
+                              cache_get_partial,
+                              cache_set_partial,
+                              cache_del_partial,
+                              self.ratelimit,
+                              fetch_partial)
+        result = get_obj()
+        self._cache_hits += get_obj.cache_hits
+        self._cache_misses += get_obj.cache_misses
+        return result # DOES NOT SYNC DATA!
+
+
+    def get_issue_cache_key(self, number):
+        """Return cache key to aid in item removal"""
+        return 'repo_%s_issue_%s' % (self.repo_full_name, str(int(number)))
+
+
+    def has_key(self, key):
+        return self.__contains__(key)
+
+
+    def items(self):
+        # Iterator comprehension
+        return (self[key] for key in self.keys())
+
+
+    def keys(self):
+        # Iterators are simply better
+        return xrange(1, self.__len__())
+
+
+    def values(self):
+        # Iterator comprehension
+        return (value for (key, value) in self.items())
+
+
+class GithubIssue(object):
+    """Standardized representation of single issue/pull request"""
+
+    # Static property values
+    _number = None
+    _github_issues = None
+
+
+    # Dynamic property values
+    _summary = None
+    _description = None
+    _modified = None
+    _commits = None
+    _merged = None
+    _opened = None
+    _closed = None
+    _assigned = None
+    _author = None
+    _commit_authors = None
+    _comments = None
+    _comment_authors = None
+    _labels = None
+    _url = None
+    _is_pull = None
+
+    def __init__(self, number, github_issues):
+        self._number = number
+        # Super class hands out raw data
+        self._github_issues = super(GithubIssues, github_issues)
 
 
     @property
-    def cache_misses(self):
-        return self.get_repo.cache_misses + self._cache_misses
+    def number(self):
+        return self._number
+
+
+    @property
+    def github_obj(self):
+        return self._github_issues.github
+
+
+    @property
+    def repo_full_name(self):
+        return self._github.repo_full_name
+
+
+    @property
+    def summary(self):
+        if self._summary is None:
+            self._summary = self._github_issues[self._number].title
+        return self._summary
+
+
+    @property
+    def description(self):
+        if self._description is None:
+            self._description = self._github_issues[self._number].body
+        return self._description
+
+
+    @property
+    def modified(self):
+        if self._modified is None:
+            self._modified = self._github_issues[self._number].updated_at
+        return self._modified
+
+
+    @property
+    def opened(self):
+        if self._opened is None:
+            self._opened = self._github_issues[self._number].created_at
+        return self._opened
+
+
+    @property
+    def closed(self):
+        if self._closed is None:
+            self._closed = self._github_issues[self._number].closed_at
+        return self._closed
+
+
+    @property
+    def assigned(self):
+        if self._assigned is None:
+            assignee = self._github_issues[self._number].assignee
+            if assignee is not None:
+                assignee = assignee.login
+            else:
+                assignee = ''
+            self._assigned = assignee
+        return self._assigned
+
+
+    @property
+    def author(self):
+        if self._author is None:
+            self._author = self._github_issues[self._number].user
+        return self._author
+
+
+    @property
+    def is_pull(self):
+        if self._is_pull is None:
+            issue = self._github_issues[self._number]
+            # Sometimes this attribute doesn't exist
+            pullreq = getattr(issue, 'pull_request', None)
+            if pullreq is None:
+                self._is_pull = False
+            else:
+                # Be certain, cache can get corrupted if wrong
+                if (pullreq.diff_url is not None and
+                    pullreq.html_url is not None and
+                    pullreq.patch_url is not None):
+                    self._is_pull = True
+        return self._is_pull
+
+
+    @property
+    def merged(self):
+        if self._merged is None:
+            issue = self._github_issues[self._number]
+            if self.is_pull
+                pull = self._github_issues.get_pull(self._number)
+                if pull.merged:
+                    self._merged = pull.merged_at
+            else: # not pull request or not merged
+                # TODO: Throw exception
+                self._merged = False
+        return self._merged
+
+
+    @property
+    def commits(self):
+        if self._commits is None:
+            if self.is_pull():
+                pull = self._github_issues.get_pull(self._number)
+                self._commits = pull.commits
+            else: # Not a pull request
+                # TODO: Throw exception
+                self._commits = 0
+        return self._commits
+
+
+    @property
+    def commit_authors(self):
+        if self._commit_authors is None:
+            if self.is_pull():
+                pull = self._github_issues.get_pull(self._number)
+                # Difficult line to wrap
+                authors = self._github_issues.get_pull_commit_authors(pull)
+                self._commit_authors = authors
+            else: # Not a pull request
+                # TODO: Throw exception
+                self._commit_authors = False
+        return self._commit_authors
+
+
+    @property
+    def comments(self):
+        return self._github_issues[self._number].comments
+
+
+    @property
+    def comment_authors(self):
+        if self._comment_authors is None:
+            if self.comments > 0:
+                issue = self._github_issues[self._number]
+                # Difficult line to wrap
+                authors = self._github_issues.get_issue_comment_authors(issue)
+                self._self._comment_authors = authors
+        return self._comment_authors
+
+
+    @property
+    def labels(self):
+        if self._labels is None:
+            label_pglist = self._github_issues[self._number].labels
+            self._labels = [label.name for label in label_pglist]
+        return self._labels
+
+
+    @property
+    def url(self):
+        if self._url is None:
+            self._url = self._github_issues[self._number].html_url
+        return self._url
+
+
+class GithubIssues(GithubIssuesBase):
+    """List of GithubIssue instances plus some extra methods"""
 
 
     def __getitem__(self, key):
         """
-        Return a standardized dict of github issue
+        Return a GithubIssue instances for issue number key
         """
-        item = self.marshal_gh_obj(super(GithubIssues, self).__getitem__(key))
-        self.shelf.sync()
-        return item
+        # These instances delay data retrieval until it is requested
+        return GithubIssue(key, self)
 
 
     def __len__(self):
@@ -416,29 +776,6 @@ class GithubIssues(GithubIssuesBase, object):
         return cache_data['raw_data']
 
 
-    def get_gh_obj(self, cache_key, fetch_partial):
-        """
-        Helper to get object possibly from cache and update counters
-        """
-        cache_get_partial = Partial(self.shelf.__getitem__,
-                                    cache_key)
-        cache_set_partial = Partial(self.shelf.__setitem__,
-                                    cache_key)
-        cache_del_partial = Partial(self.shelf.__delitem__,
-                                    cache_key)
-        # Callable instance could change every time
-        get_obj = GithubCache(self.github,
-                              cache_get_partial,
-                              cache_set_partial,
-                              cache_del_partial,
-                              self.pre_fetch_partial,
-                              fetch_partial)
-        result = get_obj()
-        self._cache_hits += get_obj.cache_hits
-        self._cache_misses += get_obj.cache_misses
-        return result # DOES NOT SYNC DATA!
-
-
     def search(self, criteria):
         """
         Return a list of issue-numbers that match a search criteria.
@@ -454,7 +791,7 @@ class GithubIssues(GithubIssuesBase, object):
         """
         valid_criteria = {}
         # use search dictionary to form hash for cached results
-        search_cache_key = 'issue_search'
+        search_cache_key = 'repo_%s_issue_search' % self.repo_full_name
         # Validate & transform criteria
         if criteria.has_key('state'):
             state = str(criteria['state'])
@@ -517,7 +854,9 @@ class GithubIssues(GithubIssuesBase, object):
                                       hour=since.hour,
                                       minute=since.minute,
                                       second=0,
-                                      microsecond=0)
+                                      microsecond=0,
+                                      tzinfo=since.tzinfo)
+            since = since.astimezone(UTC())
             search_cache_key = '%s_%s' % (search_cache_key, since.isoformat())
             valid_criteria['since'] = since
 
@@ -556,135 +895,6 @@ class GithubIssues(GithubIssuesBase, object):
             raise ValueError('login %s is not a valid github user' % login)
 
 
-    def get_gh_label(self, name):
-        repo = self.get_repo()
-        cache_key = str('repo_%s_label_%s' % (self.repo_full_name, name))
-        fetch_partial = Partial(repo.get_label, name)
-        try:
-            return self.get_gh_obj(cache_key, fetch_partial)
-        except KeyError:
-            raise ValueError('label %s is not valid for repo %s' % (name,
-                                                           self.repo_full_name))
-
-
-    def marshal_gh_obj(self, gh_issue):
-        """
-        Translate a github issue object into dictionary w/ fixed keys
-        """
-        mkeys = self.marshal_map.keys()
-        return dict([ (key, self.marshal_map[key](gh_issue)) for key in mkeys])
-
-
-    @staticmethod
-    def gh_issue_is_pull(gh_issue):
-        """
-        Return True/False if gh_issue is a pull request or not
-        """
-        pullreq = gh_issue.pull_request
-        if pullreq is not None:
-            if (pullreq.diff_url is None and
-                pullreq.html_url is None and
-                pullreq.patch_url is None):
-                return False
-        else:
-            return False
-        # pullreq not None but pullreq attributes are not None
-        return True
-
-
-    # marshal_map method
-    def gh_issue_comment_authors(self, gh_issue):
-        """
-        Retrieve a list of comment author e-mail addresses
-        """
-        if gh_issue.comments > 0:
-            num = gh_issue.number
-            cache_key = ('repo_%s_issue_%s_comments'
-                         % (self.repo_full_name, num))
-            fetch_partial = Partial(gh_issue.get_comments)
-            authors = set()
-            for comment in self.get_gh_obj(cache_key, fetch_partial):
-                # Referencing user attribute requires a request, so cache it
-                user_cache_key = cache_key + '_%s_user' % comment.id
-                user_fetch_partial = Partial(getattr, comment, 'user')
-                try:
-                    user = self.get_gh_obj(user_cache_key, user_fetch_partial)
-                except:
-                    # Also clean up comments cache
-                    self.clean_cache_entry(cache_key)
-                    raise # original exception
-                authors.add(user.email)
-            return authors
-        else:
-            return None
-
-
-    # marshal_map method
-    def gh_pr_commit_authors(self, gh_issue):
-        """
-        Return list of commit author e-mail addresses for a pull-request
-        """
-
-        if GithubIssues.gh_issue_is_pull(gh_issue):
-            num = gh_issue.number
-            repo = self.get_repo()
-            cache_key = 'repo_%s_pull_%s' % (self.repo_full_name, str(num))
-            fetch_partial = Partial(repo.get_pull, num)
-            pull = self.get_gh_obj(cache_key, fetch_partial)
-            if pull.commits is None or pull.commits < 1:
-                return None # No commits == no commit authors
-
-            cache_key = 'repo_%s_pull_%s_commits' % (self.repo_full_name,
-                                                     str(num))
-            fetch_partial = Partial(pull.get_commits)
-            authors = set()
-            for commit in self.get_gh_obj(cache_key, fetch_partial):
-                # Referencing commit author requires a request, cache it.
-                author_cache_key = cache_key + '_%s_author' % str(commit.sha)
-                author_fetch_partial = Partial(getattr, commit, 'author')
-                try:
-                    author_obj = self.get_gh_obj(author_cache_key,
-                                                 author_fetch_partial)
-                except:
-                    # clean up commit list cache entry also
-                    self.clean_cache_entry(cache_key)
-                    raise # original exception
-                # Retrieve e-mail from git commit object
-                if author_obj is None:
-                    # Referencing git commit requires a request, cache it
-                    gitcommit_cache_key = (cache_key + '_%s_gitcommit'
-                                                       % str(commit.sha))
-                    gitcommit_fetch_partial = Partial(getattr, commit,
-                                                     'commit') # git commit
-                    try:
-                        gitcommit = self.get_gh_obj(gitcommit_cache_key,
-                                                    gitcommit_fetch_partial)
-                    except:
-                        # Need to clean commit and gitcommit entries
-                        self.clean_cache_entry(cache_key)
-                        self.clean_cache_entry(gitcommit_cache_key)
-                        raise
-                    authors.add(gitcommit.author.email)
-                else: # Author is a github user
-                    authors.add(author_obj.login)
-            return authors
-        return None # not a pull request
-
-
-    # marshal_map method
-    def gh_pr_commits(self, gh_issue):
-        """
-        Retrieves the number of commits on a pull-request, None if not a pull.
-        """
-        if GithubIssues.gh_issue_is_pull(gh_issue):
-            num = gh_issue.number
-            repo = self.get_repo()
-            cache_key = 'repo_%s_pull_%s' % (self.repo_full_name, str(num))
-            fetch_partial = Partial(repo.get_pull, num)
-            pull = self.get_gh_obj(cache_key, fetch_partial)
-            return pull.commits
-        return None # not a pull request
-
 
 class MutateError(KeyError):
 
@@ -715,7 +925,7 @@ class MutableIssue(dict):
 
     @property
     def _issue_cache_key(self):
-        return self.get_issue_cache_key(self._issue_number)
+        return self._github_issues.get_issue_cache_key(self._issue_number)
 
 
     def _setdelitem(self, opr, key, value):
@@ -758,7 +968,7 @@ class MutableIssue(dict):
         # Access PyGithub object to change labels
         self._github_issue['github_issue'].set_labels(*gh_labels)
         # Force retrieval of changed item
-        self._github_issues.clean_cache_entry(self._issue_cache_key())
+        self._github_issues.clean_cache_entry(self._issue_cache_key)
 
 
     def del_labels(self):
@@ -767,6 +977,6 @@ class MutableIssue(dict):
         """
         self._github_issue['github_issue'].delete_labels()
         # Force retrieval of changed item
-        self._github_issues.clean_cache_entry(self._issue_cache_key())
+        self._github_issues.clean_cache_entry(self._issue_cache_key)
 
     # TODO: Write get_*(), set_*(), del_*() for other dictionary keys

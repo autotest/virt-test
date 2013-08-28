@@ -55,8 +55,30 @@ print
 #            sort - str - 'created', 'updated', 'comments'
 #            direction - str - 'asc', 'desc'
 #            since - datetime.datetime
-criteria = {'state':'closed', 'labels':labels,
-            'sort':'updated', 'since':since}
+if labels:
+    criteria = {'labels':labels, 'sort':'updated', 'since':since}
+else:
+    criteria = {'sort':'updated', 'since':since}
+
+print "Searching..."
+
+# Colate issues per author
+author_issues = {}
+
+# Can't search both open and closed at same time
+for state in ['open', 'closed']:
+    criteria['state'] = state
+    for number in issues.search(criteria):
+        issue = issues[number]
+        # Skip issues (they don't have commits)
+        if issue['commits'] is not None:
+            # Pull req. could be closed but not merged
+            if issue['merged'] is not None:
+                author_issues[issue['author']] = issue
+        sys.stdout.write('.')
+        sys.stdout.flush()
+
+print '\n'
 
 heading = ("Applied %s pull-requests from %s since %s  by author"
            % (",".join(labels), repo_full_name, since.isoformat()))
@@ -64,21 +86,18 @@ print heading
 print "-" * len(heading)
 print
 
-author_issues = {}
-for number in issues.search(criteria):
-    issue = issues[number]
-    # Issues don't have commits
-    if issue['commits'] is not None:
-        author_issues[issue['author']] = issue
-
 authors = author_issues.keys()
 authors.sort()
 for author in authors:
     issue = author_issues[author]
     print "Pull #%d: '%s'" % (issue['number'], issue['summary'])
-    print "    %d commit(s) by %s" % (issue['commits'],
-                                      ",".join(issue['commit_authors']))
-    print
+    if issue['commits'] > 0:
+        print "    %d commit(s) by %s" % (issue['commits'],
+                                          ",".join(issue['commit_authors']))
+        print
+    else:
+        print "    commit information unavailable"
+        print
 
 # make sure cache is cleaned and saved up
 del issues
