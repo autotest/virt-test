@@ -51,7 +51,8 @@ def run_nic_hotplug(test, params, env):
     nic_name = 'hotadded'
     nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name,
                               netdst=netdst, nettype=nettype,
-                              queues=params.get('queues'))
+                              queues=params.get('queues'),
+                              vectors=params.get('vectors'))
 
     # Only run dhclient if explicitly set and guest is not running Windows.
     # Most modern Linux guests run NetworkManager, and thus do not need this.
