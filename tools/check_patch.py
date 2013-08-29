@@ -663,8 +663,10 @@ class PatchChecker(object):
 
         @param gh_id: Patchwork patch id.
         """
-        url_template = "https://github.com/autotest/%s" % PROJECT_NAME
-        url_template += "/pull/%s.patch"
+        #url_template = "https://github.com/autotest/%s" % PROJECT_NAME
+        #url_template += "/pull/%s.patch"
+        url_template = "https://github.com/autotest/virt-test/pull/%s.patch"
+
         patch_url = url_template % gh_id
         patch_dest = os.path.join(self.base_dir, 'github-%s.patch' % gh_id)
         urllib.urlretrieve(patch_url, patch_dest)
