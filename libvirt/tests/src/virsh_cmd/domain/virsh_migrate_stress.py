@@ -135,7 +135,7 @@ def do_migration(vms, dest_uri, load_vms, stress_type):
                     if not load_vms[0].is_alive:
                         load_vms[0].start()
                 except virt_vm.VMStartError:
-                    fail_info.append("Start load vm %s failed." % load_vm.name)
+                    fail_info.append("Start load vm %s failed." % vm.name)
                     break
             else:
                 logging.warn("No load vm provided.")
@@ -145,7 +145,7 @@ def do_migration(vms, dest_uri, load_vms, stress_type):
                     if not load_vm.is_alive:
                         load_vm.start()
                 except virt_vm.VMStartError:
-                    fail_info.append("Start load vm %s failed." % load_vm.name)
+                    fail_info.append("Start load vm %s failed." % vm.name)
                     break
         elif stress_type == "stress_tool":
             try:
