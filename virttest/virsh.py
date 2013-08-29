@@ -238,7 +238,7 @@ class Virsh(VirshBase):
     Execute libvirt operations, using a new virsh shell each time.
     """
 
-    __slots__ = VirshBase.__slots__
+    __slots__ = []
 
     def __init__(self, *args, **dargs):
         """
@@ -263,7 +263,7 @@ class VirshPersistent(Virsh):
     Execute libvirt operations using persistent virsh session.
     """
 
-    __slots__ = Virsh.__slots__ + ('session_id', )
+    __slots__ = ('session_id', )
 
     # B/c the auto_close of VirshSession is False, we
     # need to manager the ref-count of it manully.
@@ -374,7 +374,7 @@ class VirshConnectBack(VirshPersistent):
     Persistent virsh session connected back from a remote host
     """
 
-    __slots__ = Virsh.__slots__ + ('remote_ip', 'remote_pwd', 'remote_user')
+    __slots__ = ('remote_ip', 'remote_pwd', 'remote_user')
 
     def new_session(self):
         """

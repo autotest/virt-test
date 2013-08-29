@@ -14,7 +14,7 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
     Base class implementing common functions for all device XML w/o a type attr.
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('device_tag',)
+    __slots__ = ('device_tag',)
 
     # Subclasses are expected to hide device_tag
     def __init__(self, device_tag, virsh_instance=base.virsh):
@@ -73,7 +73,7 @@ class TypedDeviceBase(UntypedDeviceBase):
     Base class implementing common functions for all device XML w/o a type attr.
     """
 
-    __slots__ = UntypedDeviceBase.__slots__ + ('type_name',)
+    __slots__ = ('type_name',)
 
     # Subclasses are expected to hide device_tag
     def __init__(self, device_tag, type_name, virsh_instance=base.virsh):

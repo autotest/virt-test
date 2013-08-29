@@ -21,11 +21,8 @@ class CapabilityXML(base.LibvirtXMLBase):
     # TODO: Add more __slots__ and accessors to get some useful stats
     # e.g. guest_count etc.
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('uuid',
-                                                 'os_arch_machine_map',
-                                                 'cpu_count',
-                                                 'arch', 'model',
-                                                 'vendor', 'feature_list',)
+    __slots__ = ('uuid', 'os_arch_machine_map', 'cpu_count', 'arch', 'model',
+                 'vendor', 'feature_list',)
     __schema_name__ = "capability"
 
     def __init__(self, virsh_instance=base.virsh):

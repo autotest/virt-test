@@ -40,10 +40,10 @@ class SystemXML(CAPXML):
     """
     class for capability which type is system.
     """
-    __slots__ = CAPXML.__slots__ + ('product', 'hdware_vendor',
-                                    'hdware_serial', 'hdware_uuid',
-                                    'firmware_vendor', 'firmversion'
-                                    'firm_release_date')
+    __slots__ = ('product', 'hdware_vendor',
+                 'hdware_serial', 'hdware_uuid',
+                 'firmware_vendor','firmversion'
+                 'firm_release_date')
 
     __sysfs_sub_path__ = 'dmi/id/'
 
@@ -95,9 +95,9 @@ class PCIXML(CAPXML):
     """
     class for capability whose type is pci.
     """
-    __slots__ = CAPXML.__slots__ + ('domain', 'bus', 'slot',
-                                    'function', 'product_id',
-                                    'vendor_id')
+    __slots__ = ('domain', 'bus', 'slot',
+                 'function', 'product_id',
+                 'vendor_id')
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementInt('domain', self, parent_xpath='/',
@@ -175,9 +175,9 @@ class NodedevXMLBase(base.LibvirtXMLBase):
 
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'parent',
-                                                 'cap_type', 'cap',
-                                                 'sysfs_main_path')
+    __slots__ = ('name', 'parent',
+                 'cap_type', 'cap',
+                 'sysfs_main_path')
 
     __schema_name__ = "nodedev"
 
