@@ -75,14 +75,13 @@ class PropCanBase(dict, PropCanInternal):
     """
     Objects with optional accessor methods and dict-like access to fixed set of keys
     """
+    INITIALIZED = False
 
     def __new__(cls, *args, **dargs):
         if not hasattr(cls, '__slots__'):
             raise NotImplementedError("Class '%s' must define __slots__ "
                                       "property" % str(cls))
-        newone = dict.__new__(cls, *args, **dargs)
-        # Let accessor methods know initialization is running
-        newone.super_set('INITIALIZED', False)
+        newone = super(PropCanBase, cls).__new__(cls, *args, **dargs)
         return newone
 
     def __init__(self, *args, **dargs):
@@ -219,7 +218,7 @@ class PropCan(PropCanBase):
         """
         Set the value of key, only if it's not set or None
         """
-        if not self.has_key(key):
+        if not key in self:
             self[key] = value
 
     def set_if_value_not_none(self, key, value):
