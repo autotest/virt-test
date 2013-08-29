@@ -2359,14 +2359,17 @@ def domiftune(name, interface, options=None, inbound=None,
         cmd += " --%s" % options
 
 
-def desc(name, options, **dargs):
+def desc(name, options, desc_str, **dargs):
     """
     Show or modify description or title of a domain.
 
     @param: name: name of domain,
     @param: options: options for desc command.
+    @param: desc_str: new desc message
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object.
     """
+    if desc_str:
+        options = options + " \"%s\"" % desc_str
     cmd = "desc %s %s" % (name, options)
     return command(cmd, **dargs)
