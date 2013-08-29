@@ -1255,7 +1255,7 @@ class LibvirtIface(VirtIface):
     """
     Networking information specific to libvirt
     """
-    __slots__ = VirtIface.__slots__ + []
+    __slots__ = []
 
 
 class QemuIface(VirtIface):
@@ -1263,11 +1263,11 @@ class QemuIface(VirtIface):
     """
     Networking information specific to Qemu
     """
-    __slots__ = VirtIface.__slots__ + ['vlan', 'device_id', 'ifname', 'tapfds',
-                                       'tapfd_ids', 'netdev_id', 'tftp',
-                                       'romfile', 'nic_extra_params',
-                                       'netdev_extra_params', 'queues',
-                                       'vhostfds', 'vectors']
+    __slots__ = ['vlan', 'device_id', 'ifname', 'tapfds',
+                 'tapfd_ids', 'netdev_id', 'tftp',
+                 'romfile', 'nic_extra_params',
+                 'netdev_extra_params', 'queues', 'vhostfds',
+                 'vectors']
 
 
 class VMNet(list):
@@ -1495,7 +1495,7 @@ class ParamsNet(VMNet):
             nic_dict = {'nic_name': nic_name}
             nic_params = self.params.object_params(nic_name)
             # avoid processing unsupported properties
-            proplist = list(self.container_class.__slots__)
+            proplist = list(self.container_class.get_all_slots())
             # nic_name was already set, remove from __slots__ list copy
             del proplist[proplist.index('nic_name')]
             for propertea in proplist:
@@ -1576,7 +1576,8 @@ class DbNet(VMNet):
         except KeyError:
             entry = []
         self.unlock_db()
-        proplist = list(self.container_class.__slots__)
+
+        proplist = list(self.container_class.get_all_slots())
         # nic_name was already set, remove from __slots__ list copy
         del proplist[proplist.index('nic_name')]
         nic_name_list = self.nic_name_list()
@@ -1585,9 +1586,8 @@ class DbNet(VMNet):
             if nic_name in nic_name_list:
                 for propertea in proplist:
                     # only set properties in db but not in self
-                    if db_nic.has_key(propertea):
-                        self[nic_name].set_if_none(
-                            propertea, db_nic[propertea])
+                    if propertea in db_nic:
+                        self[nic_name].set_if_none(propertea, db_nic[propertea])
         if entry:
             VMNet.__init__(self, self.container_class, entry)
         # Assume self.update_db() called elsewhere

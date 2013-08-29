@@ -88,7 +88,7 @@ class LibguestfsBase(propcan.PropCanBase):
     Base class of libguestfs tools.
     """
 
-    __slots__ = ('ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec')
+    __slots__ = ['ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec']
 
     def __init__(self, lgf_exec="/bin/true", ignore_status=True,
                  debug=False, timeout=60, uri=None):
@@ -160,7 +160,7 @@ class Guestfish(LibguestfsBase):
     Execute guestfish, using a new guestfish shell each time.
     """
 
-    __slots__ = LibguestfsBase.__slots__
+    __slots__ = []
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
@@ -278,7 +278,7 @@ class GuestfishPersistent(Guestfish):
     Execute operations using persistent guestfish session.
     """
 
-    __slots__ = Guestfish.__slots__ + ('session_id', )
+    __slots__ = ['session_id']
 
     # Help detect leftover sessions
     SESSION_COUNTER = 0

@@ -10,7 +10,7 @@ from virttest.libvirt_xml.devices import base
 
 class Emulator(base.UntypedDeviceBase):
 
-    __slots__ = base.UntypedDeviceBase.__slots__ + ('path',)
+    __slots__ = ('path',)
 
     def __init__(self, virsh_instance=base.base.virsh):
         accessors.XMLElementText('path', self, parent_xpath='/',

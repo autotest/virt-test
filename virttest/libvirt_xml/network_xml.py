@@ -52,8 +52,7 @@ class IPXML(base.LibvirtXMLBase):
         netmask: string IP's netmask
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('dhcp_ranges', 'address',
-                                                 'netmask')
+    __slots__ = ('dhcp_ranges', 'address','netmask')
 
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
@@ -128,10 +127,8 @@ class PortgroupXML(base.LibvirtXMLBase):
                            which is child of portgroup.
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'default',
-                                                 'virtualport_type',
-                                                 'bandwidth_inbound',
-                                                 'bandwidth_outbound')
+    __slots__ = ('name', 'default', 'virtualport_type',
+                 'bandwidth_inbound', 'bandwidth_outbound')
 
     def __init__(self, virsh_instance=base.virsh):
         """
@@ -186,13 +183,9 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             del: Same as defined property
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'uuid', 'bridge',
-                                                 'defined', 'active',
-                                                 'autostart', 'persistent',
-                                                 'fwd_mode', 'mac', 'ip',
-                                                 'bandwidth_inbound',
-                                                 'bandwidth_outbound',
-                                                 'portgroup')
+    __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
+                 'autostart', 'persistent', 'fwd_mode', 'mac', 'ip',
+                 'bandwidth_inbound', 'bandwidth_outbound', 'portgroup')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
         'defined', 'active',
@@ -374,7 +367,7 @@ class NetworkXML(NetworkXMLBase):
     Manipulators of a Virtual Network through it's XML definition.
     """
 
-    __slots__ = NetworkXMLBase.__slots__
+    __slots__ = []
 
     def __init__(self, network_name='default', virsh_instance=base.virsh):
         """

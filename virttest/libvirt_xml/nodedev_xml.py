@@ -175,12 +175,9 @@ class NodedevXMLBase(base.LibvirtXMLBase):
 
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'parent',
-                                                 'cap_type', 'cap',
-                                                 'sysfs_main_path',
-                                                 'host', 'fc_type',
-                                                 'wwnn', 'wwpn',
-                                                 'fabric_wwn')
+    __slots__ = ('name', 'parent', 'cap_type', 'cap',
+                 'sysfs_main_path', 'host', 'fc_type',
+                 'wwnn', 'wwpn', 'fabric_wwn')
 
     __schema_name__ = "nodedev"
 
