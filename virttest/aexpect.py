@@ -1398,7 +1398,7 @@ class ShellSession(Expect):
 
 
     def cmd(self, cmd, timeout=60, internal_timeout=None, print_func=None,
-            ok_status=[0, ]):
+            ok_status=[0, ], ignore_all_errors=False):
         """
         Send a command and return its output. If the command's exit status is
         nonzero, raise an exception.
@@ -1410,7 +1410,9 @@ class ShellSession(Expect):
         @param print_func: A function to be used to print the data being read
                 (should take a string parameter)
         @param ok_status: do not raise ShellCmdError in case that exit status
-                          is one of ok_status. (default is [0,])
+                is one of ok_status. (default is [0,])
+        @param ignore_all_errors: toggles whether or not an exception should be
+                raised  on any error.
 
         @return: The output of cmd
         @raise ShellTimeoutError: Raised if timeout expires
@@ -1422,11 +1424,17 @@ class ShellSession(Expect):
         @raise ShellError: Raised if an unknown error occurs
         @raise ShellCmdError: Raised if the exit status is nonzero
         """
-        s, o = self.cmd_status_output(cmd, timeout, internal_timeout,
-                                      print_func)
-        if s not in ok_status:
-            raise ShellCmdError(cmd, s, o)
-        return o
+        try:
+            s, o = self.cmd_status_output(cmd, timeout, internal_timeout,
+                                          print_func)
+            if s not in ok_status:
+                raise ShellCmdError(cmd, s, o)
+            return o
+        except Exception:
+            if ignore_all_errors:
+                pass
+            else:
+                raise
 
 
     def get_command_output(self, cmd, timeout=60, internal_timeout=None,

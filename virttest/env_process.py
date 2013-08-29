@@ -106,13 +106,13 @@ def preprocess_vm(test, params, env, name):
             # NeedFix: Can we find another way to get guest ip?
             if params.get("mac_changeable") == "yes":
                 utils_net.update_mac_ip_address(vm, params)
-    else:
-        # Update params of VM.
+    elif not vm.is_alive():    # VM is dead and won't be started, update params
+        vm.devices = None
+        vm.params = params
+    else:       # VM is alive and we don't care
         if params.get("kill_vm_before_test") == "yes":
             # Destroy the VM if kill_vm_before_test = "yes".
             vm.destroy(gracefully=True, free_mac_addresses=False)
-        vm.devices = None
-        vm.params = params
 
     pause_vm = False
 

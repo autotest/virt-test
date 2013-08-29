@@ -120,12 +120,16 @@ dev_dummy_mmio = """dev: fw_cfg, id ""
   mmio ffffffffffffffff/0000000000000002
   mmio ffffffffffffffff/0000000000000001"""
 
-info_block = ('ide0-hd0: removable=0 io-status=ok file=/tmp/vl.UWzrkU backing_'
-              'file=/dummy/directory/f16-64.qcow2 ro=1 drv=qcow2 encrypted=0 '
-              'bps=0 bps_rd=0 bps_wr=0 iops=0 iops_rd=0 iops_wr=0\n')
-info_block += ('usb2.6: removable=0 io-status=ok file=/tmp/stg4.qcow2 ro=0 '
-               'drv=qcow2 encrypted=0 bps=0 bps_rd=0 bps_wr=0 iops=0 iops_rd=0'
-               ' iops_wr=0')
+info_block = {'ide0-hd0': {'removable': 0, 'io-status': 'ok',
+                           'file': '/tmp/vl.UWzrkU',
+                           'backing_file': '/dummy/directory/f16-64.qcow2',
+                           'ro': 1, 'drv': 'qcow2', 'encrypted': 0, 'bps': 0,
+                           'bps_rd': 0, 'bps_wr': 0, 'iops': 0, 'iops_rd': 0,
+                           'iops_wr': 0},
+              'usb2.6': {'removable': 0, 'io-status': 'ok',
+                         'file': '/tmp/stg4.qcow2', 'ro': 0, 'drv': 'qcow2',
+                         'encrypted': 0, 'bps': 0, 'bps_rd': 0, 'bps_wr': 0,
+                         'iops': 0, 'iops_rd': 0, 'iops_wr': 0}}
 
 guest_proc_scsi = """Attached devices:
 Host: scsi4 Channel: 00 Id: 00 Lun: 00
@@ -235,12 +239,13 @@ class QtreeDiskContainerTest(unittest.TestCase):
         """ Whole workflow with bad data """
         disks = self.disks
         # missing disk in info block
-        _info_block = info_block.split('\n')[1]
+        _info_block = info_block.copy()
+        _info_block.pop('ide0-hd0')
         # snapshot in info qtree but not in params
-        _info_block = _info_block.replace('file=/tmp/stg4.qcow2',
-                                'file=none.qcow2 backing_file=/tmp/stg4.qcow2')
+        _info_block['usb2.6']['file'] = 'none.qcow2'
+        _info_block['usb2.6']['backing_file'] = '/tmp/stg4.qcow2'
         # additional disk in info block
-        _info_block += '\nmissing_bad_disk1:\n  \n'
+        _info_block['missing_bad_disk1'] = {}
         # additional disk in params
         _params = ParamsDict(params)
         _params['images'] += ' bad_disk2'

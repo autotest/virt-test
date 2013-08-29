@@ -66,7 +66,7 @@ def run_cpuid(test, params, env):
         qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
         missing = set(cpu_models) - set(qemu_models)
         if missing:
-            raise error.TestFail("Some CPU models not in QEMU CPU model list: %s")
+            raise error.TestFail("Some CPU models not in QEMU CPU model list: %r" % (missing))
         added = set(qemu_models) - set(cpu_models)
         if added:
             logging.info("Extra CPU models in QEMU CPU listing: %s", added)
@@ -501,10 +501,15 @@ def run_cpuid(test, params, env):
 
         if not machine_type:
             raise error.TestNAError("No machine_type_to_check defined")
+        cpu_model_flags = params.get('cpu_model_flags', '')
+        full_cpu_model_name = cpu_model
+        if cpu_model_flags:
+            full_cpu_model_name += ','
+            full_cpu_model_name += cpu_model_flags.lstrip(',')
         ref_file = os.path.join(test.virtdir, "deps",
                                 "cpuid_dumps",
                                 kvm_enabled and "kvm" or "nokvm",
-                                machine_type, '%s-dump.txt' % (cpu_model))
+                                machine_type, '%s-dump.txt' % (full_cpu_model_name))
         if not os.path.exists(ref_file):
             raise error.TestNAError("no cpuid dump file: %s" % (ref_file))
         reference = open(ref_file, 'r').read()
@@ -514,13 +519,14 @@ def run_cpuid(test, params, env):
         if reference is None:
             raise error.TestNAError("couldn't parse reference cpuid dump from file; %s" % (ref_file))
         try:
-            out = get_guest_cpuid(self, cpu_model, 'enforce',
+            out = get_guest_cpuid(self, cpu_model, cpu_model_flags + ',enforce',
                                   extra_params=dict(machine_type=machine_type, smp=1))
         except virt_vm.VMCreateError,e:
             if "host doesn't support requested feature:" in e.output \
                 or ("host cpuid" in e.output and \
-                    "lacks requested flag" in e.output):
-                raise error.TestNAError("Can't run CPU model %s on this host" % (cpu_model))
+                    ("lacks requested flag" in e.output or
+                     "flag restricted to guest" in e.output)):
+                raise error.TestNAError("Can't run CPU model %s on this host" % (full_cpu_model_name))
             else:
                 raise
         dbg('ref_file: %r', ref_file)

@@ -27,6 +27,8 @@ Pull request maintenance - Libvirt subtests
 M: Christopher Evich <cevich@redhat.com>
 M: Yu Mingfei <yumingfei@cn.fujitsu.com>
 M: Yang Dongsheng <yangds.fnst@cn.fujitsu.com>
+M: Li Yang <liyang.fnst@cn.fujitsu.com>
+
 
 Pull request maintenance - Libguestfs
 -------------------------------------

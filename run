@@ -227,6 +227,10 @@ class VirtTestRunParser(optparse.OptionParser):
                            help=("List of space separated no filters to be "
                                  "passed to the config parser. If -c is "
                                  "provided, this will be ignored"))
+        general.add_option("--type-specific", action="store_true",
+                           dest="only_type_specific", default=False,
+                           help=("Enable only type specific tests. Shared"
+                                 " tests will not be tested."))
 
         self.add_option_group(general)
 
@@ -247,7 +251,7 @@ class VirtTestRunParser(optparse.OptionParser):
                               "Default: kvm"))
         qemu.add_option("--nettype", action="store", dest="nettype",
                         default="user",
-                        help=("QEMU network option (bridge or user). "
+                        help=("QEMU network option (bridge, user or custom). "
                               "Default: %default"))
         qemu.add_option("--netdst", action="store", dest="netdst",
                         default="virbr0",
@@ -342,11 +346,23 @@ class VirtTestApp(object):
             logging.info("Config provided and no --qemu-bin set. Not trying "
                          "to automatically set qemu bin.")
         else:
-            (qemu_bin_path, qemu_img_path,
+            (qemu_bin_path, _,
              qemu_io_path) = _find_default_qemu_paths(self.options.qemu)
             self.cartesian_parser.assign("qemu_binary", qemu_bin_path)
-            self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
             self.cartesian_parser.assign("qemu_io_binary", qemu_io_path)
+
+
+    def _process_qemu_img(self):
+        """
+        Puts the value of the qemu bin option in the cartesian parser command.
+        """
+        if self.options.config and self.options.qemu is None:
+            logging.info("Config provided and no --qemu-bin set. Not trying "
+                         "to automatically set qemu bin.")
+        else:
+            (_, qemu_img_path,
+             _) = _find_default_qemu_paths(self.options.qemu)
+            self.cartesian_parser.assign("qemu_img_binary", qemu_img_path)
 
 
     def _process_qemu_accel(self):
@@ -364,10 +380,12 @@ class VirtTestApp(object):
                 print("In order to use bridge, you need to be root, "
                       "aborting...")
                 sys.exit(1)
-            self.cartesian_parser.assign("nettype", "bridge")
+            self.cartesian_parser.only_filter("(netconf=bridge)")
             self.cartesian_parser.assign("netdst", self.options.netdst)
         elif self.options.nettype == 'user':
-            self.cartesian_parser.assign("nettype", "user")
+            self.cartesian_parser.only_filter("(netconf=user)")
+        elif self.options.nettype == 'custom':
+            self.cartesian_parser.only_filter("(netconf=custom)")
 
 
     def _process_monitor(self):
@@ -459,10 +477,10 @@ class VirtTestApp(object):
             if self.options.nettype == "bridge":
                 if self.options.vhost == "on":
                     self.cartesian_parser.assign("netdev_extra_params",
-                                                 '"vhost=on"')
+                                                 '",vhost=on"')
                 elif self.options.vhost == "force":
                     self.cartesian_parser.assign("netdev_extra_params",
-                                                 '"vhostforce=on"')
+                                                 '",vhostforce=on"')
             else:
                 if self.options.vhost in ["on", "force"]:
                     _restore_stdout()
@@ -488,12 +506,11 @@ class VirtTestApp(object):
 
         self._process_qemu_bin()
         self._process_qemu_accel()
-        self._process_bridge_mode()
         self._process_monitor()
         self._process_smp()
         self._process_image_type()
-        self._process_nic_model()
         self._process_disk_buses()
+        self._process_nic_model()
         self._process_vhost()
         self._process_malloc_perturb()
 
@@ -575,6 +592,12 @@ class VirtTestApp(object):
                 self.cartesian_parser.no_filter(no_filter)
 
 
+    def _process_only_type_specific(self):
+        if not self.options.config:
+            if self.options.only_type_specific:
+                self.cartesian_parser.only_filter("(subtest=type_specific)")
+
+
     def _process_general_options(self):
         """
         Calls for processing all generic options.
@@ -589,6 +612,9 @@ class VirtTestApp(object):
         self._process_mem()
         self._process_tcpdump()
         self._process_no_filter()
+        self._process_qemu_img()
+        self._process_bridge_mode()
+        self._process_only_type_specific()
 
 
     def _process_options(self):

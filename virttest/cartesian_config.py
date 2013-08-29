@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-# pylint: disable=W1401
 """
 Cartesian configuration format file parser.
 
@@ -509,12 +508,14 @@ class Label(object):
 
 
 class Node(object):
-    __slots__ = ["var_name", "name", "dep", "content", "children", "labels",
-                 "append_to_shortname", "failed_cases", "default", "q_dict"]
+    __slots__ = ["var_name", "name", "filename", "dep", "content", "children",
+                 "labels", "append_to_shortname", "failed_cases", "default",
+                 "q_dict"]
 
     def __init__(self):
         self.var_name = []
         self.name = []
+        self.filename = ""
         self.dep = []
         self.content = []
         self.children = []
@@ -566,6 +567,7 @@ def _subtitution(value, d):
 
 
 class Token(object):
+    __slots__ = []
     identifier = ""
 
     def __str__(self):
@@ -601,14 +603,17 @@ class LIndent(Token):
 
 
 class LEndL(Token):
+    __slots__ = []
     identifier = "endl"
 
 
 class LEndBlock(LIndent):
+    __slots__ = []
     pass
 
 
 class LIdentifier(str):
+    __slots__ = []
     identifier = "Identifier re([A-Za-z0-9][A-Za-z0-9_-]*)"
 
 
@@ -679,91 +684,112 @@ class LIdentifier(str):
 
 
 class LWhite(LIdentifier):
+    __slots__ = []
     identifier = "WhiteSpace re(\\s)"
 
 
 class LString(LIdentifier):
+    __slots__ = []
     identifier = "String re(.+)"
 
 
 class LColon(Token):
+    __slots__ = []
     identifier = ":"
 
 
 class LVariants(Token):
+    __slots__ = []
     identifier = "variants"
 
 
 class LDot(Token):
+    __slots__ = []
     identifier = "."
 
 
 class LVariant(Token):
+    __slots__ = []
     identifier = "-"
 
 
 class LDefault(Token):
+    __slots__ = []
     identifier = "@"
 
 
 class LOnly(Token):
+    __slots__ = []
     identifier = "only"
 
 
 class LNo(Token):
+    __slots__ = []
     identifier = "no"
 
 
 class LCond(Token):
+    __slots__ = []
     identifier = ""
 
 
 class LNotCond(Token):
+    __slots__ = []
     identifier = "!"
 
 
 class LOr(Token):
+    __slots__ = []
     identifier = ","
 
 
 class LAnd(Token):
+    __slots__ = []
     identifier = ".."
 
 
 class LCoc(Token):
+    __slots__ = []
     identifier = "."
 
 
 class LComa(Token):
+    __slots__ = []
     identifier = ","
 
 
 class LLBracket(Token):
+    __slots__ = []
     identifier = "["
 
 
 class LRBracket(Token):
+    __slots__ = []
     identifier = "]"
 
 
 class LLRBracket(Token):
+    __slots__ = []
     identifier = "("
 
 
 class LRRBracket(Token):
+    __slots__ = []
     identifier = ")"
 
 
-
 class LRegExpStart(Token):
+    __slots__ = []
     identifier = "${"
 
 
 class LRegExpStop(Token):
+    __slots__ = []
     identifier = "}"
 
 
 class LInclude(Token):
+    __slots__ = []
     identifier = "include"
 
 
@@ -782,6 +808,7 @@ class LOperators(Token):
 
 
 class LSet(LOperators):
+    __slots__ = []
     identifier = "="
 
 
@@ -794,6 +821,7 @@ class LSet(LOperators):
 
 
 class LAppend(LOperators):
+    __slots__ = []
     identifier = "+="
 
 
@@ -803,6 +831,7 @@ class LAppend(LOperators):
 
 
 class LPrepend(LOperators):
+    __slots__ = []
     identifier = "<="
 
 
@@ -812,6 +841,7 @@ class LPrepend(LOperators):
 
 
 class LRegExpSet(LOperators):
+    __slots__ = []
     identifier = "?="
 
 
@@ -824,6 +854,7 @@ class LRegExpSet(LOperators):
 
 
 class LRegExpAppend(LOperators):
+    __slots__ = []
     identifier = "?+="
 
 
@@ -836,6 +867,7 @@ class LRegExpAppend(LOperators):
 
 
 class LRegExpPrepend(LOperators):
+    __slots__ = []
     identifier = "?<="
 
 
@@ -848,6 +880,7 @@ class LRegExpPrepend(LOperators):
 
 
 class LDel(LOperators):
+    __slots__ = []
     identifier = "del"
 
 
@@ -862,6 +895,7 @@ class LDel(LOperators):
 
 
 class LApplyPreDict(LOperators):
+    __slots__ = []
     identifier = "apply_pre_dict"
 
     def set_operands(self, name, value):
@@ -881,6 +915,32 @@ class LApplyPreDict(LOperators):
 
     def __repr__(self):
         return "Apply_pre_dict: %s" % self.value
+
+
+class LUpdateFileMap(LOperators):
+    __slots__ = ["filename", "shortname"]
+    identifier = "update_file_map"
+
+    def set_operands(self, filename, name):
+        # pylint: disable=W0201
+        self.name = name
+        # pylint: disable=W0201
+        self.filename = filename
+        if filename == "<string>":
+            self.shortname = filename
+        else:
+            self.shortname = os.path.basename(filename)
+        return self
+
+    def apply_to_dict(self, d):
+        if not "_name_map_file" in d:
+            d["_name_map_file"] = {}
+
+        if self.shortname in d["_name_map_file"]:
+            old_name = d["_name_map_file"][self.shortname][1]
+            d["_name_map_file"][self.shortname][1] = self.name + "." + old_name
+        else:
+            d["_name_map_file"][self.shortname] = [self.filename, self.name]
 
 
 spec_iden = "_-"
@@ -1325,6 +1385,7 @@ class Parser(object):
 
         @param filename: Path of the configuration file.
         """
+        self.node.filename = filename
         self.node = self._parse(Lexer(FileReader(filename)), self.node)
         self.filename = filename
 
@@ -1335,6 +1396,7 @@ class Parser(object):
 
         @param s: String to parse.
         """
+        self.node.filename = StrReader("").filename
         self.node = self._parse(Lexer(StrReader(s)), self.node)
 
 
@@ -1380,14 +1442,16 @@ class Parser(object):
     def _parse(self, lexer, node=None, prev_indent=-1):
         if not node:
             node = self.node
-        block_allowed = [LVariants, LIdentifier,
-                 LOnly, LNo, LInclude, LDel, LNotCond]
+        block_allowed = [LVariants, LIdentifier, LOnly,
+                         LNo, LInclude, LDel, LNotCond]
+
         variants_allowed = [LVariant]
 
         identifier_allowed = [LSet, LAppend, LPrepend,
-                                             LRegExpSet, LRegExpAppend,
-                                             LRegExpPrepend, LColon,
-                                             LEndL]
+                              LRegExpSet, LRegExpAppend,
+                              LRegExpPrepend, LColon,
+                              LEndL]
+
         varianst_allowed_in = [LLBracket, LColon, LIdentifier, LEndL]
         indent_allowed = [LIndent, LEndBlock]
 
@@ -1448,7 +1512,8 @@ class Parser(object):
                                     lexer.get_next_check([LEndL])
                                     continue
                                 else:
-                                    pre_dict = apply_predict(lexer, node, pre_dict)
+                                    pre_dict = apply_predict(lexer, node,
+                                                             pre_dict)
 
                             node.content += [(lexer.filename,
                                               lexer.linenum,
@@ -1556,6 +1621,14 @@ class Parser(object):
                                                             for n in name]
                         else:
                             node3.name = [Label(str(n)) for n in name]
+
+                        # Update mapping name to file
+                        op = LUpdateFileMap()
+                        op.set_operands(lexer.filename,
+                                        ".".join(str(x) for x in node3.name))
+                        node3.content += [(lexer.filename,
+                                           lexer.linenum,
+                                           op)]
 
                         node3.dep = deps
 
@@ -1826,6 +1899,7 @@ class Parser(object):
         labels = node.labels
         # Get the current name
         name = ".".join([str(label) for label in ctx])
+
         if node.name:
             self._debug("checking out %r", name)
 
