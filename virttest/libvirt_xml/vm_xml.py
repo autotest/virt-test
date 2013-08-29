@@ -84,10 +84,10 @@ class VMXMLBase(base.LibvirtXMLBase):
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
-                                                 'uuid', 'vcpu', 'max_mem',
-                                                 'current_mem', 'numa',
-                                                 'devices', 'seclabel')
+    __slots__ = ('hypervisor_type', 'vm_name',
+                 'uuid', 'vcpu', 'max_mem',
+                 'current_mem', 'numa',
+                 'devices', 'seclabel')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -652,7 +652,7 @@ class VMCPUXML(VMXML):
     """
 
     # Must copy these here or there will be descriptor problems
-    __slots__ = VMXML.__slots__ + ('model', 'vendor', 'feature_list',)
+    __slots__ = ('model', 'vendor', 'feature_list',)
 
     def __init__(self, virsh_instance=virsh, vm_name='', mode='host-model'):
         """
