@@ -223,8 +223,8 @@ class VirshClosure(object):
         new_dargs = self.dict_like_weakref()
         if new_dargs is None:
             new_dargs = {}
-        new_dargs.update(dargs)
-        return self.reference_function(*args, **new_dargs)
+        dargs.update(new_dargs)
+        return self.reference_function(*args, **dargs)
 
 
 class Virsh(VirshBase):
