@@ -722,16 +722,17 @@ class VirtioGuestPosix(VirtioGuest):
 
             self.use_config.clear()
             if mode:
+                self.catch_signal = True
+                os.kill(os.getpid(), signal.SIGUSR1)
+                self.use_config.wait()
                 fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_ASYNC)
                 self.poll_fds[fd] = [exp_val, 0]
-                self.catch_signal = True
             else:
                 del self.poll_fds[fd]
                 fcntl.fcntl(fd, fcntl.F_SETFL, fl & ~os.O_ASYNC)
                 self.catch_signal = False
-
-            os.kill(os.getpid(), signal.SIGUSR1)
-            self.use_config.wait()
+                os.kill(os.getpid(), signal.SIGUSR1)
+                self.use_config.wait()
 
         except Exception, inst:
             print "FAIL: Setting (a)sync mode: " + str(inst)
