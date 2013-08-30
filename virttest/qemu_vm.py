@@ -643,7 +643,8 @@ class VM(virt_vm.BaseVM):
             if devices.has_device('pci-assign'):
                 dev = QDevice('pci-assign', parent_bus={'type': 'pci'})
             else:
-                dev = QDevice('pcidevice', parent_bus={'type': 'pci'})
+                dev = qemu_devices.QCustomDevice('pcidevice',
+                                                 parent_bus={'type': 'pci'})
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
