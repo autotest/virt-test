@@ -30,7 +30,7 @@ def run_virsh_snapshot_disk(test, params, env):
     params['image_name'] = "snapshot_test"
     params['image_format'] = image_format
     image = qemu_storage.QemuImg(params, tmp_dir, "snapshot_test")
-    img_path, _ = image.create(params) 
+    img_path, _ = image.create(params)
     # Do the attach action.
     virsh.attach_disk(vm_name, source=img_path, target="vdf", extra="--persistent --subdriver %s" % image_format)
 
@@ -103,6 +103,6 @@ def run_virsh_snapshot_disk(test, params, env):
 
     finally:
         virsh.detach_disk(vm_name, target="vdf", extra="--persistent")
-        image.remove() 
+        image.remove()
         if snapshot_name:
             virsh.snapshot_delete(vm_name, snapshot_name)
