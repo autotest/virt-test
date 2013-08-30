@@ -1,3 +1,4 @@
+import logging
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
 
@@ -89,8 +90,16 @@ def run_virsh_vcpuinfo(test, params, env):
 
     #check status_error
     if status_error == "yes":
-        if status == 0 or err == "":
+        if not status:
+            logging.debug(result)
             raise error.TestFail("Run successfully with wrong command!")
+        # Check the error message in negative case.
+        if not err:
+            logging.debug(result)
+            logging.debug("Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=889276 "
+                          "is helpful for tracing this bug.")
+            raise error.TestFail("No error message for a command error!")
     elif status_error == "no":
-        if status != 0 or output == "":
+        if status:
+            logging.debug(result)
             raise error.TestFail("Run failed with right command")
