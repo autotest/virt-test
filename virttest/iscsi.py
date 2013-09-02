@@ -20,7 +20,7 @@ def iscsi_get_sessions():
     cmd = "iscsiadm --mode session"
 
     output = utils.system_output(cmd, ignore_status=True)
-    pattern = r"(\d+\.\d+\.\d+\.\d+):\d+,\d+\s+([\w\.\-:\d]+)"
+    pattern = r"(\d+\.\d+\.\d+\.\d+|\W:{2}\d\W):\d+,\d+\s+([\w\.\-:\d]+)"
     sessions = []
     if  "No active sessions" not in output:
         sessions = re.findall(pattern, output)
@@ -34,7 +34,7 @@ def iscsi_get_nodes():
     cmd = "iscsiadm --mode node"
 
     output = utils.system_output(cmd)
-    pattern = r"(\d+\.\d+\.\d+\.\d+):\d+,\d+\s+([\w\.\-:\d]+)"
+    pattern = r"(\d+\.\d+\.\d+\.\d+|\W:{2}\d\W):\d+,\d+\s+([\w\.\-:\d]+)"
     nodes = []
     if  "No records found" not in output:
         nodes = re.findall(pattern, output)
