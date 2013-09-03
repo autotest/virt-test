@@ -422,11 +422,12 @@ class QDrive(QCustomDevice):
     """
     Representation of the '-drive' qemu object without hotplug support.
     """
-    def __init__(self, aobject):
+    def __init__(self, aobject, use_device=True):
         child_bus = QDriveBus('drive_%s' % aobject, aobject)
         super(QDrive, self).__init__("drive", {}, aobject, (),
                                       child_bus)
-        self.params['id'] = 'drive_%s' % aobject
+        if use_device:
+            self.params['id'] = 'drive_%s' % aobject
 
     def set_param(self, option, value, option_type=None):
         """
@@ -2514,7 +2515,7 @@ class DevContainer(object):
         elif self.has_hmp_cmd('drive_add') and use_device:
             devices.append(QHPDrive(name))
         else:
-            devices.append(QDrive(name))
+            devices.append(QDrive(name, use_device))
         devices[-1].set_param('if', 'none')
         devices[-1].set_param('cache', cache)
         devices[-1].set_param('rerror', rerror)
@@ -2523,7 +2524,8 @@ class DevContainer(object):
         devices[-1].set_param('boot', boot, bool)
         devices[-1].set_param('snapshot', snapshot, bool)
         devices[-1].set_param('readonly', readonly, bool)
-        devices[-1].set_param('aio', aio)
+        if 'aio' in self.get_help_text():
+            devices[-1].set_param('aio', aio)
         devices[-1].set_param('media', media)
         devices[-1].set_param('format', imgfmt)
         if blkdebug is not None:
