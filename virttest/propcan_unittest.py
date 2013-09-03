@@ -72,9 +72,9 @@ class TestPropCanBase(unittest.TestCase):
             it_works = False
 
             def set_foo(self, value):
-                self.dict_set('foo', value)
+                self.__dict_set__('foo', value)
                 if value == 'bar':
-                    self.super_set('it_works', True)
+                    self.__super_set__('it_works', True)
         testcan = FooBar()
         self.assertEqual(len(testcan), 0)
         self.assertFalse(testcan.it_works)
@@ -92,16 +92,16 @@ class TestPropCanBase(unittest.TestCase):
             it_works = False
 
             def get_foo(self):
-                value = self.dict_get('foo')
+                value = self.__dict_get__('foo')
                 if value == 'bar':
-                    self.super_set('it_works', True)
+                    self.__super_set__('it_works', True)
                 return value
         testcan = FooBar()
         self.assertFalse(testcan.it_works)
         self.assertEqual(len(testcan), 0)
         testcan['foo'] = 'bar'
         self.assertEqual(len(testcan), 1)
-        # verify super_set() doesn't call getter
+        # verify __super_set__() doesn't call getter
         self.assertFalse(testcan.it_works)
         self.assertEqual(testcan['foo'], 'bar')
         self.assertEqual(testcan.foo, 'bar')
@@ -115,10 +115,10 @@ class TestPropCanBase(unittest.TestCase):
             it_works = False
 
             def del_foo(self):
-                value = self.dict_get('foo')
+                value = self.__dict_get__('foo')
                 if value == 'bar':
-                    self.super_set('it_works', True)
-                self.dict_del('foo')
+                    self.__super_set__('it_works', True)
+                self.__dict_del__('foo')
         testcan = FooBar()
         self.assertEqual(len(testcan), 0)
         self.assertFalse(testcan.it_works)

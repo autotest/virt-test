@@ -21,9 +21,9 @@ were attributes.  It's up to the test if it uses the dict-like or
 instance-attribute interface.
 
 Internally, accessor methods (get_*(), set_*(), & del_*()) should always
-use dict_get(), dict_set(), and/or dict_del() to manipulate properties
-(otherwise infinite recursion can occur).  In some cases, where class
-or instance attributes are needed (ousdie of __slots__) they must
+use __dict_get__(), __dict_set__(), and/or __dict_del__() to manipulate
+properties (otherwise infinite recursion can occur).  In some cases, where
+class or instance attributes are needed (ousdie of __slots__) they must
 be accessed via the super_set(), super_get(), and/or super_del() methods.
 None of the super_*() or the dict_*() methods are intended for use
 by test-modules.

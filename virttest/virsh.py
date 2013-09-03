@@ -83,7 +83,7 @@ class VirshBase(propcan.PropCanBase):
         """
         # self.get() would call get_uri() recursivly
         try:
-            return self.dict_get('uri')
+            return self.__dict_get__('uri')
         except KeyError:
             return None
 
@@ -258,7 +258,7 @@ class Virsh(VirshBase):
             if sym not in NOCLOSE and callable(ref):
                 # Adding methods, not properties, so avoid special __slots__
                 # handling.  __getattribute__ will still find these.
-                self.super_set(sym, VirshClosure(ref, self))
+                self.__super_set__(sym, VirshClosure(ref, self))
 
 
 class VirshPersistent(Virsh):
@@ -292,7 +292,7 @@ class VirshPersistent(Virsh):
         """
         Method to increase the counter to self.a_id in COUNTERS.
         """
-        session_id = self.dict_get("session_id")
+        session_id = self.__dict_get__("session_id")
         try:
             counter = self.__class__.COUNTERS[session_id]
         except KeyError, e:
@@ -309,7 +309,7 @@ class VirshPersistent(Virsh):
         this session, and return True.
         Else, decrease the counter in COUNTERS and return False.
         """
-        session_id = self.dict_get("session_id")
+        session_id = self.__dict_get__("session_id")
         self.__class__.COUNTERS[session_id] -= 1
         counter = self.__class__.COUNTERS[session_id]
         if counter <= 0:
@@ -330,7 +330,7 @@ class VirshPersistent(Virsh):
         If a persistent session exists, close it down.
         """
         try:
-            session_id = self.dict_get('session_id')
+            session_id = self.__dict_get__('session_id')
             if session_id:
                 try:
                     existing = VirshSession(a_id=session_id)
@@ -338,8 +338,8 @@ class VirshPersistent(Virsh):
                         self.counter_decrease()
                 except aexpect.ShellStatusError:
                     # session was already closed
-                    pass  # don't check is_alive or update counter
-                self.dict_del("session_id")
+                    pass # don't check is_alive or update counter
+                self.__dict_del__("session_id")
         except KeyError:
             # Allow other exceptions to be raised
             pass  # session was closed already
@@ -349,14 +349,14 @@ class VirshPersistent(Virsh):
         Open new session, closing any existing
         """
         # Accessors may call this method, avoid recursion
-        virsh_exec = self.dict_get('virsh_exec')  # Must exist, can't be None
-        uri = self.dict_get('uri')  # Must exist, can be None
+        virsh_exec = self.__dict_get__('virsh_exec')  # Must exist, can't be None
+        uri = self.__dict_get__('uri')  # Must exist, can be None
         try:
-            remote_user = self.dict_get('remote_user')
+            remote_user = self.__dict_get__('remote_user')
         except KeyError:
             remote_user = "root"
         try:
-            remote_pwd = self.dict_get('remote_pwd')
+            remote_pwd = self.__dict_get__('remote_pwd')
         except KeyError:
             remote_pwd = None
 
@@ -366,7 +366,7 @@ class VirshPersistent(Virsh):
                                    remote_user=remote_user,
                                    remote_pwd=remote_pwd)
         session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
+        self.__dict_set__('session_id', session_id)
 
     def set_uri(self, uri):
         """
@@ -374,11 +374,11 @@ class VirshPersistent(Virsh):
         """
         if not self.INITIALIZED:
             # Allow __init__ to call new_session
-            self.dict_set('uri', uri)
+            self.__dict_set__('uri', uri)
         else:
             # If the uri is changing
-            if self.dict_get('uri') != uri:
-                self.dict_set('uri', uri)
+            if self.__dict_get__('uri') != uri:
+                self.__dict_set__('uri', uri)
                 self.new_session()
             # otherwise do nothing
 
@@ -397,15 +397,15 @@ class VirshConnectBack(VirshPersistent):
         """
 
         # Accessors may call this method, avoid recursion
-        virsh_exec = self.dict_get('virsh_exec')  # Must exist, can't be None
-        uri = self.dict_get('uri')  # Must exist, can be None
-        remote_ip = self.dict_get('remote_ip')
+        virsh_exec = self.__dict_get__('virsh_exec')  # Must exist, can't be None
+        uri = self.__dict_get__('uri')  # Must exist, can be None
+        remote_ip = self.__dict_get__('remote_ip')
         try:
-            remote_user = self.dict_get('remote_user')
+            remote_user = self.__dict_get__('remote_user')
         except KeyError:
             remote_user = 'root'
         try:
-            remote_pwd = self.dict_get('remote_pwd')
+            remote_pwd = self.__dict_get__('remote_pwd')
         except KeyError:
             remote_pwd = None
         super(VirshConnectBack, self).close_session()
@@ -415,7 +415,8 @@ class VirshConnectBack(VirshPersistent):
                                    remote_pwd=remote_pwd,
                                    ssh_remote_auth=True)
         session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
+        self.__dict_set__('session_id', session_id)
+
 
     @staticmethod
     def kosher_args(remote_ip, uri):

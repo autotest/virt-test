@@ -100,9 +100,9 @@ class AccessorBase(PropCanBase):
 
         super(AccessorBase, self).__init__()
 
-        self.dict_set('operation', operation)
-        self.dict_set('property_name', property_name)
-        self.dict_set('libvirtxml', libvirtxml)
+        self.__dict_set__('operation', operation)
+        self.__dict_set__('property_name', property_name)
+        self.__dict_set__('libvirtxml', libvirtxml)
         for slot in self.__slots__:
             if slot in AccessorBase.__slots__:
                 continue  # already checked these
@@ -110,7 +110,7 @@ class AccessorBase(PropCanBase):
             if not dargs.has_key(slot):
                 raise ValueError('Required accessor generator parameter %s'
                                  % slot)
-            self.dict_set(slot, dargs[slot])
+            self.__dict_set__(slot, dargs[slot])
 
     # Subclass expected to override this and specify parameters
     __call__ = NotImplementedError
