@@ -442,7 +442,7 @@ class VMXML(VMXMLBase):
         """
         Get a dict with primary serial features.
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         primary_serial = xmltreefile.find('devices').find('serial')
         serial_features = {}
         serial_type = primary_serial.get('type')
@@ -467,7 +467,7 @@ class VMXML(VMXMLBase):
         # TODO: More features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         try:
             serial = vmxml.get_primary_serial()['serial']
         except AttributeError:
@@ -505,7 +505,7 @@ class VMXML(VMXMLBase):
         vmxml = VMXML.new_from_dumpxml(vm_name)
 
         try:
-            exist = vmxml.dict_get('xml').find('devices').findall('channel')
+            exist = vmxml.__dict_get__('xml').find('devices').findall('channel')
             findc = 0
             for ec in exist:
                 if ec.find('target').get('name') == "org.qemu.guest_agent.0":
@@ -577,7 +577,7 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, options=options,
                                        virsh_instance=virsh_instance)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         iftune_params = {}
         bandwidth = None
         try:
@@ -598,7 +598,7 @@ class VMXML(VMXMLBase):
         """
         Return VM's net from XML definition, None if not set
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         net_nodes = xmltreefile.find('devices').findall('interface')
         nets = {}
         for node in net_nodes:
@@ -631,7 +631,7 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         vmxml.check_cpu_mode(mode)
-        xmltreefile = vmxml.dict_get('xml')
+        xmltreefile = vmxml.__dict_get__('xml')
         try:
             cpu = xmltreefile.find('/cpu')
             logging.debug("Current cpu mode is '%s'!", cpu.get('mode'))
@@ -675,7 +675,7 @@ class VMCPUXML(VMXML):
         super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
-        self['xml'] = self.dict_get('virsh').dumpxml(vm_name,
+        self['xml'] = self.__dict_get__('virsh').dumpxml(vm_name,
                                                      extra="--update-cpu")
 
     def get_feature_list(self):
@@ -683,7 +683,7 @@ class VMCPUXML(VMXML):
         Accessor method for feature_list property (in __slots__)
         """
         feature_list = []
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         for feature_node in xmltreefile.findall('/cpu/feature'):
             feature_list.append(feature_node)
         return feature_list
@@ -708,7 +708,7 @@ class VMCPUXML(VMXML):
 
         :param num: Assigned feature number
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         count = len(self.feature_list)
         if num >= count:
             raise xcepts.LibvirtXMLError("Remove %d from %d features"
@@ -754,6 +754,6 @@ class VMCPUXML(VMXML):
 
         :param num: Assigned feature number
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         cpu_node = xmltreefile.find('/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})

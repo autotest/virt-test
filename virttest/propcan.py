@@ -18,7 +18,7 @@ or
 instance['attribute'] = whatever
 
 Internally, methods are free to call the accessor methods.  Only
-accessor methods should use the special dict_*() and super_*() methods.
+accessor methods should use the special __dict_*__() and __super_*__() methods.
 These are there to allow convenient access to the internal dictionary
 values and subclass-defined attributes (such as __slots__).
 
@@ -39,17 +39,17 @@ class A(PropCan):
 
     def set_a(self, value)
         # If is_instance(obj, A) then obj.a = "val" call this method.
-        dict_set("a", value)
+        self.__dict_set__("a", value)
 
 
     def get_a(self, value)
         # If is_instance(obj, A) then xx = obj.a call this method.
-        return dict_get("a")
+        return self.__dict_get__("a")
 
 
     def del_a(self, value)
         # If is_instance(obj, A) then del obj.a call this method.
-        dict_del("a")
+        self.__dict_del__("a")
 
 
 class B(PropCan):
@@ -74,37 +74,37 @@ class PropCanInternal(object):
     # The following methods are intended for use by accessor-methods
     # where they may need to bypass the special attribute/key handling
 
-    def dict_get(self, key):
+    def __dict_get__(self, key):
         """
         Get a key unconditionally, w/o checking for accessor method or __slots__
         """
         return dict.__getitem__(self, key)
 
-    def dict_set(self, key, value):
+    def __dict_set__(self, key, value):
         """
         Set a key unconditionally, w/o checking for accessor method or __slots__
         """
         dict.__setitem__(self, key, value)
 
-    def dict_del(self, key):
+    def __dict_del__(self, key):
         """
         Del key unconditionally, w/o checking for accessor method or __slots__
         """
         return dict.__delitem__(self, key)
 
-    def super_get(self, key):
+    def __super_get__(self, key):
         """
         Get attribute unconditionally, w/o checking accessor method or __slots__
         """
         return object.__getattribute__(self, key)
 
-    def super_set(self, key, value):
+    def __super_set__(self, key, value):
         """
         Set attribute unconditionally, w/o checking accessor method or __slots__
         """
         object.__setattr__(self, key, value)
 
-    def super_del(self, key):
+    def __super_del__(self, key):
         """
         Del attribute unconditionally, w/o checking accessor method or __slots__
         """
@@ -135,7 +135,7 @@ class PropCanBase(dict, PropCanInternal):
         for cls_slots in [getattr(_cls, '__slots__', [])
                           for _cls in cls.__mro__]:
             all_slots += cls_slots
-        newone.super_set('__all_slots__', tuple(all_slots))
+        newone.__super_set__('__all_slots__', tuple(all_slots))
         return newone
 
     def __init__(self, *args, **dargs):
@@ -149,13 +149,13 @@ class PropCanBase(dict, PropCanInternal):
         super(PropCanBase, self).__init__()
         # No need to re-invent dict argument processing
         values = dict(*args, **dargs)
-        for key in self.super_get("__all_slots__"):
+        for key in self.__super_get__("__all_slots__"):
             value = values.get(key, "@!@!@!SENTINEL!@!@!@")
             if value is not "@!@!@!SENTINEL!@!@!@":
                 # Call accessor methods if present
                 self[key] = value
         # Let accessor methods know initialization is complete
-        self.super_set('INITIALIZED', True)
+        self.__super_set__('INITIALIZED', True)
 
 
     def __getitem__(self, key):
@@ -212,7 +212,7 @@ class PropCanBase(dict, PropCanInternal):
         """
         Quickly determine if an accessor or instance attribute name is defined.
         """
-        slots = self.super_get('__all_slots__')
+        slots = self.__super_get__('__all_slots__')
         keys = slots + ('get_%s' % key, 'set_%s' % key, 'del_%s' % key)
         if key not in keys:
             raise excpt("Key '%s' not found in super class attributes or in %s"
@@ -233,7 +233,7 @@ class PropCan(PropCanBase):
 
     def __len__(self):
         length = 0
-        for key in self.super_get('__all_slots__'):
+        for key in self.__super_get__('__all_slots__'):
             # special None/False value handling
             if self.__contains__(key):
                 length += 1
@@ -241,7 +241,7 @@ class PropCan(PropCanBase):
 
     def __contains__(self, key):
         try:
-            value = self.dict_get(key)
+            value = self.__dict_get__(key)
         except (KeyError, AttributeError):
             return False
         # Avoid inf. recursion if value == self
@@ -258,7 +258,7 @@ class PropCan(PropCanBase):
 
     def keys(self):
         # special None/False value handling
-        return [key for key in self.super_get('__all_slots__')
+        return [key for key in self.__super_get__('__all_slots__')
                                          if self.__contains__(key)]
 
 
