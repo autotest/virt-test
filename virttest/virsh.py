@@ -559,19 +559,6 @@ def vcpuinfo(name, **dargs):
     return cmdresult
 
 
-def vcpucount_live(name, **dargs):
-    """
-    Prints the vcpucount of a given domain.
-
-    @param: name: name of a domain
-    @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
-    """
-
-    cmd_vcpucount = "vcpucount --live --active %s" % name
-    return command(cmd_vcpucount, **dargs).stdout.strip()
-
-
 def freecell(extra="", **dargs):
     """
     Prints the available amount of memory on the machine or within a NUMA cell.
@@ -2336,6 +2323,7 @@ def vcpucount(name, options, **dargs):
     @return: CmdResult object.
     """
     cmd = "vcpucount %s %s" % (name, options)
+    return command(cmd, **dargs)
 
 
 def domiftune(name, interface, options=None, inbound=None,
