@@ -143,12 +143,12 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                        'domains')
         if not os.path.isdir(LibvirtXMLTestBase.__doms_dir__):
             os.makedirs(LibvirtXMLTestBase.__doms_dir__)
+        # Normally not kosher to call __super_set__, but required here for testing
+        self.dummy_virsh.__super_set__('capabilities', self._capabilities)
+        self.dummy_virsh.__super_set__('dumpxml', self._dumpxml)
+        self.dummy_virsh.__super_set__('domuuid', self._domuuid)
+        self.dummy_virsh.__super_set__('define', self._define)
 
-        # Normally not kosher to call super_set, but required here for testing
-        self.dummy_virsh.super_set('capabilities', self._capabilities)
-        self.dummy_virsh.super_set('dumpxml', self._dumpxml)
-        self.dummy_virsh.super_set('domuuid', self._domuuid)
-        self.dummy_virsh.super_set('define', self._define)
 
     def tearDown(self):
         librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)

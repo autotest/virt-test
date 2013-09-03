@@ -58,14 +58,14 @@ class CapabilityXML(base.LibvirtXMLBase):
                                libvirtxml=self)
         super(CapabilityXML, self).__init__(virsh_instance)
         # calls set_xml accessor method
-        self['xml'] = self.dict_get('virsh').capabilities()
+        self['xml'] = self.__dict_get__('virsh').capabilities()
 
     def get_os_arch_machine_map(self):
         """
         Accessor method for os_arch_machine_map property (in __slots__)
         """
         oamm = {}  # Schema {<os_type>:{<arch name>:[<machine>, ...]}}
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         for guest in xmltreefile.findall('guest'):
             os_type_name = guest.find('os_type').text
             # Multiple guest definitions can share same os_type (e.g. hvm, pvm)
@@ -89,7 +89,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         Accessor method for feature_list property (in __slots__)
         """
         feature_list = []  # [<feature1>, <feature2>, ...]
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         for feature_node in xmltreefile.findall('/host/cpu/feature'):
             feature_list.append(feature_node)
         return feature_list
@@ -113,7 +113,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         Accessor method for cpu_count property (in __slots__)
         """
         cpu_count = 0
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         for cpus in xmltreefile.findall('/host/topology/cells/cell/cpus'):
             cpu_num = cpus.get('num')
             cpu_count += int(cpu_num)
@@ -125,7 +125,7 @@ class CapabilityXML(base.LibvirtXMLBase):
 
         :param num: Assigned feature number
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         count = len(self.feature_list)
         if num >= count:
             raise xcepts.LibvirtXMLError("Remove %d from %d features:"
@@ -171,6 +171,6 @@ class CapabilityXML(base.LibvirtXMLBase):
 
         :param value: The added feature name
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         cpu_node = xmltreefile.find('/host/cpu')
         xml_utils.ElementTree.SubElement(cpu_node, 'feature', {'name': value})
