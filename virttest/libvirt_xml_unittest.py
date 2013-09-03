@@ -129,6 +129,36 @@ class LibvirtXMLTestBase(unittest.TestCase):
         xml_file.close()
         return domain_xml
 
+
+    @staticmethod
+    def _nodedev_dumpxml(name, options="", to_file=None, **dargs):
+        # Must mirror virsh.nodedev_dumpxml() API but can't test this option
+        if options != "":
+            raise ValueError('Dummy virsh for testing does not support options'
+                             ' parameter')
+        if to_file is not None:
+            raise ValueError('Dummy virsh for testing does not support to_file'
+                             ' parameter')
+        if name is not 'pci_0000_00_00_0':
+            raise ValueError('Dummy virsh for testing only support '
+                             ' device name pci_0000_00_00_0')
+        xml =   ("<device>"
+                  "<name>pci_0000_00_00_0</name>"
+                  "<path>/sys/devices/pci0000:00/0000:00:00.0</path>"
+                  "<parent>computer</parent>"
+                  "<capability type='pci'>"
+                    "<domain>0</domain>"
+                    "<bus>0</bus>"
+                    "<slot>0</slot>"
+                    "<function>0</function>"
+                    "<product id='0x25c0'>5000X Chipset Memory Controller Hub</product>"
+                    "<vendor id='0x8086'>Intel Corporation</vendor>"
+                  "</capability>"
+                "</device>")
+        return utils.CmdResult('virsh nodedev-dumpxml pci_0000_00_00_0',
+                               xml, '', 0)
+
+
     def setUp(self):
         # cause any called virsh commands to fail testing unless a mock declared
         # necessary so virsh module doesn't complain about missing virsh command
@@ -149,6 +179,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
         self.dummy_virsh.__super_set__('dumpxml', self._dumpxml)
         self.dummy_virsh.__super_set__('domuuid', self._domuuid)
         self.dummy_virsh.__super_set__('define', self._define)
+        self.dummy_virsh.__super_set__('nodedev_dumpxml', self._nodedev_dumpxml)
 
 
     def tearDown(self):
