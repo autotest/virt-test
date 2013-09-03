@@ -136,10 +136,9 @@ class VirshSession(aexpect.ShellSession):
             self.virsh_exec = ( "%s \"%s -c '%s'\""
                                 % (ssh_cmd, virsh_exec, self.uri) )
         else: # setting up a local session or re-using a session
+            self.virsh_exec = virsh_exec
             if self.uri:
                 self.virsh_exec += " -c '%s'" % self.uri
-            else:
-                self.virsh_exec = virsh_exec
             ssh_cmd = None # flags not-remote session
 
         # aexpect tries to auto close session because no clients connected yet
