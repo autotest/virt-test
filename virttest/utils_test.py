@@ -519,6 +519,7 @@ class MultihostMigration(object):
         self.mig_timeout = int(params.get("mig_timeout"))
         # Port used to communicate info between source and destination
         self.regain_ip_cmd = params.get("regain_ip_cmd", None)
+        self.not_login_after_mig = params.get("not_login_after_mig", None)
 
         self.vm_lock = threading.Lock()
 
@@ -630,7 +631,7 @@ class MultihostMigration(object):
         if mig_data.params.get("host_mig_offline") != "yes":
             sync = SyncData(self.master_id(), self.hostid, mig_data.hosts,
                             mig_data.mig_id, self.sync_server)
-            mig_data.vm_ports = sync.sync(timeout=120)[mig_data.dst]
+            mig_data.vm_ports = sync.sync(timeout=240)[mig_data.dst]
             logging.info("Received from destination the migration port %s",
                          str(mig_data.vm_ports))
 
@@ -645,7 +646,7 @@ class MultihostMigration(object):
         if mig_data.params.get("host_mig_offline") != "yes":
             SyncData(self.master_id(), self.hostid,
                      mig_data.hosts, mig_data.mig_id,
-                     self.sync_server).sync(mig_data.vm_ports, timeout=120)
+                     self.sync_server).sync(mig_data.vm_ports, timeout=240)
 
 
     def _prepare_params(self, mig_data):
@@ -732,7 +733,9 @@ class MultihostMigration(object):
                 #serial console and IP renew command block test. Because
                 #there must be added "sleep" in IP renew command.
                 session_serial.cmd(self.regain_ip_cmd)
-            vm.wait_for_login(timeout=self.login_timeout)
+
+            if not self.not_login_after_mig:
+                vm.wait_for_login(timeout=self.login_timeout)
 
 
     def check_vms_src(self, mig_data):
@@ -2147,6 +2150,58 @@ def pin_vm_threads(vm, node):
         logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
     for i in vm.vcpu_threads:
         logging.info("pin vcpu thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
+
+
+def get_qemu_numa_status(numa_node_info, qemu_pid, debug=True):
+    """
+    Get the qemu process memory use status and the cpu list in each node.
+
+    :param numa_node_info: Host numa node information
+    :type numa_node_info: NumaInfo object
+    :param qemu_pid: process id of qemu
+    :type numa_node_info: string
+    :param debug: Print the debug info or not
+    :type debug: bool
+    :return: memory and cpu list in each node
+    :rtype: tuple
+    """
+    node_list = numa_node_info.online_nodes
+    qemu_memory = []
+    qemu_cpu = []
+    cpus = utils_misc.get_pid_cpu(qemu_pid)
+    for node_id in node_list:
+        qemu_memory_status = utils_memory.read_from_numa_maps(qemu_pid,
+                                                              "N%d" % node_id)
+        memory = sum([int(_) for _ in qemu_memory_status.values()])
+        qemu_memory.append(memory)
+        cpu = [_ for _ in cpus if _ in numa_node_info.nodes[node_id].cpus]
+        qemu_cpu.append(cpu)
+        if debug:
+            logging.debug("qemu-kvm process using %s pages and cpu %s in "
+                          "node %s" % (memory, " ".join(cpu), node_id))
+    return (qemu_memory, qemu_cpu)
+
+
+def max_mem_map_node(host_numa_node, qemu_pid):
+    """
+    Find the numa node which qemu process memory maps to it the most.
+
+    :param numa_node_info: Host numa node information
+    :type numa_node_info: NumaInfo object
+    :param qemu_pid: process id of qemu
+    :type numa_node_info: string
+    :return: The node id and how many pages are mapped to it
+    :rtype: tuple
+    """
+    node_list = host_numa_node.online_nodes
+    memory_status, _ = get_qemu_numa_status(host_numa_node, qemu_pid)
+    node_map_most = 0
+    memory_sz_map_most = 0
+    for index in range(len(node_list)):
+        if memory_sz_map_most < memory_status[index]:
+            memory_sz_map_most = memory_status[index]
+            node_map_most = node_list[index]
+    return (node_map_most, memory_sz_map_most)
 
 
 def service_setup(vm, session, directory):

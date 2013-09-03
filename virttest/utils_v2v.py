@@ -106,7 +106,18 @@ class Target(object):
         """
         opts_func = getattr(self, "_get_%s_options" % self.tgt)
         self.params = params
-        return opts_func()
+        options = opts_func()
+
+        self.input = params.get('input')
+        self.files = params.get('files')
+        if self.files is not None:
+            # add files as its sequence
+            file_list = self.files.split().reverse()
+            for file in file_list:
+                options = " -f %s %s " % (file, options)
+        if self.input is not None:
+            options = " -i %s %s" % (self.input, options)
+        return options
 
 
     def _get_libvirt_options(self):
@@ -115,6 +126,16 @@ class Target(object):
         """
         options = " -ic %s -os %s -b %s %s " % (self.uri,
                   self.params.get('storage'), self.params.get('network'),
+                  self.params.get('vms'))
+        return options
+
+
+    def _get_libvirtxml_options(self):
+        """
+        Return command options.
+        """
+        options = " -os %s -b %s %s " % (self.params.get('storage'),
+                  self.params.get('network'),
                   self.params.get('vms'))
         return options
 
@@ -155,10 +176,10 @@ class LinuxVMCheck(object):
         # libvirt is a default target
         if self.target == "libvirt" or self.target is None:
             self.vm = lvirt.VM(self.name, self.params, self.test.bindir,
-                              self.env.get("address_cache"))
+                               self.env.get("address_cache"))
         elif self.target == "ovirt":
             self.vm = ovirt.VMManager(self.params, self.test.bindir,
-                              self.env.get("address_cache"))
+                                      self.env.get("address_cache"))
         else:
             raise ValueError("Doesn't support %s target now" % self.target)
 
@@ -352,6 +373,41 @@ class LinuxVMCheck(object):
         else:
             xorg_output = session.cmd(cmd, ok_status=[0, 1])
         return xorg_output
+
+
+    def is_net_virtio(self, session=None, nic_index=0, timeout=LOGIN_TIMEOUT):
+        """
+        Check whether vm's interface is virtio
+        """
+        cmd = "ls -l /sys/class/net/eth%s/device" % nic_index
+        if not session:
+            session = self.vm.wait_for_login(nic_index, timeout)
+            driver_output = session.cmd(cmd, ok_status=[0, 1])
+            session.close()
+        else:
+            driver_output = session.cmd(cmd, ok_status=[0, 1])
+
+        if re.search("virtio", driver_output.split('/')[-1]):
+            return True
+        return False
+
+
+    def is_disk_virtio(self, session=None, disk="/dev/vda",
+                       nic_index=0, timeout=LOGIN_TIMEOUT):
+        """
+        Check whether disk is virtio.
+        """
+        cmd = "fdisk -l %s" % disk
+        if not session:
+            session = self.vm.wait_for_login(nic_index, timeout)
+            disk_output = session.cmd(cmd, ok_status=[0, 1])
+            session.close()
+        else:
+            disk_output = session.cmd(cmd, ok_status=[0, 1])
+
+        if re.search(disk, disk_output):
+            return True
+        return False
 
 
 class WindowsVMCheck(object):

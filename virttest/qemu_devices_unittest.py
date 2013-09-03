@@ -27,6 +27,15 @@ QEMU_DEVICES = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__devices_help"))
 QEMU_MACHINE = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__machine_help")).read()
 
 
+class MockHMPMonitor(qemu_monitor.HumanMonitor):
+    """ Dummy class inherited from qemu_monitor.HumanMonitor """
+    def __init__(self):     # pylint: disable=W0231
+        pass
+
+    def __del__(self):
+        pass
+
+
 class Devices(unittest.TestCase):
     """ set of qemu devices tests """
     def test_q_base_device(self):
@@ -47,7 +56,7 @@ class Devices(unittest.TestCase):
   aid = None
   aobject = Object1
   parent_bus = {'type': 'pci'}
-  child_bus = ()
+  child_bus = []
   params:
     ParamA = ValueB
     BoolTrue = on
@@ -76,7 +85,7 @@ class Devices(unittest.TestCase):
         self.assertEqual(str(qdevice), "q'ahci1'", "Id name error %s "
                          "!= %s" % (str(qdevice), "q'ahci1'"))
 
-        exp = "device_add addr=0x7,driver=ahci,id=ahci1"
+        exp = "device_add ahci,addr=0x7,id=ahci1"
         out = qdevice.hotplug_hmp()
         self.assertEqual(out, exp, "HMP command corrupted:\n%s\n%s"
                          % (out, exp))
@@ -230,7 +239,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 0
@@ -242,7 +251,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr1 = 1
@@ -252,7 +261,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 1
@@ -264,7 +273,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 1
@@ -276,7 +285,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       driver = dev6
@@ -285,7 +294,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 0
@@ -297,7 +306,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       driver = devB3
@@ -306,7 +315,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev7
 
@@ -315,7 +324,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 6
@@ -327,7 +336,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'bus_type'}
-    child_bus = ()
+    child_bus = []
     params:
       bus = my_bus
       addr2 = 0
@@ -487,7 +496,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev1
       bus = pci.0
@@ -497,7 +506,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev2
       bus = pci.0
@@ -507,7 +516,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       driver = dev3
       bus = pci.0
@@ -535,7 +544,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       addr = 0xc
       driver = dev1
@@ -579,7 +588,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       addr = 0x1e
       driver = dev1
@@ -589,7 +598,7 @@ Slots:
     aid = None
     aobject = None
     parent_bus = {'type': 'pci'}
-    child_bus = ()
+    child_bus = []
     params:
       addr = 0x1f
       driver = dev1
@@ -599,6 +608,77 @@ Slots:
         out = str(bus.str_long())
         self.assertEqual(out, exp, "Long representation corrupted:\n%s\n%s"
                          % (repr(out), exp))
+
+    def test_usb_bus(self):
+        """ Tests the specific handlings of QUSBBus """
+        usbc1 = qemu_devices.QUSBBus(2, 'usb1.0', 'uhci')
+
+        # Insert device into usb controller, default port
+        self.assertTrue(usbc1.insert(qemu_devices.QDevice('usb-kbd',
+                                          parent_bus={'type': 'uhci'})))
+
+        # Insert usb-hub into usb controller, default port
+        dev = qemu_devices.QDevice('usb-hub', parent_bus={'type': 'uhci'})
+        self.assertTrue(usbc1.insert(dev))
+        hub1 = dev.child_bus[-1]
+
+        # Insert usb-hub into usb-hub, exact port
+        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4'},
+                                   parent_bus={'type': 'uhci'})
+        self.assertTrue(hub1.insert(dev))
+        hub2 = dev.child_bus[-1]
+
+        # Insert usb-hub into usb-hub in usb-hub, exact port
+        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3'},
+                                   parent_bus={'type': 'uhci'})
+        self.assertTrue(hub2.insert(dev))
+        hub3 = dev.child_bus[-1]
+        # verify that port is updated correctly
+        self.assertEqual("2.4.3", dev.get_param("port"))
+
+        # Insert usb-device into usb-hub in usb-hub in usb-hub, exact port
+        self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.4.3.1'},
+                                         parent_bus={'type': 'uhci'})))
+        # Insert usb-device into usb-hub in usb-hub in usb-hub, default port
+        self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
+                                         parent_bus={'type': 'uhci'})))
+
+        # Try to insert device into specific port which belongs to inferior bus
+        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.4.3.3'},
+                                         parent_bus={'type': 'uhci'})))
+
+        # Try to insert device into specific port which belongs to superior bus
+        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.4'},
+                                         parent_bus={'type': 'uhci'})))
+
+        # Try to insert device into specific port which belongs to same level
+        # but different port
+        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
+                                         {'port': '2.3.4'},
+                                         parent_bus={'type': 'uhci'})))
+
+        # Force insert device with port which belongs to other hub
+        dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3.4'},
+                                   parent_bus={'type': 'uhci'})
+        out = hub2.insert(dev, force=True)
+        res = bool("BusId" in out and "BasicAddress" in out)
+        self.assertTrue(res, "Incorrect output of force insert:\n%s\nOutput"
+                        "have to contain BusId and BasicAddress (err)" % (out))
+        # verify that port is updated correctly
+        self.assertEqual("2.4.1", dev.get_param("port"))
+
+        # Check the overall buses correctness
+        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-hub'}  {}",
+                         usbc1.str_short())
+        self.assertEqual("usb1.0(uhci): {4:a'usb-hub'}  {}",
+                         hub1.str_short())
+        self.assertEqual("usb1.0(uhci): {1:a'usb-hub',3:a'usb-hub'}  {}",
+                         hub2.str_short())
+        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-kbd'}  {}",
+                         hub3.str_short())
 
 
 class Container(unittest.TestCase):
@@ -610,7 +690,8 @@ class Container(unittest.TestCase):
     def tearDown(self):
         self.god.unstub_all()
 
-    def create_qdev(self, vm_name='vm1'):
+    def create_qdev(self, vm_name='vm1', strict_mode="no",
+                    allow_hotplugged_vm="yes"):
         """ @return: Initialized qemu_devices.DevContainer object """
         qemu_cmd = '/usr/bin/qemu_kvm'
         qemu_devices.utils.system_output.expect_call('%s -help' % qemu_cmd,
@@ -645,7 +726,8 @@ class Container(unittest.TestCase):
                                              ignore_status=True
                                              ).and_return(QEMU_QMP)
 
-        qdev = qemu_devices.DevContainer(qemu_cmd, vm_name, False)
+        qdev = qemu_devices.DevContainer(qemu_cmd, vm_name, strict_mode, 'no',
+                                         allow_hotplugged_vm)
 
         self.god.check_playback()
         return qdev
@@ -665,31 +747,34 @@ machine
   aid = __0
   aobject = None
   parent_bus = \(\)
-  child_bus = \(.*QPCIBus.*\)
+  child_bus = \[.*QPCIBus.*\]
   params:
 i440FX
   aid = __1
   aobject = None
   parent_bus = \({'type': 'pci'},\)
-  child_bus = \(\)
+  child_bus = \[\]
   params:
     addr = 0x0
 PIIX3
   aid = __2
   aobject = None
   parent_bus = \({'type': 'pci'},\)
-  child_bus = \(\)
+  child_bus = \[\]
   params:
     addr = 0x1"""
         out = qdev.str_long()
         self.assertNotEqual(re.match(exp, out), None, 'Long representation is'
                             'corrupted:\n%s\n%s' % (out, exp))
 
-        exp = (r"Buses of vm1\n  pci.0\(pci\): \[t'i440FX',t'PIIX3'%s\]  {}"
-                % (',None' * 30))
+        exp = ("Buses of vm1\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3'%s]  {}"
+               % (',None' * 30))
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, "Bus representation is ocrrupted:\n%s\n%s" % (out,
+                                                                         exp)
 
         # Insert some good devices
         qdevice = qemu_devices.QDevice
@@ -722,18 +807,22 @@ PIIX3
                          % (out, qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',hba1,a'dev',"
-               "a'dev',a'dev']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
+               "hba1,a'dev',a'dev',a'dev']")
         out = qdev.str_short()
         self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
                          % (out, exp))
-        exp = (r"Buses of vm1"
-               r"\n  hba1.0\(hba\): {0:a'dev',1:a'dev',2:a'dev'}  {}"
-               r"\n  pci.0\(pci\): \[t'i440FX',t'PIIX3'%s,hba1%s\]  {}"
-               % (',None' * 8, ',None' * 21))
+        exp = ("Buses of vm1\n"
+               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3',None,None,None,None,None,"
+               "None,None,None,hba1,None,None,None,None,None,None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None]  {}")
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, 'Bus representation iscorrupted:\n%s\n%s' % (out,
+                                                                        exp)
 
         # Force insert bad devices: No matching bus
         dev = qdevice('baddev', {}, 'badbus', {'type': 'missing_bus'})
@@ -764,24 +853,27 @@ PIIX3
                          "ret=%s\n%s" % (out, qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',hba1,a'dev',"
-               "a'dev',a'dev',a'baddev',a'baddev',hba1__0]")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
+               "hba1,a'dev',a'dev',a'dev',a'baddev',a'baddev',hba1__0]")
         out = qdev.str_short()
-        self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
-                         % (out, exp))
-        exp = (r"Buses of vm1"
-               r"\n  hba1.0\(hba\): {0:a'dev',1:a'dev',2:a'dev'}  {}"
-               r"\n  pci.0\(pci\): \[t'i440FX',t'PIIX3',a'baddev'%s,hba1%s\]  "
-               r"{}" % (',None' * 7, ',None' * 21))
+        assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
+                                                                           exp)
+        exp = ("Buses of vm1\n"
+               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "None,None,None,None,hba1,None,None,None,None,None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None,None]  {}")
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
+                                                                         exp)
 
         # Now representation contains some devices, play with it a bit
         # length
         out = len(qdev)
-        self.assertEqual(out, 10, "Length of qdev is incorrect: %s != %s"
-                         % (out, 10))
+        assert out == 12, "Length of qdev is incorrect: %s != %s" % (out, 10)
 
         # compare
         qdev2 = self.create_qdev('vm1')
@@ -797,9 +889,9 @@ PIIX3
                             % (qdev, qdev2))
 
         # cmdline
-        exp = ("-M pc -device id=hba1,addr=0xa,driver=HBA -device driver=dev "
-               "-device driver=dev -device driver=dev -device driver=baddev "
-               "-device addr=0x2,driver=baddev -device id=hba1,driver=baddev")
+        exp = ("-M pc -device HBA,id=hba1,addr=0xa -device dev -device dev "
+               "-device dev -device baddev -device baddev,addr=0x2,bus=pci.0 "
+               "-device baddev,id=hba1")
         out = qdev.cmdline()
         self.assertEqual(out, exp, 'Corrupted qdev.cmdline() output:\n%s\n%s'
                          % (out, exp))
@@ -815,23 +907,121 @@ PIIX3
         self.assertEqual(out, None, 'Failed to remove device:\n%s\nRepr:\n%s'
                          % ('hba1__0', qdev.str_long()))
 
-        # Remove device which contains other devices
+        # Remove device which contains other devices (without recursive)
+        self.assertRaises(qemu_devices.DeviceRemoveError, qdev.remove, 'hba1',
+                          False)
+
+        # Remove device which contains other devices (recursive)
         out = qdev.remove('hba1')
         self.assertEqual(out, None, 'Failed to remove device:\n%s\nRepr:\n%s'
                          % ('hba1', qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',a'baddev',"
-               "a'baddev']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
+               "a'baddev',a'baddev']")
         out = qdev.str_short()
-        self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
-                         % (out, exp))
-        exp = (r"Buses of vm1"
-               r"\n  pci.0\(pci\): \[t'i440FX',t'PIIX3',a'baddev'%s\]  "
-               r"{}" % (',None' * 29))
+        assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
+                                                                           exp)
+        exp = ("Buses of vm1\n"
+               "  floppy(floppy): [None,None]  {}\n"
+               "  ide(ide): [None,None,None,None]  {}\n"
+               "  pci.0(pci): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None,None,None,None,None,None,None,None,None,None,None,None,"
+               "None,None]  {}")
         out = qdev.str_bus_short()
-        self.assertNotEqual(re.match(exp, out), None, 'Bus representation is'
-                            'corrupted:\n%s\n%s' % (out, exp))
+        assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
+                                                                         exp)
+
+    def test_qdev_hotplug(self):
+        """ Test the hotplug/unplug functionality """
+        qdev = self.create_qdev('vm1', False, True)
+        devs = qdev.machine_by_params({'machine_type': 'pc'})
+        for dev in devs:
+            qdev.insert(dev)
+        monitor = MockHMPMonitor()
+
+        out = qdev.get_state()
+        assert out == -1, ("Status after init is not -1"
+                                       " (%s)" % out)
+        out = len(qdev)
+        assert out == 5, "Number of devices of this VM is not 5 (%s)" % out
+
+        dev1, dev2 = qdev.images_define_by_variables('disk', '/tmp/a',
+                                                     fmt="virtio")
+
+        out = dev1.hotplug_hmp()
+        exp = "drive_add auto id=drive_disk,if=none,file=/tmp/a"
+        assert out == exp, ("Hotplug command of drive is incorrect:\n%s\n%s"
+                            % (exp, out))
+
+        # hotplug of drive will return "  OK" (pass)
+        dev1.hotplug = lambda _monitor: "OK"
+        out = qdev.hotplug(dev1, monitor, True, False)
+        assert out, "Return value of hotplug is not True (%s)" % out
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+
+        # hotplug of virtio-blk-pci will return ""
+        out = dev2.hotplug_hmp()
+        exp = "device_add virtio-blk-pci,id=disk,drive=drive_disk"
+        assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
+                            % (exp, out))
+        dev2.hotplug = lambda _monitor: ""
+        out = qdev.hotplug(dev2, monitor, True, False)
+        # automatic verification is not supported, hotplug returns the original
+        # monitor message ("")
+        assert out == "", 'Return value of hotplug is not "" (%s)' % out
+        out = qdev.get_state()
+        assert out == 1, "Status after unverified hotplug is not 1 (%s)" % out
+        # I verified, that device was hotpluged successfully
+        qdev.hotplug_verified()
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+
+        out = len(qdev)
+        assert out == 7, "Number of devices of this VM is not 7 (%s)" % out
+
+        # Hotplug is expected to pass but monitor reports failure
+        dev3 = qemu_devices.QDrive('a_dev1')
+        dev3.hotplug = lambda _monitor: ("could not open disk image /tmp/qqq: "
+                                         "No such file or directory")
+        out = qdev.hotplug(dev3, monitor, True, False)
+        exp = "could not open disk image /tmp/qqq: No such file or directory"
+        assert out, "Return value of hotplug is incorrect:\n%s\n%s" % (out,
+                                                                       exp)
+        out = qdev.get_state()
+        assert out == 1, ("Status after failed hotplug is not 1 (%s)" % out)
+        # device is still in qdev, but is not in qemu, we should remove it
+        qdev.remove(dev3, recursive=False)
+        # now qdev is synced, we might proclame the hotplug as verified
+        qdev.hotplug_verified()
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+
+        # Hotplug is expected to fail, qdev should stay unaffected
+        self.assertRaises(qemu_devices.DeviceHotplugError, qdev.hotplug, dev2,
+                          True, False)
+        out = qdev.get_state()
+        assert out == 0, "Status after impossible hotplug is not 0 (%s)" % out
+
+        # Unplug
+        # Unplug used drive (automatic verification not supported)
+        out = dev1.unplug_hmp()
+        exp = "drive_del drive_disk"
+        assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
+                            % (exp, out))
+        dev1.unplug = lambda _monitor: ""
+        out = qdev.unplug(dev1, monitor, True)
+        # I verified, that device was unplugged successfully
+        qdev.hotplug_verified()
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
+        out = len(qdev)
+        assert out == 6, "Number of devices of this VM is not 6 (%s)" % out
+        # Removal of drive shoould also set drive of the disk device to None
+        out = dev2.get_param('drive')
+        assert out == None, "Drive was not removed from disk device"
 
     # pylint: disable=W0212
     def test_qdev_low_level(self):
@@ -839,21 +1029,28 @@ PIIX3
         qdev = self.create_qdev('vm1')
 
         # Representation state (used for hotplug or other nasty things)
-        qdev._set_dirty()
+        out = qdev.get_state()
+        assert out == -1, "qdev state is incorrect %s != %s" % (out, 1)
+
+        qdev.set_dirty()
         out = qdev.get_state()
         self.assertEqual(out, 1, "qdev state is incorrect %s != %s" % (out, 1))
 
-        qdev._set_dirty()
+        qdev.set_dirty()
         out = qdev.get_state()
         self.assertEqual(out, 2, "qdev state is incorrect %s != %s" % (out, 1))
 
-        qdev._set_clean()
+        qdev.set_clean()
         out = qdev.get_state()
         self.assertEqual(out, 1, "qdev state is incorrect %s != %s" % (out, 1))
 
-        qdev._set_clean()
+        qdev.set_clean()
         out = qdev.get_state()
         self.assertEqual(out, 0, "qdev state is incorrect %s != %s" % (out, 1))
+
+        qdev.reset_state()
+        out = qdev.get_state()
+        assert out == -1, "qdev state is incorrect %s != %s" % (out, 1)
 
         # __create_unique_aid
         dev = qemu_devices.QDevice()
@@ -916,7 +1113,8 @@ PIIX3
 
         # Add some buses
         bus1 = qemu_devices.QPCIBus('pci.0', 'pci', 'a_pci0')
-        qdev.insert(qemu_devices.QDevice(child_bus=bus1))
+        qdev.insert(qemu_devices.QDevice(params={'id': 'pci0'},
+                                         child_bus=bus1))
         bus2 = qemu_devices.QPCIBus('pci.1', 'pci', 'a_pci1')
         qdev.insert(qemu_devices.QDevice(child_bus=bus2))
         bus3 = qemu_devices.QPCIBus('pci.2', 'pci', 'a_pci2')
@@ -953,7 +1151,69 @@ PIIX3
         out = qdev.idx_of_next_named_bus('pci.')
         self.assertEqual(out, 3, 'Incorrect idx of next named bus: %s !='
                          ' %s' % (out, 3))
+
+        # get_children
+        dev = qemu_devices.QDevice(parent_bus={'aobject': 'a_pci0'})
+        bus = qemu_devices.QPCIBus('test1', 'test', 'a_test1')
+        dev.add_child_bus(bus)
+        bus = qemu_devices.QPCIBus('test2', 'test', 'a_test2')
+        dev.add_child_bus(bus)
+        qdev.insert(dev)
+        qdev.insert(qemu_devices.QDevice(parent_bus={'aobject': 'a_test1'}))
+        qdev.insert(qemu_devices.QDevice(parent_bus={'aobject': 'a_test2'}))
+        out = dev.get_children()
+        assert len(out) == 2, ("Not all children were listed %d != 2:\n%s"
+                               % (len(out), out))
+
+        out = bus.get_device()
+        assert out == dev, ("bus.get_device() returned different device "
+                            "than the one in which it was plugged:\n"
+                            "%s\n%s\n%s" % (out.str_long(), dev.str_long(),
+                                            qdev.str_long()))
     # pylint: enable=W0212
+
+    def test_qdev_equal(self):
+        qdev1 = self.create_qdev('vm1', allow_hotplugged_vm='no')
+        qdev2 = self.create_qdev('vm1', allow_hotplugged_vm='no')
+        qdev3 = self.create_qdev('vm1', allow_hotplugged_vm='yes')
+        monitor = MockHMPMonitor()
+
+        assert qdev1 == qdev2, ("Init qdevs are not alike\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        # Insert a device to qdev1
+        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        qdev1.insert(dev)
+
+        assert qdev1 != qdev2, ("Different qdevs match:\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        # Insert similar device to qdev2
+        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        qdev2.insert(dev)
+
+        assert qdev1 == qdev2, ("Similar qdevs are not alike\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        # Hotplug similar device to qdev3
+        dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
+        dev.hotplug = lambda _monitor: ""   # override the hotplug method
+        qdev3.hotplug(dev, monitor, False, False)
+        assert qdev1 != qdev3, ("Similar hotplugged qdevs match even thought "
+                                "qdev3 has different state\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+        qdev3.hotplug_verified()
+        assert qdev1 == qdev3, ("Similar hotplugged qdevs are not alike\n%s\n"
+                                "%s" % (qdev1.str_long(), qdev2.str_long()))
+
+        # Eq. is not symetrical, qdev1 doesn't allow hotplugged VMs.
+        assert qdev3 != qdev1, ("Similar hotplugged qdevs match even thought "
+                                "qdev1 doesn't allow hotplugged VM\n%s\n%s"
+                                % (qdev1.str_long(), qdev2.str_long()))
+
+        qdev2.__qemu_help = "I support only this :-)"  # pylint: disable=W0212
+        assert qdev1 == qdev2, ("qdevs of different qemu versions match:\n%s\n"
+                                "%s" % (qdev1.str_long(), qdev2.str_long()))
 
 
 if __name__ == "__main__":

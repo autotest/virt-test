@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process, qemu_monitor
+from virttest import qemu_qtree, env_process
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -107,6 +107,7 @@ def run_multi_disk(test, params, env):
     stg_params += _add_param("image_format", params.get("stg_image_format"))
     stg_params += _add_param("image_boot", params.get("stg_image_boot", "no"))
     stg_params += _add_param("drive_format", params.get("stg_drive_format"))
+    stg_params += _add_param("drive_cache", params.get("stg_drive_cache"))
     if params.get("stg_assign_index") != "no":
         # Assume 0 and 1 are already occupied (hd0 and cdrom)
         stg_params += _add_param("drive_index", 'range(2,n)')
@@ -203,7 +204,7 @@ def run_multi_disk(test, params, env):
     black_list = params["black_list"].split()
 
     have_qtree = True
-    out = vm.monitor.human_monitor_cmd("qtree", debug=False)
+    out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
     if "unknown command" in str(out):
         have_qtree = False
 
@@ -213,7 +214,7 @@ def run_multi_disk(test, params, env):
         qtree = qemu_qtree.QtreeContainer()
         qtree.parse_info_qtree(vm.monitor.info('qtree'))
         disks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
-        (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info('block'))
+        (tmp1, tmp2) = disks.parse_info_block(vm.monitor.info_block())
         err += tmp1 + tmp2
         err += disks.generate_params()
         err += disks.check_disk_params(params)

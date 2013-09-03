@@ -47,7 +47,7 @@ def run_nmi_bsod_catch(test, params, env):
             if s:
                 raise error.TestFail("Fail command: %s. Output: %s" % (cmd, o))
 
-    if 'yes' in params.get("reboot_after_config"):
+    if params.get("reboot_after_config") == "yes":
         error.context("Reboot guest", logging.info)
         session = vm.reboot(timeout=timeout * 2)
 

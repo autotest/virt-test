@@ -152,10 +152,6 @@ class TestNumaNode(unittest.TestCase):
         self.numa_node = utils_misc.NumaNode(-1)
 
 
-    def test_get_node_num(self):
-        self.assertEqual(self.numa_node.get_node_num(), '1')
-
-
     def test_get_node_cpus(self):
         self.assertEqual(self.numa_node.get_node_cpus(0), '0 1 2 3 4 5 6 7')
 

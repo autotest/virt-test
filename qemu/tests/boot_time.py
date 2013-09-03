@@ -1,6 +1,5 @@
-import logging, time, re, os
+import logging, time
 from autotest.client.shared import error
-from virttest import utils_misc, utils_test, env_process, storage, data_dir
 
 try:
     from autotest.client.shared import utils_memory
@@ -57,7 +56,7 @@ def run_boot_time(test, params, env):
             vm.verify_alive()
             vm.wait_for_login(timeout=timeout)
         except Exception:
-            logging.Warn("Can not restore guest run level, "
+            logging.warning("Can not restore guest run level, "
                          "need restore the image")
             params["restore_image_after_testing"] = "yes"
 

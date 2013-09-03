@@ -1,6 +1,7 @@
 import re, string, logging, random
 from autotest.client.shared import error
 from virttest import qemu_monitor, storage, utils_misc, env_process, data_dir
+from virttest import qemu_qtree
 
 
 def run_physical_resources_check(test, params, env):
@@ -185,6 +186,8 @@ def run_physical_resources_check(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     chk_timeout = int(params.get("chk_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
+    qtree = qemu_qtree.QtreeContainer()
+    qtree.parse_info_qtree(vm.monitor.info('qtree'))
 
     logging.info("Starting physical resources check test")
     logging.info("Values assigned to VM are the values we expect "
@@ -249,10 +252,18 @@ def run_physical_resources_check(test, params, env):
     f_fail = chk_fmt_model("nics", "nic_model", "network", "model=(.*),")
     n_fail.extend(f_fail)
 
-    logging.info("Drive format check")
-    f_fail = chk_fmt_model("images", "drive_format",
-                           "block", "(.*)\: .*%s" % image_name)
-    n_fail.extend(f_fail)
+    logging.info("Images params check")
+    logging.debug("Found devices: %s", params.objects('images'))
+    qdisks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
+    _ = sum(qdisks.parse_info_block(
+                                vm.monitor.info_block()))
+    _ += qdisks.generate_params()
+    _ += qdisks.check_disk_params(params)
+    if _:
+        _ = ("Images check failed with %s errors, check the log for "
+             "details" % _)
+        logging.error(_)
+        n_fail.append(_)
 
     logging.info("Network card MAC check")
     o = ""

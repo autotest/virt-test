@@ -1,10 +1,15 @@
 """
 Library to perform pre/post test setup for KVM autotest.
 """
-import os, logging, time, re, random, commands
-from autotest.client.shared import error
-from autotest.client import utils, kvm_control, os_dep
+import os, logging, time, re, random, commands, math
+from autotest.client.shared import error, utils
+from autotest.client import kvm_control, os_dep
 import utils_misc
+
+try:
+    from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client import utils_memory
 
 
 class THPError(Exception):
@@ -229,7 +234,12 @@ class HugePageConfig(object):
         self.qemu_overhead = int(params.get("hugepages_qemu_overhead", 128))
         self.deallocate = params.get("hugepages_deallocate", "yes") == "yes"
         self.hugepage_path = '/mnt/kvm_hugepage'
+        self.kernel_hp_file = '/proc/sys/vm/nr_hugepages'
         self.hugepage_size = self.get_hugepage_size()
+        self.hugepage_force_allocate = params.get("hugepage_force_allocate",
+                                                  "no")
+        self.suggest_mem = None
+        self.lowest_mem_per_vm = int(params.get("lowest_mem", "256"))
 
         target_hugepages = params.get("target_hugepages")
         if target_hugepages is None:
@@ -238,7 +248,6 @@ class HugePageConfig(object):
             target_hugepages = int(target_hugepages)
 
         self.target_hugepages = target_hugepages
-        self.kernel_hp_file = '/proc/sys/vm/nr_hugepages'
 
 
     def get_hugepage_size(self):
@@ -264,6 +273,42 @@ class HugePageConfig(object):
         # (this value can be overriden in your cartesian config)
         vmsm = self.vms * (self.mem + self.qemu_overhead)
         target_hugepages = int(vmsm * 1024 / self.hugepage_size)
+
+        # FIXME Now the buddyinfo can not get chunk info which is bigger
+        # than 4M. So this will only fit for 2M size hugepages. Can not work
+        # when hugepage size is 1G.
+        # And sometimes huge page can not get all pages so decrease the page
+        # for about 10 huge page to make sure the allocate can success
+
+        decreased_pages = 10
+        if self.hugepage_size > 2048:
+            self.hugepage_force_allocate = "yes"
+
+        if self.hugepage_force_allocate == "no":
+            hugepage_allocated = open(self.kernel_hp_file, "r")
+            available_hugepages = int(hugepage_allocated.read().strip())
+            hugepage_allocated.close()
+            chunk_bottom = int(math.log(self.hugepage_size / 4, 2))
+            chunk_info = utils_memory.get_buddy_info(">=%s" % chunk_bottom,
+                                                      zones="DMA32 Normal")
+            for size in chunk_info:
+                available_hugepages += int(chunk_info[size] * math.pow(2,
+                                           int(int(size) - chunk_bottom)))
+
+            available_hugepages = available_hugepages - decreased_pages
+            if target_hugepages > available_hugepages:
+                logging.warn("This test requires more huge pages than we"
+                             " currently have, we'll try to allocate the"
+                             " biggest number the system can support.")
+                target_hugepages = available_hugepages
+                available_mem = available_hugepages * self.hugepage_size
+                self.suggest_mem = int(available_mem / self.vms / 1024
+                                       - self.qemu_overhead)
+                if self.suggest_mem < self.lowest_mem_per_vm:
+                    raise MemoryError("Sugguest memory %sM is too small for"
+                                      " guest to boot up. Please check your"
+                                      " host memory "
+                                      "status." % self.suggest_mem)
 
         return target_hugepages
 
@@ -315,6 +360,8 @@ class HugePageConfig(object):
                       self.target_hugepages)
         self.set_hugepages()
         self.mount_hugepage_fs()
+
+        return self.suggest_mem
 
 
     @error.context_aware
