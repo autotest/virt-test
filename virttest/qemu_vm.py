@@ -634,11 +634,19 @@ class VM(virt_vm.BaseVM):
             return " -uuid '%s'" % uuid
 
         def add_pcidevice(devices, host, params, device_driver="pci-assign"):
-            if devices.has_device(device_driver):
-                dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+            if device_driver == "pci-assign":
+                if (devices.has_device("pci-assign") or
+                                       devices.has_device("kvm-pci-assign")):
+                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                else:
+                    dev = qemu_devices.QCustomDevice('pcidevice',
+                                                    parent_bus={'type': 'pci'})
             else:
-                dev = qemu_devices.QCustomDevice('pcidevice',
-                                                 parent_bus={'type': 'pci'})
+                if devices.has_device(device_driver):
+                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                else:
+                    dev = qemu_devices.QCustomDevice('pcidevice',
+                                                    parent_bus={'type': 'pci'})
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
@@ -1789,7 +1797,7 @@ class VM(virt_vm.BaseVM):
                 if pa_type and pa_type != "no":
                     device_driver = nic_params.get("device_driver",
                                                     "pci-assign")
-                    if mac not in nic:
+                    if "mac" not in nic:
                         self.virtnet.generate_mac_address(nic["nic_name"])
                     mac = nic["mac"]
                     if self.pci_assignable is None:
