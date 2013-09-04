@@ -516,7 +516,9 @@ class VM(virt_vm.BaseVM):
                     dev.parent_bus = {'type': 'pci'}
                     dev.set_param('addr', pci_addr)
                 if nic_extra_params:
-                    for key, val in re.findall(r'(%s)=(%s)', nic_extra_params):
+                    nic_extra_params = (_.split('=', 1) for _ in
+                                            nic_extra_params.split(',') if _)
+                    for key, val in nic_extra_params:
                         dev.set_param(key, val)
                 dev.set_param("bootindex", bootindex)
             else:
