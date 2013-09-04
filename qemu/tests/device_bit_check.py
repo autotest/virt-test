@@ -29,14 +29,16 @@ def run_device_bit_check(test, params, env):
     dev_pattern = params.get("dev_pattern", "(dev: %s.*?)dev:" % dev_type)
     pci_id_pattern = params.get("pci_id_pattern")
     convert_dict = {"1": "on", "0": "off"}
+    orig_extra_params = params.get(dev_param_name)
     for properties in test_loop:
         if properties != "default":
             properties = properties.strip().split()
+            extra_params = orig_extra_params
             for index, value in enumerate(properties):
                 if value != default_value[index]:
-                    params[dev_param_name] += ",%s=%s" % (options[index],
-                                                          option_add[index])
-                params[dev_param_name] = params[dev_param_name].lstrip(",")
+                    extra_params += ",%s=%s" % (options[index],
+                                                    option_add[index])
+            params[dev_param_name] = extra_params.lstrip(",")
         else:
             properties = default_value
 
