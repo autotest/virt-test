@@ -154,10 +154,9 @@ def run_test(mod_names, options):
     test_name =  '.'.join(mod_names)
     fail = False
 
-    from_module = __import__(mod_names[0], globals(), locals(), [mod_names[-1]])
-    mod = getattr(from_module, mod_names[-1])
-
     try:
+        from_module = __import__(mod_names[0], globals(), locals(), [mod_names[-1]])
+        mod = getattr(from_module, mod_names[-1])
 
         for ut_module in [unittest, custom_unittest]:
             test = ut_module.defaultTestLoader.loadTestsFromModule(mod)
@@ -188,7 +187,7 @@ def scan_for_modules(start, options):
 
     skip_tests = []
     if options.skip_tests:
-        skip_tests.update(options.skip_tests.split())
+        skip_tests = options.skip_tests.split()
 
     for dirpath, subdirs, filenames in os.walk(start):
         # Only look in and below subdirectories that are python modules.
@@ -231,7 +230,11 @@ def find_and_run_tests(start, options):
     else:
         modules = scan_for_modules(start, options)
 
-    print_header('Number of test modules found: %d' % len(modules))
+    modules_count = len(modules)
+    if not modules_count:
+        print_header('No test module was found!')
+        return (modules_count, [])
+    print_header('Number of test modules found: %d' % modules_count)
 
     functions = {}
 
@@ -239,7 +242,7 @@ def find_and_run_tests(start, options):
         # Create a function that'll test a particular module.  module=module
         # is a hack to force python to evaluate the params now.  We then
         # rename the function to make error reporting nicer.
-        run_module = lambda module=module_names: run_test(module, options)
+        run_module = lambda module = module_names: run_test(module, options)
         name = '.'.join(module_names)
         run_module.__name__ = name
         functions[run_module] = set()
@@ -251,8 +254,8 @@ def find_and_run_tests(start, options):
         pe = parallel.ParallelExecute(functions, **dargs)
         pe.run_until_completion()
     except parallel.ParallelError, err:
-        return err.errors
-    return []
+        return (modules_count, err.errors)
+    return (modules_count, [])
 
 
 def main():
@@ -265,13 +268,17 @@ def main():
     del sys.argv[1:]
 
     absolute_start = os.path.join(ROOT, options.start)
-    errors = find_and_run_tests(absolute_start, options)
+    mod_cnt, errors = find_and_run_tests(absolute_start, options)
     if errors:
+        print "%d tests passed!" % (mod_cnt - len(errors))
         print "%d tests resulted in an error/failure:" % len(errors)
         for error in errors:
             print "\t%s" % error
         print "Rerun", sys.argv[0], "--debug to see the failure details."
         sys.exit(1)
+    elif not mod_cnt:
+        print "No module is tested!"
+        sys.exit(0)
     else:
         print "All passed!"
         sys.exit(0)
