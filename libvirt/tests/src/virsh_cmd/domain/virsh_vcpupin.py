@@ -31,11 +31,10 @@ def run_virsh_vcpupin(test, params, env):
         return actual_affinity
 
 
-    def build_expected_info(vcpu, cpu):
+    def build_expected_info(cpu):
         """
         This function returns the list of vcpu's expected affinity build
 
-        @param: vcpu: vcpu number for which the affinity is required
         @param: cpu: cpu details for the affinity
         """
 
@@ -62,7 +61,7 @@ def run_virsh_vcpupin(test, params, env):
         @param: cpu: cpu details for the affinity
         """
 
-        expected_output, expected_output_proc = build_expected_info(vcpu, cpu)
+        expected_output, expected_output_proc = build_expected_info(cpu)
         actual_output = build_actual_info(domname, vcpu)
 
         # Get the vcpus pid
@@ -93,7 +92,8 @@ def run_virsh_vcpupin(test, params, env):
 
 
     if not virsh.has_help_command('vcpucount'):
-        raise error.TestNAError("This version of libvirt doesn't support this test")
+        raise error.TestNAError("This version of libvirt doesn't"
+                                " support this test")
     # Get the vm name, pid of vm and check for alive
     vm_name = params.get("main_vm")
     vm = env.get_vm(params["main_vm"])
@@ -104,7 +104,8 @@ def run_virsh_vcpupin(test, params, env):
     host_cpu_count = utils.count_cpus()
 
     # Get the guest vcpu count
-    guest_vcpu_count = virsh.vcpucount_live(vm_name)
+    guest_vcpu_count = virsh.vcpucount(vm_name,
+                                       "--live --active").stdout.strip()
 
     # Run test case
     for vcpu in range(int(guest_vcpu_count)):
