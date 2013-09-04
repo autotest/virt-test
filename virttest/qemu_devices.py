@@ -2603,6 +2603,11 @@ class DevContainer(object):
         if 'serial' in options:
             devices[-1].set_param('serial', serial)
             devices[-2].set_param('serial', None)   # remove serial from drive
+        if blk_extra_params:
+            blk_extra_params = (_.split('=', 1) for _ in
+                                            blk_extra_params.split(',') if _)
+            for key, value in blk_extra_params:
+                devices[-1].set_param(key, value)
 
         return devices
 
