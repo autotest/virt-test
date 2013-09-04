@@ -5,7 +5,7 @@ multi_disk test for Autotest framework.
 """
 import logging, re, random, string
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process
+from virttest import qemu_qtree, env_process, utils_misc
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -255,20 +255,22 @@ def run_multi_disk(test, params, env):
         logging.debug("Volume list that meet regular expressions: %s",
                       " ".join(disks))
 
-        if len(disks) < len(params.get("images").split()):
+        images = params.get("images").split()
+        if len(disks) < len(images):
+            logging.debug("disks: %s , images: %s", len(disks), len(images))
             raise error.TestFail("Fail to list all the volumes!")
 
         if params.get("os_type") == "linux":
-            df_output = session.cmd_output("df")
-            li = re.findall(r"^/dev/(.*?)[ \d]", df_output, re.M)
+            output = session.cmd_output("mount")
+            li = re.findall(r"^/dev/(%s)\d*" % re_str, output, re.M)
             if li:
                 black_list.extend(li)
-
-        exclude_list = [d for d in disks if d in black_list]
-        func = lambda d: logging.info("No need to check volume '%s'", d)
-        map(func, exclude_list)
-
-        disks = [d for d in disks if d not in exclude_list]
+        else:
+            black_list.extend(utils_misc.get_winutils_vol(session))
+        disks = set(disks)
+        black_list = set(black_list)
+        logging.info("No need to check volume '%s'", (disks & black_list))
+        disks = disks - black_list
     except Exception:
         _do_post_cmd(session)
         raise
