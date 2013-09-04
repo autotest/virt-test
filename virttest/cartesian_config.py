@@ -883,29 +883,31 @@ class LApplyPreDict(LOperators):
 
 
 class LUpdateFileMap(LOperators):
-    __slots__ = ["filename", "shortname"]
+    __slots__ = ["shortname", "dest"]
     identifier = "update_file_map"
 
-    def set_operands(self, filename, name):
+    def set_operands(self, filename, name, dest="_name_map_file"):
         # pylint: disable=W0201
         self.name = name
         # pylint: disable=W0201
-        self.filename = filename
         if filename == "<string>":
             self.shortname = filename
         else:
             self.shortname = os.path.basename(filename)
+
+        self.dest = dest
         return self
 
     def apply_to_dict(self, d):
-        if not "_name_map_file" in d:
-            d["_name_map_file"] = {}
+        dest = self.dest
+        if not dest in d:
+            d[dest] = {}
 
-        if self.shortname in d["_name_map_file"]:
-            old_name = d["_name_map_file"][self.shortname][1]
-            d["_name_map_file"][self.shortname][1] = self.name + "." + old_name
+        if self.shortname in d[dest]:
+            old_name = d[dest][self.shortname]
+            d[dest][self.shortname] = "%s.%s" % (self.name, old_name)
         else:
-            d["_name_map_file"][self.shortname] = [self.filename, self.name]
+            d[dest][self.shortname] = self.name
 
 
 spec_iden = "_-"
@@ -1563,12 +1565,6 @@ class Parser(object):
                             node3.name = [Label(str(n)) for n in name]
 
                         # Update mapping name to file
-                        op = LUpdateFileMap()
-                        op.set_operands(lexer.filename,
-                                        ".".join(str(x) for x in node3.name))
-                        node3.content += [(lexer.filename,
-                                           lexer.linenum,
-                                           op)]
 
                         node3.dep = deps
 
@@ -1584,6 +1580,23 @@ class Parser(object):
                             already_default = True
 
                         node3.append_to_shortname = not is_default
+
+                        op = LUpdateFileMap()
+                        op.set_operands(lexer.filename,
+                                        ".".join(str(x)
+                                        for x in node3.name))
+                        node3.content += [(lexer.filename,
+                                           lexer.linenum,
+                                           op)]
+
+                        op = LUpdateFileMap()
+                        op.set_operands(lexer.filename,
+                                        ".".join(str(x.name)
+                                        for x in node3.name),
+                                        "_short_name_map_file")
+                        node3.content += [(lexer.filename,
+                                           lexer.linenum,
+                                           op)]
 
                         if node3.default and self.defaults:
                             # Move default variant in front of rest
