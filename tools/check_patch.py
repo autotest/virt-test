@@ -30,7 +30,7 @@ except ImportError:
 
 from autotest.client.shared import utils, error, logging_config
 from autotest.client.shared import logging_manager
-import run_pylint, reindent
+import run_pylint, reindent, run_pep8
 
 # Hostname of patchwork server to use
 PWHOST = "patchwork.virt.bos.redhat.com"
@@ -503,6 +503,28 @@ class FileChecker(object):
         return success
 
 
+    def _check_pep8(self):
+        """
+        Verifies the file with run_pep8.
+        """
+        success = True
+        for exc in self.check_exceptions:
+            if re.search (exc, self.path):
+                return success
+
+        path = self._get_checked_filename()
+
+        try:
+            if run_pep8.check_file(path):
+                success = False
+        except Exception, details:
+            logging.error("Pep8 exception while verifying %s, details: %s",
+                          path, details)
+            success = False
+
+        return success
+
+
     def _check_unittest(self):
         """
         Verifies if the file in question has a unittest suite, if so, run the
@@ -574,6 +596,8 @@ class FileChecker(object):
             if not self._check_indent():
                 success = False
             if not self._check_code():
+                success = False
+            if not self._check_pep8():
                 success = False
             if not skip_unittest:
                 if not self._check_unittest():
@@ -746,6 +770,7 @@ if __name__ == "__main__":
     gh_id = options.gh_id
     debug = options.debug
     run_pylint.set_verbosity(debug)
+    run_pep8.set_verbosity(debug)
     full_check = options.full_check
     confirm = options.confirm
     pwhost = options.patchwork_host
@@ -762,6 +787,7 @@ if __name__ == "__main__":
     if full_check:
         failed_paths = []
         run_pylint.set_verbosity(False)
+        run_pep8.set_verbosity(False)
         logging.info("%s full tree check", PROJECT_NAME)
         logging.info("")
 
