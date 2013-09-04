@@ -662,7 +662,13 @@ class ServiceManagerFactory(object):
             :param run: Funtion to run command.
             :type: utils.run-like function.
             """
+            result = run("exit 0")
+            if not isinstance(result, utils.CmdResult):
+                raise ValueError("Param run is a/an %s, "
+                                 "but not an instance of utils.CmdResult."
+                                 % (type(result)))
             self.run = run
+            self.init_name = self.get_name_of_init()
 
         def get_name_of_init(self):
             """
@@ -686,7 +692,7 @@ class ServiceManagerFactory(object):
             :return: Subclass type of _GenericServiceManager fro the current init command.
             :rtype: _SysVInitServiceManager or _SystemdServiceManager.
             """
-            return self._service_managers[self.get_name_of_init()]
+            return self._service_managers[self.init_name]
 
         def get_generic_service_result_parser(self):
             """
@@ -695,7 +701,7 @@ class ServiceManagerFactory(object):
             :return: ServiceResultParser fro the current init command.
             :rtype: _ServiceResultParser
             """
-            result_parser = self._result_parsers[self.get_name_of_init()]
+            result_parser = self._result_parsers[self.init_name]
             return _ServiceResultParser(result_parser)
 
         def get_generic_service_command_generator(self):
@@ -705,7 +711,7 @@ class ServiceManagerFactory(object):
             :return: ServiceCommandGenerator for the current init command.
             :rtype: _ServiceCommandGenerator
             """
-            command_generator = self._command_generators[self.get_name_of_init()]
+            command_generator = self._command_generators[self.init_name]
             return _ServiceCommandGenerator(command_generator)
 
         def get_specific_service_result_parser(self):
@@ -716,7 +722,7 @@ class ServiceManagerFactory(object):
             :return: A ServiceResultParser for the auto-detected init command.
             :rtype: _ServiceResultParser
             """
-            result_parser = self._result_parsers[self.get_name_of_init()]
+            result_parser = self._result_parsers[self.init_name]
             # remove list method
             command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
             return _ServiceResultParser(result_parser, command_list)
@@ -734,7 +740,7 @@ class ServiceManagerFactory(object):
             :return: A ServiceCommandGenerator for the auto-detected init command.
             :rtype: _ServiceCommandGenerator
             """
-            command_generator = self._command_generators[self.get_name_of_init()]
+            command_generator = self._command_generators[self.init_name]
             # remove list method
             command_list = [c for c in COMMANDS if c not in ["list", "set_target"]]
             return _ServiceCommandGenerator(command_generator, command_list)
