@@ -1846,7 +1846,7 @@ class Parser(object):
         if not node.children:
             self._debug("    reached leaf, returning it")
             d = {"name": name, "dep": dep,
-                 "shortname": ".".join([str(sn) for sn in shortname])}
+                 "shortname": ".".join([str(sn.name) for sn in shortname])}
             for _, _, op in new_content:
                 op.apply_to_dict(d)
             yield d
