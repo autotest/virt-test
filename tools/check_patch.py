@@ -43,6 +43,10 @@ import run_pylint
 import reindent
 import run_pep8
 
+UTILS_DIRNAME = os.path.dirname(sys.modules[__name__].__file__)
+TOP_LEVEL_DIRNAME = os.path.abspath(os.path.dirname(UTILS_DIRNAME))
+CODESPELL_PATH = os.path.join(UTILS_DIRNAME, 'codespell', 'codespell.py')
+
 # Hostname of patchwork server to use
 PWHOST = "patchwork.virt.bos.redhat.com"
 
@@ -371,6 +375,11 @@ class GitBackend(object):
             logging.error("git tree update failed: %s" % e)
 
 
+def run_codespell(path):
+    cmd = CODESPELL_PATH + " -w " + path
+    utils.system(CODESPELL_PATH, ignore_status=True)
+
+
 class FileChecker(object):
 
     """
@@ -526,6 +535,21 @@ class FileChecker(object):
 
         return success
 
+    def _check_codespell(self):
+        """
+        Verifies the file with codespell.
+        """
+        success = True
+        for exc in self.check_exceptions:
+            if re.search(exc, self.path):
+                return success
+
+        path = self._get_checked_filename()
+
+        run_codespell(path)
+
+        return success
+
     def _check_unittest(self):
         """
         Verifies if the file in question has a unittest suite, if so, run the
@@ -597,6 +621,8 @@ class FileChecker(object):
             if not self._check_code():
                 success = False
             if not self._check_pep8():
+                success = False
+            if not self._check_codespell():
                 success = False
             if not skip_unittest:
                 if not self._check_unittest():
@@ -785,6 +811,10 @@ if __name__ == "__main__":
         failed_paths = []
         run_pylint.set_verbosity(False)
         run_pep8.set_verbosity(False)
+        logging.info("%s spell check", PROJECT_NAME)
+        logging.info("")
+        run_codespell(TOP_LEVEL_DIRNAME)
+
         logging.info("%s full tree check", PROJECT_NAME)
         logging.info("")
 
