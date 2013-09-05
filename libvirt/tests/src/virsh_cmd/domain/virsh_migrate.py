@@ -1,6 +1,7 @@
 import logging, os, re, time, codecs
 from autotest.client.shared import error
 from virttest import utils_test, virsh, utils_libvirtd
+from virttest.libvirt_xml import vm_xml
 
 
 def run_virsh_migrate(test, params, env):
@@ -96,11 +97,37 @@ def run_virsh_migrate(test, params, env):
     status_error = params.get("status_error", 'no')
     libvirtd_state = params.get("virsh_migrate_libvirtd_state", 'on')
     src_state = params.get("virsh_migrate_src_state", "running")
-    new_nic_mac = "ff:ff:ff:ff:ff:ff"
     dest_xmlfile = ""
+    shared_storage_nfs = params.get("shared_storage_nfs", "")
+    device_target = "vda"
+
+    #Direct migration is supported only for Xen in libvirt
+    if options.count("direct") or extra.count("direct"):
+        if params.get("driver_type") is not "xen":
+            raise error.TestNAError("Direct migration is supported only for "
+                                    "Xen in libvirt.")
 
     exception = False
     try:
+        # To migrate you need to have a shared disk between hosts
+        if shared_storage_nfs == "":
+            raise error.TestError("For migration you need to have a shared "
+                                  "storage on NFS.")
+
+        if vm.is_alive():
+            vm.destroy(gracefully=False)
+        s_detach = virsh.detach_disk(vm_name, device_target,  "--config", debug=True)
+        if not s_detach:
+            logging.error("Detach vda failed before test.")
+        s_attach = virsh.attach_disk(vm_name, shared_storage_nfs, device_target,
+                                     "--config --driver qemu --subdriver qcow2 "
+                                     "--cache none", debug=True)
+        if not s_attach:
+            logging.error("Attach vda failed before test.")
+
+        vm.start()
+        vm.wait_for_login()
+
         # Confirm VM can be accessed through network.
         time.sleep(delay)
         vm_ip = vm.get_address()
@@ -116,10 +143,12 @@ def run_virsh_migrate(test, params, env):
             dest_xmlfile = params.get("virsh_migrate_xml", "")
             if dest_xmlfile:
                 ret_attach = vm.attach_interface("--type bridge --source "
-                                "virbr0 --mac %s" % new_nic_mac, True, True)
+                                "virbr0 --target tmp-vnet", True, True)
                 if not ret_attach:
                     exception = True
                     raise error.TestError("Attaching nic to %s failed." % vm.name)
+                ifaces = vm_xml.VMXML.get_net_dev(vm.name)
+                new_nic_mac = vm.get_virsh_mac_address(ifaces.index("tmp-vnet"))
                 vm_xml_new = vm.get_xml()
                 logging.debug("Xml file on source: %s" % vm_xml_new)
                 f = codecs.open(dest_xmlfile, 'wb', encoding='utf-8')
