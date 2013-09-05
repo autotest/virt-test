@@ -116,13 +116,26 @@ class PropCanBase(dict, PropCanInternal):
     """
     Objects with optional accessor methods and dict-like access to fixed set of keys
     """
+
+    # get_*(), set_*(), del_*() accessor methods called from subclass
+    # __init__ sometimes need special handling, this is the signal.
     INITIALIZED = False
+
+    # Help debugging by making all slot values available in all subclasses
+    # cache the value on first call
+    __all_slots__ = None
+
 
     def __new__(cls, *args, **dargs):
         if not hasattr(cls, '__slots__'):
             raise NotImplementedError("Class '%s' must define __slots__ "
                                       "property" % str(cls))
         newone = super(PropCanBase, cls).__new__(cls, *args, **dargs)
+        all_slots = []
+        for cls_slots in [getattr(_cls, '__slots__', [])
+                          for _cls in cls.__mro__]:
+            all_slots += cls_slots
+        newone.super_set('__all_slots__', tuple(all_slots))
         return newone
 
     def __init__(self, *args, **dargs):
@@ -136,22 +149,13 @@ class PropCanBase(dict, PropCanInternal):
         super(PropCanBase, self).__init__()
         # No need to re-invent dict argument processing
         values = dict(*args, **dargs)
-        for key in self.super_get("__all_slots"):
+        for key in self.super_get("__all_slots__"):
             value = values.get(key, "@!@!@!SENTINEL!@!@!@")
             if value is not "@!@!@!SENTINEL!@!@!@":
                 # Call accessor methods if present
                 self[key] = value
         # Let accessor methods know initialization is complete
         self.super_set('INITIALIZED', True)
-
-
-    @classmethod
-    def get_all_slots(cls):
-        slots = []
-        for cls_slots in [getattr(_cls, '__slots__', [])
-                                               for _cls in cls.__mro__]:
-            slots += cls_slots
-        return slots
 
 
     def __getitem__(self, key):
@@ -208,7 +212,7 @@ class PropCanBase(dict, PropCanInternal):
         """
         Quickly determine if an accessor or instance attribute name is defined.
         """
-        slots = tuple(self.super_get("__all_slots"))
+        slots = self.super_get('__all_slots__')
         keys = slots + ('get_%s' % key, 'set_%s' % key, 'del_%s' % key)
         if key not in keys:
             raise excpt("Key '%s' not found in super class attributes or in %s"
@@ -229,7 +233,7 @@ class PropCan(PropCanBase):
 
     def __len__(self):
         length = 0
-        for key in self.super_get("__all_slots"):
+        for key in self.super_get('__all_slots__'):
             # special None/False value handling
             if self.__contains__(key):
                 length += 1
@@ -254,8 +258,8 @@ class PropCan(PropCanBase):
 
     def keys(self):
         # special None/False value handling
-        return [key for key in self.super_get("__all_slots")
-                                                    if self.__contains__(key)]
+        return [key for key in self.super_get('__all_slots__')
+                                         if self.__contains__(key)]
 
 
     def values(self):

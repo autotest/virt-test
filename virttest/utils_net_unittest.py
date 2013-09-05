@@ -487,7 +487,7 @@ class TestVmNetSubclasses(unittest.TestCase):
                 nic_dict = {'nic_name': nic_name}
                 nic_params = test_params.object_params(nic_name)
                 # avoid processing unsupported properties
-                proplist = list(virtnet.container_class.__slots__)
+                proplist = list(virtnet.container_class().__all_slots__)
                 # name was already set, remove from __slots__ list copy
                 del proplist[proplist.index('nic_name')]
                 for propertea in proplist:

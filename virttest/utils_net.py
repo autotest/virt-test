@@ -1495,7 +1495,7 @@ class ParamsNet(VMNet):
             nic_dict = {'nic_name': nic_name}
             nic_params = self.params.object_params(nic_name)
             # avoid processing unsupported properties
-            proplist = list(self.container_class.get_all_slots())
+            proplist = list(self.container_class().__all_slots__)
             # nic_name was already set, remove from __slots__ list copy
             del proplist[proplist.index('nic_name')]
             for propertea in proplist:
@@ -1576,8 +1576,7 @@ class DbNet(VMNet):
         except KeyError:
             entry = []
         self.unlock_db()
-
-        proplist = list(self.container_class.get_all_slots())
+        proplist = list(self.container_class().__all_slots__)
         # nic_name was already set, remove from __slots__ list copy
         del proplist[proplist.index('nic_name')]
         nic_name_list = self.nic_name_list()
