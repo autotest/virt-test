@@ -54,7 +54,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
         uncomparable |= set(other.__uncompareable__)
         dict_1 = {}
         dict_2 = {}
-        slots = set(self.__slots__) | set(other.__slots__)
+        slots = set(self.__all_slots__) | set(other.__all_slots__)
         for slot in slots - uncomparable:
             try:
                 dict_1[slot] = getattr(self, slot)
