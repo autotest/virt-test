@@ -16,7 +16,7 @@ class UtilsConnTest(unittest.TestCase):
         self.assertRaises(utils_conn.ConnNotImplementedError,
                                             connbase.conn_check)
         self.assertRaises(utils_conn.ConnNotImplementedError,
-                                            connbase.conn_finish)
+                                            connbase.conn_recover)
 
         self.assertRaises(utils_conn.ConnForbiddenError,
                         connbase.set_server_session, None)
