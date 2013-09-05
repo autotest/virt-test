@@ -1236,9 +1236,8 @@ class GuestSuspend(object):
 
     @error.context_aware
     def start_suspend(self, **args):
-        supend_cmd = args.get("suspend_start_cmd")
-        error.context("Start suspend [%s]" % (supend_cmd), logging.info)
         suspend_start_cmd = args.get("suspend_start_cmd")
+        error.context("Start suspend [%s]" % (suspend_start_cmd), logging.info)
 
         session = self._get_session()
         self._open_session_list.append(session)
