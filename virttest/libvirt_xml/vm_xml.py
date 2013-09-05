@@ -15,7 +15,8 @@ class VMXMLDevices(list):
     List of device instances from classes handed out by librarian.get()
     """
 
-    def __type_check__(self, other):
+    @staticmethod
+    def __type_check__(other):
         try:
             # Raise error if object isn't dict-like or doesn't have key
             device_tag = other['device_tag']
@@ -220,7 +221,6 @@ class VMXMLBase(base.LibvirtXMLBase):
                                          % type(seclabel_dict))
         seclabel_node = self.xmltreefile.find("seclabel")
         if seclabel_node is None:
-            seclabel_attr = {}
             seclabel_node = xml_utils.ElementTree.SubElement(
                                                     self.xmltreefile.getroot(),
                                                     "seclabel")
@@ -304,8 +304,7 @@ class VMXML(VMXMLBase):
         result = self.virsh.define(self.xml)
         if result.exit_status:
             logging.debug("Define %s failed.\n"
-                          "Detail: %s."
-                          % (self.vm_name, result.stderr))
+                          "Detail: %s.", self.vm_name, result.stderr)
             return False
         return True
 
@@ -375,7 +374,8 @@ class VMXML(VMXMLBase):
         # when it goes out of scope here.
 
 
-    def check_cpu_mode(self, mode):
+    @staticmethod
+    def check_cpu_mode(mode):
         """
         Check input cpu mode invalid or not.
 
@@ -506,7 +506,8 @@ class VMXML(VMXMLBase):
         vmxml.define()
 
 
-    def set_agent_channel(self, vm_name):
+    @staticmethod
+    def set_agent_channel(vm_name):
         """
         Add channel for guest agent running
 
@@ -525,11 +526,10 @@ class VMXML(VMXMLBase):
                 raise AttributeError("Cannot find guest agent channel")
         except AttributeError:
             channel = vmxml.get_device_class('channel')(type_name='unix')
-            channel.add_source(**{'mode': 'bind',
-                                  'path': '/var/lib/libvirt/qemu/guest.agent'})
-            channel.add_target(**{'type': 'virtio',
-                                  'name': 'org.qemu.guest_agent.0'})
-
+            channel.add_source(mode='bind',
+                               path='/var/lib/libvirt/qemu/guest.agent')
+            channel.add_target(type='virtio',
+                               name='org.qemu.guest_agent.0')
             vmxml.devices = vmxml.devices.append(channel)
             vmxml.define()
 
@@ -574,7 +574,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod
-    def get_iface_dev(vm_name, options="", virsh_instance=base.virsh):
+    def get_iface_dev(vm_name, virsh_instance=base.virsh):
         """
         Return VM's interface device from XML definition, None if not set
         """
@@ -596,10 +596,12 @@ class VMXML(VMXMLBase):
         iftune_params = {}
         bandwidth = None
         try:
-            bandwidth = xmltreefile.find('devices').find('interface').find('bandwidth')
+            bandwidth = xmltreefile.find('devices/interface/bandwidth')
             try:
-                iftune_params['inbound'] = bandwidth.find('inbound').get('average')
-                iftune_params['outbound'] = bandwidth.find('outbound').get('average')
+                iftune_params['inbound'] = bandwidth.find(
+                                                      'inbound').get('average')
+                iftune_params['outbound'] = bandwidth.find(
+                                                     'outbound').get('average')
             except AttributeError:
                 logging.error("Can't find <inbound> or <outbound> element")
         except AttributeError:
@@ -621,7 +623,8 @@ class VMXML(VMXMLBase):
         return nets
 
 
-    #TODO re-visit this method after the libvirt_xml.devices.interface module is implemented
+    #TODO re-visit this method after the libvirt_xml.devices.interface module
+    #     is implemented
     @staticmethod
     def get_net_dev(vm_name):
         """
@@ -736,7 +739,8 @@ class VMCPUXML(VMXML):
         cpu_node.remove(feature_remove_node)
 
 
-    def check_feature_name(self, value):
+    @staticmethod
+    def check_feature_name(value):
         """
         Check feature name valid or not.
 
