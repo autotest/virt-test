@@ -64,47 +64,47 @@ class ConnLoginError(ConnectionError):
     """
     Error in login.
     """
-    def __init__(self, dest, e):
+    def __init__(self, dest, detail):
         ConnectionError.__init__(self)
         self.dest = dest
-        self.e = e
+        self.detail = detail
 
     def __str__(self):
         return ("Got a error when login to %s.\n"
-               "Error: %s\n" % (self.dest, self.e))
+               "Error: %s\n" % (self.dest, self.detail))
 
 
 class ConnToolNotFoundError(ConnectionError):
     """
     Error in not found tools.
     """
-    def __init__(self, tool, e):
+    def __init__(self, tool, detail):
         ConnectionError.__init__(self)
         self.tool = tool
-        self.e = e
+        self.detail = detail
 
     def __str__(self):
         return ("Got a error when access the tool (%s).\n"
-               "Error: %s\n" % (self.tool, self.e))
+               "Error: %s\n" % (self.tool, self.detail))
 
 
 class ConnSCPError(ConnectionError):
     """
     Error in SCP.
     """
-    def __init__(self, src_ip, src_path, dest_ip, dest_path, e):
+    def __init__(self, src_ip, src_path, dest_ip, dest_path, detail):
         ConnectionError.__init__(self)
         self.src_ip = src_ip
         self.src_path = src_path
         self.dest_ip = dest_ip
         self.dest_path = dest_path
-        self.e = e
+        self.detail = detail
 
     def __str__(self):
         return ("Failed scp from %s on %s to %s on %s.\n"
                 "error: %s.\n" %
                 (self.src_path, self.src_ip, self.dest_path,
-                                        self.dest_ip, self.e))
+                                        self.dest_ip, self.detail))
 
 
 class SSHCheckError(ConnectionError):
@@ -457,8 +457,8 @@ class SSHConnection(ConnectionBase):
                 tool = os_dep.command(toolName)
             except ValueError:
                 logging.debug("%s executable not set or found on path,"
-                              "some fucntion of connection will fail." %
-                              (toolName))
+                              "some fucntion of connection will fail.",
+                              toolName)
                 tool = '/bin/true'
             self.dict_set(key, tool)
 
@@ -483,7 +483,7 @@ class SSHConnection(ConnectionBase):
         except aexpect.ShellError, detail:
             client_session.close()
             raise SSHCheckError(server_ip, detail)
-        logging.debug("Check the SSH to %s OK." % server_ip)
+        logging.debug("Check the SSH to %s OK.", server_ip)
 
     def conn_recover(self):
         """
@@ -548,8 +548,8 @@ class SSHConnection(ConnectionBase):
         try:
             remote.handle_prompts(client_session, server_user,
                                   server_pwd, prompt=r"[\#\$]\s*$")
-        except remote.LoginError, e:
-            raise ConnCmdClientError(cmd, e)
+        except remote.LoginError, detail:
+            raise ConnCmdClientError(cmd, detail)
 
         client_session.close()
         logging.debug("SSH connection setup successfully.")
@@ -616,8 +616,8 @@ class TCPConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, e:
-            raise ConnServerRestartError(e)
+        except utils_libvirtd.LibvirtdError, detail:
+            raise ConnServerRestartError(detail)
 
         logging.debug("TCP connection recover successfully.")
 
@@ -655,8 +655,8 @@ class TCPConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, e:
-            raise ConnServerRestartError(e)
+        except utils_libvirtd.LibvirtdError, detail:
+            raise ConnServerRestartError(detail)
 
         logging.debug("TCP connection setup successfully.")
 
@@ -743,10 +743,6 @@ class TLSConnection(ConnectionBase):
         server_ip = self.server_ip
         server_user = self.server_user
         server_pwd = self.server_pwd
-        client_ip = self.client_ip
-        client_user = self.client_user
-        client_pwd = self.client_pwd
-        tmp_dir = self.tmp_dir
 
         del self.client_hosts
         del self.server_syslibvirtd
@@ -757,8 +753,8 @@ class TLSConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, e:
-            raise ConnServerRestartError(e)
+        except utils_libvirtd.LibvirtdError, detail:
+            raise ConnServerRestartError(detail)
         logging.debug("TLS connection recover successfully.")
 
     def conn_setup(self):
@@ -790,11 +786,9 @@ class TLSConnection(ConnectionBase):
         """
         #initialize variables
         tmp_dir = self.tmp_dir
-        cakey_path = '%s/tcakey.pem' % tmp_dir
         cacert_path = '%s/cacert.pem' % tmp_dir
         serverkey_path = '%s/serverkey.pem' % tmp_dir
         servercert_path = '%s/servercert.pem' % tmp_dir
-        serverinfo_path = '%s/server.info' % tmp_dir
         server_ip = self.server_ip
         server_user = self.server_user
         server_pwd = self.server_pwd
@@ -819,9 +813,9 @@ class TLSConnection(ConnectionBase):
             try:
                 remote.copy_files_to(server_ip, 'scp', server_user,
                          server_pwd, '22', local_path, remote_path)
-            except remote.SCPError, e:
+            except remote.SCPError, detail:
                 raise ConnSCPError('AdminHost', local_path,
-                                        server_ip, remote_path, e)
+                                        server_ip, remote_path, detail)
 
         #edit the /etc/sysconfig/libvirtd to add --listen args in libvirtd
         pattern2repl = {r".*LIBVIRTD_ARGS\s*=\s*\"\s*--listen\s*\".*":
@@ -838,8 +832,8 @@ class TLSConnection(ConnectionBase):
                                                     remote_ip=server_ip,
                                                     remote_user=server_user,
                                                     remote_pwd=server_pwd,)
-        except utils_libvirtd.LibvirtdError, e:
-            raise ConnServerRestartError(e)
+        except utils_libvirtd.LibvirtdError, detail:
+            raise ConnServerRestartError(detail)
 
     def client_setup(self):
         """
@@ -852,11 +846,9 @@ class TLSConnection(ConnectionBase):
         """
         #initialize variables
         tmp_dir = self.tmp_dir
-        cakey_path = '%s/tcakey.pem' % tmp_dir
         cacert_path = '%s/cacert.pem' % tmp_dir
         clientkey_path = '%s/clientkey.pem' % tmp_dir
         clientcert_path = '%s/clientcert.pem' % tmp_dir
-        clientinfo_path = '%s/client.info' % tmp_dir
         client_ip = self.client_ip
         client_user = self.client_user
         client_pwd = self.client_pwd
@@ -881,9 +873,9 @@ class TLSConnection(ConnectionBase):
             try:
                 remote.copy_files_to(client_ip, 'scp', client_user,
                             client_pwd, '22', local_path, remote_path)
-            except remote.SCPError, e:
+            except remote.SCPError, detail:
                 raise ConnSCPError('AdminHost', local_path,
-                                        client_ip, remote_path, e)
+                                   client_ip, remote_path, detail)
 
         #edit /etc/hosts on client
         pattern2repl = {r".*%s.*" % self.server_cn:

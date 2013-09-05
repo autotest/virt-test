@@ -97,7 +97,6 @@ def run_virsh_connect(test, params, env):
     #params special for tls connect.
     server_cn = params.get("connect_server_cn", "TLSServer")
     client_cn = params.get("connect_client_cn", "TLSClient")
-    tls_listen = params.get("tls_listen", "yes")
 
     #params special for tcp connect.
     tcp_port = params.get("tcp_port", '16509')
@@ -128,8 +127,8 @@ def run_virsh_connect(test, params, env):
         try:
             os_dep.command("qemu-kvm")
         except ValueError:
-            raise error.TestNAError("Connect test of qemu:/// is not suggested on "
-                                    "the host with no qemu driver.")
+            raise error.TestNAError("Connect test of qemu:/// is not suggested"
+                                    "on the host with no qemu driver.")
 
     if connect_arg == "transport":
         canonical_uri_type = virsh.driver()
@@ -194,16 +193,16 @@ def run_virsh_connect(test, params, env):
             if connect_uri == "":
                 connect_uri = virsh.canonical_uri().split()[-1]
 
-            logging.debug("expected uri is: %s" % connect_uri)
-            logging.debug("actual uri after connect is: %s" % uri)
+            logging.debug("expected uri is: %s", connect_uri)
+            logging.debug("actual uri after connect is: %s", uri)
             if not uri == connect_uri:
                 raise error.TestFail("Command exit normally but the uri is "
                                      "not setted as expected.")
-        except error.TestError, e:
+        except error.TestError, detail:
             if status_error == "no":
                 raise error.TestFail("Connect failed in the case expected"
                                      "to success.\n"
-                                     "Error: %s" % e)
+                                     "Error: %s" % detail)
     finally:
         if transport == "unix":
             unix_transport_recover()

@@ -709,7 +709,6 @@ class RemoteFile(object):
         local_file.close()
 
         #Get a backup_path.
-        back_dir = data_dir.get_backing_data_dir()
         backup_file = tempfile.NamedTemporaryFile(prefix=("%s_" % filename),
                                                   dir=tmp_dir)
         self.backup_path = backup_file.name
