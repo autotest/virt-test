@@ -5,8 +5,9 @@ import common
 from virttest import utils_libvirtd
 
 class UtilsLibvirtdTest(unittest.TestCase):
-    @unittest.skipIf(not utils_libvirtd.LIBVIRTD, "skip if libvirtd is not available")
     def test_service_libvirtd_control(self):
+        if not utils_libvirtd.LIBVIRTD:
+            return
         service_libvirtd_control = utils_libvirtd.service_libvirtd_control
         self.assertRaises(utils_libvirtd.LibvirtdActionUnknownError,
                           service_libvirtd_control, 'UnknowAction')

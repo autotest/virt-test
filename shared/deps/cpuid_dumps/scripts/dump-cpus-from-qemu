@@ -4,7 +4,7 @@ set
 QEMU_BIN="$1"
 DUMP_DIR="$2"
 
-CPUS=(486 athlon Conroe core2duo coreduo cpu64-rhel5 cpu64-rhel6 Haswell kvm32 kvm64 n270 Nehalem Opteron_G1 Opteron_G1,-svm Opteron_G2 Opteron_G2,-svm Opteron_G3 Opteron_G3,-svm Opteron_G4 Opteron_G4,-svm Opteron_G5 Opteron_G5,-svm Penryn pentium pentium2 pentium3 phenom qemu32 qemu64 qemu64,-abm,-sse4a qemu64 SandyBridge Westmere)
+[ -z "$QEMU_CPUS_TO_DUMP" ] && QEMU_CPUS_TO_DUMP="486 486,+apic athlon Conroe core2duo core2duo,-monitor coreduo coreduo,-monitor cpu64-rhel5 cpu64-rhel5,-svm cpu64-rhel5,-abm,-sse4a,-svm cpu64-rhel6 cpu64-rhel6,-s cpu64-rhel6,-abm,-sse4a,-svm Haswell kvm32 kvm64 n270 n270,-monitor Nehalem Opteron_G1 Opteron_G1,-svm Opteron_G2 Opteron_G2,-svm Opteron_G3 Opteron_G3,-svm Opteron_G3,-svm,-monitor Opteron_G4 Opteron_G4,-svm Opteron_G5 Opteron_G5,-svm Penryn pentium pentium,+apic pentium2 pentium2,+apic pentium3 pentium3,+apic phenom phenom,-svm,-monitor qemu32 qemu64 qemu64,-svm qemu64,-abm,-sse4a qemu64,-abm,-sse4a,-svm qemu64 SandyBridge Westmere"
 
 MACHINES=(pc-q35-1.5 pc-i440fx-1.5 pc-q35-1.4 pc-i440fx-1.4 pc-1.3 pc-1.2 pc-1.1 pc-1.0 pc-0.15 pc-0.14 pc-0.13 pc-0.12 pc-0.11 pc-0.10 rhel6.0.0 rhel6.1.0 rhel6.2.0 rhel6.3.0 rhel6.4.0 rhel6.5.0)
 
@@ -12,7 +12,7 @@ set -e
 set -x
 
 for machine in "${MACHINES[@]}";do
-    for cpu in "${CPUS[@]}";do
+    for cpu in $QEMU_CPUS_TO_DUMP;do
         mkdir -p "$DUMP_DIR/$machine"
         bash -x "$(dirname "$0")"/boot-and-get-cpuid.sh "$QEMU_BIN" \
             "$DUMP_DIR/$machine/$cpu-dump.txt" \

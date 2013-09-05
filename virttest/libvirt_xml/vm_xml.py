@@ -272,7 +272,7 @@ class VMXML(VMXMLBase):
 
 
     @staticmethod # static method (no self) needed b/c calls VMXML.__new__
-    def new_from_dumpxml(vm_name, virsh_instance=virsh):
+    def new_from_dumpxml(vm_name, options="", virsh_instance=virsh):
         """
         Return new VMXML instance from virsh dumpxml command
 
@@ -282,7 +282,7 @@ class VMXML(VMXMLBase):
         """
         # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
-        vmxml['xml'] = virsh_instance.dumpxml(vm_name)
+        vmxml['xml'] = virsh_instance.dumpxml(vm_name, options=options)
         return vmxml
 
 
@@ -294,9 +294,9 @@ class VMXML(VMXMLBase):
         return librarian.get(type_name)
 
 
-    def undefine(self):
+    def undefine(self, options=None):
         """Undefine this VM with libvirt retaining XML in instance"""
-        return self.virsh.remove_domain(self.vm_name)
+        return self.virsh.remove_domain(self.vm_name, options)
 
 
     def define(self):
@@ -506,6 +506,34 @@ class VMXML(VMXMLBase):
         vmxml.define()
 
 
+    def set_agent_channel(self, vm_name):
+        """
+        Add channel for guest agent running
+
+        @param vm_name: Name of defined vm to set agent channel
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name)
+
+        try:
+            exist = vmxml.dict_get('xml').find('devices').findall('channel')
+            findc = 0
+            for ec in exist:
+                if ec.find('target').get('name') == "org.qemu.guest_agent.0":
+                    findc = 1
+                    break
+            if findc == 0:
+                raise AttributeError("Cannot find guest agent channel")
+        except AttributeError:
+            channel = vmxml.get_device_class('channel')(type_name='unix')
+            channel.add_source(**{'mode': 'bind',
+                                  'path': '/var/lib/libvirt/qemu/guest.agent'})
+            channel.add_target(**{'type': 'virtio',
+                                  'name': 'org.qemu.guest_agent.0'})
+
+            vmxml.devices = vmxml.devices.append(channel)
+            vmxml.define()
+
+
     def get_iface_all(self):
         """
         Get a dict with interface's mac and node.
@@ -545,6 +573,41 @@ class VMXML(VMXMLBase):
             return None
 
 
+    @staticmethod
+    def get_iface_dev(vm_name, options="", virsh_instance=base.virsh):
+        """
+        Return VM's interface device from XML definition, None if not set
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        ifaces = vmxml.get_iface_all()
+        if ifaces:
+            return ifaces.keys()
+        return None
+
+
+    @staticmethod
+    def get_iftune_params(vm_name, options="", virsh_instance=base.virsh):
+        """
+        Return VM's interface tuning setting from XML definition
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, options=options,
+                                       virsh_instance=virsh_instance)
+        xmltreefile = vmxml.dict_get('xml')
+        iftune_params = {}
+        bandwidth = None
+        try:
+            bandwidth = xmltreefile.find('devices').find('interface').find('bandwidth')
+            try:
+                iftune_params['inbound'] = bandwidth.find('inbound').get('average')
+                iftune_params['outbound'] = bandwidth.find('outbound').get('average')
+            except AttributeError:
+                logging.error("Can't find <inbound> or <outbound> element")
+        except AttributeError:
+            logging.error("Can't find <bandwidth> element")
+
+        return iftune_params
+
+
     def get_net_all(self):
         """
         Return VM's net from XML definition, None if not set
@@ -556,6 +619,7 @@ class VMXML(VMXMLBase):
             dev = node.find('target').get('dev')
             nets[dev] = node
         return nets
+
 
     #TODO re-visit this method after the libvirt_xml.devices.interface module is implemented
     @staticmethod

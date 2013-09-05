@@ -21,6 +21,7 @@ def run_virsh_edit(test, params, env):
 
     domid = vm.get_id()
     domuuid = vm.get_uuid()
+    # pylint: disable=E1111
     vcpucount_result = virsh.vcpucount(vm_name, options="--config")
     if vcpucount_result.exit_status:
         raise error.TestError("Failed to get vcpucount. Detail:\n%s"

@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-# pylint: disable=W1401
 """
 Cartesian configuration format file parser.
 
@@ -566,6 +565,7 @@ def _subtitution(value, d):
 
 
 class Token(object):
+    __slots__ = []
     identifier = ""
 
     def __str__(self):
@@ -601,14 +601,17 @@ class LIndent(Token):
 
 
 class LEndL(Token):
+    __slots__ = []
     identifier = "endl"
 
 
 class LEndBlock(LIndent):
+    __slots__ = []
     pass
 
 
 class LIdentifier(str):
+    __slots__ = []
     identifier = "Identifier re([A-Za-z0-9][A-Za-z0-9_-]*)"
 
 
@@ -679,91 +682,112 @@ class LIdentifier(str):
 
 
 class LWhite(LIdentifier):
+    __slots__ = []
     identifier = "WhiteSpace re(\\s)"
 
 
 class LString(LIdentifier):
+    __slots__ = []
     identifier = "String re(.+)"
 
 
 class LColon(Token):
+    __slots__ = []
     identifier = ":"
 
 
 class LVariants(Token):
+    __slots__ = []
     identifier = "variants"
 
 
 class LDot(Token):
+    __slots__ = []
     identifier = "."
 
 
 class LVariant(Token):
+    __slots__ = []
     identifier = "-"
 
 
 class LDefault(Token):
+    __slots__ = []
     identifier = "@"
 
 
 class LOnly(Token):
+    __slots__ = []
     identifier = "only"
 
 
 class LNo(Token):
+    __slots__ = []
     identifier = "no"
 
 
 class LCond(Token):
+    __slots__ = []
     identifier = ""
 
 
 class LNotCond(Token):
+    __slots__ = []
     identifier = "!"
 
 
 class LOr(Token):
+    __slots__ = []
     identifier = ","
 
 
 class LAnd(Token):
+    __slots__ = []
     identifier = ".."
 
 
 class LCoc(Token):
+    __slots__ = []
     identifier = "."
 
 
 class LComa(Token):
+    __slots__ = []
     identifier = ","
 
 
 class LLBracket(Token):
+    __slots__ = []
     identifier = "["
 
 
 class LRBracket(Token):
+    __slots__ = []
     identifier = "]"
 
 
 class LLRBracket(Token):
+    __slots__ = []
     identifier = "("
 
 
 class LRRBracket(Token):
+    __slots__ = []
     identifier = ")"
 
 
-
 class LRegExpStart(Token):
+    __slots__ = []
     identifier = "${"
 
 
 class LRegExpStop(Token):
+    __slots__ = []
     identifier = "}"
 
 
 class LInclude(Token):
+    __slots__ = []
     identifier = "include"
 
 
@@ -782,6 +806,7 @@ class LOperators(Token):
 
 
 class LSet(LOperators):
+    __slots__ = []
     identifier = "="
 
 
@@ -794,6 +819,7 @@ class LSet(LOperators):
 
 
 class LAppend(LOperators):
+    __slots__ = []
     identifier = "+="
 
 
@@ -803,6 +829,7 @@ class LAppend(LOperators):
 
 
 class LPrepend(LOperators):
+    __slots__ = []
     identifier = "<="
 
 
@@ -812,6 +839,7 @@ class LPrepend(LOperators):
 
 
 class LRegExpSet(LOperators):
+    __slots__ = []
     identifier = "?="
 
 
@@ -824,6 +852,7 @@ class LRegExpSet(LOperators):
 
 
 class LRegExpAppend(LOperators):
+    __slots__ = []
     identifier = "?+="
 
 
@@ -836,6 +865,7 @@ class LRegExpAppend(LOperators):
 
 
 class LRegExpPrepend(LOperators):
+    __slots__ = []
     identifier = "?<="
 
 
@@ -848,6 +878,7 @@ class LRegExpPrepend(LOperators):
 
 
 class LDel(LOperators):
+    __slots__ = []
     identifier = "del"
 
 
@@ -862,6 +893,7 @@ class LDel(LOperators):
 
 
 class LApplyPreDict(LOperators):
+    __slots__ = []
     identifier = "apply_pre_dict"
 
     def set_operands(self, name, value):
@@ -1380,14 +1412,16 @@ class Parser(object):
     def _parse(self, lexer, node=None, prev_indent=-1):
         if not node:
             node = self.node
-        block_allowed = [LVariants, LIdentifier,
-                 LOnly, LNo, LInclude, LDel, LNotCond]
+        block_allowed = [LVariants, LIdentifier, LOnly,
+                         LNo, LInclude, LDel, LNotCond]
+
         variants_allowed = [LVariant]
 
         identifier_allowed = [LSet, LAppend, LPrepend,
-                                             LRegExpSet, LRegExpAppend,
-                                             LRegExpPrepend, LColon,
-                                             LEndL]
+                              LRegExpSet, LRegExpAppend,
+                              LRegExpPrepend, LColon,
+                              LEndL]
+
         varianst_allowed_in = [LLBracket, LColon, LIdentifier, LEndL]
         indent_allowed = [LIndent, LEndBlock]
 
@@ -1448,7 +1482,8 @@ class Parser(object):
                                     lexer.get_next_check([LEndL])
                                     continue
                                 else:
-                                    pre_dict = apply_predict(lexer, node, pre_dict)
+                                    pre_dict = apply_predict(lexer, node,
+                                                             pre_dict)
 
                             node.content += [(lexer.filename,
                                               lexer.linenum,

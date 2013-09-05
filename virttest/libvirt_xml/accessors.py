@@ -45,7 +45,7 @@ def py24_bin(number):
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
     bin_wrapper = py24_bin
 else:
-    bin_wrapper = bin
+    bin_wrapper = bin # pylint: disable=E0602
 
 
 def type_check(name, thing, expected):

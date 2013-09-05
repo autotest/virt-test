@@ -516,7 +516,9 @@ class VM(virt_vm.BaseVM):
                     dev.parent_bus = {'type': 'pci'}
                     dev.set_param('addr', pci_addr)
                 if nic_extra_params:
-                    for key, val in re.findall(r'(%s)=(%s)', nic_extra_params):
+                    nic_extra_params = (_.split('=', 1) for _ in
+                                            nic_extra_params.split(',') if _)
+                    for key, val in nic_extra_params:
                         dev.set_param(key, val)
                 dev.set_param("bootindex", bootindex)
             else:
@@ -537,7 +539,7 @@ class VM(virt_vm.BaseVM):
         def add_net(devices, vlan, nettype, ifname=None, tftp=None,
                     bootfile=None, hostfwd=[], netdev_id=None,
                     netdev_extra_params=None, tapfds=None, script=None,
-                    downscript=None, vhost=None, queues=None):
+                    downscript=None, vhost=None, queues=None, vhostfds=None):
             mode = None
             if nettype in ['bridge', 'network', 'macvtap']:
                 mode = 'tap'
@@ -550,10 +552,21 @@ class VM(virt_vm.BaseVM):
                 cmd = " -netdev %s,id=%s" % (mode, netdev_id)
                 if vhost:
                     cmd += ",%s" % vhost
-                    enable_vhostfd = params.get("enable_vhostfd", "yes")
-                    if vhost == 'vhost=on' and enable_vhostfd == 'yes':
-                        vhostfd = os.open("/dev/vhost-net", os.O_RDWR)
-                        cmd += ",vhostfd=%s" % vhostfd
+                    if vhostfds:
+                        if (int(queues) > 1 and
+                             'vhostfds=' in devices.get_help_text()):
+                            cmd += ",vhostfds=%s" % vhostfds
+                        else:
+                            txt = ""
+                            if int(queues) > 1:
+                                txt = "qemu do not support vhost multiqueue,"
+                                txt += " Fall back to single queue."
+                            if 'vhostfd=' in devices.get_help_text():
+                                cmd += ",vhostfd=%s" % vhostfds.split(":")[0]
+                            else:
+                                txt += " qemu do not support vhostfd."
+                            if txt:
+                                logging.warn(txt)
                 if netdev_extra_params:
                     cmd += "%s" % netdev_extra_params
             else:
@@ -632,7 +645,8 @@ class VM(virt_vm.BaseVM):
             if devices.has_device('pci-assign'):
                 dev = QDevice('pci-assign', parent_bus={'type': 'pci'})
             else:
-                dev = QDevice('pcidevice', parent_bus={'type': 'pci'})
+                dev = qemu_devices.QCustomDevice('pcidevice',
+                                                 parent_bus={'type': 'pci'})
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
@@ -949,6 +963,21 @@ class VM(virt_vm.BaseVM):
 
             return sc_cmd
 
+        def add_numa_node(devices, mem=None, cpus=None, nodeid=None):
+            """
+            This function used to add numa node to guest command line
+            """
+            if not devices.has_option("numa"):
+                return ""
+            numa_cmd = " -numa node"
+            if mem is not None:
+                numa_cmd += ",mem=%s" % mem
+            if cpus is not None:
+                numa_cmd += ",cpus=%s" % cpus
+            if nodeid is not None:
+                numa_cmd += ",nodeid=%s" % nodeid
+            return numa_cmd
+
         # End of command line option wrappers
 
         # If nothing changed and devices exists, return imediatelly
@@ -1012,7 +1041,7 @@ class VM(virt_vm.BaseVM):
             numa_node = int(params.get("numa_node"))
             if numa_node < 0:
                 p = utils_misc.NumaNode(numa_node)
-                n = int(p.get_node_num()) + numa_node
+                n = int(utils_misc.get_node_count()) + numa_node
                 cmd += "numactl -m %s " % n
             else:
                 n = numa_node - 1
@@ -1243,6 +1272,10 @@ class VM(virt_vm.BaseVM):
                     tapfds = nic.tapfds
                 else:
                     tapfds = None
+                if nic.has_key('vhostfds'):
+                    vhostfds = nic.vhostfds
+                else:
+                    vhostfds = None
                 ifname = nic.get('ifname')
                 queues = nic.get("queues", 1)
                 # Handle the '-net nic' part
@@ -1256,7 +1289,8 @@ class VM(virt_vm.BaseVM):
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
                                bootp, redirs, netdev_id, netdev_extra,
-                               tapfds, script, downscript, vhost, queues)
+                               tapfds, script, downscript, vhost, queues,
+                               vhostfds)
                 # TODO: Is every NIC a PCI device?
                 devices.insert(StrDev("NET-%s" % nettype, cmdline=cmd))
             else:
@@ -1307,6 +1341,30 @@ class VM(virt_vm.BaseVM):
         self.cpuinfo.threads = vcpu_threads
         self.cpuinfo.sockets = vcpu_sockets
         devices.insert(StrDev('smp', cmdline=add_smp(devices)))
+
+        numa_total_cpus = 0
+        numa_total_mem = 0
+        for numa_node in params.objects("guest_numa_nodes"):
+            numa_params = params.object_params(numa_node)
+            numa_mem = numa_params.get("numa_mem")
+            numa_cpus = numa_params.get("numa_cpus")
+            numa_nodeid = numa_params.get("numa_nodeid")
+            if numa_mem is not None:
+                numa_total_mem += int(numa_mem)
+            if numa_cpus is not None:
+                numa_total_cpus += len(utils_misc.cpu_str_to_list(numa_cpus))
+            devices.insert(StrDev('numa', cmdline=add_numa_node(devices)))
+
+        if params.get("numa_consistency_check_cpu_mem", "no") == "yes":
+            if (numa_total_cpus > int(smp) or numa_total_mem > int(mem)
+                or len(params.objects("guest_numa_nodes")) > int(smp)):
+                logging.debug("-numa need %s vcpu and %s memory. It is not "
+                              "matched the -smp and -mem. The vcpu number "
+                              "from -smp is %s, and memory size from -mem is"
+                              " %s" % (numa_total_cpus, numa_total_mem, smp,
+                                       mem))
+                raise virt_vm.VMDeviceError("The numa node cfg can not fit"
+                                            " smp and memory cfg.")
 
         cpu_model = params.get("cpu_model")
         use_default_cpu_model = True
@@ -1625,6 +1683,9 @@ class VM(virt_vm.BaseVM):
                 if nic.tapfds:
                     for i in nic.tapfds.split(':'):
                         os.close(int(i))
+                if nic.vhostfds:
+                    for i in nic.tapfds.split(':'):
+                        os.close(int(i))
         except TypeError:
             pass
 
@@ -1769,6 +1830,13 @@ class VM(virt_vm.BaseVM):
                         self.virtnet.generate_ifname(nic.nic_name)
                     if nic.nettype in ['bridge', 'network', 'macvtap']:
                         self._nic_tap_add_helper(nic)
+                    if ((nic_params.get("vhost") == 'vhost=on') and
+                        (nic_params.get("enable_vhostfd", "yes") == "yes")):
+                        vhostfds = []
+                        for i in xrange(int(nic.queues)):
+                            vhostfds.append(str(os.open("/dev/vhost-net",
+                                                         os.O_RDWR)))
+                        nic.vhostfds = ':'.join(vhostfds)
                     elif nic.nettype == 'user':
                         logging.info("Assuming dependencies met for "
                                      "user mode nic %s, and ready to go"
@@ -1886,6 +1954,13 @@ class VM(virt_vm.BaseVM):
                     # File descriptor is already closed
                     except OSError:
                         pass
+                if nic.has_key('vhostfds'):
+                    try:
+                        for i in nic.vhostfds.split(':'):
+                            os.close(int(i))
+                        del nic['vhostfds']
+                    except OSError:
+                        pass
 
             # Make sure the process was started successfully
             if not self.process.is_alive():
@@ -1963,9 +2038,10 @@ class VM(virt_vm.BaseVM):
             vcpu_thread_pattern = self.params.get("vcpu_thread_pattern",
                                                   r"thread_id.?[:|=]\s*(\d+)")
             self.vcpu_threads = self.get_vcpu_pids(vcpu_thread_pattern)
-            o = commands.getoutput("ps aux")
-            self.vhost_threads = re.findall("\w+\s+(\d+)\s.*\[vhost-%s\]" %
-                                            self.get_pid(), o)
+
+            vhost_thread_pattern = params.get("vhost_thread_pattern",
+                                              r"\w+\s+(\d+)\s.*\[vhost-%s\]")
+            self.vhost_threads = self.get_vhost_threads(vhost_thread_pattern)
 
             # Establish a session with the serial console
             # Let's consider the first serial port as serial console.
@@ -2322,6 +2398,20 @@ class VM(virt_vm.BaseVM):
                                            str(self.monitor.info("cpus")))]
 
 
+    def get_vhost_threads(self, vhost_thread_pattern):
+        """
+        Return the list of vhost threads PIDs
+
+        :param vhost_thread_pattern: a regex to match the vhost threads
+        :type vhost_thread_pattern: string
+        :return: a list of vhost threads PIDs
+        :rtype: list of integer
+        """
+        return [int(_) for _ in re.findall(vhost_thread_pattern %
+                                           self.get_pid(),
+                                           utils.system_output("ps aux"))]
+
+
     def get_shared_meminfo(self):
         """
         Returns the VM's shared memory information.
@@ -2343,6 +2433,46 @@ class VM(virt_vm.BaseVM):
         @param spice_var - spice related variable 'spice_port', ...
         """
         return self.spice_options.get(spice_var, None)
+
+    @error.context_aware
+    def hotplug_vcpu(self, cpu_id=None, plug_command=""):
+        """
+        Hotplug a vcpu, if not assign the cpu_id, will use the minimum unused.
+        the function will use the plug_command if you assigned it, else the
+        function will use the command automatically generated based on the
+        type of monitor
+
+        @param: cpu_id  the cpu_id you want hotplug.
+        """
+        vcpu_threads_count = len(self.vcpu_threads)
+        plug_cpu_id = cpu_id
+        if plug_cpu_id is None:
+            plug_cpu_id = vcpu_threads_count
+        if plug_command:
+            vcpu_add_cmd = plug_command % plug_cpu_id
+        else:
+            if self.monitor.protocol == 'human':
+                vcpu_add_cmd = "cpu_set %s online" % plug_cpu_id
+            elif self.monitor.protocol == 'qmp':
+                vcpu_add_cmd =  "cpu-add id=%s" % plug_cpu_id
+
+        try:
+            self.monitor.verify_supported_cmd(vcpu_add_cmd.split()[0])
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            raise error.TestNAError("%s monitor not support cmd '%s'" %
+                                    (self.monitor.protocol, vcpu_add_cmd))
+        try:
+            cmd_output = self.monitor.send_args_cmd(vcpu_add_cmd)
+        except qemu_monitor.QMPCmdError, e:
+            return (False, str(e))
+
+        vcpu_thread_pattern = self.params.get("vcpu_thread_pattern",
+                                              r"thread_id.?[:|=]\s*(\d+)")
+        self.vcpu_threads = self.get_vcpu_pids(vcpu_thread_pattern)
+        if len(self.vcpu_threads) == vcpu_threads_count + 1:
+            return(True, plug_cpu_id)
+        else:
+            return(False, cmd_output)
 
     @error.context_aware
     def hotplug_nic(self, **params):
@@ -2750,8 +2880,9 @@ class VM(virt_vm.BaseVM):
             error.context()
 
         try:
-            if (self.params["display"] == "spice" and
-                not (protocol == "exec" and "gzip" in migration_exec_cmd_src)):
+            if (self.params["display"] == "spice" and local and
+                not (protocol == "exec" and
+                (migration_exec_cmd_src and "gzip" in migration_exec_cmd_src))):
                 host_ip = utils_net.get_host_ip_address(self.params)
                 dest_port = clone.spice_options.get('spice_port', '')
                 if self.params.get("spice_ssl") == "yes":

@@ -296,6 +296,7 @@ class QtreeContainer(object):
                         new.set_parent(current)
                     current = new
                     line = line[5:].split(',')
+                    line[1] = line[1].strip()
                     q_id = line[1][5:-1]
                     if len(q_id) > 0:
                         current.set_qtree_prop('id', line[1][5:-1])
@@ -371,26 +372,17 @@ class QtreeDisksContainer(object):
         """
         additional = 0
         missing = 0
-        names = []
-        for disk in self.disks:
-            names.append(disk.get_qname())
-        info = info.split('\n')
-        for line in info:
-            if not line.strip():
-                continue
-            line = line.split(':', 1)
-            name = line[0].strip()
-            if name not in names:
+        for i in xrange(len(self.disks)):
+            disk = self.disks[i]
+            name = disk.get_qname()
+            if name not in info:
                 logging.error("disk %s is in block but not in qtree", name)
                 missing += 1
                 continue
-            else:
-                disk = self.disks[names.index(name)]
-            for _ in line[1].strip().split(' '):
-                (prop, value) = _.split('=', 1)
+            for prop, value in info[name].iteritems():
                 disk.set_block_prop(prop, value)
         for disk in self.disks:
-            if isinstance(disk, QtreeDisk) and disk.get_block() == {}:
+            if disk.get_block() == {}:
                 logging.error("disk in qtree but not in info block\n%s", disk)
                 additional += 1
         return (additional, missing)
@@ -462,11 +454,34 @@ class QtreeDisksContainer(object):
         @param params: autotest params
         @return: number of errors
         """
+        def check_drive_format(node, params):
+            """ checks the drive format according to qtree info """
+            expected = params.get('drive_format')
+            if expected == 'scsi':
+                expected = 'lsi53c895a'
+            elif expected.startswith('scsi'):
+                expected = params.get('scsi_hba', 'virtio-scsi-pci')
+            elif expected.startswith('usb'):
+                expected = 'usb-storage'
+            try:
+                if expected == 'virtio':
+                    actual = node.qtree['type']
+                else:
+                    actual = node.parent.parent.qtree.get('type')
+            except AttributeError:
+                logging.error("Failed to check drive format, can't get parent"
+                              "of:\n%s", node)
+            if actual == 'virtio-scsi-device':  # new name for virtio-scsi
+                actual = 'virtio-scsi-pci'
+            if expected not in actual:
+                return ("drive format in qemu is %s, in autotest %s"
+                        % (actual, expected))
+
         err = 0
         disks = {}
         for disk in self.disks:
             if isinstance(disk, QtreeDisk):
-                disks[disk.get_qname()] = disk.get_params().copy()
+                disks[disk.get_qname()] = (disk.get_params().copy(), disk)
         # We don't have the params name so we need to map file_names instead
         qname = None
         for name in params.objects('cdroms'):
@@ -474,7 +489,7 @@ class QtreeDisksContainer(object):
                                 params.object_params(name).get('cdrom', ''))
             image_name = os.path.realpath(image_name)
             for (qname, disk) in disks.iteritems():
-                if disk.get('image_name') == image_name:
+                if disk[0].get('image_name') == image_name:
                     break
             else:
                 continue    # Not /proc/scsi cdrom device
@@ -490,25 +505,25 @@ class QtreeDisksContainer(object):
                         storage.get_image_filename(image_params,
                                                    base_dir))
             for (qname, disk) in disks.iteritems():
-                if disk.get('image_name') == image_name:
-                    current = disk
+                if disk[0].get('image_name') == image_name:
+                    current = disk[0]
+                    current_node = disk[1]
                     # autotest params might use relative path
                     current['image_name'] = image_params.get('image_name')
                     break
             if not current:
-                logging.error("Disk %s is not in qtree but is in params.", name)
+                logging.error("Disk %s is not in qtree but is in params.",
+                              name)
                 err += 1
                 continue
             for prop in current.iterkeys():
                 handled = False
                 if prop == "drive_format":
-                    # HOOK: ahci disk is ide-* disk
-                    if (image_params.get(prop) == 'ahci' and
-                                current.get(prop).startswith('ide-')):
-                        handled = True
-                    # HOOK: params to qemu translation
-                    elif current.get(prop).startswith(image_params.get(prop)):
-                        handled = True
+                    out = check_drive_format(current_node, image_params)
+                    if out:
+                        logging.error("Disk %s %s", qname, out)
+                        err += 1
+                    handled = True
                 elif (image_params.get(prop) and
                         image_params.get(prop) == current.get(prop)):
                     handled = True

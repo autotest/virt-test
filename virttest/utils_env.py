@@ -79,7 +79,7 @@ class Env(UserDict.IterableUserDict):
         vm_list = []
         for key in self.data.keys():
             if key.startswith("vm__"):
-                vm_list.append(self[key])
+                vm_list.append(self.data[key])
         return vm_list
 
 

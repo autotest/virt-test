@@ -303,11 +303,6 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_console_params - which type of virtio port to test
         @param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        # When the GW is already running and the thread only connects,
-        # every signal destroys the daemon. Fresh start solves the problem.
-        error.context("Reloading the GuestWorker before sigio test.",
-                      logging.info)
-        test_delete_guest_script()
         (vm, guest_worker, port) = get_vm_with_single_port(
                                         params.get('virtio_console_params'))
         if port.is_open():

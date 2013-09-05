@@ -23,6 +23,7 @@ import virt_vm
 import utils_misc
 
 try:
+    # pylint: disable=E0611
     from collections import OrderedDict
 except ImportError:
     class OrderedDict(dict):
@@ -98,7 +99,7 @@ def none_or_int(value):
     elif isinstance(value, str) and value.isdigit():
         return int(value)
     else:
-        raise TypeError("This parameter have to be int or none")
+        raise TypeError("This parameter has to be int or none")
 
 
 def _build_cmd(cmd, args=None, q_id=None):
@@ -272,11 +273,11 @@ class QBaseDevice(object):
         self.aid = aid
 
     def get_children(self):
-        """ @return: List of all childrens (recursive) """
-        childrens = []
+        """ @return: List of all children (recursive) """
+        children = []
         for bus in self.child_bus:
-            childrens.extend(bus)
-        return childrens
+            children.extend(bus)
+        return children
 
     def cmdline(self):
         """ @return: cmdline command to define this device """
@@ -421,11 +422,12 @@ class QDrive(QCustomDevice):
     """
     Representation of the '-drive' qemu object without hotplug support.
     """
-    def __init__(self, aobject):
+    def __init__(self, aobject, use_device=True):
         child_bus = QDriveBus('drive_%s' % aobject, aobject)
         super(QDrive, self).__init__("drive", {}, aobject, (),
                                       child_bus)
-        self.params['id'] = 'drive_%s' % aobject
+        if use_device:
+            self.params['id'] = 'drive_%s' % aobject
 
     def set_param(self, option, value, option_type=None):
         """
@@ -1148,6 +1150,7 @@ class QUSBBus(QSparseBus):
         super(QUSBBus, self).__init__('bus', [['port'], [length + 1]], busid,
                                       bus_type, aobject)
         self.__port_prefix = port_prefix
+        self.__length = length
 
     def _set_first_addr(self, addr_pattern):
         """ First addr is not 0 but 1 """
@@ -1214,6 +1217,9 @@ class QUSBBus(QSparseBus):
                 addr = ['%s.%s' % (self.__port_prefix, addr[0])]
         self.__hook_child_bus(device, addr)
         device['bus'] = True    # Force bus item to be updated
+        if addr[0] == self.__length:
+            # Force port on the last device, otherwise qemu adds usb-hub
+            device['port'] = True
         super(QUSBBus, self)._update_device_props(device, addr)
 
 
@@ -1514,8 +1520,7 @@ class DevContainer(object):
             """ @return: list of human monitor commands """
             _ = utils.system_output("echo -e 'help\nquit' | %s -monitor "
                                     "stdio -vnc none" % qemu_binary,
-                                    timeout=10, ignore_status=True,
-                                    verbose=False)
+                                    timeout=10, ignore_status=True)
             _ = re.findall(r'^([^\| \[\n]+\|?\w+)', _, re.M)
             hmp_cmds = []
             for cmd in _:
@@ -1536,7 +1541,7 @@ class DevContainer(object):
                             '{ "execute": "quit" }\''
                             '| %s -qmp stdio -vnc none | grep return |'
                             ' grep RAND91' % qemu_binary, timeout=10,
-                            ignore_status=True, verbose=False).splitlines()
+                            ignore_status=True).splitlines()
             if not cmds:
                 # Some qemu versions crashes when qmp used too early; add sleep
                 cmds = utils.system_output('echo -e \''
@@ -1545,7 +1550,7 @@ class DevContainer(object):
                             '{ "execute": "quit" }\' | (sleep 1; cat )'
                             '| %s -qmp stdio -vnc none | grep return |'
                             ' grep RAND91' % qemu_binary, timeout=10,
-                            ignore_status=True, verbose=False).splitlines()
+                            ignore_status=True).splitlines()
             if cmds:
                 cmds = re.findall(r'{\s*"name"\s*:\s*"([^"]+)"\s*}', cmds[0])
             if cmds:    # If no mathes, return None
@@ -1553,12 +1558,12 @@ class DevContainer(object):
 
         self.__state = -1    # is representation sync with VM (0 = synchronized)
         self.__qemu_help = utils.system_output("%s -help" % qemu_binary,
-                                timeout=10, ignore_status=True, verbose=False)
+                                timeout=10, ignore_status=True)
         self.__device_help = utils.system_output("%s -device ? 2>&1"
                                             % qemu_binary, timeout=10,
-                                            ignore_status=True, verbose=False)
+                                            ignore_status=True)
         self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
-                                timeout=10, ignore_status=True, verbose=False)
+                                timeout=10, ignore_status=True)
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
         self.__qmp_cmds = get_qmp_cmds(qemu_binary,
                                        workaround_qemu_qmp_crash == 'always')
@@ -1566,6 +1571,9 @@ class DevContainer(object):
         self.strict_mode = strict_mode == 'yes'
         self.__devices = []
         self.__buses = []
+        self.__qemu_binary = qemu_binary
+        self.__execute_qemu_last = None
+        self.__execute_qemu_out = ""
         self.allow_hotplugged_vm = allow_hotplugged_vm == 'yes'
 
     def __getitem__(self, item):
@@ -1605,14 +1613,14 @@ class DevContainer(object):
         """
         Remove device from this representation
         @param device: autotest id or QObject-like object
-        @param recursive: remove childrens recursively
+        @param recursive: remove children recursively
         @return: None on success, -1 when the device is not present
         """
         device = self[device]
-        if not recursive:   # Check if there are no childrens
+        if not recursive:   # Check if there are no children
             for bus in device.child_bus:
                 if len(bus) != 0:
-                    raise DeviceRemoveError(device, "Children bus contains "
+                    raise DeviceRemoveError(device, "Child bus contains "
                                             "devices", self)
         else:               # Recursively remove all devices
             for dev in device.get_children():
@@ -1812,6 +1820,23 @@ class DevContainer(object):
         @return: Is the desired command supported by this qemu's QMP monitor?
         """
         return cmd in self.__qmp_cmds
+
+    def execute_qemu(self, options, timeout=5):
+        """
+        Execute this qemu and return the stdout+stderr output.
+        :param options: additional qemu options
+        :type options: string
+        :param timeout: execution timeout
+        :type timeout: int
+        :return: Output of the qemu
+        :rtype: string
+        """
+        if self.__execute_qemu_last != options:
+            cmd = "%s %s 2>&1" % (self.__qemu_binary, options)
+            self.__execute_qemu_out = str(utils.run(cmd, timeout=timeout,
+                                                    ignore_status=True,
+                                                    verbose=False).stdout)
+        return self.__execute_qemu_out
 
     def get_buses(self, bus_spec):
         """
@@ -2042,7 +2067,8 @@ class DevContainer(object):
                            == 'scsi')
             _scsi_without_device = (not self.has_option('device') and
                                     params.object_params(image_name)
-                                    .get('drive_format').startswith('scsi'))
+                                    .get('drive_format', 'virtio_blk')
+                                    .startswith('scsi'))
             if _is_oldscsi or _scsi_without_device:
                 i += 1
 
@@ -2051,7 +2077,8 @@ class DevContainer(object):
                            == 'scsi')
             _scsi_without_device = (not self.has_option('device') and
                                     params.object_params(image_name)
-                                    .get('cd_format').startswith('scsi'))
+                                    .get('cd_format', 'virtio_blk')
+                                    .startswith('scsi'))
             if _is_oldscsi or _scsi_without_device:
                 i += 1
 
@@ -2488,7 +2515,7 @@ class DevContainer(object):
         elif self.has_hmp_cmd('drive_add') and use_device:
             devices.append(QHPDrive(name))
         else:
-            devices.append(QDrive(name))
+            devices.append(QDrive(name, use_device))
         devices[-1].set_param('if', 'none')
         devices[-1].set_param('cache', cache)
         devices[-1].set_param('rerror', rerror)
@@ -2497,7 +2524,8 @@ class DevContainer(object):
         devices[-1].set_param('boot', boot, bool)
         devices[-1].set_param('snapshot', snapshot, bool)
         devices[-1].set_param('readonly', readonly, bool)
-        devices[-1].set_param('aio', aio)
+        if 'aio' in self.get_help_text():
+            devices[-1].set_param('aio', aio)
         devices[-1].set_param('media', media)
         devices[-1].set_param('format', imgfmt)
         if blkdebug is not None:
@@ -2530,18 +2558,10 @@ class DevContainer(object):
         #######################################################################
         devices.append(QDevice(params={}, aobject=name))
         devices[-1].parent_bus += ({'busid': 'drive_%s' % name}, dev_parent)
-        devices[-1].set_param('id', name)
-        devices[-1].set_param('bus', bus)
-        devices[-1].set_param('drive', 'drive_%s' % name)
-        devices[-1].set_param('logical_block_size', logical_block_size)
-        devices[-1].set_param('physical_block_size', physical_block_size)
-        devices[-1].set_param('min_io_size', min_io_size)
-        devices[-1].set_param('opt_io_size', opt_io_size)
-        devices[-1].set_param('bootindex', bootindex)
-        devices[-1].set_param('serial', serial)
-        devices[-1].set_param('x-data-plane', x_data_plane, bool)
         if fmt in ("ide", "ahci"):
-            if media == 'cdrom':
+            if not self.has_device('ide-hd'):
+                devices[-1].set_param('driver', 'ide-drive')
+            elif media == 'cdrom':
                 devices[-1].set_param('driver', 'ide-cd')
             else:
                 devices[-1].set_param('driver', 'ide-hd')
@@ -2569,6 +2589,25 @@ class DevContainer(object):
         else:
             logging.warn('Using default device handling (disk %s)', name)
             devices[-1].set_param('driver', fmt)
+        # Get the supported options
+        options = self.execute_qemu("-device %s,?" % devices[-1]['driver'])
+        devices[-1].set_param('id', name)
+        devices[-1].set_param('bus', bus)
+        devices[-1].set_param('drive', 'drive_%s' % name)
+        devices[-1].set_param('logical_block_size', logical_block_size)
+        devices[-1].set_param('physical_block_size', physical_block_size)
+        devices[-1].set_param('min_io_size', min_io_size)
+        devices[-1].set_param('opt_io_size', opt_io_size)
+        devices[-1].set_param('bootindex', bootindex)
+        devices[-1].set_param('x-data-plane', x_data_plane, bool)
+        if 'serial' in options:
+            devices[-1].set_param('serial', serial)
+            devices[-2].set_param('serial', None)   # remove serial from drive
+        if blk_extra_params:
+            blk_extra_params = (_.split('=', 1) for _ in
+                                            blk_extra_params.split(',') if _)
+            for key, value in blk_extra_params:
+                devices[-1].set_param(key, value)
 
         return devices
 

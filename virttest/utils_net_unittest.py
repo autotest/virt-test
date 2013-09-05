@@ -256,7 +256,7 @@ class TestVmNetSubclasses(unittest.TestCase):
         - twovms:
             vms=vm1 vm2
         - threevms:
-            vms=vm1 vm2 vm3 vm4
+            vms=vm1 vm2 vm3
 
     variants:
         - typeundefined:
@@ -266,10 +266,16 @@ class TestVmNetSubclasses(unittest.TestCase):
                 - unsetdrivertype:
                 - xen:
                     driver_type = xen
+                    nics=nic1
                 - qemu:
                     driver_type = qemu
+                    nics=nic1 nic2
                 - kvm:
                     driver_type = kvm
+                    nics=nic1 nic2 nic3
+                - lxc:
+                    driver_type = lxc
+                    nics=nic1 nic2 nic3 nic4
         - qemu:
             vm_type = qemu
             variants:
@@ -278,36 +284,6 @@ class TestVmNetSubclasses(unittest.TestCase):
                     driver_type = kvm
                 - qemu:
                     driver_type = qemu
-
-    variants:
-        - nicsundefined:
-        - onenic:
-            nics=nic1
-        - twonics:
-            nics=nic1 nic2
-        - threenics:
-            nics=nic1 nic2 nic3
-        - fournics:
-            nics=nic1 nic2 nic3 nic4
-
-    variants:
-        - nicsmapundefined:
-        - onezero:
-            nics(_.*) =
-        - oneone:
-            nics(_.*) = nic1
-        - onetwo:
-            nics(_.*) = nic1 nic2
-        - onethree:
-            nics(_.*) = nic1 nic2 nic3
-        - onefour:
-            nics(_.*) = nic1 nic2 nic3 nic4
-        - twotwo:
-            nics(_.*) = nic2 nic3 nic4
-        - threetwo:
-            nics(_.*) = nic3 nic4
-        - fourtwo:
-            nics(_.*) = nic4 nic2
 
     variants:
         -propsundefined:

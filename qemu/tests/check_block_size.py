@@ -1,7 +1,6 @@
 import logging
 from autotest.client.shared import error
-from tests import unattended_install
-from virttest import virt_vm
+from virttest import utils_test
 
 
 @error.context_aware
@@ -18,25 +17,23 @@ def run_check_block_size(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
+    name = params["main_vm"]
     if params.get("need_install") == "yes":
         error.context("Install guest with a new image", logging.info)
-        unattended_install.run_unattended_install(test, params, env)
-
-    params["cdroms"] = ""
-    params["unattended_file"] = ""
-    params["cdrom_unattended"] = ""
-    params["kernel"] = ""
-    params["initrd"] = ""
-    params["kernel_params"] = ""
-    params["boot_once"] = "c"
-
-    vm = env.get_vm(params["main_vm"])
-    try:
-        vm.verify_alive()
-    except virt_vm.VMDeadError:
-        logging.info("VM is dead, creating...")
+        utils_test.run_virt_sub_test(test, params, env,
+                                     sub_type='unattended_install')
+        params["cdroms"] = ""
+        params["unattended_file"] = ""
+        params["cdrom_unattended"] = ""
+        params["kernel"] = ""
+        params["initrd"] = ""
+        params["kernel_params"] = ""
+        params["boot_once"] = "c"
+        vm = env.get_vm(name)
+        vm.destroy()
         vm.create(params=params)
 
+    vm = env.get_vm(name)
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 

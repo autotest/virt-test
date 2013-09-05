@@ -6,6 +6,7 @@ A class and functions used for running and controlling child processes.
 """
 
 import os, sys, pty, select, termios, fcntl
+import tempfile
 
 BASE_DIR = os.path.join('/tmp', 'aexpect_spawn')
 
@@ -80,7 +81,16 @@ if __name__ == "__main__":
     (shell_pid, shell_fd) = pty.fork()
     if shell_pid == 0:
         # Child process: run the command in a subshell
-        os.execv("/bin/sh", ["/bin/sh", "-c", command])
+        if len(command) > 255:
+            tmp_file = tempfile.mktemp(suffix='.sh',
+                                        prefix='autotest', dir="/tmp")
+            fd_cmd = open(tmp_file, "w")
+            fd_cmd.write(command)
+            fd_cmd.close()
+            os.execv("/bin/sh", ["/bin/sh", "-c", "source %s" % tmp_file])
+            os.remove(tmp_file)
+        else:
+            os.execv("/bin/sh", ["/bin/sh", "-c", command])
     else:
         # Parent process
         lock_server_running = _lock(lock_server_running_filename)
@@ -588,15 +598,22 @@ class Spawn(object):
         return _locked(self.lock_server_running_filename)
 
 
+    def kill(self, sig=signal.SIGKILL):
+        """
+        Kill the child process if alive
+        """
+        # Kill it if it's alive
+        if self.is_alive():
+            utils_misc.kill_process_tree(self.get_pid(), sig)
+
+
     def close(self, sig=signal.SIGKILL):
         """
         Kill the child process if it's alive and remove temporary files.
 
         @param sig: The signal to send the process when attempting to kill it.
         """
-        # Kill it if it's alive
-        if self.is_alive():
-            utils_misc.kill_process_tree(self.get_pid(), sig)
+        self.kill(sig=sig)
         # Wait for the server to exit
         _wait(self.lock_server_running_filename)
         # Call all cleanup routines
@@ -1398,7 +1415,7 @@ class ShellSession(Expect):
 
 
     def cmd(self, cmd, timeout=60, internal_timeout=None, print_func=None,
-            ok_status=[0, ]):
+            ok_status=[0, ], ignore_all_errors=False):
         """
         Send a command and return its output. If the command's exit status is
         nonzero, raise an exception.
@@ -1410,7 +1427,9 @@ class ShellSession(Expect):
         @param print_func: A function to be used to print the data being read
                 (should take a string parameter)
         @param ok_status: do not raise ShellCmdError in case that exit status
-                          is one of ok_status. (default is [0,])
+                is one of ok_status. (default is [0,])
+        @param ignore_all_errors: toggles whether or not an exception should be
+                raised  on any error.
 
         @return: The output of cmd
         @raise ShellTimeoutError: Raised if timeout expires
@@ -1422,11 +1441,17 @@ class ShellSession(Expect):
         @raise ShellError: Raised if an unknown error occurs
         @raise ShellCmdError: Raised if the exit status is nonzero
         """
-        s, o = self.cmd_status_output(cmd, timeout, internal_timeout,
-                                      print_func)
-        if s not in ok_status:
-            raise ShellCmdError(cmd, s, o)
-        return o
+        try:
+            s, o = self.cmd_status_output(cmd, timeout, internal_timeout,
+                                          print_func)
+            if s not in ok_status:
+                raise ShellCmdError(cmd, s, o)
+            return o
+        except Exception:
+            if ignore_all_errors:
+                pass
+            else:
+                raise
 
 
     def get_command_output(self, cmd, timeout=60, internal_timeout=None,

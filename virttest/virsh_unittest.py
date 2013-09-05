@@ -40,7 +40,7 @@ class TestVirshClosure(ModuleLoad):
     def test_args(self):
         # save some typing
         VC = self.virsh.VirshClosure
-        tcinst = {}
+        tcinst = self.SomeClass()
         vcinst = VC(self.somefunc, tcinst)
         args, dargs = vcinst('foo')
         self.assertEqual(len(args), 1)
@@ -51,7 +51,7 @@ class TestVirshClosure(ModuleLoad):
     def test_dargs(self):
         # save some typing
         VC = self.virsh.VirshClosure
-        tcinst = {'foo':'bar'}
+        tcinst = self.SomeClass(foo='bar')
         vcinst = VC(self.somefunc, tcinst)
         args, dargs = vcinst()
         self.assertEqual(len(args), 0)
@@ -63,7 +63,7 @@ class TestVirshClosure(ModuleLoad):
     def test_args_and_dargs(self):
         # save some typing
         VC = self.virsh.VirshClosure
-        tcinst = {'foo':'bar'}
+        tcinst = self.SomeClass(foo='bar')
         vcinst = VC(self.somefunc, tcinst)
         args, dargs = vcinst('foo')
         self.assertEqual(len(args), 1)
@@ -148,9 +148,7 @@ class ConstructorsTest(ModuleLoad):
         else:
             logging.disable(logging.INFO)
             vp = self.virsh.VirshPersistent()
-            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 1)
             vp.close_session() # Make sure session gets cleaned up
-            self.assertEqual(self.virsh.VirshPersistent.SESSION_COUNTER, 0)
 
 
     def TestVirshClosure(self):
@@ -168,6 +166,54 @@ class ModuleLoadCheckVirsh(unittest.TestCase):
             return # Don't run any tests, no virsh executable was found
         else:
             super(ModuleLoadCheckVirsh, self).run(*args, **dargs)
+
+
+class SessionManagerTest(ModuleLoadCheckVirsh):
+
+    def test_del_VirshPersistent(self):
+        """
+        Unittest for __del__ of VirshPersistent.
+
+        This test makes sure the __del__ method of VirshPersistent works
+        well in `del vp_instance`.
+        """
+        vp = self.virsh.VirshPersistent()
+        virsh_exec = vp.virsh_exec
+        self.assertTrue(utils.process_is_alive(virsh_exec))
+        del vp
+        self.assertFalse(utils.process_is_alive(virsh_exec))
+
+    def test_VirshSession(self):
+        """
+        Unittest for VirshSession.
+
+        This test use VirshSession over VirshPersistent with auto_close=True.
+        """
+        virsh_exec = self.virsh.Virsh()['virsh_exec']
+        # Build a VirshSession object.
+        session_1 = self.virsh.VirshSession(virsh_exec, auto_close=True)
+        self.assertTrue(utils.process_is_alive(virsh_exec))
+        del session_1
+        self.assertFalse(utils.process_is_alive(virsh_exec))
+
+    def test_VirshPersistent(self):
+        """
+        Unittest for session manager of VirshPersistent.
+        """
+        virsh_exec = self.virsh.Virsh()['virsh_exec']
+        vp_1 = self.virsh.VirshPersistent()
+        self.assertTrue(utils.process_is_alive(virsh_exec))
+        # Init the vp_2 with same params of vp_1.
+        vp_2 = self.virsh.VirshPersistent(**vp_1)
+        # Make sure vp_1 and vp_2 are refer to the same session.
+        self.assertEqual(vp_1.session_id, vp_2.session_id)
+
+        del vp_1
+        # Make sure the session is not closed when vp_2 still refer to it.
+        self.assertTrue(utils.process_is_alive(virsh_exec))
+        del vp_2
+        # Session was closed since no other VirshPersistent refer to it.
+        self.assertFalse(utils.process_is_alive(virsh_exec))
 
 
 class VirshHasHelpCommandTest(ModuleLoadCheckVirsh):
@@ -247,9 +293,7 @@ class VirshPersistentClassHasHelpCommandTest(VirshHasHelpCommandTest):
         logging.disable(logging.INFO)
         super(VirshPersistentClassHasHelpCommandTest, self).setUp()
         self.VirshPersistent = self.virsh.VirshPersistent
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
         self.virsh = self.VirshPersistent(debug=False)
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
         self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
 
 
@@ -260,10 +304,8 @@ class VirshPersistentClassHasHelpCommandTest(VirshHasHelpCommandTest):
 
 
     def tearDown(self):
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 1)
         self.assertTrue(utils.process_is_alive(self.virsh.virsh_exec))
         self.virsh.close_session()
-        self.assertEqual(self.VirshPersistent.SESSION_COUNTER, 0)
         self.assertFalse(utils.process_is_alive(self.virsh.virsh_exec))
 
 

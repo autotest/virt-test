@@ -709,7 +709,6 @@ class RemoteFile(object):
         local_file.close()
 
         #Get a backup_path.
-        back_dir = data_dir.get_backing_data_dir()
         backup_file = tempfile.NamedTemporaryFile(prefix=("%s_" % filename),
                                                   dir=tmp_dir)
         self.backup_path = backup_file.name
@@ -822,5 +821,24 @@ class RemoteFile(object):
                     #Check this line is the last one or not.
                     if (not line.endswith('\n') and (index >0)):
                         lines[index-1] = lines[index-1].rstrip("\n")
+        self._write_local(lines)
+        self._push_file()
+
+    def sub_else_add(self, pattern2repl_dict):
+        """
+        Replace the string which match the pattern.
+        If no match in the all lines, append the value
+        to the end of file.
+        """
+        lines = self._read_local()
+        for pattern, repl in pattern2repl_dict.items():
+            no_line_match = True
+            for index in range(len(lines)):
+                line = lines[index]
+                if re.match(pattern, line):
+                    no_line_match = False
+                    lines[index] = re.sub(pattern, repl, line)
+            if no_line_match:
+                lines.append("\n%s" % repl)
         self._write_local(lines)
         self._push_file()

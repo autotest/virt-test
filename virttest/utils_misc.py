@@ -800,7 +800,6 @@ def umount(src, mount_point, fstype):
     @mount_point: mount point
     @type: file system type
     """
-
     mount_string = "%s %s %s" % (src, mount_point, fstype)
     if is_mounted(src, mount_point, fstype):
         umount_cmd = "umount %s" % mount_point
@@ -855,6 +854,8 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :return: if the src is mounted as expect
     :rtype: Boolean
     """
+    mount_point = os.path.realpath(mount_point)
+    src = os.path.realpath(src)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
     if mount_string.strip() in file("/etc/mtab").read():
         logging.debug("%s is successfully mounted", src)
@@ -1121,6 +1122,7 @@ def create_x509_dir(path, cacert_subj, server_subj, passphrase,
         utils.run(cmd)
         logging.info(cmd)
 
+
 def convert_ipv4_to_ipv6(ipv4):
     """
     Translates a passed in string of an ipv4 address to an ipv6 address.
@@ -1155,27 +1157,191 @@ def convert_ipv4_to_ipv6(ipv4):
         converted_ip += test
     return converted_ip
 
+
+def get_thread_cpu(thread):
+    """
+    Get the light weight process(thread) used cpus.
+
+    :param thread: thread checked
+    :type thread: string
+    :return: A list include all cpus the thread used
+    :rtype: list
+    """
+    cmd =  "ps -o cpuid,lwp -eL | grep -w %s$" % thread
+    cpu_thread = utils.system_output(cmd)
+    if not cpu_thread:
+        return []
+    return list(set([_.strip().split()[0] for _ in cpu_thread.splitlines()]))
+
+
+def get_pid_cpu(pid):
+    """
+    Get the process used cpus.
+
+    :param pid: process id
+    :type thread: string
+    :return: A list include all cpus the process used
+    :rtype: list
+    """
+    cmd = "ps -o cpuid -L -p %s" % pid
+    cpu_pid = utils.system_output(cmd)
+    if not cpu_pid:
+        return []
+    return list(set([_.strip() for _ in cpu_pid.splitlines()]))
+
+
+def get_node_count():
+    """
+    Get the number of nodes of current host.
+
+    :return: the number of nodes
+    :rtype: string
+    """
+    cmd = utils.run("numactl --hardware")
+    return int(re.findall("available: (\d+) nodes", cmd.stdout)[0])
+
+
+def cpu_str_to_list(origin_str):
+    """
+    Convert the cpu string to a list. The string may include comma and
+    hyphen.
+
+    :param origin_str: the cpu info string read from system
+    :type origin_str: string
+    :return: A list of the cpu ids
+    :rtype: list
+    """
+    if isinstance(origin_str, str):
+        cpu_list = []
+        for cpu in origin_str.strip().split(","):
+            if "-" in cpu:
+                start, end = cpu.split("-")
+                for cpu_id in range(int(start), int(end)+1):
+                    cpu_list.append(cpu_id)
+            else:
+                try:
+                    cpu_id = int(cpu)
+                    cpu_list.append(cpu_id)
+                except ValueError:
+                    logging.error("Illegimate string in cpu "
+                                  "informations: %s" % cpu)
+                    cpu_list = []
+                    break
+        cpu_list.sort()
+        return cpu_list
+
+
+class NumaInfo(object):
+    """
+    Numa topology for host. Also provide the function for check the memory status
+    of the node.
+    """
+    def __init__(self):
+        self.numa_sys_path = "/sys/devices/system/node"
+        self.all_nodes = self.get_all_nodes()
+        self.online_nodes = self.get_online_nodes()
+        self.nodes = {}
+        self.distances = {}
+        for node_id in self.online_nodes:
+            self.nodes[node_id] = NumaNode(node_id + 1)
+            self.distances[node_id] = self.get_node_distance(node_id)
+
+
+    def get_all_nodes(self):
+        """
+        Get all node ids in host.
+
+        :return: All node ids in host
+        :rtype: list
+        """
+        all_nodes = get_path(self.numa_sys_path, "possible")
+        all_nodes_file = open(all_nodes, "r")
+        nodes_info = all_nodes_file.read()
+        all_nodes_file.close()
+
+        return cpu_str_to_list(nodes_info)
+
+
+    def get_online_nodes(self):
+        """
+        Get node ids online in host
+
+        :return: The ids of node which is online
+        :rtype: list
+        """
+        online_nodes = get_path(self.numa_sys_path, "online")
+        online_nodes_file = open(online_nodes, "r")
+        nodes_info = online_nodes_file.read()
+        online_nodes_file.close()
+
+        return cpu_str_to_list(nodes_info)
+
+
+    def get_node_distance(self, node_id):
+        """
+        Get the distance from the give node to other nodes include itself.
+
+        :param node_id: Node that you want to check
+        :type node_id: string
+        :return: A list in of distance for the node in positive-sequence
+        :rtype: list
+        """
+        cmd = utils.run("numactl --hardware")
+        node_distances = cmd.stdout.split("node distances:")[-1].strip()
+        node_distance = node_distances.splitlines()[node_id + 1]
+        if "%s:" % node_id not in node_distance:
+            logging.warn("Get wrong unexpect information from numctl")
+            numa_sys_path = self.numa_sys_path
+            distance_path = get_path(numa_sys_path,
+                                           "node%s/distance" % node_id)
+            if not os.path.isfile(distance_path):
+                logging.error("Can not get distance information for"
+                              " node %s" % node_id)
+                return []
+            node_distance_file = open(distance_path, 'r')
+            node_distance = node_distance_file.read()
+            node_distance_file.close()
+        else:
+            node_distance = node_distance.split(":")[-1]
+
+        return node_distance.strip().split()
+
+
+    def read_from_node_meminfo(self, node_id, key):
+        """
+        Get specific value of a given node from memoinfo file
+
+        :param node_id: The node you want to check
+        :type node_id: string
+        :param key: The value you want to check such as MemTotal etc.
+        :type key: string
+        :return: The value in KB
+        :rtype: string
+        """
+        memory_path = os.path.join(self.numa_sys_path,
+                                   "node%s/meminfo" % node_id)
+        memory_file = open(memory_path, "r")
+        memory_info = memory_file.read()
+        memory_file.close()
+
+        return re.findall("%s:\s+(\d+)" % key, memory_info)[0]
+
+
 class NumaNode(object):
     """
     Numa node to control processes and shared memory.
     """
     def __init__(self, i=-1):
-        self.num = self.get_node_num()
+        self.num = get_node_count()
         if i < 0:
             self.cpus = self.get_node_cpus(int(self.num) + i).split()
+            self.node_id = self.num + i
         else:
             self.cpus = self.get_node_cpus(i - 1).split()
+            self.node_id = i - 1
         self.dict = {}
         for i in self.cpus:
             self.dict[i] = "free"
-
-
-    def get_node_num(self):
-        """
-        Get the number of nodes of current host.
-        """
-        cmd = utils.run("numactl --hardware")
-        return re.findall("available: (\d+) nodes", cmd.stdout)[0]
 
 
     def get_node_cpus(self, i):
@@ -1683,3 +1849,34 @@ def get_winutils_vol(session, label="WIN_UTILS"):
     if not device:
         return ""
     return device.group(1)
+
+
+def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
+    """
+    Divide the valued options into key and value
+
+    @param options: the valued options get from cfg
+    @param split_pattern: patten used to split options
+    @param dict_split: patten used to split sub options and insert into dict
+    @param start_count: the start_count to insert option_dict
+    @return: dict include option and its value
+    """
+    option_dict = {}
+    if options.strip() is not None:
+        pat = re.compile(split_pattern)
+        option_list = pat.split(options.lstrip(split_pattern))
+        logging.debug("option_list is %s", option_list)
+
+        for match in option_list[start_count:]:
+            match_list = match.split(dict_split)
+            if len(match_list) == 2:
+                key = match_list[0]
+                value = match_list[1]
+                if not key in option_dict:
+                    option_dict[key] = value
+                else:
+                    logging.debug("key %s in option_dict", key)
+                    option_dict[key] = option_dict[key].split()
+                    option_dict[key].append(value)
+
+    return option_dict

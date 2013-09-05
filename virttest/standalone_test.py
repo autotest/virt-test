@@ -15,6 +15,9 @@ def get_tag_index(options, params):
     if options.config:
         TAG_INDEX = -1
         return TAG_INDEX
+    # lvsb tests only have short names
+    if options.type == 'lvsb':
+        return 0
     name = params['name']
     if TAG_INDEX.get(name) is None:
         guest_name_list = get_guest_name_list(options)
@@ -417,10 +420,11 @@ def create_config_files(options):
         print_stdout("Setup error: %s does not exist" % os.path.join(test_dir, "cfg"))
         print_stdout("Perhaps you have not specified -t?")
         sys.exit(1)
-
-    bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
+    # lvsb test doesn't use shared configs
+    if options.type != 'lvsb':
+        bootstrap.create_config_files(test_dir, shared_dir, interactive=False)
+        bootstrap.create_guest_os_cfg(options.type)
     bootstrap.create_subtests_cfg(options.type)
-    bootstrap.create_guest_os_cfg(options.type)
 
 
 def get_paginator():
@@ -539,6 +543,10 @@ def print_guest_list(options):
     @param cartesian_parser: Cartesian parser object with test options.
     """
     pipe = get_paginator()
+    # lvsb testing has no concept of guests
+    if options.type == 'lvsb':
+        pipe.write("No guest types available for lvsb testing")
+        return
     index = 0
     pipe.write("Searched %s for guest images\n" %
                os.path.join(data_dir.get_data_dir(), 'images'))
