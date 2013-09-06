@@ -648,6 +648,20 @@ def version(option='', **dargs):
     return command("version %s" % option, **dargs).stdout.strip()
 
 
+def maxvcpus(option='', **dargs):
+    """
+    Return the connection vcpu maximum number.
+
+    @param: option: additional option string to pass
+    @param: dargs: standardized virsh function API keywords
+    @return: CmdResult object
+    """
+    cmd = "maxvcpus %s" % option
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
+
 def dom_list(options="", **dargs):
     """
     Return the list of domains.
