@@ -520,18 +520,15 @@ class FileChecker(object):
         path = self._get_checked_filename()
 
         try:
-            run_pep8.check_file(path)
+            if not run_pep8.check(path):
+                success = False
+                logging.error("File non PEP8 compliant: %s", path[2:])
         except Exception, details:
             logging.error(
                 "PEP8 linter exception while verifying %s, details: %s",
                 path, details)
             success = False
 
-        mf = self.vcs.get_modified_files()
-        path = path[2:]
-        if path in mf:
-            success = False
-            logging.error("PEP8 linter modified %s", path)
 
         return success
 
@@ -793,7 +790,6 @@ if __name__ == "__main__":
     gh_id = options.gh_id
     debug = options.debug
     run_pylint.set_verbosity(debug)
-    run_pep8.set_verbosity(debug)
     full_check = options.full_check
     confirm = options.confirm
     pwhost = options.patchwork_host
@@ -810,7 +806,6 @@ if __name__ == "__main__":
     if full_check:
         failed_paths = []
         run_pylint.set_verbosity(False)
-        run_pep8.set_verbosity(False)
         logging.info("%s spell check", PROJECT_NAME)
         logging.info("")
         run_codespell(TOP_LEVEL_DIRNAME)
