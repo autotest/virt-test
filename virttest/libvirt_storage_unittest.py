@@ -110,6 +110,7 @@ class PoolTestBase(ModuleLoadCheckVirsh):
         self.bogus_virsh.super_set('pool_start', self._pool_start)
         self.bogus_virsh.super_set('pool_destroy', self._pool_destroy)
         self.bogus_virsh.super_set('pool_undefine', self._pool_undefine)
+        self.bogus_virsh.super_set('pool_autostart', self._pool_autostart)
         self.sp = libvirt_storage.StoragePool(self.bogus_virsh)
 
 
