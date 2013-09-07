@@ -1277,15 +1277,14 @@ def net_list(options, extra="", **dargs):
 
 def net_info(network, extra="", **dargs):
     """
-    List networks on host.
+    Returns basic information about the network
 
-    @param: network: options to pass to command
+    @param: network: network name or uuid
     @param: extra: extra parameters to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
     return command("net-info %s %s" % (network, extra), **dargs)
-
 
 def net_state_dict(only_names=False, **dargs):
     """
@@ -1410,16 +1409,16 @@ def net_autostart(network, extra="", **dargs):
     return command("net-autostart %s %s" % (network, extra), **dargs)
 
 
-def iface_list(ifc_name, extra="", **dargs):
+def iface_list(options, extra="", **dargs):
     """
     List interfaces on host.
 
-    @param: ifc_name: interface name to be passed
+    @param: options: --all or --inactive or blank value to be passed
     @param: extra: extra parameters to pass to command
     @param: dargs: standardized virsh function API keywords
     @return: CmdResult object
     """
-    return command("iface-list %s %s" % (ifc_name, extra), **dargs)
+    return command("iface-list %s %s" % (options, extra), **dargs)
 
 
 def iface_dumpxml(ifc_name, to_file=None, extra="", **dargs):
