@@ -39,6 +39,6 @@ def run_tracing_exception_injection(test, params, env):
     try:
         utils.run(inj_check_cmd)
     except error.CmdError:
-        err_msg = "kvm:kvm_inj_exception is not an avaliable event in host"
+        err_msg = "kvm:kvm_inj_exception is not an available event in host"
         raise error.TestFail(err_msg)
     logging.info("Host supports tracing of exception injection in KVM")

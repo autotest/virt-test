@@ -68,8 +68,8 @@ def run_watchdog(test, params, env):
 
     def _action_check(session, watchdog_action):
         """
-        Check whether or not the watchdog action occured. if the action was
-        not occured will raise error.
+        Check whether or not the watchdog action occurred. if the action was
+        not occurred will raise error.
         """
         #when watchdog action is pause, shutdown, reset, poweroff
         #the vm session will lost responsive

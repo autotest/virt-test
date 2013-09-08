@@ -13,7 +13,7 @@ def run_build(test, params, env):
     srcdir = params.get("srcdir", test.srcdir)
     params["srcdir"] = srcdir
 
-    # Flag if a installer minor failure ocurred
+    # Flag if a installer minor failure occurred
     minor_failure = False
     minor_failure_reasons = []
 

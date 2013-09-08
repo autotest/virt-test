@@ -72,7 +72,7 @@ def run_virtual_nic_private(test, params, env):
         sessions[0].cmd(dd_cmd  % (src_file, filesize), timeout=timeout)
         t.start()
 
-        error.context("Transfering file guest1 -> guest2", logging.info)
+        error.context("Transferring file guest1 -> guest2", logging.info)
         remote.scp_between_remotes(addresses[0], addresses[1],
                                    shell_port, password, password,
                                    username, username, src_file, dst_file)

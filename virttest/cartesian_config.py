@@ -588,8 +588,8 @@ class LIndent(Token):
     __slots__ = ["length"]
     identifier = "indent"
 
-    def __init__(self, lenght):
-        self.length = lenght
+    def __init__(self, length):
+        self.length = length
 
 
     def __str__(self):

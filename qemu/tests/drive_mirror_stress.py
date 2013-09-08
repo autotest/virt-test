@@ -46,8 +46,8 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
         error.context("launch stress app in guest", logging.info)
         session.sendline(cmd)
         logging.info("Start command: %s" % cmd)
-        runing = utils_misc.wait_for(self.app_runing, timeout=150, step=5)
-        if not runing:
+        running = utils_misc.wait_for(self.app_runing, timeout=150, step=5)
+        if not running:
             raise error.TestFail("stress app isn't running")
         return None
 

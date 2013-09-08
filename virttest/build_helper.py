@@ -244,7 +244,7 @@ class LocalTarHelper(object):
 
     def execute(self):
         '''
-        Executes all action this helper is suposed to perform
+        Executes all action this helper is supposed to perform
 
         This is the main entry point method for this class, and all other
         helper classes.
@@ -302,7 +302,7 @@ class RemoteTarHelper(LocalTarHelper):
 
     def execute(self):
         '''
-        Executes all action this helper class is suposed to perform
+        Executes all action this helper class is supposed to perform
 
         This is the main entry point method for this class, and all other
         helper classes.
@@ -593,7 +593,7 @@ class GnuSourceBuildHelper(object):
 
     def configure(self):
         '''
-        Runs the "configure" script passing apropriate command line options
+        Runs the "configure" script passing appropriate command line options
         '''
         configure_command = self.get_configure_command()
         logging.info('Running configure on build dir')

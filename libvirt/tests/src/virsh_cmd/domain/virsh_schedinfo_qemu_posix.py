@@ -129,7 +129,7 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
                              ignore_status=True, debug=True)
     status = result.exit_status
 
-    # VM must be runnning to get cgroup parameters.
+    # VM must be running to get cgroup parameters.
     if not vm.is_alive():
         vm.start()
     set_value_of_cgroup = get_parameter_in_cgroup(vm_name,

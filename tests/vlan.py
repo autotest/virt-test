@@ -108,12 +108,12 @@ def run_vlan(test, params, env):
         else:
             logging.info("digest_origin is  %s", digest_origin[src])
             logging.info("digest_receive is %s", digest_receive)
-            raise error.TestFail("File transfered differ from origin")
+            raise error.TestFail("File transferred differ from origin")
         session[dst].cmd("rm -f receive")
 
 
     def flood_ping(src, dst):
-        # we must use a dedicated session becuase the aexpect
+        # we must use a dedicated session because the aexpect
         # does not have the other method to interrupt the process in
         # the guest rather than close the session.
         error.context("Flood ping from %s interface %s to %s" % (vm[src].name,
@@ -148,7 +148,7 @@ def run_vlan(test, params, env):
         session.append(vm[i].wait_for_login(timeout=login_timeout))
         if not session[i] :
             raise error.TestError("Could not log into guest %s" % vm[i].name)
-        logging.info("Logged in %s successfull" % vm[i].name)
+        logging.info("Logged in %s successful" % vm[i].name)
 
         ifname.append(utils_net.get_linux_ifname(session[i],
                       vm[i].get_mac_address()))
@@ -200,7 +200,7 @@ def run_vlan(test, params, env):
             flood_ping(0, 1)
             flood_ping(1, 0)
 
-            error.context("Transfering data through nc", logging.info)
+            error.context("Transferring data through nc", logging.info)
             nc_transfer(0, 1)
             nc_transfer(1, 0)
 

@@ -10,7 +10,7 @@ import aexpect
 
 class SandboxException(Exception):
     """
-    Basic exception class for problems occuring in SandboxBase or subclasses
+    Basic exception class for problems occurring in SandboxBase or subclasses
     """
 
     def __init__(self, message):
@@ -50,7 +50,7 @@ class SandboxSession(object):
     @property
     def session_id(self):
         """
-        Returns unique & persistant identifier for the background process
+        Returns unique & persistent identifier for the background process
         """
         if self.connected:
             return self.session.get_id()
@@ -178,7 +178,7 @@ class SandboxBase(object):
         # Allow global 'lvsb_*' keys to be overridden for specific subclass
         self.params = params.object_params(self.__class__.__name__)
         self.options = None # opaque value consumed by make_command()
-        # Aexpect has some well hidden bugs, private atribute hides
+        # Aexpect has some well hidden bugs, private attribute hides
         # interface in case it changes from fixes or gets swapped out
         # entirely.
         self._session = SandboxSession()

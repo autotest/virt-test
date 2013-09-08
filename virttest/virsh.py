@@ -294,7 +294,7 @@ class VirshPersistent(Virsh):
         """
         Method to decrease the counter to self.a_id in COUNTERS.
         If the counter is less than 1, it means there is no more
-        VirshSession instance refering to the session. So close
+        VirshSession instance referring to the session. So close
         this session, and return True.
         Else, decrease the counter in COUNTERS and return False.
         """
@@ -452,7 +452,7 @@ def command(cmd, **dargs):
         logging.debug("Running virsh command: %s", cmd)
 
     if session:
-        # Utilize persistant virsh session
+        # Utilize persistent virsh session
         ret = session.cmd_result(cmd, ignore_status)
         # Mark return value with session it came from
         ret.from_session_id = session_id
@@ -467,10 +467,10 @@ def command(cmd, **dargs):
         cmd = "%s%s%s" % (virsh_exec, uri_arg, cmd)
         # Raise exception if ignore_status == False
         ret = utils.run(cmd, verbose=debug, ignore_status=ignore_status)
-        # Mark return as not coming from persistant virsh session
+        # Mark return as not coming from persistent virsh session
         ret.from_session_id = None
 
-    # Always log debug info, if persistant session or not
+    # Always log debug info, if persistent session or not
     if debug:
         logging.debug("status: %s", ret.exit_status)
         logging.debug("stdout: %s", ret.stdout.strip())
@@ -823,7 +823,7 @@ def domxml_from_native(info_format, native_file, options=None, **dargs):
     Convert native guest configuration format to domain XML format.
 
     @param info_format:The command's options. For exmple:qemu-argv.
-    @param native_file:Native infomation file.
+    @param native_file:Native information file.
     @param options:extra param.
     @param dargs: standardized virsh function API keywords.
     @return: result from command

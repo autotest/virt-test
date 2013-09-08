@@ -74,7 +74,7 @@ def run_virtual_nic_send_buffer(test, params, env):
     try:
         error.context("Transfer data from host to each guest")
         for vm in vms:
-            error.context("Transfering data from host to guest %s " % vm.name,
+            error.context("Transferring data from host to guest %s " % vm.name,
                           logging.info)
             vm.copy_files_to(host_file, src_file, timeout=transfer_timeout)
 
@@ -93,7 +93,7 @@ def run_virtual_nic_send_buffer(test, params, env):
         for vm_src in addresses:
             for vm_dst in addresses:
                 if vm_src != vm_dst:
-                    error.context("Transfering data %s to %s" %
+                    error.context("Transferring data %s to %s" %
                                   (vm_src, vm_dst), logging.info)
                     remote.udp_copy_between_remotes(vm_src, vm_dst,
                                                     shell_port,

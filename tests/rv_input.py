@@ -19,7 +19,7 @@ def deploy_epel_repo(guest_session, params):
     @param params
     """
 
-    #Check existance of epel repository
+    #Check existence of epel repository
     cmd = ("if [ ! -f /etc/yum.repos.d/epel.repo ]; then echo"
           " \"NeedsInstall\"; fi")
     output = guest_session.cmd(cmd, timeout=10)

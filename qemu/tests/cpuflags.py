@@ -621,7 +621,7 @@ def run_cpuflags(test, params, env):
                                         flags.all_possible_guest_flags)
             logging.info("Woking CPU flags: %s", str(Flags[0]))
             logging.info("Not working CPU flags: %s", str(Flags[1]))
-            logging.warning("Flags works even if not deffined on guest cpu "
+            logging.warning("Flags works even if not defined on guest cpu "
                             "flags: %s", str(Flags[0] - guest_flags))
             logging.warning("Not tested CPU flags: %s", str(Flags[2]))
 
@@ -929,7 +929,7 @@ def run_cpuflags(test, params, env):
                         logging.info("Woking CPU flags: %s", str(Flags[0]))
                         logging.info("Not working CPU flags: %s",
                                      str(Flags[1]))
-                        logging.warning("Flags works even if not deffined on"
+                        logging.warning("Flags works even if not defined on"
                                         " guest cpu flags: %s",
                                         str(Flags[0] - flags.guest_flags))
                         logging.warning("Not tested CPU flags: %s",
@@ -968,7 +968,7 @@ def run_cpuflags(test, params, env):
                                      str(Flags[0]))
                         logging.info("Not working CPU flags: %s",
                                      str(Flags[1]))
-                        logging.warning("Flags works even if not deffined on"
+                        logging.warning("Flags works even if not defined on"
                                         " guest cpu flags: %s",
                                         str(Flags[0] - flags.guest_flags))
                         logging.warning("Not tested CPU flags: %s",
@@ -1059,7 +1059,7 @@ def run_cpuflags(test, params, env):
                         logging.info("Woking CPU flags: %s", str(Flags[0]))
                         logging.info("Not working CPU flags: %s",
                                      str(Flags[1]))
-                        logging.warning("Flags works even if not deffined on"
+                        logging.warning("Flags works even if not defined on"
                                         " guest cpu flags: %s",
                                         str(Flags[0] - flags.guest_flags))
                         logging.warning("Not tested CPU flags: %s",
@@ -1101,7 +1101,7 @@ def run_cpuflags(test, params, env):
                                      str(Flags[0]))
                         logging.info("Not working CPU flags: %s",
                                      str(Flags[1]))
-                        logging.warning("Flags works even if not deffined on"
+                        logging.warning("Flags works even if not defined on"
                                         " guest cpu flags: %s",
                                         str(Flags[0] - flags.guest_flags))
                         logging.warning("Not tested CPU flags: %s",

@@ -1854,7 +1854,7 @@ def get_ip_address_by_interface(ifname):
 def get_host_ip_address(params):
     """
     returns ip address of host specified in host_ip_addr parameter If provided
-    otherwise ip address on interface specified in netdst paramter is returned
+    otherwise ip address on interface specified in netdst parameter is returned
     @param params
     """
     host_ip = params.get('host_ip_addr', None)

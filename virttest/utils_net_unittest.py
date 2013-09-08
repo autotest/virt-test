@@ -144,7 +144,7 @@ class TestVirtIface(unittest.TestCase):
             key = utils_misc.generate_random_string(16)
             value = utils_misc.generate_random_string(16)
             more_props[key] = value
-        #Keep seperated for testing
+        #Keep separated for testing
         apendex_set = {}
         apendex_set.update(props)
         apendex_set.update(more_props)

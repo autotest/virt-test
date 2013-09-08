@@ -8,7 +8,7 @@ def run_virsh_undefine(test, params, env):
 
     Undefine an inactive domain, or convert persistent to transient.
     1.Prepare test environment.
-    2.Backup the VM's infomation to a xml file.
+    2.Backup the VM's information to a xml file.
     3.When the libvirtd == "off", stop the libvirtd service.
     4.Perform virsh undefine operation.
     5.Recover test environment.(libvirts service,VM)

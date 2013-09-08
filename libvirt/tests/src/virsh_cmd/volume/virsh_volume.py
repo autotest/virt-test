@@ -99,7 +99,7 @@ def run_virsh_volume(test, params, env):
             raise error.TestFail("Command virsh vol-delete failed:\n%s" %
                                  result.stderr.strip())
         else:
-            logging.debug("Volume: %s sucessfully created on pool: %s",
+            logging.debug("Volume: %s successfully created on pool: %s",
                           expected_vol['name'], expected_vol['pool_name'])
 
 

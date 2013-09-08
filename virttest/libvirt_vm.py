@@ -804,7 +804,7 @@ class VM(virt_vm.BaseVM):
                     if remove:
                         session.sendline("sed -i -e /%s/d /etc/securetty"
                                          % device)
-                logging.debug("Set root login for %s successfuly.", device)
+                logging.debug("Set root login for %s successfully.", device)
                 return True
             finally:
                 session.close()
@@ -879,7 +879,7 @@ class VM(virt_vm.BaseVM):
                     if remove:
                         session.sendline("sed -i -e /%s/d "
                                          "/etc/inittab" % matched_str)
-                logging.debug("Set inittab for %s successfuly.", device)
+                logging.debug("Set inittab for %s successfully.", device)
                 return True
             finally:
                 session.close()
@@ -1053,7 +1053,7 @@ class VM(virt_vm.BaseVM):
                                                 "running as root or "
                                                 "placing SELinux into "
                                                 "permissive mode.")
-                # some other problem happend, raise normally
+                # some other problem happened, raise normally
                 raise
             # Wait for the domain to be created
             utils_misc.wait_for(func=self.is_alive, timeout=60,
@@ -1297,11 +1297,11 @@ class VM(virt_vm.BaseVM):
         return shm * 4.0 / 1024
 
     def activate_nic(self, nic_index_or_name):
-        #TODO: Impliment nic hotplugging
+        #TODO: Implement nic hotplugging
         pass # Just a stub for now
 
     def deactivate_nic(self, nic_index_or_name):
-        #TODO: Impliment nic hot un-plugging
+        #TODO: Implement nic hot un-plugging
         pass # Just a stub for now
 
     @error.context_aware
@@ -1491,7 +1491,7 @@ class VM(virt_vm.BaseVM):
 
     def dominfo(self):
         """
-        Return a dict include vm's infomation.
+        Return a dict include vm's information.
         """
         output = virsh.dominfo(self.name, uri=self.connect_uri).stdout.strip()
         # Key: word before ':' | value: content after ':' (stripped)
@@ -1505,7 +1505,7 @@ class VM(virt_vm.BaseVM):
 
     def vcpuinfo(self):
         """
-        Return a dict's list include vm's vcpu infomation.
+        Return a dict's list include vm's vcpu information.
         """
         output = virsh.vcpuinfo(self.name,
                                 uri=self.connect_uri).stdout.strip()

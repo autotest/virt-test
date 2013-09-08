@@ -191,7 +191,7 @@ class StoragePool(object):
 
     def pool_info(self, name):
         """
-        Get pool's infomation.
+        Get pool's information.
 
         @return: A dict include pool's information:
                 Name ==> value

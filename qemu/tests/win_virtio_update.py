@@ -61,7 +61,7 @@ def run_win_virtio_update(test, params, env):
         if re.findall("zip$", url_virtio_win):
             utils.system("cd /tmp/virtio_win; unzip *; rm -f *.zip")
 
-        virtio_version = params.get("virtio_version", "unkown")
+        virtio_version = params.get("virtio_version", "unknown")
         virtio_iso = params.get("cdrom_virtio", "/tmp/prewhql.iso")
         utils.system("mkisofs -J -o %s /tmp/virtio_win" % virtio_iso)
 

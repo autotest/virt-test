@@ -172,7 +172,7 @@ def run_ethtool(test, params, env):
                           lambda:session.cmd_status("pgrep tcpdump") == 0, 30):
             return (False, "Tcpdump process wasn't launched")
 
-        txt = "Transfering file %s from %s" % (filename, src)
+        txt = "Transferring file %s from %s" % (filename, src)
         error.context(txt, logging.info)
         try:
             copy_files_func(filename, filename)

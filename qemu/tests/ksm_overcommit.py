@@ -30,7 +30,7 @@ def run_ksm_overcommit(test, params, env):
                      memory) (S2, shouldn't finish)
                   4) Destroy all VMs but the last one
                   5) Checks the last VMs memory for corruption
-    Paralel mode - uses one VM with multiple allocator workers. Executes
+    Parallel mode - uses one VM with multiple allocator workers. Executes
                    scenarios in parallel to put more stress on the KVM.
                    0) Prints out the setup and initialize guest(s)
                    1) Fills memory with the same number (S1)

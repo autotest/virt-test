@@ -8,7 +8,7 @@ import parallel
 
 class StreamProxy(object):
     """
-    Mechanism to supress stdout output, while keeping the original stdout.
+    Mechanism to suppress stdout output, while keeping the original stdout.
     """
 
     def __init__(self, filename='/dev/null', stream=sys.stdout):

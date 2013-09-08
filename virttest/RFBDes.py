@@ -304,7 +304,7 @@ class Des(object):
         @param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
         """
 
-        # Split the data into list, crypting each one seperately
+        # Split the data into list, crypting each one separately
         i = 0
         result = []
         while i < len(data):

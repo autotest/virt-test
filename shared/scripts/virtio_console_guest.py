@@ -174,7 +174,7 @@ class VirtioGuest:
         @param port: Port to write data
         @param length: Length of data
         @param mode: True = loop mode, False = one shoot mode
-        @param is_static: False = generates $lenght long block (mode=0)
+        @param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
         """
         raise NotImplementedError
@@ -243,7 +243,7 @@ class VirtioGuestPosix(VirtioGuest):
                     return
 
                 if len(viop_names) != len(in_files):
-                    print ("FAIL: Not all ports were successfuly initialized "
+                    print ("FAIL: Not all ports were successfully initialized "
                            "in debugfs, only %d from %d." % (len(viop_names),
                                                              len(in_files)))
                     return
@@ -851,7 +851,7 @@ class VirtioGuestPosix(VirtioGuest):
         @param port: Port to write data
         @param length: Length of data
         @param mode: True = loop mode, False = one shoot mode
-        @param is_static: False = generates $lenght long block (mode=0)
+        @param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
         """
         in_f = self._open([port])
@@ -878,7 +878,7 @@ class VirtioGuestPosix(VirtioGuest):
         if writes >= length:
             print "PASS: Send data length %d" % writes
         else:
-            print ("FAIL: Partial send: desired %d, transfered %d" %
+            print ("FAIL: Partial send: desired %d, transferred %d" %
                    (length, writes))
 
     def recv(self, port, length=1, bfr=1024, mode=True):
@@ -905,7 +905,7 @@ class VirtioGuestPosix(VirtioGuest):
         if len(recvs) >= length:
             print "PASS: Recv data length %d" % len(recvs)
         else:
-            print ("FAIL: Partial recv: desired %d, transfered %d" %
+            print ("FAIL: Partial recv: desired %d, transferred %d" %
                    (length, len(recvs)))
 
     def clean_port(self, port, bfr=1024):
@@ -1096,7 +1096,7 @@ class VirtioGuestNt(VirtioGuest):
                 for desc in self.in_files:
                     ret, _data = win32file.ReadFile(desc, self.cachesize)
                     if ret:
-                        msg = ("Error occured while receiving data, "
+                        msg = ("Error occurred while receiving data, "
                                "err=%s, read=%s" % (ret, _data))
                         print "FAIL: " + msg
                         raise IOError(msg)
@@ -1105,7 +1105,7 @@ class VirtioGuestNt(VirtioGuest):
                     for desc in self.out_files:
                         ret, _data = win32file.WriteFile(desc, data)
                         if ret:
-                            msg = ("Error occured while sending data, "
+                            msg = ("Error occurred while sending data, "
                                    "err=%s, sentlen=%s" % (ret, _data))
                             print "FAIL: " + msg
                             raise IOError(msg)
@@ -1132,7 +1132,7 @@ class VirtioGuestNt(VirtioGuest):
         def run(self):
             while not self.exit_thread.isSet():
                 if win32file.WriteFile(self.port, self.data)[0]:
-                    msg = "Error occured while sending data."
+                    msg = "Error occurred while sending data."
                     print "FAIL: " + msg
                     raise IOError(msg)
 
@@ -1159,7 +1159,7 @@ class VirtioGuestNt(VirtioGuest):
         @param port: Port to write data
         @param length: Length of data
         @param mode: True = loop mode, False = one shoot mode
-        @param is_static: False = generates $lenght long block (mode=0)
+        @param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
         """
         port = self._open([port])[0]
@@ -1173,7 +1173,7 @@ class VirtioGuestNt(VirtioGuest):
                     data += "%c" % random.randrange(255)
                 _ret, _len = win32file.WriteFile(port, data)
                 if _ret:
-                    msg = ("Error occured while sending data, "
+                    msg = ("Error occurred while sending data, "
                            "err=%s, sentlen=%s" % (_ret, _len))
                     raise IOError(msg)
                 writes = _len
@@ -1187,7 +1187,7 @@ class VirtioGuestNt(VirtioGuest):
                 while (writes < length):
                     _ret, _len = win32file.WriteFile(port, data)
                     if _ret:
-                        msg = ("Error occured while sending data, err=%s"
+                        msg = ("Error occurred while sending data, err=%s"
                                ", sentlen=%s, allsentlen=%s" % (_ret, _len,
                                                                 writes))
                         raise IOError(msg)
@@ -1197,7 +1197,7 @@ class VirtioGuestNt(VirtioGuest):
         if writes >= length:
             print "PASS: Send data length %d" % writes
         else:
-            print ("FAIL: Partial send: desired %d, transfered %d" %
+            print ("FAIL: Partial send: desired %d, transferred %d" %
                    (length, writes))
 
     def recv(self, port, length=1, buflen=1024, mode=True):
@@ -1214,7 +1214,7 @@ class VirtioGuestNt(VirtioGuest):
         try:
             _ret, _data = win32file.ReadFile(port, buflen)
             if _ret:
-                msg = ("Error occured while receiving data, "
+                msg = ("Error occurred while receiving data, "
                        "err=%s, read=%s" % (_ret, _data))
                 raise IOError(msg)
             recvs = _data
@@ -1225,7 +1225,7 @@ class VirtioGuestNt(VirtioGuest):
                 try:
                     _ret, _data = win32file.ReadFile(port, buflen)
                     if _ret:
-                        msg = ("Error occured while receiving data, "
+                        msg = ("Error occurred while receiving data, "
                                "err=%s, read=%s, allread=%s" % (_ret, _data,
                                                                 len(recvs)))
                         raise IOError(msg)
@@ -1234,7 +1234,7 @@ class VirtioGuestNt(VirtioGuest):
         if len(recvs) >= length:
             print "PASS: Recv data length %d" % len(recvs)
         else:
-            print ("FAIL: Partial recv: desired %d, transfered %d" %
+            print ("FAIL: Partial recv: desired %d, transferred %d" %
                    (length, len(recvs)))
 
 

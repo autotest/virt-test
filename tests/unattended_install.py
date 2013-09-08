@@ -112,7 +112,7 @@ class UnattendedInstallConfig(object):
     """
     def __init__(self, test, params, vm):
         """
-        Sets class atributes from test parameters.
+        Sets class attributes from test parameters.
 
         @param test: QEMU test object.
         @param params: Dictionary with test parameters.

@@ -274,7 +274,7 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                         except Exception, details:
                             err += "\n%s: %s" % (image_name, details)
                     if err:
-                        raise virt_vm.VMImageCheckError("Error(s) occured "
+                        raise virt_vm.VMImageCheckError("Error(s) occurred "
                                         "while processing images: %s" % err)
                 finally:
                     if unpause_vm:
@@ -682,7 +682,7 @@ def postprocess(test, params, env):
             logging.error(details)
 
     if err:
-        raise virt_vm.VMError("Failures occured while postprocess:%s" % err)
+        raise virt_vm.VMError("Failures occurred while postprocess:%s" % err)
 
 
 def postprocess_on_error(test, params, env):

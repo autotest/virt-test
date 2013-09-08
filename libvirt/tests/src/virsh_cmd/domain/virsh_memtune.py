@@ -14,7 +14,7 @@ def run_virsh_memtune(test, params, env):
     """
     Test the command virsh memtune
 
-    (1) To get the current memtune paramters
+    (1) To get the current memtune parameters
     (2) Change the parameter values
     (3) Check the memtune query updated with the values
     (4) Check whether the mounted cgroup path gets the updated value

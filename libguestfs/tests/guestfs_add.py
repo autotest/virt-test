@@ -164,7 +164,7 @@ def run_guestfs_add(test, params, env):
                 login_wrote_text = session.cmd_output("cat /mnt/guestfs_temp",
                                                        timeout=5)
             except aexpect.ShellTimeoutError, detail:
-                # writen content with guestfs.write won't contain line break
+                # written content with guestfs.write won't contain line break
                 # Is is a bug of guestfish.write?
                 login_wrote_text = str(detail)
             if not re.search(content, login_wrote_text):

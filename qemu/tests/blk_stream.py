@@ -34,7 +34,7 @@ class BlockStream(block_copy.BlockCopy):
         status = self.get_status()
         if not status:
             raise error.TestFail("no active job found")
-        msg = "block stream job runing, "
+        msg = "block stream job running, "
         if default_speed:
             msg += "with limited speed %s B/s" % default_speed
         else:

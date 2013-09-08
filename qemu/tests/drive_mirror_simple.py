@@ -10,7 +10,7 @@ class DriveMirrorSimple(drive_mirror.DriveMirror):
     @error.context_aware
     def query_status(self):
         """
-        query runing block mirroring job info;
+        query running block mirroring job info;
         """
         error.context("query job status", logging.info)
         if not self.get_status():

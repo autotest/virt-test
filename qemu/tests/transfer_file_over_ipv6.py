@@ -105,7 +105,7 @@ def run_transfer_file_over_ipv6(test, params, env):
         for vm_src in addresses:
             for vm_dst in addresses:
                 if vm_src != vm_dst:
-                    error.context("Transfering data from %s to %s" %
+                    error.context("Transferring data from %s to %s" %
                                   (vm_src.name, vm_dst.name), logging.info)
                     remote.scp_between_remotes("%s%%%s" % (addresses[vm_src],
                                                            host_ifname),

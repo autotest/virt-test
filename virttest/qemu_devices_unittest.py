@@ -1206,7 +1206,7 @@ PIIX3
         assert qdev1 == qdev3, ("Similar hotplugged qdevs are not alike\n%s\n"
                                 "%s" % (qdev1.str_long(), qdev2.str_long()))
 
-        # Eq. is not symetrical, qdev1 doesn't allow hotplugged VMs.
+        # Eq. is not symmetrical, qdev1 doesn't allow hotplugged VMs.
         assert qdev3 != qdev1, ("Similar hotplugged qdevs match even thought "
                                 "qdev1 doesn't allow hotplugged VM\n%s\n%s"
                                 % (qdev1.str_long(), qdev2.str_long()))

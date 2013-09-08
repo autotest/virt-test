@@ -820,7 +820,7 @@ def mount(src, mount_point, fstype, perm="rw"):
     @src: mount source
     @mount_point: mount point
     @fstype: file system type
-    @perm: mount premission
+    @perm: mount permission
     """
     umount(src, mount_point, fstype)
     mount_string = "%s %s %s %s" % (src, mount_point, fstype, perm)
@@ -849,7 +849,7 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :type mount_point: string
     :param fstype: file system type
     :type fstype: string
-    :param perm: mount premission
+    :param perm: mount permission
     :type perm: string
     :return: if the src is mounted as expect
     :rtype: Boolean

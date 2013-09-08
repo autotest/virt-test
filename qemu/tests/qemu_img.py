@@ -377,11 +377,11 @@ def run_qemu_img(test, params, env):
                                      "original file")
             vm.destroy()
 
-            # Excecute the commit command
+            # Execute the commit command
             cmitcmd = "%s commit -f %s %s.%s" % (cmd, image_format,
                                                  backing_file_name,
                                                  image_format)
-            error.context("Commiting image by command %s" % cmitcmd,
+            error.context("Committing image by command %s" % cmitcmd,
                           logging.info)
             try:
                 utils.system(cmitcmd, verbose=False)

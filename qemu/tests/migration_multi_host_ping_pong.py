@@ -95,7 +95,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
                         disk_out = ("\ndisk_test_output: \n" +
                                           session.cmd_output("cat %s" %
                                                  (self.disktest_out)))
-                    raise error.TestFail("Something wrong happend"
+                    raise error.TestFail("Something wrong happened"
                                          " during migration %s"
                                          " should be running all time"
                                          " during this test."
@@ -172,7 +172,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
                     cpu_flags_out = ("\n cpuflags_test_output: \n" +
                                       session.cmd_output("cat %s" %
                                                  (self.cpuflags_test_out)))
-                    raise error.TestFail("Something wrong happend"
+                    raise error.TestFail("Something wrong happened"
                                          " during migration cpuflags-test"
                                          " should be running all time"
                                          " during this test.\n%s" %
@@ -196,7 +196,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
                     disk_out = ("\n cpuflags_test_output: \n" +
                                       session.cmd_output("cat %s" %
                                                  (self.disktest_out)))
-                    raise error.TestFail("Something wrong happend"
+                    raise error.TestFail("Something wrong happened"
                                          " during migration disktest"
                                          " should be running all time"
                                          " during this test.\n%s" %

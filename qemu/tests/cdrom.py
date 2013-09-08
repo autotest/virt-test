@@ -65,7 +65,7 @@ def run_cdrom(test, params, env):
         """
         Creates 'new' iso image with one file on it
 
-        @param params: paramters for test
+        @param params: parameters for test
         @param name: name of new iso image file
         @param preapre: if True then it prepare cd images.
         @param file_size: Size of iso image in MB

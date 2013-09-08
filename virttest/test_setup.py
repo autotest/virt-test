@@ -332,7 +332,7 @@ class HugePageConfig(object):
                                  "to the target value of %d hugepages." %
                                  self.target_hugepages)
         hugepage_cfg.close()
-        logging.debug("Successfuly set %s large memory pages on host ",
+        logging.debug("Successfully set %s large memory pages on host ",
                       self.target_hugepages)
 
 
@@ -373,7 +373,7 @@ class HugePageConfig(object):
             except error.CmdError:
                 return
             utils.system("echo 0 > %s" % self.kernel_hp_file)
-            logging.debug("Hugepage memory successfuly dealocated")
+            logging.debug("Hugepage memory successfully dealocated")
 
 
 class KSMError(Exception):
@@ -882,7 +882,7 @@ class PciAssignable(object):
         """
         Catch all VFs PCI IDs.
 
-        @return: List with all PCI IDs for the Virtual Functions avaliable
+        @return: List with all PCI IDs for the Virtual Functions available
         """
         if self.setup:
             if not self.sr_iov_setup():
@@ -995,7 +995,7 @@ class PciAssignable(object):
         Check if the PCI hardware device drive is loaded with the appropriate,
         parameters (number of VFs), and if it's not, perform setup.
 
-        @return: True, if the setup was completed successfuly, False otherwise.
+        @return: True, if the setup was completed successfully, False otherwise.
         """
         # Check if the host support interrupt remapping
         error.context("Set up host env for PCI assign test", logging.info)
@@ -1058,7 +1058,7 @@ class PciAssignable(object):
         Check if the PCI hardware device drive is loaded with the appropriate,
         parameters (none of VFs), and if it's not, perform cleanup.
 
-        @return: True, if the setup was completed successfuly, False otherwise.
+        @return: True, if the setup was completed successfully, False otherwise.
         """
         # Check if the host support interrupt remapping
         error.context("Clean up host env after PCI assign test", logging.info)

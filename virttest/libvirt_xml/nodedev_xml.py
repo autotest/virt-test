@@ -78,7 +78,7 @@ class SystemXML(CAPXML):
     @staticmethod
     def make_sysfs_sub_path():
         """
-        return __sysfs_sub_path__ immediatly.
+        return __sysfs_sub_path__ immediately.
         """
         return SystemXML.__sysfs_sub_path__
 

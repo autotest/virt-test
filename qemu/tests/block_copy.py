@@ -176,7 +176,7 @@ class BlockCopy(object):
                                           self.vm.monitor.get_event("RESET"),
                                           timeout=timeout)
             if not reseted:
-                raise error.TestFail("No RESET event recived after"
+                raise error.TestFail("No RESET event received after"
                                      "execute system_reset %ss" % timeout)
             self.vm.monitor.clear_event("RESET")
         else:

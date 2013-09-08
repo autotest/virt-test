@@ -57,7 +57,7 @@ def run_virsh_nodecpustats(test, params, env):
 
     def virsh_check_nodecpustats_percentage(actual_per):
         """
-        Check the actual nodecpustats percentage adds upto 100%
+        Check the actual nodecpustats percentage adds up to 100%
         """
 
         total = int(round(actual_per['user'] + actual_per['system'] + \

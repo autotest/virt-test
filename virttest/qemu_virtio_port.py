@@ -802,7 +802,7 @@ class ThRecvCheck(Thread):
         if self.sendidx >= 0:
             minsendidx = min(minsendidx, self.sendidx)
         if (self.sendlen - minsendidx):
-            logging.error("ThRecvCheck %s: Data loss occured during socket"
+            logging.error("ThRecvCheck %s: Data loss occurred during socket"
                           "reconnection. Maximal loss was %d per one "
                           "migration.", self.getName(),
                           (self.sendlen - minsendidx))
@@ -952,7 +952,7 @@ class ThRecvCheck(Thread):
         if self.sendidx >= 0:
             minsendidx = min(minsendidx, self.sendidx)
         if (self.sendlen - minsendidx):
-            logging.debug("ThRecvCheck %s: Data loss occured during socket"
+            logging.debug("ThRecvCheck %s: Data loss occurred during socket"
                           "reconnection. Maximal loss was %d per one "
                           "migration.", self.getName(),
                           (self.sendlen - minsendidx))

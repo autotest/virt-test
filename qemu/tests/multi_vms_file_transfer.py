@@ -67,7 +67,7 @@ def run_multi_vms_file_transfer(test, params, env):
         error.context("Creating %dMB file on host" % filesize, logging.info)
         utils.run(cmd)
         orig_md5 = utils.hash_file(host_path, method="md5")
-        error.context("Transfering file host -> VM1, timeout: %ss" % \
+        error.context("Transferring file host -> VM1, timeout: %ss" % \
                        transfer_timeout, logging.info)
         t_begin = time.time()
         vm1.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
@@ -83,7 +83,7 @@ def run_multi_vms_file_transfer(test, params, env):
             log_vm1 = os.path.join(test.debugdir, "remote_scp_to_vm1_%s.log" %i)
             log_vm2 = os.path.join(test.debugdir, "remote_scp_to_vm2_%s.log" %i)
 
-            msg = "Transfering file VM1 -> VM2, timeout: %ss." % transfer_timeout
+            msg = "Transferring file VM1 -> VM2, timeout: %ss." % transfer_timeout
             msg += " Repeat: %s/%s" % (i + 1, repeat_time)
             error.context(msg, logging.info)
             t_begin = time.time()
@@ -100,7 +100,7 @@ def run_multi_vms_file_transfer(test, params, env):
             md5_check(session_vm2, orig_md5)
             session_vm1.cmd("rm -rf %s" % guest_path)
 
-            msg = "Transfering file VM2 -> VM1, timeout: %ss." % transfer_timeout
+            msg = "Transferring file VM2 -> VM1, timeout: %ss." % transfer_timeout
             msg += " Repeat: %s/%s" % (i + 1, repeat_time)
 
             error.context(msg,  logging.info)

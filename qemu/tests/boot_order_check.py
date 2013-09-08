@@ -41,7 +41,7 @@ def run_boot_order_check(test, params, env):
     list_nic_addr = []
 
     # As device id in the last line of info pci output
-    # We need reverse the pci infomation to get the pci addr which is in the
+    # We need reverse the pci information to get the pci addr which is in the
     # front row.
     pci_info = vm.monitor.info("pci")
     pci_list = str(pci_info).split("\n")

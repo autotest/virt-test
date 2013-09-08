@@ -447,8 +447,8 @@ class MultihostMigration(object):
     problem with listen server port.
 
     Multihost migration starts SyncListenServer through which
-    all messages are transfered, since the multiple hosts can
-    be in diferent states.
+    all messages are transferred, since the multiple hosts can
+    be in different states.
 
     Class SyncData is used to transfer data over network or
     synchronize the migration process. Synchronization sessions
@@ -1618,7 +1618,7 @@ def run_file_transfer(test, params, env):
             raise error.TestError("Unknown test file transfer mode %s" %
                                   transfer_type)
 
-        error.context("Transfering file host -> guest,"
+        error.context("Transferring file host -> guest,"
                       " timeout: %ss" % transfer_timeout, logging.info)
         t_begin = time.time()
         vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
@@ -1627,7 +1627,7 @@ def run_file_transfer(test, params, env):
         logging.info("File transfer host -> guest succeed, "
                      "estimated throughput: %.2fMB/s", throughput)
 
-        error.context("Transfering file guest -> host,"
+        error.context("Transferring file guest -> host,"
                       " timeout: %ss" % transfer_timeout, logging.info)
         t_begin = time.time()
         vm.copy_files_from(guest_path, host_path2, timeout=transfer_timeout)
@@ -1637,7 +1637,7 @@ def run_file_transfer(test, params, env):
                      "estimated throughput: %.2fMB/s", throughput)
 
         error.context("Compare md5sum between original file and"
-                      " transfered file", logging.info)
+                      " transferred file", logging.info)
         if (utils.hash_file(host_path, method="md5") !=
             utils.hash_file(host_path2, method="md5")):
             raise error.TestFail("File changed after transfer host -> guest "

@@ -31,7 +31,7 @@ def run_floppy(test, params, env):
         """
         Creates 'new' floppy with one file on it
 
-        @param params: paramters for test
+        @param params: parameters for test
         @param preapre: if True then it prepare cd images.
 
         @return: path to new floppy file.

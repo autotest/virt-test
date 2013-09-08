@@ -645,7 +645,7 @@ def run_virtio_console(test, params, env):
             err = ""
             end_time = time.time() + test_time
             no_threads = len(threads)
-            transfered = [0] * no_threads
+            transferred = [0] * no_threads
             while end_time > time.time():
                 if not vm.is_alive():
                     err += "main(vmdied), "
@@ -654,12 +654,12 @@ def run_virtio_console(test, params, env):
                     if not threads[i].isAlive():
                         err += "main(th%s died), " % threads[i]
                     _transfered.append(threads[i].idx)
-                if (_transfered == transfered and
-                            transfered != [0] * no_threads):
+                if (_transfered == transferred and
+                            transferred != [0] * no_threads):
                     err += "main(no_data), "
-                transfered = _transfered
+                transferred = _transfered
                 if err:
-                    logging.error("Error occured while executing loopback "
+                    logging.error("Error occurred while executing loopback "
                                   "(%d out of %ds)",
                                   test_time - int(end_time - time.time()),
                                   test_time)
@@ -692,7 +692,7 @@ def run_virtio_console(test, params, env):
                          tmp[:-2])
             if err:
                 no_errors += 1
-                logging.error("test_loopback: error occured in threads: %s.",
+                logging.error("test_loopback: error occurred in threads: %s.",
                               err[:-2])
 
             guest_worker.safe_exit_loopback_threads([send_pt], recv_pts)
@@ -713,7 +713,7 @@ def run_virtio_console(test, params, env):
 
         cleanup(vm, guest_worker)
         if no_errors:
-            msg = ("test_loopback: %d errors occured while executing test, "
+            msg = ("test_loopback: %d errors occurred while executing test, "
                    "check log for details." % no_errors)
             logging.error(msg)
             raise error.TestFail(msg)
@@ -804,8 +804,8 @@ def run_virtio_console(test, params, env):
             Hibernate (S4) and resume the VM.
             @note: data loss is handled differently in this case. First we
                    set data loss to (almost) infinity. After the resume we
-                   periodically check the number of transfered and lost data.
-                   When there is no loss and number of transfered data is
+                   periodically check the number of transferred and lost data.
+                   When there is no loss and number of transferred data is
                    sufficient, we take it as the initial data loss is over.
                    Than we set the allowed loss to 0.
             """
@@ -854,7 +854,7 @@ def run_virtio_console(test, params, env):
                 if dcount < 100:
                     continue
                 if dloss == 0:
-                    # at least 100 chars were transfered without data loss
+                    # at least 100 chars were transferred without data loss
                     # the initial loss is over
                     break
                 _loss = loss
@@ -991,7 +991,7 @@ def run_virtio_console(test, params, env):
                     if not threads[1].isAlive():
                         logging.error('RecvCheck thread stopped unexpectedly.')
                     if count == threads[1].idx:
-                        logging.error('No data transfered after interruption!')
+                        logging.error('No data transferred after interruption!')
                     logging.info('Output from GuestWorker:\n%s',
                                  guest_worker.read_nonblocking())
                     try:
@@ -1008,7 +1008,7 @@ def run_virtio_console(test, params, env):
                         logging.warn("Failed to get info from qtree: %s", inst)
                     exit_event.set()
                     vm.verify_kernel_crash()
-                    raise error.TestFail('No data transfered after'
+                    raise error.TestFail('No data transferred after'
                                          'interruption.')
         except Exception, inst:
             err = True
@@ -1155,7 +1155,7 @@ def run_virtio_console(test, params, env):
                 thread.join()
                 if thread.ret_code:
                     no_errors += 1
-                    logging.error("test_perf: error occured in thread %s",
+                    logging.error("test_perf: error occurred in thread %s",
                                   thread)
 
                 # Let the guest read-out all the remaining data
@@ -1199,7 +1199,7 @@ def run_virtio_console(test, params, env):
                 thread.join()
                 if thread.ret_code:
                     no_errors += 1
-                    logging.error("test_perf: error occured in thread %s",
+                    logging.error("test_perf: error occurred in thread %s",
                                   thread)
                 # Deviation is higher than single time_slice
                 if (_time > time_slice):
@@ -1233,7 +1233,7 @@ def run_virtio_console(test, params, env):
             del exit_event
         cleanup(vm, guest_worker)
         if no_errors:
-            msg = ("test_perf: %d errors occured while executing test, "
+            msg = ("test_perf: %d errors occurred while executing test, "
                    "check log for details." % no_errors)
             logging.error(msg)
             raise error.TestFail(msg)
@@ -1261,7 +1261,7 @@ def run_virtio_console(test, params, env):
             ports = get_virtio_ports(vm)[0]
 
         # TODO BUG: sendlen = max allowed data to be lost per one migration
-        # TODO BUG: using SMP the data loss is upto 4 buffers
+        # TODO BUG: using SMP the data loss is up to 4 buffers
         # 2048 = char.dev. socket size, parms[2] = host->guest send buffer size
         sendlen = 2 * 2 * max(qemu_virtio_port.SOCKET_SIZE, blocklen)
         if not offline:     # TODO BUG: online migration causes more loses
@@ -1345,7 +1345,7 @@ def run_virtio_console(test, params, env):
                 time.sleep(2)
             if not threads[0].isAlive():
                 if exit_event.isSet():
-                    raise error.TestFail("Exit event emited, check the log for"
+                    raise error.TestFail("Exit event emitted, check the log for"
                                          "send/recv thread failure.")
                 else:
                     exit_event.set()
@@ -1359,7 +1359,7 @@ def run_virtio_console(test, params, env):
                 if verified[i] == threads[i + 1].idx:
                     exit_event.set()
                     raise error.TestFail("No new data in %d console were "
-                                         "transfered after migration %d"
+                                         "transferred after migration %d"
                                          % (i, (j + 1)))
                 verified[i] = threads[i + 1].idx
             logging.info("%d out of %d migration(s) passed", (j + 1),
@@ -1393,7 +1393,7 @@ def run_virtio_console(test, params, env):
         logging.info("test_migrate: %s data received and verified during %d "
                      "migrations", tmp[:-2], no_migrations)
         if err:
-            msg = "test_migrate: error occured in threads: %s." % err[:-2]
+            msg = "test_migrate: error occurred in threads: %s." % err[:-2]
             logging.error(msg)
             raise error.TestFail(msg)
 
@@ -1605,7 +1605,7 @@ def run_virtio_console(test, params, env):
         @param cfg: virtio_console_loops - how many loops to run
         """
         # TODO: QMP
-        # TODO: check qtree for device presense
+        # TODO: check qtree for device presence
         pause = int(params.get("virtio_console_pause", 10))
         vm = get_vm_with_ports()
         idx = 1
@@ -1618,7 +1618,7 @@ def run_virtio_console(test, params, env):
                                          % (idx))
             time.sleep(pause)
             if ret != "":
-                raise error.TestFail("Error occured while hotpluging virtio-"
+                raise error.TestFail("Error occurred while hotpluging virtio-"
                                      "pci. Iteration %s, monitor output:\n%s"
                                      % (i, ret))
 
@@ -1791,15 +1791,15 @@ def run_virtio_console(test, params, env):
                       method=params.get('virtio_console_method', 'shell'),
                       timeout=720)
         except Exception, details:
-            for proces in process:
-                proces.terminate()
+            for process in process:
+                process.terminate()
             for port in vm.virtio_ports:
                 port.close()
             raise error.TestFail("Fail to reboot VM:\n%s" % details)
 
         # close the virtio ports and process
-        for proces in process:
-            proces.terminate()
+        for process in process:
+            process.terminate()
         for port in vm.virtio_ports:
             port.close()
         error.context("Executing basic loopback after reboot.", logging.info)

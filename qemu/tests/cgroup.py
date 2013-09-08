@@ -585,7 +585,7 @@ def run_cgroup(test, params, env):
         """
         Tests cfs scheduler utilisation when cfs_period_us and cfs_quota_us
         are set for each virtual CPU with multiple VMs.
-        Each VM have double the previous created one (1, 2, 4, 8..) upto
+        Each VM have double the previous created one (1, 2, 4, 8..) up to
         twice physical CPUs overcommit. cfs quotas are set to 1/2 thus VMs
         should consume exactly 100%. It measures the difference.
         @note: VMs are created in test
@@ -933,7 +933,7 @@ def run_cgroup(test, params, env):
         if err:
             raise error.TestFail(err)
         else:
-            return ("Cpu utilisation enforced succesfully")
+            return ("Cpu utilisation enforced successfully")
 
     @error.context_aware
     def cpuset_cpus():
@@ -1123,7 +1123,7 @@ def run_cgroup(test, params, env):
             try:
                 verify = _generate_verification(cpusets, no_cpus)
             except IndexError:
-                raise error.TestError("IndexError occured while generatin "
+                raise error.TestError("IndexError occurred while generatin "
                                       "verification data. Probably missmatched"
                                       " no_host_cpus and cgroup_cpuset cpus")
 

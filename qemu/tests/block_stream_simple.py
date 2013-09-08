@@ -10,7 +10,7 @@ class BlockStreamSimple(blk_stream.BlockStream):
     @error.context_aware
     def query_status(self):
         """
-        query runing block streaming job info;
+        query running block streaming job info;
         """
         error.context("query job status", logging.info)
         if not self.get_status():

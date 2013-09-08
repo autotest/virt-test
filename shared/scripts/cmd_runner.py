@@ -8,7 +8,7 @@ import threading, shelve, commands, re, os, sys, random, string
 class Runner(object):
     def __init__(self):
         """
-        Set the global paramter for thread clean up
+        Set the global parameter for thread clean up
         """
         self.kill_thread_flag = False
 

@@ -35,7 +35,7 @@ def run_virsh_edit(test, params, env):
 
     def modify_vcpu(source, edit_cmd):
         """
-        Modify vm's cpu infomation.
+        Modify vm's cpu information.
 
         @param: source : virsh edit's option.
         @param: dic_mode : a edit commad line .
@@ -56,7 +56,7 @@ def run_virsh_edit(test, params, env):
 
     def edit_vcpu(source, guest_name):
         """
-        Modify vm's cpu infomation by virsh edit command.
+        Modify vm's cpu information by virsh edit command.
 
         @param: source : virsh edit's option.
         @param: guest_name : vm's name.

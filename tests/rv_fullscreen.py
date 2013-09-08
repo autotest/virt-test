@@ -1,7 +1,7 @@
 """
 rv_fullscreen.py - remote-viewer full screen
                    Testing the remote-viewer --full-screen option
-                   If successfull, the resolution of the guest will
+                   If successful, the resolution of the guest will
                    take the resolution of the client.
 
 Requires: connected binaries remote-viewer, Xorg, gnome session

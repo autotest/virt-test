@@ -106,9 +106,9 @@ class Cgroup(object):
 
     def mk_cgroup_cgcreate(self, pwd=None, cgroup=None):
         """
-        Make a cgroup by cgcreate command
+        Make a cgroup by executing the cgcreate command
 
-        @params: cgroup: Maked cgroup name
+        @params: cgroup: name of the cgroup to be created
         @return: last cgroup index
         """
         try:
@@ -281,7 +281,7 @@ class Cgroup(object):
         @param cmd: command to be executed
         @return: subprocess.Popen() process
         """
-        logging.debug("cg.test(): executing paralel process '%s'", cmd)
+        logging.debug("cg.test(): executing parallel process '%s'", cmd)
         cmd = self._client + ' ' + cmd
         process = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,

@@ -142,7 +142,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
         # help keep line length short, virsh is not a property
         the_copy = self.__class__(virsh_instance=self.virsh)
         try:
-            # file may not be accessable, obtain XML string value
+            # file may not be accessible, obtain XML string value
             xmlstr = str(self.dict_get('xml'))
             # Create fresh/new XMLTreeFile along with tmp files from XML content
             the_copy.dict_set('xml', xml_utils.XMLTreeFile(xmlstr))

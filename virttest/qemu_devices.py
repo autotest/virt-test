@@ -705,7 +705,7 @@ class QFloppy(QGlobal):
 class QSparseBus(object):
     """
     Universal bus representation object.
-    It creates an abstraction of the way how buses works in qemu. Additionaly
+    It creates an abstraction of the way how buses works in qemu. Additionally
     it can store incorrect records (out-of-range addr, multiple devs, ...).
     Everything with bad* prefix means it concerns the bad records (badbus).
     You can insert and remove device to certain address, address ranges or let
@@ -1146,7 +1146,7 @@ class QUSBBus(QSparseBus):
             if bus in bus_type:
                 bus_type = bus
                 break
-        # Usb ports are counted from 1 so the lenght have to be +1
+        # Usb ports are counted from 1 so the length have to be +1
         super(QUSBBus, self).__init__('bus', [['port'], [length + 1]], busid,
                                       bus_type, aobject)
         self.__port_prefix = port_prefix
@@ -1943,7 +1943,7 @@ class DevContainer(object):
         device.set_aid(self.__create_unique_aid(device.get_qid()))
         self.__devices.append(device)
         if err:
-            return ("Errors occured while adding device %s into %s:\n%s"
+            return ("Errors occurred while adding device %s into %s:\n%s"
                     % (device, self, err))
 
     def hotplug(self, device, monitor, verify=True, force=False):
@@ -2001,7 +2001,7 @@ class DevContainer(object):
     def hotplug_verified(self):
         """
         This function should be used after you verify, that hotplug was
-        successfull. For each hotplug call, hotplug_verified have to be
+        successful. For each hotplug call, hotplug_verified have to be
         executed in order to mark VM as clear.
         @warning: If you can't verify, that hotplug was successful, don't
                   use this function! You could screw-up following tests.

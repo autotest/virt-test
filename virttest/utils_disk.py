@@ -71,7 +71,7 @@ class Disk(object):
     def close(self):
         os.chmod(self.path, 0755)
         cleanup(self.mount)
-        logging.debug("Disk %s successfuly set", self.path)
+        logging.debug("Disk %s successfully set", self.path)
 
 
 class FloppyDisk(Disk):
@@ -213,7 +213,7 @@ class CdromDisk(Disk):
 
         os.chmod(self.path, 0755)
         cleanup(self.mount)
-        logging.debug("unattended install CD image %s successfuly created",
+        logging.debug("unattended install CD image %s successfully created",
                       self.path)
 
 

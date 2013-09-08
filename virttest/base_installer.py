@@ -233,7 +233,7 @@ class BaseInstaller(object):
 
         Ideas for using this method:
           * check MD5SUM/SHA1SUM for tarball downloads
-          * check RPM files, probaly by signature (rpm -k)
+          * check RPM files, probably by signature (rpm -k)
           * git status and check if there's no locally modified files
         '''
         pass

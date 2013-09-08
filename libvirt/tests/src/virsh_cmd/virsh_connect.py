@@ -185,9 +185,9 @@ def run_virsh_connect(test, params, env):
     try:
         try:
             uri = do_virsh_connect(connect_uri, connect_opt)
-            #connect sucessfully
+            #connect successfully
             if status_error == "yes":
-                raise error.TestFail("Connect sucessfully in the "
+                raise error.TestFail("Connect successfully in the "
                                      "case expected to fail.")
             #get the expect uri when connect argument is ""
             if connect_uri == "":

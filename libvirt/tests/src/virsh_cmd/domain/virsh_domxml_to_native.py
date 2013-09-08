@@ -21,11 +21,11 @@ def run_virsh_domxml_to_native(test, params, env):
 
     def compare(conv_arg):
         """
-        Compare converted infomation with vm's infomation.
+        Compare converted information with vm's information.
 
-        @param: conv_arg : Converted infomation.
-        @return: True if converted infomation has no diffrent from
-                 vm's infomation.
+        @param: conv_arg : Converted information.
+        @return: True if converted information has no different from
+                 vm's information.
         """
         pid = vm.get_pid()
         cmdline_tmp = utils.system_output("cat -v /proc/%d/cmdline" % pid)

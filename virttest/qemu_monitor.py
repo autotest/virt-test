@@ -322,7 +322,7 @@ class Monitor:
         Send HMP command
 
         This method allows code to send HMP commands without the need to check
-        if ther monitor is QMPMonitor or HumanMonitor.
+        if the monitor is QMPMonitor or HumanMonitor.
 
         @param cmd: human monitor command.
         @param timeout: Time duration to wait for response
@@ -725,7 +725,7 @@ class HumanMonitor(Monitor):
         'memsave val=0 size=10240 filename=memsave'
         Command without parameter: 'sendkey ctrl-alt-f1'
 
-        @param cmdlines: Commands send to qemu which is seperated by ";". For
+        @param cmdlines: Commands send to qemu which is separated by ";". For
                          command with parameters command should send in a string
                          with this format:
                          $command $arg_name=$arg_value $arg_name=$arg_value
@@ -1610,7 +1610,7 @@ class QMPMonitor(Monitor):
         'memsave val=0 size=10240 filename=memsave'
         Command without parameter: 'query-vnc'
 
-        @param cmdlines: Commands send to qemu which is seperated by ";". For
+        @param cmdlines: Commands send to qemu which is separated by ";". For
                          command with parameters command should send in a string
                          with this format:
                          $command $arg_name=$arg_value $arg_name=$arg_value

@@ -11,7 +11,7 @@ def run_yonit_bitmap(test, params, env):
     for regression test of BZ #556455.
 
     Run the benchmark (infinite) loop background using
-    run_guest_test_background, and detect the existance of the process
+    run_guest_test_background, and detect the existence of the process
     in guest.
 
       1. If the process exits before test timeout, that means the benchmark

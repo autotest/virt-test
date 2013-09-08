@@ -457,7 +457,7 @@ class SSHConnection(ConnectionBase):
                 tool = os_dep.command(toolName)
             except ValueError:
                 logging.debug("%s executable not set or found on path,"
-                              "some fucntion of connection will fail.",
+                              "some function of connection will fail.",
                               toolName)
                 tool = '/bin/true'
             self.dict_set(key, tool)

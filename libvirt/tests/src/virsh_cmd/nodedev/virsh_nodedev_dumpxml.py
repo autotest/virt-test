@@ -30,7 +30,7 @@ def do_nodedev_dumpxml(dev_name, dev_opt=""):
     key2value_dict_xml = nodedevxml.get_key2value_dict()
     #Get the dict of key to path in sysfs.
     #key2syspath_dict contain the all keys and the path of file which contain
-    #                 infomation for each key.
+    #                 information for each key.
     key2syspath_dict = nodedevxml.get_key2syspath_dict()
     #Get the values contained in files.
     #key2value_dict_sys contain the all keys and values in sysfs.
@@ -71,7 +71,7 @@ def run_virsh_nodedev_dumpxml(test, params, env):
     try:
         do_nodedev_dumpxml(dev_name=device_name, dev_opt=device_opt)
         if status_error:
-            raise error.TestFail('Nodedev dumpxml successed in negitive test.')
+            raise error.TestFail('Nodedev dumpxml successed in negative test.')
         else:
             pass
     except error.TestError, e:

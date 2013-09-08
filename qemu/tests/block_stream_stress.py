@@ -80,7 +80,7 @@ class BlockStreamStress(blk_stream.BlockStream):
                                      text="wait stress app quit",
                                      step=1.0, timeout=params["wait_timeout"])
         if not stoped:
-            raise error.TestFail("stress app is still runing")
+            raise error.TestFail("stress app is still running")
 
     def app_runing(self):
         """

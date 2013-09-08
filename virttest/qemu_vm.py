@@ -661,7 +661,7 @@ class VM(virt_vm.BaseVM):
                         fail_param.append(param)
             if fail_param:
                 msg = ("parameter %s is not support in device pci-assign."
-                       " It only support following paramter:\n %s" %
+                       " It only support following parameter:\n %s" %
                        (param, pcidevice_help))
                 logging.warn(msg)
             devices.insert(dev)
@@ -1857,7 +1857,7 @@ class VM(virt_vm.BaseVM):
                 self.pa_pci_ids = self.pci_assignable.request_devs()
 
                 if self.pa_pci_ids:
-                    logging.debug("Successfuly assigned devices: %s",
+                    logging.debug("Successfully assigned devices: %s",
                                   self.pa_pci_ids)
                 else:
                     raise virt_vm.VMPAError(pa_type)
@@ -1882,7 +1882,7 @@ class VM(virt_vm.BaseVM):
                 else:
                     utils_misc.log_last_traceback('Fail to create qemu'
                                                   'command:')
-                raise virt_vm.VMStartError(self.name, 'Error occured while '
+                raise virt_vm.VMStartError(self.name, 'Error occurred while '
                                            'executing make_create_command(). '
                                            'Check the log for traceback.')
 

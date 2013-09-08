@@ -24,7 +24,7 @@ def run_virsh_domxml_from_native(test, params, env):
         """
         Put dumpxml vm'infomation to a file
 
-        @param: guest_args : File which will save config infomation.
+        @param: guest_args : File which will save config information.
         """
         pid = vm.get_pid()
         cmdline =  utils.system_output("cat -v /proc/%d/cmdline" % pid)
@@ -40,7 +40,7 @@ def run_virsh_domxml_from_native(test, params, env):
     invalid_guest_args = params.get("dfn_invalid_guest_args")
     status_error = params.get("status_error")
 
-    #put vm's infomation to a file
+    #put vm's information to a file
     if guest_args != "":
         if os.path.dirname(guest_args) is "":
             guest_args = os.path.join(test.tmpdir, guest_args)

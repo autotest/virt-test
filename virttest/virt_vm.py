@@ -409,7 +409,7 @@ class BaseVM(object):
 
     So called "protected" methods are intended to be used only by VM classes,
     and not be consumed by tests. Theses should respect a naming convention
-    and always be preceeded by a single underline.
+    and always be preceded by a single underline.
 
     Currently most (if not all) methods are public and appears to be consumed
     by tests. It is a ongoing task to determine whether  methods should be

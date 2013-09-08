@@ -89,7 +89,7 @@ def run_format_disk(test, params, env):
         if s != 0:
             raise error.TestFail("Read file error: %s" % o)
         if o.strip() != ranstr:
-            raise error.TestFail("The content writen to file has changed")
+            raise error.TestFail("The content written to file has changed")
 
     umount_cmd = params.get("umount_cmd")
     if umount_cmd:
