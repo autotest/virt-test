@@ -520,7 +520,7 @@ class FileChecker(object):
         path = self._get_checked_filename()
 
         try:
-            if not run_pep8.check(path):
+            if run_pep8.check(path):
                 success = False
                 logging.error("File non PEP8 compliant: %s", path[2:])
         except Exception, details:
