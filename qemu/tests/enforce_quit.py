@@ -12,9 +12,9 @@ def run_enforce_quit(test, params, env):
     1). boot guest with enforce params
     2). guest will quit if flags is not supported in host
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
 
     guest_cpumodel = params.get("cpu_model", "Conroe").split(",")[0]

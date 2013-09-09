@@ -11,9 +11,9 @@ def run_balloon_disable(test, params, env):
     1) Log into a guest
     2) Send a system monitor command (info balloon) and check return value
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

@@ -8,9 +8,9 @@ def run_usb_host(test, params, env):
     """
     Test usb host device passthrough
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     @error.context_aware
     def usb_dev_hotplug():

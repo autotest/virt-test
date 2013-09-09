@@ -24,9 +24,9 @@ class QemuImg(storage.QemuImg):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images.
         """
         storage.QemuImg(params, root_dir, tag)
         # Please init image_cmd for libvirt in this class
@@ -36,7 +36,7 @@ class QemuImg(storage.QemuImg):
         """
         Create an image.
 
-        @param params: Dictionary containing the test parameters.
+        :param params: Dictionary containing the test parameters.
 
         @note: params should contain:
         """
@@ -46,8 +46,8 @@ class QemuImg(storage.QemuImg):
         """
         Convert image
 
-        @param params: A dict
-        @param root_dir: dir for save the convert image
+        :param params: A dict
+        :param root_dir: dir for save the convert image
 
         @note: params should contain:
         """
@@ -57,7 +57,7 @@ class QemuImg(storage.QemuImg):
         """
         Rebase image
 
-        @param params: A dict
+        :param params: A dict
 
         @note: params should contain:
         """
@@ -81,7 +81,7 @@ class QemuImg(storage.QemuImg):
         """
         Delete a snapshot image.
 
-        @param blkdebug_cfg: The configure file of blkdebug
+        :param blkdebug_cfg: The configure file of blkdebug
 
         @note: params should contain:
                snapshot_image_name -- the name of snapshot image file
@@ -100,8 +100,8 @@ class QemuImg(storage.QemuImg):
         """
         Check an image using the appropriate tools for each virt backend.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
 
         @note: params should contain:
 
@@ -167,7 +167,7 @@ class StoragePool(object):
         """
         Get pool's state.
 
-        @return: active/inactive, and None when something wrong.
+        :return: active/inactive, and None when something wrong.
         """
         try:
             pools = self.list_pools()
@@ -186,7 +186,7 @@ class StoragePool(object):
         """
         Get pool's information.
 
-        @return: A dict include pool's information:
+        :return: A dict include pool's information:
                 Name ==> value
                 UUID ==> value
                 ...

@@ -207,8 +207,8 @@ class NodedevXMLBase(base.LibvirtXMLBase):
         """
         Init a cap class for a specific type.
 
-        @param cap_type: the type of capability.
-        @return: instanse of the cap.
+        :param cap_type: the type of capability.
+        :return: instanse of the cap.
         """
         cap_class_name = NodedevXMLBase.__type2class_dict__[cap_type]
         cap_class = globals()[cap_class_name]

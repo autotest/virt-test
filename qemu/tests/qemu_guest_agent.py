@@ -213,9 +213,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Test steps:
         1) Send "guest-sync" command in the host side.
 
-        @param test: kvm test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environmen.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
         """
         error.context("Check guest agent command 'guest-sync'", logging.info)
         self.gagent.sync()
@@ -244,9 +244,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Shutdown guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environmen.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
         if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
@@ -257,9 +257,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Reboot guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environmen.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_REBOOT)
         pattern = params["gagent_guest_reboot_pattern"]
@@ -280,9 +280,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         Halt guest with guest agent command "guest-shutdown"
 
-        @param test: kvm test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environmen.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_HALT)
         pattern = params["gagent_guest_shutdown_pattern"]
@@ -339,9 +339,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         3) Check the FS is frozen from both guest agent side and guest os side.
         4) Thaw the FS.
 
-        @param test: kvm test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environmen.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
         """
         error.base_context("Check guest agent command 'guest-fsfreeze-freeze'",
                            logging.info)
@@ -450,9 +450,9 @@ def run_qemu_guest_agent(test, params, env):
     2) Install qemu-guest-agent package in guest.
     3) Run some basic test for qemu guest agent.
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
     if params["os_type"] == "windows":
         gagent_test = QemuGuestAgentBasicCheckWin(test, params, env)

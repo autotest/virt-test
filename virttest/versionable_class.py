@@ -174,7 +174,7 @@ class BB(VM_container):
 def isclass(obj):
     """
     :param obj: Object for inspection if obj is class.
-    :return: true if the object is a class.
+    :return:: true if the object is a class.
     """
     return isinstance(obj, (type, types.ClassType))
 
@@ -203,7 +203,7 @@ class ModuleWrapper(object):
 
         :param name: Name of specific object.
         :type name: string.
-        :return: specific class when name of class starts with managed or
+        :return:: specific class when name of class starts with managed or
                  normal attribute from wrapped class.
         """
         if not name in self.wrapped.__dict__:
@@ -333,7 +333,7 @@ class Manager(object):
         :param orig_class: Original class
         :type orig_class: class
 
-        :return: Derived alternative class
+        :return:: Derived alternative class
         :rtype: class
         """
         for m_cls in cls.__mro__:
@@ -353,7 +353,7 @@ def factory(orig_cls, *args, **kargs):
     :param orig_class: Class from which should be derived good version.
     :param *args: list of parameters for _ir_right_ver
     :param *kargs: dict of named parameters for _ir_right_ver
-    :return: params specific class.
+    :return:: params specific class.
     :rtype: class
     """
     return Manager(orig_cls.__module__).factory(orig_cls, *args, **kargs)[0]

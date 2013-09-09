@@ -17,9 +17,9 @@ def run_migration_with_file_transfer(test, params, env):
     5) Transfer file from guest back to host.
     6) Repeatedly migrate VM and wait until transfer's finished.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

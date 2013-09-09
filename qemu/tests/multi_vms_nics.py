@@ -29,9 +29,9 @@ def run_multi_vms_nics(test, params, env):
        6.3) Compare original file and transferred file
     7) Repeat step 3 - 6 on every nic.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def ping(session, nic, dst_ip, strick_check, flood_minutes):

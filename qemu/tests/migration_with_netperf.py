@@ -14,9 +14,9 @@ def run_migration_with_netperf(test, params, env):
     4) Migrate the guest in local during netperf clients working.
     5) Repeatedly migrate VM and wait until netperf clients stopped.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
 
     def start_netperf_server():

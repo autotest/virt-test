@@ -23,9 +23,9 @@ def run_time_manage(test, params, env):
     7) Print the drift values for all sessions
     8) TODO: Validate if the drift value has to be within defined value
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     # Checking the main vm is alive
     vm = env.get_vm(params["main_vm"])

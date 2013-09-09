@@ -17,15 +17,15 @@ def run_migration(test, params, env):
     4) Compare the output of a reference command executed on the source with
             the output of the same command on the destination machine.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def guest_stress_start(guest_stress_test):
         """
         Start a stress test in guest, Could be 'iozone', 'dd', 'stress'
 
-        @param type: type of stress test.
+        :param type: type of stress test.
         """
         from tests import autotest_control
 

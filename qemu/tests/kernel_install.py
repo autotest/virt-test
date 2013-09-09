@@ -20,9 +20,9 @@ def run_kernel_install(test, params, env):
     7) Do sub tests in guest with new kernel (optional)
     8) Restore grub and reboot guest (optional)
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     sub_test_path = os.path.join(test.bindir, "../%s" % CLIENT_TEST)
     _tmp_file_list = []

@@ -103,11 +103,11 @@ def handle_prompts(session, username, password, prompt, timeout=10, debug=False)
 
     @brief: Log into a remote host (guest) using SSH or Telnet.
 
-    @param session: An Expect or ShellSession instance to operate on
-    @param username: The username to send in reply to a login prompt
-    @param password: The password to send in reply to a password prompt
-    @param prompt: The shell prompt that indicates a successful login
-    @param timeout: The maximal time duration (in seconds) to wait for each
+    :param session: An Expect or ShellSession instance to operate on
+    :param username: The username to send in reply to a login prompt
+    :param password: The password to send in reply to a password prompt
+    :param prompt: The shell prompt that indicates a successful login
+    :param timeout: The maximal time duration (in seconds) to wait for each
             step of the login procedure (i.e. the "Are you sure" prompt, the
             password prompt, the shell prompt, etc)
     @raise LoginTimeoutError: If timeout expires
@@ -183,21 +183,21 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     """
     Log into a remote host (guest) using SSH/Telnet/Netcat.
 
-    @param client: The client to use ('ssh', 'telnet' or 'nc')
-    @param host: Hostname or IP address
-    @param port: Port to connect to
-    @param username: Username (if required)
-    @param password: Password (if required)
-    @param prompt: Shell prompt (regular expression)
-    @param linesep: The line separator to use when sending lines
+    :param client: The client to use ('ssh', 'telnet' or 'nc')
+    :param host: Hostname or IP address
+    :param port: Port to connect to
+    :param username: Username (if required)
+    :param password: Password (if required)
+    :param prompt: Shell prompt (regular expression)
+    :param linesep: The line separator to use when sending lines
             (e.g. '\\n' or '\\r\\n')
-    @param log_filename: If specified, log all output to this file
-    @param timeout: The maximal time duration (in seconds) to wait for
+    :param log_filename: If specified, log all output to this file
+    :param timeout: The maximal time duration (in seconds) to wait for
             each step of the login procedure (i.e. the "Are you sure" prompt
             or the password prompt)
     @raise LoginBadClientError: If an unknown client is requested
     @raise: Whatever handle_prompts() raises
-    @return: A ShellSession object.
+    :return: A ShellSession object.
     """
     if client == "ssh":
         cmd = ("ssh -o UserKnownHostsFile=/dev/null "
@@ -231,13 +231,13 @@ def wait_for_login(
     Make multiple attempts to log into a remote host (guest) until one succeeds
     or timeout expires.
 
-    @param timeout: Total time duration to wait for a successful login
-    @param internal_timeout: The maximal time duration (in seconds) to wait for
+    :param timeout: Total time duration to wait for a successful login
+    :param internal_timeout: The maximal time duration (in seconds) to wait for
             each step of the login procedure (e.g. the "Are you sure" prompt
             or the password prompt)
-    @see: remote_login()
+    :see:: remote_login()
     @raise: Whatever remote_login() raises
-    @return: A ShellSession object.
+    :return: A ShellSession object.
     """
     logging.debug("Attempting to log into %s:%s using %s (timeout %ds)",
                   host, port, client, timeout)
@@ -263,11 +263,11 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
 
     @brief: Transfer files using SCP, given a command line.
 
-    @param session: An Expect or ShellSession instance to operate on
-    @param password_list: Password list to send in reply to the password prompt
-    @param transfer_timeout: The time duration (in seconds) to wait for the
+    :param session: An Expect or ShellSession instance to operate on
+    :param password_list: Password list to send in reply to the password prompt
+    :param transfer_timeout: The time duration (in seconds) to wait for the
             transfer to complete.
-    @param login_timeout: The maximal time duration (in seconds) to wait for
+    :param login_timeout: The maximal time duration (in seconds) to wait for
             each step of the login procedure (i.e. the "Are you sure" prompt or
             the password prompt)
     @raise SCPAuthenticationError: If authentication fails
@@ -334,13 +334,13 @@ def remote_scp(command, password_list, log_filename=None, transfer_timeout=600,
 
     @brief: Transfer files using SCP, given a command line.
 
-    @param command: The command to execute
+    :param command: The command to execute
         (e.g. "scp -r foobar root@localhost:/tmp/").
-    @param password_list: Password list to send in reply to a password prompt.
-    @param log_filename: If specified, log all output to this file
-    @param transfer_timeout: The time duration (in seconds) to wait for the
+    :param password_list: Password list to send in reply to a password prompt.
+    :param log_filename: If specified, log all output to this file
+    :param transfer_timeout: The time duration (in seconds) to wait for the
             transfer to complete.
-    @param login_timeout: The maximal time duration (in seconds) to wait for
+    :param login_timeout: The maximal time duration (in seconds) to wait for
             each step of the login procedure (i.e. the "Are you sure" prompt
             or the password prompt)
     @raise: Whatever _remote_scp() raises
@@ -367,14 +367,14 @@ def scp_to_remote(host, port, username, password, local_path, remote_path,
     """
     Copy files to a remote host (guest) through scp.
 
-    @param host: Hostname or IP address
-    @param username: Username (if required)
-    @param password: Password (if required)
-    @param local_path: Path on the local machine where we are copying from
-    @param remote_path: Path on the remote machine where we are copying to
-    @param limit: Speed limit of file transfer.
-    @param log_filename: If specified, log all output to this file
-    @param timeout: The time duration (in seconds) to wait for the transfer
+    :param host: Hostname or IP address
+    :param username: Username (if required)
+    :param password: Password (if required)
+    :param local_path: Path on the local machine where we are copying from
+    :param remote_path: Path on the remote machine where we are copying to
+    :param limit: Speed limit of file transfer.
+    :param log_filename: If specified, log all output to this file
+    :param timeout: The time duration (in seconds) to wait for the transfer
             to complete.
     @raise: Whatever remote_scp() raises
     """
@@ -395,14 +395,14 @@ def scp_from_remote(host, port, username, password, remote_path, local_path,
     """
     Copy files from a remote host (guest).
 
-    @param host: Hostname or IP address
-    @param username: Username (if required)
-    @param password: Password (if required)
-    @param local_path: Path on the local machine where we are copying from
-    @param remote_path: Path on the remote machine where we are copying to
-    @param limit: Speed limit of file transfer.
-    @param log_filename: If specified, log all output to this file
-    @param timeout: The time duration (in seconds) to wait for the transfer
+    :param host: Hostname or IP address
+    :param username: Username (if required)
+    :param password: Password (if required)
+    :param local_path: Path on the local machine where we are copying from
+    :param remote_path: Path on the remote machine where we are copying to
+    :param limit: Speed limit of file transfer.
+    :param log_filename: If specified, log all output to this file
+    :param timeout: The time duration (in seconds) to wait for the transfer
             to complete.
     @raise: Whatever remote_scp() raises
     """
@@ -424,17 +424,17 @@ def scp_between_remotes(src, dst, port, s_passwd, d_passwd, s_name, d_name,
     """
     Copy files from a remote host (guest) to another remote host (guest).
 
-    @param src/dst: Hostname or IP address of src and dst
-    @param s_name/d_name: Username (if required)
-    @param s_passwd/d_passwd: Password (if required)
-    @param s_path/d_path: Path on the remote machine where we are copying
+    :param src/dst: Hostname or IP address of src and dst
+    :param s_name/d_name: Username (if required)
+    :param s_passwd/d_passwd: Password (if required)
+    :param s_path/d_path: Path on the remote machine where we are copying
                          from/to
-    @param limit: Speed limit of file transfer.
-    @param log_filename: If specified, log all output to this file
-    @param timeout: The time duration (in seconds) to wait for the transfer
+    :param limit: Speed limit of file transfer.
+    :param log_filename: If specified, log all output to this file
+    :param timeout: The time duration (in seconds) to wait for the transfer
             to complete.
 
-    @return: True on success and False on failure.
+    :return: True on success and False on failure.
     """
     if (limit):
         limit = "-l %s" % (limit)
@@ -458,18 +458,18 @@ def nc_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
     Copy files from a remote host (guest) to another remote host (guest) using
     netcat. now this method only support linux
 
-    @param src/dst: Hostname or IP address of src and dst
-    @param s_name/d_name: Username (if required)
-    @param s_passwd/d_passwd: Password (if required)
-    @param s_path/d_path: Path on the remote machine where we are copying
-    @param c_type: Login method to remote host(guest).
-    @param c_prompt : command line prompt of remote host(guest)
-    @param d_port:  the port data transfer
-    @param d_protocol : nc protocol use (tcp or udp)
-    @param timeout: If a connection and stdin are idle for more than timeout
+    :param src/dst: Hostname or IP address of src and dst
+    :param s_name/d_name: Username (if required)
+    :param s_passwd/d_passwd: Password (if required)
+    :param s_path/d_path: Path on the remote machine where we are copying
+    :param c_type: Login method to remote host(guest).
+    :param c_prompt : command line prompt of remote host(guest)
+    :param d_port:  the port data transfer
+    :param d_protocol : nc protocol use (tcp or udp)
+    :param timeout: If a connection and stdin are idle for more than timeout
                     seconds, then the connection is silently closed.
 
-    @return: True on success and False on failure.
+    :return: True on success and False on failure.
     """
     s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
     d_session = remote_login(c_type, dst, s_port, d_name, d_passwd, c_prompt)
@@ -500,14 +500,14 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
     Copy files from a remote host (guest) to another remote host (guest) by
     udp.
 
-    @param src/dst: Hostname or IP address of src and dst
-    @param s_name/d_name: Username (if required)
-    @param s_passwd/d_passwd: Password (if required)
-    @param s_path/d_path: Path on the remote machine where we are copying
-    @param c_type: Login method to remote host(guest).
-    @param c_prompt : command line prompt of remote host(guest)
-    @param d_port:  the port data transfer
-    @param timeout: data transfer timeout
+    :param src/dst: Hostname or IP address of src and dst
+    :param s_name/d_name: Username (if required)
+    :param s_passwd/d_passwd: Password (if required)
+    :param s_path/d_path: Path on the remote machine where we are copying
+    :param c_type: Login method to remote host(guest).
+    :param c_prompt : command line prompt of remote host(guest)
+    :param d_port:  the port data transfer
+    :param timeout: data transfer timeout
 
     """
     s_session = remote_login(c_type, src, s_port, s_name, s_passwd, c_prompt)
@@ -629,16 +629,16 @@ def copy_files_to(address, client, username, password, port, local_path,
     """
     Copy files to a remote host (guest) using the selected client.
 
-    @param client: Type of transfer client
-    @param username: Username (if required)
-    @param password: Password (if requried)
-    @param local_path: Path on the local machine where we are copying from
-    @param remote_path: Path on the remote machine where we are copying to
-    @param address: Address of remote host(guest)
-    @param limit: Speed limit of file transfer.
-    @param log_filename: If specified, log all output to this file (SCP only)
-    @param verbose: If True, log some stats using logging.debug (RSS only)
-    @param timeout: The time duration (in seconds) to wait for the transfer to
+    :param client: Type of transfer client
+    :param username: Username (if required)
+    :param password: Password (if requried)
+    :param local_path: Path on the local machine where we are copying from
+    :param remote_path: Path on the remote machine where we are copying to
+    :param address: Address of remote host(guest)
+    :param limit: Speed limit of file transfer.
+    :param log_filename: If specified, log all output to this file (SCP only)
+    :param verbose: If True, log some stats using logging.debug (RSS only)
+    :param timeout: The time duration (in seconds) to wait for the transfer to
             complete.
     @raise: Whatever remote_scp() raises
     """
@@ -660,16 +660,16 @@ def copy_files_from(address, client, username, password, port, remote_path,
     """
     Copy files from a remote host (guest) using the selected client.
 
-    @param client: Type of transfer client
-    @param username: Username (if required)
-    @param password: Password (if requried)
-    @param remote_path: Path on the remote machine where we are copying from
-    @param local_path: Path on the local machine where we are copying to
-    @param address: Address of remote host(guest)
-    @param limit: Speed limit of file transfer.
-    @param log_filename: If specified, log all output to this file (SCP only)
-    @param verbose: If True, log some stats using logging.debug (RSS only)
-    @param timeout: The time duration (in seconds) to wait for the transfer to
+    :param client: Type of transfer client
+    :param username: Username (if required)
+    :param password: Password (if requried)
+    :param remote_path: Path on the remote machine where we are copying from
+    :param local_path: Path on the local machine where we are copying to
+    :param address: Address of remote host(guest)
+    :param limit: Speed limit of file transfer.
+    :param log_filename: If specified, log all output to this file (SCP only)
+    :param verbose: If True, log some stats using logging.debug (RSS only)
+    :param timeout: The time duration (in seconds) to wait for the transfer to
     complete.
     @raise: Whatever remote_scp() raises
     """
@@ -697,15 +697,15 @@ class RemoteFile(object):
         """
         Initialization of RemoteFile class.
 
-        @param address: Address of remote host(guest)
-        @param client: Type of transfer client
-        @param username: Username (if required)
-        @param password: Password (if requried)
-        @param remote_path: Path of file which we want to edit on remote.
-        @param limit: Speed limit of file transfer.
-        @param log_filename: If specified, log all output to this file(SCP only)
-        @param verbose: If True, log some stats using logging.debug (RSS only)
-        @param timeout: The time duration (in seconds) to wait for the
+        :param address: Address of remote host(guest)
+        :param client: Type of transfer client
+        :param username: Username (if required)
+        :param password: Password (if requried)
+        :param remote_path: Path of file which we want to edit on remote.
+        :param limit: Speed limit of file transfer.
+        :param log_filename: If specified, log all output to this file(SCP only)
+        :param verbose: If True, log some stats using logging.debug (RSS only)
+        :param timeout: The time duration (in seconds) to wait for the
                         transfer tocomplete.
         """
         self.address = address
@@ -790,7 +790,7 @@ class RemoteFile(object):
         """
         Read file on local_path.
 
-        @return: string list got from readlines().
+        :return: string list got from readlines().
         """
         local_file = open(self.local_path, "r")
         lines = local_file.readlines()

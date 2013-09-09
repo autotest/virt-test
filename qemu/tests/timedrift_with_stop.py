@@ -18,9 +18,9 @@ def run_timedrift_with_stop(test, params, env):
     6) Take a second time reading.
     7) If the drift (in seconds) is higher than a user specified value, fail.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
     sleep_time = int(params.get("sleep_time", 30))

@@ -708,7 +708,7 @@ class Container(unittest.TestCase):
 
     def create_qdev(self, vm_name='vm1', strict_mode="no",
                     allow_hotplugged_vm="yes"):
-        """ @return: Initialized qemu_devices.DevContainer object """
+        """ :return: Initialized qemu_devices.DevContainer object """
         qemu_cmd = '/usr/bin/qemu_kvm'
         qemu_devices.utils.system_output.expect_call('%s -help' % qemu_cmd,
                                                      timeout=10, ignore_status=True

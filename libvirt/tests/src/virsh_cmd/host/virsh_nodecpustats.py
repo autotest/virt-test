@@ -69,9 +69,9 @@ def run_virsh_nodecpustats(test, params, env):
     def parse_output(output):
         """
         To get the output parsed into a dictionary
-        @param: virsh command output
+        :param virsh command output
 
-        @return: dict of user,system,idle,iowait times
+        :return: dict of user,system,idle,iowait times
         """
 
         # From the beginning of a line, group 1 is one or more word-characters,
@@ -96,9 +96,9 @@ def run_virsh_nodecpustats(test, params, env):
     def parse_percentage_output(output):
         """
         To get the output parsed into a dictionary
-        @param: virsh command output
+        :param virsh command output
 
-        @return: dict of user,system,idle,iowait times
+        :return: dict of user,system,idle,iowait times
         """
 
         # From the beginning of a line, group 1 is one or more word-characters,

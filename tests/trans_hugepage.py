@@ -24,9 +24,9 @@ def run_trans_hugepage(test, params, env):
     1) Smoke test
     2) Stress test
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def get_mem_status(params, role):
         if role == "host":

@@ -17,9 +17,9 @@ def run_cpuflags(test, params, env):
     """
     Boot guest with different cpu flags and check if guest works correctly.
 
-    @param test: kvm test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     utils_misc.Flag.aliases = utils_misc.kvm_map_flags_aliases
     qemu_binary = utils_misc.get_qemu_binary(params)
@@ -106,8 +106,8 @@ def run_cpuflags(test, params, env):
         """
         Get guest system cpuflags.
 
-        @param vm_session: session to checked vm.
-        @return: [corespond flags]
+        :param vm_session: session to checked vm.
+        :return: [corespond flags]
         """
         flags_re = re.compile(r'^flags\s*:(.*)$', re.MULTILINE)
         out = vm_session.cmd_output("cat /proc/cpuinfo")
@@ -119,8 +119,8 @@ def run_cpuflags(test, params, env):
         """
         Get cpu flags correspond with cpumodel parameters.
 
-        @param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
-        @return: [corespond flags]
+        :param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
+        :return: [corespond flags]
         """
         cmd = qemu_binary + " -cpu ?dump"
         output = utils.run(cmd).stdout
@@ -182,8 +182,8 @@ def run_cpuflags(test, params, env):
         """
         Get cpu flags correspond with cpumodel parameters.
 
-        @param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
-        @return: [corespond flags]
+        :param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
+        :return: [corespond flags]
         """
         p = ParseCpuFlags()
         cpus = p.parse_file(cpuflags_def)
@@ -223,8 +223,8 @@ def run_cpuflags(test, params, env):
         """
         Get cpu flags correspond with cpumodel parameters.
 
-        @param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
-        @return: [corespond flags]
+        :param cpumodel: Cpumodel parameter sended to <qemu-kvm-cmd>.
+        :return: [corespond flags]
         """
         p = ParseCpuFlags()
         p.parse_file(cpuflags_def)
@@ -234,7 +234,7 @@ def run_cpuflags(test, params, env):
         """
         Get all cpu models from qemu.
 
-        @return: cpu models.
+        :return: cpu models.
         """
         cmd = qemu_binary + " -cpu ?"
         output = utils.run(cmd).stdout
@@ -246,7 +246,7 @@ def run_cpuflags(test, params, env):
         """
         Get all cpu models from qemu.
 
-        @return: cpu models.
+        :return: cpu models.
         """
         cmd = qemu_binary + " -cpu ?"
         output = utils.run(cmd).stdout
@@ -279,8 +279,8 @@ def run_cpuflags(test, params, env):
         """
         Get all name of Flag.
 
-        @param cpu_flag: Flag
-        @return: all name of Flag.
+        :param cpu_flag: Flag
+        :return: all name of Flag.
         """
         cpu_flag = utils_misc.Flag(cpu_flag)
         for f in get_all_qemu_flags():
@@ -292,8 +292,8 @@ def run_cpuflags(test, params, env):
         """
         Parse qemu cpu params.
 
-        @param cpumodel: Cpu model command.
-        @return: All flags which guest must have.
+        :param cpumodel: Cpu model command.
+        :return: All flags which guest must have.
         """
         flags = cpumodel.split(",")
         cpumodel = flags[0]
@@ -315,10 +315,10 @@ def run_cpuflags(test, params, env):
         """
         Check if vm flags are same like flags select by cpumodel.
 
-        @param cpumodel: params for -cpu param in qemu-kvm
-        @param vm_session: session to vm to check flags.
+        :param cpumodel: params for -cpu param in qemu-kvm
+        :param vm_session: session to vm to check flags.
 
-        @return: ([excess], [missing]) flags
+        :return: ([excess], [missing]) flags
         """
         gf = get_guest_system_cpuflags(vm_session)
         rf = parse_qemu_cpucommand(cpumodel)
@@ -332,7 +332,7 @@ def run_cpuflags(test, params, env):
         """
         Get all cpumodels which set of flags is subset of hosts flags.
 
-        @return: [cpumodels]
+        :return: [cpumodels]
         """
         cpumodels = []
         for cpumodel in get_cpu_models():
@@ -345,8 +345,8 @@ def run_cpuflags(test, params, env):
         """
         Disable cpu in guest system.
 
-        @param cpu: CPU id to disable.
-        @param disable: if True disable cpu else enable cpu.
+        :param cpu: CPU id to disable.
+        :param disable: if True disable cpu else enable cpu.
         """
         system_cpu_dir = "/sys/devices/system/cpu/"
         cpu_online = system_cpu_dir + "cpu%d/online" % (cpu)
@@ -362,10 +362,10 @@ def run_cpuflags(test, params, env):
         """
         Disable cpu in guest system.
 
-        @param smp: Count of cpu core in system.
-        @param disable_cpu: List of disabled cpu.
+        :param smp: Count of cpu core in system.
+        :param disable_cpu: List of disabled cpu.
 
-        @return: List of CPUs that are still enabled after disable procedure.
+        :return: List of CPUs that are still enabled after disable procedure.
         """
         online = [0]
         for cpu in range(1, smp):
@@ -388,8 +388,8 @@ def run_cpuflags(test, params, env):
         """
         Install stress to vm.
 
-        @param vm: virtual machine.
-        @param dst_dir: Installation path.
+        :param vm: virtual machine.
+        :param dst_dir: Installation path.
         """
         session = vm.wait_for_login()
         vm.copy_files_to(cpuflags_src, dst_dir)
@@ -403,10 +403,10 @@ def run_cpuflags(test, params, env):
         """
         Check which flags work.
 
-        @param vm: Virtual machine.
-        @param path: Path of cpuflags_test
-        @param flags: Flags to test.
-        @return: Tuple (Working, not working, not tested) flags.
+        :param vm: Virtual machine.
+        :param path: Path of cpuflags_test
+        :param flags: Flags to test.
+        :return: Tuple (Working, not working, not tested) flags.
         """
         pass_Flags = []
         not_tested = []
@@ -460,7 +460,7 @@ def run_cpuflags(test, params, env):
         """
         Parse cpu_models from config file.
 
-        @return: [(cpumodel, extra_flags)]
+        :return: [(cpumodel, extra_flags)]
         """
         cpu_model = params.get("cpu_model", "")
         logging.debug("CPU model found: %s", str(cpu_model))
@@ -863,8 +863,8 @@ def run_cpuflags(test, params, env):
         """
         Send python object over network.
 
-        @param ip_addr: ipaddres of waiter for data.
-        @param obj: object to send
+        :param ip_addr: ipaddres of waiter for data.
+        :param obj: object to send
         """
         data = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
         socket.sendall("%6d" % len(data))
@@ -874,9 +874,9 @@ def run_cpuflags(test, params, env):
         """
         Receive python object over network.
 
-        @param ip_addr: ipaddres of waiter for data.
-        @param obj: object to send
-        @return: object from network
+        :param ip_addr: ipaddres of waiter for data.
+        :param obj: object to send
+        :return: object from network
         """
         try:
             time_start = time.time()

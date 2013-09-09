@@ -33,8 +33,8 @@ class Cgroup(object):
     def __init__(self, module, _client):
         """
         Constructor
-        @param module: Name of the cgroup module
-        @param _client: Test script pwd + name
+        :param module: Name of the cgroup module
+        :param _client: Test script pwd + name
         """
         self.module = module
         self._client = _client
@@ -56,7 +56,7 @@ class Cgroup(object):
         """
         Initializes object for use.
 
-        @param modules: Array of all available cgroup modules.
+        :param modules: Array of all available cgroup modules.
         """
         self.root = modules.get_pwd(self.module)
         if not self.root:
@@ -67,8 +67,8 @@ class Cgroup(object):
         """
         Get cgroup's full path
 
-        @param: cgroup: cgroup name
-        @return: cgroup's full path
+        :param cgroup: cgroup name
+        :return: cgroup's full path
         """
         if not isinstance(cgroup, str):
             raise error.TestError("cgroup type isn't string!")
@@ -78,8 +78,8 @@ class Cgroup(object):
         """
         Get cgroup's name
 
-        @param: pwd: cgroup name
-        @return: cgroup's name
+        :param pwd: cgroup name
+        :return: cgroup's name
         """
         if pwd is None:
             # root cgroup
@@ -97,8 +97,8 @@ class Cgroup(object):
         """
         Get cgroup's index in cgroups
 
-        @param: cgroup: cgroup name
-        @return: index of cgroup
+        :param cgroup: cgroup name
+        :return: index of cgroup
         """
         try:
             if self.__get_cgroup_pwd(cgroup) not in self.cgroups:
@@ -112,8 +112,8 @@ class Cgroup(object):
         """
         Make a cgroup by executing the cgcreate command
 
-        @params: cgroup: name of the cgroup to be created
-        @return: last cgroup index
+        :params: cgroup: name of the cgroup to be created
+        :return: last cgroup index
         """
         try:
             parent_cgroup = self.get_cgroup_name(pwd)
@@ -142,9 +142,9 @@ class Cgroup(object):
     def mk_cgroup(self, pwd=None, cgroup=None):
         """
         Creates new temporary cgroup
-        @param pwd: where to create this cgroup (default: self.root)
-        @param cgroup: desired cgroup name
-        @return: last cgroup index
+        :param pwd: where to create this cgroup (default: self.root)
+        :param cgroup: desired cgroup name
+        :return: last cgroup index
         """
         if pwd is None:
             pwd = self.root
@@ -168,9 +168,9 @@ class Cgroup(object):
         """
         Execute command in desired cgroup
 
-        @param: cgroup: Desired cgroup
-        @param: cmd: Executed command
-        @param: args: Executed command's parameters
+        :param cgroup: Desired cgroup
+        :param cmd: Executed command
+        :param args: Executed command's parameters
         """
         try:
             args_str = ""
@@ -188,7 +188,7 @@ class Cgroup(object):
         """
         Removes cgroup.
 
-        @param pwd: cgroup directory.
+        :param pwd: cgroup directory.
         """
         if isinstance(pwd, int):
             pwd = self.cgroups[pwd]
@@ -220,8 +220,8 @@ class Cgroup(object):
         """
         Delete desired cgroup.
 
-        @params cgroup: desired cgroup
-        @params force:If true, sub cgroup can be deleted with parent cgroup
+        :params cgroup: desired cgroup
+        :params force:If true, sub cgroup can be deleted with parent cgroup
         """
         try:
             cgroup_pwd = self.__get_cgroup_pwd(cgroup)
@@ -240,8 +240,8 @@ class Cgroup(object):
         """
         Classify pid into cgroup
 
-        @param pid: pid of the process
-        @param cgroup: cgroup name
+        :param pid: pid of the process
+        :param cgroup: cgroup name
         """
         try:
             cgroup_pwd = self.__get_cgroup_pwd(cgroup)
@@ -258,8 +258,8 @@ class Cgroup(object):
         """
         Get all pids in cgroup
 
-        @params: pwd: cgroup directory
-        @return: all pids(list)
+        :params: pwd: cgroup directory
+        :return: all pids(list)
         """
         if pwd is None:
             pwd = self.root
@@ -274,8 +274,8 @@ class Cgroup(object):
         """
         Executes cgroup_client.py with cmd parameter.
 
-        @param cmd: command to be executed
-        @return: subprocess.Popen() process
+        :param cmd: command to be executed
+        :return: subprocess.Popen() process
         """
         logging.debug("cg.test(): executing parallel process '%s'", cmd)
         cmd = self._client + ' ' + cmd
@@ -287,9 +287,9 @@ class Cgroup(object):
     def is_cgroup(self, pid, pwd):
         """
         Checks if the 'pid' process is in 'pwd' cgroup
-        @param pid: pid of the process
-        @param pwd: cgroup directory
-        @return: 0 when is 'pwd' member
+        :param pid: pid of the process
+        :param pwd: cgroup directory
+        :return: 0 when is 'pwd' member
         """
         if isinstance(pwd, int):
             pwd = self.cgroups[pwd]
@@ -301,16 +301,16 @@ class Cgroup(object):
     def is_root_cgroup(self, pid):
         """
         Checks if the 'pid' process is in root cgroup (WO cgroup)
-        @param pid: pid of the process
-        @return: 0 when is 'root' member
+        :param pid: pid of the process
+        :return: 0 when is 'root' member
         """
         return self.is_cgroup(pid, self.root)
 
     def set_cgroup(self, pid, pwd=None):
         """
         Sets cgroup membership
-        @param pid: pid of the process
-        @param pwd: cgroup directory
+        :param pid: pid of the process
+        :param pwd: cgroup directory
         """
         if pwd is None:
             pwd = self.root
@@ -327,17 +327,17 @@ class Cgroup(object):
     def set_root_cgroup(self, pid):
         """
         Resets the cgroup membership (sets to root)
-        @param pid: pid of the process
-        @return: 0 when PASSED
+        :param pid: pid of the process
+        :return: 0 when PASSED
         """
         return self.set_cgroup(pid, self.root)
 
     def get_property(self, prop, pwd=None):
         """
         Gets the property value
-        @param prop: property name (file)
-        @param pwd: cgroup directory
-        @return: [] values or None when FAILED
+        :param prop: property name (file)
+        :param pwd: cgroup directory
+        :return: [] values or None when FAILED
         """
         if pwd is None:
             pwd = self.root
@@ -356,11 +356,11 @@ class Cgroup(object):
     def set_property_h(self, prop, value, pwd=None, check=True, checkprop=None):
         """
         Sets the one-line property value concerning the K,M,G postfix
-        @param prop: property name (file)
-        @param value: desired value
-        @param pwd: cgroup directory
-        @param check: check the value after setup / override checking value
-        @param checkprop: override prop when checking the value
+        :param prop: property name (file)
+        :param value: desired value
+        :param pwd: cgroup directory
+        :param check: check the value after setup / override checking value
+        :param checkprop: override prop when checking the value
         """
         _value = value
         try:
@@ -381,11 +381,11 @@ class Cgroup(object):
     def set_property(self, prop, value, pwd=None, check=True, checkprop=None):
         """
         Sets the property value
-        @param prop: property name (file)
-        @param value: desired value
-        @param pwd: cgroup directory
-        @param check: check the value after setup / override checking value
-        @param checkprop: override prop when checking the value
+        :param prop: property name (file)
+        :param value: desired value
+        :param pwd: cgroup directory
+        :param check: check the value after setup / override checking value
+        :param checkprop: override prop when checking the value
         """
         value = str(value)
         if pwd is None:
@@ -414,11 +414,11 @@ class Cgroup(object):
         """
         Sets the property value by cgset command
 
-        @param: prop: property name (file)
-        @param: value: desired value
-        @param pwd: cgroup directory
-        @param check: check the value after setup / override checking value
-        @param checkprop: override prop when checking the value
+        :param prop: property name (file)
+        :param value: desired value
+        :param pwd: cgroup directory
+        :param check: check the value after setup / override checking value
+        :param checkprop: override prop when checking the value
         """
         if pwd is None:
             pwd = self.root
@@ -530,8 +530,8 @@ class CgroupModules(object):
         """
         Checks the mounted modules and if necessary mounts them into tmp
             mountdir.
-        @param _modules: Desired modules.'memory','cpu,cpuset'...
-        @return: Number of initialized modules.
+        :param _modules: Desired modules.'memory','cpu,cpuset'...
+        :return: Number of initialized modules.
         """
         logging.debug("Desired cgroup modules: %s", _modules)
         mounts = []
@@ -576,8 +576,8 @@ class CgroupModules(object):
     def get_pwd(self, module):
         """
         Returns the mount directory of 'module'
-        @param module: desired module (memory, ...)
-        @return: mount directory of 'module' or None
+        :param module: desired module (memory, ...)
+        :return: mount directory of 'module' or None
         """
         try:
             i = self.modules[0].index(module)
@@ -590,8 +590,8 @@ class CgroupModules(object):
 def get_load_per_cpu(_stats=None):
     """
     Gather load per cpu from /proc/stat
-    @param _stats: previous values
-    @return: list of diff/absolute values of CPU times [SUM, CPU1, CPU2, ...]
+    :param _stats: previous values
+    :return: list of diff/absolute values of CPU times [SUM, CPU1, CPU2, ...]
     """
     stats = []
     f_stat = open('/proc/stat', 'r')
@@ -614,7 +614,7 @@ def get_cgroup_mountpoint(controller):
     Get desired controller's mountpoint
 
     @controller: Desired controller
-    @return: controller's mountpoint
+    :return: controller's mountpoint
     """
     if controller not in get_all_controllers():
         raise error.TestError("Doesn't support controller <%s>" % controller)
@@ -629,7 +629,7 @@ def get_all_controllers():
     """
     Get all controllers used in system
 
-    @return: all used controllers(controller_list)
+    :return: all used controllers(controller_list)
     """
     try:
         result = utils.run("lssubsys", ignore_status=False)
@@ -648,10 +648,10 @@ def resolve_task_cgroup_path(pid, controller):
     """
     Resolving cgroup mount path of a particular task
 
-    @params: pid : process id of a task for which the cgroup path required
-    @params: controller: takes one of the controller names in controller list
+    :params: pid : process id of a task for which the cgroup path required
+    :params: controller: takes one of the controller names in controller list
 
-    @return: resolved path for cgroup controllers of a given pid
+    :return: resolved path for cgroup controllers of a given pid
     """
     if controller not in get_all_controllers():
         raise error.TestError("Doesn't support controller <%s>" % controller)
@@ -689,7 +689,7 @@ class CgconfigService(object):
         If the action is status, return True when it's running, otherwise return
         False.
 
-        @param: action: cgconfig service action
+        :param action: cgconfig service action
         """
         if not hasattr(self._service_manager, action):
             raise error.TestError("Unknown action: %s" % action)

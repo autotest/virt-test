@@ -131,13 +131,13 @@ class QemuAgent(Monitor):
         Connect to the guest agent socket, Also make sure the json
         module is available.
 
-        @param vm: The VM object who has this GuestAgent.
-        @param name: Guest agent identifier.
-        @param serial_type: Specific which serial type (firtio or isa) guest
+        :param vm: The VM object who has this GuestAgent.
+        :param name: Guest agent identifier.
+        :param serial_type: Specific which serial type (firtio or isa) guest
                 agent will use.
-        @param serial_filename: Guest agent socket filename.
-        @param get_supported_cmds: Try to get supported cmd list when initiation.
-        @param suppress_exceptions: If True, ignore VAgentError exception.
+        :param serial_filename: Guest agent socket filename.
+        :param get_supported_cmds: Try to get supported cmd list when initiation.
+        :param suppress_exceptions: If True, ignore VAgentError exception.
 
         @raise VAgentConnectError: Raised if the connection fails and
                 suppress_exceptions is False
@@ -185,8 +185,8 @@ class QemuAgent(Monitor):
         Stop when all available lines have been successfully decoded, or when
         timeout expires. Return all decoded objects.
 
-        @param timeout: Time to wait for all lines to decode successfully
-        @return: A list of objects
+        :param timeout: Time to wait for all lines to decode successfully
+        :return: A list of objects
         """
         if not self._data_available():
             return []
@@ -219,7 +219,7 @@ class QemuAgent(Monitor):
         """
         Send raw data without waiting for response.
 
-        @param data: Data to send
+        :param data: Data to send
         @raise VAgentSocketError: Raised if a socket error occurs
         """
         try:
@@ -232,9 +232,9 @@ class QemuAgent(Monitor):
         """
         Read a response from the guest agent socket.
 
-        @param id: If not None, look for a response with this id
-        @param timeout: Time duration to wait for response
-        @return: The response dict
+        :param id: If not None, look for a response with this id
+        :param timeout: Time duration to wait for response
+        :return: The response dict
         """
         end_time = time.time() + timeout
         while self._data_available(end_time - time.time()):
@@ -253,8 +253,8 @@ class QemuAgent(Monitor):
         so we have to send 'guest-sync' cmd by ourselves to keep the
         socket synced.
 
-        @param timeout: Time duration to wait for response
-        @return: True if socket is synced.
+        :param timeout: Time duration to wait for response
+        :return: True if socket is synced.
         """
         def check_result(response):
             if response:
@@ -307,9 +307,9 @@ class QemuAgent(Monitor):
         """
         Check wheter guest agent support 'cmd'.
 
-        @param cmd: command string which will be checked.
+        :param cmd: command string which will be checked.
 
-        @return: True if cmd is supported, False if not supported.
+        :return: True if cmd is supported, False if not supported.
         """
         # Initiate supported cmds list if it's empty.
         if not self._supported_cmds:
@@ -328,9 +328,9 @@ class QemuAgent(Monitor):
         """
         Print log message beening sent.
 
-        @param cmd: Command string.
-        @param debug: Whether to print the commands.
-        @param extra_str: Extra string would be printed in log.
+        :param cmd: Command string.
+        :param debug: Whether to print the commands.
+        :param extra_str: Extra string would be printed in log.
         """
         if self.debug_log or debug:
             logging.debug("(vagent %s) Sending command '%s' %s",
@@ -340,9 +340,9 @@ class QemuAgent(Monitor):
         """
         Print log message for guest agent cmd's response.
 
-        @param cmd: Command string.
-        @param resp: Response from guest agent command.
-        @param debug: Whether to print the commands.
+        :param cmd: Command string.
+        :param resp: Response from guest agent command.
+        :param debug: Whether to print the commands.
         """
         def _log_output(o, indent=0):
             logging.debug("(vagent %s)    %s%s",
@@ -386,13 +386,13 @@ class QemuAgent(Monitor):
         Send a guest agent command and return the response if success_resp is
         True.
 
-        @param cmd: Command to send
-        @param args: A dict containing command arguments, or None
-        @param timeout: Time duration to wait for response
-        @param debug: Whether to print the commands being sent and responses
-        @param fd: file object or file descriptor to pass
+        :param cmd: Command to send
+        :param args: A dict containing command arguments, or None
+        :param timeout: Time duration to wait for response
+        :param debug: Whether to print the commands being sent and responses
+        :param fd: file object or file descriptor to pass
 
-        @return: The response received
+        :return: The response received
 
         @raise VAgentLockError: Raised if the lock cannot be acquired
         @raise VAgentSocketError: Raised if a socket error occurs
@@ -424,9 +424,9 @@ class QemuAgent(Monitor):
         Unlike cmd(), return the raw response dict without performing
         any checks on it.
 
-        @param data: The data to send
-        @param timeout: Time duration to wait for response
-        @return: The response received
+        :param data: The data to send
+        :param timeout: Time duration to wait for response
+        :return: The response received
         @raise VAgentLockError: Raised if the lock cannot be acquired
         @raise VAgentSocketError: Raised if a socket error occurs
         @raise VAgentProtocolError: Raised if no response is received
@@ -460,9 +460,9 @@ class QemuAgent(Monitor):
         Unlike cmd(), return the raw response dict without performing any
         checks on it.
 
-        @param obj: The object to send
-        @param timeout: Time duration to wait for response
-        @return: The response received
+        :param obj: The object to send
+        :param timeout: Time duration to wait for response
+        :return: The response received
         @raise VAgentLockError: Raised if the lock cannot be acquired
         @raise VAgentSocketError: Raised if a socket error occurs
         @raise VAgentProtocolError: Raised if no response is received
@@ -482,9 +482,9 @@ class QemuAgent(Monitor):
         """
         Send "guest-shutdown", this cmd would not return any response.
 
-        @param mode: Speicfy shutdown mode, now qemu guest agent supports
+        :param mode: Speicfy shutdown mode, now qemu guest agent supports
                      'powerdown', 'reboot', 'halt' 3 modes.
-        @return: True if shutdown cmd is sent successfully, False if
+        :return: True if shutdown cmd is sent successfully, False if
                  'shutdown' is unsupported.
         """
         cmd = "guest-shutdown"
@@ -525,9 +525,9 @@ class QemuAgent(Monitor):
                  for the presence of the 'system_wakeup' command before issuing
                  guest agent command.
 
-        @param mode: Specify suspend mode, could be one of 'disk', 'ram',
+        :param mode: Specify suspend mode, could be one of 'disk', 'ram',
                      'hybrid'.
-        @return: True if shutdown cmd is sent successfully, False if
+        :return: True if shutdown cmd is sent successfully, False if
                  'suspend' is unsupported.
         @raise VAgentSuspendUnknownModeError: Raise if mode is not supported.
         """
@@ -563,7 +563,7 @@ class QemuAgent(Monitor):
         Verify the guest agent fsfreeze status is same as expected, if not,
         raise a VAgentFreezeStatusError.
 
-        @param expected: The expected status.
+        :param expected: The expected status.
         @raise VAgentFreezeStatusError: Raise if the guest fsfreeze status is
                 unexpected.
         """
@@ -576,9 +576,9 @@ class QemuAgent(Monitor):
         """
         Freeze File system on guest.
 
-        @param check_status: Force this function to check the fsreeze status
+        :param check_status: Force this function to check the fsreeze status
                              before/after sending cmd.
-        @return: Frozen FS number if cmd succeed, -1 if guest agent doesn't
+        :return: Frozen FS number if cmd succeed, -1 if guest agent doesn't
                  support fsfreeze cmd.
         """
         error.context("Freeze all FS in guest '%s'" % self.vm.name)
@@ -604,9 +604,9 @@ class QemuAgent(Monitor):
         """
         Thaw File system on guest.
 
-        @param check_status: Force this function to check the fsreeze status
+        :param check_status: Force this function to check the fsreeze status
                              before/after sending cmd.
-        @return: Thaw FS number if cmd succeed, -1 if guest agent doesn't
+        :return: Thaw FS number if cmd succeed, -1 if guest agent doesn't
                  support fsfreeze cmd.
         """
         error.context("thaw all FS in guest '%s'" % self.vm.name)

@@ -13,9 +13,9 @@ def run_watchdog(test, params, env):
     Test Step:
         1. see every function step
     Params:
-        @param test: QEMU test object.
-        @param params: Dictionary with test parameters.
-        @param env: Dictionary with the test environment.
+        :param test: QEMU test object.
+        :param params: Dictionary with test parameters.
+        :param env: Dictionary with the test environment.
     """
 
     timeout = int(params.get("login_timeout", '360'))

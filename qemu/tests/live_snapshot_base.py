@@ -14,9 +14,9 @@ def run_live_snapshot_base(test, params, env):
     3). Create live snapshot
     4). Copy the file from guest,then check md5
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

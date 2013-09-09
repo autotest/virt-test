@@ -87,9 +87,9 @@ def get_monitor_filename(vm, monitor_name):
     """
     Return the filename corresponding to a given monitor name.
 
-    @param vm: The VM object which has the monitor.
-    @param monitor_name: The monitor name.
-    @return: The string of socket file name for qemu monitor.
+    :param vm: The VM object which has the monitor.
+    :param monitor_name: The monitor name.
+    :return: The string of socket file name for qemu monitor.
     """
     return "/tmp/monitor-%s-%s" % (monitor_name, vm.instance)
 
@@ -99,7 +99,7 @@ def get_monitor_filenames(vm):
     Return a list of all monitor filenames (as specified in the VM's
     params).
 
-    @param vm: The VM object which has the monitors.
+    :param vm: The VM object which has the monitors.
     """
     return [get_monitor_filename(vm, m) for m in vm.params.objects("monitors")]
 
@@ -108,9 +108,9 @@ def create_monitor(vm, monitor_name, monitor_params):
     """
     Create monitor object and connect to the monitor socket.
 
-    @param vm: The VM object which has the monitor.
-    @param monitor_name: The name of this monitor object.
-    @param monitor_params: The dict for creating this monitor object.
+    :param vm: The VM object which has the monitor.
+    :param monitor_name: The name of this monitor object.
+    :param monitor_params: The dict for creating this monitor object.
     """
     monitor_creator = HumanMonitor
     if monitor_params.get("monitor_type") == "qmp":
@@ -133,10 +133,10 @@ def wait_for_create_monitor(vm, monitor_name, monitor_params, timeout):
     Wait for the progress of creating monitor object. This function will
     retry to create the Monitor object until timeout.
 
-    @param vm: The VM object which has the monitor.
-    @param monitor_name: The name of this monitor object.
-    @param monitor_params: The dict for creating this monitor object.
-    @param timeout: Time to wait for creating this monitor object.
+    :param vm: The VM object which has the monitor.
+    :param monitor_name: The name of this monitor object.
+    :param monitor_params: The dict for creating this monitor object.
+    :param timeout: Time to wait for creating this monitor object.
     """
     # Wait for monitor connection to succeed
     end_time = time.time() + timeout
@@ -164,9 +164,9 @@ class Monitor:
         """
         Initialize the instance.
 
-        @param vm: The VM which this monitor belongs to.
-        @param name: Monitor identifier (a string)
-        @param filename: Monitor socket filename
+        :param vm: The VM which this monitor belongs to.
+        :param name: Monitor identifier (a string)
+        :param filename: Monitor socket filename
 
         @raise MonitorConnectError: Raised if the connection fails
         """
@@ -245,9 +245,9 @@ class Monitor:
         """
         Check wheter kvm monitor support 'cmd'.
 
-        @param cmd: command string which will be checked.
+        :param cmd: command string which will be checked.
 
-        @return: True if cmd is supported, False if not supported.
+        :return: True if cmd is supported, False if not supported.
         """
         if cmd and cmd in self._supported_cmds:
             return True
@@ -257,9 +257,9 @@ class Monitor:
         """
         Print log message beening sent.
 
-        @param cmd: Command string.
-        @param debug: Whether to print the commands.
-        @param extra_str: Extra string would be printed in log.
+        :param cmd: Command string.
+        :param debug: Whether to print the commands.
+        :param extra_str: Extra string would be printed in log.
         """
         if self.debug_log or debug:
             logging.debug("(monitor %s) Sending command '%s' %s",
@@ -305,7 +305,7 @@ class Monitor:
         Verify whether cmd is supported by monitor. If not, raise a
         MonitorNotSupportedCmdError Exception.
 
-        @param cmd: The cmd string need to verify.
+        :param cmd: The cmd string need to verify.
         """
         if not self._has_command(cmd):
             raise MonitorNotSupportedCmdError(self.name, cmd)
@@ -320,12 +320,12 @@ class Monitor:
         This method allows code to send HMP commands without the need to check
         if the monitor is QMPMonitor or HumanMonitor.
 
-        @param cmd: human monitor command.
-        @param timeout: Time duration to wait for response
-        @param debug: Whether to print the commands being sent and responses
-        @param fd: file object or file descriptor to pass
+        :param cmd: human monitor command.
+        :param timeout: Time duration to wait for response
+        :param debug: Whether to print the commands being sent and responses
+        :param fd: file object or file descriptor to pass
 
-        @return: The response to the command
+        :return: The response to the command
         """
         raise NotImplementedError
 
@@ -369,7 +369,7 @@ class Monitor:
         """
         Run 'info numa' command and parse returned information
 
-        @return: An array of (ram, cpus) tuples, where ram is the RAM size in
+        :return: An array of (ram, cpus) tuples, where ram is the RAM size in
                  MB and cpus is a set of CPU numbers
         """
         r = self.human_monitor_cmd("info numa")
@@ -384,7 +384,7 @@ class Monitor:
     def info_block(self, debug=True):
         """
         Request info about blocks and return dict of parsed results
-        @return: Dict of disk parameters
+        :return: Dict of disk parameters
         """
         info = self.info('block', debug)
         if isinstance(info, str):
@@ -514,9 +514,9 @@ class HumanMonitor(Monitor):
         """
         Connect to the monitor socket and find the (qemu) prompt.
 
-        @param vm: The VM which this monitor belongs to.
-        @param name: Monitor identifier (a string)
-        @param filename: Monitor socket filename
+        :param vm: The VM which this monitor belongs to.
+        :param name: Monitor identifier (a string)
+        :param filename: Monitor socket filename
 
         @raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
@@ -573,7 +573,7 @@ class HumanMonitor(Monitor):
         """
         Send a command without waiting for output.
 
-        @param cmd: Command to send
+        :param cmd: Command to send
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
         """
@@ -608,9 +608,9 @@ class HumanMonitor(Monitor):
         """
         Print log message for monitor cmd's response.
 
-        @param cmd: Command string.
-        @param resp: Response from monitor command.
-        @param debug: Whether to print the commands.
+        :param cmd: Command string.
+        :param resp: Response from monitor command.
+        :param debug: Whether to print the commands.
         """
         if self.debug_log or debug:
             logging.debug("(monitor %s) Response to '%s'", self.name, cmd)
@@ -622,10 +622,10 @@ class HumanMonitor(Monitor):
         """
         Send command to the monitor.
 
-        @param cmd: Command to send to the monitor
-        @param timeout: Time duration to wait for the (qemu) prompt to return
-        @param debug: Whether to print the commands being sent and responses
-        @return: Output received from the monitor
+        :param cmd: Command to send to the monitor
+        :param timeout: Time duration to wait for the (qemu) prompt to return
+        :param debug: Whether to print the commands being sent and responses
+        :return: Output received from the monitor
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
@@ -671,12 +671,12 @@ class HumanMonitor(Monitor):
         """
         Send human monitor command directly
 
-        @param cmd: human monitor command.
-        @param timeout: Time duration to wait for response
-        @param debug: Whether to print the commands being sent and responses
-        @param fd: file object or file descriptor to pass
+        :param cmd: human monitor command.
+        :param timeout: Time duration to wait for response
+        :param debug: Whether to print the commands being sent and responses
+        :param fd: file object or file descriptor to pass
 
-        @return: The response to the command
+        :return: The response to the command
         """
         return self.cmd(cmd, timeout, debug, fd)
 
@@ -693,8 +693,8 @@ class HumanMonitor(Monitor):
         """
         Verify VM status
 
-        @param status: Optional VM status, 'running' or 'paused'
-        @return: return True if VM status is same as we expected
+        :param status: Optional VM status, 'running' or 'paused'
+        :return: return True if VM status is same as we expected
         """
         return (status in self.get_status())
 
@@ -713,14 +713,14 @@ class HumanMonitor(Monitor):
         'memsave val=0 size=10240 filename=memsave'
         Command without parameter: 'sendkey ctrl-alt-f1'
 
-        @param cmdlines: Commands send to qemu which is separated by ";". For
+        :param cmdlines: Commands send to qemu which is separated by ";". For
                          command with parameters command should send in a string
                          with this format:
                          $command $arg_name=$arg_value $arg_name=$arg_value
-        @param timeout: Time duration to wait for (qemu) prompt after command
-        @param convert: If command need to convert. For commands such as:
+        :param timeout: Time duration to wait for (qemu) prompt after command
+        :param convert: If command need to convert. For commands such as:
                         $command $arg_value
-        @return: The output of the command
+        :return: The output of the command
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSendError: Raised if the command cannot be sent
         @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
@@ -751,7 +751,7 @@ class HumanMonitor(Monitor):
     def info(self, what, debug=True):
         """
         Request info about something and return the output.
-        @param debug: Whether to print the commands being sent and responses
+        :param debug: Whether to print the commands being sent and responses
         """
         return self.cmd("info %s" % what, debug=debug)
 
@@ -765,8 +765,8 @@ class HumanMonitor(Monitor):
         """
         Request a screendump.
 
-        @param filename: Location for the screendump
-        @return: The command's output
+        :param filename: Location for the screendump
+        :return: The command's output
         """
         return self.cmd(cmd="screendump %s" % filename, debug=debug)
 
@@ -774,9 +774,9 @@ class HumanMonitor(Monitor):
         """
         Set link up/down.
 
-        @param name: Link name
-        @param up: Bool value, True=set up this link, False=Set down this link
-        @return: The response to the command
+        :param name: Link name
+        :param up: Bool value, True=set up this link, False=Set down this link
+        :return: The response to the command
         """
         set_link_cmd = "set_link"
 
@@ -799,11 +799,11 @@ class HumanMonitor(Monitor):
         """
         Take a live disk snapshot.
 
-        @param device: device id of base image
-        @param snapshot_file: image file name of snapshot
-        @param snapshot_format: image format of snapshot
+        :param device: device id of base image
+        :param snapshot_file: image file name of snapshot
+        :param snapshot_format: image format of snapshot
 
-        @return: The response to the command
+        :return: The response to the command
         """
         cmd = ("snapshot_blkdev %s %s %s" %
                (device, snapshot_file, snapshot_format))
@@ -814,12 +814,12 @@ class HumanMonitor(Monitor):
         """
         Start block-stream job;
 
-        @param device: device ID
-        @param speed: int type, lmited speed(B/s)
-        @param base: base file
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param speed: int type, lmited speed(B/s)
+        :param base: base file
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -836,11 +836,11 @@ class HumanMonitor(Monitor):
         """
         Set limited speed for runnig job on the device
 
-        @param device: device ID
-        @param speed: int type, limited speed(B/s)
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param speed: int type, limited speed(B/s)
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -852,10 +852,10 @@ class HumanMonitor(Monitor):
         """
         Cancel running block stream/mirror job on the device
 
-        @param device: device ID
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -867,9 +867,9 @@ class HumanMonitor(Monitor):
         """
         Get block job status on the device
 
-        @param device: device ID
+        :param device: device ID
 
-        @return: dict about job info, return empty dict if no active job
+        :return: dict about job info, return empty dict if no active job
         """
         job = dict()
         output = str(self.info("block-jobs"))
@@ -892,9 +892,9 @@ class HumanMonitor(Monitor):
         """
         Return "backing_file" path of the device
 
-        @param device: device ID
+        :param device: device ID
 
-        @return: string, backing_file path
+        :return: string, backing_file path
         """
         backing_file = None
         block_info = self.query("block")
@@ -910,16 +910,16 @@ class HumanMonitor(Monitor):
         """
         Start mirror type block device copy job
 
-        @param device: device ID
-        @param target: target image
-        @param speed: limited speed, unit is B/s
-        @param sync: full copy to target image(unsupport in human monitor)
-        @param mode: target image create mode, 'absolute-paths' or 'existing'
-        @param format: target image format
-        @param cmd: block mirror command
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param target: target image
+        :param speed: limited speed, unit is B/s
+        :param sync: full copy to target image(unsupport in human monitor)
+        :param mode: target image create mode, 'absolute-paths' or 'existing'
+        :param format: target image format
+        :param cmd: block mirror command
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -940,13 +940,13 @@ class HumanMonitor(Monitor):
         """
         Reopen new target image
 
-        @param device: device ID
-        @param new_image_file: new image file name
-        @param image_format: new image file format
-        @param cmd: image reopen command
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param new_image_file: new image file name
+        :param image_format: new image file format
+        :param cmd: image reopen command
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -962,11 +962,11 @@ class HumanMonitor(Monitor):
         """
         Migrate.
 
-        @param uri: destination URI
-        @param full_copy: If true, migrate with full disk copy
-        @param incremental_copy: If true, migrate with incremental disk copy
-        @param wait: If true, wait for completion
-        @return: The command's output
+        :param uri: destination URI
+        :param full_copy: If true, migrate with full disk copy
+        :param incremental_copy: If true, migrate with incremental disk copy
+        :param wait: If true, wait for completion
+        :return: The command's output
         """
         cmd = "migrate"
         if not wait:
@@ -982,8 +982,8 @@ class HumanMonitor(Monitor):
         """
         Set maximum speed (in bytes/sec) for migrations.
 
-        @param value: Speed in bytes/sec
-        @return: The command's output
+        :param value: Speed in bytes/sec
+        :return: The command's output
         """
         return self.cmd("migrate_set_speed %s" % value)
 
@@ -991,8 +991,8 @@ class HumanMonitor(Monitor):
         """
         Set maximum tolerated downtime (in seconds) for migration.
 
-        @param: value: maximum downtime (in seconds)
-        @return: The command's output
+        :param value: maximum downtime (in seconds)
+        :return: The command's output
         """
         return self.cmd("migrate_set_downtime %s" % value)
 
@@ -1000,9 +1000,9 @@ class HumanMonitor(Monitor):
         """
         Send key combination to VM.
 
-        @param keystr: Key combination string
-        @param hold_time: Hold time in ms (should normally stay 1 ms)
-        @return: The command's output
+        :param keystr: Key combination string
+        :param hold_time: Hold time in ms (should normally stay 1 ms)
+        :return: The command's output
         """
         return self.cmd("sendkey %s %s" % (keystr, hold_time))
 
@@ -1010,9 +1010,9 @@ class HumanMonitor(Monitor):
         """
         Move mouse.
 
-        @param dx: X amount
-        @param dy: Y amount
-        @return: The command's output
+        :param dx: X amount
+        :param dy: Y amount
+        :return: The command's output
         """
         return self.cmd("mouse_move %s %s" % (dx, dy))
 
@@ -1020,8 +1020,8 @@ class HumanMonitor(Monitor):
         """
         Set mouse button state.
 
-        @param state: Button state (1=L, 2=M, 4=R)
-        @return: The command's output
+        :param state: Button state (1=L, 2=M, 4=R)
+        :return: The command's output
         """
         return self.cmd("mouse_button %s" % state)
 
@@ -1029,9 +1029,9 @@ class HumanMonitor(Monitor):
         """
         Receives a file descriptor
 
-        @param fd: File descriptor to pass to QEMU
-        @param name: File descriptor name (internal to QEMU)
-        @return: The command's output
+        :param fd: File descriptor to pass to QEMU
+        :param name: File descriptor name (internal to QEMU)
+        :return: The command's output
         """
         return self.cmd("getfd %s" % name, fd=fd)
 
@@ -1053,10 +1053,10 @@ class HumanMonitor(Monitor):
         """
         Resize the block device size
 
-        @param device: Block device name
-        @param size: Block device size need to set to. To keep the same with
+        :param device: Block device name
+        :param size: Block device size need to set to. To keep the same with
                      qmp monitor will use bytes as unit for the block size
-        @return: Command output
+        :return: Command output
         """
         size = int(size) / 1024 / 1024
         cmd = "block_resize device=%s,size=%s" % (device, size)
@@ -1079,9 +1079,9 @@ class QMPMonitor(Monitor):
         Connect to the monitor socket, read the greeting message and issue the
         qmp_capabilities command.  Also make sure the json module is available.
 
-        @param vm: The VM which this monitor belongs to.
-        @param name: Monitor identifier (a string)
-        @param filename: Monitor socket filename
+        :param vm: The VM which this monitor belongs to.
+        :param name: Monitor identifier (a string)
+        :param filename: Monitor socket filename
 
         @raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
@@ -1149,8 +1149,8 @@ class QMPMonitor(Monitor):
         timeout expires.  If any decoded objects are asynchronous events, store
         them in self._events.  Return all decoded objects.
 
-        @param timeout: Time to wait for all lines to decode successfully
-        @return: A list of objects
+        :param timeout: Time to wait for all lines to decode successfully
+        :return: A list of objects
         """
         if not self._data_available():
             return []
@@ -1185,7 +1185,7 @@ class QMPMonitor(Monitor):
         """
         Send raw data without waiting for response.
 
-        @param data: Data to send
+        :param data: Data to send
         @raise MonitorSocketError: Raised if a socket error occurs
         """
         try:
@@ -1198,9 +1198,9 @@ class QMPMonitor(Monitor):
         """
         Read a response from the QMP monitor.
 
-        @param id: If not None, look for a response with this id
-        @param timeout: Time duration to wait for response
-        @return: The response dict, or None if none was found
+        :param id: If not None, look for a response with this id
+        :param timeout: Time duration to wait for response
+        :return: The response dict, or None if none was found
         """
         end_time = time.time() + timeout
         while self._data_available(end_time - time.time()):
@@ -1240,9 +1240,9 @@ class QMPMonitor(Monitor):
         """
         Check wheter monitor support hmp 'cmd'.
 
-        @param cmd: command string which will be checked.
+        :param cmd: command string which will be checked.
 
-        @return: True if cmd is supported, False if not supported.
+        :return: True if cmd is supported, False if not supported.
         """
         if cmd and cmd in self._supported_hmp_cmds:
             return True
@@ -1253,7 +1253,7 @@ class QMPMonitor(Monitor):
         Verify whether cmd is supported by hmp monitor.
         If not, raise a MonitorNotSupportedCmdError Exception.
 
-        @param cmd: The cmd string need to verify.
+        :param cmd: The cmd string need to verify.
         """
         if not self._has_hmp_command(cmd):
             raise MonitorNotSupportedCmdError(self.name, cmd)
@@ -1262,9 +1262,9 @@ class QMPMonitor(Monitor):
         """
         Print log message for monitor cmd's response.
 
-        @param cmd: Command string.
-        @param resp: Response from monitor command.
-        @param debug: Whether to print the commands.
+        :param cmd: Command string.
+        :param resp: Response from monitor command.
+        :param debug: Whether to print the commands.
         """
         def _log_output(o, indent=0):
             logging.debug("(monitor %s)    %s%s",
@@ -1309,13 +1309,13 @@ class QMPMonitor(Monitor):
         Note: an id is automatically assigned to the command and the response
         is checked for the presence of the same id.
 
-        @param cmd: Command to send
-        @param args: A dict containing command arguments, or None
-        @param timeout: Time duration to wait for response
-        @param debug: Whether to print the commands being sent and responses
-        @param fd: file object or file descriptor to pass
+        :param cmd: Command to send
+        :param args: A dict containing command arguments, or None
+        :param timeout: Time duration to wait for response
+        :param debug: Whether to print the commands being sent and responses
+        :param fd: file object or file descriptor to pass
 
-        @return: The response received
+        :return: The response received
 
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
@@ -1369,9 +1369,9 @@ class QMPMonitor(Monitor):
         Unlike cmd(), return the raw response dict without performing any
         checks on it.
 
-        @param data: The data to send
-        @param timeout: Time duration to wait for response
-        @return: The response received
+        :param data: The data to send
+        :param timeout: Time duration to wait for response
+        :return: The response received
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if no response is received
@@ -1399,9 +1399,9 @@ class QMPMonitor(Monitor):
         Unlike cmd(), return the raw response dict without performing any
         checks on it.
 
-        @param obj: The object to send
-        @param timeout: Time duration to wait for response
-        @return: The response received
+        :param obj: The object to send
+        :param timeout: Time duration to wait for response
+        :return: The response received
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if no response is received
@@ -1415,11 +1415,11 @@ class QMPMonitor(Monitor):
         Unlike cmd(), return the raw response dict without performing any
         checks on it.
 
-        @param cmd: Command to send
-        @param args: A dict containing command arguments, or None
-        @param id:  An id for the command, or None
-        @param timeout: Time duration to wait for response
-        @return: The response received
+        :param cmd: Command to send
+        :param args: A dict containing command arguments, or None
+        :param id:  An id for the command, or None
+        :param timeout: Time duration to wait for response
+        :return: The response received
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSocketError: Raised if a socket error occurs
         @raise MonitorProtocolError: Raised if no response is received
@@ -1436,7 +1436,7 @@ class QMPMonitor(Monitor):
         """
         Get VM status.
 
-        @return: return VM status
+        :return: return VM status
         """
         return self.cmd(cmd="query-status", debug=False)
 
@@ -1444,8 +1444,8 @@ class QMPMonitor(Monitor):
         """
         Verify VM status
 
-        @param status: Optional VM status, 'running' or 'paused'
-        @return: return True if VM status is same as we expected
+        :param status: Optional VM status, 'running' or 'paused'
+        :return: return True if VM status is same as we expected
         """
         o = dict(self.cmd(cmd="query-status", debug=False))
         if status == 'paused':
@@ -1461,7 +1461,7 @@ class QMPMonitor(Monitor):
         Return a list of the asynchronous events received since the last
         clear_events() call.
 
-        @return: A list of events (the objects returned have an "event" key)
+        :return: A list of events (the objects returned have an "event" key)
         @raise MonitorLockError: Raised if the lock cannot be acquired
         """
         if not self._acquire_lock():
@@ -1477,8 +1477,8 @@ class QMPMonitor(Monitor):
         """
         Look for an event with the given name in the list of events.
 
-        @param name: The name of the event to look for (e.g. 'RESET')
-        @return: An event object or None if none is found
+        :param name: The name of the event to look for (e.g. 'RESET')
+        :return: An event object or None if none is found
         """
         for e in self.get_events():
             if e.get("event") == name:
@@ -1489,12 +1489,12 @@ class QMPMonitor(Monitor):
         """
         Run human monitor command in QMP through human-monitor-command
 
-        @param cmd: human monitor command.
-        @param timeout: Time duration to wait for response
-        @param debug: Whether to print the commands being sent and responses
-        @param fd: file object or file descriptor to pass
+        :param cmd: human monitor command.
+        :param timeout: Time duration to wait for response
+        :param debug: Whether to print the commands being sent and responses
+        :param fd: file object or file descriptor to pass
 
-        @return: The response to the command
+        :return: The response to the command
         """
         self._log_command(cmd, extra_str="(via Human Monitor)")
 
@@ -1552,14 +1552,14 @@ class QMPMonitor(Monitor):
         'memsave val=0 size=10240 filename=memsave'
         Command without parameter: 'query-vnc'
 
-        @param cmdlines: Commands send to qemu which is separated by ";". For
+        :param cmdlines: Commands send to qemu which is separated by ";". For
                          command with parameters command should send in a string
                          with this format:
                          $command $arg_name=$arg_value $arg_name=$arg_value
-        @param timeout: Time duration to wait for (qemu) prompt after command
-        @param convert: If command need to convert. For commands not in standard
+        :param timeout: Time duration to wait for (qemu) prompt after command
+        :param convert: If command need to convert. For commands not in standard
                         format such as: $command $arg_value
-        @return: The response to the command
+        :return: The response to the command
         @raise MonitorLockError: Raised if the lock cannot be acquired
         @raise MonitorSendError: Raised if the command cannot be sent
         @raise MonitorProtocolError: Raised if no response is received
@@ -1629,10 +1629,10 @@ class QMPMonitor(Monitor):
         """
         Request a screendump.
 
-        @param filename: Location for the screendump
-        @param debug: Whether to print the commands being sent and responses
+        :param filename: Location for the screendump
+        :param debug: Whether to print the commands being sent and responses
 
-        @return: The response to the command
+        :return: The response to the command
         """
         cmd = "screendump"
         if not self._has_command(cmd):
@@ -1647,10 +1647,10 @@ class QMPMonitor(Monitor):
         """
         Send key combination to VM.
 
-        @param keystr: Key combination string
-        @param hold_time: Hold time in ms (should normally stay 1 ms)
+        :param keystr: Key combination string
+        :param hold_time: Hold time in ms (should normally stay 1 ms)
 
-        @return: The response to the command
+        :return: The response to the command
         """
         return self.human_monitor_cmd("sendkey %s %s" % (keystr, hold_time))
 
@@ -1658,11 +1658,11 @@ class QMPMonitor(Monitor):
         """
         Migrate.
 
-        @param uri: destination URI
-        @param full_copy: If true, migrate with full disk copy
-        @param incremental_copy: If true, migrate with incremental disk copy
-        @param wait: If true, wait for completion
-        @return: The response to the command
+        :param uri: destination URI
+        :param full_copy: If true, migrate with full disk copy
+        :param incremental_copy: If true, migrate with incremental disk copy
+        :param wait: If true, wait for completion
+        :return: The response to the command
         """
         args = {"uri": uri,
                 "blk": full_copy,
@@ -1681,8 +1681,8 @@ class QMPMonitor(Monitor):
         """
         Set maximum speed (in bytes/sec) for migrations.
 
-        @param value: Speed in bytes/sec
-        @return: The response to the command
+        :param value: Speed in bytes/sec
+        :return: The response to the command
         """
         value = utils.convert_data_size(value, "M")
         args = {"value": value}
@@ -1692,10 +1692,10 @@ class QMPMonitor(Monitor):
         """
         Set link up/down.
 
-        @param name: Link name
-        @param up: Bool value, True=set up this link, False=Set down this link
+        :param name: Link name
+        :param up: Bool value, True=set up this link, False=Set down this link
 
-        @return: The response to the command
+        :return: The response to the command
         """
         return self.send_args_cmd("set_link name=%s,up=%s" % (name, str(up)))
 
@@ -1703,9 +1703,9 @@ class QMPMonitor(Monitor):
         """
         Set maximum tolerated downtime (in seconds) for migration.
 
-        @param: value: maximum downtime (in seconds)
+        :param value: maximum downtime (in seconds)
 
-        @return: The command's output
+        :return: The command's output
         """
         val = value * 10 ** 9
         args = {"value": val}
@@ -1715,11 +1715,11 @@ class QMPMonitor(Monitor):
         """
         Take a live disk snapshot.
 
-        @param device: device id of base image
-        @param snapshot_file: image file name of snapshot
-        @param snapshot_format: image format of snapshot
+        :param device: device id of base image
+        :param snapshot_file: image file name of snapshot
+        :param snapshot_format: image format of snapshot
 
-        @return: The response to the command
+        :return: The response to the command
         """
         args = {"device": device,
                 "snapshot-file": snapshot_file,
@@ -1731,12 +1731,12 @@ class QMPMonitor(Monitor):
         """
         Start block-stream job;
 
-        @param device: device ID
-        @param speed: int type, limited speed(B/s)
-        @param base: base file
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param speed: int type, limited speed(B/s)
+        :param base: base file
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -1753,11 +1753,11 @@ class QMPMonitor(Monitor):
         """
         Set limited speed for runnig job on the device
 
-        @param device: device ID
-        @param speed: int type, limited speed(B/s)
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param speed: int type, limited speed(B/s)
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -1770,10 +1770,10 @@ class QMPMonitor(Monitor):
         """
         Cancel running block stream/mirror job on the device
 
-        @param device: device ID
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -1785,9 +1785,9 @@ class QMPMonitor(Monitor):
         """
         Get block job status on the device
 
-        @param device: device ID
+        :param device: device ID
 
-        @return: dict about job info, return empty dict if no active job
+        :return: dict about job info, return empty dict if no active job
         """
         job = dict()
         output = str(self.info("block-jobs"))
@@ -1802,9 +1802,9 @@ class QMPMonitor(Monitor):
         """
         Return "backing_file" path of the device
 
-        @param device: device ID
+        :param device: device ID
 
-        @return: string, backing_file path
+        :return: string, backing_file path
         """
         backing_file = None
         block_info = self.query("block")
@@ -1820,17 +1820,17 @@ class QMPMonitor(Monitor):
         """
         Start mirror type block device copy job
 
-        @param device: device ID
-        @param target: target image
-        @param speed: limited speed, unit is B/s
-        @param sync: what parts of the disk image should be copied to the
+        :param device: device ID
+        :param target: target image
+        :param speed: limited speed, unit is B/s
+        :param sync: what parts of the disk image should be copied to the
                      destination;
-        @param mode: 'absolute-paths' or 'existing'
-        @param format: target image format
-        @param cmd: block mirror command
-        @param correct: auto correct command, correct by default
+        :param mode: 'absolute-paths' or 'existing'
+        :param format: target image format
+        :param cmd: block mirror command
+        :param correct: auto correct command, correct by default
 
-        @return: The command's output
+        :return: The command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -1854,13 +1854,13 @@ class QMPMonitor(Monitor):
         """
         Reopen new target image;
 
-        @param device: device ID
-        @param new_image_file: new image file name
-        @param image_format: new image file format
-        @param cmd: image reopen command
-        @param correct: auto correct command, correct by default
+        :param device: device ID
+        :param new_image_file: new image file name
+        :param image_format: new image file format
+        :param cmd: image reopen command
+        :param correct: auto correct command, correct by default
 
-        @return: the command's output
+        :return: the command's output
         """
         if correct:
             cmd = self.correct(cmd)
@@ -1875,10 +1875,10 @@ class QMPMonitor(Monitor):
         """
         Receives a file descriptor
 
-        @param fd: File descriptor to pass to QEMU
-        @param name: File descriptor name (internal to QEMU)
+        :param fd: File descriptor to pass to QEMU
+        :param name: File descriptor name (internal to QEMU)
 
-        @return: The response to the command
+        :return: The response to the command
         """
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
@@ -1901,9 +1901,9 @@ class QMPMonitor(Monitor):
         """
         Resize the block device size
 
-        @param device: Block device name
-        @param size: Block device size need to set to. Unit is bytes.
-        @return: Command output
+        :param device: Block device name
+        :param size: Block device size need to set to. Unit is bytes.
+        :return: Command output
         """
         cmd = "block_resize device=%s,size=%s" % (device, size)
         return self.send_args_cmd(cmd)

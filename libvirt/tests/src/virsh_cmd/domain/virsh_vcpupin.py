@@ -22,8 +22,8 @@ def run_virsh_vcpupin(test, params, env):
         This function returns list of the vcpu's affinity from
         virsh vcpuinfo output
 
-        @param: domname: VM Name to operate on
-        @param: vcpu: vcpu number for which the affinity is required
+        :param domname: VM Name to operate on
+        :param vcpu: vcpu number for which the affinity is required
         """
 
         output = virsh.vcpuinfo(domname)
@@ -36,7 +36,7 @@ def run_virsh_vcpupin(test, params, env):
         """
         This function returns the list of vcpu's expected affinity build
 
-        @param: cpu: cpu details for the affinity
+        :param cpu: cpu details for the affinity
         """
 
         expected_affinity = []
@@ -56,9 +56,9 @@ def run_virsh_vcpupin(test, params, env):
         This function checks the actual and the expected affinity of given vcpu
         and raises error if not matchs
 
-        @param: domname:  VM Name to operate on
-        @param: vcpu: vcpu number for which the affinity is required
-        @param: cpu: cpu details for the affinity
+        :param domname:  VM Name to operate on
+        :param vcpu: vcpu number for which the affinity is required
+        :param cpu: cpu details for the affinity
         """
 
         expected_output, expected_output_proc = build_expected_info(cpu)

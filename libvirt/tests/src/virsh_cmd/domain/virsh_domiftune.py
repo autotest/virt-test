@@ -8,7 +8,7 @@ def check_domiftune(params):
     """
     Compare inbound and outbound value with guest XML configuration
     and virsh command output.
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     vm = params.get("vm")
@@ -70,7 +70,7 @@ def check_domiftune(params):
 def get_domiftune_parameter(params):
     """
     Get the domiftune parameters
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     options = params.get("options")
@@ -98,7 +98,7 @@ def get_domiftune_parameter(params):
 def set_domiftune_parameter(params):
     """
     Set the domiftune parameters
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     inbound = params.get("inbound")

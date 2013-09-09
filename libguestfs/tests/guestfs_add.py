@@ -20,10 +20,10 @@ def add_disk_or_domain(guestfs, disk_or_domain, add_ref="domain",
     """
     Add disk or domain to guestfish
 
-    @param guestfs: a session of guestfish
-    @param disk_or_domain: a disk or a domain
-    @param add_ref: domain or disk
-    @param readonly: is added disk or domain readonly.
+    :param guestfs: a session of guestfish
+    :param disk_or_domain: a disk or a domain
+    :param add_ref: domain or disk
+    :param readonly: is added disk or domain readonly.
     """
     if add_ref == "domain":
         add_result = guestfs.add_domain(disk_or_domain, readonly=readonly)

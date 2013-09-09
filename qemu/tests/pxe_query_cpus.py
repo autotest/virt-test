@@ -116,9 +116,9 @@ def run_pxe_query_cpus(test, params, env):
     3). verify vm not paused during pxe booting
 
     params:
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     pxe_test = PxeTest(test, params, env)
     error.context("Enable %s on host" % pxe_test.mmu, logging.info)

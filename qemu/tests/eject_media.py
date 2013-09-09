@@ -18,9 +18,9 @@ def run_eject_media(test, params, env):
     7) Insert original cdrom to cdrom.
     8) Try to eject non-removable device.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
 
     if not utils_misc.qemu_has_option("qmp"):

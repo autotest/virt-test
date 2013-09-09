@@ -13,9 +13,9 @@ def run_qemu_iotests(test, params, env):
     3) Run test for the file format detected
     4) Report any errors found to autotest
 
-    @param test:   QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env:    Dictionary with test environment.
     """
     # First, let's get qemu-io
     std = "git://git.kernel.org/pub/scm/linux/kernel/git/hch/qemu-iotests.git"

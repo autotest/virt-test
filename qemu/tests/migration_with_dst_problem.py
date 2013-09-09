@@ -19,9 +19,9 @@ def run_migration_with_dst_problem(test, params, env):
 
     Test needs params: nettype = bridge.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))
@@ -68,10 +68,10 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Start service on guest.
 
-        @param vm: Virtual machine for vm.
-        @param service: service to stop.
-        @param action: action with service (start|stop|restart)
-        @param init_service: name of service for old service control.
+        :param vm: Virtual machine for vm.
+        :param service: service to stop.
+        :param action: action with service (start|stop|restart)
+        :param init_service: name of service for old service control.
         """
         try:
             session.cmd("systemctl --version", timeout=timeout)
@@ -85,7 +85,7 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Start nfs server on guest.
 
-        @param vm: Virtual machine for vm.
+        :param vm: Virtual machine for vm.
         """
         session = vm.wait_for_login(timeout=login_timeout)
         cmd = "echo '%s' > /etc/exports" % (share_cfg)
@@ -99,7 +99,7 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Umount nfs server mount_path
 
-        @param mount_path: path where nfs dir will be placed.
+        :param mount_path: path where nfs dir will be placed.
         """
         utils.run("umount -f %s" % (mount_path))
 
@@ -107,8 +107,8 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Create file with size and create there ext3 filesystem.
 
-        @param dst_path: Path to file.
-        @param size: Size of file in MB
+        :param dst_path: Path to file.
+        :param size: Size of file in MB
         """
         utils.run("dd if=/dev/zero of=%s bs=1M count=%s" % (dst_path, size))
         utils.run("mkfs.ext3 -F %s" % (dst_path))
@@ -117,9 +117,9 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Mount Disk to path
 
-        @param disk_path: Path to disk
-        @param mount_path: Path where disk will be mounted.
-        @param options: String with options for mount
+        :param disk_path: Path to disk
+        :param mount_path: Path where disk will be mounted.
+        :param options: String with options for mount
         """
         if options is None:
             options = ""
@@ -132,10 +132,10 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Find disk on vm which ends with disk_serial
 
-        @param vm: VM where to find a disk.
-        @param disk_serial: sufix of disk id.
+        :param vm: VM where to find a disk.
+        :param disk_serial: sufix of disk id.
 
-        @return: string Disk path
+        :return: string Disk path
         """
         session = vm.wait_for_login(timeout=login_timeout)
 
@@ -151,8 +151,8 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Create Ext3 on disk a send there data from main disk.
 
-        @param vm: VM where to find a disk.
-        @param disk_path: Path to disk in guest system.
+        :param vm: VM where to find a disk.
+        :param disk_path: Path to disk in guest system.
         """
         session = vm.wait_for_login(timeout=login_timeout)
         session.cmd("mkfs.ext3 -F %s" % (disk_path))
@@ -163,11 +163,11 @@ def run_migration_with_dst_problem(test, params, env):
         """
         Start disk load. Cyclic copy from src_path to dst_path.
 
-        @param vm: VM where to find a disk.
-        @param src_path: Source of data
-        @param dst_path: Path to destination
-        @param copy_timeout: Timeout for copy
-        @param dsize: Size of data block which is periodical copied.
+        :param vm: VM where to find a disk.
+        :param src_path: Source of data
+        :param dst_path: Path to destination
+        :param copy_timeout: Timeout for copy
+        :param dsize: Size of data block which is periodical copied.
         """
         if dsize is None:
             dsize = 100
@@ -200,8 +200,8 @@ def run_migration_with_dst_problem(test, params, env):
             Set iscsi server with some variant.
 
             @oaram vm_ds: VM where should be iscsi server started.
-            @param disk_path: path where should be disk placed.
-            @param disk_size: size of new disk.
+            :param disk_path: path where should be disk placed.
+            :param disk_size: size of new disk.
             """
             session = vm_ds.wait_for_login(timeout=login_timeout)
 
@@ -232,9 +232,9 @@ def run_migration_with_dst_problem(test, params, env):
             """
             Connect to iscsi server on guest.
 
-            @param vm_ds: Guest where is iscsi server running.
+            :param vm_ds: Guest where is iscsi server running.
 
-            @return: path where disk is connected.
+            :return: path where disk is connected.
             """
             ip_dst = vm_ds.get_address()
             utils.run("iscsiadm -m discovery -t st -p %s" % (ip_dst))

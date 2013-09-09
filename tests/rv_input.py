@@ -17,8 +17,8 @@ def deploy_epel_repo(guest_session, params):
     """
     Deploy epel repository to RHEL VM If It's RHEL6 or 5.
 
-    @param guest_session - ssh session to guest VM
-    @param params
+    :param guest_session - ssh session to guest VM
+    :param params
     """
 
     # Check existence of epel repository
@@ -53,8 +53,8 @@ def install_wxpython(guest_session, params):
     Install wxPython to a VM with yum package manager.
     Requires epel repository for RHEL guest.
 
-    @param guest_session - ssh session to guest VM
-    @param params
+    :param guest_session - ssh session to guest VM
+    :param params
     """
 
     cmd = "rpm -q wxPython"
@@ -72,9 +72,9 @@ def deploy_test_form(test, guest_vm, params):
     Copy wxPython Test form to guest VM.
     Test form is copied to /tmp directory.
 
-    @param test
-    @param guest_vm - vm object
-    @param params
+    :param test
+    :param guest_vm - vm object
+    :param params
     """
 
     script = params.get("guest_script")
@@ -89,8 +89,8 @@ def run_test_form(guest_session, params):
     Start wxPython simple test form on guest VM.
     Test form catches KeyEvents and is located in /tmp.
 
-    @param guest_session - ssh session to guest VM
-    @param params
+    :param guest_session - ssh session to guest VM
+    :param params
     """
 
     logging.info("Starting test form for catching key events on guest")
@@ -102,7 +102,7 @@ def run_test_form(guest_session, params):
 
 def get_test_results(guest_vm):
     """
-    @param guest_vm - vm object
+    :param guest_vm - vm object
     """
 
     path = "/tmp/autotest-rv_input"
@@ -116,9 +116,9 @@ def test_type_and_func_keys(client_vm, guest_session, params):
     Test typewriter and functional keys.
     Function sends various keys through qemu monitor to client VM.
 
-    @param client_vm - vm object
-    @param guest_session - ssh session to guest VM
-    @param params
+    :param client_vm - vm object
+    :param guest_session - ssh session to guest VM
+    :param params
     """
 
     run_test_form(guest_session, params)
@@ -138,9 +138,9 @@ def test_leds_and_esc_keys(client_vm, guest_session, params):
     Test LEDS and Escaped keys.
     Function sends various keys through qemu monitor to client VM.
 
-    @param client_vm - vm object
-    @param guest_session - ssh session to guest VM
-    @param params
+    :param client_vm - vm object
+    :param guest_session - ssh session to guest VM
+    :param params
     """
 
     # Run wxPython form catching KeyEvents on guest
@@ -169,9 +169,9 @@ def test_nonus_layout(client_vm, guest_session, params):
     Test some keys of non-us keyboard layouts (de, cz).
     Function sends various keys through qemu monitor to client VM.
 
-    @param client_vm - vm object
-    @param guest_session - ssh session to guest VM
-    @param params
+    :param client_vm - vm object
+    :param guest_session - ssh session to guest VM
+    :param params
     """
 
     # Run wxPython form catching KeyEvents on guest
@@ -206,10 +206,10 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     Function sets LEDS (caps, num) to ON and send scancodes of "a" and "1 (num)"
     and expected to get keycodes of "A" and "1" after migration.
 
-    @param client_vm - vm object
-    @param guest_vm - vm object
-    @param guest_session - ssh session to guest VM
-    @param params
+    :param client_vm - vm object
+    :param guest_vm - vm object
+    :param guest_session - ssh session to guest VM
+    :param params
     """
 
     # Run wxPython form catching KeyEvents on guest
@@ -239,8 +239,8 @@ def analyze_results(file_path, test_type):
     """
     Analyze results - compare caught keycodes and expected keycodes.
 
-    @param file_path - path to file with results
-    @param test_type - type of the test
+    :param file_path - path to file with results
+    :param test_type - type of the test
     """
 
     if test_type == "type_and_func_keys":
@@ -284,9 +284,9 @@ def run_rv_input(test, params, env):
     Test for testing keyboard inputs through spice.
     Test depends on rv_connect test.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     guest_vm = env.get_vm(params["guest_vm"])

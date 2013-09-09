@@ -46,8 +46,8 @@ def get_image_blkdebug_filename(params, root_dir):
 
     blkdebug files allow error injection in the block subsystem.
 
-    @param params: Dictionary containing the test parameters.
-    @param root_dir: Base directory for relative filenames.
+    :param params: Dictionary containing the test parameters.
+    :param root_dir: Base directory for relative filenames.
 
     @note: params should contain:
            blkdebug -- the name of the debug file.
@@ -64,8 +64,8 @@ def get_image_filename(params, root_dir):
     """
     Generate an image path from params and root_dir.
 
-    @param params: Dictionary containing the test parameters.
-    @param root_dir: Base directory for relative filenames.
+    :param params: Dictionary containing the test parameters.
+    :param root_dir: Base directory for relative filenames.
 
     @note: params should contain:
            image_name -- the name of the image file, without extension
@@ -160,9 +160,9 @@ class QemuImg(object):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images.
         """
         self.image_filename = get_image_filename(params, root_dir)
         self.image_format = params.get("image_format", "qcow2")
@@ -196,7 +196,7 @@ class QemuImg(object):
         """
         Check if object has the option required.
 
-        @param option: option should be checked
+        :param option: option should be checked
         """
         if option not in self.__dict__:
             raise OptionMissing(option)
@@ -206,10 +206,10 @@ class QemuImg(object):
         """
         Backup or restore a disk image, depending on the action chosen.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param action: Whether we want to backup or restore the image.
-        @param good: If we are backing up a good image(we want to restore it)
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param action: Whether we want to backup or restore the image.
+        :param good: If we are backing up a good image(we want to restore it)
             or a bad image (we are saving a bad image for posterior analysis).
 
         @note: params should contain:
@@ -314,10 +314,10 @@ class QemuImg(object):
         """
         Clone master image to vm specific file.
 
-        @param params: Dictionary containing the test parameters.
-        @param vm_name: Vm name.
-        @param image_name: Master image name.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param vm_name: Vm name.
+        :param image_name: Master image name.
+        :param root_dir: Base directory for relative filenames.
         """
         if not params.get("image_name_%s_%s" % (image_name, vm_name)):
             m_image_name = params.get("image_name", "image")
@@ -342,10 +342,10 @@ class QemuImg(object):
         """
         Remove vm specific file.
 
-        @param params: Dictionary containing the test parameters.
-        @param vm_name: Vm name.
-        @param image_name: Master image name.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param vm_name: Vm name.
+        :param image_name: Master image name.
+        :param root_dir: Base directory for relative filenames.
         """
         if params.get("image_name_%s_%s" % (image_name, vm_name)):
             m_image_name = params.get("image_name", "image")
@@ -373,9 +373,9 @@ class Rawdev(object):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         host_set_flag = params.get("host_setup_flag")
         if host_set_flag is not None:
@@ -397,9 +397,9 @@ class Iscsidev(Rawdev):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         Rawdev.__init__(self, params, root_dir, tag)
         self.emulated_file_remove = False

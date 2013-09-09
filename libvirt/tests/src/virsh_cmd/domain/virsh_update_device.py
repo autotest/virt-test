@@ -26,8 +26,8 @@ def run_virsh_update_device(test, params, env):
         """
         Create a xml file to update a device.
 
-        @param: update_xmlfile : Temp xml saves device information.
-        @param: source_iso : disk's source file.
+        :param update_xmlfile : Temp xml saves device information.
+        :param source_iso : disk's source file.
         """
         try:
             f = open(source_iso, 'wb')
@@ -53,8 +53,8 @@ def run_virsh_update_device(test, params, env):
         """
         Check attached device and disk exist or not.
 
-        @param: source_file : disk's source file.
-        @param: output :VM's xml information .
+        :param source_file : disk's source file.
+        :param output :VM's xml information .
         """
         dom = parseString(output)
         source = dom.getElementsByTagName("source")

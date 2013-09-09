@@ -17,9 +17,9 @@ def run_ping(test, params, env):
     3) Ping test from guest side, packet size is from 0 to 65507
        (win guest is up to 65500) (Optional)
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def _get_loss_ratio(output):
         if params.get("strict_check", "no") == "yes":

@@ -14,9 +14,9 @@ def run_sysprep(test, params, env):
     3) Boot guest up again.
     4) Check that SID in guest has changed.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     vm = env.get_vm(params["main_vm"])

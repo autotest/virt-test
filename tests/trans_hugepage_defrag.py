@@ -20,15 +20,15 @@ def run_trans_hugepage_defrag(test, params, env):
     6) Set the khugepaged do defrag
     7) Use libhugetlbfs to allocated huge page compare the value
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def get_mem_stat(param):
         """
         Get the memory size for a given memory param.
 
-        @param param: Memory parameter.
+        :param param: Memory parameter.
         """
         for line in file('/proc/meminfo', 'r').readlines():
             if line.startswith("%s" % param):
@@ -39,7 +39,7 @@ def run_trans_hugepage_defrag(test, params, env):
         """
         Set the number of hugepages on the system.
 
-        @param number: Number of pages (either string or numeric).
+        :param number: Number of pages (either string or numeric).
         """
         logging.info("Trying to setup %d hugepages on host", number)
         f = file("/proc/sys/vm/nr_hugepages", "w+")
@@ -58,9 +58,9 @@ def run_trans_hugepage_defrag(test, params, env):
         """
         Turn on/off feature functionality.
 
-        @param status: String representing status, may be 'on' or 'off'.
-        @param relative_path: Path of the feature relative to THP config base.
-        @param test_config: Object that keeps track of THP config state.
+        :param status: String representing status, may be 'on' or 'off'.
+        :param relative_path: Path of the feature relative to THP config base.
+        :param test_config: Object that keeps track of THP config state.
 
         @raise: error.TestFail, if can't change feature status
         """
@@ -104,7 +104,7 @@ def run_trans_hugepage_defrag(test, params, env):
         It accomplishes that goal by spawning a large number of dd processes
         on a tmpfs mount.
 
-        @param mem_path: tmpfs mount point.
+        :param mem_path: tmpfs mount point.
         """
         error.context("Fragmenting host memory")
         try:

@@ -21,8 +21,8 @@ def run_virsh_help(test, params, env):
         """
         Check all virsh commands or groups's help information
 
-        @param: test_target: Test target,all virsh or all virsh groups
-        @return: True if check successfully
+        :param test_target: Test target,all virsh or all virsh groups
+        :return: True if check successfully
         """
         help_list = []
         if test_target == "all_command":

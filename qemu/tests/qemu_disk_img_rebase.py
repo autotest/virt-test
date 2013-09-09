@@ -54,9 +54,9 @@ def run_qemu_disk_img_rebase(test, params, env):
     """
     'qemu-img' rebase function test:
 
-    @param test: Qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     base_image = params.get("images", "image1").split()[0]
     params_bak = copy.deepcopy(params)

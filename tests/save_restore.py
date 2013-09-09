@@ -17,9 +17,9 @@ def run_save_restore(test, params, env):
     6) Repeat save_restore_repeat times or
        until save_restore_duration seconds pass.
 
-    @param test: test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def get_save_filename(path="", file_pfx=""):
@@ -27,8 +27,8 @@ def run_save_restore(test, params, env):
         Generate a guaranteed not to clash filename.
 
         @oaram: path: Optional base path to place file
-        @param: file_pfxx: Optional prefix to filename
-        @return: absolute path to new non-clashing filename
+        :param file_pfxx: Optional prefix to filename
+        :return: absolute path to new non-clashing filename
         """
         if not path:
             path = tempfile.gettempdir()

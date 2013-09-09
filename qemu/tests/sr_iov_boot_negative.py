@@ -11,9 +11,9 @@ def run_sr_iov_boot_negative(test, params, env):
     2) Verify that qemu could handle the negative parameters.
        Check the negative message (optional)
 
-    @param test: qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     neg_msg = params.get("negative_msg")

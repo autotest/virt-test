@@ -24,7 +24,7 @@ def cleanup(folder):
     If folder is a mountpoint, do what is possible to unmount it. Afterwards,
     try to remove it.
 
-    @param folder: Directory to be cleaned up.
+    :param folder: Directory to be cleaned up.
     """
     error.context("cleaning up unattended install directory %s" % folder)
     if os.path.ismount(folder):
@@ -40,7 +40,7 @@ def clean_old_image(image):
     Clean a leftover image file from previous processes. If it contains a
     mounted file system, do the proper cleanup procedures.
 
-    @param image: Path to image to be cleaned up.
+    :param image: Path to image to be cleaned up.
     """
     error.context("cleaning up old leftover image %s" % image)
     if os.path.exists(image):

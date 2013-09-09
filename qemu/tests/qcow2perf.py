@@ -16,9 +16,9 @@ def run_qcow2perf(test, params, env):
     3. Do one operations to the image and measure the time
     4. Record the results
 
-    @param test:   QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env:    Dictionary with test environment.
     """
     image_chain = params.get("image_chain")
     test_image = int(params.get("test_image", "0"))

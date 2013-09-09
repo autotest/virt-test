@@ -15,9 +15,9 @@ def run_device_bit_check(test, params, env):
     2) Verify the relevant bit of the device set correctly in the monitor
        or inside guest(if it is possible)
 
-    @param test: qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     default_value = params.get("default_value", "1 1").split()
     option_add = params.get("option_add", "off off").split()

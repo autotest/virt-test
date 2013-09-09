@@ -87,7 +87,7 @@ def get_remote_vm_disk(rvm):
     """
     Local v2v need remote vm's disk to copy.
 
-    @param rvm: remote vm instance
+    :param rvm: remote vm instance
     """
     # Get remote vms' disk path
     disks = rvm.get_disk_devices()
@@ -105,8 +105,8 @@ def copy_remote_vm(rvm, local_path, remote_host, username, password, timeout=120
     """
     Copy remote vm's disk to local path.
 
-    @param local_path: Where should we put the disk
-    @return: fixed XML file path
+    :param local_path: Where should we put the disk
+    :return: fixed XML file path
     """
     remote_disk_path = get_remote_vm_disk(rvm)
     disk_name = os.path.basename(remote_disk_path)

@@ -428,7 +428,7 @@ class GithubIssues(GithubIssuesBase, object):
         """
         Return a list of issue-numbers that match a search criteria.
 
-        @param: criteria: Dictionary of search terms
+        :param criteria: Dictionary of search terms
             state - str - 'open', 'closed'
             assignee - list of str (login), "none" or "*"
             mentioned - str (login)

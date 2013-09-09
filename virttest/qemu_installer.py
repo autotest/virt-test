@@ -41,7 +41,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         """
         Kills all qemu processes and all processes holding /dev/kvm down
 
-        @return: None
+        :return: None
         """
         logging.debug("Killing any qemu processes that might be left behind")
         utils.system("pkill qemu", ignore_status=True)
@@ -53,7 +53,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Removes previously created links, if they exist
 
-        @return: None
+        :return: None
         '''
         qemu_path = os.path.join(self.test_builddir, self.QEMU_BIN)
         qemu_img_path = os.path.join(self.test_builddir, self.QEMU_IMG_BIN)
@@ -71,7 +71,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Removes previously created links, if they exist
 
-        @return: None
+        :return: None
         '''
         qemu_unittest_path = os.path.join(self.test_builddir, "unittests")
 
@@ -82,7 +82,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Create symbolic links for qemu and qemu-img commands on test bindir
 
-        @return: None
+        :return: None
         '''
         unittest_src = os.path.join(self.install_prefix,
                                     'share', 'qemu', 'tests')
@@ -99,7 +99,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Attempts to find the QEMU binary at the installation prefix
 
-        @return: full path of QEMU binary or None if not found
+        :return: full path of QEMU binary or None if not found
         '''
         result = None
 
@@ -121,7 +121,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Attempts to find the qemu-img binary at the installation prefix
 
-        @return: full path of qemu-img binary or None if not found
+        :return: full path of qemu-img binary or None if not found
         '''
         qemu_img_bin_name = os.path.join(self.install_prefix,
                                          'bin', self.QEMU_IMG_BIN)
@@ -137,7 +137,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Attempts to find the qemu-io binary at the installation prefix
 
-        @return: full path of qemu-io binary or None if not found
+        :return: full path of qemu-io binary or None if not found
         '''
         qemu_io_bin_name = os.path.join(self.install_prefix,
                                         'bin', self.QEMU_IO_BIN)
@@ -153,7 +153,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Attempts to find the qemu fs proxy binary at the installation prefix
 
-        @return: full path of qemu fs proxy binary or None if not found
+        :return: full path of qemu fs proxy binary or None if not found
         '''
         qemu_fs_proxy_bin_name = os.path.join(self.install_prefix,
                                               'bin', self.QEMU_FS_PROXY_BIN)
@@ -170,7 +170,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         """
         Create symbolic links for qemu and qemu-img commands on test bindir
 
-        @return: None
+        :return: None
         """
         logging.debug("Linking QEMU binaries")
 
@@ -211,7 +211,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         This uses a simple mechanism of looking up the installer name
         for deciding what action to do.
 
-        @return: None
+        :return: None
         '''
         if 'unit' in self.name:
             self._cleanup_link_unittest()
@@ -225,7 +225,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         '''
         Performs the uninstallation of KVM userspace component
 
-        @return: None
+        :return: None
         '''
         self._kill_qemu_processes()
         self._cleanup_links()

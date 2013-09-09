@@ -12,9 +12,9 @@ def run_cyginstall(test, params, env):
     1) Install cygwin in guest
     2) Verify cygwin install
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     cygwin_install_cmd = params.get("cygwin_install_cmd")
     cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")

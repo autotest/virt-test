@@ -38,21 +38,21 @@ def run_cdrom(test, params, env):
         Note: This case requires a qemu cli without setting file property
         for -drive option, and will be separated to a different cfg item.
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
 
-    @param cfg: workaround_eject_time - Some versions of qemu are unable to
+    :param cfg: workaround_eject_time - Some versions of qemu are unable to
                                         eject CDROM directly after insert
-    @param cfg: cdrom_test_autounlock - Test whether guest OS unlocks cdrom
+    :param cfg: cdrom_test_autounlock - Test whether guest OS unlocks cdrom
                                         after boot (<300s after VM is booted)
-    @param cfg: cdrom_test_tray_status - Test tray reporting (eject and insert
+    :param cfg: cdrom_test_tray_status - Test tray reporting (eject and insert
                                          CD couple of times in guest).
-    @param cfg: cdrom_test_locked -     Test whether cdrom tray lock function
+    :param cfg: cdrom_test_locked -     Test whether cdrom tray lock function
                                         work well in guest.
-    @param cfg: cdrom_test_eject -      Test whether cdrom works well after
+    :param cfg: cdrom_test_eject -      Test whether cdrom works well after
                                         several times of eject action.
-    @param cfg: cdrom_test_file_operation - Test file operation for cdrom,
+    :param cfg: cdrom_test_file_operation - Test file operation for cdrom,
                                             such as mount/umount, reading files
                                             on cdrom.
 
@@ -69,12 +69,12 @@ def run_cdrom(test, params, env):
         """
         Creates 'new' iso image with one file on it
 
-        @param params: parameters for test
-        @param name: name of new iso image file
-        @param preapre: if True then it prepare cd images.
-        @param file_size: Size of iso image in MB
+        :param params: parameters for test
+        :param name: name of new iso image file
+        :param preapre: if True then it prepare cd images.
+        :param file_size: Size of iso image in MB
 
-        @return: path to new iso image file.
+        :return: path to new iso image file.
         """
         error.context("Creating test iso image '%s'" % name, logging.info)
         cdrom_cd1 = params.get("cdrom_cd1")
@@ -101,9 +101,9 @@ def run_cdrom(test, params, env):
 
     def get_cdrom_file(vm, qemu_cdrom_device):
         """
-        @param vm: VM object
-        @param qemu_cdrom_device: qemu monitor device
-        @return: file associated with $qemu_cdrom_device device
+        :param vm: VM object
+        :param qemu_cdrom_device: qemu monitor device
+        :return: file associated with $qemu_cdrom_device device
         """
         blocks = vm.monitor.info("block")
         cdfile = None
@@ -170,16 +170,16 @@ def run_cdrom(test, params, env):
         """
         Checks whether the tray is opend
 
-        @param vm: VM object
-        @param qemu_cdrom_device: cdrom image file name.
-        @param mode: tray status checking mode, now support:
+        :param vm: VM object
+        :param qemu_cdrom_device: cdrom image file name.
+        :param mode: tray status checking mode, now support:
                      "monitor": get tray status from monitor.
                      "session": get tray status from guest os.
                      "mixed": get tray status first, if failed, try to
                               get the status in guest os again.
-        @param dev_name: cdrom device name in guest os.
+        :param dev_name: cdrom device name in guest os.
 
-        @return: True if cdrom tray is open, otherwise False.
+        :return: True if cdrom tray is open, otherwise False.
                  None if failed to get the tray status.
         """
         is_open, checked = (None, False)
@@ -205,10 +205,10 @@ def run_cdrom(test, params, env):
         """
         Checks whether the cdrom is locked
 
-        @param vm: VM object
-        @param cdrom: cdrom object
+        :param vm: VM object
+        :param cdrom: cdrom object
 
-        @return: Cdrom state if locked return True
+        :return: Cdrom state if locked return True
         """
         error.context("Check cdrom state of locing.")
         blocks = vm.monitor.info("block")
@@ -259,9 +259,9 @@ def run_cdrom(test, params, env):
         """
         Get vm device class from device path.
 
-        @param vm: VM object.
-        @param dev_file_path: Device file path.
-        @return: device object
+        :param vm: VM object.
+        :param dev_file_path: Device file path.
+        :return: device object
         """
         error.context("Get cdrom device object")
         device = vm.get_block({'file': dev_file_path})
@@ -275,11 +275,11 @@ def run_cdrom(test, params, env):
         """
         Start disk load. Cyclic copy from src_path to dst_path.
 
-        @param vm: VM where to find a disk.
-        @param src_path: Source of data
-        @param dst_path: Path to destination
-        @param copy_timeout: Timeout for copy
-        @param dsize: Size of data block which is periodical copied.
+        :param vm: VM where to find a disk.
+        :param src_path: Source of data
+        :param dst_path: Path to destination
+        :param copy_timeout: Timeout for copy
+        :param dsize: Size of data block which is periodical copied.
         """
         if copy_timeout is None:
             copy_timeout = 120

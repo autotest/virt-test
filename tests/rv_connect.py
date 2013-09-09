@@ -17,8 +17,8 @@ from autotest.client.shared import error
 def str_input(client_vm, ticket):
     """
     sends spice_password trough vm.send_key()
-    @param client_session - vm() object
-    @param ticket - use params.get("spice_password")
+    :param client_session - vm() object
+    :param ticket - use params.get("spice_password")
     """
     logging.info("Passing ticket '%s' to the remote-viewer.", ticket)
     char_mapping = {":": "shift-semicolon",
@@ -38,8 +38,8 @@ def str_input(client_vm, ticket):
 def print_rv_version(client_session, rv_binary):
     """
     prints remote-viewer and spice-gtk version available inside client_session
-    @param client_session - vm.wait_for_login()
-    @param rv_binary - remote-viewer binary
+    :param client_session - vm.wait_for_login()
+    :param rv_binary - remote-viewer binary
     """
     logging.info("remote-viewer version: %s",
                  client_session.cmd(rv_binary + " -V"))
@@ -53,9 +53,9 @@ def launch_rv(client_vm, guest_vm, params):
     inside client_session on background.
     remote-viewer will try to connect from vm1 from vm2
 
-    @param client_vm - vm object
-    @param guest_vm - vm object
-    @param params
+    :param client_vm - vm object
+    :param guest_vm - vm object
+    :param params
     """
     rv_binary = params.get("rv_binary", "remote-viewer")
     host_ip = utils_net.get_host_ip_address(params)
@@ -272,8 +272,8 @@ def run_rv_connect(test, params, env):
 
     The plan is to support remote-viewer at first place
 
-    @param test: QEMU test object.  @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.  :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     guest_vm = env.get_vm(params["guest_vm"])

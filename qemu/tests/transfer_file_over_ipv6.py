@@ -14,9 +14,9 @@ def run_transfer_file_over_ipv6(test, params, env):
         2. Transfer data: host <--> guest1 <--> guest2 <-->host via ipv6
         3. after data transfer, check data have no change
     Params:
-        @param test: QEMU test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environment.
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
     """
     timeout = int(params.get("login_timeout", '360'))
     client = params.get("file_transfer_client")

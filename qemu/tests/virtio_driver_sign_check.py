@@ -13,9 +13,9 @@ def run_virtio_driver_sign_check(test, params, env):
     2) Install windows SDK in guest.
     3) use SignTool.exe to verify whether block driver digital signed
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

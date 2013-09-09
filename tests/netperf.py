@@ -15,9 +15,9 @@ def format_result(result, base="12", fbase="2"):
     """
     Format the result to a fixed length string.
 
-    @param result: result need to convert
-    @param base: the length of converted string
-    @param fbase: the decimal digit for float
+    :param result: result need to convert
+    :param base: the length of converted string
+    :param fbase: the decimal digit for float
     """
     if isinstance(result, str):
         value = "%" + base + "s"
@@ -32,12 +32,12 @@ def netperf_record(results, filter_list, header=False, base="12", fbase="2"):
     """
     Record the results in a certain format.
 
-    @param results: a dict include the results for the variables
-    @param filter_list: variable list which is wanted to be shown in the
+    :param results: a dict include the results for the variables
+    :param filter_list: variable list which is wanted to be shown in the
                         record file, also fix the order of variables
-    @param header: if record the variables as a column name before the results
-    @param base: the length of a variable
-    @param fbase: the decimal digit for float
+    :param header: if record the variables as a column name before the results
+    :param base: the length of a variable
+    :param fbase: the decimal digit for float
     """
     key_list = []
     for key in filter_list:
@@ -60,9 +60,9 @@ def start_netserver_win(session, start_cmd, pattern):
     """
     Start netserver in Windows guest through a cygwin session.
 
-    @param session: remote session for cygwin
-    @param start_cmd: command to start netserver
-    @param pattern: pattern to judge the status of netserver
+    :param session: remote session for cygwin
+    :param start_cmd: command to start netserver
+    :param pattern: pattern to judge the status of netserver
     """
     output = session.cmd_output(start_cmd)
     try:
@@ -82,9 +82,9 @@ def run_netperf(test, params, env):
     2) Prepare the test environment in server/client/host
     3) Execute netperf tests, collect and analyze the results
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def env_setup(session, ip, user, port, password):
         error.context("Setup env for %s" % ip)
@@ -239,21 +239,21 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     """
     Start to test with different kind of configurations
 
-    @param server: netperf server ip for data connection
-    @param server_ctl: ip to control netperf server
-    @param host: localhost ip
-    @param clients: netperf clients' ip
-    @param resultsdir: directory to restore the results
-    @param l: test duration
-    @param sessions_rr: sessions number list for RR test
-    @param sessions: sessions number list
-    @param sizes_rr: request/response sizes (TCP_RR, UDP_RR)
-    @param sizes: send size (TCP_STREAM, UDP_STREAM)
-    @param protocols: test type
-    @param ver_cmd: command to check kvm version
-    @param netserver_port: netserver listen port
-    @param params: Dictionary with the test parameters.
-    @param server_cyg: shell session for cygwin in windows guest
+    :param server: netperf server ip for data connection
+    :param server_ctl: ip to control netperf server
+    :param host: localhost ip
+    :param clients: netperf clients' ip
+    :param resultsdir: directory to restore the results
+    :param l: test duration
+    :param sessions_rr: sessions number list for RR test
+    :param sessions: sessions number list
+    :param sizes_rr: request/response sizes (TCP_RR, UDP_RR)
+    :param sizes: send size (TCP_STREAM, UDP_STREAM)
+    :param protocols: test type
+    :param ver_cmd: command to check kvm version
+    :param netserver_port: netserver listen port
+    :param params: Dictionary with the test parameters.
+    :param server_cyg: shell session for cygwin in windows guest
     """
 
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
@@ -360,9 +360,9 @@ def ssh_cmd(session, cmd, timeout=120):
     """
     Execute remote command and return the output
 
-    @param session: a remote shell session or tag for localhost
-    @param cmd: executed command
-    @param timeout: timeout for the command
+    :param session: a remote shell session or tag for localhost
+    :param cmd: executed command
+    :param timeout: timeout for the command
     """
     if session == "localhost":
         return utils.system_output(cmd, timeout=timeout)
@@ -424,7 +424,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
 
     def count_interrupt(name):
         """
-        @param name: the name of interrupt, such as "virtio0-input"
+        :param name: the name of interrupt, such as "virtio0-input"
         """
         intr = 0
         stat = ssh_cmd(server_ctl, "cat /proc/interrupts |grep %s" % name)
@@ -494,8 +494,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         Process the demo result, remove the noise from head,
         and compute the final throughout.
 
-        @param fname: result file name
-        @param sessions: sessions' number
+        :param fname: result file name
+        :param sessions: sessions' number
         """
         fd = open(fname)
         lines = fd.readlines()

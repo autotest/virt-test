@@ -75,9 +75,9 @@ def get_living_vm(env, vm_name):
     """
     Get a VM object from the environment and make sure it's alive.
 
-    @param env: Dictionary with test environment.
-    @param vm_name: Name of the desired VM object.
-    @return: A VM object.
+    :param env: Dictionary with test environment.
+    :param vm_name: Name of the desired VM object.
+    :return: A VM object.
     """
     vm = env.get_vm(vm_name)
     if not vm:
@@ -92,12 +92,12 @@ def wait_for_login(vm, nic_index=0, timeout=240, start=0, step=2, serial=None):
     """
     Try logging into a VM repeatedly.  Stop on success or when timeout expires.
 
-    @param vm: VM object.
-    @param nic_index: Index of NIC to access in the VM.
-    @param timeout: Time to wait before giving up.
-    @param serial: Whether to use a serial connection instead of a remote
+    :param vm: VM object.
+    :param nic_index: Index of NIC to access in the VM.
+    :param timeout: Time to wait before giving up.
+    :param serial: Whether to use a serial connection instead of a remote
             (ssh, rss) one.
-    @return: A shell session object.
+    :return: A shell session object.
     """
     end_time = time.time() + timeout
     session = None
@@ -151,14 +151,14 @@ def reboot(vm, session, method="shell", sleep_before_reset=10, nic_index=0,
     Reboot the VM and wait for it to come back up by trying to log in until
     timeout expires.
 
-    @param vm: VM object.
-    @param session: A shell session object.
-    @param method: Reboot method.  Can be "shell" (send a shell reboot
+    :param vm: VM object.
+    :param session: A shell session object.
+    :param method: Reboot method.  Can be "shell" (send a shell reboot
             command) or "system_reset" (send a system_reset monitor command).
-    @param nic_index: Index of NIC to access in the VM, when logging in after
+    :param nic_index: Index of NIC to access in the VM, when logging in after
             rebooting.
-    @param timeout: Time to wait before giving up (after rebooting).
-    @return: A new shell session object.
+    :param timeout: Time to wait before giving up (after rebooting).
+    :return: A new shell session object.
     """
     if method == "shell":
         # Send a reboot command to the guest's shell
@@ -206,10 +206,10 @@ def update_boot_option(vm, args_removed=None, args_added=None,
     """
     Update guest default kernel option.
 
-    @param vm: The VM object.
-    @param args_removed: Kernel options want to remove.
-    @param args_added: Kernel options want to add.
-    @param need_reboot: Whether need reboot VM or not.
+    :param vm: The VM object.
+    :param args_removed: Kernel options want to remove.
+    :param args_added: Kernel options want to add.
+    :param need_reboot: Whether need reboot VM or not.
     @raise error.TestError: Raised if fail to update guest kernel cmdlie.
 
     """
@@ -249,15 +249,15 @@ def migrate(vm, env=None, mig_timeout=3600, mig_protocol="tcp",
     """
     Migrate a VM locally and re-register it in the environment.
 
-    @param vm: The VM to migrate.
-    @param env: The environment dictionary.  If omitted, the migrated VM will
+    :param vm: The VM to migrate.
+    :param env: The environment dictionary.  If omitted, the migrated VM will
             not be registered.
-    @param mig_timeout: timeout value for migration.
-    @param mig_protocol: migration protocol
-    @param mig_cancel: Test migrate_cancel or not when protocol is tcp.
-    @param dest_host: Destination host (defaults to 'localhost').
-    @param mig_port: Port that will be used for migration.
-    @return: The post-migration VM, in case of same host migration, True in
+    :param mig_timeout: timeout value for migration.
+    :param mig_protocol: migration protocol
+    :param mig_cancel: Test migrate_cancel or not when protocol is tcp.
+    :param dest_host: Destination host (defaults to 'localhost').
+    :param mig_port: Port that will be used for migration.
+    :return: The post-migration VM, in case of same host migration, True in
             case of multi-host migration.
     """
     def mig_finished():
@@ -437,13 +437,13 @@ class MigrationData(object):
 
     def is_src(self):
         """
-        @return: True if host is source.
+        :return: True if host is source.
         """
         return self.source
 
     def is_dst(self):
         """
-        @return: True if host is destination.
+        :return: True if host is destination.
         """
         return self.destination
 
@@ -566,7 +566,7 @@ class MultihostMigration(object):
         """
         Migrate vms source.
 
-        @param mig_Data: Data for migration.
+        :param mig_Data: Data for migration.
 
         For change way how machine migrates is necessary
         re implement this method.
@@ -607,7 +607,7 @@ class MultihostMigration(object):
         Migrate vms destination. This function is started on dest host during
         migration.
 
-        @param mig_Data: Data for migration.
+        :param mig_Data: Data for migration.
         """
         pass
 
@@ -660,7 +660,7 @@ class MultihostMigration(object):
         """
         Prepare separate params for vm migration.
 
-        @param vms_name: List of vms.
+        :param vms_name: List of vms.
         """
         new_params = mig_data.params.copy()
         new_params["vms"] = " ".join(mig_data.vms_name)
@@ -670,8 +670,8 @@ class MultihostMigration(object):
         """
         Check if vms are started correctly.
 
-        @param vms: list of vms.
-        @param source: Must be True if is source machine.
+        :param vms: list of vms.
+        :param source: Must be True if is source machine.
         """
         logging.info("Try check vms %s" % (mig_data.vms_name))
         for vm in mig_data.vms_name:
@@ -690,8 +690,8 @@ class MultihostMigration(object):
         """
         Prepare destination of migration for migration.
 
-        @param mig_data: Class with data necessary for migration.
-        @param migration_mode: Migration mode for prepare machine.
+        :param mig_data: Class with data necessary for migration.
+        :param migration_mode: Migration mode for prepare machine.
         """
         new_params = self._prepare_params(mig_data)
 
@@ -718,7 +718,7 @@ class MultihostMigration(object):
         """
         Check vms after migrate.
 
-        @param mig_data: object with migration data.
+        :param mig_data: object with migration data.
         """
         for vm in mig_data.vms:
             vm.resume()
@@ -744,7 +744,7 @@ class MultihostMigration(object):
         """
         Check vms after migrate.
 
-        @param mig_data: object with migration data.
+        :param mig_data: object with migration data.
         """
         pass
 
@@ -758,7 +758,7 @@ class MultihostMigration(object):
         """
         Do something right before migration.
 
-        @param mig_data: object with migration data.
+        :param mig_data: object with migration data.
         """
         pass
 
@@ -786,13 +786,13 @@ class MultihostMigration(object):
         --------------------------------------------------------
                     wait for sync on finish migration
 
-        @param vms_name: List of vms.
-        @param srchost: src host id.
-        @param dsthost: dst host id.
-        @param start_work: Function started before migration.
-        @param check_work: Function started after migration.
-        @param mig_mode: Migration mode.
-        @param params_append: Append params to self.params only for migration.
+        :param vms_name: List of vms.
+        :param srchost: src host id.
+        :param dsthost: dst host id.
+        :param start_work: Function started before migration.
+        :param check_work: Function started after migration.
+        :param mig_mode: Migration mode.
+        :param params_append: Append params to self.params only for migration.
         """
         def migrate_wrap(vms_name, srchost, dsthost, start_work=None,
                          check_work=None, params_append=None):
@@ -905,11 +905,11 @@ class MultihostMigration(object):
         It executes start_work on source machine before migration and executes
         check_work on dsthost after migration.
 
-        @param vms_name: List of vms.
-        @param srchost: src host id.
-        @param dsthost: dst host id.
-        @param start_work: Function which is started before migration.
-        @param check_work: Function which is started after
+        :param vms_name: List of vms.
+        :param srchost: src host id.
+        :param dsthost: dst host id.
+        :param start_work: Function which is started before migration.
+        :param check_work: Function which is started after
                            done of migration.
         """
         self.migrate(vms_name, srchost, dsthost, start_work, check_work,
@@ -948,7 +948,7 @@ class MultihostMigrationFd(MultihostMigration):
         """
         Migrate vms source.
 
-        @param mig_Data: Data for migration.
+        :param mig_Data: Data for migration.
 
         For change way how machine migrates is necessary
         re implement this method.
@@ -1121,7 +1121,7 @@ class MultihostMigrationExec(MultihostMigration):
         """
         Migrate vms source.
 
-        @param mig_Data: Data for migration.
+        :param mig_Data: Data for migration.
 
         For change way how machine migrates is necessary
         re implement this method.
@@ -1255,8 +1255,8 @@ def stop_windows_service(session, service, timeout=120):
     Stop a Windows service using sc.
     If the service is already stopped or is not installed, do nothing.
 
-    @param service: The name of the service
-    @param timeout: Time duration to wait for service to stop
+    :param service: The name of the service
+    :param timeout: Time duration to wait for service to stop
     @raise error.TestError: Raised if the service can't be stopped
     """
     end_time = time.time() + timeout
@@ -1277,8 +1277,8 @@ def start_windows_service(session, service, timeout=120):
     If the service is already running, do nothing.
     If the service isn't installed, fail.
 
-    @param service: The name of the service
-    @param timeout: Time duration to wait for service to start
+    :param service: The name of the service
+    :param timeout: Time duration to wait for service to start
     @raise error.TestError: Raised if the service can't be started
     """
     end_time = time.time() + timeout
@@ -1328,13 +1328,13 @@ def get_time(session, time_command, time_filter_re, time_format):
     (i.e. should "display" a command prompt and should be done with all
     previous commands).
 
-    @param session: A shell session.
-    @param time_command: Command to issue to get the current guest time.
-    @param time_filter_re: Regex filter to apply on the output of
+    :param session: A shell session.
+    :param time_command: Command to issue to get the current guest time.
+    :param time_filter_re: Regex filter to apply on the output of
             time_command in order to get the current time.
-    @param time_format: Format string to pass to time.strptime() with the
+    :param time_format: Format string to pass to time.strptime() with the
             result of the regex filter.
-    @return: A tuple containing the host time and guest time.
+    :return: A tuple containing the host time and guest time.
     """
     if len(re.findall("ntpdate|w32tm", time_command)) == 0:
         host_time = time.time()
@@ -1378,13 +1378,13 @@ def get_time(session, time_command, time_filter_re, time_format):
 def dump_command_output(session, command, filename, timeout=30.0,
                         internal_timeout=1.0, print_func=None):
     """
-    @param session: a saved communication between host and guest.
-    @param command: will running in guest side.
-    @param filename: redirect command output to the specify file
-    @param timeout: the duration (in seconds) to wait until a match is found.
-    @param internal_timeout: the timeout to pass to read_nonblocking.
-    @param print_func: a function to be used to print the data being read.
-    @return: Command output(string).
+    :param session: a saved communication between host and guest.
+    :param command: will running in guest side.
+    :param filename: redirect command output to the specify file
+    :param timeout: the duration (in seconds) to wait until a match is found.
+    :param internal_timeout: the timeout to pass to read_nonblocking.
+    :param print_func: a function to be used to print the data being read.
+    :return: Command output(string).
     """
 
     (status, output) = session.cmd_status_output(command, timeout,
@@ -1408,9 +1408,9 @@ def fix_atest_cmd(atest_basedir, cmd, ip):
     2. adding autotest/cli/atest prefix/basedir;
     and etc..
 
-    @param atest_basedir: base dir of autotest/cli/atest
-    @param cmd: command to fix.
-    @param ip: ip of the autotest server to add to the command.
+    :param atest_basedir: base dir of autotest/cli/atest
+    :param cmd: command to fix.
+    :param ip: ip of the autotest server to add to the command.
     """
     cmd = os.path.join(atest_basedir, cmd)
     return ''.join([cmd, " -w ", ip])
@@ -1418,11 +1418,11 @@ def fix_atest_cmd(atest_basedir, cmd, ip):
 
 def get_svr_session(ip, port="22", usrname="root", passwd="123456", prompt=""):
     """
-    @param ip: IP address of the server.
-    @param port: the port for remote session.
-    @param usrname: user name for remote login.
-    @param passwd: password.
-    @param prompt: shell/session prompt for the connection.
+    :param ip: IP address of the server.
+    :param port: the port for remote session.
+    :param usrname: user name for remote login.
+    :param passwd: password.
+    :param prompt: shell/session prompt for the connection.
     """
     session = remote.remote_login('ssh', ip, port, usrname, passwd, prompt)
     if not session:
@@ -1436,8 +1436,8 @@ def get_memory_info(lvms):
     Get memory information from host and guests in format:
     Host: memfree = XXXM; Guests memsh = {XXX,XXX,...}
 
-    @params lvms: List of VM objects
-    @return: String with memory info report
+    :params lvms: List of VM objects
+    :return: String with memory info report
     """
     if not isinstance(lvms, list):
         raise error.TestError("Invalid list passed to get_stat: %s " % lvms)
@@ -1468,8 +1468,8 @@ def domstat_cgroup_cpuacct_percpu(domain, qemu_path="/libvirt/qemu/"):
     """
     Get a list of domain-specific per CPU stats from cgroup cpuacct controller.
 
-    @param domain: Domain name
-    @param qemu_path: Default: "/libvirt/qemu/".
+    :param domain: Domain name
+    :param qemu_path: Default: "/libvirt/qemu/".
                       Please refer OS doc to pass the correct qemu path.
                       $CGRP_MNTPT/cpuacct/<$qemu_path>/<domain>..
     """
@@ -1493,9 +1493,9 @@ def run_image_copy(test, params, env):
     2) Check the existence of source image
     3) If it exists, copy the image from NFS
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     if vm is not None:
@@ -1576,9 +1576,9 @@ def run_file_transfer(test, params, env):
     4) Copy this file from guest to host.
     5) Check if file transfers ended good.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -1657,25 +1657,25 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     """
     Run an autotest control file inside a guest (linux only utility).
 
-    @param vm: VM object.
-    @param session: A shell session on the VM provided.
-    @param control_path: A path to an autotest control file.
-    @param timeout: Timeout under which the autotest control file must complete.
-    @param outputdir: Path on host where we should copy the guest autotest
+    :param vm: VM object.
+    :param session: A shell session on the VM provided.
+    :param control_path: A path to an autotest control file.
+    :param timeout: Timeout under which the autotest control file must complete.
+    :param outputdir: Path on host where we should copy the guest autotest
             results to.
 
     The following params is used by the migration
-    @param params: Test params used in the migration test
+    :param params: Test params used in the migration test
     """
     def copy_if_hash_differs(vm, local_path, remote_path):
         """
         Copy a file to a guest if it doesn't exist or if its MD5sum differs.
 
-        @param vm: VM object.
-        @param local_path: Local path.
-        @param remote_path: Remote path.
+        :param vm: VM object.
+        :param local_path: Local path.
+        :param remote_path: Remote path.
 
-        @return: Whether the hash differs (True) or not (False).
+        :return: Whether the hash differs (True) or not (False).
         """
         hash_differs = False
         local_hash = utils.hash_file(local_path)
@@ -1704,9 +1704,9 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         Extract the autotest .tar.bz2 file on the guest, ensuring the final
         destination path will be dest_dir.
 
-        @param vm: VM object
-        @param remote_path: Remote file path
-        @param dest_dir: Destination dir for the contents
+        :param vm: VM object
+        :param remote_path: Remote file path
+        :param dest_dir: Destination dir for the contents
         """
         basename = os.path.basename(remote_path)
         logging.debug("Extracting %s on VM %s", basename, vm.name)
@@ -1957,7 +1957,7 @@ def get_loss_ratio(output):
     """
     Get the packet loss ratio from the output of ping
 .
-    @param output: Ping output.
+    :param output: Ping output.
     """
     try:
         return int(re.findall('(\d+)% packet loss', output)[0])
@@ -1970,9 +1970,9 @@ def raw_ping(command, timeout, session, output_func):
     """
     Low-level ping command execution.
 
-    @param command: Ping command.
-    @param timeout: Timeout of the ping command.
-    @param session: Local executon hint or session to execute the ping command.
+    :param command: Ping command.
+    :param timeout: Timeout of the ping command.
+    :param session: Local executon hint or session to execute the ping command.
     """
     if session is None:
         process = aexpect.run_bg(command, output_func=output_func,
@@ -2026,19 +2026,19 @@ def ping(dest=None, count=None, interval=None, interface=None,
     """
     Wrapper of ping.
 
-    @param dest: Destination address.
-    @param count: Count of icmp packet.
-    @param interval: Interval of two icmp echo request.
-    @param interface: Specified interface of the source address.
-    @param packetsize: Packet size of icmp.
-    @param ttl: IP time to live.
-    @param hint: Path mtu discovery hint.
-    @param adaptive: Adaptive ping flag.
-    @param broadcast: Broadcast ping flag.
-    @param flood: Flood ping flag.
-    @param timeout: Timeout for the ping command.
-    @param output_func: Function used to log the result of ping.
-    @param session: Local executon hint or session to execute the ping command.
+    :param dest: Destination address.
+    :param count: Count of icmp packet.
+    :param interval: Interval of two icmp echo request.
+    :param interface: Specified interface of the source address.
+    :param packetsize: Packet size of icmp.
+    :param ttl: IP time to live.
+    :param hint: Path mtu discovery hint.
+    :param adaptive: Adaptive ping flag.
+    :param broadcast: Broadcast ping flag.
+    :param flood: Flood ping flag.
+    :param timeout: Timeout for the ping command.
+    :param output_func: Function used to log the result of ping.
+    :param session: Local executon hint or session to execute the ping command.
     """
     if dest is not None:
         command = "ping %s " % dest
@@ -2072,11 +2072,11 @@ def ping(dest=None, count=None, interval=None, interface=None,
 def run_virt_sub_test(test, params, env, sub_type=None, tag=None):
     """
     Call another test script in one test script.
-    @param test:   QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env:    Dictionary with test environment.
-    @param sub_type: Type of called test script.
-    @param tag:    Tag for get the sub_test params
+    :param test:   QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env:    Dictionary with test environment.
+    :param sub_type: Type of called test script.
+    :param tag:    Tag for get the sub_test params
     """
     if sub_type is None:
         raise error.TestError("No sub test is found")
@@ -2109,8 +2109,8 @@ def get_readable_cdroms(params, session):
     """
     Get the cdrom list which contain media in guest.
 
-    @param params: Dictionary with the test parameters.
-    @param session: A shell session on the VM provided.
+    :param params: Dictionary with the test parameters.
+    :param session: A shell session on the VM provided.
     """
     get_cdrom_cmd = params.get("cdrom_get_cdrom_cmd")
     check_cdrom_patttern = params.get("cdrom_check_cdrom_pattern")
@@ -2135,8 +2135,8 @@ def get_readable_cdroms(params, session):
 def pin_vm_threads(vm, node):
     """
     Pin VM threads to single cpu of a numa node
-    @param vm: VM object
-    @param node: NumaNode object
+    :param vm: VM object
+    :param node: NumaNode object
     """
     for i in vm.vhost_threads:
         logging.info("pin vhost thread(%s) to cpu(%s)" % (i, node.pin_cpu(i)))
@@ -2154,7 +2154,7 @@ def get_qemu_numa_status(numa_node_info, qemu_pid, debug=True):
     :type numa_node_info: string
     :param debug: Print the debug info or not
     :type debug: bool
-    :return: memory and cpu list in each node
+    :return:: memory and cpu list in each node
     :rtype: tuple
     """
     node_list = numa_node_info.online_nodes
@@ -2182,7 +2182,7 @@ def max_mem_map_node(host_numa_node, qemu_pid):
     :type numa_node_info: NumaInfo object
     :param qemu_pid: process id of qemu
     :type numa_node_info: string
-    :return: The node id and how many pages are mapped to it
+    :return:: The node id and how many pages are mapped to it
     :rtype: tuple
     """
     node_list = host_numa_node.online_nodes
@@ -2382,11 +2382,11 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
     """
     Get windows driver's hardware id from inf files.
 
-    @param dirver: Configurable driver name.
-    @param mount_point: Mount point for the driver storage
-    @param storage_path: The path of the virtio driver storage
-    @param re_hw_id: the pattern for getting hardware id from inf files
-    @param run_cmd:  Use hardware id in windows cmd command or not
+    :param dirver: Configurable driver name.
+    :param mount_point: Mount point for the driver storage
+    :param storage_path: The path of the virtio driver storage
+    :param re_hw_id: the pattern for getting hardware id from inf files
+    :param run_cmd:  Use hardware id in windows cmd command or not
 
     Return: Windows driver's hardware id
     """

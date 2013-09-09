@@ -18,9 +18,9 @@ def run_live_snapshot_chain(test, params, env):
     4. Do post snapshot operates(option)
     5. Check the base and snapshot images(option)
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def get_base_image(snapshot_chain, snapshot_file):
         try:

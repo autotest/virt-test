@@ -25,7 +25,7 @@ def nodeset_parser(nodeset):
     """
     Parse a list of numa nodes, its syntax is a comma separated list,
     with '-' for ranges and '^' for excluding a node.
-    @param nodeset: NUMA node selections to set
+    :param nodeset: NUMA node selections to set
     """
     hyphens = []
     carets = []
@@ -71,7 +71,7 @@ def nodeset_parser(nodeset):
 def check_numatune_xml(params):
     """
     Compare mode and nodeset value with guest XML configuration
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     mode = params.get("numa_mode", "")
@@ -117,7 +117,7 @@ def check_numatune_xml(params):
 def get_numa_parameter(params):
     """
     Get the numa parameters
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     options = params.get("options", None)
@@ -142,7 +142,7 @@ def get_numa_parameter(params):
 def set_numa_parameter(params):
     """
     Set the numa parameters
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     mode = params.get("numa_mode")

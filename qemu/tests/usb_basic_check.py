@@ -85,9 +85,9 @@ def run_usb_basic_check(test, params, env):
     5) Log into the guest to verify it's up again (optional)
     6) Verify device(s) again after guest reboot (optional)
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def _check_dev():

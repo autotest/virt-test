@@ -86,8 +86,8 @@ def run_qmp_basic(test, params, env):
         """
         Check QMP OK response.
 
-        @param resp: QMP response
-        @param empty: if True, response should not contain data to return
+        :param resp: QMP response
+        :param empty: if True, response should not contain data to return
         """
         check_key_is_dict(resp, "return")
         if empty and len(resp["return"]) > 0:
@@ -98,9 +98,9 @@ def run_qmp_basic(test, params, env):
         """
         Check QMP error response.
 
-        @param resp: QMP response
-        @param classname: Expected error class name
-        @param datadict: Expected error data dictionary
+        :param resp: QMP response
+        :param classname: Expected error class name
+        :param datadict: Expected error data dictionary
         """
         check_key_is_dict(resp, "error")
         check_key_is_str(resp["error"], "class")

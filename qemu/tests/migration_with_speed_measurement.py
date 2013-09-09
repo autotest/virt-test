@@ -20,9 +20,9 @@ def run_migration_with_speed_measurement(test, params, env):
     5) Kill off both VMs.
     6) Print statistic of migration.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

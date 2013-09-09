@@ -12,9 +12,9 @@ def run_pxe(test, params, env):
     2) Snoop the tftp packet in the tap device
     3) Analyzing the tcpdump result
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     error.context("Try to boot from NIC", logging.info)
     vm = env.get_vm(params["main_vm"])

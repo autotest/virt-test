@@ -14,9 +14,9 @@ def run_nonexist_vcpu_hotplug(test, params, env):
         3) hotplug non-existed(no in 1..160) vcpus to guest.
         4) check guest vcpu quantity, should didn't changed
     params:
-        @param test: QEMU test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environment.
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
     """
 
     hotplug_cmd = "cpu_set %s online"

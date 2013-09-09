@@ -13,9 +13,9 @@ def run_rv_vdagent(test, params, env):
     """
     Tests spice vdagent (starting, stopping, restarting, and status)
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))

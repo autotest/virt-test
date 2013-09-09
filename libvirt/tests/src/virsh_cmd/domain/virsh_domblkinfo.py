@@ -21,7 +21,7 @@ def run_virsh_domblkinfo(test, params, env):
         2.Perform domblkinfo operation.
         3.Detach the disk.
 
-        @return: Command status and output.
+        :return: Command status and output.
         """
         try:
             source_file = open(test_disk_source, 'wb')

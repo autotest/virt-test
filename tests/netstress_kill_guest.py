@@ -12,16 +12,16 @@ def run_netstress_kill_guest(test, params, env):
     """
     Try stop network interface in VM when other VM try to communicate.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def get_corespond_ip(ip):
         """
         Get local ip address which is used for contact ip.
 
-        @param ip: Remote ip
-        @return: Local corespond IP.
+        :param ip: Remote ip
+        :return: Local corespond IP.
         """
         result = utils.run("ip route get %s" % (ip)).stdout
         ip = re.search("src (.+)", result)
@@ -33,7 +33,7 @@ def run_netstress_kill_guest(test, params, env):
         """
         Get driver of network cards.
 
-        @param session: session to machine
+        :param session: session to machine
         """
         modules = []
         cmd = params.get("nic_module_cmd")

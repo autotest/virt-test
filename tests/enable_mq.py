@@ -13,9 +13,9 @@ def run_enable_mq(test, params, env):
     2) Login guests one by one
     3) Enable MQ for all virtio nics by ethtool -L
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     login_timeout = int(params.get("login_timeout", 360))

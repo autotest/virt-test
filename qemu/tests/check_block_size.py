@@ -13,9 +13,9 @@ def run_check_block_size(test, params, env):
     TODO: This test only works on Linux guest, should make it work in windows
           guest. (Are there any windows tools to check block size?)
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     name = params["main_vm"]
     if params.get("need_install") == "yes":

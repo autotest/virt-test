@@ -28,9 +28,9 @@ def run_drive_mirror_simple(test, params, env):
     3). reset max job speed before steady status(optional)
     4). cancel active job on the device before steady status(optional)
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_images", "image1")
     repeats = int(params.get("repeat_times", 3))

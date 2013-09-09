@@ -310,8 +310,8 @@ class NetworkXML(NetworkXMLBase):
         """
         Return a dictionary of names to NetworkXML instances for all networks
 
-        @param: virsh: virsh module or instance to use
-        @return: Dictionary of network name to NetworkXML instance
+        :param virsh: virsh module or instance to use
+        :return: Dictionary of network name to NetworkXML instance
         """
         result = {}
         # Values should all share virsh property
@@ -328,9 +328,9 @@ class NetworkXML(NetworkXMLBase):
         """
         Return new NetworkXML instance from virsh net-dumpxml command
 
-        @param: network_name: Name of network to net-dumpxml
-        @param: virsh_instance: virsh module or instance to use
-        @return: New initialized NetworkXML instance
+        :param network_name: Name of network to net-dumpxml
+        :param virsh_instance: virsh module or instance to use
+        :return: New initialized NetworkXML instance
         """
         netxml = NetworkXML(virsh_instance=virsh_instance)
         netxml['xml'] = virsh_instance.net_dumpxml(network_name).stdout.strip()
@@ -341,8 +341,8 @@ class NetworkXML(NetworkXMLBase):
         """
         Return Network's uuid by Network's name.
 
-        @param: network_name: Network's name
-        @return: Network's uuid
+        :param network_name: Network's name
+        :return: Network's uuid
         """
         network_xml = NetworkXML.new_from_net_dumpxml(network_name,
                                                       virsh_instance)

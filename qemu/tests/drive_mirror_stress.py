@@ -111,9 +111,9 @@ def run_drive_mirror_stress(test, params, env):
     7). quit stress app, reboot guest(optional);
     8). verify guest can response correctly
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_image", "image1")
     stress_test = DriveMirrorStress(test, params, env, tag)

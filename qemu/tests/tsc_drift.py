@@ -20,9 +20,9 @@ def run_tsc_drift(test, params, env):
     4) Compute the TSC frequency of host and guest
     5) Compare the frequency deviation between host and guest with standard
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     drift_threshold = float(params.get("drift_threshold"))

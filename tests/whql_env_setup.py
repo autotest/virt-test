@@ -23,9 +23,9 @@ def run_whql_env_setup(test, params, env):
     7) Update the nic configuration
     8) Install debug view and make it auto run
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     log_path = "%s/../debug" % test.resultsdir
     # Prepare the tools iso

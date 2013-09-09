@@ -89,8 +89,8 @@ class PropCanBase(dict, PropCanInternal):
         """
         Initialize contents directly or by way of accessors
 
-        @param: *args: Initial values for __slots__ keys, same as dict.
-        @param: **dargs: Initial values for __slots__ keys, same as dict.
+        :param *args: Initial values for __slots__ keys, same as dict.
+        :param **dargs: Initial values for __slots__ keys, same as dict.
         """
         # Params are initialized here, not in super
         super(PropCanBase, self).__init__()

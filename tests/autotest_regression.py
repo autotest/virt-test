@@ -21,9 +21,9 @@ def run_autotest_regression(test, params, env):
     10) Schedule a simple job sleeptest in the client. Wait for client reboot.
     11) If any of these steps have failed, fail the test and report the error
 
-    @param test: virt test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: virt test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     step_failures = []
     autotest_repo = params['autotest_repo']

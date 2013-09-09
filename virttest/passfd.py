@@ -72,10 +72,10 @@ def sendfd(sock, fd, message="NONE"):
     Note that the file descriptor cannot be sent by itself, at least
     one byte of payload needs to be sent also.
 
-    @param sock: socket object or file descriptor for an AF_UNIX socket
-    @param fd: file object or file descriptor to pass
-    @param message: message to send
-    @return: On success, sendfd returns the number of bytes sent, not including
+    :param sock: socket object or file descriptor for an AF_UNIX socket
+    :param fd: file object or file descriptor to pass
+    :param message: message to send
+    :return: On success, sendfd returns the number of bytes sent, not including
     the file descriptor nor the control data.  If there was no message
     to send, 0 is returned.
     """
@@ -86,9 +86,9 @@ def recvfd(sock, msg_buf=4096):
     """
     Receive a message and a file descriptor from a Unix domain socket.
 
-    @param sock: file descriptor or socket object for an AF_UNIX socket
-    @param buffersize: maximum message size to receive
-    @return: On success, recvfd returns a tuple containing the received
+    :param sock: file descriptor or socket object for an AF_UNIX socket
+    :param buffersize: maximum message size to receive
+    :return: On success, recvfd returns a tuple containing the received
     file descriptor and message
     @raise OSError is raised if recvmsg fails
     @raise RuntimeError is raised if the received data does not carry

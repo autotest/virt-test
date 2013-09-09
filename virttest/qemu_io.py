@@ -50,10 +50,10 @@ class QemuIO(object):
                      forbid_option=[]):
         """
         Generate the command line for qemu-io from the parameters
-        @params ignore_option: list for the options should not in command
-        @params essential_option: list for the essential options
-        @params forbid_option: list for the option should not in command
-        @return: qemu-io command line
+        :params ignore_option: list for the options should not in command
+        :params essential_option: list for the essential options
+        :params forbid_option: list for the option should not in command
+        :return: qemu-io command line
         """
         essential_flag = False
 
@@ -119,8 +119,8 @@ class QemuIOShellSession(QemuIO):
         """
         Get output from shell session. If the create flag is True, init the
         shell session and set the create flag to False.
-        @param command: command to execute in qemu-io
-        @param timeout: timeout for execute the command
+        :param command: command to execute in qemu-io
+        :param timeout: timeout for execute the command
         """
         qemu_io_cmd = self.qemu_io_cmd
         prompt = self.prompt
@@ -176,8 +176,8 @@ class QemuIOSystem(QemuIO):
         """
         Get output from system_output. Add the command to the qemu-io command
         line with -c and record the output in the log file.
-        @param command: command to execute in qemu-io
-        @param timeout: timeout for execute the command
+        :param command: command to execute in qemu-io
+        :param timeout: timeout for execute the command
         """
         qemu_io_cmd = self.qemu_io_cmd
         if command:

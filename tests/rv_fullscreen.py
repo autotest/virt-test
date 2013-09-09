@@ -18,9 +18,9 @@ def run_rv_fullscreen(test, params, env):
     Positive test: full_screen param = yes, verify guest res = client res
     Negative test: full_screen param= no, verify guest res != client res
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     # Get the parameters needed for the test
     full_screen = params.get("full_screen")

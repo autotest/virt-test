@@ -104,9 +104,9 @@ def run_block_stream_stress(test, params, env):
     7). quit stress app
     8). reboot and verify guest can response correctly
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_image", "image1")
     stress_test = BlockStreamStress(test, params, env, tag)

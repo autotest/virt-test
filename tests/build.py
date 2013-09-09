@@ -6,9 +6,9 @@ def run_build(test, params, env):
     """
     Installs virtualization software using the selected installers
 
-    @param test: test object.
-    @param params: Dictionary with test parameters.
-    @param env: Test environment.
+    :param test: test object.
+    :param params: Dictionary with test parameters.
+    :param env: Test environment.
     """
     srcdir = params.get("srcdir", test.srcdir)
     params["srcdir"] = srcdir

@@ -89,12 +89,12 @@ class VM(virt_vm.BaseVM):
         """
         Initialize the object and set a few attributes.
 
-        @param name: The name of the object
-        @param params: A dict containing VM params
+        :param name: The name of the object
+        :param params: A dict containing VM params
                 (see method make_qemu_command for a full description)
-        @param root_dir: Base directory for relative filenames
-        @param address_cache: A dict that maps MAC addresses to IP addresses
-        @param state: If provided, use this as self.__dict__
+        :param root_dir: Base directory for relative filenames
+        :param address_cache: A dict that maps MAC addresses to IP addresses
+        :param state: If provided, use this as self.__dict__
         """
 
         if state:
@@ -190,7 +190,7 @@ class VM(virt_vm.BaseVM):
         """
         Check VM status
 
-        @param status: Optional VM status, 'running' or 'paused'
+        :param status: Optional VM status, 'running' or 'paused'
         @raise VMStatusError: If the VM status is not same as parameter
         """
         if not self.monitor.verify_status(status):
@@ -240,11 +240,11 @@ class VM(virt_vm.BaseVM):
         Any parameters not passed to this function are copied from the source
         VM.
 
-        @param name: Optional new VM name
-        @param params: Optional new VM creation parameters
-        @param root_dir: Optional new base directory for relative filenames
-        @param address_cache: A dict that maps MAC addresses to IP addresses
-        @param copy_state: If True, copy the original VM's state to the clone.
+        :param name: Optional new VM name
+        :param params: Optional new VM creation parameters
+        :param root_dir: Optional new base directory for relative filenames
+        :param address_cache: A dict that maps MAC addresses to IP addresses
+        :param copy_state: If True, copy the original VM's state to the clone.
                 Mainly useful for make_qemu_command().
         """
         if name is None:
@@ -265,7 +265,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the serial console filename.
 
-        @param name: The serial port name.
+        :param name: The serial port name.
         """
         if name:
             return "/tmp/serial-%s-%s" % (name, self.instance)
@@ -285,9 +285,9 @@ class VM(virt_vm.BaseVM):
         parameter is not supplied, the corresponding value stored in the
         class attributes is used.
 
-        @param name: The name of the object
-        @param params: A dict containing VM params
-        @param root_dir: Base directory for relative filenames
+        :param name: The name of the object
+        :param params: A dict containing VM params
+        :param root_dir: Base directory for relative filenames
 
         @note: The params dict should contain:
                mem -- memory size in MBs
@@ -405,15 +405,15 @@ class VM(virt_vm.BaseVM):
                             name_prefix=None, index=None, extra_params=""):
             """
             Appends virtio_serialport or virtio_console device to cmdline.
-            @param help: qemu -h output
-            @param name: Name of the port
-            @param bus: Which virtio-serial-pci device use
-            @param filename: Path to chardev filename
-            @param porttype: Type of the port (*serialport, console)
-            @param chardev: Which chardev to use (*socket, spicevmc)
-            @param name_prefix: Custom name prefix (port index is appended)
-            @param index: Index of the current virtio_port
-            @param extra_params: Space sepparated chardev params
+            :param help: qemu -h output
+            :param name: Name of the port
+            :param bus: Which virtio-serial-pci device use
+            :param filename: Path to chardev filename
+            :param porttype: Type of the port (*serialport, console)
+            :param chardev: Which chardev to use (*socket, spicevmc)
+            :param name_prefix: Custom name prefix (port index is appended)
+            :param index: Index of the current virtio_port
+            :param extra_params: Space sepparated chardev params
             """
             cmd = ''
             # host chardev
@@ -662,8 +662,8 @@ class VM(virt_vm.BaseVM):
             """
             processes spice parameters on rhel5 host.
 
-            @param spice_options - dict with spice keys/values
-            @param port_range - tuple with port range, default: (3000, 3199)
+            :param spice_options - dict with spice keys/values
+            :param port_range - tuple with port range, default: (3000, 3199)
             """
 
             if devices.has_option("spice"):
@@ -697,8 +697,8 @@ class VM(virt_vm.BaseVM):
                       tls_port_range=(3200, 3399)):
             """
             processes spice parameters
-            @param port_range - tuple with port range, default: (3000, 3199)
-            @param tls_port_range - tuple with tls port range,
+            :param port_range - tuple with port range, default: (3000, 3199)
+            :param tls_port_range - tuple with tls port range,
                                     default: (3200, 3399)
             """
             spice_opts = []  # will be used for ",".join()
@@ -826,8 +826,8 @@ class VM(virt_vm.BaseVM):
         def add_qxl(qxl_nr, qxl_memory=None):
             """
             adds extra qxl devices + sets memory to -vga qxl and extra qxls
-            @param qxl_nr total number of qxl devices
-            @param qxl_memory sets memory to individual devices
+            :param qxl_nr total number of qxl devices
+            :param qxl_memory sets memory to individual devices
             """
             qxl_str = ""
             vram_help = ""
@@ -1688,16 +1688,16 @@ class VM(virt_vm.BaseVM):
         All parameters are optional. If name, params or root_dir are not
         supplied, the respective values stored as class attributes are used.
 
-        @param name: The name of the object
-        @param params: A dict containing VM params
-        @param root_dir: Base directory for relative filenames
-        @param migration_mode: If supplied, start VM for incoming migration
+        :param name: The name of the object
+        :param params: A dict containing VM params
+        :param root_dir: Base directory for relative filenames
+        :param migration_mode: If supplied, start VM for incoming migration
                 using this protocol (either 'rdma', 'x-rdma', 'rdma', 'tcp', 'unix' or 'exec')
-        @param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
+        :param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
                 (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
                 default to listening on a random TCP port
-        @param migration_fd: Open descriptor from machine should migrate.
-        @param mac_source: A VM object from which to copy MAC addresses. If not
+        :param migration_fd: Open descriptor from machine should migrate.
+        :param mac_source: A VM object from which to copy MAC addresses. If not
                 specified, new addresses will be generated.
 
         @raise VMCreateError: If qemu terminates unexpectedly
@@ -2080,13 +2080,13 @@ class VM(virt_vm.BaseVM):
         """
         Wait until the VM status changes to specified status
 
-        @return: True in case the status has changed before timeout, otherwise
+        :return: True in case the status has changed before timeout, otherwise
         return None.
 
-        @param timeout: Timeout in seconds
-        @param first: Time to sleep before first attempt
-        @param steps: Time to sleep between attempts in seconds
-        @param text: Text to print while waiting, for debug purposes
+        :param timeout: Timeout in seconds
+        :param first: Time to sleep before first attempt
+        :param steps: Time to sleep between attempts in seconds
+        :param text: Text to print while waiting, for debug purposes
         """
         return utils_misc.wait_for(lambda: self.monitor.verify_status(status),
                                    timeout, first, step, text)
@@ -2095,10 +2095,10 @@ class VM(virt_vm.BaseVM):
         """
         Wait until the VM is paused.
 
-        @return: True in case the VM is paused before timeout, otherwise
+        :return: True in case the VM is paused before timeout, otherwise
         return None.
 
-        @param timeout: Timeout in seconds
+        :param timeout: Timeout in seconds
         """
         return self.wait_for_status("paused", timeout)
 
@@ -2106,11 +2106,11 @@ class VM(virt_vm.BaseVM):
         """
         Wait until VM is dead.
 
-        @return: True if VM is dead before timeout, otherwise returns None.
+        :return: True if VM is dead before timeout, otherwise returns None.
 
-        @param timeout: Timeout in seconds
-        @param first: Time to sleep before first attempt
-        @param steps: Time to sleep between attempts in seconds
+        :param timeout: Timeout in seconds
+        :param first: Time to sleep before first attempt
+        :param steps: Time to sleep between attempts in seconds
         """
         return utils_misc.wait_for(self.is_dead, timeout, first, step)
 
@@ -2120,7 +2120,7 @@ class VM(virt_vm.BaseVM):
 
         Helps until the VM is shut down by the guest.
 
-        @return: True in case the VM was shut down, None otherwise.
+        :return: True in case the VM was shut down, None otherwise.
 
         Note that the VM is not necessarily dead when this function returns
         True. If QEMU is running in -no-shutdown mode, the QEMU process
@@ -2135,7 +2135,7 @@ class VM(virt_vm.BaseVM):
         """
         Try to gracefully shut down the VM.
 
-        @return: True if VM was successfully shut down, None otherwise.
+        :return: True if VM was successfully shut down, None otherwise.
 
         Note that the VM is not necessarily dead when this function returns
         True. If QEMU is running in -no-shutdown mode, the QEMU process
@@ -2168,7 +2168,7 @@ class VM(virt_vm.BaseVM):
             .free_mac_addresses, if needed
             .delete macvtap, if needed
 
-        @param free_mac_addresses: Whether to release the VM's NICs back
+        :param free_mac_addresses: Whether to release the VM's NICs back
                 to the address pool.
         """
         self.monitors = []
@@ -2219,10 +2219,10 @@ class VM(virt_vm.BaseVM):
         command.  Then, attempt to destroy the VM via the monitor with a 'quit'
         command.  If that fails, send SIGKILL to the qemu process.
 
-        @param gracefully: If True, an attempt will be made to end the VM
+        :param gracefully: If True, an attempt will be made to end the VM
                 using a shell command before trying to end the qemu process
                 with a 'quit' or a kill signal.
-        @param free_mac_addresses: If True, the MAC addresses used by the VM
+        :param free_mac_addresses: If True, the MAC addresses used by the VM
                 will be freed.
         """
         try:
@@ -2295,7 +2295,7 @@ class VM(virt_vm.BaseVM):
     def get_monitors_by_type(self, mon_type):
         """
         Return list of monitors of mon_type type.
-        @param mon_type: desired monitor type (qmp, human)
+        :param mon_type: desired monitor type (qmp, human)
         """
         return [_ for _ in self.monitors if _.protocol == mon_type]
 
@@ -2303,8 +2303,8 @@ class VM(virt_vm.BaseVM):
         """
         Return the peer of netdev or network deivce.
 
-        @param netid: id of netdev or device
-        @return: id of the peer device otherwise None
+        :param netid: id of netdev or device
+        :return: id of the peer device otherwise None
         """
         o = self.monitor.info("network")
         network_info = o
@@ -2332,7 +2332,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the ifname of a bridge/tap device associated with a NIC.
 
-        @param nic_index: Index of the NIC
+        :param nic_index: Index of the NIC
         """
         return self.virtnet[nic_index].ifname
 
@@ -2370,7 +2370,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the list of vcpu PIDs
 
-        @return: the list of vcpu PIDs
+        :return: the list of vcpu PIDs
         """
         return [int(_) for _ in re.findall(vcpu_thread_pattern,
                                            str(self.monitor.info("cpus")))]
@@ -2381,7 +2381,7 @@ class VM(virt_vm.BaseVM):
 
         :param vhost_thread_pattern: a regex to match the vhost threads
         :type vhost_thread_pattern: string
-        :return: a list of vhost threads PIDs
+        :return:: a list of vhost threads PIDs
         :rtype: list of integer
         """
         return [int(_) for _ in re.findall(vhost_thread_pattern %
@@ -2392,7 +2392,7 @@ class VM(virt_vm.BaseVM):
         """
         Returns the VM's shared memory information.
 
-        @return: Shared memory used by VM (MB)
+        :return: Shared memory used by VM (MB)
         """
         if self.is_dead():
             logging.error("Could not get shared memory info from dead VM.")
@@ -2406,7 +2406,7 @@ class VM(virt_vm.BaseVM):
     def get_spice_var(self, spice_var):
         """
         Returns string value of spice variable of choice or None
-        @param spice_var - spice related variable 'spice_port', ...
+        :param spice_var - spice related variable 'spice_port', ...
         """
         return self.spice_options.get(spice_var, None)
 
@@ -2418,7 +2418,7 @@ class VM(virt_vm.BaseVM):
         function will use the command automatically generated based on the
         type of monitor
 
-        @param: cpu_id  the cpu_id you want hotplug.
+        :param cpu_id  the cpu_id you want hotplug.
         """
         vcpu_threads_count = len(self.vcpu_threads)
         plug_cpu_id = cpu_id
@@ -2455,7 +2455,7 @@ class VM(virt_vm.BaseVM):
         """
         Convenience method wrapper for add_nic() and add_netdev().
 
-        @return: dict-like object containing nic's details
+        :return: dict-like object containing nic's details
         """
         nic_name = self.add_nic(**params)["nic_name"]
         self.activate_netdev(nic_name)
@@ -2478,8 +2478,8 @@ class VM(virt_vm.BaseVM):
         """
         Hotplug a netdev device.
 
-        @param: **params: NIC info. dict.
-        @return: netdev_id
+        :param **params: NIC info. dict.
+        :return: netdev_id
         """
         nic_name = params['nic_name']
         nic = self.virtnet[nic_name]
@@ -2509,7 +2509,7 @@ class VM(virt_vm.BaseVM):
         """
         Remove netdev info. from nic on VM, does not deactivate.
 
-        @param: netdev_id: ID set/returned from activate_netdev()
+        :param netdev_id: ID set/returned from activate_netdev()
         """
         nic = self.virtnet[nic_index_or_name]
         error.context("removing netdev info from nic %s from vm %s" % (
@@ -2522,11 +2522,11 @@ class VM(virt_vm.BaseVM):
         """
         Add new or setup existing NIC, optionally creating netdev if None
 
-        @param: **params: Parameters to set
-        @param: nic_name: Name for existing or new device
-        @param: nic_model: Model name to emulate
-        @param: netdev_id: Existing qemu net device ID name, None to create new
-        @param: mac: Optional MAC address, None to randomly generate.
+        :param **params: Parameters to set
+        :param nic_name: Name for existing or new device
+        :param nic_model: Model name to emulate
+        :param netdev_id: Existing qemu net device ID name, None to create new
+        :param mac: Optional MAC address, None to randomly generate.
         """
         # returns existing or new nic object
         nic = super(VM, self).add_nic(**params)
@@ -2619,7 +2619,7 @@ class VM(virt_vm.BaseVM):
         """
         Activate an VM's inactive NIC device and verify state
 
-        @param: nic_index_or_name: name or index number for existing NIC
+        :param nic_index_or_name: name or index number for existing NIC
         """
         error.context("Retrieving info for NIC %s on VM %s" % (
             nic_index_or_name, self.name))
@@ -2656,8 +2656,8 @@ class VM(virt_vm.BaseVM):
         """
         Reverses what activate_nic did
 
-        @param: nic_index_or_name: name or index number for existing NIC
-        @param: wait: Time test will wait for the guest to unplug the device
+        :param nic_index_or_name: name or index number for existing NIC
+        :param wait: Time test will wait for the guest to unplug the device
         """
         nic = self.virtnet[nic_index_or_name]
         error.context("Removing nic %s from VM %s" % (nic_index_or_name,
@@ -2684,7 +2684,7 @@ class VM(virt_vm.BaseVM):
         """
         Reverses what activate_netdev() did
 
-        @param: netdev_id: ID set/returned from activate_netdev()
+        :param netdev_id: ID set/returned from activate_netdev()
         """
         # FIXME: Need to down interface & remove from bridge????
         error.context("removing netdev id %s from vm %s" %
@@ -2706,8 +2706,8 @@ class VM(virt_vm.BaseVM):
         """
         Undefine nic prameters, reverses what add_nic did.
 
-        @param: nic_index_or_name: name or index number for existing NIC
-        @param: wait: Time test will wait for the guest to unplug the device
+        :param nic_index_or_name: name or index number for existing NIC
+        :param wait: Time test will wait for the guest to unplug the device
         """
         super(VM, self).del_nic(nic_index_or_name)
 
@@ -2716,8 +2716,8 @@ class VM(virt_vm.BaseVM):
         """
         Send file descriptor over unix socket to VM.
 
-        @param fd: File descriptor.
-        @param fd_name: File descriptor identificator in VM.
+        :param fd: File descriptor.
+        :param fd_name: File descriptor identificator in VM.
         """
         error.context("Send fd %d like %s to VM %s" % (fd, fd_name, self.name))
 
@@ -2791,29 +2791,29 @@ class VM(virt_vm.BaseVM):
         of the destination VM.  Otherwise, the state is switched with that of
         a dead VM (returned by self.clone()).
 
-        @param timeout: Time to wait for migration to complete.
-        @param protocol: Migration protocol (as defined in MIGRATION_PROTOS)
-        @param cancel_delay: If provided, specifies a time duration after which
+        :param timeout: Time to wait for migration to complete.
+        :param protocol: Migration protocol (as defined in MIGRATION_PROTOS)
+        :param cancel_delay: If provided, specifies a time duration after which
                 migration will be canceled.  Used for testing migrate_cancel.
-        @param offline: If True, pause the source VM before migration.
-        @param stable_check: If True, compare the VM's state after migration to
+        :param offline: If True, pause the source VM before migration.
+        :param stable_check: If True, compare the VM's state after migration to
                 its state before migration and raise an exception if they
                 differ.
-        @param clean: If True, delete the saved state files (relevant only if
+        :param clean: If True, delete the saved state files (relevant only if
                 stable_check is also True).
         @save_path: The path for state files.
-        @param dest_host: Destination host (defaults to 'localhost').
-        @param remote_port: Port to use for remote migration.
-        @param not_wait_for_migration: If True migration start but not wait till
+        :param dest_host: Destination host (defaults to 'localhost').
+        :param remote_port: Port to use for remote migration.
+        :param not_wait_for_migration: If True migration start but not wait till
                 the end of migration.
-        @param fd_s: File descriptor for migration to which source
+        :param fd_s: File descriptor for migration to which source
                      VM write data. Descriptor is closed during the migration.
-        @param fd_d: File descriptor for migration from which destination
+        :param fd_d: File descriptor for migration from which destination
                      VM read data.
-        @param migration_exec_cmd_src: Command to embed in '-incoming "exec: "'
+        :param migration_exec_cmd_src: Command to embed in '-incoming "exec: "'
                 (e.g. 'exec:gzip -c > filename') if migration_mode is 'exec'
                 default to listening on a random TCP port
-        @param migration_exec_cmd_dst: Command to embed in '-incoming "exec: "'
+        :param migration_exec_cmd_dst: Command to embed in '-incoming "exec: "'
                 (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
                 default to listening on a random TCP port
         """
@@ -2998,13 +2998,13 @@ class VM(virt_vm.BaseVM):
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
 
-        @param session: A shell session object or None.
-        @param method: Reboot method.  Can be "shell" (send a shell reboot
+        :param session: A shell session object or None.
+        :param method: Reboot method.  Can be "shell" (send a shell reboot
                 command) or "system_reset" (send a system_reset monitor command).
-        @param nic_index: Index of NIC to access in the VM, when logging in
+        :param nic_index: Index of NIC to access in the VM, when logging in
                 after rebooting.
-        @param timeout: Time to wait for login to succeed (after rebooting).
-        @return: A new shell session object.
+        :param timeout: Time to wait for login to succeed (after rebooting).
+        :return: A new shell session object.
         """
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
@@ -3051,7 +3051,7 @@ class VM(virt_vm.BaseVM):
         """
         Send a key event to the VM.
 
-        @param: keystr: A key event string (e.g. "ctrl-alt-delete")
+        :param keystr: A key event string (e.g. "ctrl-alt-delete")
         """
         # For compatibility with versions of QEMU that do not recognize all
         # key names: replace keyname with the hex value from the dict, which
@@ -3145,8 +3145,8 @@ class VM(virt_vm.BaseVM):
         """
         Set link up/down.
 
-        @param name: Link name
-        @param up: Bool value, True=set up this link, False=Set down this link
+        :param name: Link name
+        :param up: Bool value, True=set up this link, False=Set down this link
         """
         self.monitor.set_link(netdev_name, up)
 
@@ -3155,12 +3155,12 @@ class VM(virt_vm.BaseVM):
         Get specified block device from monitor's info block command.
         The block device is defined by parameter in p_dict.
 
-        @param p_dict: Dictionary that contains parameters and its value used
+        :param p_dict: Dictionary that contains parameters and its value used
                        to define specified block device.
 
         @blocks_info: the results of monitor command 'info block'
 
-        @return: Matched block device name, None when not find any device.
+        :return: Matched block device name, None when not find any device.
         """
         if isinstance(blocks_info, str):
             for block in blocks_info.splitlines():
@@ -3196,7 +3196,7 @@ class VM(virt_vm.BaseVM):
         """
         process the info block, so that can deal with
         the new and old qemu formart.
-        @param blocks_info: the output of qemu command
+        :param blocks_info: the output of qemu command
                             'info block'
         """
         block_list = []
@@ -3216,10 +3216,10 @@ class VM(virt_vm.BaseVM):
         Get specified block device from monitor's info block command.
         The block device is defined by parameter in p_dict.
 
-        @param p_dict: Dictionary that contains parameters and its value used
+        :param p_dict: Dictionary that contains parameters and its value used
                        to define specified block device.
 
-        @return: Matched block device name, None when not find any device.
+        :return: Matched block device name, None when not find any device.
         """
         blocks_info = self.monitor.info("block")
         block = self.get_block_old(blocks_info, p_dict)
@@ -3251,12 +3251,12 @@ class VM(virt_vm.BaseVM):
         Check whether specified block device is locked or not.
         Return True, if device is locked, else False.
 
-        @param vm: VM object
-        @param value: Parameter that can specify block device.
+        :param vm: VM object
+        :param value: Parameter that can specify block device.
                       Can be any possible identification of a device,
                       Such as device name/image file name/...
 
-        @return: True if device is locked, False if device is unlocked.
+        :return: True if device is locked, False if device is unlocked.
         """
         assert value, "Device identification not specified"
 
@@ -3291,11 +3291,11 @@ class VM(virt_vm.BaseVM):
         """
         Take a live disk snapshot.
 
-        @param base_file: base file name
-        @param snapshot_file: snapshot file name
-        @param snapshot_format: snapshot file format
+        :param base_file: base file name
+        :param snapshot_file: snapshot file name
+        :param snapshot_format: snapshot file format
 
-        @return: File name of disk snapshot.
+        :return: File name of disk snapshot.
         """
         device = self.get_block({"file": base_file})
 
@@ -3314,10 +3314,10 @@ class VM(virt_vm.BaseVM):
         """
         start to stream block device, aka merge snapshot;
 
-        @param device: device ID;
-        @param speed: limited speed, default unit B/s;
-        @param base: base file;
-        @param correct: auto correct cmd, correct by default
+        :param device: device ID;
+        :param speed: limited speed, default unit B/s;
+        :param base: base file;
+        :param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_stream_cmd", "block-stream")
         return self.monitor.block_stream(device, speed, base,
@@ -3328,14 +3328,14 @@ class VM(virt_vm.BaseVM):
         """
         Mirror block device to target file;
 
-        @param device: device ID
-        @param target: destination image file name;
-        @param speed: max limited speed, default unit is B/s;
-        @param sync: what parts of the disk image should be copied to the
+        :param device: device ID
+        :param target: destination image file name;
+        :param speed: max limited speed, default unit is B/s;
+        :param sync: what parts of the disk image should be copied to the
                      destination;
-        @param mode: new image open mode
-        @param format: target image format
-        @param correct: auto correct cmd, correct by default
+        :param mode: new image open mode
+        :param format: target image format
+        :param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_mirror_cmd", "drive-mirror")
         return self.monitor.block_mirror(device, target, speed, sync,
@@ -3345,10 +3345,10 @@ class VM(virt_vm.BaseVM):
         """
         Reopen a new image, no need to do this step in rhel7 host
 
-        @param device: device ID
-        @param new_image: new image filename
-        @param format: new image format
-        @param correct: auto correct cmd, correct by default
+        :param device: device ID
+        :param new_image: new image filename
+        :param format: new image format
+        :param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_reopen_cmd", "block-job-complete")
         return self.monitor.block_reopen(device, new_image,
@@ -3358,8 +3358,8 @@ class VM(virt_vm.BaseVM):
         """
         cancel active job on the image_file
 
-        @param device: device ID
-        @param correct: auto correct cmd, correct by default
+        :param device: device ID
+        :param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("block_job_cancel_cmd", "block-job-cancel")
         return self.monitor.cancel_block_job(device, cmd, correct=correct)
@@ -3368,9 +3368,9 @@ class VM(virt_vm.BaseVM):
         """
         set max speed of block job;
 
-        @param device: device ID
-        @param speed: max speed of block job
-        @param correct: auto correct cmd, correct by default
+        :param device: device ID
+        :param speed: max speed of block job
+        :param correct: auto correct cmd, correct by default
         """
         cmd = self.params.get("set_block_job_speed", "block-job-set-speed")
         return self.monitor.set_block_job_speed(device, speed,
@@ -3380,6 +3380,6 @@ class VM(virt_vm.BaseVM):
         """
         get block job info;
 
-        @param device: device ID
+        :param device: device ID
         """
         return self.monitor.query_block_job(device)

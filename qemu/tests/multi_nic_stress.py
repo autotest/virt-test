@@ -10,9 +10,9 @@ def ssh_cmd(session, cmd, timeout=60):
     """
     Execute remote command and return the output
 
-    @param session: a remote shell session or tag for localhost
-    @param cmd: executed command
-    @param timeout: timeout for the command
+    :param session: a remote shell session or tag for localhost
+    :param cmd: executed command
+    :param timeout: timeout for the command
     """
     if session == "localhost":
         return utils.system_output(cmd, timeout=timeout)
@@ -31,9 +31,9 @@ def run_multi_nic_stress(test, params, env):
     3) Execute netperf  stress on multi nics
     4) After the stress do ping, check the nics works
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def env_setup(session, ip_addr, username, shell_port, password):
         """
@@ -153,17 +153,17 @@ def start_test(servers, server_ctl, clients, l=60,
     """
     Start to test with different kind of configurations
 
-    @param servers: netperf server ips for data connection
-    @param server_ctl: ip to control netperf server
-    @param clients: netperf clients' ip
-    @param l: test duration
-    @param sessions_rr: sessions number list for RR test
-    @param sessions: sessions number list
-    @param sizes_rr: request/response sizes (TCP_RR, UDP_RR)
-    @param sizes: send size (TCP_STREAM, UDP_STREAM)
-    @param protocols: test type
-    @param netserver_port: netserver listen port
-    @param params: Dictionary with the test parameters.
+    :param servers: netperf server ips for data connection
+    :param server_ctl: ip to control netperf server
+    :param clients: netperf clients' ip
+    :param l: test duration
+    :param sessions_rr: sessions number list for RR test
+    :param sessions: sessions number list
+    :param sizes_rr: request/response sizes (TCP_RR, UDP_RR)
+    :param sizes: send size (TCP_STREAM, UDP_STREAM)
+    :param protocols: test type
+    :param netserver_port: netserver listen port
+    :param params: Dictionary with the test parameters.
     """
     for protocol in protocols.split():
         error.context("Testing %s protocol" % protocol, logging.info)

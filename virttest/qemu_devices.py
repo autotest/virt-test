@@ -94,8 +94,8 @@ def _convert_args(arg_dict):
     """
     Convert monitor command arguments dict into humanmonitor string.
 
-    @param arg_dict: The dict of monitor command arguments.
-    @return: A string in humanmonitor's 'key=value' format, or a empty
+    :param arg_dict: The dict of monitor command arguments.
+    :return: A string in humanmonitor's 'key=value' format, or a empty
              '' when the dict is empty.
     """
     return ",".join("%s=%s" % (key, val) for key, val in arg_dict.iteritems())
@@ -117,8 +117,8 @@ def _build_cmd(cmd, args=None, q_id=None):
     """
     Format QMP command from cmd and args
 
-    @param cmd: Command ('device_add', ...)
-    @param q_id: queue id; True = generate random, None = None, str = use str
+    :param cmd: Command ('device_add', ...)
+    :param q_id: queue id; True = generate random, None = None, str = use str
     """
     obj = {"execute": cmd}
     if args is not None:
@@ -140,11 +140,11 @@ class QBaseDevice(object):
     def __init__(self, dev_type="QBaseDevice", params=None, aobject=None,
                  parent_bus=None, child_bus=None):
         """
-        @param dev_type: type of this component
-        @param params: component's parameters
-        @param aobject: Autotest object which is associated with this device
-        @param parent_bus: list of dicts specifying the parent bus
-        @param child_bus: list of buses, which this device provides
+        :param dev_type: type of this component
+        :param params: component's parameters
+        :param aobject: Autotest object which is associated with this device
+        :param parent_bus: list of dicts specifying the parent bus
+        :param child_bus: list of buses, which this device provides
         """
         self.aid = None         # unique per VM id
         self.type = dev_type    # device type
@@ -176,9 +176,9 @@ class QBaseDevice(object):
     def set_param(self, option, value, option_type=None):
         """
         Set device param using qemu notation ("on", "off" instead of bool...)
-        @param option: which option's value to set
-        @param value: new value
-        @param option_type: type of the option (bool)
+        :param option: which option's value to set
+        :param value: new value
+        :param option_type: type of the option (bool)
         """
         if option_type is bool or isinstance(value, bool):
             if value in ['yes', 'on', True]:
@@ -194,11 +194,11 @@ class QBaseDevice(object):
             del(self.params[option])
 
     def get_param(self, option):
-        """ @return: object param """
+        """ :return: object param """
         return self.params.get(option)
 
     def __getitem__(self, option):
-        """ @return: object param """
+        """ :return: object param """
         return self.params[option]
 
     def __delitem__(self, option):
@@ -218,11 +218,11 @@ class QBaseDevice(object):
         return option in self.params
 
     def __str__(self):
-        """ @return: Short string representation of this object. """
+        """ :return: Short string representation of this object. """
         return self.str_short()
 
     def __eq__(self, dev2):
-        """ @return: True when devs are similar, False when different. """
+        """ :return: True when devs are similar, False when different. """
         try:
             for check_attr in ('cmdline', 'hotplug_hmp',
                                'hotplug_qmp'):
@@ -241,7 +241,7 @@ class QBaseDevice(object):
         return True
 
     def __ne__(self, dev2):
-        """ @return: True when devs are different, False when similar. """
+        """ :return: True when devs are different, False when similar. """
         return not self.__eq__(dev2)
 
     def str_short(self):
@@ -270,34 +270,34 @@ class QBaseDevice(object):
         return out + '\n'
 
     def _get_alternative_name(self):
-        """ @return: alternative object name """
+        """ :return: alternative object name """
         return None
 
     def get_qid(self):
-        """ @return: qemu_id """
+        """ :return: qemu_id """
         return self.params.get('id', '')
 
     def get_aid(self):
-        """ @return: per VM unique autotest_id """
+        """ :return: per VM unique autotest_id """
         return self.aid
 
     def set_aid(self, aid):
-        """@param aid: new autotest id for this device"""
+        """:param aid: new autotest id for this device"""
         self.aid = aid
 
     def get_children(self):
-        """ @return: List of all children (recursive) """
+        """ :return: List of all children (recursive) """
         children = []
         for bus in self.child_bus:
             children.extend(bus)
         return children
 
     def cmdline(self):
-        """ @return: cmdline command to define this device """
+        """ :return: cmdline command to define this device """
         raise NotImplementedError
 
     def hotplug(self, monitor):
-        """ @return: the output of monitor.cmd() hotplug command """
+        """ :return: the output of monitor.cmd() hotplug command """
         if isinstance(monitor, qemu_monitor.QMPMonitor):
             try:
                 cmd, args = self.hotplug_qmp()
@@ -311,11 +311,11 @@ class QBaseDevice(object):
                                                                 type(monitor)))
 
     def hotplug_hmp(self):
-        """ @return: the hotplug monitor command """
+        """ :return: the hotplug monitor command """
         raise DeviceError("Hotplug is not supported by this device %s", self)
 
     def hotplug_qmp(self):
-        """ @return: tuple(hotplug qemu command, arguments)"""
+        """ :return: tuple(hotplug qemu command, arguments)"""
         raise DeviceError("Hotplug is not supported by this device %s", self)
 
     def unplug_hook(self):
@@ -327,7 +327,7 @@ class QBaseDevice(object):
         pass
 
     def unplug(self, monitor):
-        """ @return: the output of monitor.cmd() unplug command """
+        """ :return: the output of monitor.cmd() unplug command """
         if isinstance(monitor, qemu_monitor.QMPMonitor):
             try:
                 cmd, args = self.unplug_qmp()
@@ -341,26 +341,26 @@ class QBaseDevice(object):
                                                                 type(monitor)))
 
     def unplug_hmp(self):
-        """ @return: the unplug monitor command """
+        """ :return: the unplug monitor command """
         raise DeviceError("Unplug is not supported by this device %s", self)
 
     def unplug_qmp(self):
-        """ @return: tuple(unplug qemu command, arguments)"""
+        """ :return: tuple(unplug qemu command, arguments)"""
         raise DeviceError("Unplug is not supported by this device %s", self)
 
     def verify_hotplug(self, out, monitor):
         """
-        @param out: Output of the hotplug command
-        @param monitor: Monitor used for hotplug
-        @return: True when successful, False when unsuccessful, string/None
+        :param out: Output of the hotplug command
+        :param monitor: Monitor used for hotplug
+        :return: True when successful, False when unsuccessful, string/None
                  when can't decide.
         """
         return out
 
     def verify_unplug(self, out, monitor):      # pylint: disable=W0613,R0201
         """
-        @param out: Output of the unplug command
-        @param monitor: Monitor used for unplug
+        :param out: Output of the unplug command
+        :param monitor: Monitor used for unplug
         """
         return out
 
@@ -376,19 +376,19 @@ class QStringDevice(QBaseDevice):
     def __init__(self, dev_type="dummy", params=None, aobject=None,
                  parent_bus=None, child_bus=None, cmdline=""):
         """
-        @param dev_type: type of this component
-        @param params: component's parameters
-        @param aobject: Autotest object which is associated with this device
-        @param parent_bus: bus(es), in which this device is plugged in
-        @param child_bus: bus, which this device provides
-        @param cmdline: cmdline string
+        :param dev_type: type of this component
+        :param params: component's parameters
+        :param aobject: Autotest object which is associated with this device
+        :param parent_bus: bus(es), in which this device is plugged in
+        :param child_bus: bus, which this device provides
+        :param cmdline: cmdline string
         """
         super(QStringDevice, self).__init__(dev_type, params, aobject,
                                             parent_bus, child_bus)
         self._cmdline = cmdline
 
     def cmdline(self):
-        """ @return: cmdline command to define this device """
+        """ :return: cmdline command to define this device """
         try:
             if self._cmdline:
                 return self._cmdline % self.params
@@ -407,7 +407,7 @@ class QCustomDevice(QBaseDevice):
     def __init__(self, dev_type, params=None, aobject=None,
                  parent_bus=None, child_bus=None, backend=None):
         """
-        @param dev_type: The desired -$option parameter (device, chardev, ..)
+        :param dev_type: The desired -$option parameter (device, chardev, ..)
         """
         super(QCustomDevice, self).__init__(dev_type, params, aobject,
                                             parent_bus, child_bus)
@@ -417,7 +417,7 @@ class QCustomDevice(QBaseDevice):
             self.__backend = None
 
     def cmdline(self):
-        """ @return: cmdline command to define this device """
+        """ :return: cmdline command to define this device """
         if self.__backend and self.params.get(self.__backend):
             out = "-%s %s," % (self.type, self.params.get(self.__backend))
             params = self.params.copy()
@@ -452,9 +452,9 @@ class QDrive(QCustomDevice):
         """
         Set device param using qemu notation ("on", "off" instead of bool...)
         It restricts setting of the 'id' param as it's automatically created.
-        @param option: which option's value to set
-        @param value: new value
-        @param option_type: type of the option (bool)
+        :param option: which option's value to set
+        :param value: new value
+        :param option_type: type of the option (bool)
         """
         if option == 'id':
             raise KeyError("Drive ID is automatically created from aobject. %s"
@@ -518,14 +518,14 @@ class QHPDrive(QDrive):
                     break
 
     def hotplug_hmp(self):
-        """ @return: the hotplug monitor command """
+        """ :return: the hotplug monitor command """
         args = self.params.copy()
         pci_addr = args.pop('addr', 'auto')
         args = _convert_args(args)
         return "drive_add %s %s" % (pci_addr, args)
 
     def unplug_hmp(self):
-        """ @return: the unplug monitor command """
+        """ :return: the unplug monitor command """
         if self.get_qid() is None:
             raise DeviceError("qid not set; device %s can't be unplugged"
                               % self)
@@ -543,7 +543,7 @@ class QRHDrive(QDrive):
         self.__hook_drive_bus = None
 
     def hotplug_hmp(self):
-        """ @return: the hotplug monitor command """
+        """ :return: the hotplug monitor command """
         args = self.params.copy()
         args.pop('addr', None)    # not supported by RHDrive
         args.pop('if', None)
@@ -551,7 +551,7 @@ class QRHDrive(QDrive):
         return "__com.redhat_drive_add %s" % args
 
     def hotplug_qmp(self):
-        """ @return: the hotplug monitor command """
+        """ :return: the hotplug monitor command """
         args = self.params.copy()
         args.pop('addr', None)    # not supported by RHDrive
         args.pop('if', None)
@@ -589,14 +589,14 @@ class QRHDrive(QDrive):
                     break
 
     def unplug_hmp(self):
-        """ @return: the unplug monitor command """
+        """ :return: the unplug monitor command """
         if self.get_qid() is None:
             raise DeviceError("qid not set; device %s can't be unplugged"
                               % self)
         return "__com.redhat_drive_del %s" % self.get_qid()
 
     def unplug_qmp(self):
-        """ @return: the unplug monitor command """
+        """ :return: the unplug monitor command """
         if self.get_qid() is None:
             raise DeviceError("qid not set; device %s can't be unplugged"
                               % self)
@@ -622,12 +622,12 @@ class QDevice(QCustomDevice):
         self.hook_drive_bus = None
 
     def _get_alternative_name(self):
-        """ @return: alternative object name """
+        """ :return: alternative object name """
         if self.params.get('driver'):
             return self.params.get('driver')
 
     def hotplug_hmp(self):
-        """ @return: the hotplug monitor command """
+        """ :return: the hotplug monitor command """
         if self.params.get('driver'):
             params = self.params.copy()
             out = "device_add %s" % params.pop('driver')
@@ -639,7 +639,7 @@ class QDevice(QCustomDevice):
         return out
 
     def hotplug_qmp(self):
-        """ @return: the hotplug monitor command """
+        """ :return: the hotplug monitor command """
         return "device_add", self.params
 
     def get_children(self):
@@ -650,14 +650,14 @@ class QDevice(QCustomDevice):
         return devices
 
     def unplug_hmp(self):
-        """ @return: the unplug monitor command """
+        """ :return: the unplug monitor command """
         if self.get_qid():
             return "device_del %s" % self.get_qid()
         else:
             raise DeviceError("Device has no qemu_id.")
 
     def unplug_qmp(self):
-        """ @return: the unplug monitor command """
+        """ :return: the unplug monitor command """
         if self.get_qid():
             return "device_del", self.get_qid()
         else:
@@ -673,13 +673,13 @@ class QGlobal(QBaseDevice):
     def __init__(self, driver, prop, value, aobject=None,
                  parent_bus=None, child_bus=None):
         """
-        @param driver: Which global driver to set
-        @param prop: Which property to set
-        @param value: What's the desired value
-        @param params: component's parameters
-        @param aobject: Autotest object which is associated with this device
-        @param parent_bus: bus(es), in which this device is plugged in
-        @param child_bus: bus, which this device provides
+        :param driver: Which global driver to set
+        :param prop: Which property to set
+        :param value: What's the desired value
+        :param params: component's parameters
+        :param aobject: Autotest object which is associated with this device
+        :param parent_bus: bus(es), in which this device is plugged in
+        :param child_bus: bus, which this device provides
         """
         params = {'driver': driver, 'property': prop, 'value': value}
         super(QGlobal, self).__init__('global', params, aobject,
@@ -703,11 +703,11 @@ class QFloppy(QGlobal):
     def __init__(self, unit=None, drive=None, aobject=None, parent_bus=None,
                  child_bus=None):
         """
-        @param unit: Floppy unit (None, 0, 1 or driveA, driveB)
-        @param drive: id of drive
-        @param aobject: Autotest object which is associated with this device
-        @param parent_bus: bus(es), in which this device is plugged in
-        @param child_bus: bus(es), which this device provides
+        :param unit: Floppy unit (None, 0, 1 or driveA, driveB)
+        :param drive: id of drive
+        :param aobject: Autotest object which is associated with this device
+        :param parent_bus: bus(es), in which this device is plugged in
+        :param child_bus: bus(es), which this device provides
         """
         super(QFloppy, self).__init__('isa-fdc', unit, drive, aobject,
                                       parent_bus, child_bus)
@@ -752,11 +752,11 @@ class QSparseBus(object):
 
     def __init__(self, bus_item, addr_spec, busid, bus_type, aobject=None):
         """
-        @param bus_item: Name of the parameter which specifies bus (bus)
-        @param addr_spec: Bus address specification [names][lengths]
-        @param busid: id of the bus (pci.0)
-        @param bus_type: type of the bus (pci)
-        @param aobject: Related autotest object (image1)
+        :param bus_item: Name of the parameter which specifies bus (bus)
+        :param addr_spec: Bus address specification [names][lengths]
+        :param busid: id of the bus (pci.0)
+        :param bus_type: type of the bus (pci)
+        :param aobject: Related autotest object (image1)
         """
         self.busid = busid
         self.type = bus_type
@@ -773,8 +773,8 @@ class QSparseBus(object):
 
     def __getitem__(self, item):
         """
-        @param item: autotest id or QObject-like object
-        @return: First matching object from this bus
+        :param item: autotest id or QObject-like object
+        :return: First matching object from this bus
         @raise KeyError: In case no match was found
         """
         if isinstance(item, QBaseDevice):
@@ -793,8 +793,8 @@ class QSparseBus(object):
 
     def get(self, item):
         """
-        @param item: autotest id or QObject-like object
-        @return: First matching object from this bus or None
+        :param item: autotest id or QObject-like object
+        :return: First matching object from this bus or None
         """
         if item in self:
             return self[item]
@@ -802,20 +802,20 @@ class QSparseBus(object):
     def __delitem__(self, item):
         """
         Remove device from bus
-        @param item: autotest id or QObject-like object
+        :param item: autotest id or QObject-like object
         @raise KeyError: In case no match was found
         """
         self.remove(self[item])
 
     def __len__(self):
-        """ @return: Number of devices in this bus """
+        """ :return: Number of devices in this bus """
         return len(self.bus) + len(self.badbus)
 
     def __contains__(self, item):
         """
         Is specified item in this bus?
-        @param item: autotest id or QObject-like object
-        @return: True - yes, False - no
+        :param item: autotest id or QObject-like object
+        :return: True - yes, False - no
         """
         if isinstance(item, QBaseDevice):
             if (item in self.bus.itervalues() or
@@ -893,9 +893,9 @@ class QSparseBus(object):
     def _increment_addr(self, addr, last_addr=None):
         """
         Increment addr base of addr_pattern and last used addr
-        @param addr: addr_pattern
-        @param last_addr: previous address
-        @return: last_addr + 1
+        :param addr: addr_pattern
+        :param last_addr: previous address
+        :return: last_addr + 1
         """
         if not last_addr:
             last_addr = [0] * len(self.addr_lengths)
@@ -916,8 +916,8 @@ class QSparseBus(object):
     def _addr2stor(addr):
         """
         Converts internal addr to storable/hashable address
-        @param addr: internal address [addr1, addr2, ...]
-        @return: storable address "addr1-addr2-..."
+        :param addr: internal address [addr1, addr2, ...]
+        :return: storable address "addr1-addr2-..."
         """
         out = ""
         for value in addr:
@@ -933,8 +933,8 @@ class QSparseBus(object):
     def _dev2addr(self, device):
         """
         Parse the internal address out of the device
-        @param device: QBaseDevice device
-        @return: internal address  [addr1, addr2, ...]
+        :param device: QBaseDevice device
+        :return: internal address  [addr1, addr2, ...]
         """
         addr = []
         for key in self.addr_items:
@@ -943,8 +943,8 @@ class QSparseBus(object):
 
     def _set_first_addr(self, addr_pattern):
         """
-        @param addr_pattern: Address pattern (full qualified or with Nones)
-        @return: first valid address based on addr_pattern
+        :param addr_pattern: Address pattern (full qualified or with Nones)
+        :return: first valid address based on addr_pattern
         """
         use_reserved = True
         if addr_pattern is None:
@@ -961,8 +961,8 @@ class QSparseBus(object):
     def get_free_slot(self, addr_pattern):
         """
         Finds unoccupied address
-        @param addr_pattern: Address pattern (full qualified or with Nones)
-        @return: First free address when found, (free or reserved for this dev)
+        :param addr_pattern: Address pattern (full qualified or with Nones)
+        :return: First free address when found, (free or reserved for this dev)
                  None when no free address is found, (all occupied)
                  False in case of incorrect address (oor)
         """
@@ -985,8 +985,8 @@ class QSparseBus(object):
     def _check_bus(self, device):
         """
         Check, whether this device can be plugged into this bus.
-        @param device: QBaseDevice device
-        @return: True in case ids are correct, False when not
+        :param device: QBaseDevice device
+        :return: True in case ids are correct, False when not
         """
         if (device.get_param(self.bus_item) and
            device.get_param(self.bus_item) != self.busid):
@@ -997,8 +997,8 @@ class QSparseBus(object):
     def _set_device_props(self, device, addr):
         """
         Set the full device address
-        @param device: QBaseDevice device
-        @param addr: internal address  [addr1, addr2, ...]
+        :param device: QBaseDevice device
+        :param addr: internal address  [addr1, addr2, ...]
         """
         device.set_param(self.bus_item, self.busid)
         for i in xrange(len(self.addr_items)):
@@ -1007,8 +1007,8 @@ class QSparseBus(object):
     def _update_device_props(self, device, addr):
         """
         Update values of previously set address items.
-        @param device: QBaseDevice device
-        @param addr: internal address  [addr1, addr2, ...]
+        :param device: QBaseDevice device
+        :param addr: internal address  [addr1, addr2, ...]
         """
         if device.get_param(self.bus_item) is not None:
             device.set_param(self.bus_item, self.busid)
@@ -1019,10 +1019,10 @@ class QSparseBus(object):
     def insert(self, device, strict_mode=False, force=False):
         """
         Insert device into this bus representation.
-        @param device: QBaseDevice device
-        @param strict_mode: Use strict mode (set optional params)
-        @param force: Force insert the device even when errs occurs
-        @return: True on success,
+        :param device: QBaseDevice device
+        :param strict_mode: Use strict mode (set optional params)
+        :param force: Force insert the device even when errs occurs
+        :return: True on success,
                  False when an incorrect addr/busid is set,
                  None when there is no free slot,
                  error string when force added device with errors.
@@ -1079,16 +1079,16 @@ class QSparseBus(object):
     def _insert_good(self, device, addr):
         """
         Insert device into good bus
-        @param device: QBaseDevice device
-        @param addr: internal address  [addr1, addr2, ...]
+        :param device: QBaseDevice device
+        :param addr: internal address  [addr1, addr2, ...]
         """
         self.bus[addr] = device
 
     def _insert_oor(self, device, addr):
         """
         Insert device into bad bus as out-of-range (o)
-        @param device: QBaseDevice device
-        @param addr: storable address "addr1-addr2-..."
+        :param device: QBaseDevice device
+        :param addr: storable address "addr1-addr2-..."
         """
         addr = "o" + addr
         if addr in self.badbus:
@@ -1101,8 +1101,8 @@ class QSparseBus(object):
     def _insert_used(self, device, addr):
         """
         Insert device into bad bus because address is already used
-        @param device: QBaseDevice device
-        @param addr: storable address "addr1-addr2-..."
+        :param device: QBaseDevice device
+        :param addr: storable address "addr1-addr2-..."
         """
         i = 2
         while "%s(%dx)" % (addr, i) in self.badbus:
@@ -1112,8 +1112,8 @@ class QSparseBus(object):
     def remove(self, device):
         """
         Remove device from this bus
-        @param device: QBaseDevice device
-        @return: True when removed, False when the device wasn't found
+        :param device: QBaseDevice device
+        :return: True when removed, False when the device wasn't found
         """
         if not self._remove_good(device):
             return self._remove_bad(device)
@@ -1122,8 +1122,8 @@ class QSparseBus(object):
     def _remove_good(self, device):
         """
         Remove device from the good bus
-        @param device: QBaseDevice device
-        @return: True when removed, False when the device wasn't found
+        :param device: QBaseDevice device
+        :return: True when removed, False when the device wasn't found
         """
         if device in self.bus.itervalues():
             remove = None
@@ -1139,8 +1139,8 @@ class QSparseBus(object):
     def _remove_bad(self, device):
         """
         Remove device from the bad bus
-        @param device: QBaseDevice device
-        @return: True when removed, False when the device wasn't found
+        :param device: QBaseDevice device
+        :return: True when removed, False when the device wasn't found
         """
         if device in self.badbus.itervalues():
             remove = None
@@ -1216,8 +1216,8 @@ class QUSBBus(QSparseBus):
     def _dev2addr(self, device):
         """
         Parse the internal address out of the device
-        @param device: QBaseDevice device
-        @return: internal address  [addr1, addr2, ...]
+        :param device: QBaseDevice device
+        :return: internal address  [addr1, addr2, ...]
         """
         value = device.get_param('port')
         if value is None:
@@ -1265,8 +1265,8 @@ class QDriveBus(QSparseBus):
 
     def __init__(self, busid, aobject=None):
         """
-        @param busid: id of the bus (pci.0)
-        @param aobject: Related autotest object (image1)
+        :param busid: id of the bus (pci.0)
+        :param aobject: Related autotest object (image1)
         """
         super(QDriveBus, self).__init__('drive', [[], []], busid, 'QDrive',
                                         aobject)
@@ -1415,10 +1415,10 @@ class QSCSIBus(QSparseBus):
 
     def __init__(self, busid, bus_type, addr_spec, aobject=None):
         """
-        @param busid: id of the bus (mybus.0)
-        @param bus_type: type of the bus (virtio-scsi-pci, lsi53c895a, ...)
-        @param addr_spec: Ranges of addr_spec [scsiid_range, lun_range]
-        @param aobject: Related autotest object (image1)
+        :param busid: id of the bus (mybus.0)
+        :param bus_type: type of the bus (virtio-scsi-pci, lsi53c895a, ...)
+        :param addr_spec: Ranges of addr_spec [scsiid_range, lun_range]
+        :param aobject: Related autotest object (image1)
         """
         super(QSCSIBus, self).__init__('bus', [['scsiid', 'lun'], addr_spec],
                                        busid, bus_type, aobject)
@@ -1439,10 +1439,10 @@ class QBusUnitBus(QDenseBus):
 
     def __init__(self, busid, bus_type, lengths, aobject=None):
         """
-        @param busid: id of the bus (mybus.0)
-        @param bus_type: type of the bus (ahci)
-        @param lenghts: lenghts of [buses, units]
-        @param aobject: Related autotest object (image1)
+        :param busid: id of the bus (mybus.0)
+        :param bus_type: type of the bus (ahci)
+        :param lenghts: lenghts of [buses, units]
+        :param aobject: Related autotest object (image1)
         """
         if len(lengths) != 2:
             raise ValueError("len(lenghts) have to be 2 (%s)" % self)
@@ -1564,12 +1564,12 @@ class DevContainer(object):
     def __init__(self, qemu_binary, vmname, strict_mode="no",
                  workaround_qemu_qmp_crash="no", allow_hotplugged_vm="yes"):
         """
-        @param qemu_binary: qemu binary
-        @param vm: related VM
-        @param strict_mode: Use strict mode (set optional params)
+        :param qemu_binary: qemu binary
+        :param vm: related VM
+        :param strict_mode: Use strict mode (set optional params)
         """
         def get_hmp_cmds(qemu_binary):
-            """ @return: list of human monitor commands """
+            """ :return: list of human monitor commands """
             _ = utils.system_output("echo -e 'help\nquit' | %s -monitor "
                                     "stdio -vnc none" % qemu_binary,
                                     timeout=10, ignore_status=True)
@@ -1584,7 +1584,7 @@ class DevContainer(object):
             return hmp_cmds
 
         def get_qmp_cmds(qemu_binary, workaround_qemu_qmp_crash=False):
-            """ @return: list of qmp commands """
+            """ :return: list of qmp commands """
             cmds = None
             if not workaround_qemu_qmp_crash:
                 cmds = utils.system_output('echo -e \''
@@ -1631,8 +1631,8 @@ class DevContainer(object):
 
     def __getitem__(self, item):
         """
-        @param item: autotest id or QObject-like object
-        @return: First matching object defined in this QDevContainer
+        :param item: autotest id or QObject-like object
+        :return: First matching object defined in this QDevContainer
         @raise KeyError: In case no match was found
         """
         if isinstance(item, QBaseDevice):
@@ -1646,8 +1646,8 @@ class DevContainer(object):
 
     def get(self, item):
         """
-        @param item: autotest id or QObject-like object
-        @return: First matching object defined in this QDevContainer or None
+        :param item: autotest id or QObject-like object
+        :return: First matching object defined in this QDevContainer or None
         """
         if item in self:
             return self[item]
@@ -1655,7 +1655,7 @@ class DevContainer(object):
     def __delitem__(self, item):
         """
         Delete specified item from devices list
-        @param item: autotest id or QObject-like object
+        :param item: autotest id or QObject-like object
         @raise KeyError: In case no match was found
         """
         # Remove child_buses including devices
@@ -1665,9 +1665,9 @@ class DevContainer(object):
     def remove(self, device, recursive=True):
         """
         Remove device from this representation
-        @param device: autotest id or QObject-like object
-        @param recursive: remove children recursively
-        @return: None on success, -1 when the device is not present
+        :param device: autotest id or QObject-like object
+        :param recursive: remove children recursively
+        :return: None on success, -1 when the device is not present
         """
         device = self[device]
         if not recursive:   # Check if there are no children
@@ -1688,14 +1688,14 @@ class DevContainer(object):
             self.__devices.remove(device)   # Remove from list of devices
 
     def __len__(self):
-        """ @return: Number of inserted devices """
+        """ :return: Number of inserted devices """
         return len(self.__devices)
 
     def __contains__(self, item):
         """
         Is specified item defined in current devices list?
-        @param item: autotest id or QObject-like object
-        @return: True - yes, False - no
+        :param item: autotest id or QObject-like object
+        :return: True - yes, False - no
         """
         if isinstance(item, QBaseDevice):
             if item in self.__devices:
@@ -1766,8 +1766,8 @@ class DevContainer(object):
 
     def get_by_qid(self, qid):
         """
-        @param qid: qemu id
-        @return: List of items with matching qemu id
+        :param qid: qemu id
+        :return: List of items with matching qemu id
         """
         ret = []
         if qid:
@@ -1828,8 +1828,8 @@ class DevContainer(object):
     def __create_unique_aid(self, qid):
         """
         Creates unique autotest id name from given qid
-        @param qid: Original qemu id
-        @return: aid (the format is "$qid__%d")
+        :param qid: Original qemu id
+        :return: aid (the format is "$qid__%d")
         """
         if qid and qid not in self:
             return qid
@@ -1840,37 +1840,37 @@ class DevContainer(object):
 
     def has_option(self, option):
         """
-        @param option: Desired option
-        @return: Is the desired option supported by current qemu?
+        :param option: Desired option
+        :return: Is the desired option supported by current qemu?
         """
         return bool(re.search(r"^-%s(\s|$)" % option, self.__qemu_help,
                               re.MULTILINE))
 
     def has_device(self, device):
         """
-        @param device: Desired device
-        @return: Is the desired device supported by current qemu?
+        :param device: Desired device
+        :return: Is the desired device supported by current qemu?
         """
         return bool(re.search(r'name "%s"' % device, self.__device_help,
                               re.MULTILINE))
 
     def get_help_text(self):
         """
-        @return: Full output of "qemu -help"
+        :return: Full output of "qemu -help"
         """
         return self.__qemu_help
 
     def has_hmp_cmd(self, cmd):
         """
-        @param cmd: Desired command
-        @return: Is the desired command supported by this qemu's human monitor?
+        :param cmd: Desired command
+        :return: Is the desired command supported by this qemu's human monitor?
         """
         return cmd in self.__hmp_cmds
 
     def has_qmp_cmd(self, cmd):
         """
-        @param cmd: Desired command
-        @return: Is the desired command supported by this qemu's QMP monitor?
+        :param cmd: Desired command
+        :return: Is the desired command supported by this qemu's QMP monitor?
         """
         return cmd in self.__qmp_cmds
 
@@ -1881,7 +1881,7 @@ class DevContainer(object):
         :type options: string
         :param timeout: execution timeout
         :type timeout: int
-        :return: Output of the qemu
+        :return:: Output of the qemu
         :rtype: string
         """
         if self.__execute_qemu_last != options:
@@ -1893,8 +1893,8 @@ class DevContainer(object):
 
     def get_buses(self, bus_spec):
         """
-        @param bus_spec: Bus specification (dictionary)
-        @return: All matching buses
+        :param bus_spec: Bus specification (dictionary)
+        :return: All matching buses
         """
         buses = []
         for bus in self.__buses:
@@ -1907,9 +1907,9 @@ class DevContainer(object):
 
     def get_first_free_bus(self, bus_spec, addr):
         """
-        @param bus_spec: Bus specification (dictionary)
-        @param addr: Desired address
-        @return: First matching bus with free desired address (the latest
+        :param bus_spec: Bus specification (dictionary)
+        :param addr: Desired address
+        :return: First matching bus with free desired address (the latest
                  added matching bus)
         """
         buses = self.get_buses(bus_spec)
@@ -1921,9 +1921,9 @@ class DevContainer(object):
     def insert(self, device, force=False):
         """
         Inserts device into this VM representation
-        @param device: QBaseDevice device
-        @param force: Force insert the device even when errs occurs
-        @return: None on success,
+        :param device: QBaseDevice device
+        :param force: Force insert the device even when errs occurs
+        :return: None on success,
                  error string when force added device with errors.
         @raise DeviceInsertError: On failure in case force is not set
 
@@ -2001,7 +2001,7 @@ class DevContainer(object):
 
     def hotplug(self, device, monitor, verify=True, force=False):
         """
-        @return: output of the monitor.cmd() or True/False if device
+        :return: output of the monitor.cmd() or True/False if device
                  supports automatic verification and verify=True
         """
         self.set_dirty()
@@ -2025,7 +2025,7 @@ class DevContainer(object):
 
     def unplug(self, device, monitor, verify=True):
         """
-        @return: output of the monitor.cmd() or True/False if device
+        :return: output of the monitor.cmd() or True/False if device
                  supports automatic verification and verify=True
                  In case you use step_by_step it returns list of returns.
         """
@@ -2063,11 +2063,11 @@ class DevContainer(object):
 
     def list_missing_named_buses(self, bus_pattern, bus_type, bus_count):
         """
-        @param bus_pattern: Bus name pattern with 1x%s for idx or %s is
+        :param bus_pattern: Bus name pattern with 1x%s for idx or %s is
                             appended in the end. ('mybuses' or 'my%sbus').
-        @param bus_type: Type of the bus.
-        @param bus_count: Desired number of buses.
-        @return: List of buses, which are missing in range(bus_count)
+        :param bus_type: Type of the bus.
+        :param bus_count: Desired number of buses.
+        :return: List of buses, which are missing in range(bus_count)
         """
         if not "%s" in bus_pattern:
             bus_pattern = bus_pattern + "%s"
@@ -2081,8 +2081,8 @@ class DevContainer(object):
 
     def idx_of_next_named_bus(self, bus_pattern):
         """
-        @param bus_pattern: Bus name prefix without %s and tailing digit
-        @return: Name of the next bus (integer is appended and incremented
+        :param bus_pattern: Bus name prefix without %s and tailing digit
+        :return: Name of the next bus (integer is appended and incremented
                  until there is no existing bus).
         """
         if not "%s" in bus_pattern:
@@ -2100,7 +2100,7 @@ class DevContainer(object):
     def cmdline(self):
         """
         Creates cmdline arguments for creating all defined devices
-        @return: cmdline of all devices (without qemu-cmd itself)
+        :return: cmdline of all devices (without qemu-cmd itself)
         """
         out = ""
         for device in self.__devices:
@@ -2147,14 +2147,14 @@ class DevContainer(object):
     def machine_by_params(self, params=None):
         """
         Choose the used machine and set the default devices accordingly
-        @param params: VM params
-        @return: List of added devices (including default buses)
+        :param params: VM params
+        :return: List of added devices (including default buses)
         """
         def machine_q35(cmd=False):
             """
             Q35 + ICH9
-            @param cmd: If set uses "-M $cmd" to force this machine type
-            @return: List of added devices (including default buses)
+            :param cmd: If set uses "-M $cmd" to force this machine type
+            :return: List of added devices (including default buses)
             """
             # TODO: Add all supported devices (AHCI, ...) and
             # verify that PCIE works as pci bus (ranges, etc...)
@@ -2175,8 +2175,8 @@ class DevContainer(object):
         def machine_i440FX(cmd=False):
             """
             i440FX + PIIX
-            @param cmd: If set uses "-M $cmd" to force this machine type
-            @return: List of added devices (including default buses)
+            :param cmd: If set uses "-M $cmd" to force this machine type
+            :return: List of added devices (including default buses)
             """
             devices = []
             if arch.ARCH == 'ppc64':
@@ -2198,8 +2198,8 @@ class DevContainer(object):
             """
             isapc or unknown machine type. This type doesn't add any default
             buses or devices, only sets the cmdline.
-            @param cmd: If set uses "-M $cmd" to force this machine type
-            @return: List of added devices (including default buses)
+            :param cmd: If set uses "-M $cmd" to force this machine type
+            :return: List of added devices (including default buses)
             """
             logging.warn('isa/unknown machine type is not supported by '
                          'autotest, false errors might occur.')
@@ -2255,15 +2255,15 @@ class DevContainer(object):
                           max_ports=6, pci_addr=None):
         """
         Creates usb-controller devices by variables
-        @param usb_id: Usb bus name
-        @param usb_type: Usb bus type
-        @param multifunction: Is the bus multifunction
-        @param masterbus: Is this bus master?
-        @param firstport: Offset of the first port
-        @param freq: Bus frequency
-        @param max_ports: How many ports this bus have [6]
-        @param pci_addr: Desired PCI address
-        @return: List of QDev devices
+        :param usb_id: Usb bus name
+        :param usb_type: Usb bus type
+        :param multifunction: Is the bus multifunction
+        :param masterbus: Is this bus master?
+        :param firstport: Offset of the first port
+        :param freq: Bus frequency
+        :param max_ports: How many ports this bus have [6]
+        :param pci_addr: Desired PCI address
+        :return: List of QDev devices
         """
         if not self.has_option("device"):
             # Okay, for the archaic qemu which has not device parameter,
@@ -2307,9 +2307,9 @@ class DevContainer(object):
     def usbc_by_params(self, usb_name, params):
         """
         Wrapper for creating usb bus from autotest usb params.
-        @param usb_name: Name of the usb bus
-        @param params: USB params (params.object_params(usb_name))
-        @return: List of QDev devices
+        :param usb_name: Name of the usb bus
+        :param params: USB params (params.object_params(usb_name))
+        :return: List of QDev devices
         """
         return self.usbc_by_variables(usb_name,
                                       params.get('usb_type'),
@@ -2325,12 +2325,12 @@ class DevContainer(object):
                          port=None):
         """
         Creates usb-devices by variables.
-        @param usb_name: usb name
-        @param usb_type: usb type (usb-tablet, usb-serial, ...)
-        @param controller_type: type of the controller (uhci, ehci, xhci, ...)
-        @param bus: the bus name (my_bus.0, ...)
-        @param port: port specifiacation (4, 4.1.2, ...)
-        @return: QDev device
+        :param usb_name: usb name
+        :param usb_type: usb type (usb-tablet, usb-serial, ...)
+        :param controller_type: type of the controller (uhci, ehci, xhci, ...)
+        :param bus: the bus name (my_bus.0, ...)
+        :param port: port specifiacation (4, 4.1.2, ...)
+        :return: QDev device
         """
         if not self.has_device(usb_type):
             raise error.TestNAError("usb device %s not available"
@@ -2354,9 +2354,9 @@ class DevContainer(object):
     def usb_by_params(self, usb_name, params):
         """
         Wrapper for creating usb devices from autotest params.
-        @param usb_name: Name of the usb
-        @param params: USB device's params
-        @return: QDev device
+        :param usb_name: Name of the usb
+        :param params: USB device's params
+        :return: QDev device
         """
         return self.usb_by_variables(usb_name,
                                      params.get("usb_type"),
@@ -2379,35 +2379,35 @@ class DevContainer(object):
         Creates related devices by variables
         @note: To skip the argument use None, to disable it use False
         @note: Strictly bool options accept "yes", "on" and True ("no"...)
-        @param name: Autotest name of this disk
-        @param filename: Path to the disk file
-        @param index: drive index (used for generating names)
-        @param fmt: drive subsystem type (ide, scsi, virtio, usb2, ...)
-        @param cache: disk cache (none, writethrough, writeback)
-        @param werror: What to do when write error occurs (stop, ...)
-        @param rerror: What to do when read error occurs (stop, ...)
-        @param serial: drive serial number ($string)
-        @param snapshot: use snapshot? ($bool)
-        @param boot: is bootable? ($bool)
-        @param blkdebug: use blkdebug (None, blkdebug_filename)
-        @param bus: 1st level of disk location (index of bus) ($int)
-        @param unit: 2nd level of disk location (unit/scsiid/...) ($int)
-        @param port: 3rd level of disk location (port/lun/...) ($int)
-        @param bootindex: device boot priority ($int)
-        @param removable: can the drive be removed? ($bool)
-        @param min_io_size: Min allowed io size
-        @param opt_io_size: Optimal io size
-        @param physical_block_size: set physical_block_size ($int)
-        @param logical_block_size: set logical_block_size ($int)
-        @param readonly: set the drive readonly ($bool)
-        @param scsiid: Deprecated 2nd level of disk location (&unit)
-        @param lun: Deprecated 3rd level of disk location (&port)
-        @param aio: set the type of async IO (native, threads, ..)
-        @param strict_mode: enforce optional parameters (address, ...) ($bool)
-        @param media: type of the media (disk, cdrom, ...)
-        @param imgfmt: image format (qcow2, raw, ...)
-        @param pci_addr: drive pci address ($int)
-        @param scsi_hba: Custom scsi HBA
+        :param name: Autotest name of this disk
+        :param filename: Path to the disk file
+        :param index: drive index (used for generating names)
+        :param fmt: drive subsystem type (ide, scsi, virtio, usb2, ...)
+        :param cache: disk cache (none, writethrough, writeback)
+        :param werror: What to do when write error occurs (stop, ...)
+        :param rerror: What to do when read error occurs (stop, ...)
+        :param serial: drive serial number ($string)
+        :param snapshot: use snapshot? ($bool)
+        :param boot: is bootable? ($bool)
+        :param blkdebug: use blkdebug (None, blkdebug_filename)
+        :param bus: 1st level of disk location (index of bus) ($int)
+        :param unit: 2nd level of disk location (unit/scsiid/...) ($int)
+        :param port: 3rd level of disk location (port/lun/...) ($int)
+        :param bootindex: device boot priority ($int)
+        :param removable: can the drive be removed? ($bool)
+        :param min_io_size: Min allowed io size
+        :param opt_io_size: Optimal io size
+        :param physical_block_size: set physical_block_size ($int)
+        :param logical_block_size: set logical_block_size ($int)
+        :param readonly: set the drive readonly ($bool)
+        :param scsiid: Deprecated 2nd level of disk location (&unit)
+        :param lun: Deprecated 3rd level of disk location (&port)
+        :param aio: set the type of async IO (native, threads, ..)
+        :param strict_mode: enforce optional parameters (address, ...) ($bool)
+        :param media: type of the media (disk, cdrom, ...)
+        :param imgfmt: image format (qcow2, raw, ...)
+        :param pci_addr: drive pci address ($int)
+        :param scsi_hba: Custom scsi HBA
         """
         def define_hbas(hba, bus, unit, port, qbus, addr_spec=None):
             """
@@ -2673,8 +2673,8 @@ class DevContainer(object):
         @note: Strictly bool options accept "yes", "on" and True ("no"...)
         @note: Options starting with '_' are optional and used only when
                strict_mode is True
-        @param name: Name of the new disk
-        @param params: Disk params (params.object_params(name))
+        :param name: Name of the new disk
+        :param params: Disk params (params.object_params(name))
         """
         shared_dir = os.path.join(data_dir.get_data_dir(), "shared")
         return self.images_define_by_variables(name,
@@ -2737,8 +2737,8 @@ class DevContainer(object):
         @note: Strictly bool options accept "yes", "on" and True ("no"...)
         @note: Options starting with '_' are optional and used only when
                strict_mode is True
-        @param name: Name of the new disk
-        @param params: Disk params (params.object_params(name))
+        :param name: Name of the new disk
+        :param params: Disk params (params.object_params(name))
         """
         iso = image_params.get('cdrom')
         if iso:

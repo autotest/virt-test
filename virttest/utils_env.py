@@ -29,8 +29,8 @@ class Env(UserDict.IterableUserDict):
         error occurs during unpickling, or if filename is not supplied,
         create an empty Env object.
 
-        @param filename: Path to an env file.
-        @param version: Required env version (int).
+        :param filename: Path to an env file.
+        :param version: Required env version (int).
         """
         UserDict.IterableUserDict.__init__(self)
         empty = {"version": version}
@@ -66,7 +66,7 @@ class Env(UserDict.IterableUserDict):
         """
         Pickle the contents of the Env object into a file.
 
-        @param filename: Filename to pickle the dict into.  If not supplied,
+        :param filename: Filename to pickle the dict into.  If not supplied,
                 use the filename from which the dict was loaded.
         """
         filename = filename or self._filename
@@ -113,7 +113,7 @@ class Env(UserDict.IterableUserDict):
         """
         Return a VM object by its name.
 
-        @param name: VM name.
+        :param name: VM name.
         """
         return self.data.get("vm__%s" % name)
 
@@ -131,8 +131,8 @@ class Env(UserDict.IterableUserDict):
         """
         Register a VM in this Env object.
 
-        @param name: VM name.
-        @param vm: VM object.
+        :param name: VM name.
+        :param vm: VM object.
         """
         self.data["vm__%s" % name] = vm
 
@@ -140,7 +140,7 @@ class Env(UserDict.IterableUserDict):
         """
         Remove a given VM.
 
-        @param name: VM name.
+        :param name: VM name.
         """
         del self.data["vm__%s" % name]
 
@@ -148,8 +148,8 @@ class Env(UserDict.IterableUserDict):
         """
         Register a Sync Server in this Env object.
 
-        @param port: Sync Server port.
-        @param server: Sync Server object.
+        :param port: Sync Server port.
+        :param server: Sync Server object.
         """
         self.data["sync__%s" % port] = server
 
@@ -157,7 +157,7 @@ class Env(UserDict.IterableUserDict):
         """
         Remove a given Sync Server.
 
-        @param port: Sync Server port.
+        :param port: Sync Server port.
         """
         del self.data["sync__%s" % port]
 
@@ -165,7 +165,7 @@ class Env(UserDict.IterableUserDict):
         """
         Return a Sync Server object by its port.
 
-        @param port: Sync Server port.
+        :param port: Sync Server port.
         """
         return self.data.get("sync__%s" % port)
 

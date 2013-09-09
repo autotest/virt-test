@@ -19,9 +19,9 @@ def run_numa_basic(test, params, env):
     4) Destroy the guest
     5) Repeat step 2 ~ 4 on every node in host
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     error.context("Get host numa topological structure", logging.info)
     timeout = float(params.get("login_timeout", 240))

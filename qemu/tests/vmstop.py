@@ -15,9 +15,9 @@ def run_vmstop(test, params, env):
     5) Check the session
     6) Migrat the vm to a file twice and compare them.
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

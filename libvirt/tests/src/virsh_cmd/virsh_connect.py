@@ -15,10 +15,10 @@ def do_virsh_connect(uri, options):
 
     Raise a error.TestError if execute virsh connect command failed.
 
-    @param uri: argument of virsh connect command.
-    @param options: options pass to command connect.
+    :param uri: argument of virsh connect command.
+    :param options: options pass to command connect.
 
-    @return: the uri of the virsh session after connect.
+    :return: the uri of the virsh session after connect.
 
     """
     virsh_instance = virsh.VirshPersistent()

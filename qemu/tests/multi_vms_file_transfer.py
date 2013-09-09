@@ -21,9 +21,9 @@ def run_multi_vms_file_transfer(test, params, env):
     8) Compare copied file's md5 with original file.
     9) Repeat step 5-8
 
-    @param test: KVM test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: KVM test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def md5_check(session, orig_md5):
         msg = "Compare copied file's md5 with original file."

@@ -29,8 +29,8 @@ def lgf_cmd_check(cmd):
     """
     To check whether the cmd is supported on this host.
 
-    @param cmd: the cmd to use a libguest tool.
-    @return: None if the cmd is not exist, otherwise return its path.
+    :param cmd: the cmd to use a libguest tool.
+    :return: None if the cmd is not exist, otherwise return its path.
     """
     libguestfs_cmds = ['libguestfs-test-tool', 'guestfish', 'guestmount',
                        'virt-alignment-scan', 'virt-cat', 'virt-copy-in',
@@ -57,8 +57,8 @@ def lgf_command(cmd, ignore_status=True, debug=False, timeout=60):
     """
     Interface of libguestfs tools' commands.
 
-    @param cmd: Command line to execute.
-    @return: CmdResult object.
+    :param cmd: Command line to execute.
+    :return: CmdResult object.
     @raise: LibguestfsCmdError if non-zero exit status
             and ignore_status=False
     """
@@ -167,12 +167,12 @@ class Guestfish(LibguestfsBase):
         """
         Initialize guestfish command with options.
 
-        @param: disk_img: if it is not None, use option '-a disk'.
-        @param: ro_mode: only for disk_img. add option '--ro' if it is True.
-        @param: libvirt_domain: if it is not None, use option '-d domain'.
-        @param: inspector: guestfish mounts vm's disks automatically
-        @param: uri: guestfish's connect uri
-        @param: mount_options: Mount the named partition or logical volume
+        :param disk_img: if it is not None, use option '-a disk'.
+        :param ro_mode: only for disk_img. add option '--ro' if it is True.
+        :param libvirt_domain: if it is not None, use option '-d domain'.
+        :param inspector: guestfish mounts vm's disks automatically
+        :param uri: guestfish's connect uri
+        :param mount_options: Mount the named partition or logical volume
                                on the given mountpoint.
         """
         guestfs_exec = "guestfish"
@@ -225,10 +225,10 @@ class GuestfishSession(aexpect.ShellSession):
         """
         Initialize guestfish session server, or client if id set.
 
-        @param: guestfs_cmd: path to guestfish executable
-        @param: id: ID of an already running server, if accessing a running
+        :param guestfs_cmd: path to guestfish executable
+        :param id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param prompt: Regular expression describing the shell's prompt line.
+        :param prompt: Regular expression describing the shell's prompt line.
         """
         # aexpect tries to auto close session because no clients connected yet
         super(GuestfishSession, self).__init__(guestfs_exec, a_id,
@@ -240,13 +240,13 @@ class GuestfishSession(aexpect.ShellSession):
         """
         Send a guestfish command and return its exit status and output.
 
-        @param cmd: guestfish command to send (must not contain newline characters)
-        @param timeout: The duration (in seconds) to wait for the prompt to
+        :param cmd: guestfish command to send (must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to
                 return
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @return: A tuple (status, output) where status is the exit status and
+        :return: A tuple (status, output) where status is the exit status and
                 output is the output of cmd
         @raise ShellTimeoutError: Raised if timeout expires
         @raise ShellProcessTerminatedError: Raised if the shell process
@@ -365,7 +365,7 @@ class GuestfishPersistent(Guestfish):
         """
         Execute inner command of guestfish in a pesistent session.
 
-        @param command: inner command to be executed.
+        :param command: inner command to be executed.
         """
         session = self.open_session()
         # Allow to raise error by default.
@@ -581,10 +581,10 @@ def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
     """
     Execute libguest-test-tool command.
 
-    @param qemuarg: the qemu option
-    @param qemudirarg: the qemudir option
-    @param timeoutarg: the timeout option
-    @return: a CmdResult object
+    :param qemuarg: the qemu option
+    :param qemudirarg: the qemudir option
+    :param timeoutarg: the timeout option
+    :return: a CmdResult object
     @raise: raise LibguestfsCmdError
     """
     cmd = "libguestfs-test-tool"
@@ -608,11 +608,11 @@ def virt_edit_cmd(disk_or_domain, file_path, options=None,
     Since virt-edit will need uses' interact, maintain and return
     a session if there is no raise after command has been executed.
 
-    @param disk_or_domain: a img path or a domain name.
-    @param file_path: the file need to be edited in img file.
-    @param options: the options of virt-edit.
-    @param extra: additional suffix of command.
-    @return: a session of executing virt-edit command.
+    :param disk_or_domain: a img path or a domain name.
+    :param file_path: the file need to be edited in img file.
+    :param options: the options of virt-edit.
+    :param extra: additional suffix of command.
+    :return: a session of executing virt-edit command.
     """
     # disk_or_domain and file_path are necessary parameters.
     cmd = "virt-edit '%s' '%s'" % (disk_or_domain, file_path)

@@ -34,9 +34,9 @@ def run_virsh_memtune(test, params, env):
         (1) Match the output of the virsh memtune
         (2) Match the output of the respective cgroup fs value
 
-        @params: path: memory controller path for a domain
-        @params: expected_value: the expected hard limit value
-        @return: True or False based on the checks
+        :params: path: memory controller path for a domain
+        :params: expected_value: the expected hard limit value
+        :return: True or False based on the checks
         """
         status_value = True
         # Check 1
@@ -73,9 +73,9 @@ def run_virsh_memtune(test, params, env):
         (1) Match the output of the virsh memtune
         (2) Match the output of the respective cgroup fs value
 
-        @params: path: memory controller path for a domain
-        @params: expected_value: the expected soft limit value
-        @return: True or False based on the checks
+        :params: path: memory controller path for a domain
+        :params: expected_value: the expected soft limit value
+        :return: True or False based on the checks
         """
 
         status_value = True
@@ -113,9 +113,9 @@ def run_virsh_memtune(test, params, env):
         (1) Match the output of the virsh memtune
         (2) Match the output of the respective cgroup fs value
 
-        @params: path: memory controller path for a domain
-        @params: expected_value: the expected hardswap limit value
-        @return: True or False based on the checks
+        :params: path: memory controller path for a domain
+        :params: expected_value: the expected hardswap limit value
+        :return: True or False based on the checks
         """
 
         status_value = True

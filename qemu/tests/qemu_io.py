@@ -109,9 +109,9 @@ def run_qemu_io(test, params, env):
     1) Do some qemu_io operations(write & read etc.)
     2) Check whether qcow image file is corrupted
 
-    @param test:   QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env:    Dictionary with test environment.
     """
 
     test_type = params.get("test_type")

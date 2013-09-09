@@ -17,9 +17,9 @@ def run_physical_resources_check(test, params, env):
        to the VM (qemu command line)
     3) Verify all MAC addresses for guest NICs
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     # Define a function for checking number of hard drivers & NICs
     def check_num(devices, info_cmd, check_str):
@@ -92,11 +92,11 @@ def run_physical_resources_check(test, params, env):
         """
         Checking cpu sockets/cores/threads number.
 
-        @param chk_type: Should be one of 'sockets', 'cores', 'threads'.
-        @param expected_n: Expected number of guest cpu number.
-        @param chk_timeout: timeout of running chk_cmd.
+        :param chk_type: Should be one of 'sockets', 'cores', 'threads'.
+        :param expected_n: Expected number of guest cpu number.
+        :param chk_timeout: timeout of running chk_cmd.
 
-        @return a list that contains fail report.
+        :return: a list that contains fail report.
         """
         f_fail = []
         chk_str = params["mem_chk_re_str"]

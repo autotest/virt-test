@@ -18,19 +18,19 @@ def run_usb_storage(test, params, env):
     6) Check usb removable option (optional)
     7) Check usb min_io_size/opt_io_size option (optional)
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     @error.context_aware
     def _verify_string(regex_str, string, expect_result, search_opt=0):
         """
         Verify USB storage device in monitor
 
-        @param regex_str: Regex for checking command output
-        @param string: The string which will be checked
-        @param expect_result: The expected string
-        @param search_opt: Search option for re module.
+        :param regex_str: Regex for checking command output
+        :param string: The string which will be checked
+        :param expect_result: The expected string
+        :param search_opt: Search option for re module.
         """
         def _compare_str(act, exp, ignore_case):
             str_func = lambda x: x

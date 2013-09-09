@@ -22,9 +22,9 @@ def run_virsh_schedinfo_xen_credit(test, params, env):
         """
         Get the value of set_ref.
 
-        @param result: CmdResult struct
-        @param set_ref: the parameter has been set
-        @param scheduler: the scheduler of xen(default is credit)
+        :param result: CmdResult struct
+        :param set_ref: the parameter has been set
+        :param scheduler: the scheduler of xen(default is credit)
         """
         output = result.stdout.strip()
         if not re.search("Scheduler", output):

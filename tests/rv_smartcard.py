@@ -16,9 +16,9 @@ def run_rv_smartcard(test, params, env):
     """
     Tests disconnection of remote-viewer.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     # Get the required parameters needed for the tests
     cert_list = params.get("gencerts").split(",")

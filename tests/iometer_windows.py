@@ -21,9 +21,9 @@ def run_iometer_windows(test, params, env):
     5) Run Iometer.exe with icf
     6) Copy result to host
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

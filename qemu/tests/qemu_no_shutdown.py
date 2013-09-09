@@ -16,9 +16,9 @@ def run_qemu_no_shutdown(test, params, env):
     6. Wait for guest OS to boot up
     7. Repeat step 2-6 for 5 times.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     timeout = int(params.get("login_timeout", 360))
     repeat_times = int(params.get("repeat_times", 5))

@@ -139,9 +139,9 @@ class LocalSourceDirHelper(object):
 
     def __init__(self, source_dir, destination_dir):
         '''
-        @param source_dir:
-        @param destination_dir:
-        @return: new LocalSourceDirHelper instance
+        :param source_dir:
+        :param destination_dir:
+        :return: new LocalSourceDirHelper instance
         '''
         self.source = source_dir
         self.destination = destination_dir
@@ -494,13 +494,13 @@ class GnuSourceBuildHelper(object):
                  configure_options=[]):
         '''
         @type source: string
-        @param source: source directory or tarball
+        :param source: source directory or tarball
         @type prefix: string
-        @param prefix: installation prefix
+        :param prefix: installation prefix
         @type build_dir: string
-        @param build_dir: temporary directory used for building the source code
+        :param build_dir: temporary directory used for building the source code
         @type configure_options: list
-        @param configure_options: options to pass to configure
+        :param configure_options: options to pass to configure
         @throws: GnuSourceBuildInvalidSource
         '''
         self.source = source
@@ -520,7 +520,7 @@ class GnuSourceBuildHelper(object):
         either '<prefix>/share/pkgconfig' or '<prefix>/lib/pkgconfig' is
         exactly for the purpose of using them.
 
-        @returns: None
+        :return:s: None
         '''
         env_var = 'PKG_CONFIG_PATH'
 
@@ -560,7 +560,7 @@ class GnuSourceBuildHelper(object):
 
         This will run the "configure" script at the source directory
 
-        @returns: list of options accepted by configure script
+        :return:s: list of options accepted by configure script
         '''
         help_raw = utils.system_output('%s --help' % self.get_configure_path(),
                                        ignore_status=True)
@@ -591,7 +591,7 @@ class GnuSourceBuildHelper(object):
         '''
         Formats configure script with all options set
 
-        @returns: string with all configure options, including prefix
+        :return:s: string with all configure options, including prefix
         '''
         prefix_option = "--prefix=%s" % self.prefix
         options = self.configure_options
@@ -636,7 +636,7 @@ class GnuSourceBuildHelper(object):
         '''
         Runs a parallel make, falling back to a single job in failure
 
-        @param failure_feedback: return information on build failure by raising
+        :param failure_feedback: return information on build failure by raising
                                  the appropriate exceptions
         @raise: SourceBuildParallelFailed if parallel build fails, or
                 SourceBuildFailed if single job build fails
@@ -681,11 +681,11 @@ class LinuxKernelBuildHelper(object):
     def __init__(self, params, prefix, source):
         '''
         @type params: dict
-        @param params: dictionary containing the test parameters
+        :param params: dictionary containing the test parameters
         @type source: string
-        @param source: source directory or tarball
+        :param source: source directory or tarball
         @type prefix: string
-        @param prefix: installation prefix
+        :param prefix: installation prefix
         '''
         self.params = params
         self.prefix = prefix
@@ -745,7 +745,7 @@ class LinuxKernelBuildHelper(object):
         '''
         Runs a parallel make
 
-        @param failure_feedback: return information on build failure by raising
+        :param failure_feedback: return information on build failure by raising
                                  the appropriate exceptions
         @raise: SourceBuildParallelFailed if parallel build fails, or
         '''

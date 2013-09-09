@@ -47,9 +47,9 @@ def run_block_stream_reboot(test, params, env):
     2). create snapshots and start stream job immediately;
     3). waiting stream done and check guest is alive;
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_images", "image1")
     reboot_test = BlockStreamReboot(test, params, env, tag)

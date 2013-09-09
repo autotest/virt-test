@@ -14,9 +14,9 @@ def run_kexec(test, params, env):
     3) Reboot to new kernel through kexec command.
     4) Check x2apic enabled in guest again if need.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def check_x2apic_flag():

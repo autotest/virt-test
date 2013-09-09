@@ -75,12 +75,12 @@ class VMManager(virt_vm.BaseVM):
         """
         Initialize the object and set a few attributes.
 
-        @param name: The name of the object
-        @param params: A dict containing VM params (see method
+        :param name: The name of the object
+        :param params: A dict containing VM params (see method
                        make_qemu_command for a full description)
-        @param root_dir: Base directory for relative filenames
-        @param address_cache: A dict that maps MAC addresses to IP addresses
-        @param state: If provided, use this as self.__dict__
+        :param root_dir: Base directory for relative filenames
+        :param address_cache: A dict that maps MAC addresses to IP addresses
+        :param state: If provided, use this as self.__dict__
         """
 
         if state:
@@ -462,8 +462,8 @@ class VMManager(virt_vm.BaseVM):
         """
         Return the address of the guest through ovirt node tcpdump cache.
 
-        @param index: Name or index of the NIC whose address is requested.
-        @return: IP address of NIC.
+        :param index: Name or index of the NIC whose address is requested.
+        :return: IP address of NIC.
         @raise VMIPAddressMissingError: If no IP address is found for the the
                 NIC's MAC address
         """

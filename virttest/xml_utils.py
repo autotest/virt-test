@@ -277,7 +277,7 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         """
         Removes a matching subelement.
 
-        @param: element: element to be removed.
+        :param element: element to be removed.
         """
         self.get_parent(element).remove(element)
 
@@ -285,7 +285,7 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         """
         Remove an element found by xpath
 
-        @param: xpath: element name or path to remove
+        :param xpath: element name or path to remove
         """
         self.remove(self.find(xpath))  # can't remove root
 
@@ -329,7 +329,7 @@ class Sub(object):
         """
         Use string.safe_substitute on text and return the result
 
-        @param: text: string to substitute
+        :param text: string to substitute
         """
 
         return string.Template(text).safe_substitute(**self._mapping)
@@ -345,7 +345,7 @@ class TemplateXMLTreeBuilder(ElementTree.XMLTreeBuilder, Sub):
         """
         Initialize parser that substitutes keys with values in data
 
-        @param: **mapping: values to be substituted for ${key} in XML input
+        :param **mapping: values to be substituted for ${key} in XML input
         """
 
         Sub.__init__(self, **mapping)
@@ -365,8 +365,8 @@ class TemplateXML(XMLTreeFile):
         """
         Initialize from a XML string or filename, and string.template mapping.
 
-        @param: xml: A filename or string containing XML
-        @param: **mapping: keys/values to feed with XML to string.template
+        :param xml: A filename or string containing XML
+        :param **mapping: keys/values to feed with XML to string.template
         """
 
         self.parser = self.ParserClass(**mapping)
@@ -378,8 +378,8 @@ class TemplateXML(XMLTreeFile):
         """
         Parse source XML file or filename using TemplateXMLTreeBuilder
 
-        @param: source: XML file or filename
-        @param: parser: ignored
+        :param source: XML file or filename
+        :param parser: ignored
         """
         if parser is None:
             return super(TemplateXML, self).parse(source, self.parser)

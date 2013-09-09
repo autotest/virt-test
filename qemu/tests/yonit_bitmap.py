@@ -21,9 +21,9 @@ def run_yonit_bitmap(test, params, env):
       2. If just timeout happen, this test passes, i.e. the guest stays
       good while running the benchmark in the given time.
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     sec_per_day = 86400  # seconds per day

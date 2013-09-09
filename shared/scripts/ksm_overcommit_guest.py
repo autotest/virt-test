@@ -32,9 +32,9 @@ class MemFill(object):
         """
         Constructor of MemFill class.
 
-        @param mem: Amount of test memory in MB.
-        @param random_key: Seed of random series used for fill up memory.
-        @param static_value: Value used to fill all memory.
+        :param mem: Amount of test memory in MB.
+        :param random_key: Seed of random series used for fill up memory.
+        :param static_value: Value used to fill all memory.
         """
         if (static_value < 0 or static_value > 255):
             print ("FAIL: Initialization static value"
@@ -68,8 +68,8 @@ class MemFill(object):
         """
         Compare pages of memory and print the differences found.
 
-        @param original: Data that was expected to be in memory.
-        @param inmem: Data in memory.
+        :param original: Data that was expected to be in memory.
+        :param inmem: Data in memory.
         """
         for ip in range(PAGE_SIZE / original.itemsize):
             if (not original[ip] == inmem[ip]):  # find which item is wrong
@@ -88,8 +88,8 @@ class MemFill(object):
         """
         Create page filled by value.
 
-        @param value: String we want to fill the page with.
-        @return: return array of bytes size PAGE_SIZE.
+        :param value: String we want to fill the page with.
+        :return: return array of bytes size PAGE_SIZE.
         """
         a = array.array("B")
         for _ in range((PAGE_SIZE / a.itemsize)):
@@ -103,8 +103,8 @@ class MemFill(object):
         """
         Create page filled by static random series.
 
-        @param seed: Seed of random series.
-        @return: Static random array series.
+        :param seed: Seed of random series.
+        :return: Static random array series.
         """
         random.seed(seed)
         a = array.array(self.allocate_by)
@@ -116,7 +116,7 @@ class MemFill(object):
         """
         Fill memory page by page, with value generated with value_page.
 
-        @param value: Parameter to be passed to value_page. None to just use
+        :param value: Parameter to be passed to value_page. None to just use
                 what's on the attribute static_value.
         """
         self.f.seek(0)
@@ -131,9 +131,9 @@ class MemFill(object):
         """
         Check memory to see if data is correct.
 
-        @param value: Parameter to be passed to value_page. None to just use
+        :param value: Parameter to be passed to value_page. None to just use
                 what's on the attribute static_value.
-        @return: if data in memory is correct return PASS
+        :return: if data in memory is correct return PASS
                 else print some wrong data and return FAIL
         """
         self.f.seek(0)
@@ -161,8 +161,8 @@ class MemFill(object):
         Fill memory by page with static random series with added special value
         on random place in pages.
 
-        @param n_bytes_on_end: how many bytes on the end of page can be changed.
-        @return: PASS.
+        :param n_bytes_on_end: how many bytes on the end of page can be changed.
+        :return: PASS.
         """
         self.f.seek(0)
         page = self.random_page(self.random_key)
@@ -187,7 +187,7 @@ class MemFill(object):
         """
         Check memory to see if it contains correct contents.
 
-        @return: if data in memory is correct return PASS
+        :return: if data in memory is correct return PASS
                 else print some wrong data and return FAIL.
         """
         self.f.seek(0)

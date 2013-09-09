@@ -18,9 +18,9 @@ def run_pci_hotplug(test, params, env):
     5) Check whether the newly added PCI device works fine.
     6) PCI delete the device, verify whether could remove the PCI device.
 
-    @param test:   QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env:    Dictionary with test environment.
     """
     # Select an image file
     def find_image(pci_num):

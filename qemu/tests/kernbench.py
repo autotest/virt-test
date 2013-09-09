@@ -15,9 +15,9 @@ def run_kernbench(test, params, env):
     2) Get a kernel code.
     3) Make the kernel with kernbench -M or time make -j 2*smp
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def download_if_not_exists():
         if not os.path.exists(file_name):

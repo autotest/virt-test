@@ -16,9 +16,9 @@ def run_performance(test, params, env):
     but we can implement some special requests for performance
     testing.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -133,7 +133,7 @@ def mpstat_ana(filename):
     """
     Get the cpu usage from the mpstat summary file
 
-    @param filename: filename of the mpstat summary file
+    :param filename: filename of the mpstat summary file
     """
     mpstat_result = open(filename, 'r')
     key_value = "%idle"
@@ -157,7 +157,7 @@ def time_ana(results_tuple):
     """
     Get the time from the results when run test with time
 
-    @param results_tuple: the tuple get from results file
+    :param results_tuple: the tuple get from results file
     """
     time_unit = 1.0
     time_data = 0.0
@@ -174,9 +174,9 @@ def format_result(result, base="20", fbase="2"):
     """
     Format the result to a fixed length string.
 
-    @param result: result need to convert
-    @param base: the length of converted string
-    @param fbase: the decimal digit for float
+    :param result: result need to convert
+    :param base: the length of converted string
+    :param fbase: the decimal digit for float
     """
     if isinstance(result, str):
         value = "%" + base + "s"
@@ -191,9 +191,9 @@ def get_sum_result(sum_matrix, value, tag):
     """
     Calculate the summary result
 
-    @param sum_matrix: matrix to store the summary results
-    @param value: value to add to matrix
-    @param tag: the keyword for the value in matrix
+    :param sum_matrix: matrix to store the summary results
+    :param value: value to add to matrix
+    :param tag: the keyword for the value in matrix
     """
     if tag in sum_matrix.keys():
         sum_matrix[tag] += value

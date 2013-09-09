@@ -25,7 +25,7 @@ def do_virsh_start(vm_name):
 
     Throws a StartError if execute virsh start command failed.
 
-    @param vm_ref: option of virsh start command.
+    :param vm_ref: option of virsh start command.
     """
     cmd_result = virsh.command("start %s" % vm_name)
 

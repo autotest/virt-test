@@ -15,9 +15,9 @@ def run_unittest(test, params, env):
     3) If qemu exited with code = 0, the unittest passed. Otherwise, it failed
     4) Collect all logs generated
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     unittest_dir = os.path.join(test.builddir, 'unittests')
     if not os.path.isdir(unittest_dir):

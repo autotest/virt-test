@@ -18,9 +18,9 @@ def run_change_media(test, params, env):
     8) Change cdrom without force.
     9) Change a non-removable media.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
 
     def check_block_locked(block_name):

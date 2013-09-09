@@ -127,8 +127,8 @@ def do_migration(vms, dest_uri, load_vms, stress_type):
     """
     Migrate vms with stress.
 
-    @param vms: migrated vms.
-    @param load_vms: provided for stress.
+    :param vms: migrated vms.
+    :param load_vms: provided for stress.
     """
     fail_info = []
     for vm in vms:

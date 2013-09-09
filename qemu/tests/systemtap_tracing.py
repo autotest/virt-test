@@ -14,9 +14,9 @@ def run_systemtap_tracing(test, params, env):
     2) Boot the guest, and do some operation(if needed).
     3) Check the output of the stap
     params:
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def create_patterns_reg(trace_key):

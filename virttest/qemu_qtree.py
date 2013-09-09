@@ -232,13 +232,13 @@ class QtreeContainer(object):
         self.nodes = None
 
     def get_qtree(self):
-        """ @return: root of qtree """
+        """ :return: root of qtree """
         if self.nodes:
             return self.nodes[-1]
 
     def get_nodes(self):
         """
-        @return: flat list of all qtree nodes (last one is main-system-bus)
+        :return: flat list of all qtree nodes (last one is main-system-bus)
         """
         return self.nodes
 
@@ -383,8 +383,8 @@ class QtreeDisksContainer(object):
     def parse_info_block(self, info):
         """
         Extracts all information about self.disks and fills them in.
-        @param info: output of 'info block' command
-        @return: (self.disks defined in qtree but not in info block,
+        :param info: output of 'info block' command
+        :return: (self.disks defined in qtree but not in info block,
                   self.disks defined in block info but not in qtree)
         """
         additional = 0
@@ -408,7 +408,7 @@ class QtreeDisksContainer(object):
         """
         Generate params from current self.qtree and self.block info.
         @note: disk name is not yet the one from autotest params
-        @return: number of fails
+        :return: number of fails
         """
         err = 0
         for disk in self.disks:
@@ -423,8 +423,8 @@ class QtreeDisksContainer(object):
         """
         Check info from guest's /proc/scsi/scsi file with qtree/block info
         @note: Not tested disks are of different type (virtio_blk, ...)
-        @param info: contents of guest's /proc/scsi/scsi file
-        @return: (#disks missing in guest os, #disks missing in qtree,
+        :param info: contents of guest's /proc/scsi/scsi file
+        :return: (#disks missing in guest os, #disks missing in qtree,
                   #not tested disks from qtree, #not tested disks from guest)
         """
         # Check only channel, id and lun for now
@@ -468,8 +468,8 @@ class QtreeDisksContainer(object):
     def check_disk_params(self, params):
         """
         Check gathered info from qtree/block with params
-        @param params: autotest params
-        @return: number of errors
+        :param params: autotest params
+        :return: number of errors
         """
         def check_drive_format(node, params):
             """ checks the drive format according to qtree info """

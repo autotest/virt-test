@@ -87,8 +87,8 @@ def prepare_remote_sp(rsp, rvm, pool_name="v2v_test"):
     """
     v2v need remote vm's disk stored in a pool.
 
-    @param rsp: remote storage pool's instance
-    @param rvm: remote vm instance
+    :param rsp: remote storage pool's instance
+    :param rvm: remote vm instance
     """
     # Get remote vms' disk path
     disks = rvm.get_disk_devices()

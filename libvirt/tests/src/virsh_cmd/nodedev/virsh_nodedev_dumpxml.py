@@ -12,7 +12,7 @@ def do_nodedev_dumpxml(dev_name, dev_opt=""):
     (1).execute nodedev-dumpxml command.
     (2).compare info in xml with info in sysfs.
 
-    @param dev_name: name of device.
+    :param dev_name: name of device.
     @raise TestFail: if execute command failed
                      or check result failed.
     """

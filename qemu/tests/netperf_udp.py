@@ -18,9 +18,9 @@ def run_netperf_udp(test, params, env):
        message size.
     6) Compare UDP performance to make sure it is acceptable.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def get_remote_host_session():

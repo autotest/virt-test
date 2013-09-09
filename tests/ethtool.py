@@ -25,9 +25,9 @@ def run_ethtool(test, params, env):
     8) Repeat step 3 - 7.
     9) Restore original configuration.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
 
     @todo: Not all guests have ethtool installed, so
         find a way to get it installed using yum/apt-get/
@@ -72,8 +72,8 @@ def run_ethtool(test, params, env):
         """
         Set ethernet device offload status
 
-        @param f_type: Offload type name
-        @param status: New status will be changed to
+        :param f_type: Offload type name
+        :param status: New status will be changed to
         """
         txt = "Set ethernet device offload status."
         txt += " (%s) %s: set status %s" % (ethname, f_type, status)
@@ -126,8 +126,8 @@ def run_ethtool(test, params, env):
         Transfer file by scp, use tcpdump to capture packets, then check the
         return string.
 
-        @param src: Source host of transfer file
-        @return: Tuple (status, error msg/tcpdump result)
+        :param src: Source host of transfer file
+        :return: Tuple (status, error msg/tcpdump result)
         """
         sess = vm.wait_for_login(timeout=login_timeout)
         session.cmd_output("rm -rf %s" % filename)

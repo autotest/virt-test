@@ -35,7 +35,7 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
         @Param controller: the controller which parameter is in.
         @Param parameter: the cgroup parameter of vm which we need to get.
         @Param libvirt_cgroup_path: the path of libvirt in cgroup
-        @return: False if expected controller is not mounted.
+        :return: False if expected controller is not mounted.
                  else return value's result object.
         """
         try:
@@ -60,9 +60,9 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
         """
         Get the value of set_ref.
 
-        @param result: CmdResult struct
-        @param set_ref: the parameter has been set
-        @param scheduler: the scheduler of qemu(default is posix)
+        :param result: CmdResult struct
+        :param set_ref: the parameter has been set
+        :param scheduler: the scheduler of qemu(default is posix)
         """
         output = result.stdout.strip()
         if not re.search("Scheduler", output):

@@ -21,9 +21,9 @@ def run_vlan(test, params, env):
     9) Remove the named vlan-device.
     10) Test maximal plumb/unplumb vlans.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def add_vlan(session, v_id, iface="eth0", cmd_type="ip"):
         """

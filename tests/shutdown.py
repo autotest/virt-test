@@ -13,9 +13,9 @@ def run_shutdown(test, params, env):
        monitor command (depending on the value of shutdown_method)
     3) Wait until the guest is down
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

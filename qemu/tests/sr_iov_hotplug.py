@@ -19,9 +19,9 @@ def run_sr_iov_hotplug(test, params, env):
     7) Check whether the newly added PCI device works fine.
     8) Delete the device, verify whether could remove the sr-iov device.
 
-    @param test:   QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env:    Dictionary with test environment.
     """
 
     def pci_add_iov(pci_num):

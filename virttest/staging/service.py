@@ -94,7 +94,7 @@ def sys_v_init_result_parser(command):
 
     :param command: command.
     :type command: str.
-    :return: different from the command.
+    :return:: different from the command.
     command is status: return true if service is running.
     command is is_enabled: return true if service is enalbled.
     command is list: return a dict from service name to status.
@@ -182,7 +182,7 @@ def systemd_result_parser(command):
 
     :param command: command.
     :type command: str.
-    :return: different from the command.
+    :return:: different from the command.
     command is status: return true if service is running.
     command is is_enabled: return true if service is enalbled.
     command is list: return a dict from service name to status.
@@ -245,7 +245,7 @@ def sys_v_init_command_generator(command):
 
     :param command: start,stop,restart, etc.
     :type command: str
-    :return: list of commands to pass to utils.run or similar function
+    :return:: list of commands to pass to utils.run or similar function
     :rtype: list
     """
     command_name = "service"
@@ -287,7 +287,7 @@ def systemd_command_generator(command):
 
     :param command: start,stop,restart, etc.
     :type command: str
-    :return: list of command and arguments to pass to utils.run or similar functions
+    :return:: list of command and arguments to pass to utils.run or similar functions
     :rtype: list
     """
     command_name = "systemctl"
@@ -386,7 +386,7 @@ def _get_name_of_init(run=utils.run):
     """
     Internal function to determine what executable is PID 1,
     aka init by checking /proc/1/exe
-    :return: executable name for PID 1, aka init
+    :return:: executable name for PID 1, aka init
     :rtype:  str
     """
     # /proc/1/comm was added in 2.6.33 and is not in RHEL6.x, so use cmdline
@@ -403,7 +403,7 @@ def get_name_of_init(run=utils.run):
     Determine what executable is PID 1, aka init by checking /proc/1/exe
     This init detection will only run once and cache the return value.
 
-    :return: executable name for PID 1, aka init
+    :return:: executable name for PID 1, aka init
     :rtype:  str
     """
     # _init_name is explicitly undefined so that we get the NameError on first access
@@ -457,7 +457,7 @@ class _SpecificServiceManager(object):
         :type command: function
         :param service_name: init service name or systemd unit name
         :type service_name: str
-        :return: wrapped utils.run function.
+        :return:: wrapped utils.run function.
         :rtype: function
         """
         def run(**kwargs):
@@ -467,7 +467,7 @@ class _SpecificServiceManager(object):
             :param kwargs: extra arguments to utils.run, .e.g. timeout. But not for ignore_status.
                            We need a CmdResult to parse and raise a error.TestError if command failed.
                            We will not let the CmdError out.
-            :return: result of parse_func.
+            :return:: result of parse_func.
             """
             # If run_func is utils.run by default, we need to set
             # ignore_status = True. Otherwise, skip this setting.
@@ -520,7 +520,7 @@ class _GenericServiceManager(object):
         :type run_func:  function
         :param command: partial function that generates the command list
         :type command: function
-        :return: wrapped utils.run function.
+        :return:: wrapped utils.run function.
         :rtype: function
         """
         def run(service="", **kwargs):
@@ -531,7 +531,7 @@ class _GenericServiceManager(object):
             :param kwargs: extra arguments to utils.run, .e.g. timeout. But not for ignore_status.
                            We need a CmdResult to parse and raise a error.TestError if command failed.
                            We will not let the CmdError out.
-            :return: result of parse_func.
+            :return:: result of parse_func.
             """
             # If run_func is utils.run by default, we need to set
             # ignore_status = True. Otherwise, skip this setting.
@@ -579,7 +579,7 @@ def convert_sysv_runlevel(level):
 
     :param level: sys_v runlevel
     :type level: str or int
-    :return: systemd target
+    :return:: systemd target
     :rtype: str
     :raise ValueError: when runlevel is unknown
     """
@@ -605,7 +605,7 @@ def convert_systemd_target_to_runlevel(target):
 
     :param target: systemd target
     :type target: str
-    :return: sys_v runlevel
+    :return:: sys_v runlevel
     :rtype: str
     :raise ValueError: when systemd target is unknown
     """
@@ -672,7 +672,7 @@ def _get_service_result_parser(run=utils.run):
     """
     Get the ServiceResultParser using the auto-detect init command.
 
-    :return: ServiceResultParser fro the current init command.
+    :return:: ServiceResultParser fro the current init command.
     :rtype: _ServiceResultParser
     """
     # pylint: disable=W0601
@@ -689,7 +689,7 @@ def _get_service_command_generator(run=utils.run):
     """
     Lazy initializer for ServiceCommandGenerator using the auto-detect init command.
 
-    :return: ServiceCommandGenerator for the current init command.
+    :return:: ServiceCommandGenerator for the current init command.
     :rtype: _ServiceCommandGenerator
     """
     # _service_command_generator is explicitly undefined so that we get the NameError on first access
@@ -724,7 +724,7 @@ def ServiceManager(run=utils.run):
         service_manager.disable(s)
         service_manager.stop(s)
 
-    :return: SysVInitServiceManager or SystemdServiceManager
+    :return:: SysVInitServiceManager or SystemdServiceManager
     :rtype: _GenericServiceManager
     """
     service_manager = _service_managers[get_name_of_init(run)]
@@ -744,7 +744,7 @@ def _auto_create_specific_service_result_parser(run=utils.run):
     Create a class that will create partial functions that generate result_parser
     for the current init command.
 
-    :return: A ServiceResultParser for the auto-detected init command.
+    :return:: A ServiceResultParser for the auto-detected init command.
     :rtype: _ServiceResultParser
     """
     result_parser = _result_parsers[get_name_of_init(run)]
@@ -763,7 +763,7 @@ def _auto_create_specific_service_command_generator(run=utils.run):
     lldpad.start()
     lldpad.stop()
 
-    :return: A ServiceCommandGenerator for the auto-detected init command.
+    :return:: A ServiceCommandGenerator for the auto-detected init command.
     :rtype: _ServiceCommandGenerator
     """
     command_generator = _command_generators[get_name_of_init(run)]
@@ -789,7 +789,7 @@ def SpecificServiceManager(service_name, run=utils.run):
 
     :param service_name: systemd unit or init.d service to manager
     :type service_name: str
-    :return: SpecificServiceManager that has start/stop methods
+    :return:: SpecificServiceManager that has start/stop methods
     :rtype: _SpecificServiceManager
     """
     return _SpecificServiceManager(service_name,

@@ -18,9 +18,9 @@ def run_timedrift_monotonicity(test, params, env):
        and record the time log.
     5) Analyse log if it is exist.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def get_time(cmd, test_time, session):
         if os.path.isfile(host_path):

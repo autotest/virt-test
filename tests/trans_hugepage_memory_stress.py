@@ -15,9 +15,9 @@ def run_trans_hugepage_memory_stress(test, params, env):
     """
     Run stress as a memory stress in guest for THP testing
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
 
     nr_ah = []

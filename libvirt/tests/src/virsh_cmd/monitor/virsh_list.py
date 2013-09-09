@@ -20,11 +20,11 @@ def run_virsh_list(test, params, env):
         Create a virsh list command and execute it on remote host.
         It will list local domains on remote host.
 
-        @param options_ref:options in virsh list command.
-        @param remote_ip:remote host's ip.
-        @param remote_passwd:remote host's password.
-        @param local_ip:local ip, to create uri in virsh list.
-        @return:return status and output of the virsh list command.
+        :param options_ref:options in virsh list command.
+        :param remote_ip:remote host's ip.
+        :param remote_passwd:remote host's password.
+        :param local_ip:local ip, to create uri in virsh list.
+        :return:return status and output of the virsh list command.
         """
         complete_uri = libvirt_vm.complete_uri(local_ip)
         command_on_remote = "virsh -c %s list %s" % (complete_uri, options_ref)

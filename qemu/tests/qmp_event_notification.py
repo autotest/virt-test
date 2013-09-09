@@ -12,9 +12,9 @@ def run_qmp_event_notification(test, params, env):
     2) Trigger qmp event in guest.
     3) Try to catch qmp event notification in qmp monitor.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
 
     if not utils_misc.qemu_has_option("qmp"):

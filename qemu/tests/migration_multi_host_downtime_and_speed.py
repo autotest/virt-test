@@ -13,9 +13,9 @@ def run_migration_multi_host_downtime_and_speed(test, params, env):
     Migration execution progress is described in documentation
     for migrate method in class MultihostMigration.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
     base_class = utils_test.MultihostMigration

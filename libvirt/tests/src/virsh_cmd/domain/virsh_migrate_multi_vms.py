@@ -24,8 +24,8 @@ def make_migration_options(optionstr="", timeout=60):
     Analyse a string to options for migration.
     They are split by one space.
 
-    @param optionstr: a string contain all options and split by space
-    @param timeout: timeout for migration.
+    :param optionstr: a string contain all options and split by space
+    :param timeout: timeout for migration.
     """
     options = ""
     for option in optionstr.split():
@@ -113,8 +113,8 @@ def thread_func_migration(virsh_instance, cmd):
     """
     Thread for virsh migrate command.
 
-    @param virsh_instance: A VirshPersistent or VirshConnectBack instance.
-    @param cmd: command to be executed in session
+    :param virsh_instance: A VirshPersistent or VirshConnectBack instance.
+    :param cmd: command to be executed in session
     """
     # Judge result for main_func with a global variable.
     global ret_migration
@@ -137,8 +137,8 @@ def multi_migration(helpers, simultaneous=False, jobabort=False, timeout=60):
     Migrate multiple vms simultaneously or not.
     If jobabort is True, run "virsh domjobabort vm_name" during migration.
 
-    @param helper: A MigrationHelper class instance
-    @param timeout: thread's timeout
+    :param helper: A MigrationHelper class instance
+    :param timeout: thread's timeout
     """
     migration_threads = []
     for helper in helpers:

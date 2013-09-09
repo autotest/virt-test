@@ -16,9 +16,9 @@ def run_timerdevice_change_guest_clksource(test, params, env):
     5) Boot guest system
     6) Check the current clocksource in guest
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def verify_guest_clock_source(session, expected):
         error.context("Check the current clocksource in guest", logging.info)

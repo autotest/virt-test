@@ -58,7 +58,7 @@ class Uri(object):
         """
         Uri dispatcher.
 
-        @param hostname: String with host name.
+        :param hostname: String with host name.
         """
         uri_func = getattr(self, "_get_%s_uri" % self.hyper)
         self.host = hostname
@@ -408,9 +408,9 @@ def v2v_cmd(params):
     """
     Append cmd to 'virt-v2v' and execute, optionally return full results.
 
-    @param: params: A dictionary includes all of required parameters such as
+    :param params: A dictionary includes all of required parameters such as
                     'target', 'hypervisor' and 'hostname', etc.
-    @return: stdout of command
+    :return: stdout of command
     """
     if V2V_EXEC is None:
         raise ValueError('Missing command: virt-v2v')

@@ -15,9 +15,9 @@ def run_cluster_size_check(test, params, env):
     3) Create image with cluster_size option
     4) Verify if the cluster_size is the set value
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def memory_size(size):

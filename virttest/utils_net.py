@@ -443,8 +443,8 @@ class Macvtap(Interface):
         """
         Create a macvtap device, only when the device does not exist.
 
-        @param device: Macvtap device to be created.
-        @param mode: Creation mode.
+        :param device: Macvtap device to be created.
+        :param mode: Creation mode.
         """
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
         if os.path.exists(path):
@@ -552,8 +552,8 @@ class Bridge(object):
         """
         Return bridge which contain port.
 
-        @param port_name: Name of port.
-        @return: Bridge name or None if there is no bridge which contain port.
+        :param port_name: Name of port.
+        :return: Bridge name or None if there is no bridge which contain port.
         """
         bridge = None
         for (br, ifaces) in self.get_structure().iteritems():
@@ -574,8 +574,8 @@ class Bridge(object):
         """
         Add a device to bridge
 
-        @param ifname: Name of TAP device
-        @param brname: Name of the bridge
+        :param ifname: Name of TAP device
+        :param brname: Name of the bridge
         """
         try:
             self._br_ioctl(arch.SIOCBRADDIF, brname, ifname)
@@ -586,8 +586,8 @@ class Bridge(object):
         """
         Remove a TAP device from bridge
 
-        @param ifname: Name of TAP device
-        @param brname: Name of the bridge
+        :param ifname: Name of TAP device
+        :param brname: Name of the bridge
         """
         try:
             self._br_ioctl(arch.SIOCBRDELIF, brname, ifname)
@@ -625,7 +625,7 @@ def if_nametoindex(ifname):
     Map an interface name into its corresponding index.
     Returns 0 on error, as 0 is not a valid index
 
-    @param ifname: interface name
+    :param ifname: interface name
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16si", ifname, 0)
@@ -639,7 +639,7 @@ def vnet_mq_probe(tapfd):
     """
     Check if the IFF_MULTI_QUEUE is support by tun.
 
-    @param tapfd: the file descriptor of /dev/net/tun
+    :param tapfd: the file descriptor of /dev/net/tun
     """
     u = struct.pack("I", 0)
     try:
@@ -658,7 +658,7 @@ def vnet_hdr_probe(tapfd):
     """
     Check if the IFF_VNET_HDR is support by tun.
 
-    @param tapfd: the file descriptor of /dev/net/tun
+    :param tapfd: the file descriptor of /dev/net/tun
     """
     u = struct.pack("I", 0)
     try:
@@ -681,10 +681,10 @@ def open_tap(devname, ifname, queues=1, vnet_hdr=True):
     For single queue, only returns one file descriptor, it's used by
     fd=<fd> legacy parameter of qemu
 
-    @param devname: TUN device path
-    @param ifname: TAP interface name
-    @param queues: Queue number
-    @param vnet_hdr: Whether enable the vnet header
+    :param devname: TUN device path
+    :param ifname: TAP interface name
+    :param queues: Queue number
+    :param vnet_hdr: Whether enable the vnet header
     """
     tapfds = []
 
@@ -715,9 +715,9 @@ def open_tap(devname, ifname, queues=1, vnet_hdr=True):
 
 def is_virtual_network_dev(dev_name):
     """
-    @param dev_name: Device name.
+    :param dev_name: Device name.
 
-    @return: True if dev_name is in virtual/net dir, else false.
+    :return: True if dev_name is in virtual/net dir, else false.
     """
     if dev_name in os.listdir("/sys/devices/virtual/net/"):
         return True
@@ -729,9 +729,9 @@ def find_dnsmasq_listen_address():
     """
     Search all dnsmasq listen addresses.
 
-    @param bridge_name: Name of bridge.
-    @param bridge_ip: Bridge ip.
-    @return: List of ip where dnsmasq is listening.
+    :param bridge_name: Name of bridge.
+    :param bridge_ip: Bridge ip.
+    :return: List of ip where dnsmasq is listening.
     """
     cmd = "ps -Af | grep dnsmasq"
     result = utils.run(cmd).stdout
@@ -748,10 +748,10 @@ def local_runner_status(cmd, timeout=None):
 
 def get_net_if(runner=None):
     """
-    @param runner: command runner.
-    @param div_phy_virt: if set true, will return a tuple division real
+    :param runner: command runner.
+    :param div_phy_virt: if set true, will return a tuple division real
                          physical interface and virtual interface
-    @return: List of network interfaces.
+    :return: List of network interfaces.
     """
     if runner is None:
         runner = local_runner
@@ -764,7 +764,7 @@ def get_sorted_net_if():
     """
     Get all network interfaces, but sort them among physical and virtual if.
 
-    @return: Tuple (physical interfaces, virtual interfaces)
+    :return: Tuple (physical interfaces, virtual interfaces)
     """
     all_interfaces = get_net_if()
     phy_interfaces = []
@@ -785,8 +785,8 @@ def get_net_if_addrs(if_name, runner=None):
     Get network device ip addresses. ioctl not used because it's not
     compatible with ipv6 address.
 
-    @param if_name: Name of interface.
-    @return: List ip addresses of network interface.
+    :param if_name: Name of interface.
+    :return: List ip addresses of network interface.
     """
     if runner is None:
         runner = local_runner
@@ -799,7 +799,7 @@ def get_net_if_addrs(if_name, runner=None):
 
 def get_net_if_and_addrs(runner=None):
     """
-    @return: Dict of interfaces and their addresses {"ifname": addrs}.
+    :return: Dict of interfaces and their addresses {"ifname": addrs}.
     """
     ret = {}
     ifs = get_net_if(runner)
@@ -813,8 +813,8 @@ def set_net_if_ip(if_name, ip_addr, runner=None):
     Get network device ip addresses. ioctl not used because there is
     incompatibility with ipv6.
 
-    @param if_name: Name of interface.
-    @param ip_addr: Interface ip addr in format "ip_address/mask".
+    :param if_name: Name of interface.
+    :param ip_addr: Interface ip addr in format "ip_address/mask".
     @raise: IfChangeAddrError.
     """
     if runner is None:
@@ -828,7 +828,7 @@ def set_net_if_ip(if_name, ip_addr, runner=None):
 
 def ipv6_from_mac_addr(mac_addr):
     """
-    @return: Ipv6 address for communication in link range.
+    :return: Ipv6 address for communication in link range.
     """
     mp = mac_addr.split(":")
     mp[0] = ("%x") % (int(mp[0], 16) ^ 0x2)
@@ -840,10 +840,10 @@ def check_add_dnsmasq_to_br(br_name, tmpdir):
     Add dnsmasq for bridge. dnsmasq could be added only if bridge
     has assigned ip address.
 
-    @param bridge_name: Name of bridge.
-    @param bridge_ip: Bridge ip.
-    @param tmpdir: Tmp dir for save pid file and ip range file.
-    @return: When new dnsmasq is started name of pidfile  otherwise return
+    :param bridge_name: Name of bridge.
+    :param bridge_ip: Bridge ip.
+    :param tmpdir: Tmp dir for save pid file and ip range file.
+    :return: When new dnsmasq is started name of pidfile  otherwise return
              None because system dnsmasq is already started on bridge.
     """
     br_ips = get_net_if_addrs(br_name)["ipv4"]
@@ -879,8 +879,8 @@ def find_bridge_manager(br_name, ovs=None):
     """
     Finds bridge which contain interface iface_name.
 
-    @param br_name: Name of interface.
-    @return: (br_manager) which contain bridge or None.
+    :param br_name: Name of interface.
+    :return: (br_manager) which contain bridge or None.
     """
     if ovs is None:
         ovs = __ovs
@@ -898,8 +898,8 @@ def find_current_bridge(iface_name, ovs=None):
     """
     Finds bridge which contains interface iface_name.
 
-    @param iface_name: Name of interface.
-    @return: (br_manager, Bridge) which contain iface_name or None.
+    :param iface_name: Name of interface.
+    :return: (br_manager, Bridge) which contain iface_name or None.
     """
     if ovs is None:
         ovs = __ovs
@@ -921,8 +921,8 @@ def change_iface_bridge(ifname, new_bridge, ovs=None):
     """
     Change bridge on which interface was added.
 
-    @param ifname: Iface name or Iface struct.
-    @param new_bridge: Name of new bridge.
+    :param ifname: Iface name or Iface struct.
+    :param new_bridge: Name of new bridge.
     """
     if ovs is None:
         ovs = __ovs
@@ -951,9 +951,9 @@ def add_to_bridge(ifname, brname, ovs=None):
     """
     Add a TAP device to bridge
 
-    @param ifname: Name of TAP device
-    @param brname: Name of the bridge
-    @param ovs: OpenVSwitch object.
+    :param ifname: Name of TAP device
+    :param brname: Name of the bridge
+    :param ovs: OpenVSwitch object.
     """
     if ovs is None:
         ovs = __ovs
@@ -981,9 +981,9 @@ def del_from_bridge(ifname, brname, ovs=None):
     """
     Del a TAP device to bridge
 
-    @param ifname: Name of TAP device
-    @param brname: Name of the bridge
-    @param ovs: OpenVSwitch object.
+    :param ifname: Name of TAP device
+    :param brname: Name of the bridge
+    :param ovs: OpenVSwitch object.
     """
     if ovs is None:
         ovs = __ovs
@@ -1011,7 +1011,7 @@ def bring_up_ifname(ifname):
     """
     Bring up an interface
 
-    @param ifname: Name of the interface
+    :param ifname: Name of the interface
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16sh", ifname, arch.IFF_UP)
@@ -1026,7 +1026,7 @@ def bring_down_ifname(ifname):
     """
     Bring up an interface
 
-    @param ifname: Name of the interface
+    :param ifname: Name of the interface
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     ifr = struct.pack("16sh", ifname, 0)
@@ -1041,7 +1041,7 @@ def if_set_macaddress(ifname, mac):
     """
     Set the mac address for an interface
 
-    @param ifname: Name of the interface
+    :param ifname: Name of the interface
     @mac: Mac address
     """
     ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
@@ -1168,7 +1168,7 @@ class VirtIface(propcan.PropCan):
         """
         Append randomly generated byte strings to make mac complete
 
-        @param: mac: String or list of mac bytes (possibly incomplete)
+        :param mac: String or list of mac bytes (possibly incomplete)
         @raise: TypeError if mac is not a string or a list
         """
         mac = cls.mac_str_to_int_list(mac)
@@ -1624,10 +1624,10 @@ class VirtNet(DbNet, ParamsNet):
         """
         Load networking info. from db, then from params, then update db.
 
-        @param: params: Params instance using specification above
-        @param: vm_name: Name of the VM as might appear in Params
-        @param: db_key: database key uniquely identifying VM instance
-        @param: db_filename: database file to cache previously parsed params
+        :param params: Params instance using specification above
+        :param vm_name: Name of the VM as might appear in Params
+        :param db_key: database key uniquely identifying VM instance
+        :param db_filename: database file to cache previously parsed params
         """
         # Params always overrides database content
         DbNet.__init__(self, params, vm_name, db_filename, db_key)
@@ -1680,8 +1680,8 @@ class VirtNet(DbNet, ParamsNet):
         """
         Set & return valid mac address for nic_index_or_name or raise NetError
 
-        @param: nic_index_or_name: index number or name of NIC
-        @return: MAC address string
+        :param nic_index_or_name: index number or name of NIC
+        :return: MAC address string
         @raise: NetError if mac generation failed
         """
         nic = self[nic_index_or_name]
@@ -1715,7 +1715,7 @@ class VirtNet(DbNet, ParamsNet):
         """
         Remove the mac value from nic_index_or_name and cache unless static
 
-        @param: nic_index_or_name: index number or name of NIC
+        :param nic_index_or_name: index number or name of NIC
         """
         nic = self[nic_index_or_name]
         if nic.has_key('mac'):
@@ -1727,7 +1727,7 @@ class VirtNet(DbNet, ParamsNet):
         """
         Set a MAC address to value specified
 
-        @param: nic_index_or_name: index number or name of NIC
+        :param nic_index_or_name: index number or name of NIC
         @raise: NetError if mac already assigned
         """
         nic = self[nic_index_or_name]
@@ -1741,8 +1741,8 @@ class VirtNet(DbNet, ParamsNet):
         """
         Return a MAC address for nic_index_or_name
 
-        @param: nic_index_or_name: index number or name of NIC
-        @return: MAC address string.
+        :param nic_index_or_name: index number or name of NIC
+        :return: MAC address string.
         """
         return self[nic_index_or_name].mac.lower()
 
@@ -1763,7 +1763,7 @@ def parse_arp():
     """
     Read /proc/net/arp, return a mapping of MAC to IP
 
-    @return: dict mapping MAC to IP
+    :return: dict mapping MAC to IP
     """
     ret = {}
     arp_cache = file('/proc/net/arp').readlines()
@@ -1786,9 +1786,9 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     Use arping and the ARP cache to make sure a given IP address belongs to one
     of the given MAC addresses.
 
-    @param ip: An IP address.
-    @param macs: A list or tuple of MAC addresses.
-    @return: True if ip is assigned to a MAC address in macs.
+    :param ip: An IP address.
+    :param macs: A list or tuple of MAC addresses.
+    :return: True if ip is assigned to a MAC address in macs.
     """
     ip_map = parse_arp()
     for mac in macs:
@@ -1827,7 +1827,7 @@ def generate_mac_address_simple():
 def get_ip_address_by_interface(ifname):
     """
     returns ip address by interface
-    @param ifname - interface name
+    :param ifname - interface name
     @raise NetError - When failed to fetch IP address (ioctl raised IOError.).
 
     Retrieves interface address from socket fd trough ioctl call
@@ -1852,7 +1852,7 @@ def get_host_ip_address(params):
     """
     returns ip address of host specified in host_ip_addr parameter If provided
     otherwise ip address on interface specified in netdst parameter is returned
-    @param params
+    :param params
     """
     host_ip = params.get('host_ip_addr', None)
     if not host_ip:
@@ -1866,7 +1866,7 @@ def get_linux_ifname(session, mac_address=""):
     """
     Get the interface name through the mac address.
 
-    @param session: session to the virtual machine
+    :param session: session to the virtual machine
     @mac_address: the macaddress of nic
 
     @raise error.TestError in case it was not possible to determine the
@@ -1912,7 +1912,7 @@ def restart_guest_network(session, nic_name=None):
     """
     Restart guest's network via serial console.
 
-    @param session: session to virtual machine
+    :param session: session to virtual machine
     @nic_name: nic card name in guest to restart
     """
     if_list = []
@@ -1933,8 +1933,8 @@ def update_mac_ip_address(vm, params, timeout=None):
     Get mac and ip address from guest then update the mac pool and
     address cache
 
-    @param vm: VM object
-    @param params: Dictionary with the test parameters.
+    :param vm: VM object
+    :param params: Dictionary with the test parameters.
     """
     network_query = params.get("network_query", "ifconfig")
     restart_network = params.get("restart_network", "service network restart")
@@ -1976,10 +1976,10 @@ def get_windows_nic_attribute(session, key, value, target, timeout=240):
     Get the windows nic attribute using wmic. All the support key you can
     using wmic to have a check.
 
-    @param session: session to the virtual machine
-    @param key: the key supported by wmic
-    @param value: the value of the key
-    @param target: which nic attribute you want to get.
+    :param session: session to the virtual machine
+    :param key: the key supported by wmic
+    :param value: the value of the key
+    :param target: which nic attribute you want to get.
 
     """
     cmd = 'wmic nic where %s="%s" get %s' % (key, value, target)
@@ -1993,9 +1993,9 @@ def set_win_guest_nic_status(session, connection_id, status, timeout=240):
     """
     Set windows guest nic ENABLED/DISABLED
 
-    @param  session : session to virtual machine
-    @param  connection_id : windows guest nic netconnectionid
-    @param  status : set nic ENABLED/DISABLED
+    :param  session : session to virtual machine
+    :param  connection_id : windows guest nic netconnectionid
+    :param  status : set nic ENABLED/DISABLED
     """
     cmd = 'netsh interface set interface name="%s" admin=%s'
     session.cmd(cmd % (connection_id, status), timeout=timeout)
@@ -2017,8 +2017,8 @@ def restart_windows_guest_network(session, connection_id, timeout=240,
     Restart guest's network via serial console. mode "netsh" can not
     works in winxp system
 
-    @param session: session to virtual machine
-    @param connection_id: windows nic connectionid,it means connection name,
+    :param session: session to virtual machine
+    :param connection_id: windows nic connectionid,it means connection name,
                           you Can get connection id string via wmic
     """
     if mode == "netsh":
@@ -2035,11 +2035,11 @@ def restart_windows_guest_network_by_key(session, key, value, timeout=240,
     interfaceindex, "netsh" can not work in winxp system.
     using devcon mode must download devcon.exe and put it under c:\
 
-    @param session: session to virtual machine
-    @param key: the key supported by wmic nic
-    @param value: the value of the key
-    @param timeout: timeout
-    @param mode: command mode netsh or devcon
+    :param session: session to virtual machine
+    :param key: the key supported by wmic nic
+    :param value: the value of the key
+    :param timeout: timeout
+    :param mode: command mode netsh or devcon
     """
     if mode == "netsh":
         oper_key = "netconnectionid"

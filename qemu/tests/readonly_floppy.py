@@ -19,9 +19,9 @@ def run_readonly_floppy(test, params, env):
        'protected'(for windows) keyword,if not,fail the test;
     5) Close session to the VM
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     error.context("Boot up guest with floppies", logging.info)

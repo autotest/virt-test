@@ -112,9 +112,9 @@ def run_vnc(test, params, env):
     3) Handshaking after vnc password set by __com.redhat_set_password.
     4) Handshaking again after vnc password timeout.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

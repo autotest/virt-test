@@ -21,9 +21,9 @@ def run_cpu_hotplug(test, params, env):
     8) Run the CPU Hotplug test suite shipped with autotest inside guest
        (Linux guest only)
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     error.context("boot the vm, with '-smp X,maxcpus=Y' option,"
                   "thus allow hotplug vcpu", logging.info)

@@ -20,9 +20,9 @@ def run_floppy(test, params, env):
     4) Calculate md5sum value of a file and copy it into floppy.
     5) Verify whether the md5sum does match.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     source_file = params["source_file"]
     dest_file = params["dest_file"]
@@ -34,10 +34,10 @@ def run_floppy(test, params, env):
         """
         Creates 'new' floppy with one file on it
 
-        @param params: parameters for test
-        @param preapre: if True then it prepare cd images.
+        :param params: parameters for test
+        :param preapre: if True then it prepare cd images.
 
-        @return: path to new floppy file.
+        :return: path to new floppy file.
         """
         error.context("creating test floppy")
         floppy = params["floppy_name"]
@@ -56,10 +56,10 @@ def run_floppy(test, params, env):
         """
         Start disk load. Cyclic copy from src_path to dst_path.
 
-        @param vm: VM where to find a disk.
-        @param src_path: Source of data
-        @param copy_timeout: Timeout for copy
-        @param dsize: Size of data block which is periodically copied.
+        :param vm: VM where to find a disk.
+        :param src_path: Source of data
+        :param copy_timeout: Timeout for copy
+        :param dsize: Size of data block which is periodically copied.
         """
         if copy_timeout is None:
             copy_timeout = 120

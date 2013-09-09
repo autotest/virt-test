@@ -122,8 +122,8 @@ class UnattendedInstallConfig(object):
         """
         Sets class attributes from test parameters.
 
-        @param test: QEMU test object.
-        @param params: Dictionary with test parameters.
+        :param test: QEMU test object.
+        :param params: Dictionary with test parameters.
         """
         root_dir = data_dir.get_data_dir()
         self.deps_dir = os.path.join(test.virtdir, 'deps')
@@ -233,9 +233,9 @@ class UnattendedInstallConfig(object):
         """
         Get windows driver's hardware id from inf files.
 
-        @param dirver: Configurable driver name.
-        @param run_cmd:  Use hardware id in windows cmd command or not.
-        @param return: Windows driver's hardware id
+        :param dirver: Configurable driver name.
+        :param run_cmd:  Use hardware id in windows cmd command or not.
+        :param return: Windows driver's hardware id
         """
         if not os.path.exists(self.cdrom_mount_point):
             os.mkdir(self.cdrom_mount_point)
@@ -274,7 +274,7 @@ class UnattendedInstallConfig(object):
         Update driver string with the hardware id get from inf files
 
         @driver: driver string
-        @return new driver string
+        :return: new driver string
         """
         if 'hwid' in driver:
             if 'hwidcmd' in driver:
@@ -316,7 +316,7 @@ class UnattendedInstallConfig(object):
         provided for this test and replace the KVM_TEST_MEDIUM with
         the tree url or nfs address provided for this test.
 
-        @return: Answer file contents
+        :return: Answer file contents
         """
         contents = open(self.unattended_file).read()
 
@@ -970,9 +970,9 @@ def run_unattended_install(test, params, env):
     1) Starts a VM with an appropriated setup to start an unattended OS install.
     2) Wait until the install reports to the install watcher its end.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     @error.context_aware
     def copy_images():

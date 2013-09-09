@@ -9,9 +9,9 @@ def run_drive_mirror_reboot(test, params, env):
     3). reopen new image then reboot guest
     4). check guest alive
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_images", "image1")
     reboot_test = drive_mirror.DriveMirror(test, params, env, tag)

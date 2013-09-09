@@ -17,9 +17,9 @@ def run_migration_multi_host(test, params, env):
         3) migration
         4) after migration start post_sub_test
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
     pre_sub_test = params.get("pre_sub_test")

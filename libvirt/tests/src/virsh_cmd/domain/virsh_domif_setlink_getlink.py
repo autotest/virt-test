@@ -20,10 +20,10 @@ def run_virsh_domif_setlink_getlink(test, params, env):
         """
         Set the domain link state
 
-        @param: vm : domain name
-        @param: device : domain virtual interface
-        @param: opration : domain virtual interface state
-        @param: options : some options like --config
+        :param vm : domain name
+        :param device : domain virtual interface
+        :param opration : domain virtual interface state
+        :param options : some options like --config
 
         """
 
@@ -33,9 +33,9 @@ def run_virsh_domif_setlink_getlink(test, params, env):
         """
         Get the domain link state
 
-        @param: vm : domain name
-        @param: device : domain virtual interface
-        @param: options : some options like --config
+        :param vm : domain name
+        :param device : domain virtual interface
+        :param options : some options like --config
 
         """
 

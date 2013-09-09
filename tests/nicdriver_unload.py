@@ -18,9 +18,9 @@ def run_nicdriver_unload(test, params, env):
     4) Repeatedly unload/load NIC driver during file transfer.
     5) Check whether the test interface should still work.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def send_cmd_safe(session, cmd, timeout=60):
         logging.debug("Sending command: %s", cmd)

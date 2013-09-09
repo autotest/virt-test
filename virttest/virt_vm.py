@@ -408,16 +408,16 @@ class CpuInfo(object):
     def __init__(self, model=None, vendor=None, flags=None, family=None,
                  smp=0, maxcpus=0, sockets=0, cores=0, threads=0):
         """
-        @param model: CPU Model of VM (use 'qemu -cpu ?' for list)
-        @param vendor: CPU Vendor of VM
-        @param flags: CPU Flags of VM
-        @param flags: CPU Family of VM
-        @param smp: set the number of CPUs to 'n' [default=1]
-        @param maxcpus: maximum number of total cpus, including
+        :param model: CPU Model of VM (use 'qemu -cpu ?' for list)
+        :param vendor: CPU Vendor of VM
+        :param flags: CPU Flags of VM
+        :param flags: CPU Family of VM
+        :param smp: set the number of CPUs to 'n' [default=1]
+        :param maxcpus: maximum number of total cpus, including
                         offline CPUs for hotplug, etc
-        @param cores: number of CPU cores on one socket
-        @param threads: number of threads on one CPU core
-        @param sockets: number of discrete sockets in the system
+        :param cores: number of CPU cores on one socket
+        :param threads: number of threads on one CPU core
+        :param sockets: number of discrete sockets in the system
         """
         self.model = model
         self.vendor = vendor
@@ -586,7 +586,7 @@ class BaseVM(object):
         """
         Return the MAC address of a NIC.
 
-        @param nic_index: Index of the NIC
+        :param nic_index: Index of the NIC
         @raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
         """
@@ -600,9 +600,9 @@ class BaseVM(object):
         """
         Return the IP address of a NIC or guest (in host space).
 
-        @param index: Name or index of the NIC whose address is requested.
-        @return: 'localhost': Port redirection is in use
-        @return: IP address of NIC if valid in arp cache.
+        :param index: Name or index of the NIC whose address is requested.
+        :return: 'localhost': Port redirection is in use
+        :return: IP address of NIC if valid in arp cache.
         @raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
         @raise VMIPAddressMissingError: If no IP address is found for the the
@@ -651,7 +651,7 @@ class BaseVM(object):
         Fill VM's nic address to the virtnet structure based on VM's address
         structure addrs.
 
-        @param addrs: Dict of interfaces and address
+        :param addrs: Dict of interfaces and address
                         {"if_name":{"mac":['addrs',],
                                     "ipv4":['addrs',],
                                     "ipv6":['addrs',]},
@@ -668,9 +668,9 @@ class BaseVM(object):
         """
         Return the port in host space corresponding to port in guest space.
 
-        @param port: Port number in host space.
-        @param nic_index: Index of the NIC.
-        @return: If port redirection is used, return the host port redirected
+        :param port: Port number in host space.
+        :param nic_index: Index of the NIC.
+        :return: If port redirection is used, return the host port redirected
                 to guest port port. Otherwise return port.
         @raise VMPortNotRedirectedError: If an unredirected port is requested
                 in user mode
@@ -688,7 +688,7 @@ class BaseVM(object):
         """
         Free a NIC's MAC address.
 
-        @param nic_index: Index of the NIC
+        :param nic_index: Index of the NIC
         """
         self.virtnet.free_mac_address(nic_index_or_name)
 
@@ -714,11 +714,11 @@ class BaseVM(object):
         """
         Add new or setup existing NIC with optional model type and mac address
 
-        @param: **params: Additional NIC parameters to set.
-        @param: nic_name: Name for device
-        @param: mac: Optional MAC address, None to randomly generate.
-        @param: ip: Optional IP address to register in address_cache
-        @return: Dict with new NIC's info.
+        :param **params: Additional NIC parameters to set.
+        :param nic_name: Name for device
+        :param mac: Optional MAC address, None to randomly generate.
+        :param ip: Optional IP address to register in address_cache
+        :return: Dict with new NIC's info.
         """
         if not params.has_key('nic_name'):
             params['nic_name'] = utils_misc.generate_random_id()
@@ -825,10 +825,10 @@ class BaseVM(object):
         If timeout expires while waiting for output from the guest (e.g. a
         password prompt or a shell prompt) -- fail.
 
-        @param nic_index: The index of the NIC to connect to.
-        @param timeout: Time (seconds) before giving up logging into the
+        :param nic_index: The index of the NIC to connect to.
+        :param timeout: Time (seconds) before giving up logging into the
                 guest.
-        @return: A ShellSession object.
+        :return: A ShellSession object.
         """
         error.context("logging into '%s'" % self.name)
         if not username:
@@ -864,13 +864,13 @@ class BaseVM(object):
         """
         Make multiple attempts to log into the guest via SSH/Telnet/Netcat.
 
-        @param nic_index: The index of the NIC to connect to.
-        @param timeout: Time (seconds) to keep trying to log in.
-        @param internal_timeout: Timeout to pass to login().
-        @param serial: Whether to use a serial connection when remote login
+        :param nic_index: The index of the NIC to connect to.
+        :param timeout: Time (seconds) to keep trying to log in.
+        :param internal_timeout: Timeout to pass to login().
+        :param serial: Whether to use a serial connection when remote login
                 (ssh, rss) failed.
-        @param restart_network: Whether to try to restart guest's network.
-        @return: A ShellSession object.
+        :param restart_network: Whether to try to restart guest's network.
+        :return: A ShellSession object.
         """
         error_messages = []
         logging.debug("Attempting to log into '%s' (timeout %ds)", self.name,
@@ -904,12 +904,12 @@ class BaseVM(object):
         """
         Transfer files to the remote host(guest).
 
-        @param host_path: Host path
-        @param guest_path: Guest path
-        @param nic_index: The index of the NIC to connect to.
-        @param limit: Speed limit of file transfer.
-        @param verbose: If True, log some stats using logging.debug (RSS only)
-        @param timeout: Time (seconds) before giving up on doing the remote
+        :param host_path: Host path
+        :param guest_path: Guest path
+        :param nic_index: The index of the NIC to connect to.
+        :param limit: Speed limit of file transfer.
+        :param verbose: If True, log some stats using logging.debug (RSS only)
+        :param timeout: Time (seconds) before giving up on doing the remote
                 copy.
         """
         error.context("sending file(s) to '%s'" % self.name)
@@ -935,12 +935,12 @@ class BaseVM(object):
         """
         Transfer files from the guest.
 
-        @param host_path: Guest path
-        @param guest_path: Host path
-        @param nic_index: The index of the NIC to connect to.
-        @param limit: Speed limit of file transfer.
-        @param verbose: If True, log some stats using logging.debug (RSS only)
-        @param timeout: Time (seconds) before giving up on doing the remote
+        :param host_path: Guest path
+        :param guest_path: Host path
+        :param nic_index: The index of the NIC to connect to.
+        :param limit: Speed limit of file transfer.
+        :param verbose: If True, log some stats using logging.debug (RSS only)
+        :param timeout: Time (seconds) before giving up on doing the remote
                 copy.
         """
         error.context("receiving file(s) from '%s'" % self.name)
@@ -967,8 +967,8 @@ class BaseVM(object):
         If timeout expires while waiting for output from the guest (e.g. a
         password prompt or a shell prompt) -- fail.
 
-        @param timeout: Time (seconds) before giving up logging into the guest.
-        @return: ShellSession object on success and None on failure.
+        :param timeout: Time (seconds) before giving up logging into the guest.
+        :return: ShellSession object on success and None on failure.
         """
         error.context("logging into '%s' via serial console" % self.name)
         if not username:
@@ -1010,10 +1010,10 @@ class BaseVM(object):
         """
         Make multiple attempts to log into the guest via serial console.
 
-        @param timeout: Time (seconds) to keep trying to log in.
-        @param internal_timeout: Timeout to pass to serial_login().
-        @param restart_network: Whether try to restart guest's network.
-        @return: A ShellSession object.
+        :param timeout: Time (seconds) to keep trying to log in.
+        :param internal_timeout: Timeout to pass to serial_login().
+        :param restart_network: Whether try to restart guest's network.
+        :return: A ShellSession object.
         """
         error_messages = []
         logging.debug("Attempting to log into '%s' via serial console "
@@ -1042,7 +1042,7 @@ class BaseVM(object):
         """
         Catch UUID of the VM.
 
-        @return: None,if not specified in config file
+        :return: None,if not specified in config file
         """
         if self.params.get("uuid") == "random":
             return self.uuid
@@ -1053,7 +1053,7 @@ class BaseVM(object):
         """
         Send a string to the VM.
 
-        @param sr: String, that must consist of alphanumeric characters only.
+        :param sr: String, that must consist of alphanumeric characters only.
                 Capital letters are allowed.
         """
         for char in sr:
@@ -1076,10 +1076,10 @@ class BaseVM(object):
         """
         Get bootup memory size of the VM.
 
-        @param cmd: Command used to check memory. If not provided,
+        :param cmd: Command used to check memory. If not provided,
                     self.params.get("mem_chk_cmd") will be used.
-        @param timeout: timeout for cmd
-        @param re_str: pattern to get memory size from the command
+        :param timeout: timeout for cmd
+        :param re_str: pattern to get memory size from the command
                        output. If not provided,
                        self.params.get("mem_chk_re_str") will be
                        used.
@@ -1137,7 +1137,7 @@ class BaseVM(object):
         """
         Activate an inactive network device
 
-        @param: nic_index_or_name: name or index number for existing NIC
+        :param nic_index_or_name: name or index number for existing NIC
         """
         raise NotImplementedError
 
@@ -1145,7 +1145,7 @@ class BaseVM(object):
         """
         Deactivate an active network device
 
-        @param: nic_index_or_name: name or index number for existing NIC
+        :param nic_index_or_name: name or index number for existing NIC
         """
         raise NotImplementedError
 
@@ -1171,10 +1171,10 @@ class BaseVM(object):
         command.  Then, attempt to destroy the VM via the monitor with a 'quit'
         command.  If that fails, send SIGKILL to the qemu process.
 
-        @param gracefully: If True, an attempt will be made to end the VM
+        :param gracefully: If True, an attempt will be made to end the VM
                 using a shell command before trying to end the qemu process
                 with a 'quit' or a kill signal.
-        @param free_mac_addresses: If True, the MAC addresses used by the VM
+        :param free_mac_addresses: If True, the MAC addresses used by the VM
                 will be freed.
         """
         raise NotImplementedError
@@ -1190,19 +1190,19 @@ class BaseVM(object):
         of the destination VM.  Otherwise, the state is switched with that of
         a dead VM (returned by self.clone()).
 
-        @param timeout: Time to wait for migration to complete.
-        @param protocol: Migration protocol ('tcp', 'unix' or 'exec').
-        @param cancel_delay: If provided, specifies a time duration after which
+        :param timeout: Time to wait for migration to complete.
+        :param protocol: Migration protocol ('tcp', 'unix' or 'exec').
+        :param cancel_delay: If provided, specifies a time duration after which
                 migration will be canceled.  Used for testing migrate_cancel.
-        @param offline: If True, pause the source VM before migration.
-        @param stable_check: If True, compare the VM's state after migration to
+        :param offline: If True, pause the source VM before migration.
+        :param stable_check: If True, compare the VM's state after migration to
                 its state before migration and raise an exception if they
                 differ.
-        @param clean: If True, delete the saved state files (relevant only if
+        :param clean: If True, delete the saved state files (relevant only if
                 stable_check is also True).
         @save_path: The path for state files.
-        @param dest_host: Destination host (defaults to 'localhost').
-        @param remote_port: Port to use for remote migration.
+        :param dest_host: Destination host (defaults to 'localhost').
+        :param remote_port: Port to use for remote migration.
         """
         raise NotImplementedError
 
@@ -1212,13 +1212,13 @@ class BaseVM(object):
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
 
-        @param session: A shell session object or None.
-        @param method: Reboot method.  Can be "shell" (send a shell reboot
+        :param session: A shell session object or None.
+        :param method: Reboot method.  Can be "shell" (send a shell reboot
                 command) or "system_reset" (send a system_reset monitor command).
-        @param nic_index: Index of NIC to access in the VM, when logging in
+        :param nic_index: Index of NIC to access in the VM, when logging in
                 after rebooting.
-        @param timeout: Time to wait for login to succeed (after rebooting).
-        @return: A new shell session object.
+        :param timeout: Time to wait for login to succeed (after rebooting).
+        :return: A new shell session object.
         """
         raise NotImplementedError
 
@@ -1227,7 +1227,7 @@ class BaseVM(object):
         """
         Send a key event to the VM.
 
-        @param: keystr: A key event string (e.g. "ctrl-alt-delete")
+        :param keystr: A key event string (e.g. "ctrl-alt-delete")
         """
         raise NotImplementedError
 
@@ -1237,7 +1237,7 @@ class BaseVM(object):
 
         Throws a VMStatusError if before/after state is incorrect.
 
-        @param: path: file where VM state recorded
+        :param path: file where VM state recorded
 
         """
         raise NotImplementedError
@@ -1248,7 +1248,7 @@ class BaseVM(object):
 
         Throws a VMStatusError if before/after restore state is incorrect
 
-        @param: path: path to file vm state was saved to
+        :param path: path to file vm state was saved to
         """
         raise NotImplementedError
 
@@ -1256,7 +1256,7 @@ class BaseVM(object):
         """
         Save the virtual machine as the tag 'tag_name'
 
-        @param: tag_name: tag of the virtual machine that saved
+        :param tag_name: tag of the virtual machine that saved
 
         """
         raise NotImplementedError
@@ -1265,7 +1265,7 @@ class BaseVM(object):
         """
         Load the virtual machine tagged 'tag_name'.
 
-        @param: tag_name: tag of the virtual machine that saved
+        :param tag_name: tag of the virtual machine that saved
         """
         raise NotImplementedError
 

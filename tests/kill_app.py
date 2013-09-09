@@ -20,9 +20,9 @@ def run_kill_app(test, params, env):
     It has to be defined if application is on guest or client with parameter
     kill_on_vms which should contain name(s) of vm(s) (separated with ',')
 
-    @param test: KVM test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: KVM test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     kill_on_vms = params.get("kill_on_vms", "")
     vms = kill_on_vms.split(',')
@@ -41,8 +41,8 @@ def kill_app(vm_name, app_name, params, env):
     """
     Kill selected app on selected VM
 
-    @params vm_name - VM name in parameters
-    @params app_name - name of application
+    :params vm_name - VM name in parameters
+    :params app_name - name of application
     """
     vm = env.get_vm(params[vm_name])
 

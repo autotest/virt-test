@@ -137,14 +137,14 @@ class EfiVar(object):
         Instantiates a new EfiVar
 
         @type name: string
-        @param name: the name of the variable that will be created
+        :param name: the name of the variable that will be created
         @type data: string
-        @param data: user data that will populate the variable
+        :param data: user data that will populate the variable
         @type guid: tuple
-        @param guid: content for the guid value that composes the full variable
+        :param guid: content for the guid value that composes the full variable
                      name
-        @param attributes: integer
-        @param attributes: bitwise AND of the EFI attributes this variable will
+        :param attributes: integer
+        :param attributes: bitwise AND of the EFI attributes this variable will
                            have set
         '''
         self.data = data
@@ -222,14 +222,14 @@ class EfiToolSys(object):
         Creates a new EFI variable
 
         @type name: string
-        @param name: the name of the variable that will be created
+        :param name: the name of the variable that will be created
         @type data: string
-        @param data: user data that will populate the variable
+        :param data: user data that will populate the variable
         @type guid: tuple
-        @param guid: content for the guid value that composes the full variable
+        :param guid: content for the guid value that composes the full variable
                      name
-        @param attributes: integer
-        @param attributes: bitwise AND of the EFI attributes this variable will
+        :param attributes: integer
+        :param attributes: bitwise AND of the EFI attributes this variable will
                            have set
         '''
         if not self.check_basic_structure():
@@ -245,14 +245,14 @@ class EfiToolSys(object):
         Delets an existing EFI variable
 
         @type name: string
-        @param name: the name of the variable that will be deleted
+        :param name: the name of the variable that will be deleted
         @type data: string
-        @param data: user data that will populate the variable
+        :param data: user data that will populate the variable
         @type guid: tuple
-        @param guid: content for the guid value that composes the full variable
+        :param guid: content for the guid value that composes the full variable
                      name
-        @param attributes: integer
-        @param attributes: bitwise AND of the EFI attributes this variable will
+        :param attributes: integer
+        :param attributes: bitwise AND of the EFI attributes this variable will
                            have set
         '''
         if not self.check_basic_structure():
@@ -300,7 +300,7 @@ class EliloConf(object):
         Instantiates a new EliloConf
 
         @type path: string
-        @param path: path to elilo.conf
+        :param path: path to elilo.conf
         '''
         self.path = path
         self.global_options_to_add = {}
@@ -326,10 +326,10 @@ class EliloConf(object):
         Adds a global option to the updated elilo configuration file
 
         @type key: string
-        @param key: option name
+        :param key: option name
         @type val: string or None
-        @param key: option value or None for options with no values
-        @returns: None
+        :param key: option value or None for options with no values
+        :return:s: None
         '''
         self.global_options_to_add[key] = val
 
@@ -338,10 +338,10 @@ class EliloConf(object):
         Removes a global option to the updated elilo configuration file
 
         @type key: string
-        @param key: option name
+        :param key: option name
         @type val: string or None
-        @param key: option value or None for options with no values
-        @returns: None
+        :param key: option value or None for options with no values
+        :return:s: None
         '''
         self.global_options_to_remove[key] = val
 
@@ -350,8 +350,8 @@ class EliloConf(object):
         Transforms a text line from the configuration file into a tuple
 
         @type line: string
-        @param line: line of text from the configuration file
-        @returns: a tuple with key and value
+        :param line: line of text from the configuration file
+        :return:s: a tuple with key and value
         '''
         parts = line.split('=', 1)
         key = parts[0].rstrip()
@@ -366,8 +366,8 @@ class EliloConf(object):
         Transforms a tuple into a text line suitable for the config file
 
         @type keyval: tuple
-        @param keyval: a tuple containing key and value
-        @returns: a text line suitable for the config file
+        :param keyval: a tuple containing key and value
+        :return:s: a text line suitable for the config file
         '''
         key, val = keyval
         if val is None:
@@ -380,8 +380,8 @@ class EliloConf(object):
         Utility method to check if option is to be removed
 
         @type line: string
-        @param line: line of text from the configuration file
-        @returns: True or False
+        :param line: line of text from the configuration file
+        :return:s: True or False
         '''
         key, val = self.line_to_keyval(line)
         if key in self.global_options_to_remove:
@@ -394,8 +394,8 @@ class EliloConf(object):
         Utility method to check if option is to be added
 
         @type line: string
-        @param line: line of text from the configuration file
-        @returns: True or False
+        :param line: line of text from the configuration file
+        :return:s: True or False
         '''
         key, val = self.line_to_keyval(line)
         if key in self.global_options_to_add:
@@ -439,7 +439,7 @@ def find_executable(executable, favorite_path=None):
     Returns whether the system has a given executable
 
     @type executable: string
-    @param executable: the name of a file that can be read and executed
+    :param executable: the name of a file that can be read and executed
     '''
     if os.path.isabs(executable):
         paths = [os.path.dirname(executable)]
@@ -460,8 +460,8 @@ def parse_entry(entry_str, separator='='):
     """
     Parse entry as returned by boottool.
 
-    @param entry_str: one entry information as returned by boottool
-    @return: dictionary of key -> value where key is the string before
+    :param entry_str: one entry information as returned by boottool
+    :return: dictionary of key -> value where key is the string before
             the first ":" in an entry line and value is the string after
             it
     """
@@ -745,7 +745,7 @@ class Grubby(object):
         If path is not provided, check first if there's a built grubby,
         then look for the system grubby.
 
-        @param path: Alternate grubby path.
+        :param path: Alternate grubby path.
         """
         if path is None:
             if os.path.exists(GRUBBY_DEFAULT_USER_PATH):
@@ -913,10 +913,10 @@ class Grubby(object):
         This code assume the first (or only) entry is the main directory
 
         @type tarball: string
-        @param tarball: tarball file path
+        :param tarball: tarball file path
         @type directory: string
-        @param directory: directory path
-        @return: path of toplevel directory as extracted from tarball
+        :param directory: directory path
+        :return: path of toplevel directory as extracted from tarball
         '''
         f = tarfile.open(tarball)
         members = f.getmembers()
@@ -932,8 +932,8 @@ class Grubby(object):
         Returns the indexes found in a get_info() output
 
         @type info: list of lines
-        @param info: result of utility method get_info()
-        @returns: maximum index number
+        :param info: result of utility method get_info()
+        :return:s: maximum index number
         '''
         indexes = []
         for line in self.get_info_lines():
@@ -950,8 +950,8 @@ class Grubby(object):
         Returns the index of an entry based on the title of the entry
 
         @type title: string
-        @param title: the title of the entry
-        @returns: the index of the given entry or None
+        :param title: the title of the entry
+        :return:s: the index of the given entry or None
         '''
         if self._is_number(title):
             return title
@@ -975,12 +975,12 @@ class Grubby(object):
         Filters info, looking for keys, optionally set with a given value
 
         @type info: list of lines
-        @param info: result of utility method get_info()
+        :param info: result of utility method get_info()
         @type key: string
-        @param key: filter based on this key
+        :param key: filter based on this key
         @type value: string
-        @param value: filter based on this value
-        @returns: value or None
+        :param value: filter based on this value
+        :return:s: value or None
         '''
         for line in info:
             if value is not None:
@@ -997,8 +997,8 @@ class Grubby(object):
         Returns the kernel path for an entry based on its title
 
         @type title: string
-        @param title: the title of the entry
-        @returns: the kernel path of None
+        :param title: the title of the entry
+        :return:s: the kernel path of None
         '''
         index = self._index_for_title(title)
         if index is not None:
@@ -1041,9 +1041,9 @@ class Grubby(object):
         (this is in order to not change the semantics of the "console"
         parameter where the last occurrence has special meaning)
 
-        @param cmdline: a space separate list of kernel boot parameters
+        :param cmdline: a space separate list of kernel boot parameters
             (ex. 'console=ttyS0,57600n8 nmi_watchdog=1')
-        @return: a space separated list of kernel boot parameters without
+        :return: a space separated list of kernel boot parameters without
             duplicates
         """
         copied = set()
@@ -1067,7 +1067,7 @@ class Grubby(object):
         This module performs the same action as client side boottool.py
         get_type() method, but with a better name IMHO.
 
-        @returns: name of detected bootloader
+        :return:s: name of detected bootloader
         '''
         args = [self.path, '--bootloader-probe']
         output = self._run_get_output_err(args)
@@ -1093,7 +1093,7 @@ class Grubby(object):
         does not attempt to filter the result of the command / system call
         that returns the archicture.
 
-        @returns: string with system archicteture, such as x86_64, ppc64, etc
+        :return:s: string with system archicteture, such as x86_64, ppc64, etc
         '''
         return os.uname()[4]
 
@@ -1104,7 +1104,7 @@ class Grubby(object):
         '''
         Get the title of all boot entries.
 
-        @returns: list with titles of boot entries
+        :return:s: list with titles of boot entries
         '''
         titles = []
         for line in self.get_info_lines():
@@ -1123,7 +1123,7 @@ class Grubby(object):
         This module performs the same action as client side boottool.py
         get_default() method, but with a better name IMHO.
 
-        @returns: an integer with the the default entry.
+        :return:s: an integer with the the default entry.
         '''
         default_index = self._run_grubby_get_output(['--default-index'])
         if default_index is not None and default_index:
@@ -1150,7 +1150,7 @@ class Grubby(object):
         index. So this method will, until grubby gets fixed, always return
         success.
 
-        @param index: entry index number to set as the default.
+        :param index: entry index number to set as the default.
         """
         return self._run_grubby_get_return(['--set-default-index=%s' % index])
 
@@ -1164,7 +1164,7 @@ class Grubby(object):
         Conforms to the client side boottool.py API, but rely directly on
         grubby functionality.
 
-        @returns: a string of the default entry title.
+        :return:s: a string of the default entry title.
         '''
         return self._run_grubby_get_output(['--default-title'])
 
@@ -1176,8 +1176,8 @@ class Grubby(object):
         use index instead of kernel title ("fallback") as fallback is
         a special option in grub
 
-        @param search_info: can be 'default', position number or title
-        @return a dictionary of key->value where key is the type of entry
+        :param search_info: can be 'default', position number or title
+        :return: a dictionary of key->value where key is the type of entry
                 information (ex. 'title', 'args', 'kernel', etc) and value
                 is the value for that piece of information.
         """
@@ -1188,7 +1188,7 @@ class Grubby(object):
         """
         Get all entries information.
 
-        @return: a dictionary of index -> entry where entry is a dictionary
+        :return: a dictionary of index -> entry where entry is a dictionary
                 of entry information as described for get_entry().
         """
         raw = self.get_info()
@@ -1217,8 +1217,8 @@ class Grubby(object):
         of 'grubby --info=<entry>'
 
         @type entry: string
-        @param entry: entry description, usually an index starting from 0
-        @returns: set of lines
+        :param entry: entry description, usually an index starting from 0
+        :return:s: set of lines
         '''
         command = '--info=%s' % entry
         info = self._run_grubby_get_output([command])
@@ -1229,8 +1229,8 @@ class Grubby(object):
         """
         Returns a title for a particular kernel.
 
-        @param path: path of the kernel image configured in the boot config
-        @return: if the given kernel path is found it will return a string
+        :param path: path of the kernel image configured in the boot config
+        :return: if the given kernel path is found it will return a string
                 with the title for the found entry, otherwise returns None
         """
         entries = self.get_entries()
@@ -1243,8 +1243,8 @@ class Grubby(object):
         """
         Add cmdline arguments for the specified kernel.
 
-        @param kernel: can be a position number (index) or title
-        @param args: argument to be added to the current list of args
+        :param kernel: can be a position number (index) or title
+        :param args: argument to be added to the current list of args
         """
         entry_selection = self._get_entry_selection(kernel)
         command_arguments = ['--update-kernel=%s' % entry_selection,
@@ -1255,8 +1255,8 @@ class Grubby(object):
         """
         Removes specified cmdline arguments.
 
-        @param kernel: can be a position number (index) or title
-        @param args: argument to be removed of the current list of args
+        :param kernel: can be a position number (index) or title
+        :param args: argument to be removed of the current list of args
         """
         entry_selection = self._get_entry_selection(kernel)
         command_arguments = ['--update-kernel=%s' % entry_selection,
@@ -1269,17 +1269,17 @@ class Grubby(object):
         Add a kernel entry to the bootloader (or replace if one exists
         already with the same title).
 
-        @param path: string path to the kernel image file
-        @param title: title of this entry in the bootloader config
-        @param root: string of the root device
-        @param args: string with cmdline args
-        @param initrd: string path to the initrd file
-        @param default: set to True to make this entry the default one
+        :param path: string path to the kernel image file
+        :param title: title of this entry in the bootloader config
+        :param root: string of the root device
+        :param args: string with cmdline args
+        :param initrd: string path to the initrd file
+        :param default: set to True to make this entry the default one
                 (default False)
-        @param position: where to insert the new entry in the bootloader
+        :param position: where to insert the new entry in the bootloader
                 config file (default 'end', other valid input 'start', or
                 # of the title)
-        @param xen_hypervisor: xen hypervisor image file (valid only when
+        :param xen_hypervisor: xen hypervisor image file (valid only when
                 xen mode is enabled)
         """
         if title in self.get_titles():
@@ -1320,7 +1320,7 @@ class Grubby(object):
         """
         Removes a specific entry from the bootloader configuration.
 
-        @param kernel: entry position or entry title.
+        :param kernel: entry position or entry title.
 
         FIXME: param kernel should also take 'start' or 'end'.
         """
@@ -1345,8 +1345,8 @@ class Grubby(object):
         of 'grubby --info=<entry>'
 
         @type entry: string
-        @param entry: entry description, usually an index starting from 0
-        @returns: set of lines
+        :param entry: entry description, usually an index starting from 0
+        :return:s: set of lines
         '''
         info = self.get_info(entry)
         if info:
@@ -1356,7 +1356,7 @@ class Grubby(object):
         '''
         Get the version of grubby that is installed on this machine as is
 
-        @returns: string with raw output from grubby --version
+        :return:s: string with raw output from grubby --version
         '''
         return self._run_grubby_get_output(['--version'], False)
 
@@ -1364,7 +1364,7 @@ class Grubby(object):
         '''
         Get the version of grubby that is installed on this machine
 
-        @returns: tuple with (major, minor) grubby version
+        :return:s: tuple with (major, minor) grubby version
         '''
         output = self.get_grubby_version_raw()
         if output is None:
@@ -1400,7 +1400,7 @@ class Grubby(object):
         Backs up the current grubby binary to make room the one we'll build
 
         @type path: string
-        @param path: path to the binary that should be backed up
+        :param path: path to the binary that should be backed up
         '''
         backup_path = '%s.boottool.bkp' % path
         if (os.path.exists(path)
@@ -2111,8 +2111,8 @@ class BoottoolApp(object):
         Adds a new boot entry based on the values of other command line options
 
         @type opts: object
-        @param opts: parsed command line options
-        @returns:
+        :param opts: parsed command line options
+        :return:s:
         '''
         if not self.opts.add_kernel:
             self.log.error("Kernel to add is required")

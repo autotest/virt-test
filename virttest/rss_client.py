@@ -92,11 +92,11 @@ class FileTransferClient(object):
         """
         Connect to a server.
 
-        @param address: The server's address
-        @param port: The server's port
-        @param log_func: If provided, transfer stats will be passed to this
+        :param address: The server's address
+        :param port: The server's port
+        :param log_func: If provided, transfer stats will be passed to this
                 function during the transfer
-        @param timeout: Time duration to wait for connection to succeed
+        :param timeout: Time duration to wait for connection to succeed
         @raise FileTransferConnectError: Raised if the connection fails
         """
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -257,11 +257,11 @@ class FileUploadClient(FileTransferClient):
         """
         Connect to a server.
 
-        @param address: The server's address
-        @param port: The server's port
-        @param log_func: If provided, transfer stats will be passed to this
+        :param address: The server's address
+        :param port: The server's port
+        :param log_func: If provided, transfer stats will be passed to this
                 function during the transfer
-        @param timeout: Time duration to wait for connection to succeed
+        :param timeout: Time duration to wait for connection to succeed
         @raise FileTransferConnectError: Raised if the connection fails
         @raise FileTransferProtocolError: Raised if an incorrect magic number
                 is received
@@ -299,11 +299,11 @@ class FileUploadClient(FileTransferClient):
             src_pattern='/tmp/foo.txt', dst_path='C:\\Windows\\*'
                 (wildcards are only allowed in src_pattern)
 
-        @param src_pattern: A path or wildcard pattern specifying the files or
+        :param src_pattern: A path or wildcard pattern specifying the files or
                 directories to send to the server
-        @param dst_path: A path in the server's filesystem where the files will
+        :param dst_path: A path in the server's filesystem where the files will
                 be saved
-        @param timeout: Time duration in seconds to wait for the transfer to
+        :param timeout: Time duration in seconds to wait for the transfer to
                 complete
         @raise FileTransferTimeoutError: Raised if timeout expires
         @raise FileTransferServerError: Raised if something goes wrong and the
@@ -356,11 +356,11 @@ class FileDownloadClient(FileTransferClient):
         """
         Connect to a server.
 
-        @param address: The server's address
-        @param port: The server's port
-        @param log_func: If provided, transfer stats will be passed to this
+        :param address: The server's address
+        :param port: The server's port
+        :param log_func: If provided, transfer stats will be passed to this
                 function during the transfer
-        @param timeout: Time duration to wait for connection to succeed
+        :param timeout: Time duration to wait for connection to succeed
         @raise FileTransferConnectError: Raised if the connection fails
         @raise FileTransferProtocolError: Raised if an incorrect magic number
                 is received
@@ -386,12 +386,12 @@ class FileDownloadClient(FileTransferClient):
             src_pattern='C:\\Windows', dst_path='/tmp/*'
                 (wildcards are only allowed in src_pattern)
 
-        @param src_pattern: A path or wildcard pattern specifying the files or
+        :param src_pattern: A path or wildcard pattern specifying the files or
                 directories, in the server's filesystem, that will be sent to
                 the client
-        @param dst_path: A path in the local filesystem where the files will
+        :param dst_path: A path in the local filesystem where the files will
                 be saved
-        @param timeout: Time duration in seconds to wait for the transfer to
+        :param timeout: Time duration in seconds to wait for the transfer to
                 complete
         @raise FileTransferTimeoutError: Raised if timeout expires
         @raise FileTransferServerError: Raised if something goes wrong and the
@@ -456,7 +456,7 @@ def upload(address, port, src_pattern, dst_path, log_func=None, timeout=60,
     """
     Connect to server and upload files.
 
-    @see: FileUploadClient
+    :see:: FileUploadClient
     """
     client = FileUploadClient(address, port, log_func, connect_timeout)
     client.upload(src_pattern, dst_path, timeout)
@@ -468,7 +468,7 @@ def download(address, port, src_pattern, dst_path, log_func=None, timeout=60,
     """
     Connect to server and upload files.
 
-    @see: FileDownloadClient
+    :see:: FileDownloadClient
     """
     client = FileDownloadClient(address, port, log_func, connect_timeout)
     client.download(src_pattern, dst_path, timeout)

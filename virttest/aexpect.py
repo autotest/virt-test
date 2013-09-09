@@ -312,19 +312,19 @@ def run_bg(command, termination_func=None, output_func=None, output_prefix="",
     @brief: Run a subprocess in the background and collect its output and
             exit status.
 
-    @param command: The shell command to execute
-    @param termination_func: A function to call when the process terminates
+    :param command: The shell command to execute
+    :param termination_func: A function to call when the process terminates
             (should take an integer exit status parameter)
-    @param output_func: A function to call with each line of output from
+    :param output_func: A function to call with each line of output from
             the subprocess (should take a string parameter)
-    @param output_prefix: A string to pre-pend to each line of the output,
+    :param output_prefix: A string to pre-pend to each line of the output,
             before passing it to stdout_func
-    @param timeout: Time duration (in seconds) to wait for the subprocess to
+    :param timeout: Time duration (in seconds) to wait for the subprocess to
             terminate before returning
-    @param auto_close: If True, close() the instance automatically when its
+    :param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
 
-    @return: A Expect object.
+    :return: A Expect object.
     """
     process = Expect(command=command,
                      termination_func=termination_func,
@@ -349,15 +349,15 @@ def run_fg(command, output_func=None, output_prefix="", timeout=1.0):
     @brief: Run a subprocess in the foreground and collect its output and
             exit status.
 
-    @param command: The shell command to execute
-    @param output_func: A function to call with each line of output from
+    :param command: The shell command to execute
+    :param output_func: A function to call with each line of output from
             the subprocess (should take a string parameter)
-    @param output_prefix: A string to pre-pend to each line of the output,
+    :param output_prefix: A string to pre-pend to each line of the output,
             before passing it to stdout_func
-    @param timeout: Time duration (in seconds) to wait for the subprocess to
+    :param timeout: Time duration (in seconds) to wait for the subprocess to
             terminate before killing it and returning
 
-    @return: A 2-tuple containing the exit status of the process and its
+    :return: A 2-tuple containing the exit status of the process and its
             STDOUT/STDERR output.  If timeout expires before the process
             terminates, the returned status is None.
     """
@@ -406,16 +406,16 @@ class Spawn(object):
         """
         Initialize the class and run command as a child process.
 
-        @param command: Command to run, or None if accessing an already running
+        :param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        :param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param auto_close: If True, close() the instance automatically when its
+        :param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
-        @param echo: Boolean indicating whether echo should be initially
+        :param echo: Boolean indicating whether echo should be initially
                 enabled for the pseudo terminal running the subprocess.  This
                 parameter has an effect only when starting a new server.
-        @param linesep: Line separator to be appended to strings sent to the
+        :param linesep: Line separator to be appended to strings sent to the
                 child process by sendline().
         """
         self.a_id = a_id or utils_misc.generate_random_string(8)
@@ -510,7 +510,7 @@ class Spawn(object):
         Should be called before __init__().  Intended for use by derived
         classes.
 
-        @param reader: The name of the reader.
+        :param reader: The name of the reader.
         """
         if not hasattr(self, "readers"):
             self.readers = []
@@ -522,7 +522,7 @@ class Spawn(object):
         The function will be called after the process terminates but before
         final cleanup.  Intended for use by derived classes.
 
-        @param hook: The hook function.
+        :param hook: The hook function.
         """
         if not hasattr(self, "close_hooks"):
             self.close_hooks = []
@@ -534,7 +534,7 @@ class Spawn(object):
         pipe.  If no such reader exists, or the pipe could not be opened,
         return None.  Intended for use by derived classes.
 
-        @param reader: The name of the reader.
+        :param reader: The name of the reader.
         """
         return self.reader_fds.get(reader)
 
@@ -614,7 +614,7 @@ class Spawn(object):
         """
         Kill the child process if it's alive and remove temporary files.
 
-        @param sig: The signal to send the process when attempting to kill it.
+        :param sig: The signal to send the process when attempting to kill it.
         """
         self.kill(sig=sig)
         # Wait for the server to exit
@@ -636,7 +636,7 @@ class Spawn(object):
         """
         Sets the line separator string (usually "\\n").
 
-        @param linesep: Line separator string.
+        :param linesep: Line separator string.
         """
         self.linesep = linesep
 
@@ -644,7 +644,7 @@ class Spawn(object):
         """
         Send a string to the child process.
 
-        @param cont: String to send to the child process.
+        :param cont: String to send to the child process.
         """
         try:
             fd = os.open(self.inpipe_filename, os.O_RDWR)
@@ -657,7 +657,7 @@ class Spawn(object):
         """
         Send a string followed by a line separator to the child process.
 
-        @param cont: String to send to the child process.
+        :param cont: String to send to the child process.
         """
         self.send(cont + self.linesep)
 
@@ -701,28 +701,28 @@ class Tail(Spawn):
         """
         Initialize the class and run command as a child process.
 
-        @param command: Command to run, or None if accessing an already running
+        :param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        :param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param auto_close: If True, close() the instance automatically when its
+        :param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
-        @param echo: Boolean indicating whether echo should be initially
+        :param echo: Boolean indicating whether echo should be initially
                 enabled for the pseudo terminal running the subprocess.  This
                 parameter has an effect only when starting a new server.
-        @param linesep: Line separator to be appended to strings sent to the
+        :param linesep: Line separator to be appended to strings sent to the
                 child process by sendline().
-        @param termination_func: Function to call when the process exits.  The
+        :param termination_func: Function to call when the process exits.  The
                 function must accept a single exit status parameter.
-        @param termination_params: Parameters to send to termination_func
+        :param termination_params: Parameters to send to termination_func
                 before the exit status.
-        @param output_func: Function to call whenever a line of output is
+        :param output_func: Function to call whenever a line of output is
                 available from the STDOUT or STDERR streams of the process.
                 The function must accept a single string parameter.  The string
                 does not include the final newline.
-        @param output_params: Parameters to send to output_func before the
+        :param output_params: Parameters to send to output_func before the
                 output line.
-        @param output_prefix: String to prepend to lines sent to output_func.
+        :param output_prefix: String to prepend to lines sent to output_func.
         """
         # Add a reader and a close hook
         self._add_reader("tail")
@@ -758,7 +758,7 @@ class Tail(Spawn):
         """
         Set the termination_func attribute. See __init__() for details.
 
-        @param termination_func: Function to call when the process terminates.
+        :param termination_func: Function to call when the process terminates.
                 Must take a single parameter -- the exit status.
         """
         self.termination_func = termination_func
@@ -769,7 +769,7 @@ class Tail(Spawn):
         """
         Set the termination_params attribute. See __init__() for details.
 
-        @param termination_params: Parameters to send to termination_func
+        :param termination_params: Parameters to send to termination_func
                 before the exit status.
         """
         self.termination_params = termination_params
@@ -778,7 +778,7 @@ class Tail(Spawn):
         """
         Set the output_func attribute. See __init__() for details.
 
-        @param output_func: Function to call for each line of STDOUT/STDERR
+        :param output_func: Function to call for each line of STDOUT/STDERR
                 output from the process.  Must take a single string parameter.
         """
         self.output_func = output_func
@@ -789,7 +789,7 @@ class Tail(Spawn):
         """
         Set the output_params attribute. See __init__() for details.
 
-        @param output_params: Parameters to send to output_func before the
+        :param output_params: Parameters to send to output_func before the
                 output line.
         """
         self.output_params = output_params
@@ -798,7 +798,7 @@ class Tail(Spawn):
         """
         Set the output_prefix attribute. See __init__() for details.
 
-        @param output_prefix: String to pre-pend to each line sent to
+        :param output_prefix: String to pre-pend to each line sent to
                 output_func (see set_output_callback()).
         """
         self.output_prefix = output_prefix
@@ -807,7 +807,7 @@ class Tail(Spawn):
         """
         Set a log file name for this tail instance.
 
-        @param filename: Base name of the log.
+        :param filename: Base name of the log.
         """
         self.log_file = filename
 
@@ -903,28 +903,28 @@ class Expect(Tail):
         """
         Initialize the class and run command as a child process.
 
-        @param command: Command to run, or None if accessing an already running
+        :param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        :param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param auto_close: If True, close() the instance automatically when its
+        :param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default False).
-        @param echo: Boolean indicating whether echo should be initially
+        :param echo: Boolean indicating whether echo should be initially
                 enabled for the pseudo terminal running the subprocess.  This
                 parameter has an effect only when starting a new server.
-        @param linesep: Line separator to be appended to strings sent to the
+        :param linesep: Line separator to be appended to strings sent to the
                 child process by sendline().
-        @param termination_func: Function to call when the process exits.  The
+        :param termination_func: Function to call when the process exits.  The
                 function must accept a single exit status parameter.
-        @param termination_params: Parameters to send to termination_func
+        :param termination_params: Parameters to send to termination_func
                 before the exit status.
-        @param output_func: Function to call whenever a line of output is
+        :param output_func: Function to call whenever a line of output is
                 available from the STDOUT or STDERR streams of the process.
                 The function must accept a single string parameter.  The string
                 does not include the final newline.
-        @param output_params: Parameters to send to output_func before the
+        :param output_params: Parameters to send to output_func before the
                 output line.
-        @param output_prefix: String to prepend to lines sent to output_func.
+        :param output_prefix: String to prepend to lines sent to output_func.
         """
         # Add a reader
         self._add_reader("expect")
@@ -944,10 +944,10 @@ class Expect(Tail):
         """
         Read from child until there is nothing to read for timeout seconds.
 
-        @param internal_timeout: Time (seconds) to wait before we give up
+        :param internal_timeout: Time (seconds) to wait before we give up
                                  reading from the child process, or None to
                                  use the default value.
-        @param timeout: Timeout for reading child process output.
+        :param timeout: Timeout for reading child process output.
         """
         if internal_timeout is None:
             internal_timeout = 0.1
@@ -979,8 +979,8 @@ class Expect(Tail):
         None and empty strings in patterns are ignored.
         If no match is found, return None.
 
-        @param cont: input string
-        @param patterns: List of strings (regular expression patterns).
+        :param cont: input string
+        :param patterns: List of strings (regular expression patterns).
         """
         for i in range(len(patterns)):
             if not patterns[i]:
@@ -996,8 +996,8 @@ class Expect(Tail):
         None and empty strings in patterns are ignored.
         If no match is found, return None.
 
-        @param cont: List of strings (input strings)
-        @param patterns: List of strings (regular expression patterns). The
+        :param cont: List of strings (input strings)
+        :param patterns: List of strings (regular expression patterns). The
                          pattern priority is from the last to first.
         """
         for i in range(-len(patterns), 0):
@@ -1017,17 +1017,17 @@ class Expect(Tail):
 
         @brief: Read from child using read_nonblocking until a pattern
                 matches.
-        @param patterns: List of strings (regular expression patterns)
-        @param filter_func: Function to apply to the data read from the child before
+        :param patterns: List of strings (regular expression patterns)
+        :param filter_func: Function to apply to the data read from the child before
                 attempting to match it against the patterns (should take and
                 return a string)
-        @param timeout: The duration (in seconds) to wait until a match is
+        :param timeout: The duration (in seconds) to wait until a match is
                 found
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @param match_func: Function to compare the output and patterns.
-        @return: Tuple containing the match index and the data read so far
+        :param match_func: Function to compare the output and patterns.
+        :return: Tuple containing the match index and the data read so far
         @raise ExpectTimeoutError: Raised if timeout expires
         @raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
@@ -1074,13 +1074,13 @@ class Expect(Tail):
         Read using read_nonblocking until the last word of the output matches
         one of the patterns (using match_patterns), or until timeout expires.
 
-        @param patterns: A list of strings (regular expression patterns)
-        @param timeout: The duration (in seconds) to wait until a match is
+        :param patterns: A list of strings (regular expression patterns)
+        :param timeout: The duration (in seconds) to wait until a match is
                 found
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @return: A tuple containing the match index and the data read so far
+        :return: A tuple containing the match index and the data read so far
         @raise ExpectTimeoutError: Raised if timeout expires
         @raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
@@ -1107,13 +1107,13 @@ class Expect(Tail):
         @brief: Read using read_nonblocking until the last non-empty line
                 matches a pattern.
 
-        @param patterns: A list of strings (regular expression patterns)
-        @param timeout: The duration (in seconds) to wait until a match is
+        :param patterns: A list of strings (regular expression patterns)
+        :param timeout: The duration (in seconds) to wait until a match is
                 found
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @return: A tuple containing the match index and the data read so far
+        :return: A tuple containing the match index and the data read so far
         @raise ExpectTimeoutError: Raised if timeout expires
         @raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
@@ -1140,14 +1140,14 @@ class Expect(Tail):
 
         @brief: Read using read_nonblocking until any line matches a pattern.
 
-        @param patterns: A list of strings (regular expression patterns)
+        :param patterns: A list of strings (regular expression patterns)
                          Consider using '^' in the beginning.
-        @param timeout: The duration (in seconds) to wait until a match is
+        :param timeout: The duration (in seconds) to wait until a match is
                 found
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @return: A tuple containing the match index and the data read so far
+        :return: A tuple containing the match index and the data read so far
         @raise ExpectTimeoutError: Raised if timeout expires
         @raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
@@ -1178,30 +1178,30 @@ class ShellSession(Expect):
         """
         Initialize the class and run command as a child process.
 
-        @param command: Command to run, or None if accessing an already running
+        :param command: Command to run, or None if accessing an already running
                 server.
-        @param a_id: ID of an already running server, if accessing a running
+        :param a_id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param auto_close: If True, close() the instance automatically when its
+        :param auto_close: If True, close() the instance automatically when its
                 reference count drops to zero (default True).
-        @param echo: Boolean indicating whether echo should be initially
+        :param echo: Boolean indicating whether echo should be initially
                 enabled for the pseudo terminal running the subprocess.  This
                 parameter has an effect only when starting a new server.
-        @param linesep: Line separator to be appended to strings sent to the
+        :param linesep: Line separator to be appended to strings sent to the
                 child process by sendline().
-        @param termination_func: Function to call when the process exits.  The
+        :param termination_func: Function to call when the process exits.  The
                 function must accept a single exit status parameter.
-        @param termination_params: Parameters to send to termination_func
+        :param termination_params: Parameters to send to termination_func
                 before the exit status.
-        @param output_func: Function to call whenever a line of output is
+        :param output_func: Function to call whenever a line of output is
                 available from the STDOUT or STDERR streams of the process.
                 The function must accept a single string parameter.  The string
                 does not include the final newline.
-        @param output_params: Parameters to send to output_func before the
+        :param output_params: Parameters to send to output_func before the
                 output line.
-        @param output_prefix: String to prepend to lines sent to output_func.
-        @param prompt: Regular expression describing the shell's prompt line.
-        @param status_test_command: Command to be used for getting the last
+        :param output_prefix: String to prepend to lines sent to output_func.
+        :param prompt: Regular expression describing the shell's prompt line.
+        :param status_test_command: Command to be used for getting the last
                 exit status of commands run inside the shell (used by
                 cmd_status_output() and friends).
         """
@@ -1225,7 +1225,7 @@ class ShellSession(Expect):
         """
         Set the prompt attribute for later use by read_up_to_prompt.
 
-        @param: String that describes the prompt contents.
+        :param String that describes the prompt contents.
         """
         self.prompt = prompt
 
@@ -1233,7 +1233,7 @@ class ShellSession(Expect):
         """
         Set the command to be sent in order to get the last exit status.
 
-        @param status_test_command: Command that will be sent to get the last
+        :param status_test_command: Command that will be sent to get the last
                 exit status.
         """
         self.status_test_command = status_test_command
@@ -1247,7 +1247,7 @@ class ShellSession(Expect):
         If all is OK, some output should be available (e.g. the shell prompt).
         In that case return True.  Otherwise return False.
 
-        @param timeout: Time duration to wait before the process is considered
+        :param timeout: Time duration to wait before the process is considered
                 unresponsive.
         """
         # Read all output that's waiting to be read, to make sure the output
@@ -1274,13 +1274,13 @@ class ShellSession(Expect):
         @brief: Read using read_nonblocking until the last non-empty line
                 matches the prompt.
 
-        @param timeout: The duration (in seconds) to wait until a match is
+        :param timeout: The duration (in seconds) to wait until a match is
                 found
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being
                 read (should take a string parameter)
 
-        @return: The data read so far
+        :return: The data read so far
         @raise ExpectTimeoutError: Raised if timeout expires
         @raise ExpectProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
@@ -1295,14 +1295,14 @@ class ShellSession(Expect):
         """
         Send a command and return its output.
 
-        @param cmd: Command to send (must not contain newline characters)
-        @param timeout: The duration (in seconds) to wait for the prompt to
+        :param cmd: Command to send (must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to
                 return
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
 
-        @return: The output of cmd
+        :return: The output of cmd
         @raise ShellTimeoutError: Raised if timeout expires
         @raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
@@ -1338,14 +1338,14 @@ class ShellSession(Expect):
         """
         Send a command and return its exit status and output.
 
-        @param cmd: Command to send (must not contain newline characters)
-        @param timeout: The duration (in seconds) to wait for the prompt to
+        :param cmd: Command to send (must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to
                 return
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
 
-        @return: A tuple (status, output) where status is the exit status and
+        :return: A tuple (status, output) where status is the exit status and
                 output is the output of cmd
         @raise ShellTimeoutError: Raised if timeout expires
         @raise ShellProcessTerminatedError: Raised if the shell process
@@ -1372,14 +1372,14 @@ class ShellSession(Expect):
         """
         Send a command and return its exit status.
 
-        @param cmd: Command to send (must not contain newline characters)
-        @param timeout: The duration (in seconds) to wait for the prompt to
+        :param cmd: Command to send (must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to
                 return
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
 
-        @return: The exit status of cmd
+        :return: The exit status of cmd
         @raise ShellTimeoutError: Raised if timeout expires
         @raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
@@ -1395,18 +1395,18 @@ class ShellSession(Expect):
         Send a command and return its output. If the command's exit status is
         nonzero, raise an exception.
 
-        @param cmd: Command to send (must not contain newline characters)
-        @param timeout: The duration (in seconds) to wait for the prompt to
+        :param cmd: Command to send (must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to
                 return
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @param ok_status: do not raise ShellCmdError in case that exit status
+        :param ok_status: do not raise ShellCmdError in case that exit status
                 is one of ok_status. (default is [0,])
-        @param ignore_all_errors: toggles whether or not an exception should be
+        :param ignore_all_errors: toggles whether or not an exception should be
                 raised  on any error.
 
-        @return: The output of cmd
+        :return: The output of cmd
         @raise ShellTimeoutError: Raised if timeout expires
         @raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output

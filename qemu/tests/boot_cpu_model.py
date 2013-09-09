@@ -11,8 +11,8 @@ def run_boot_cpu_model(test, params, env):
     1). boot guest with cpu model
     2). check flags if enable_check == "yes", otherwise shutdown guest
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
 
     """
     host_flags = utils_misc.get_cpu_flags()

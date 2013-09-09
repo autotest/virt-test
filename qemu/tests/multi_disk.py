@@ -24,7 +24,7 @@ def _range(buf, n=None):
     range4   ... multiplies the occurrence of each value
                 (range(0,4,1,2) => [0,0,1,1,2,2,3,3])
     @raise ValueError: In case incorrect values are given.
-    @return: List of int values. In case it can't substitute 'n'
+    :return: List of int values. In case it can't substitute 'n'
              it returns the original string.
     """
     out = _RE_RANGE1.match(buf)
@@ -83,9 +83,9 @@ def run_multi_disk(test, params, env):
     8) Compare the original file and the copied file using md5 or fc comand.
     9) Repeat steps 3-5 if needed.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def _add_param(name, value):
         """ Converts name+value to stg_params string """

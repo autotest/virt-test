@@ -15,9 +15,9 @@ def run_sr_iov_hotplug_negative(test, params, env):
     4) Verify that qemu could handle the negative parameters
        check hotplug error message (optional)
 
-    @param test: qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def make_pci_add_cmd(pa_pci_id, pci_addr="auto"):

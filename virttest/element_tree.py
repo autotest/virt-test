@@ -139,10 +139,10 @@ VERSION = "1.2.6b"
 # appropriate factory functions instead, such as {@link #Element}
 # and {@link #SubElement}.
 #
-# @see Element
-# @see SubElement
-# @see Comment
-# @see ProcessingInstruction
+# :see: Element
+# :see: SubElement
+# :see: Comment
+# :see: ProcessingInstruction
 
 
 class _ElementInterface(object):
@@ -187,9 +187,9 @@ class _ElementInterface(object):
     #
     # Creates a new element object of the same type as this element.
     #
-    # @param tag Element tag.
-    # @param attrib Element attributes, given as a dictionary.
-    # @return A new element instance.
+    # :param tag Element tag.
+    # :param attrib Element attributes, given as a dictionary.
+    # :return: A new element instance.
 
     def makeelement(self, tag, attrib):
         return Element(tag, attrib)
@@ -197,7 +197,7 @@ class _ElementInterface(object):
     #
     # Returns the number of subelements.
     #
-    # @return The number of subelements.
+    # :return: The number of subelements.
 
     def __len__(self):
         return len(self._children)
@@ -205,8 +205,8 @@ class _ElementInterface(object):
     #
     # Returns the given subelement.
     #
-    # @param index What subelement to return.
-    # @return The given subelement.
+    # :param index What subelement to return.
+    # :return: The given subelement.
     # @exception IndexError If the given element does not exist.
 
     def __getitem__(self, index):
@@ -215,8 +215,8 @@ class _ElementInterface(object):
     #
     # Replaces the given subelement.
     #
-    # @param index What subelement to replace.
-    # @param element The new element value.
+    # :param index What subelement to replace.
+    # :param element The new element value.
     # @exception IndexError If the given element does not exist.
     # @exception AssertionError If element is not a valid object.
 
@@ -227,7 +227,7 @@ class _ElementInterface(object):
     #
     # Deletes the given subelement.
     #
-    # @param index What subelement to delete.
+    # :param index What subelement to delete.
     # @exception IndexError If the given element does not exist.
 
     def __delitem__(self, index):
@@ -236,9 +236,9 @@ class _ElementInterface(object):
     #
     # Returns a list containing subelements in the given range.
     #
-    # @param start The first subelement to return.
-    # @param stop The first subelement that shouldn't be returned.
-    # @return A sequence object containing subelements.
+    # :param start The first subelement to return.
+    # :param stop The first subelement that shouldn't be returned.
+    # :return: A sequence object containing subelements.
 
     def __getslice__(self, start, stop):
         return self._children[start:stop]
@@ -246,9 +246,9 @@ class _ElementInterface(object):
     #
     # Replaces a number of subelements with elements from a sequence.
     #
-    # @param start The first subelement to replace.
-    # @param stop The first subelement that shouldn't be replaced.
-    # @param elements A sequence object with zero or more elements.
+    # :param start The first subelement to replace.
+    # :param stop The first subelement that shouldn't be replaced.
+    # :param elements A sequence object with zero or more elements.
     # @exception AssertionError If a sequence member is not a valid object.
 
     def __setslice__(self, start, stop, elements):
@@ -259,8 +259,8 @@ class _ElementInterface(object):
     #
     # Deletes a number of subelements.
     #
-    # @param start The first subelement to delete.
-    # @param stop The first subelement to leave in there.
+    # :param start The first subelement to delete.
+    # :param stop The first subelement to leave in there.
 
     def __delslice__(self, start, stop):
         del self._children[start:stop]
@@ -268,7 +268,7 @@ class _ElementInterface(object):
     #
     # Adds a subelement to the end of this element.
     #
-    # @param element The element to add.
+    # :param element The element to add.
     # @exception AssertionError If a sequence member is not a valid object.
 
     def append(self, element):
@@ -278,7 +278,7 @@ class _ElementInterface(object):
     #
     # Inserts a subelement at the given position in this element.
     #
-    # @param index Where to insert the new subelement.
+    # :param index Where to insert the new subelement.
     # @exception AssertionError If the element is not a valid object.
 
     def insert(self, index, element):
@@ -290,7 +290,7 @@ class _ElementInterface(object):
     # this method compares elements based on identity, not on tag
     # value or contents.
     #
-    # @param element What element to remove.
+    # :param element What element to remove.
     # @exception ValueError If a matching element could not be found.
     # @exception AssertionError If the element is not a valid object.
 
@@ -302,7 +302,7 @@ class _ElementInterface(object):
     # Returns all subelements.  The elements are returned in document
     # order.
     #
-    # @return A list of subelements.
+    # :return: A list of subelements.
     # @defreturn list of Element instances
 
     def getchildren(self):
@@ -311,8 +311,8 @@ class _ElementInterface(object):
     #
     # Finds the first matching subelement, by tag name or path.
     #
-    # @param path What element to look for.
-    # @return The first matching element, or None if no element was found.
+    # :param path What element to look for.
+    # :return: The first matching element, or None if no element was found.
     # @defreturn Element or None
 
     def find(self, path):
@@ -321,9 +321,9 @@ class _ElementInterface(object):
     #
     # Finds text for the first matching subelement, by tag name or path.
     #
-    # @param path What element to look for.
-    # @param default What to return if the element was not found.
-    # @return The text content of the first matching element, or the
+    # :param path What element to look for.
+    # :param default What to return if the element was not found.
+    # :return: The text content of the first matching element, or the
     #     default value no element was found.  Note that if the element
     #     has is found, but has no text content, this method returns an
     #     empty string.
@@ -335,8 +335,8 @@ class _ElementInterface(object):
     #
     # Finds all matching subelements, by tag name or path.
     #
-    # @param path What element to look for.
-    # @return A list or iterator containing all matching elements,
+    # :param path What element to look for.
+    # :return: A list or iterator containing all matching elements,
     #    in document order.
     # @defreturn list of Element instances
 
@@ -355,9 +355,9 @@ class _ElementInterface(object):
     #
     # Gets an element attribute.
     #
-    # @param key What attribute to look for.
-    # @param default What to return if the attribute was not found.
-    # @return The attribute value, or the default value, if the
+    # :param key What attribute to look for.
+    # :param default What to return if the attribute was not found.
+    # :return: The attribute value, or the default value, if the
     #     attribute was not found.
     # @defreturn string or None
 
@@ -367,8 +367,8 @@ class _ElementInterface(object):
     #
     # Sets an element attribute.
     #
-    # @param key What attribute to set.
-    # @param value The attribute value.
+    # :param key What attribute to set.
+    # :param value The attribute value.
 
     def set(self, key, value):
         self.attrib[key] = value
@@ -377,7 +377,7 @@ class _ElementInterface(object):
     # Gets a list of attribute names.  The names are returned in an
     # arbitrary order (just like for an ordinary Python dictionary).
     #
-    # @return A list of element attribute names.
+    # :return: A list of element attribute names.
     # @defreturn list of strings
 
     def keys(self):
@@ -387,7 +387,7 @@ class _ElementInterface(object):
     # Gets element attributes, as a sequence.  The attributes are
     # returned in an arbitrary order.
     #
-    # @return A list of (name, value) tuples for all attributes.
+    # :return: A list of (name, value) tuples for all attributes.
     # @defreturn list of (string, string) tuples
 
     def items(self):
@@ -401,8 +401,8 @@ class _ElementInterface(object):
     # If the tree structure is modified during iteration, the result
     # is undefined.
     #
-    # @param tag What tags to look for (default is to return all elements).
-    # @return A list or iterator containing all the matching elements.
+    # :param tag What tags to look for (default is to return all elements).
+    # :return: A list or iterator containing all the matching elements.
     # @defreturn list or iterator
 
     def getiterator(self, tag=None):
@@ -427,10 +427,10 @@ _Element = _ElementInterface
 # The element name, attribute names, and attribute values can be
 # either 8-bit ASCII strings or Unicode strings.
 #
-# @param tag The element name.
-# @param attrib An optional dictionary, containing element attributes.
-# @param **extra Additional attributes, given as keyword arguments.
-# @return An element instance.
+# :param tag The element name.
+# :param attrib An optional dictionary, containing element attributes.
+# :param **extra Additional attributes, given as keyword arguments.
+# :return: An element instance.
 # @defreturn Element
 
 
@@ -446,11 +446,11 @@ def Element(tag, attrib={}, **extra):
 # The element name, attribute names, and attribute values can be
 # either 8-bit ASCII strings or Unicode strings.
 #
-# @param parent The parent element.
-# @param tag The subelement name.
-# @param attrib An optional dictionary, containing element attributes.
-# @param **extra Additional attributes, given as keyword arguments.
-# @return An element instance.
+# :param parent The parent element.
+# :param tag The subelement name.
+# :param attrib An optional dictionary, containing element attributes.
+# :param **extra Additional attributes, given as keyword arguments.
+# :return: An element instance.
 # @defreturn Element
 
 
@@ -468,8 +468,8 @@ def SubElement(parent, tag, attrib={}, **extra):
 # The comment string can be either an 8-bit ASCII string or a Unicode
 # string.
 #
-# @param text A string containing the comment string.
-# @return An element instance, representing a comment.
+# :param text A string containing the comment string.
+# :return: An element instance, representing a comment.
 # @defreturn Element
 
 
@@ -482,9 +482,9 @@ def Comment(text=None):
 # PI element factory.  This factory function creates a special element
 # that will be serialized as an XML processing instruction.
 #
-# @param target A string containing the PI target.
-# @param text A string containing the PI contents, if any.
-# @return An element instance, representing a PI.
+# :param target A string containing the PI target.
+# :param text A string containing the PI contents, if any.
+# :return: An element instance, representing a PI.
 # @defreturn Element
 
 
@@ -501,11 +501,11 @@ PI = ProcessingInstruction
 # QName wrapper.  This can be used to wrap a QName attribute value, in
 # order to get proper namespace handling on output.
 #
-# @param text A string containing the QName value, in the form {uri}local,
+# :param text A string containing the QName value, in the form {uri}local,
 #     or, if the tag argument is given, the URI part of a QName.
-# @param tag Optional tag.  If given, the first argument is interpreted as
+# :param tag Optional tag.  If given, the first argument is interpreted as
 #     an URI, and this argument is interpreted as a local name.
-# @return An opaque object, representing the QName.
+# :return: An opaque object, representing the QName.
 
 
 class QName(object):
@@ -531,7 +531,7 @@ class QName(object):
 # hierarchy, and adds some extra support for serialization to and from
 # standard XML.
 #
-# @param element Optional root element.
+# :param element Optional root element.
 # @keyparam file Optional file handle or name.  If given, the
 #     tree is initialized with the contents of this XML file.
 
@@ -547,7 +547,7 @@ class ElementTree(object):
     #
     # Gets the root element for this tree.
     #
-    # @return An element instance.
+    # :return: An element instance.
     # @defreturn Element
 
     def getroot(self):
@@ -558,7 +558,7 @@ class ElementTree(object):
     # current contents of the tree, and replaces it with the given
     # element.  Use with care.
     #
-    # @param element An element instance.
+    # :param element An element instance.
 
     def _setroot(self, element):
         assert iselement(element)
@@ -567,10 +567,10 @@ class ElementTree(object):
     #
     # Loads an external XML document into this element tree.
     #
-    # @param source A file name or file object.
-    # @param parser An optional parser instance.  If not given, the
+    # :param source A file name or file object.
+    # :param parser An optional parser instance.  If not given, the
     #     standard {@link XMLTreeBuilder} parser is used.
-    # @return The document root element.
+    # :return: The document root element.
     # @defreturn Element
 
     def parse(self, source, parser=None):
@@ -590,8 +590,8 @@ class ElementTree(object):
     # Creates a tree iterator for the root element.  The iterator loops
     # over all elements in this tree, in document order.
     #
-    # @param tag What tags to look for (default is to return all elements)
-    # @return An iterator.
+    # :param tag What tags to look for (default is to return all elements)
+    # :return: An iterator.
     # @defreturn iterator
 
     def getiterator(self, tag=None):
@@ -602,8 +602,8 @@ class ElementTree(object):
     # Finds the first toplevel element with given tag.
     # Same as getroot().find(path).
     #
-    # @param path What element to look for.
-    # @return The first matching element, or None if no element was found.
+    # :param path What element to look for.
+    # :return: The first matching element, or None if no element was found.
     # @defreturn Element or None
 
     def find(self, path):
@@ -616,9 +616,9 @@ class ElementTree(object):
     # Finds the element text for the first toplevel element with given
     # tag.  Same as getroot().findtext(path).
     #
-    # @param path What toplevel element to look for.
-    # @param default What to return if the element was not found.
-    # @return The text content of the first matching element, or the
+    # :param path What toplevel element to look for.
+    # :param default What to return if the element was not found.
+    # :return: The text content of the first matching element, or the
     #     default value no element was found.  Note that if the element
     #     has is found, but has no text content, this method returns an
     #     empty string.
@@ -634,8 +634,8 @@ class ElementTree(object):
     # Finds all toplevel elements with the given tag.
     # Same as getroot().findall(path).
     #
-    # @param path What element to look for.
-    # @return A list or iterator containing all matching elements,
+    # :param path What element to look for.
+    # :return: A list or iterator containing all matching elements,
     #    in document order.
     # @defreturn list of Element instances
 
@@ -648,8 +648,8 @@ class ElementTree(object):
     #
     # Writes the element tree to a file, as XML.
     #
-    # @param file A file name, or a file object opened for writing.
-    # @param encoding Optional output encoding (default is US-ASCII).
+    # :param file A file name, or a file object opened for writing.
+    # :param encoding Optional output encoding (default is US-ASCII).
 
     def write(self, file, encoding="us-ascii"):
         assert self._root is not None
@@ -721,8 +721,8 @@ class ElementTree(object):
 #
 # Checks if an object appears to be a valid element object.
 #
-# @param An element instance.
-# @return A true value if this is an element object.
+# :param An element instance.
+# :return: A true value if this is an element object.
 # @defreturn flag
 
 
@@ -738,7 +738,7 @@ def iselement(element):
 # The exact output format is implementation dependent.  In this
 # version, it's written as an ordinary XML file.
 #
-# @param elem An element tree or an individual element.
+# :param elem An element tree or an individual element.
 
 
 def dump(elem):
@@ -862,10 +862,10 @@ def fixtag(tag, namespaces):
 #
 # Parses an XML document into an element tree.
 #
-# @param source A filename or file object containing XML data.
-# @param parser An optional parser instance.  If not given, the
+# :param source A filename or file object containing XML data.
+# :param parser An optional parser instance.  If not given, the
 #     standard {@link XMLTreeBuilder} parser is used.
-# @return An ElementTree instance
+# :return: An ElementTree instance
 
 
 def parse(source, parser=None):
@@ -877,10 +877,10 @@ def parse(source, parser=None):
 # Parses an XML document into an element tree incrementally, and reports
 # what's going on to the user.
 #
-# @param source A filename or file object containing XML data.
-# @param events A list of events to report back.  If omitted, only "end"
+# :param source A filename or file object containing XML data.
+# :param events A list of events to report back.  If omitted, only "end"
 #     events are reported.
-# @return A (event, elem) iterator.
+# :return: A (event, elem) iterator.
 
 
 class iterparse(object):
@@ -968,8 +968,8 @@ class iterparse(object):
 # Parses an XML document from a string constant.  This function can
 # be used to embed "XML literals" in Python code.
 #
-# @param source A string containing XML data.
-# @return An Element instance.
+# :param source A string containing XML data.
+# :return: An Element instance.
 # @defreturn Element
 
 
@@ -982,8 +982,8 @@ def XML(text):
 # Parses an XML document from a string constant, and also returns
 # a dictionary which maps from element id:s to elements.
 #
-# @param source A string containing XML data.
-# @return A tuple containing an Element instance and a dictionary.
+# :param source A string containing XML data.
+# :return: A tuple containing an Element instance and a dictionary.
 # @defreturn (Element, dictionary)
 
 
@@ -1002,8 +1002,8 @@ def XMLID(text):
 # Parses an XML document from a string constant.  Same as {@link #XML}.
 #
 # @def fromstring(text)
-# @param source A string containing XML data.
-# @return An Element instance.
+# :param source A string containing XML data.
+# :return: An Element instance.
 # @defreturn Element
 
 fromstring = XML
@@ -1012,8 +1012,8 @@ fromstring = XML
 # Generates a string representation of an XML element, including all
 # subelements.
 #
-# @param element An Element instance.
-# @return An encoded string containing the XML data.
+# :param element An Element instance.
+# :return: An encoded string containing the XML data.
 # @defreturn string
 
 
@@ -1034,7 +1034,7 @@ def tostring(element, encoding=None):
 # You can use this class to build an element structure using a custom XML
 # parser, or a parser for some other XML-like format.
 #
-# @param element_factory Optional element factory.  This factory
+# :param element_factory Optional element factory.  This factory
 #    is called to create new Element instances, as necessary.
 
 
@@ -1053,7 +1053,7 @@ class TreeBuilder(object):
     # Flushes the parser buffers, and returns the toplevel documen
     # element.
     #
-    # @return An Element instance.
+    # :return: An Element instance.
     # @defreturn Element
 
     def close(self):
@@ -1076,7 +1076,7 @@ class TreeBuilder(object):
     #
     # Adds text to the current element.
     #
-    # @param data A string.  This should be either an 8-bit string
+    # :param data A string.  This should be either an 8-bit string
     #    containing ASCII text, or a Unicode string.
 
     def data(self, data):
@@ -1085,9 +1085,9 @@ class TreeBuilder(object):
     #
     # Opens a new element.
     #
-    # @param tag The element name.
-    # @param attrib A dictionary containing element attributes.
-    # @return The opened element.
+    # :param tag The element name.
+    # :param attrib A dictionary containing element attributes.
+    # :return: The opened element.
     # @defreturn Element
 
     def start(self, tag, attrs):
@@ -1102,8 +1102,8 @@ class TreeBuilder(object):
     #
     # Closes the current element.
     #
-    # @param tag The element name.
-    # @return The closed element.
+    # :param tag The element name.
+    # :return: The closed element.
     # @defreturn Element
 
     def end(self, tag):
@@ -1123,8 +1123,8 @@ class TreeBuilder(object):
 # instance of the standard {@link #TreeBuilder} class.
 # @keyparam html Predefine HTML entities.  This flag is not supported
 #     by the current implementation.
-# @see #ElementTree
-# @see #TreeBuilder
+# :see: #ElementTree
+# :see: #TreeBuilder
 
 
 class XMLTreeBuilder(object):
@@ -1248,9 +1248,9 @@ class XMLTreeBuilder(object):
     #
     # Handles a doctype declaration.
     #
-    # @param name Doctype name.
-    # @param pubid Public identifier.
-    # @param system System identifier.
+    # :param name Doctype name.
+    # :param pubid Public identifier.
+    # :param system System identifier.
 
     def doctype(self, name, pubid, system):
         pass
@@ -1258,7 +1258,7 @@ class XMLTreeBuilder(object):
     #
     # Feeds data to the parser.
     #
-    # @param data Encoded data.
+    # :param data Encoded data.
 
     def feed(self, data):
         self._parser.Parse(data, 0)
@@ -1266,7 +1266,7 @@ class XMLTreeBuilder(object):
     #
     # Finishes feeding data to the parser.
     #
-    # @return An element structure.
+    # :return: An element structure.
     # @defreturn Element
 
     def close(self):

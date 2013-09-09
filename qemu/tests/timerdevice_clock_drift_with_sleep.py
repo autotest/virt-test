@@ -18,9 +18,9 @@ def run_timerdevice_clock_drift_with_sleep(test, params, env):
     6) Pin (only 1/none/all) vcpus to host cpu.
     7) Sleep a while and check the time drift on guest
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def verify_elapsed_time():
         usleep_cmd = r'echo "for n in \$(seq 1000);'

@@ -25,7 +25,7 @@ class ServiceManagerInterface(object):
     def get_version(cls):
         """
         Get version of ServiceManager.
-        @return: Version of ServiceManager.
+        :return: Version of ServiceManager.
         """
         return open("/proc/1/comm", "r").read().strip()
 
@@ -104,12 +104,12 @@ class OpenVSwitchControl(object):
         """
         Makes initialization of OpenVSwitch.
 
-        @param tmpdir: Tmp directory for save openvswitch test files.
-        @param db_path: Path of OVS databimpoty ase.
-        @param db_socket: Path of OVS db socket.
-        @param db_pidfile: Path of OVS db ovsdb-server pid.
-        @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
-        @param install_prefix: Path where is openvswitch installed.
+        :param tmpdir: Tmp directory for save openvswitch test files.
+        :param db_path: Path of OVS databimpoty ase.
+        :param db_socket: Path of OVS db socket.
+        :param db_pidfile: Path of OVS db ovsdb-server pid.
+        :param ovs_pidfile: Path of OVS ovs-vswitchd pid.
+        :param install_prefix: Path where is openvswitch installed.
         """
         # if path is None set default path.
         if not install_prefix:
@@ -148,7 +148,7 @@ class OpenVSwitchControl(object):
     @staticmethod
     def convert_version_to_int(version):
         """
-        @param version: (int) Converted from version string 1.4.0 => int 140
+        :param version: (int) Converted from version string 1.4.0 => int 140
         """
         if (isinstance(version, int)):
             return version
@@ -163,7 +163,7 @@ class OpenVSwitchControl(object):
         """
         Get version of installed OpenVSwtich.
 
-        @return: Version of OpenVSwtich.
+        :return: Version of OpenVSwtich.
         """
         version = None
         try:
@@ -220,7 +220,7 @@ class OpenVSwitchControlDB_140(OpenVSwitchControl):
         """
         Check condition for select control class.
 
-        @param version: version of OpenVSwtich
+        :param version: version of OpenVSwtich
         """
         version = cls.get_version()
         if version is not None:
@@ -247,7 +247,7 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
         """
         Check condition for select control class.
 
-        @param version: version of OpenVSwtich
+        :param version: version of OpenVSwtich
         """
         version = cls.get_version()
         if version is not None:
@@ -301,7 +301,7 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
 
     def add_port_trunk(self, port_name, trunk):
         """
-        @param trunk: list of vlans id.
+        :param trunk: list of vlans id.
         """
         trunk = map(lambda x: str(x), trunk)
         trunk = "[" + ",".join(trunk) + "]"
@@ -317,8 +317,8 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
         """
         Return bridge which contain port.
 
-        @param port_name: Name of port.
-        @return: Bridge name or None if there is no bridge which contain port.
+        :param port_name: Name of port.
+        :return: Bridge name or None if there is no bridge which contain port.
         """
         bridge = None
         try:
@@ -344,11 +344,11 @@ class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
         """
         Makes initialization of OpenVSwitch.
 
-        @param db_path: Path of OVS database.
-        @param db_socket: Path of OVS db socket.
-        @param db_pidfile: Path of OVS db ovsdb-server pid.
-        @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
-        @param install_prefix: Path where is openvswitch installed.
+        :param db_path: Path of OVS database.
+        :param db_socket: Path of OVS db socket.
+        :param db_pidfile: Path of OVS db ovsdb-server pid.
+        :param ovs_pidfile: Path of OVS ovs-vswitchd pid.
+        :param install_prefix: Path where is openvswitch installed.
         """
         sup = super(man[self.__class__, OpenVSwitchSystem], self)
         sup.__init__(self, db_path, db_socket, db_pidfile, ovs_pidfile,
@@ -361,7 +361,7 @@ class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
         """
         Check if OpenVSwitch is already installed in system on default places.
 
-        @return: Version of OpenVSwtich.
+        :return: Version of OpenVSwtich.
         """
         if self.get_version():
             return True
@@ -446,12 +446,12 @@ class OpenVSwitch(OpenVSwitchSystem):
         """
         Makes initialization of OpenVSwitch.
 
-        @param tmpdir: Tmp directory for save openvswitch test files.
-        @param db_path: Path of OVS database.
-        @param db_socket: Path of OVS db socket.
-        @param db_pidfile: Path of OVS db ovsdb-server pid.
-        @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
-        @param install_prefix: Path where is openvswitch installed.
+        :param tmpdir: Tmp directory for save openvswitch test files.
+        :param db_path: Path of OVS database.
+        :param db_socket: Path of OVS db socket.
+        :param db_pidfile: Path of OVS db ovsdb-server pid.
+        :param ovs_pidfile: Path of OVS ovs-vswitchd pid.
+        :param install_prefix: Path where is openvswitch installed.
         """
         super(man[self, OpenVSwitch], self).__init__(db_path, db_socket,
                                                      db_pidfile, ovs_pidfile,

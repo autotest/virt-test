@@ -16,11 +16,11 @@ class scheduler:
         """
         Initialize the class.
 
-        @param tests: A list of test dictionaries.
-        @param num_workers: The number of workers (pipelines).
-        @param total_cpus: The total number of CPUs to dedicate to tests.
-        @param total_mem: The total amount of memory to dedicate to tests.
-        @param bindir: The directory where environment files reside.
+        :param tests: A list of test dictionaries.
+        :param num_workers: The number of workers (pipelines).
+        :param total_cpus: The total number of CPUs to dedicate to tests.
+        :param total_mem: The total amount of memory to dedicate to tests.
+        :param bindir: The directory where environment files reside.
         """
         self.tests = tests
         self.num_workers = num_workers
@@ -45,8 +45,8 @@ class scheduler:
 
         Waits for commands from the scheduler and processes them.
 
-        @param index: The index of this worker (in the range 0..num_workers-1).
-        @param run_test_func: A function to be called to run a test
+        :param index: The index of this worker (in the range 0..num_workers-1).
+        :param run_test_func: A function to be called to run a test
                 (e.g. job.run_test).
         """
         r = self.s2w_r[index]

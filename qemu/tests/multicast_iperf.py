@@ -14,9 +14,9 @@ def run_multicast_iperf(test, params, env):
     2) Prepare the test environment in server/client/host,install iperf
     3) Execute iperf tests, analyze the results
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def server_start(cmd, catch_data):
         """

@@ -39,9 +39,9 @@ def run_cgroup(test, params, env):
     def assign_vm_into_cgroup(vm, cgroup, pwd=None):
         """
         Assigns all threads of VM into cgroup
-        @param vm: desired VM
-        @param cgroup: cgroup handler
-        @param pwd: desired cgroup's pwd, cgroup index or None for root cgroup
+        :param vm: desired VM
+        :param cgroup: cgroup handler
+        :param pwd: desired cgroup's pwd, cgroup index or None for root cgroup
         """
         cgroup.set_cgroup(vm.get_shell_pid(), pwd)
         for i in range(10):
@@ -62,20 +62,20 @@ def run_cgroup(test, params, env):
     def distance(actual, reference):
         """
         Absolute value of relative distance of two numbers
-        @param actual: actual value
-        @param reference: reference value
-        @return: relative distance abs((a-r)/r) (float)
+        :param actual: actual value
+        :param reference: reference value
+        :return: relative distance abs((a-r)/r) (float)
         """
         return abs(float(actual - reference) / reference)
 
     def get_dd_cmd(direction, dev=None, count=None, blocksize=None):
         """
         Generates dd_cmd string
-        @param direction: {read,write,bi} dd direction
-        @param dev: used device ('vd?')
-        @param count: count parameter of dd
-        @param blocksize: blocksize parameter of dd
-        @return: dd command string
+        :param direction: {read,write,bi} dd direction
+        :param dev: used device ('vd?')
+        :param count: count parameter of dd
+        :param blocksize: blocksize parameter of dd
+        :return: dd command string
         """
         if dev is None:
             if get_device_driver() == "virtio":
@@ -99,14 +99,14 @@ def run_cgroup(test, params, env):
     def get_device_driver():
         """
         Discovers the used block device driver {ide, scsi, virtio_blk}
-        @return: Used block device driver {ide, scsi, virtio}
+        :return: Used block device driver {ide, scsi, virtio}
         """
         return params.get('drive_format', 'virtio')
 
     def get_maj_min(dev):
         """
         Returns the major and minor numbers of the dev device
-        @return: Tuple(major, minor) numbers of the dev device
+        :return: Tuple(major, minor) numbers of the dev device
         """
         try:
             rdev = os.stat(dev).st_rdev
@@ -119,7 +119,7 @@ def run_cgroup(test, params, env):
     def rm_scsi_disks(no_disks):
         """
         Removes no_disks scsi_debug disks from the last one.
-        @param no_disks: How many disks to remove
+        :param no_disks: How many disks to remove
         @note: params['cgroup_rmmod_scsi_debug'] == "yes" => rmmod scsi_debug
         """
         utils.system("echo -%d > /sys/bus/pseudo/drivers/scsi_debug/add_host"
@@ -131,7 +131,7 @@ def run_cgroup(test, params, env):
     def param_add_scsi_disks(prefix="scsi-debug-"):
         """
         Adds scsi_debug disk to every VM in params['vms']
-        @param prefix: adds prefix to drive name
+        :param prefix: adds prefix to drive name
         """
         if utils.system("lsmod | grep scsi_debug", ignore_status=True):
             utils.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
@@ -155,8 +155,8 @@ def run_cgroup(test, params, env):
     def param_add_file_disks(size, prefix="hd2-"):
         """
         Adds file disk to every VM in params['vms']
-        @param size: Disk size (1M)
-        @param prefix: adds prefix to drive name
+        :param size: Disk size (1M)
+        :param prefix: adds prefix to drive name
         """
         for name in params['vms'].split(' '):
             vm_disks = params.get('images_%s' % name,
@@ -174,7 +174,7 @@ def run_cgroup(test, params, env):
     def param_add_vms(no_vms):
         """
         Defines $no_vms in params
-        @param no_vms: Desired number of VMs
+        :param no_vms: Desired number of VMs
         @note: All defined VMs are overwritten.
         """
         params['vms'] = ""
@@ -189,16 +189,16 @@ def run_cgroup(test, params, env):
         Sets blkio.weight for each VM and measure the actual distribution
         of read/write speeds.
         @note: VMs are created in test
-        @param cfg: cgroup_test_time - test duration '60'
-        @param cfg: cgroup_weights - list of R/W weights '[100, 1000]'
-        @param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
+        :param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_weights - list of R/W weights '[100, 1000]'
+        :param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
         """
         def _test(direction):
             """
             Executes loop of dd commands, kills it after $test_time and
             verifies the speeds using median.
-            @param direction: "read" / "write"
-            @return: "" on success or err message when fails
+            :param direction: "read" / "write"
+            :return: "" on success or err message when fails
             """
             out = []
             # Initiate dd loop on all VMs (2 sessions per VM)
@@ -347,9 +347,9 @@ def run_cgroup(test, params, env):
         $test_time seconds. Afterwards it verifies whether the speeds matches.
         @note: VMs are created in test
         @note: Uses scsi_debug disks
-        @param cfg: cgroup_test_time - test duration '60'
-        @param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
-        @param cfg: cgroup_speeds list of simultaneous speeds
+        :param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
+        :param cfg: cgroup_speeds list of simultaneous speeds
                     [speed1, speed2,..] '[1024]'
         """
         error.context("Init")
@@ -374,9 +374,9 @@ def run_cgroup(test, params, env):
         All scenarios have to have the same number of speeds (= no_vms).
         @note: VMs are created in test
         @note: Uses scsi_debug disks
-        @param cfg: cgroup_test_time - test duration '60'
-        @param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
-        @param cfg: cgroup_speeds list of lists defining [[vm1],[vm2],..]]
+        :param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
+        :param cfg: cgroup_speeds list of lists defining [[vm1],[vm2],..]]
                     and speeds [[speed1],[speed2],..],..].
                     '[[1024,0,2048,0,8192]]'
         """
@@ -384,8 +384,8 @@ def run_cgroup(test, params, env):
             """
             Executes loop of small dd transfers changes cgroups and measures
             speeds.
-            @param direction: "read" / "write"
-            @return: "" on success or err message when fails
+            :param direction: "read" / "write"
+            :return: "" on success or err message when fails
             """
             # Test
             dd_cmd = get_dd_cmd(direction)
@@ -592,8 +592,8 @@ def run_cgroup(test, params, env):
         twice physical CPUs overcommit. cfs quotas are set to 1/2 thus VMs
         should consume exactly 100%. It measures the difference.
         @note: VMs are created in test
-        @param cfg: cgroup_test_time - test duration '60'
-        @param cfg: cgroup_limit - allowed threshold '0.05' (5%)
+        :param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_limit - allowed threshold '0.05' (5%)
         """
         error.context("Setup test")
         modules = CgroupModules()
@@ -747,10 +747,10 @@ def run_cgroup(test, params, env):
         """
         Sets cpu.share shares for different VMs and measure the actual
         utilisation distribution over physical CPUs
-        @param cfg: cgroup_use_max_smp - use smp = all_host_cpus
-        @param cfg: cgroup_test_time - test duration '60'
-        @param cfg: smp - no_vcpus per VM. When smp <= 0 .. smp = no_host_cpus
-        @param cfg: cgroup_speeds - list of speeds of each vms [vm0, vm1,..].
+        :param cfg: cgroup_use_max_smp - use smp = all_host_cpus
+        :param cfg: cgroup_test_time - test duration '60'
+        :param cfg: smp - no_vcpus per VM. When smp <= 0 .. smp = no_host_cpus
+        :param cfg: cgroup_speeds - list of speeds of each vms [vm0, vm1,..].
                     List is sorted in test! '[10000, 100000]'
         """
         def _get_stat(f_stats, _stats=None):
@@ -948,15 +948,15 @@ def run_cgroup(test, params, env):
         you can force the test to use half of the host cpus.
         @warning: Default verification method assumes 100% utilisation on each
                   used CPU. You can force cgroup_verify results.
-        @param cfg: cgroup_use_half_smp - force smp = no_host_cpus / 2
-        @param cfg: cgroup_test_time - scenerio duration '1'
-        @param cfg: cgroup_limit - allowed threshold '0.05' (5%)
-        @params cfg: cgroup_cpuset - list of lists defining cpu pinning.
+        :param cfg: cgroup_use_half_smp - force smp = no_host_cpus / 2
+        :param cfg: cgroup_test_time - scenerio duration '1'
+        :param cfg: cgroup_limit - allowed threshold '0.05' (5%)
+        :params cfg: cgroup_cpuset - list of lists defining cpu pinning.
                      [[1st_scenario],[2nd_scenario], ...]
                      [[main_thread, vcpu0, vcpu1, ...], ...]
                      eg. [[None, '0,3', '1', '2', '1-2'], ['0', '0', '1'.....]]
                      'by default 5 specific scenarios'
-        @params cfg: cgroup_verify - list of lists defining verification
+        :params cfg: cgroup_verify - list of lists defining verification
                      physical CPUs utilisations
                      [[1st_scenario],[2nd_scenario], ...]
                      [[cpu0_util,cpu1_util,...], ...]
@@ -967,8 +967,8 @@ def run_cgroup(test, params, env):
         def _generate_cpusets(vm_cpus, no_cpus):
             """
             Generates 5 cpusets scenerios
-            @param vm_cpus: number of virtual CPUs
-            @param no_cpus: number of physical CPUs
+            :param vm_cpus: number of virtual CPUs
+            :param no_cpus: number of physical CPUs
             """
             cpusets = []
             # OO__
@@ -1000,8 +1000,8 @@ def run_cgroup(test, params, env):
             Calculates verification data.
             @warning: Inaccurate method, every pinned CPU have to have 100%
                       utilisation!
-            @param cpusets: cpusets scenarios
-            @param no_cpus: number of physical CPUs
+            :param cpusets: cpusets scenarios
+            :param no_cpus: number of physical CPUs
             """
             verify = []
             # For every scenerio
@@ -1213,7 +1213,7 @@ def run_cgroup(test, params, env):
         """
         Tests the cpuset.cpus cgroup feature. It stresses all VM's CPUs
         while switching between cgroups with different setting.
-        @param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_test_time - test duration '60'
         """
         error.context("Init")
         try:
@@ -1316,8 +1316,8 @@ def run_cgroup(test, params, env):
         """
         Tests the cpuset.mems pinning. It changes cgroups with different
         mem nodes while stressing memory.
-        @param cfg: cgroup_test_time - test duration '60'
-        @param cfg: cgroup_cpuset_mems_mb - override the size of memory blocks
+        :param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_cpuset_mems_mb - override the size of memory blocks
                     'by default 1/2 of VM memory'
         """
         error.context("Init")
@@ -1424,7 +1424,7 @@ def run_cgroup(test, params, env):
         def _set_permissions(cgroup, permissions):
             """
             Wrapper for setting permissions to first cgroup
-            @param self.permissions: is defined as a list of dictionaries:
+            :param self.permissions: is defined as a list of dictionaries:
                {'property': control property, 'value': permition value,
                 'check_value': check value (from devices.list property),
                 'read_results': excepced read results T/F,
@@ -1439,11 +1439,11 @@ def run_cgroup(test, params, env):
         def _add_drive(monitor, monitor_type, disk, name, readonly=False):
             """
             Hot-adds disk to monitor's VM.
-            @param monitor: VM's monitor.
-            @param monitor_type: which command to use for hot-adding. (string)
-            @param disk: pwd to disk
-            @param name: id name given to this disk in VM
-            @param readonly: Use readonly? 'False'
+            :param monitor: VM's monitor.
+            :param monitor_type: which command to use for hot-adding. (string)
+            :param disk: pwd to disk
+            :param name: id name given to this disk in VM
+            :param readonly: Use readonly? 'False'
             """
             if readonly:
                 readonly_str = "on"
@@ -1635,13 +1635,13 @@ def run_cgroup(test, params, env):
         """
         Tests the freezer.state cgroup functionality. (it freezes the guest
         and unfreeze it again)
-        @param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_test_time - test duration '60'
         """
         def _get_stat(pid):
             """
             Gather statistics of pid+1st level subprocesses cpu usage
-            @param pid: PID of the desired process
-            @return: sum of all cpu-related values of 1st level subprocesses
+            :param pid: PID of the desired process
+            :return: sum of all cpu-related values of 1st level subprocesses
             """
             out = None
             for i in range(10):
@@ -1748,8 +1748,8 @@ def run_cgroup(test, params, env):
         memory.limit_in_bytes: Qemu process should be swaped out and the
                                block created.
         memory.memsw.limit_in_bytes: Qemu should be killed with err 137.
-        @param memsw: Whether to run memsw or rss mem only test
-        @param cfg: cgroup_memory_limit_kb - (4kb aligned) test uses
+        :param memsw: Whether to run memsw or rss mem only test
+        :param cfg: cgroup_memory_limit_kb - (4kb aligned) test uses
                     1.1 * memory_limit memory blocks for testing
                     'by default 1/2 of VM memory'
         """
@@ -1924,7 +1924,7 @@ def run_cgroup(test, params, env):
         Executes the memory_limit test with parameter memsw.
         It tries to allocate bigger block than allowed limit. Qemu should be
         killed with err 137.
-        @param cfg: cgroup_memory_limit_kb - test uses 1.1 * memory_limit
+        :param cfg: cgroup_memory_limit_kb - test uses 1.1 * memory_limit
                     memory blocks for testing 'by default 1/2 of VM memory'
         """
         return memory_limit(memsw=True)
@@ -1933,8 +1933,8 @@ def run_cgroup(test, params, env):
         """
         Tests the memory.move_charge_at_immigrate cgroup capability. It changes
         memory cgroup while running the guest system.
-        @param cfg: cgroup_test_time - test duration '60'
-        @param cfg: cgroup_memory_move_mb - override the size of memory blocks
+        :param cfg: cgroup_test_time - test duration '60'
+        :param cfg: cgroup_memory_move_mb - override the size of memory blocks
                     'by default 1/2 of VM memory'
         """
         error.context("Init")

@@ -14,9 +14,9 @@ def run_virtual_nic_private(test, params, env):
         2. transfer file from guest1 to guest2, check md5
         3. in guest 3 try to capture the packets(guest1 <-> guest2)
     Params:
-        @param test: QEMU test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environment.
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
     """
     def data_mon(session, cmd, timeout):
         try:

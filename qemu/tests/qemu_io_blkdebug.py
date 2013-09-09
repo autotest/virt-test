@@ -18,9 +18,9 @@ def run_qemu_io_blkdebug(test, params, env):
     4. Get the error message from perror by error number set in config file
     5. Compare the error message
 
-    @param test:   QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env:    Dictionary with test environment.
     """
     tmp_dir = params.get("tmp_dir", "/tmp")
     blkdebug_cfg = utils_misc.get_path(tmp_dir, params.get("blkdebug_cfg",

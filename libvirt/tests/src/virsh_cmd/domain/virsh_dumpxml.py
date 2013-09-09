@@ -22,8 +22,8 @@ def run_virsh_dumpxml(test, params, env):
         To check whether the dumpxml is got during vm is running.
         (Verify the domid in dumpxml)
 
-        @param dumpxml: the output of virsh dumpxml.
-        @param domid: the id of vm
+        :param dumpxml: the output of virsh dumpxml.
+        :param domid: the id of vm
         """
         match_string = "<domain.*id='%s'/>" % domid
         if re.search(dumpxml, match_string):

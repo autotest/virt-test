@@ -24,9 +24,9 @@ def run_nfs_perf(test, params, env):
           you may not get any possible error report from
           this script directly.
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     def _do_clean_up(func, *args):
         try:

@@ -13,9 +13,9 @@ def run_qmp_command(test, params, env):
     3) Initiate the qmp command defined in config (qmp_cmd)
     4) Verify that qmp command works as designed.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
     def check_result(qmp_o, output=None):
         """
@@ -32,8 +32,8 @@ def run_qmp_command(test, params, env):
         result_check = m_format_q, will try to match the output's format with
                        check pattern.
 
-        @param qmp_o: output from pre_cmd, qmp_cmd or post_cmd.
-        @param o: output from pre_cmd, qmp_cmd or post_cmd or an execpt
+        :param qmp_o: output from pre_cmd, qmp_cmd or post_cmd.
+        :param o: output from pre_cmd, qmp_cmd or post_cmd or an execpt
         result set in config file.
         """
         if result_check == "equal":

@@ -16,7 +16,7 @@ def launch_totem(guest_session, params):
     """
     Launch Totem player
 
-    @param guest_vm - vm object
+    :param guest_vm - vm object
     """
 
     totem_version = guest_session.cmd('totem --version')
@@ -51,8 +51,8 @@ def deploy_video_file(test, vm_obj, params):
     """
     Deploy video file into destination on vm
 
-    @param vm_obj - vm object
-    @param params: Dictionary with the test parameters.
+    :param vm_obj - vm object
+    :param params: Dictionary with the test parameters.
     """
     source_video_file = params.get("source_video_file")
     video_dir = os.path.join("deps", source_video_file)
@@ -70,9 +70,9 @@ def run_rv_video(test, params, env):
     """
     Test of video through spice
 
-    @param test: KVM test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: KVM test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     guest_vm = env.get_vm(params["guest_vm"])

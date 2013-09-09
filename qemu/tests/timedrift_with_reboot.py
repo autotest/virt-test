@@ -13,9 +13,9 @@ def run_timedrift_with_reboot(test, params, env):
     4) Take a second time reading.
     5) If the drift (in seconds) is higher than a user specified value, fail.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

@@ -11,7 +11,7 @@ def xml_recover(vmxml):
     """
     Recover older xml config with backup vmxml.
 
-    @params: vmxml: VMXML object
+    :params: vmxml: VMXML object
     """
     try:
         options = "--snapshots-metadata"
@@ -28,8 +28,8 @@ def check_snap_in_image(vm_name, snap_name):
     """
     check the snapshot info in image
 
-    @params: vm_name: VM name
-    @params: snap_name: Snapshot name
+    :params: vm_name: VM name
+    :params: snap_name: Snapshot name
     """
 
     domxml = virsh.dumpxml(vm_name)
@@ -53,8 +53,8 @@ def compose_disk_options(test, params, opt_names):
     individually, The 'value' after 'file=' is a parameter which also need to
     get from cfg
 
-    @params: test & params: system parameters
-    @params: opt_names: params get from cfg of {disk,mem}spec options
+    :params: test & params: system parameters
+    :params: opt_names: params get from cfg of {disk,mem}spec options
     """
     if opt_names.find("file=") >= 0:
         opt_disk = opt_names.split("file=")

@@ -15,9 +15,9 @@ def run_system_reset_bootable(test, params, env):
        from step 2.
     4) Log into the guest to verify it could normally boot.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     timeout = float(params.get("login_timeout", 240))

@@ -20,9 +20,9 @@ def run_cpu_add(test, params, env):
     8) Run sub test after CPU Hotplug
     9) Recheck guest cpus after sub test
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def qemu_guest_cpu_match(vm, vcpu_been_pluged=0, wait_time=60):
         """

@@ -13,9 +13,9 @@ def run_boot(test, params, env):
     4) Wait until the guest is up again
     5) Log into the guest to verify it's up again
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     timeout = float(params.get("login_timeout", 240))

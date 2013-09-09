@@ -12,9 +12,9 @@ def run_nx(test, params, env):
     2) cp the exploit prog into the guest
     3) run the exploit
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     vm = env.get_vm(params["main_vm"])

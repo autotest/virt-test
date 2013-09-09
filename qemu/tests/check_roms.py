@@ -12,9 +12,9 @@ def run_check_roms(test, params, env):
     2) run "info roms" in qemu monitor
     3) check the roms are loaded once not twice
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     error.context("start VM with additional option roms", logging.info)
     vm = env.get_vm(params["main_vm"])

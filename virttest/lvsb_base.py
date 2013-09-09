@@ -198,7 +198,7 @@ class SandboxBase(object):
         """
         Launch new sandbox as asynchronous background sandbox process
 
-        @param: extra: String of extra command-line to use but not store
+        :param extra: String of extra command-line to use but not store
         """
         logging.debug("Launching %s", self.make_sandbox_command_line())
         self._session.new_session(self.make_sandbox_command_line(extra))
@@ -453,7 +453,7 @@ class TestSandboxes(object):
         """
         Iterate over all sandboxes, calling do_something on each
 
-        @param: do_sometihng: Called with the item and *args, **dargs
+        :param do_sometihng: Called with the item and *args, **dargs
         """
         # Simplify making the same call to every running sandbox
         return [do_something(sandbox, *args, **dargs)

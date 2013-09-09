@@ -16,9 +16,9 @@ def run_softlockup(test, params, env):
     3) Run for a relatively long time length. ex: 12, 18 or 24 hours.
     4) Output the test result and observe drift.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     stress_setup_cmd = params.get("stress_setup_cmd")
     stress_cmd = params.get("stress_cmd")

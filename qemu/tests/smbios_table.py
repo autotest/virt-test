@@ -12,9 +12,9 @@ def run_smbios_table(test, params, env):
     2) Boot a guest with smbios options and/or -M option
     3) Verify if bios options have been emulated correctly.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     smbios_type = params.get("smbios_type")
     notset_output = params.get("notset_output")

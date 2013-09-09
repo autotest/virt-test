@@ -19,17 +19,17 @@ def run_iofuzz(test, params, env):
     is then rebooted. The test fails if we detect the qemu process to terminate
     while executing the process.
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def outb(session, port, data):
         """
         Write data to a given port.
 
-        @param session: SSH session stablished to a VM
-        @param port: Port where we'll write the data
-        @param data: Integer value that will be written on the port. This
+        :param session: SSH session stablished to a VM
+        :param port: Port where we'll write the data
+        :param data: Integer value that will be written on the port. This
                 value will be converted to octal before its written.
         """
         logging.debug("outb(0x%x, 0x%x)", port, data)
@@ -44,8 +44,8 @@ def run_iofuzz(test, params, env):
         """
         Read from a given port.
 
-        @param session: SSH session stablished to a VM
-        @param port: Port where we'll read data
+        :param session: SSH session stablished to a VM
+        :param port: Port where we'll read data
         """
         logging.debug("inb(0x%x)", port)
         inb_cmd = "dd if=/dev/port seek=%d of=/dev/null bs=1 count=1" % port
@@ -62,7 +62,7 @@ def run_iofuzz(test, params, env):
         If it fails, the guest will be reset. If during the process the VM
         process abnormally ends, the test fails.
 
-        @param inst_list: List of instructions that will be executed.
+        :param inst_list: List of instructions that will be executed.
         @raise error.TestFail: If the VM process dies in the middle of the
                 fuzzing procedure.
         """

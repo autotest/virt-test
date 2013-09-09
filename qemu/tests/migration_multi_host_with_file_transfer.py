@@ -37,10 +37,10 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
      end:
        check all checksum with orig_file checksum
 
-    @param test: Kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
-    @param cfg:
+    :param test: Kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
+    :param cfg:
         file_size: Size of generated file.
         transfer_timeout: Timeout for file transfer.
         transfer_speed: File transfer speed limit.
@@ -93,7 +93,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             for vm in mig_data.vms:
                 vm.resume()
@@ -110,9 +110,9 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
             """
             Prepare, start vm and return vm.
 
-            @param vm_name: Class with data necessary for migration.
+            :param vm_name: Class with data necessary for migration.
 
-            @return: Started VM.
+            :return: Started VM.
             """
             new_params = self.params.copy()
 

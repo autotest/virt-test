@@ -19,9 +19,9 @@ def run_virsh_cpu_compare(test, params, env):
         """
         Get CPU information and put it into a file.
 
-        @param: target: Test target, host or guest's cpu description.
-        @param: mode: Test mode, decides file's detail.
-        @param: tmp_file: File saves CPU information.
+        :param target: Test target, host or guest's cpu description.
+        :param mode: Test mode, decides file's detail.
+        :param tmp_file: File saves CPU information.
         """
         try:
             cpu_xml_file = open(tmp_file, 'wb')

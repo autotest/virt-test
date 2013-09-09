@@ -20,9 +20,9 @@ def run_block_stream_drop_backingfile(test, params, env):
     5). reboot guest vierfy it works correctly
     6). verify not backingfile with qemu-img command too;
 
-    @param test: Qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

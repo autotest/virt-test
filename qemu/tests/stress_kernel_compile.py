@@ -18,9 +18,9 @@ def run_stress_kernel_compile(tests, params, env):
        $overcommit times as host's mem.
     2) Launch kernel compile inside every guest.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def kernelcompile(session, vm_name):
         vm = env.get_vm(vm_name)

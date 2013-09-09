@@ -25,9 +25,9 @@ def run_block_stream_simple(test, params, env):
     2). reset max job speed before steady status(optional)
     3). cancel active job on the device(optional)
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_images", "image1")
     simple_test = BlockStreamSimple(test, params, env, tag)

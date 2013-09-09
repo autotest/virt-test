@@ -22,9 +22,9 @@ def run_timerdevice_clock_drift_with_ntp(test, params, env):
     10) Check the drift in /var/lib/ntp/drift file on guest after hours
         of running.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def _drift_file_exist():
         try:

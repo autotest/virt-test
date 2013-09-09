@@ -105,15 +105,15 @@ class VirshSession(aexpect.ShellSession):
         """
         Initialize virsh session server, or client if id set.
 
-        @param: virsh_exec: path to virsh executable
-        @param: uri: uri of libvirt instance to connect to
-        @param: id: ID of an already running server, if accessing a running
+        :param virsh_exec: path to virsh executable
+        :param uri: uri of libvirt instance to connect to
+        :param id: ID of an already running server, if accessing a running
                 server, or None if starting a new one.
-        @param: prompt: Regular expression describing the shell's prompt line.
-        @param: remote_ip: Hostname/IP of remote system to ssh into (if any)
-        @param: remote_user: Username to ssh in as (if any)
-        @param: remote_pwd: Password to use, or None for host/pubkey
-        @param: auto_close: Param to init ShellSession.
+        :param prompt: Regular expression describing the shell's prompt line.
+        :param remote_ip: Hostname/IP of remote system to ssh into (if any)
+        :param remote_user: Username to ssh in as (if any)
+        :param remote_pwd: Password to use, or None for host/pubkey
+        :param auto_close: Param to init ShellSession.
 
         Because the VirshSession is designed for class VirshPersistent, so
         the default value of auto_close is False, and we manage the reference
@@ -168,13 +168,13 @@ class VirshSession(aexpect.ShellSession):
         """
         Send a virsh command and return its exit status and output.
 
-        @param cmd: virsh command to send (must not contain newline characters)
-        @param timeout: The duration (in seconds) to wait for the prompt to
+        :param cmd: virsh command to send (must not contain newline characters)
+        :param timeout: The duration (in seconds) to wait for the prompt to
                 return
-        @param internal_timeout: The timeout to pass to read_nonblocking
-        @param print_func: A function to be used to print the data being read
+        :param internal_timeout: The timeout to pass to read_nonblocking
+        :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
-        @return: A tuple (status, output) where status is the exit status and
+        :return: A tuple (status, output) where status is the exit status and
                 output is the output of cmd
         @raise ShellTimeoutError: Raised if timeout expires
         @raise ShellProcessTerminatedError: Raised if the shell process
@@ -221,8 +221,8 @@ class VirshClosure(object):
         """
         Call reference_function with dict_like_instance augmented by **dargs
 
-        @param: *args: Passthrough to reference_function
-        @param: **dargs: Updates dict_like_instance copy before call
+        :param *args: Passthrough to reference_function
+        :param **dargs: Updates dict_like_instance copy before call
         """
         new_dargs = self.dict_like_weakref()
         if new_dargs is None:
@@ -243,8 +243,8 @@ class Virsh(VirshBase):
         """
         Initialize Virsh instance with persistent options
 
-        @param: *args: Initial property keys/values
-        @param: **dargs: Initial property keys/values
+        :param *args: Initial property keys/values
+        :param **dargs: Initial property keys/values
         """
         super(Virsh, self).__init__(*args, **dargs)
         # Define the instance callables from the contents of this module
@@ -405,9 +405,9 @@ class VirshConnectBack(VirshPersistent):
         """
         Convenience static method to help validate argument sanity before use
 
-        @param: remote_ip: ip/hostname of remote libvirt helper-system
-        @param: uri: fully qualified libvirt uri of local system, from remote.
-        @returns: True/False if checks pass or not
+        :param remote_ip: ip/hostname of remote libvirt helper-system
+        :param uri: fully qualified libvirt uri of local system, from remote.
+        :return:s: True/False if checks pass or not
         """
         if remote_ip is None or uri is None:
             return False
@@ -434,9 +434,9 @@ def command(cmd, **dargs):
     """
     Interface to cmd function as 'cmd' symbol is polluted
 
-    @param: cmd: Command line to append to virsh command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param cmd: Command line to append to virsh command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     @raises: CmdError if non-zero exit status and ignore_status=False
     """
 
@@ -491,9 +491,9 @@ def domname(dom_id_or_uuid, **dargs):
     """
     Convert a domain id or UUID to domain name
 
-    @param: dom_id_or_uuid: a domain id or UUID.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param dom_id_or_uuid: a domain id or UUID.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("domname --domain %s" % dom_id_or_uuid, **dargs)
 
@@ -502,9 +502,9 @@ def qemu_monitor_command(name, cmd, **dargs):
     """
     This helps to execute the qemu monitor command through virsh command.
 
-    @param: name: Name of monitor domain
-    @param: cmd: monitor command to execute
-    @param: dargs: standardized virsh function API keywords
+    :param name: Name of monitor domain
+    :param cmd: monitor command to execute
+    :param dargs: standardized virsh function API keywords
     """
 
     cmd_qemu_monitor = "qemu-monitor-command %s --hmp \'%s\'" % (name, cmd)
@@ -516,10 +516,10 @@ def setvcpus(name, count, extra="", **dargs):
     Change the number of virtual CPUs in the guest domain.
 
     @oaram name: name of vm to affect
-    @param count: value for vcpu parameter
-    @param options: any extra command options.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult object from command
+    :param count: value for vcpu parameter
+    :param options: any extra command options.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object from command
     """
     cmd = "setvcpus %s %s %s" % (name, count, extra)
     return command(cmd, **dargs)
@@ -529,11 +529,11 @@ def vcpupin(name, vcpu, cpu, **dargs):
     """
     Changes the cpu affinity for respective vcpu.
 
-    @param: name: name of domain
-    @param: vcpu: virtual CPU to modify
-    @param: cpu: physical CPU specification (string)
-    @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    :param name: name of domain
+    :param vcpu: virtual CPU to modify
+    :param cpu: physical CPU specification (string)
+    :param dargs: standardized virsh function API keywords
+    :return: True operation was successful
     """
     dargs['ignore_status'] = False
     try:
@@ -549,9 +549,9 @@ def vcpuinfo(name, **dargs):
     """
     Retrieves the vcpuinfo command result if values not "N/A"
 
-    @param: name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: name of domain
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     # Guarantee cmdresult object created
     dargs['ignore_status'] = True
@@ -569,9 +569,9 @@ def freecell(extra="", **dargs):
     """
     Prints the available amount of memory on the machine or within a NUMA cell.
 
-    @param: dargs: extra: extra argument string to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param dargs: extra: extra argument string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd_freecell = "freecell %s" % extra
     return command(cmd_freecell, **dargs)
@@ -582,9 +582,9 @@ def nodeinfo(extra="", **dargs):
     Returns basic information about the node,like number and type of CPU,
     and size of the physical memory.
 
-    @param: dargs: extra: extra argument string to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param dargs: extra: extra argument string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd_nodeinfo = "nodeinfo %s" % extra
     return command(cmd_nodeinfo, **dargs)
@@ -594,9 +594,9 @@ def canonical_uri(option='', **dargs):
     """
     Return the hypervisor canonical URI.
 
-    @param: option: additional option string to pass
-    @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
+    :param option: additional option string to pass
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
     """
     return command("uri %s" % option, **dargs).stdout.strip()
 
@@ -605,9 +605,9 @@ def hostname(option='', **dargs):
     """
     Return the hypervisor hostname.
 
-    @param: option: additional option string to pass
-    @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
+    :param option: additional option string to pass
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
     """
     return command("hostname %s" % option, **dargs).stdout.strip()
 
@@ -616,9 +616,9 @@ def version(option='', **dargs):
     """
     Return the major version info about what this built from.
 
-    @param: option: additional option string to pass
-    @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
+    :param option: additional option string to pass
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
     """
     return command("version %s" % option, **dargs).stdout.strip()
 
@@ -627,8 +627,8 @@ def dom_list(options="", **dargs):
     """
     Return the list of domains.
 
-    @param: options: options to pass to list command
-    @return: CmdResult object
+    :param options: options to pass to list command
+    :return: CmdResult object
     """
     return command("list %s" % options, **dargs)
 
@@ -637,9 +637,9 @@ def reboot(name, options="", **dargs):
     """
     Run a reboot command in the target domain.
 
-    @param: name: Name of domain.
-    @param: options: options: options to pass to reboot command
-    @return: CmdResult object
+    :param name: Name of domain.
+    :param options: options: options to pass to reboot command
+    :return: CmdResult object
     """
     return command("reboot --domain %s %s" % (name, options), **dargs)
 
@@ -648,9 +648,9 @@ def managedsave(name, options="", **dargs):
     """
     Managed save of a domain state.
 
-    @param: name: Name of domain to save
-    @param: options: options: options to pass to list command
-    @return: CmdResult object
+    :param name: Name of domain to save
+    :param options: options: options to pass to list command
+    :return: CmdResult object
     """
     return command("managedsave --domain %s %s" % (name, options), **dargs)
 
@@ -659,8 +659,8 @@ def managedsave_remove(name, **dargs):
     """
     Remove managed save of a domain
 
-    @param: name: name of managed-saved domain to remove
-    @return: CmdResult object
+    :param name: name of managed-saved domain to remove
+    :return: CmdResult object
     """
     return command("managedsave-remove --domain %s" % name, **dargs)
 
@@ -669,8 +669,8 @@ def driver(**dargs):
     """
     Return the driver by asking libvirt
 
-    @param: dargs: standardized virsh function API keywords
-    @return: VM driver name
+    :param dargs: standardized virsh function API keywords
+    :return: VM driver name
     """
     # libvirt schme composed of driver + command
     # ref: http://libvirt.org/uri.html
@@ -683,9 +683,9 @@ def domstate(name, **dargs):
     """
     Return the state about a running domain.
 
-    @param name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("domstate %s" % name, **dargs)
 
@@ -694,9 +694,9 @@ def domid(name_or_uuid, **dargs):
     """
     Return VM's ID.
 
-    @param name_or_uuid: VM name or uuid
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name_or_uuid: VM name or uuid
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("domid %s" % (name_or_uuid), **dargs)
 
@@ -705,9 +705,9 @@ def dominfo(name, **dargs):
     """
     Return the VM information.
 
-    @param: name: VM's name or id,uuid.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: VM's name or id,uuid.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("dominfo %s" % (name), **dargs)
 
@@ -716,9 +716,9 @@ def domuuid(name_or_id, **dargs):
     """
     Return the Converted domain name or id to the domain UUID.
 
-    @param name_or_id: VM name or id
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name_or_id: VM name or id
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("domuuid %s" % name_or_id, **dargs)
 
@@ -727,10 +727,10 @@ def screenshot(name, filename, **dargs):
     """
     Capture a screenshot of VM's console and store it in file on host
 
-    @param: name: VM name
-    @param: filename: name of host file
-    @param: dargs: standardized virsh function API keywords
-    @return: filename
+    :param name: VM name
+    :param filename: name of host file
+    :param dargs: standardized virsh function API keywords
+    :return: filename
     """
     global SCREENSHOT_ERROR_COUNT
     dargs['ignore_status'] = False
@@ -750,11 +750,11 @@ def domblkstat(name, device, option, **dargs):
     """
     Store state of VM into named file.
 
-    @param: name: VM's name.
-    @param: device: VM's device.
-    @param: option: command domblkstat option.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: VM's name.
+    :param device: VM's device.
+    :param option: command domblkstat option.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("domblkstat %s %s %s" % (name, device, option), **dargs)
 
@@ -763,10 +763,10 @@ def dumpxml(name, extra="", to_file="", **dargs):
     """
     Return the domain information as an XML dump.
 
-    @param: name: VM name
-    @param: to_file: optional file to write XML output to
-    @param: dargs: standardized virsh function API keywords
-    @return: standard output from command
+    :param name: VM name
+    :param to_file: optional file to write XML output to
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
     """
     dargs['ignore_status'] = True
     cmd = "dumpxml %s %s" % (name, extra)
@@ -785,9 +785,9 @@ def domifstat(name, interface, **dargs):
     """
     Get network interface stats for a running domain.
 
-    @param: name: Name of domain
-    @param: interface: interface device
-    @return: CmdResult object
+    :param name: Name of domain
+    :param interface: interface device
+    :return: CmdResult object
     """
     return command("domifstat %s %s" % (name, interface), **dargs)
 
@@ -796,9 +796,9 @@ def domjobinfo(name, **dargs):
     """
     Get domain job information.
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("domjobinfo %s" % name, **dargs)
 
@@ -807,9 +807,9 @@ def edit(options, **dargs):
     """
     Edit the XML configuration for a domain.
 
-    @param options: virsh edit options string.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param options: virsh edit options string.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("edit %s" % options, **dargs)
 
@@ -818,9 +818,9 @@ def domjobabort(name, **dargs):
     """
     Aborts the currently running domain job.
 
-    @param name: VM's name, id or uuid.
-    @param dargs: standardized virsh function API keywords
-    @return: result from command
+    :param name: VM's name, id or uuid.
+    :param dargs: standardized virsh function API keywords
+    :return: result from command
     """
     return command("domjobabort %s" % name, **dargs)
 
@@ -829,11 +829,11 @@ def domxml_from_native(info_format, native_file, options=None, **dargs):
     """
     Convert native guest configuration format to domain XML format.
 
-    @param info_format:The command's options. For exmple:qemu-argv.
-    @param native_file:Native information file.
-    @param options:extra param.
-    @param dargs: standardized virsh function API keywords.
-    @return: result from command
+    :param info_format:The command's options. For exmple:qemu-argv.
+    :param native_file:Native information file.
+    :param options:extra param.
+    :param dargs: standardized virsh function API keywords.
+    :return: result from command
     """
     cmd = "domxml-from-native %s %s %s" % (info_format, native_file, options)
     return command(cmd, **dargs)
@@ -843,11 +843,11 @@ def domxml_to_native(info_format, xml_file, options, **dargs):
     """
     Convert domain XML config to a native guest configuration format.
 
-    @param info_format:The command's options. For exmple:qemu-argv.
-    @param xml_file:XML config file.
-    @param options:extra param.
-    @param dargs: standardized virsh function API keywords
-    @return: result from command
+    :param info_format:The command's options. For exmple:qemu-argv.
+    :param xml_file:XML config file.
+    :param options:extra param.
+    :param dargs: standardized virsh function API keywords
+    :return: result from command
     """
     cmd = "domxml-to-native %s %s %s" % (info_format, xml_file, options)
     return command(cmd, **dargs)
@@ -857,9 +857,9 @@ def vncdisplay(name, **dargs):
     """
     Output the IP address and port number for the VNC display.
 
-    @param name: VM's name or id,uuid.
-    @param dargs: standardized virsh function API keywords.
-    @return: result from command
+    :param name: VM's name or id,uuid.
+    :param dargs: standardized virsh function API keywords.
+    :return: result from command
     """
     return command("vncdisplay %s" % name, **dargs)
 
@@ -868,9 +868,9 @@ def is_alive(name, **dargs):
     """
     Return True if the domain is started/alive.
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: True operation was successful
     """
     return not is_dead(name, **dargs)
 
@@ -879,9 +879,9 @@ def is_dead(name, **dargs):
     """
     Return True if the domain is undefined or not started/dead.
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: True operation was successful
     """
     dargs['ignore_status'] = False
     try:
@@ -898,9 +898,9 @@ def suspend(name, **dargs):
     """
     True on successful suspend of VM - kept in memory and not scheduled.
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("suspend %s" % (name), **dargs)
 
@@ -909,9 +909,9 @@ def resume(name, **dargs):
     """
     True on successful moving domain out of suspend
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("resume %s" % (name), **dargs)
 
@@ -920,10 +920,10 @@ def dommemstat(name, extra="", **dargs):
     """
     Store state of VM into named file.
 
-    @param: name: VM name
-    @param: extra: extra options to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: VM name
+    :param extra: extra options to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("dommemstat %s %s" % (name, extra), **dargs)
 
@@ -932,11 +932,11 @@ def dump(name, path, option="", **dargs):
     """
     Dump the core of a domain to a file for analysis.
 
-    @param: name: VM name
-    @param: path: absolute path to state file
-    @param: option: command's option.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: VM name
+    :param path: absolute path to state file
+    :param option: command's option.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("dump %s %s %s" % (name, path, option), **dargs)
 
@@ -945,10 +945,10 @@ def save(option, path, **dargs):
     """
     Store state of VM into named file.
 
-    @param: option: save command's first option, vm'name, id or uuid.
-    @param: path: absolute path to state file
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param option: save command's first option, vm'name, id or uuid.
+    :param path: absolute path to state file
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("save %s %s" % (option, path), **dargs)
 
@@ -957,8 +957,8 @@ def restore(path, **dargs):
     """
     Load state of VM from named file and remove file.
 
-    @param: path: absolute path to state file.
-    @param: dargs: standardized virsh function API keywords
+    :param path: absolute path to state file.
+    :param dargs: standardized virsh function API keywords
     """
     return command("restore %s" % path, **dargs)
 
@@ -967,9 +967,9 @@ def start(name, **dargs):
     """
     True on successful start of (previously defined) inactive domain.
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object.
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object.
     """
     return command("start %s" % name, **dargs)
 
@@ -978,9 +978,9 @@ def shutdown(name, **dargs):
     """
     True on successful domain shutdown.
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("shutdown %s" % (name), **dargs)
 
@@ -989,9 +989,9 @@ def destroy(name, **dargs):
     """
     True on successful domain destruction
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("destroy %s" % (name), **dargs)
 
@@ -1000,9 +1000,9 @@ def define(xml_path, **dargs):
     """
     Return True on successful domain define.
 
-    @param: xml_path: XML file path
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param xml_path: XML file path
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "define --file %s" % xml_path
     logging.debug("Define VM from %s", xml_path)
@@ -1013,9 +1013,9 @@ def undefine(name, options=None, **dargs):
     """
     Return cmd result of domain undefine (after shutdown/destroy).
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "undefine %s" % name
     if options is not None:
@@ -1029,9 +1029,9 @@ def remove_domain(name, options=None, **dargs):
     """
     Return True after forcefully removing a domain if it exists.
 
-    @param: name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: True operation was successful
     """
     if domain_exists(name, **dargs):
         if is_alive(name, **dargs):
@@ -1049,9 +1049,9 @@ def domain_exists(name, **dargs):
     """
     Return True if a domain exits.
 
-    @param name: VM name
-    @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    :param name: VM name
+    :param dargs: standardized virsh function API keywords
+    :return: True operation was successful
     """
     dargs['ignore_status'] = False
     try:
@@ -1066,12 +1066,12 @@ def migrate(name="", dest_uri="", option="", extra="", **dargs):
     """
     Migrate a guest to another host.
 
-    @param: name: name of guest on uri.
-    @param: dest_uri: libvirt uri to send guest to
-    @param: option: Free-form string of options to virsh migrate
-    @param: extra: Free-form string of options to follow <domain> <desturi>
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: name of guest on uri.
+    :param dest_uri: libvirt uri to send guest to
+    :param option: Free-form string of options to virsh migrate
+    :param extra: Free-form string of options to follow <domain> <desturi>
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "migrate"
     if option:
@@ -1091,8 +1091,8 @@ def migrate_setmaxdowntime(domain, downtime, extra=None, **dargs):
     Set maximum tolerable downtime of a domain
     which is being live-migrated to another host.
 
-    @param domain: name/uuid/id of guest
-    @param downtime: downtime number of live migration
+    :param domain: name/uuid/id of guest
+    :param downtime: downtime number of live migration
     """
     cmd = "migrate-setmaxdowntime %s %s" % (domain, downtime)
     if extra is not None:
@@ -1104,11 +1104,11 @@ def attach_device(name, xml_file, extra="", **dargs):
     """
     Attach a device to VM.
 
-    @param: name: name of guest
-    @param: xml_file: xml describing device to detach
-    @param: extra: additional arguments to command
-    @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    :param name: name of guest
+    :param xml_file: xml describing device to detach
+    :param extra: additional arguments to command
+    :param dargs: standardized virsh function API keywords
+    :return: True operation was successful
     """
     cmd = "attach-device --domain %s --file %s %s" % (name, xml_file, extra)
     dargs['ignore_status'] = False
@@ -1124,11 +1124,11 @@ def detach_device(name, xml_file, extra="", **dargs):
     """
     Detach a device from VM.
 
-    @param: name: name of guest
-    @param: xml_file: xml describing device to detach
-    @param: extra: additional arguments to command
-    @param: dargs: standardized virsh function API keywords
-    @return: True operation was successful
+    :param name: name of guest
+    :param xml_file: xml describing device to detach
+    :param extra: additional arguments to command
+    :param dargs: standardized virsh function API keywords
+    :return: True operation was successful
     """
     cmd = "detach-device --domain %s --file %s %s" % (name, xml_file, extra)
     dargs['ignore_status'] = False
@@ -1146,13 +1146,13 @@ def update_device(domainarg=None, filearg=None,
     """
     Update device from an XML <file>.
 
-    @param: domainarg: Domain name (first pos. parameter)
-    @param: filearg: File name (second pos. parameter)
-    @param: domain_opt: Option to --domain parameter
-    @param: file_opt: Option to --file parameter
-    @param: flagstr: string of "--force, --persistent, etc."
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param domainarg: Domain name (first pos. parameter)
+    :param filearg: File name (second pos. parameter)
+    :param domain_opt: Option to --domain parameter
+    :param file_opt: Option to --file parameter
+    :param flagstr: string of "--force, --persistent, etc."
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     cmd = "update-device"
     if domainarg is not None:  # Allow testing of ""
@@ -1172,12 +1172,12 @@ def attach_disk(name, source, target, extra="", **dargs):
     """
     Attach a disk to VM.
 
-    @param: name: name of guest
-    @param: source: source of disk device
-    @param: target: target of disk device
-    @param: extra: additional arguments to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: name of guest
+    :param source: source of disk device
+    :param target: target of disk device
+    :param extra: additional arguments to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "attach-disk --domain %s --source %s --target %s %s"\
         % (name, source, target, extra)
@@ -1188,10 +1188,10 @@ def detach_disk(name, target, extra="", **dargs):
     """
     Detach a disk from VM.
 
-    @param: name: name of guest
-    @param: target: target of disk device
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: name of guest
+    :param target: target of disk device
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "detach-disk --domain %s --target %s %s" % (name, target, extra)
     return command(cmd, **dargs)
@@ -1201,10 +1201,10 @@ def attach_interface(name, option="", **dargs):
     """
     Attach a NIC to VM.
 
-    @param: name: name of guest
-    @param: option: options to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: name of guest
+    :param option: options to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "attach-interface "
 
@@ -1220,10 +1220,10 @@ def detach_interface(name, option="", **dargs):
     """
     Detach a NIC to VM.
 
-    @param: name: name of guest
-    @param: option: options to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: name of guest
+    :param option: options to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "detach-interface "
 
@@ -1239,11 +1239,11 @@ def net_dumpxml(name, extra="", to_file="", **dargs):
     """
     Dump XML from network named param name.
 
-    @param: name: Name of a network
-    @param: extra: Extra parameters to pass to command
-    @param: to_file: Send result to a file
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: Name of a network
+    :param extra: Extra parameters to pass to command
+    :param to_file: Send result to a file
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "net-dumpxml %s %s" % (name, extra)
     result = command(cmd, **dargs)
@@ -1258,10 +1258,10 @@ def net_create(xml_file, extra="", **dargs):
     """
     Create _transient_ network from a XML file.
 
-    @param: xml_file: xml defining network
-    @param: extra: extra parameters to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param xml_file: xml defining network
+    :param extra: extra parameters to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-create %s %s" % (xml_file, extra), **dargs)
 
@@ -1270,10 +1270,10 @@ def net_define(xml_file, extra="", **dargs):
     """
     Define network from a XML file, do not start
 
-    @param: xml_file: xml defining network
-    @param: extra: extra parameters to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param xml_file: xml defining network
+    :param extra: extra parameters to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-define %s %s" % (xml_file, extra), **dargs)
 
@@ -1282,10 +1282,10 @@ def net_list(options, extra="", **dargs):
     """
     List networks on host.
 
-    @param: options: options to pass to command
-    @param: extra: extra parameters to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param options: options to pass to command
+    :param extra: extra parameters to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-list %s %s" % (options, extra), **dargs)
 
@@ -1294,9 +1294,9 @@ def net_state_dict(only_names=False, **dargs):
     """
     Return network name to state/autostart/persistent mapping
 
-    @param: only_names: When true, return network names as keys and None values
-    @param: dargs: standardized virsh function API keywords
-    @return: dictionary
+    :param only_names: When true, return network names as keys and None values
+    :param dargs: standardized virsh function API keywords
+    :return: dictionary
     """
     # Using multiple virsh commands in different ways
     dargs['ignore_status'] = False  # force problem detection
@@ -1345,10 +1345,10 @@ def net_start(network, extra="", **dargs):
     """
     Start network on host.
 
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra parameters to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param network: name/parameter for network option/argument
+    :param extra: extra parameters to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-start %s %s" % (network, extra), **dargs)
 
@@ -1357,10 +1357,10 @@ def net_destroy(network, extra="", **dargs):
     """
     Destroy (stop) an activated network on host.
 
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra string to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param network: name/parameter for network option/argument
+    :param extra: extra string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-destroy %s %s" % (network, extra), **dargs)
 
@@ -1369,10 +1369,10 @@ def net_undefine(network, extra="", **dargs):
     """
     Undefine a defined network on host.
 
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra string to pass to command
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param network: name/parameter for network option/argument
+    :param extra: extra string to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-undefine %s %s" % (network, extra), **dargs)
 
@@ -1381,10 +1381,10 @@ def net_name(uuid, extra="", **dargs):
     """
     Get network name on host.
 
-    @param: uuid: network UUID.
-    @param: extra: extra parameters to pass to command.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param uuid: network UUID.
+    :param extra: extra parameters to pass to command.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-name %s %s" % (uuid, extra), **dargs)
 
@@ -1393,10 +1393,10 @@ def net_uuid(network, extra="", **dargs):
     """
     Get network UUID on host.
 
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra parameters to pass to command.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param network: name/parameter for network option/argument
+    :param extra: extra parameters to pass to command.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-uuid %s %s" % (network, extra), **dargs)
 
@@ -1405,10 +1405,10 @@ def net_autostart(network, extra="", **dargs):
     """
     Set/unset a network to autostart on host boot
 
-    @param: network: name/parameter for network option/argument
-    @param: extra: extra parameters to pass to command (e.g. --disable)
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param network: name/parameter for network option/argument
+    :param extra: extra parameters to pass to command (e.g. --disable)
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     return command("net-autostart %s %s" % (network, extra), **dargs)
 
@@ -1417,8 +1417,8 @@ def pool_info(name, **dargs):
     """
     Returns basic information about the storage pool.
 
-    @param: name: name of pool
-    @param: dargs: standardized virsh function API keywords
+    :param name: name of pool
+    :param dargs: standardized virsh function API keywords
     """
     cmd = "pool-info %s" % name
     return command(cmd, **dargs)
@@ -1428,8 +1428,8 @@ def pool_destroy(name, **dargs):
     """
     Forcefully stop a given pool.
 
-    @param: name: name of pool
-    @param: dargs: standardized virsh function API keywords
+    :param name: name of pool
+    :param dargs: standardized virsh function API keywords
     """
     cmd = "pool-destroy %s" % name
     dargs['ignore_status'] = False
@@ -1445,12 +1445,12 @@ def pool_create_as(name, pool_type, target, extra="", **dargs):
     """
     Create a pool from a set of args.
 
-    @param: name: name of pool
-    @param: pool_type: storage pool type such as 'dir'
-    @param: target: libvirt uri to send guest to
-    @param: extra: Free-form string of options
-    @param: dargs: standardized virsh function API keywords
-    @return: True if pool creation command was successful
+    :param name: name of pool
+    :param pool_type: storage pool type such as 'dir'
+    :param target: libvirt uri to send guest to
+    :param extra: Free-form string of options
+    :param dargs: standardized virsh function API keywords
+    :return: True if pool creation command was successful
     """
 
     if not name:
@@ -1479,11 +1479,11 @@ def pool_list(option="", extra="", **dargs):
     """
     Prints the pool information of Host
 
-    @param: option: options given to command
+    :param option: options given to command
     --all - gives all pool details, including inactive
     --inactive - gives only inactive pool details
     --details - Gives the complete details about the pools
-    @param: extra: to provide extra options(to enter invalid options)
+    :param extra: to provide extra options(to enter invalid options)
     """
     return command("pool-list %s %s" % (option, extra), **dargs)
 
@@ -1492,8 +1492,8 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
     """
     Define the pool from the arguments
 
-    @param: name: Name of the pool to be defined
-    @param: typ: Type of the pool to be defined
+    :param name: Name of the pool to be defined
+    :param typ: Type of the pool to be defined
     dir - file system directory
     disk - Physical Disk Device
     fs - Pre-formatted Block Device
@@ -1502,10 +1502,10 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
     logical - LVM Volume Group
     mpath - Multipath Device Enumerater
     scsi - SCSI Host Adapter
-    @param: target: libvirt uri to send guest to
-    @param: extra: Free-form string of options
-    @param: dargs: standardized virsh function API keywords
-    @return: True if pool define command was successful
+    :param target: libvirt uri to send guest to
+    :param extra: Free-form string of options
+    :param dargs: standardized virsh function API keywords
+    :return: True if pool define command was successful
     """
 
     types = ['dir', 'fs', 'netfs', 'disk', 'iscsi', 'logical']
@@ -1524,10 +1524,10 @@ def pool_define_as(name, pool_type, target, extra="", **dargs):
 def pool_start(name, extra="", **dargs):
     """
     Start the defined pool
-    @param: name: Name of the pool to be started
-    @param: extra: Free-form string of options
-    @param: dargs: standardized virsh function API keywords
-    @return: True if pool start command was successful
+    :param name: Name of the pool to be started
+    :param extra: Free-form string of options
+    :param dargs: standardized virsh function API keywords
+    :return: True if pool start command was successful
     """
     return command("pool-start %s %s" % (name, extra), **dargs)
 
@@ -1535,10 +1535,10 @@ def pool_start(name, extra="", **dargs):
 def pool_autostart(name, extra="", **dargs):
     """
     Mark for autostart of a pool
-    @param: name: Name of the pool to be mark for autostart
-    @param: extra: Free-form string of options
-    @param: dargs: standardized virsh function API keywords
-    @return: True if pool autostart command was successful
+    :param name: Name of the pool to be mark for autostart
+    :param extra: Free-form string of options
+    :param dargs: standardized virsh function API keywords
+    :return: True if pool autostart command was successful
     """
     return command("pool-autostart %s %s" % (name, extra), **dargs)
 
@@ -1547,10 +1547,10 @@ def pool_undefine(name, extra="", **dargs):
     """
     Undefine the given pool
 
-    @param: name: Name of the pool to be undefined
-    @param: extra: Free-form string of options
-    @param: dargs: standardized virsh function API keywords
-    @return: True if pool undefine command was successful
+    :param name: Name of the pool to be undefined
+    :param extra: Free-form string of options
+    :param dargs: standardized virsh function API keywords
+    :return: True if pool undefine command was successful
     """
     return command("pool-undefine %s %s" % (name, extra), **dargs)
 
@@ -1559,8 +1559,8 @@ def pool_build(name, options="", **dargs):
     """
     Build pool.
 
-    @param name: Name of the pool to be built
-    @param options: options for pool-build
+    :param name: Name of the pool to be built
+    :param options: options for pool-build
     """
     return command("pool-build %s %s" % (name, options), **dargs)
 
@@ -1570,14 +1570,14 @@ def vol_create_as(volume_name, pool_name, capacity,
     """
     To create the volumes on different available pool
 
-    @param: name: Name of the volume to be created
-    @param: pool_name: Name of the pool to be used
-    @param: capacity: Size of the volume
-    @param: allocaltion: Size of the volume to be pre-allocated
-    @param: frmt: volume formats(e.g. raw, qed, qcow2)
-    @param: extra: Free-form string of options
-    @param: dargs: standardized virsh function API keywords
-    @return: True if pool undefine command was successful
+    :param name: Name of the volume to be created
+    :param pool_name: Name of the pool to be used
+    :param capacity: Size of the volume
+    :param allocaltion: Size of the volume to be pre-allocated
+    :param frmt: volume formats(e.g. raw, qed, qcow2)
+    :param extra: Free-form string of options
+    :param dargs: standardized virsh function API keywords
+    :return: True if pool undefine command was successful
     """
 
     cmd = "vol-create-as --pool %s" % pool_name
@@ -1596,10 +1596,10 @@ def vol_list(pool_name, extra="", **dargs):
     """
     List the volumes for a given pool
 
-    @param: pool_name: Name of the pool
-    @param: extra: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param pool_name: Name of the pool
+    :param extra: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     return command("vol-list %s %s" % (pool_name, extra), **dargs)
 
@@ -1608,11 +1608,11 @@ def vol_delete(volume_name, pool_name, extra="", **dargs):
     """
     Delete a given volume
 
-    @param: volume_name: Name of the volume
-    @param: pool_name: Name of the pool
-    @param: extra: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param volume_name: Name of the volume
+    :param pool_name: Name of the pool
+    :param extra: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     return command("vol-delete %s %s %s" %
                    (volume_name, pool_name, extra), **dargs)
@@ -1622,10 +1622,10 @@ def vol_key(volume_name, pool_name, extra="", **drags):
     """
     Prints the key of the given volume name
 
-    @param: volume_name: Name of the volume
-    @param: extra: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param volume_name: Name of the volume
+    :param extra: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     return command("vol-key --vol %s --pool %s %s" %
                    (volume_name, pool_name, extra), **drags)
@@ -1635,10 +1635,10 @@ def vol_info(volume_name, extra="", **drags):
     """
     Prints the given volume info
 
-    @param: volume_name: Name of the volume
-    @param: extra: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param volume_name: Name of the volume
+    :param extra: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     return command("vol-info --vol %s %s" % (volume_name, extra), **drags)
 
@@ -1647,10 +1647,10 @@ def vol_name(volume_key, extra="", **drags):
     """
     Prints the given volume name
 
-    @param: volume_name: Name of the volume
-    @param: extra: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param volume_name: Name of the volume
+    :param extra: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     return command("vol-name --vol %s %s" % (volume_key, extra), **drags)
 
@@ -1659,11 +1659,11 @@ def vol_path(volume_name, pool_name, extra="", **dargs):
     """
     Prints the give volume path
 
-    @param: volume_name: Name of the volume
-    @param: pool_name: Name of the pool
-    @param: extra: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param volume_name: Name of the volume
+    :param pool_name: Name of the pool
+    :param extra: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     return command("vol-path --vol %s --pool %s %s" %
                    (volume_name, pool_name, extra), **dargs)
@@ -1673,12 +1673,12 @@ def vol_dumpxml(volume_name, pool_name, to_file=None, options="", **dargs):
     """
     Dumps volume details in xml
 
-    @param: volume_name: Name of the volume
-    @param: pool_name: Name of the pool
-    @param: to_file: path of the file to store the output
-    @param: options: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param volume_name: Name of the volume
+    :param pool_name: Name of the pool
+    :param to_file: path of the file to store the output
+    :param options: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     cmd = ('vol-dumpxml --vol %s --pool %s %s' %
            (volume_name, pool_name, options))
@@ -1694,10 +1694,10 @@ def vol_pool(volume_name, extra="", **dargs):
     """
     Returns pool name for a given vol-key
 
-    @param: volume_name: Name of the volume
-    @param: extra: Free-form string options
-    @param: dargs: standardized virsh function API keywords
-    @return: returns the output of the command
+    :param volume_name: Name of the volume
+    :param extra: Free-form string options
+    :param dargs: standardized virsh function API keywords
+    :return: returns the output of the command
     """
     return command("vol-pool %s %s" % (volume_name, extra), **dargs)
 
@@ -1706,8 +1706,8 @@ def capabilities(option='', **dargs):
     """
     Return output from virsh capabilities command
 
-    @param: option: additional options (takes none)
-    @param: dargs: standardized virsh function API keywords
+    :param option: additional options (takes none)
+    :param dargs: standardized virsh function API keywords
     """
     return command('capabilities %s' % option, **dargs).stdout.strip()
 
@@ -1716,8 +1716,8 @@ def nodecpustats(option='', **dargs):
     """
     Returns basic information about the node CPU statistics
 
-    @param: option: additional options (takes none)
-    @param: dargs: standardized virsh function API keywords
+    :param option: additional options (takes none)
+    :param dargs: standardized virsh function API keywords
     """
 
     cmd_nodecpustat = "nodecpustats %s" % option
@@ -1728,8 +1728,8 @@ def nodememstats(option='', **dargs):
     """
     Returns basic information about the node Memory statistics
 
-    @param: option: additional options (takes none)
-    @param: dargs: standardized virsh function API keywords
+    :param option: additional options (takes none)
+    :param dargs: standardized virsh function API keywords
     """
 
     return command('nodememstats %s' % option, **dargs)
@@ -1739,8 +1739,8 @@ def memtune_set(name, options, **dargs):
     """
     Set the memory controller parameters
 
-    @param: domname: VM Name
-    @param: options: contains the values limit, state and value
+    :param domname: VM Name
+    :param options: contains the values limit, state and value
     """
     return command("memtune %s %s" % (name, options), **dargs)
 
@@ -1749,7 +1749,7 @@ def memtune_list(name, **dargs):
     """
     List the memory controller value of a given domain
 
-    @param: domname: VM Name
+    :param domname: VM Name
     """
     return command("memtune %s" % (name), **dargs)
 
@@ -1758,9 +1758,9 @@ def memtune_get(name, key):
     """
     Get the specific memory controller value
 
-    @param: domname: VM Name
-    @param: key: memory controller limit for which the value needed
-    @return: the memory value of a key in Kbs
+    :param domname: VM Name
+    :param key: memory controller limit for which the value needed
+    :return: the memory value of a key in Kbs
     """
     memtune_output = memtune_list(name)
     memtune_value = re.findall(r"%s\s*:\s+(\S+)" % key, str(memtune_output))
@@ -1774,10 +1774,10 @@ def help_command(options='', cache=False, **dargs):
     """
     Return list of commands and groups in help command output
 
-    @param: options: additional options to pass to help command
-    @param: cache: Return cached result if True, or refreshed cache if False
-    @param: dargs: standardized virsh function API keywords
-    @return: List of command and group names
+    :param options: additional options to pass to help command
+    :param cache: Return cached result if True, or refreshed cache if False
+    :param dargs: standardized virsh function API keywords
+    :return: List of command and group names
     """
     # Combine virsh command list and virsh group list.
     virsh_command_list = help_command_only(options, cache, **dargs)
@@ -1791,10 +1791,10 @@ def help_command_only(options='', cache=False, **dargs):
     """
     Return list of commands in help command output
 
-    @param: options: additional options to pass to help command
-    @param: cache: Return cached result if True, or refreshed cache if False
-    @param: dargs: standardized virsh function API keywords
-    @return: List of command names
+    :param options: additional options to pass to help command
+    :param cache: Return cached result if True, or refreshed cache if False
+    :param dargs: standardized virsh function API keywords
+    :return: List of command names
     """
     # global needed to support this function's use in Virsh method closure
     global VIRSH_COMMAND_CACHE
@@ -1816,10 +1816,10 @@ def help_command_group(options='', cache=False, **dargs):
     """
     Return list of groups in help command output
 
-    @param: options: additional options to pass to help command
-    @param: cache: Return cached result if True, or refreshed cache if False
-    @param: dargs: standardized virsh function API keywords
-    @return: List of group names
+    :param options: additional options to pass to help command
+    :param cache: Return cached result if True, or refreshed cache if False
+    :param dargs: standardized virsh function API keywords
+    :return: List of group names
     """
     # global needed to support this function's use in Virsh method closure
     global VIRSH_COMMAND_GROUP_CACHE, VIRSH_COMMAND_GROUP_CACHE_NO_DETAIL
@@ -1844,10 +1844,10 @@ def has_help_command(virsh_cmd, options='', **dargs):
     """
     String match on virsh command in help output command list
 
-    @param: virsh_cmd: Name of virsh command or group to look for
-    @param: options: Additional options to send to help command
-    @param: dargs: standardized virsh function API keywords
-    @return: True/False
+    :param virsh_cmd: Name of virsh command or group to look for
+    :param options: Additional options to send to help command
+    :param dargs: standardized virsh function API keywords
+    :return: True/False
     """
     return bool(help_command_only(options, cache=True,
                                   **dargs).count(virsh_cmd))
@@ -1857,10 +1857,10 @@ def has_command_help_match(virsh_cmd, regex, **dargs):
     """
     Regex search on subcommand help output
 
-    @param: virsh_cmd: Name of virsh command or group to match help output
-    @param: regex: regular expression string to match
-    @param: dargs: standardized virsh function API keywords
-    @return: re match object
+    :param virsh_cmd: Name of virsh command or group to match help output
+    :param regex: regular expression string to match
+    :param dargs: standardized virsh function API keywords
+    :return: re match object
     """
     command_help_output = help(virsh_cmd, **dargs).stdout.strip()
     return re.search(regex, command_help_output)
@@ -1871,9 +1871,9 @@ def help(virsh_cmd='', **dargs):
     Prints global help, command specific help, or help for a
     group of related commands
 
-    @param virsh_cmd: Name of virsh command or group
-    @param: dargs: standardized virsh function API keywords
-    @returns: CmdResult instance
+    :param virsh_cmd: Name of virsh command or group
+    :param dargs: standardized virsh function API keywords
+    :return:s: CmdResult instance
     """
     return command("help %s" % virsh_cmd, **dargs)
 
@@ -1882,9 +1882,9 @@ def schedinfo(domain, options="", **dargs):
     """
     Show/Set scheduler parameters.
 
-    @param domain: vm's name id or uuid.
-    @param options: additional options.
-    @param: dargs: standardized virsh function API keywords
+    :param domain: vm's name id or uuid.
+    :param options: additional options.
+    :param dargs: standardized virsh function API keywords
     """
     cmd = "schedinfo %s %s" % (domain, options)
     return command(cmd, **dargs)
@@ -1895,14 +1895,14 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     """
     Change the current memory allocation in the guest domain.
 
-    @param: domainarg: Domain name (first pos. parameter)
-    @param: sizearg: Memory size in KiB (second. pos. parameter)
-    @param: domain: Option to --domain parameter
-    @param: size: Option to --size or --kilobytes parameter
-    @param: use_kilobytes: True for --kilobytes, False for --size
-    @param: dargs: standardized virsh function API keywords
-    @param: flagstr: string of "--config, --live, --current, etc."
-    @returns: CmdResult instance
+    :param domainarg: Domain name (first pos. parameter)
+    :param sizearg: Memory size in KiB (second. pos. parameter)
+    :param domain: Option to --domain parameter
+    :param size: Option to --size or --kilobytes parameter
+    :param use_kilobytes: True for --kilobytes, False for --size
+    :param dargs: standardized virsh function API keywords
+    :param flagstr: string of "--config, --live, --current, etc."
+    :return:s: CmdResult instance
     @raises: error.CmdError: if libvirtd is not running!!!!!!
     """
 
@@ -1928,13 +1928,13 @@ def setmaxmem(domainarg=None, sizearg=None, domain=None,
     """
     Change the maximum memory allocation for the guest domain.
 
-    @param: domainarg: Domain name (first pos. parameter)
-    @param: sizearg: Memory size in KiB (second. pos. parameter)
-    @param: domain: Option to --domain parameter
-    @param: size: Option to --size or --kilobytes parameter
-    @param: use_kilobytes: True for --kilobytes, False for --size
-    @param: flagstr: string of "--config, --live, --current, etc."
-    @returns: CmdResult instance
+    :param domainarg: Domain name (first pos. parameter)
+    :param sizearg: Memory size in KiB (second. pos. parameter)
+    :param domain: Option to --domain parameter
+    :param size: Option to --size or --kilobytes parameter
+    :param use_kilobytes: True for --kilobytes, False for --size
+    :param flagstr: string of "--config, --live, --current, etc."
+    :return:s: CmdResult instance
     @raises: error.CmdError: if libvirtd is not running.
     """
     cmd = "setmaxmem"
@@ -1958,9 +1958,9 @@ def snapshot_create(name, options="", **dargs):
     """
     Create snapshot of domain.
 
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @return: name of snapshot
+    :param name: name of domain
+    :param dargs: standardized virsh function API keywords
+    :return: name of snapshot
     """
     cmd = "snapshot-create %s %s" % (name, options)
     return command(cmd, **dargs)
@@ -1970,10 +1970,10 @@ def snapshot_create_as(name, options="", **dargs):
     """
     Create snapshot of domain with options.
 
-    @param name: name of domain
-    @param options: options of snapshot-create-as
-    @param: dargs: standardized virsh function API keywords
-    @return: name of snapshot
+    :param name: name of domain
+    :param options: options of snapshot-create-as
+    :param dargs: standardized virsh function API keywords
+    :return: name of snapshot
     """
     # CmdResult is handled here, force ignore_status
     cmd = "snapshot-create-as %s" % name
@@ -1987,9 +1987,9 @@ def snapshot_current(name, **dargs):
     """
     Create snapshot of domain.
 
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @return: name of snapshot
+    :param name: name of domain
+    :param dargs: standardized virsh function API keywords
+    :return: name of snapshot
     """
     # CmdResult is handled here, force ignore_status
     dargs['ignore_status'] = True
@@ -2005,10 +2005,10 @@ def snapshot_list(name, options=None, **dargs):
     """
     Get list of snapshots of domain.
 
-    @param name: name of domain
-    @param options: options of snapshot_list
-    @param: dargs: standardized virsh function API keywords
-    @return: list of snapshot names
+    :param name: name of domain
+    :param options: options of snapshot_list
+    :param dargs: standardized virsh function API keywords
+    :return: list of snapshot names
     """
     # CmdResult is handled here, force ignore_status
     dargs['ignore_status'] = True
@@ -2035,10 +2035,10 @@ def snapshot_dumpxml(name, snapshot, options=None, **dargs):
     """
     Get dumpxml of snapshot
 
-    @param name: name of domain
-    @param snapshot: name of snapshot
-    @param dargs: standardized virsh function API keywords
-    @return: standard output from command
+    :param name: name of domain
+    :param snapshot: name of snapshot
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
     """
     cmd = "snapshot-dumpxml %s %s" % (name, snapshot)
     if options is not None:
@@ -2051,10 +2051,10 @@ def snapshot_info(name, snapshot, **dargs):
     """
     Check snapshot information.
 
-    @param name: name of domain
-    @param snapshot: name os snapshot to verify
-    @param: dargs: standardized virsh function API keywords
-    @return: snapshot information dictionary
+    :param name: name of domain
+    :param snapshot: name os snapshot to verify
+    :param dargs: standardized virsh function API keywords
+    :return: snapshot information dictionary
     """
     # CmdResult is handled here, force ignore_status
     dargs['ignore_status'] = True
@@ -2083,10 +2083,10 @@ def snapshot_revert(name, snapshot, **dargs):
     """
     Revert domain state to saved snapshot.
 
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @param snapshot: snapshot to revert to
-    @return: CmdResult instance
+    :param name: name of domain
+    :param dargs: standardized virsh function API keywords
+    :param snapshot: snapshot to revert to
+    :return: CmdResult instance
     """
     return command("snapshot-revert %s %s" % (name, snapshot), **dargs)
 
@@ -2095,10 +2095,10 @@ def snapshot_delete(name, snapshot, **dargs):
     """
     Remove domain snapshot
 
-    @param name: name of domain
-    @param: dargs: standardized virsh function API keywords
-    @param snapshot: snapshot to delete
-    @return: CmdResult instance
+    :param name: name of domain
+    :param dargs: standardized virsh function API keywords
+    :param snapshot: snapshot to delete
+    :return: CmdResult instance
     """
     return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
 
@@ -2107,10 +2107,10 @@ def domblkinfo(name, device, **dargs):
     """
     Get block device size info for a domain.
 
-    @param: name: VM's name or id,uuid.
-    @param: device: device of VM.
-    @param: dargs: standardized virsh function API keywords.
-    @return: CmdResult object.
+    :param name: VM's name or id,uuid.
+    :param device: device of VM.
+    :param dargs: standardized virsh function API keywords.
+    :return: CmdResult object.
     """
     return command("domblkinfo %s %s" % (name, device), **dargs)
 
@@ -2119,10 +2119,10 @@ def domblklist(name, options=None, **dargs):
     """
     Get domain devices.
 
-    @param name: name of domain
-    @param options: options of domblklist.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: name of domain
+    :param options: options of domblklist.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     cmd = "domblklist %s" % name
     if options:
@@ -2135,10 +2135,10 @@ def cpu_stats(name, options, **dargs):
     """
     Display per-CPU and total statistics about domain's CPUs
 
-    @param name: name of domain
-    @param options: options of cpu_stats
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: name of domain
+    :param options: options of cpu_stats
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     cmd = "cpu-stats %s" % name
     if options:
@@ -2151,11 +2151,11 @@ def change_media(name, device, options, **dargs):
     """
     Change media of CD or floppy drive.
 
-    @param: name: VM's name.
-    @param: path: Fully-qualified path or target of disk device
-    @param: options: command change_media options.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: VM's name.
+    :param path: Fully-qualified path or target of disk device
+    :param options: command change_media options.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     cmd = "change-media %s %s " % (name, device)
     if options:
@@ -2167,9 +2167,9 @@ def cpu_compare(xml_file, **dargs):
     """
     Compare host CPU with a CPU described by an XML file
 
-    @param xml_file: file containing an XML CPU description.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param xml_file: file containing an XML CPU description.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("cpu-compare %s" % xml_file, **dargs)
 
@@ -2178,9 +2178,9 @@ def cpu_baseline(xml_file, **dargs):
     """
     Compute baseline CPU for a set of given CPUs.
 
-    @param xml_file: file containing an XML CPU description.
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param xml_file: file containing an XML CPU description.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     return command("cpu-baseline %s" % xml_file, **dargs)
 
@@ -2188,10 +2188,10 @@ def cpu_baseline(xml_file, **dargs):
 def numatune(name, mode=None, nodeset=None, options=None, **dargs):
     """
     Set or get a domain's numa parameters
-    @param name: name of domain
-    @param options: options may be live, config and current
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: name of domain
+    :param options: options may be live, config and current
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     cmd = "numatune %s" % name
     if options:
@@ -2208,8 +2208,8 @@ def ttyconsole(name, **dargs):
     """
     Print tty console device.
 
-    @param name: name, uuid or id of domain
-    @return: CmdResult instance
+    :param name: name, uuid or id of domain
+    :return: CmdResult instance
     """
     return command("ttyconsole %s" % name, **dargs)
 
@@ -2218,11 +2218,11 @@ def nodedev_dumpxml(name, options="", to_file=None, **dargs):
     """
     Do dumpxml for node device.
 
-    @param name: the name of device.
-    @param options: extra options to nodedev-dumpxml cmd.
-    @param to_file: optional file to write XML output to.
+    :param name: the name of device.
+    :param options: extra options to nodedev-dumpxml cmd.
+    :param to_file: optional file to write XML output to.
 
-    @return: Cmdobject of virsh nodedev-dumpxml.
+    :return: Cmdobject of virsh nodedev-dumpxml.
     """
     cmd = ('nodedev-dumpxml %s %s' % (name, options))
     result = command(cmd, **dargs)
@@ -2238,9 +2238,9 @@ def connect(connect_uri="", options="", **dargs):
     """
     Run a connect command to the uri.
 
-    @param connect_uri: target uri connect to.
-    @param: options: options to pass to connect command
-    @return: CmdResult object.
+    :param connect_uri: target uri connect to.
+    :param options: options to pass to connect command
+    :return: CmdResult object.
     """
     return command("connect %s %s" % (connect_uri, options), **dargs)
 
@@ -2249,12 +2249,12 @@ def domif_setlink(name, interface, state, options=None, **dargs):
     """
     Set network interface stats for a running domain.
 
-    @param: name: Name of domain
-    @param: interface: interface device
-    @param: state: new state of the device  up or down
-    @param: options: command options.
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param name: Name of domain
+    :param interface: interface device
+    :param state: new state of the device  up or down
+    :param options: command options.
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "domif-setlink %s %s %s " % (name, interface, state)
     if options:
@@ -2267,11 +2267,11 @@ def domif_getlink(name, interface, options=None, **dargs):
     """
     Get network interface stats for a running domain.
 
-    @param: name: Name of domain
-    @param: interface: interface device
-    @param: options: command options.
-    @param: dargs: standardized virsh function API keywords
-    @return: domif state
+    :param name: Name of domain
+    :param interface: interface device
+    :param options: command options.
+    :param dargs: standardized virsh function API keywords
+    :return: domif state
     """
     cmd = "domif-getlink %s %s " % (name, interface)
     if options:
@@ -2284,7 +2284,7 @@ def nodedev_list(options="", **dargs):
     """
     List the node devices.
 
-    @return: CmdResult object.
+    :return: CmdResult object.
     """
     cmd = "nodedev-list %s" % (options)
     CmdResult = command(cmd, **dargs)
@@ -2296,7 +2296,7 @@ def nodedev_detach(name, options="", **dargs):
     """
     Detach node device from host.
 
-    @return: cmdresult object.
+    :return: cmdresult object.
     """
     cmd = ("nodedev-detach --device %s %s" % (name, options))
     CmdResult = command(cmd, **dargs)
@@ -2308,7 +2308,7 @@ def nodedev_dettach(name, options="", **dargs):
     """
     Detach node device from host.
 
-    @return: nodedev_detach(name).
+    :return: nodedev_detach(name).
     """
     return nodedev_detach(name, options, **dargs)
 
@@ -2318,7 +2318,7 @@ def nodedev_reattach(name, options="", **dargs):
     If node device is detached, this action will
     reattach it to its device driver.
 
-    @return: cmdresult object.
+    :return: cmdresult object.
     """
     cmd = ("nodedev-reattach --device %s %s" % (name, options))
     CmdResult = command(cmd, **dargs)
@@ -2330,9 +2330,9 @@ def vcpucount(name, options, **dargs):
     """
     Get the vcpu count of guest.
 
-    @param name: name of domain.
-    @param options: options for vcpucoutn command.
-    @return: CmdResult object.
+    :param name: name of domain.
+    :param options: options for vcpucoutn command.
+    :return: CmdResult object.
     """
     cmd = "vcpucount %s %s" % (name, options)
     return command(cmd, **dargs)
@@ -2342,13 +2342,13 @@ def domiftune(name, interface, options=None, inbound=None,
               outbound=None, **dargs):
     """
     Set/get parameters of a virtual interface
-    @param name: name of domain
-    @param interface: interface device (MAC Address)
-    @param inbound: control domain's incoming traffics
-    @param outbound: control domain's outgoing traffics
-    @param options: options may be live, config and current
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: name of domain
+    :param interface: interface device (MAC Address)
+    :param inbound: control domain's incoming traffics
+    :param outbound: control domain's outgoing traffics
+    :param options: options may be live, config and current
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
     cmd = "domiftune %s %s" % (name, interface)
     if inbound:

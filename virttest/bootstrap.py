@@ -390,17 +390,17 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     """
     Common virt test assistant module.
 
-    @param test_name: Test name, such as "qemu".
-    @param test_dir: Path with the test directory.
-    @param base_dir: Base directory used to hold images and isos.
-    @param default_userspace_paths: Important programs for a successful test
+    :param test_name: Test name, such as "qemu".
+    :param test_dir: Path with the test directory.
+    :param base_dir: Base directory used to hold images and isos.
+    :param default_userspace_paths: Important programs for a successful test
             execution.
-    @param check_modules: Whether we want to verify if a given list of modules
+    :param check_modules: Whether we want to verify if a given list of modules
             is loaded in the system.
-    @param online_docs_url: URL to an online documentation system, such as a
+    :param online_docs_url: URL to an online documentation system, such as a
             wiki page.
-    @param restore_image: Whether to restore the image from the pristine.
-    @param interactive: Whether to ask for confirmation.
+    :param restore_image: Whether to restore the image from the pristine.
+    :param interactive: Whether to ask for confirmation.
 
     @raise error.CmdError: If JeOS image failed to uncompress
     @raise ValueError: If 7za was not found

@@ -22,7 +22,7 @@ def md5eval(data):
     encapsulate objects in a way that is compatible with python 2.4 and
     python 2.6 without warnings.
 
-    @param data: Optional input string that will be used to update the object.
+    :param data: Optional input string that will be used to update the object.
     """
     try:
         hsh = hashlib.new('md5')
@@ -38,9 +38,9 @@ def find_id_for_screendump(md5sum, data_dir):
     """
     Search dir for a PPM file whose name ends with md5sum.
 
-    @param md5sum: md5 sum string
-    @param dir: Directory that holds the PPM files.
-    @return: The file's basename without any preceding path, e.g.
+    :param md5sum: md5 sum string
+    :param dir: Directory that holds the PPM files.
+    :return: The file's basename without any preceding path, e.g.
     '20080101_120000_d41d8cd98f00b204e9800998ecf8427e.ppm'.
     """
     try:
@@ -57,7 +57,7 @@ def generate_id_for_screendump(md5sum, data_dir):
     """
     Generate a unique filename using the given MD5 sum.
 
-    @return: Only the file basename, without any preceding path. The
+    :return: Only the file basename, without any preceding path. The
     filename consists of the current date and time, the MD5 sum and a .ppm
     extension, e.g. '20080101_120000_d41d8cd98f00b204e9800998ecf8427e.ppm'.
     """
@@ -80,7 +80,7 @@ def image_read_from_ppm_file(filename):
     """
     Read a PPM image.
 
-    @return: A 3 element tuple containing the width, height and data of the
+    :return: A 3 element tuple containing the width, height and data of the
             image.
     """
     fin = open(filename, "rb")
@@ -98,9 +98,9 @@ def image_write_to_ppm_file(filename, width, height, data):
     """
     Write a PPM image with the given width, height and data.
 
-    @param filename: PPM file path
-    @param width: PPM file width (pixels)
-    @param height: PPM file height (pixels)
+    :param filename: PPM file path
+    :param width: PPM file width (pixels)
+    :param height: PPM file height (pixels)
     """
     fout = open(filename, "wb")
     fout.write("P6\n")
@@ -114,14 +114,14 @@ def image_crop(width, height, data, x1, y1, dx, dy):
     """
     Crop an image.
 
-    @param width: Original image width
-    @param height: Original image height
-    @param data: Image data
-    @param x1: Desired x coordinate of the cropped region
-    @param y1: Desired y coordinate of the cropped region
-    @param dx: Desired width of the cropped region
-    @param dy: Desired height of the cropped region
-    @return: A 3-tuple containing the width, height and data of the
+    :param width: Original image width
+    :param height: Original image height
+    :param data: Image data
+    :param x1: Desired x coordinate of the cropped region
+    :param y1: Desired y coordinate of the cropped region
+    :param dx: Desired width of the cropped region
+    :param dy: Desired height of the cropped region
+    :return: A 3-tuple containing the width, height and data of the
     cropped image.
     """
     if x1 > width - 1:
@@ -144,8 +144,8 @@ def image_md5sum(width, height, data):
     """
     Return the md5sum of an image.
 
-    @param width: PPM file width
-    @param height: PPM file height
+    :param width: PPM file width
+    :param height: PPM file height
     @data: PPM file data
     """
     header = "P6\n%d %d\n255\n" % (width, height)
@@ -159,14 +159,14 @@ def get_region_md5sum(width, height, data, x1, y1, dx, dy,
     """
     Return the md5sum of a cropped region.
 
-    @param width: Original image width
-    @param height: Original image height
-    @param data: Image data
-    @param x1: Desired x coord of the cropped region
-    @param y1: Desired y coord of the cropped region
-    @param dx: Desired width of the cropped region
-    @param dy: Desired height of the cropped region
-    @param cropped_image_filename: if not None, write the resulting cropped
+    :param width: Original image width
+    :param height: Original image height
+    :param data: Image data
+    :param x1: Desired x coord of the cropped region
+    :param y1: Desired y coord of the cropped region
+    :param dx: Desired width of the cropped region
+    :param dy: Desired height of the cropped region
+    :param cropped_image_filename: if not None, write the resulting cropped
             image to a file with this name
     """
     (cw, ch, cdata) = image_crop(width, height, data, x1, y1, dx, dy)
@@ -180,8 +180,8 @@ def image_verify_ppm_file(filename):
     """
     Verify the validity of a PPM file.
 
-    @param filename: Path of the file being verified.
-    @return: True if filename is a valid PPM image file. This function
+    :param filename: Path of the file being verified.
+    :return: True if filename is a valid PPM image file. This function
     reads only the first few bytes of the file so it should be rather fast.
     """
     try:
@@ -203,11 +203,11 @@ def image_comparison(width, height, data1, data2):
     """
     Generate a green-red comparison image from two given images.
 
-    @param width: Width of both images
-    @param height: Height of both images
-    @param data1: Data of first image
-    @param data2: Data of second image
-    @return: A 3-element tuple containing the width, height and data of the
+    :param width: Width of both images
+    :param height: Height of both images
+    :param data1: Data of first image
+    :param data2: Data of second image
+    :return: A 3-element tuple containing the width, height and data of the
             generated comparison image.
 
     @note: Input images must be the same size.
@@ -243,11 +243,11 @@ def image_fuzzy_compare(width, height, data1, data2):
     """
     Return the degree of equality of two given images.
 
-    @param width: Width of both images
-    @param height: Height of both images
-    @param data1: Data of first image
-    @param data2: Data of second image
-    @return: Ratio equal_pixel_count / total_pixel_count.
+    :param width: Width of both images
+    :param height: Height of both images
+    :param data1: Data of first image
+    :param data2: Data of second image
+    :return: Ratio equal_pixel_count / total_pixel_count.
 
     @note: Input images must be the same size.
     """

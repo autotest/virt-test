@@ -12,9 +12,9 @@ def run_kdump(test, params, env):
        each vcpu, or only trigger one crash with nmi interrupt and
        check vmcore.
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -34,7 +34,7 @@ def run_kdump(test, params, env):
         """
         Trigger a crash dump through sysrq-trigger
 
-        @param vcpu: vcpu which is used to trigger a crash
+        :param vcpu: vcpu which is used to trigger a crash
         """
         session = vm.wait_for_login(timeout=timeout)
         session.cmd_output("rm -rf /var/crash/*")

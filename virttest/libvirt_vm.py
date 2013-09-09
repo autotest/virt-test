@@ -28,8 +28,8 @@ def normalize_connect_uri(connect_uri):
     """
     Processes connect_uri Cartesian into something virsh can use
 
-    @param: connect_uri: Cartesian Params setting
-    @return: Normalized connect_uri
+    :param connect_uri: Cartesian Params setting
+    :return: Normalized connect_uri
     """
     if connect_uri == 'default':
         return None
@@ -45,8 +45,8 @@ def complete_uri(ip_address):
     Return a complete URI with the combination of ip_address and local uri.
     It is useful when you need to connect remote hypervisor.
 
-    @param ip_address: an ip address or a hostname
-    @return: a complete uri
+    :param ip_address: an ip address or a hostname
+    :return: a complete uri
     """
     # Allow to raise CmdError if canonical_uri is failed
     uri = virsh.canonical_uri(ignore_status=False)
@@ -61,9 +61,9 @@ def get_uri_with_transport(uri_type='qemu', transport="", dest_ip=""):
     """
     Return a URI to connect driver on dest with a specificed transport.
 
-    @param origin_uri: The URI on dest used to connect itself directly.
-    @param transport: The transport type connect to dest.
-    @param dest_ip: The ip of destination.
+    :param origin_uri: The URI on dest used to connect itself directly.
+    :param transport: The transport type connect to dest.
+    :param dest_ip: The ip of destination.
     """
     _type2uri_ = {'qemu': "qemu:///system",
                   'qemu_system': "qemu:///system",
@@ -98,12 +98,12 @@ class VM(virt_vm.BaseVM):
         """
         Initialize the object and set a few attributes.
 
-        @param name: The name of the object
-        @param params: A dict containing VM params
+        :param name: The name of the object
+        :param params: A dict containing VM params
                 (see method make_create_command for a full description)
-        @param root_dir: Base directory for relative filenames
-        @param address_cache: A dict that maps MAC addresses to IP addresses
-        @param state: If provided, use this as self.__dict__
+        :param root_dir: Base directory for relative filenames
+        :param address_cache: A dict that maps MAC addresses to IP addresses
+        :param state: If provided, use this as self.__dict__
         """
 
         if state:
@@ -254,11 +254,11 @@ class VM(virt_vm.BaseVM):
         Any parameters not passed to this function are copied from the source
         VM.
 
-        @param name: Optional new VM name
-        @param params: Optional new VM creation parameters
-        @param root_dir: Optional new base directory for relative filenames
-        @param address_cache: A dict that maps MAC addresses to IP addresses
-        @param copy_state: If True, copy the original VM's state to the clone.
+        :param name: Optional new VM name
+        :param params: Optional new VM creation parameters
+        :param root_dir: Optional new base directory for relative filenames
+        :param address_cache: A dict that maps MAC addresses to IP addresses
+        :param copy_state: If True, copy the original VM's state to the clone.
                 Mainly useful for make_create_command().
         """
         if name is None:
@@ -281,9 +281,9 @@ class VM(virt_vm.BaseVM):
         parameter is not supplied, the corresponding value stored in the
         class attributes is used.
 
-        @param name: The name of the object
-        @param params: A dict containing VM params
-        @param root_dir: Base directory for relative filenames
+        :param name: The name of the object
+        :param params: A dict containing VM params
+        :param root_dir: Base directory for relative filenames
 
         @note: The params dict should contain:
                mem -- memory size in MBs
@@ -803,8 +803,8 @@ class VM(virt_vm.BaseVM):
         """
         Allow or ban root to login through serial console.
 
-        @param device: device to set root login
-        @param allow_root: do remove operation
+        :param device: device to set root login
+        :param allow_root: do remove operation
         """
         try:
             session = self.login()
@@ -832,9 +832,9 @@ class VM(virt_vm.BaseVM):
         """
         Set kernel parameter for given console device.
 
-        @param device: a console device
-        @param speed: speed of serial console
-        @param remove: do remove operation
+        :param device: a console device
+        :param speed: speed of serial console
+        :param remove: do remove operation
         """
         try:
             session = self.login()
@@ -869,9 +869,9 @@ class VM(virt_vm.BaseVM):
         """
         Set getty for given console device.
 
-        @param device: a console device
-        @param getty: getty type: agetty, mgetty and so on.
-        @param remove: do remove operation
+        :param device: a console device
+        :param getty: getty type: agetty, mgetty and so on.
+        :param remove: do remove operation
         """
         try:
             session = self.login()
@@ -909,14 +909,14 @@ class VM(virt_vm.BaseVM):
         All parameters are optional. If name, params or root_dir are not
         supplied, the respective values stored as class attributes are used.
 
-        @param name: The name of the object
-        @param params: A dict containing VM params
-        @param root_dir: Base directory for relative filenames
-        @param migration_mode: If supplied, start VM for incoming migration
+        :param name: The name of the object
+        :param params: A dict containing VM params
+        :param root_dir: Base directory for relative filenames
+        :param migration_mode: If supplied, start VM for incoming migration
                 using this protocol (either 'tcp', 'unix' or 'exec')
-        @param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
+        :param migration_exec_cmd: Command to embed in '-incoming "exec: ..."'
                 (e.g. 'gzip -c -d filename') if migration_mode is 'exec'
-        @param mac_source: A VM object from which to copy MAC addresses. If not
+        :param mac_source: A VM object from which to copy MAC addresses. If not
                 specified, new addresses will be generated.
 
         @raise VMCreateError: If qemu terminates unexpectedly
@@ -1093,10 +1093,10 @@ class VM(virt_vm.BaseVM):
         """
         Migrate a VM to a remote host.
 
-        @param: dest_uri: Destination libvirt URI
-        @param: option: Migration options before <domain> <desturi>
-        @param: extra: Migration options after <domain> <desturi>
-        @return: True if command succeeded
+        :param dest_uri: Destination libvirt URI
+        :param option: Migration options before <domain> <desturi>
+        :param extra: Migration options after <domain> <desturi>
+        :return: True if command succeeded
         """
         logging.info("Migrating VM %s from %s to %s" %
                      (self.name, self.connect_uri, dest_uri))
@@ -1151,10 +1151,10 @@ class VM(virt_vm.BaseVM):
         If gracefully is True, first attempt to shutdown the VM with a shell
         command. If that fails, send SIGKILL to the qemu process.
 
-        @param gracefully: If True, an attempt will be made to end the VM
+        :param gracefully: If True, an attempt will be made to end the VM
                 using a shell command before trying to end the qemu process
                 with a 'quit' or a kill signal.
-        @param free_mac_addresses: If vm is undefined with libvirt, also
+        :param free_mac_addresses: If vm is undefined with libvirt, also
                                    release/reset associated mac address
         """
         try:
@@ -1228,7 +1228,7 @@ class VM(virt_vm.BaseVM):
         """
         Get the MAC of this VM domain.
 
-        @param nic_index: Index of the NIC
+        :param nic_index: Index of the NIC
         @raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
         """
@@ -1249,7 +1249,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the VM's PID.
 
-        @return: int with PID. If VM is not alive, returns None.
+        :return: int with PID. If VM is not alive, returns None.
         """
         pid_file = "/var/run/libvirt/qemu/%s.pid" % self.name
         pid = None
@@ -1271,7 +1271,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the vcpu's pid for a given VM.
 
-        @return: list of PID of vcpus of a VM.
+        :return: list of PID of vcpus of a VM.
         """
         output = virsh.qemu_monitor_command(self.name, "info cpus",
                                             uri=self.connect_uri)
@@ -1291,7 +1291,7 @@ class VM(virt_vm.BaseVM):
         """
         Returns the VM's shared memory information.
 
-        @return: Shared memory used by VM (MB)
+        :return: Shared memory used by VM (MB)
         """
         if self.is_dead():
             logging.error("Could not get shared memory info from dead VM.")
@@ -1316,13 +1316,13 @@ class VM(virt_vm.BaseVM):
         Reboot the VM and wait for it to come back up by trying to log in until
         timeout expires.
 
-        @param session: A shell session object or None.
-        @param method: Reboot method.  Can be "shell" (send a shell reboot
+        :param session: A shell session object or None.
+        :param method: Reboot method.  Can be "shell" (send a shell reboot
                 command).
-        @param nic_index: Index of NIC to access in the VM, when logging in
+        :param nic_index: Index of NIC to access in the VM, when logging in
                 after rebooting.
-        @param timeout: Time to wait for login to succeed (after rebooting).
-        @return: A new shell session object.
+        :param timeout: Time to wait for login to succeed (after rebooting).
+        :return: A new shell session object.
         """
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
@@ -1398,8 +1398,8 @@ class VM(virt_vm.BaseVM):
         Wait for a domain to shutdown, libvirt does not block on domain
         shutdown so we need to watch for successful completion.
 
-        @param name: VM name
-        @param name: Optional timeout value
+        :param name: VM name
+        :param name: Optional timeout value
         """
         timeout = count
         while count > 0:

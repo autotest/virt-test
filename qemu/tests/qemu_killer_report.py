@@ -14,9 +14,9 @@ def run_qemu_killer_report(test, params, env):
     2) Kill VM by signal 15 in another process.
     3) Check that QEMU report the process ID that sent it kill signals.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     def kill_vm_by_signal_15():

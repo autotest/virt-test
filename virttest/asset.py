@@ -119,7 +119,7 @@ def download_file(asset_info, interactive=False, force=False):
     This function will verify the SHA1 hash of the file. If the file
     appears to be missing or corrupted, let the user know.
 
-    @param asset_info: Dictionary returned by get_asset_info
+    :param asset_info: Dictionary returned by get_asset_info
     """
     file_ok = False
     problems_ignored = False
@@ -233,9 +233,9 @@ def download_asset(asset, interactive=True, restore_image=False):
         uncompress_cmd = Command that needs to be executed with the compressed
             file as a parameter
 
-    @param asset: String describing an asset file.
-    @param interactive: Whether to ask the user before downloading the file.
-    @param restore_image: If the asset is a compressed image, we can uncompress
+    :param asset: String describing an asset file.
+    :param interactive: Whether to ask the user before downloading the file.
+    :param restore_image: If the asset is a compressed image, we can uncompress
                           in order to restore the image.
     """
     asset_info = get_asset_info(asset)

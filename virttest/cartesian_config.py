@@ -188,7 +188,7 @@ def _match_adjacent(block, ctx, ctx_set):
     """
     It try to match as many blocks as possible from context.
 
-    @return: Count of matched blocks.
+    :return: Count of matched blocks.
     """
     if block[0] not in ctx_set:
         return 0
@@ -370,7 +370,7 @@ class StrReader(object):
         """
         Initialize the reader.
 
-        @param s: The string to parse.
+        :param s: The string to parse.
         """
         self.filename = "<string>"
         self._lines = []
@@ -390,8 +390,8 @@ class StrReader(object):
         """
         Get the next line in the current block.
 
-        @param prev_indent: The indentation level of the previous block.
-        @return: (line, indent, linenum), where indent is the line's
+        :param prev_indent: The indentation level of the previous block.
+        :return: (line, indent, linenum), where indent is the line's
             indentation level.  If no line is available, (None, -1, -1) is
             returned.
         """
@@ -527,10 +527,10 @@ def _subtitution(value, d):
     """
     Only optimization string Template subtitute is quite expensive operation.
 
-    @param value: String where could be $string for subtitution.
-    @param d: Dictionary from which should be value subtituted to value.
+    :param value: String where could be $string for subtitution.
+    :param d: Dictionary from which should be value subtituted to value.
 
-    @return: Substituted string
+    :return: Substituted string
     """
     if "$" in value:
         start = 0
@@ -785,7 +785,7 @@ class LSet(LOperators):
 
     def apply_to_dict(self, d):
         """
-        @param d: Dictionary for apply value
+        :param d: Dictionary for apply value
         """
         if self.name not in _reserved_keys:
             d[self.name] = _subtitution(self.value, d)
@@ -1091,9 +1091,9 @@ class Lexer(object):
         Read tokens from iterator until get end_tokens or type of token not
         match ltype
 
-        @param lType: List of allowed tokens
-        @param end_tokens: List of tokens for end reading
-        @return: List of readed tokens.
+        :param lType: List of allowed tokens
+        :param end_tokens: List of tokens for end reading
+        :return: List of readed tokens.
         """
         if end_tokens is None:
             end_tokens = [LEndL]
@@ -1111,8 +1111,8 @@ class Lexer(object):
         """
         Read tokens from iterator until get one of end_tokens and strip LWhite
 
-        @param end_tokens:  List of tokens for end reading
-        @return: List of readed tokens.
+        :param end_tokens:  List of tokens for end reading
+        :return: List of readed tokens.
         """
         if end_tokens is None:
             end_tokens = [LEndL]
@@ -1191,7 +1191,7 @@ def apply_predict(lexer, node, pre_dict):
 
 def parse_filter(lexer, tokens):
     """
-    @return: Parsed filter
+    :return: Parsed filter
     """
     or_filters = []
     tokens = iter(tokens + [LEndL()])
@@ -1301,7 +1301,7 @@ class Parser(object):
         """
         Parse a file.
 
-        @param filename: Path of the configuration file.
+        :param filename: Path of the configuration file.
         """
         self.node = self._parse(Lexer(FileReader(filename)), self.node)
         self.filename = filename
@@ -1310,7 +1310,7 @@ class Parser(object):
         """
         Parse a string.
 
-        @param s: String to parse.
+        :param s: String to parse.
         """
         self.node = self._parse(Lexer(StrReader(s)), self.node)
 
@@ -1320,7 +1320,7 @@ class Parser(object):
 
         Equivalent to parse a "only variant" line.
 
-        @param variant: String with the variant name.
+        :param variant: String with the variant name.
         """
         string = "only %s" % variant
         self.only_filters.append(string)
@@ -1332,7 +1332,7 @@ class Parser(object):
 
         Equivalent to parse a "no variant" line.
 
-        @param variant: String with the variant name.
+        :param variant: String with the variant name.
         """
         string = "no %s" % variant
         self.only_filters.append(string)
@@ -1344,7 +1344,7 @@ class Parser(object):
 
         Equivalent to parse a "key = value" line.
 
-        @param variant: String with the variant name.
+        :param variant: String with the variant name.
         """
         string = "%s = %s" % (key, value)
         self.assignments.append(string)
@@ -1700,7 +1700,7 @@ class Parser(object):
         Generate dictionaries from the code parsed so far.  This should
         be called after parsing something.
 
-        @return: A dict generator.
+        :return: A dict generator.
         """
         def process_content(content, failed_filters):
             # 1. Check that the filters in content are OK with the current

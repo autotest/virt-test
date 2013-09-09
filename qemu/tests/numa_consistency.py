@@ -22,9 +22,9 @@ def run_numa_consistency(test, params, env):
        thread is not switch to other node.
     6) Repeat step 3~5 for each vcpu thread of the guest.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def get_vcpu_used_node(numa_node_info, vcpu_thread):
         cpu_used_host = utils_misc.get_thread_cpu(vcpu_thread)[0]

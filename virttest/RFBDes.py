@@ -139,7 +139,7 @@ class Des(object):
         """
         Initialize the instance.
 
-        @param key: Original used in DES.
+        :param key: Original used in DES.
         """
         if len(key) != 8:
             key = (key + '\0' * 8)[:8]
@@ -164,7 +164,7 @@ class Des(object):
         bits in each byte of the password are put in reverse order before
         using it as encryption key.
 
-        @param key: Original used in DES.
+        :param key: Original used in DES.
         """
         newkey = []
         for ki in range(len(key)):
@@ -182,8 +182,8 @@ class Des(object):
         """
         Return sub list of block according to index in table.
 
-        @param table: Index list.
-        @param block: bit list used to get sub list.
+        :param table: Index list.
+        :param block: bit list used to get sub list.
         @
         """
         block_list = []
@@ -218,7 +218,7 @@ class Des(object):
         3. Substitution
         4. Permutation
 
-        @param K: One of sixteen 48-bit subkeys are derived from the main key.
+        :param K: One of sixteen 48-bit subkeys are derived from the main key.
         """
         # Expansion:
         # The 32-bit half-block is expanded to 48 bits using E.
@@ -259,8 +259,8 @@ class Des(object):
         """
         Crypt the block of data through DES bit-manipulation
 
-        @param data: data need to crypt.
-        @param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
+        :param data: data need to crypt.
+        :param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
         """
         # Get new block by using Ip.
         block = self.get_sub_list(self.IP, data)
@@ -295,8 +295,8 @@ class Des(object):
         """
         Crypt the data in blocks, running it through des_crypt()
 
-        @param data: Data to be encrypted/decrypted.
-        @param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
+        :param data: Data to be encrypted/decrypted.
+        :param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
         """
 
         # Split the data into list, crypting each one separately

@@ -22,9 +22,9 @@ def run_numa_stress(test, params, env):
     5) Repeat step 2 ~ 4 several times
 
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     host_numa_node = utils_misc.NumaInfo()
     if len(host_numa_node.online_nodes) < 2:

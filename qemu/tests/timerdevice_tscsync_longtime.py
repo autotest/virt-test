@@ -18,9 +18,9 @@ def run_timerdevice_tscsync_longtime(test, params, env):
     5) Compile the time-warp-test.c.
     6) Run time-warp-test for minimum 4 hours.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     error.context("Check for an appropriate clocksource on host", logging.info)
     host_cmd = "cat /sys/devices/system/clocksource/"

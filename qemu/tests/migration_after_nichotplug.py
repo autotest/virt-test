@@ -21,9 +21,9 @@ def run_migration_after_nichotplug(test, params, env):
     10) Ping guest's new ip from host.
     11) Re-enabling the primary link.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
 
     def set_link(nic_name, up=False):

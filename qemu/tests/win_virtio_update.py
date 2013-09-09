@@ -19,9 +19,9 @@ def run_win_virtio_update(test, params, env):
     2) Install virtio driver
     3) Check dirver info
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def check_cdrom(timeout):
         cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"

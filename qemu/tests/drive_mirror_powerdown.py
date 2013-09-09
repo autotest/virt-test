@@ -43,9 +43,9 @@ def run_drive_mirror_powerdown(test, params, env):
     5). bootup guest with target image
     6). check guest can response correctly
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_images", "image1")
     powerdown_test = DriveMirrorPowerdown(test, params, env, tag)

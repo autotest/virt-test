@@ -27,7 +27,7 @@ def check_dumpxml_iface(vm_name, checked_mac, checked_type=None,
     """
     Check interfaces in vm's XML file to get matched one.
 
-    @return: a tuple with a status and an output
+    :return: a tuple with a status and an output
     """
     iface_features = vm_xml.VMXML.get_iface_by_mac(vm_name, checked_mac)
     if iface_features is not None:

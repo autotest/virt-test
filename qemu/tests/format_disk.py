@@ -18,9 +18,9 @@ def run_format_disk(test, params, env):
     8) Umount the disk (Optional)
     9) Check dmesg output in guest (Optional)
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

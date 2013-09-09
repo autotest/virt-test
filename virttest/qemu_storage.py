@@ -25,9 +25,9 @@ class QemuImg(storage.QemuImg):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         storage.QemuImg.__init__(self, params, root_dir, tag)
         self.image_cmd = utils_misc.get_qemu_img_binary(params)
@@ -40,8 +40,8 @@ class QemuImg(storage.QemuImg):
         """
         Create an image using qemu_img or dd.
 
-        @param params: Dictionary containing the test parameters.
-        @param ignore_errors: Whether to ignore errors on the image creation
+        :param params: Dictionary containing the test parameters.
+        :param ignore_errors: Whether to ignore errors on the image creation
                 cmd.
 
         @note: params should contain:
@@ -59,7 +59,7 @@ class QemuImg(storage.QemuImg):
                preallocated(optional) -- if preallocation when create image,
                allowed values: off, metadata. Default is "off"
 
-        @return: tuple (path to the image created, utils.CmdResult object
+        :return: tuple (path to the image created, utils.CmdResult object
                 containing the result of the creation command).
         """
         if params.get("create_with_dd") == "yes" and self.image_format == "raw":
@@ -140,9 +140,9 @@ class QemuImg(storage.QemuImg):
         """
         Convert image
 
-        @param params: dictionary containing the test parameters
-        @param root_dir: dir for save the convert image
-        @param cache_mode: the cache mode used to write the output disk image,
+        :param params: dictionary containing the test parameters
+        :param root_dir: dir for save the convert image
+        :param cache_mode: the cache mode used to write the output disk image,
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
 
@@ -189,8 +189,8 @@ class QemuImg(storage.QemuImg):
         """
         Rebase image
 
-        @param params: dictionary containing the test parameters
-        @param cache_mode: the cache mode used to write the output disk image,
+        :param params: dictionary containing the test parameters
+        :param cache_mode: the cache mode used to write the output disk image,
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
 
@@ -232,7 +232,7 @@ class QemuImg(storage.QemuImg):
         """
         Commit image to it's base file
 
-        @param cache_mode: the cache mode used to write the output disk image,
+        :param cache_mode: the cache mode used to write the output disk image,
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
         """
@@ -270,7 +270,7 @@ class QemuImg(storage.QemuImg):
         """
         Delete a snapshot image.
 
-        @param blkdebug_cfg: The configure file of blkdebug
+        :param blkdebug_cfg: The configure file of blkdebug
 
         @note: params should contain:
                snapshot_image_name -- the name of snapshot image file
@@ -326,7 +326,7 @@ class QemuImg(storage.QemuImg):
         """
         Verifies whether qemu-img supports command cmd.
 
-        @param cmd: Command string.
+        :param cmd: Command string.
         """
         supports_cmd = True
 
@@ -341,8 +341,8 @@ class QemuImg(storage.QemuImg):
         """
         Compare 2 images using the appropriate tools for each virt backend.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
 
         @note: params should contain:
                image_name -- the name of the image file, without extension
@@ -370,8 +370,8 @@ class QemuImg(storage.QemuImg):
         """
         Check an image using the appropriate tools for each virt backend.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
 
         @note: params should contain:
                image_name -- the name of the image file, without extension
@@ -454,9 +454,9 @@ class Iscsidev(storage.Iscsidev):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         super(Iscsidev, self).__init__(params, root_dir, tag)
 

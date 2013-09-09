@@ -25,9 +25,9 @@ def run_migration_multi_host_ping_pong(test, params, env):
 
     There are some variants of test no stress, cpu_memory, disk, all.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
     base_class = utils_test.MultihostMigration
@@ -63,7 +63,7 @@ def run_migration_multi_host_ping_pong(test, params, env):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             for vm in mig_data.vms:
                 vm.resume()
@@ -108,9 +108,9 @@ def run_migration_multi_host_ping_pong(test, params, env):
             """
             Prepare, start vm and return vm.
 
-            @param vm_name: Class with data necessary for migration.
+            :param vm_name: Class with data necessary for migration.
 
-            @return: Started VM.
+            :return: Started VM.
             """
             new_params = self.params.copy()
 

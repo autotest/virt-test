@@ -20,9 +20,9 @@ def run_chardev_hotplug(test, params, env):
     5) Add a pty chardev, verify that it shows ok for guest os,
        pipe a message to it, verify that message made to host side.
 
-    @param test: qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def cmd_qmp_log(vm, cmd, args):

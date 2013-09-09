@@ -16,9 +16,9 @@ def run_boot_from_device(test, params, env):
     3) Log into the guest if it's up
     4) Shutdown the guest if it's up
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def create_cdroms():

@@ -19,22 +19,22 @@ def run_balloon_check(test, params, env):
     7) Check memory after sub test
     8) Check whether the memory is set up correctly
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def error_report(step, expect_value, monitor_value, guest_value,
                      guest_changed=None, ori_value=None):
         """
         Generate the error report
 
-        @param step: the step of the error happen
-        @param expect_value: memory size assign to the vm
-        @param monitor_value: memory size report from monitor, this value can
+        :param step: the step of the error happen
+        :param expect_value: memory size assign to the vm
+        :param monitor_value: memory size report from monitor, this value can
                               be None
-        @param guest_value: memory size report from guest, this value can be
+        :param guest_value: memory size report from guest, this value can be
                             None
-        @param ori_value: memory size in qemu command line
+        :param ori_value: memory size in qemu command line
         """
         logging.error("Memory size mismatch %s:\n" % step)
         if guest_changed is not None:
@@ -57,7 +57,7 @@ def run_balloon_check(test, params, env):
         Verify the actual memory reported by monitor command info balloon. If
         the operation failed, increase the failure counter.
 
-        @return: Number of failures occurred during operation.
+        :return: Number of failures occurred during operation.
         """
         try:
             output = vm.monitor.info("balloon")
@@ -75,7 +75,7 @@ def run_balloon_check(test, params, env):
         results in Windows and Linux guests. So use different method for
         them.
 
-        @return: Number of failures occurred during operation and the memory
+        :return: Number of failures occurred during operation and the memory
                  size.
         """
         try:
@@ -95,11 +95,11 @@ def run_balloon_check(test, params, env):
         """
         Check memory status according expect values
 
-        @param step: the check point string
-        @param ballooned_mem: ballooned memory in current step
-        @param ori_mmem: original memory size get from monitor
-        @param ori_gmem: original memory size get from guest
-        @param ratio: the ratio that can accept when check results
+        :param step: the check point string
+        :param ballooned_mem: ballooned memory in current step
+        :param ori_mmem: original memory size get from monitor
+        :param ori_gmem: original memory size get from guest
+        :param ratio: the ratio that can accept when check results
         """
         error.context("Check memory status %s" % step, logging.info)
         mmem = check_ballooned_memory()
@@ -118,7 +118,7 @@ def run_balloon_check(test, params, env):
         Baloon memory to new_mem and verifies on both qemu monitor and
         guest OS if change worked.
 
-        @param new_mem: New desired memory.
+        :param new_mem: New desired memory.
         """
         error.context("Change VM memory to %s" % new_mem, logging.info)
         compare_mem = new_mem

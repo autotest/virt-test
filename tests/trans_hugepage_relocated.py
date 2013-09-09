@@ -22,9 +22,9 @@ def run_trans_hugepage_relocated(test, params, env):
     the same in 1 minute. We will check that value every 10 seconds and check
     if it is following the rules.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def nr_hugepage_check(sleep_time, wait_time):
         time_last = 0

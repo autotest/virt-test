@@ -12,9 +12,9 @@ def run_block_resize(test, params, env):
     1) Start guest with data image and check the data image size.
     2) Enlarge(or Decrease) the data image and check it in guest.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def get_block_size(session, block_cmd, block_pattern):
         """

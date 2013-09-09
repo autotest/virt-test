@@ -17,9 +17,9 @@ def run_virtual_nic_send_buffer(test, params, env):
     5. Repeat 1-4, test with the sndbuf=0, and default value in 6.2.
 
     Params:
-        @param test: QEMU test object.
-        @param params: Dictionary with the test parameters.
-        @param env: Dictionary with test environment.
+        :param test: QEMU test object.
+        :param params: Dictionary with the test parameters.
+        :param env: Dictionary with test environment.
     """
     def env_setup(session):
         """

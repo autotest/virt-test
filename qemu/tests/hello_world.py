@@ -22,9 +22,9 @@ def run_hello_world(test, params, env):
 
     This is a sample QEMU test, so people can get used to some of the test APIs.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     # Error contexts are used to give more info on what was
     # going on when one exception happened executing test code.

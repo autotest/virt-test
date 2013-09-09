@@ -25,9 +25,9 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
     6) Kill both VMs.
     7) Print statistic of migration.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
     base_class = utils_test.MultihostMigration
@@ -98,7 +98,7 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             pass
 
@@ -106,7 +106,7 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
             """
             Migrate vms source.
 
-            @param mig_Data: Data for migration.
+            :param mig_Data: Data for migration.
 
             For change way how machine migrates is necessary
             re implement this method.

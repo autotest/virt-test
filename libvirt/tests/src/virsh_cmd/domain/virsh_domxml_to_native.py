@@ -24,8 +24,8 @@ def run_virsh_domxml_to_native(test, params, env):
         """
         Compare converted information with vm's information.
 
-        @param: conv_arg : Converted information.
-        @return: True if converted information has no different from
+        :param conv_arg : Converted information.
+        :return: True if converted information has no different from
                  vm's information.
         """
         pid = vm.get_pid()

@@ -20,7 +20,7 @@ def wait_timeout(timeout=10):
     """
     time.sleep(timeout) + logging.debug(timeout)
 
-    @param timeout=10
+    :param timeout=10
     """
     logging.debug("Waiting (timeout=%ss)", timeout)
     time.sleep(timeout)
@@ -29,10 +29,10 @@ def wait_timeout(timeout=10):
 def verify_established(client_vm, host, port, rv_binary):
     """
     Parses netstat output for established connection on host:port
-    @param client_session - vm.wait_for_login()
-    @param host - host ip addr
-    @param port - port for client to connect
-    @param rv_binary - remote-viewer binary
+    :param client_session - vm.wait_for_login()
+    :param host - host ip addr
+    :param port - port for client to connect
+    :param rv_binary - remote-viewer binary
     """
     rv_binary = rv_binary.split(os.path.sep)[-1]
 
@@ -59,8 +59,8 @@ def start_vdagent(guest_session, test_timeout):
     """
     Sending commands to start the spice-vdagentd service
 
-    @param guest_session: ssh session of the VM
-    @param test_timeout: timeout time for the cmds
+    :param guest_session: ssh session of the VM
+    :param test_timeout: timeout time for the cmds
     """
     cmd = "service spice-vdagentd start"
     try:
@@ -81,8 +81,8 @@ def restart_vdagent(guest_session, test_timeout):
     """
     Sending commands to restart the spice-vdagentd service
 
-    @param guest_session: ssh session of the VM
-    @param test_timeout: timeout time for the cmds
+    :param guest_session: ssh session of the VM
+    :param test_timeout: timeout time for the cmds
     """
     cmd = "service spice-vdagentd restart"
     try:
@@ -102,8 +102,8 @@ def stop_vdagent(guest_session, test_timeout):
     """
     Sending commands to stop the spice-vdagentd service
 
-    @param guest_session: ssh session of the VM
-    @param test_timeout: timeout time for the cmds
+    :param guest_session: ssh session of the VM
+    :param test_timeout: timeout time for the cmds
     """
     cmd = "service spice-vdagentd stop"
     try:
@@ -126,8 +126,8 @@ def verify_vdagent(guest_session, test_timeout):
     """
     Verifying vdagent is installed on a VM
 
-    @param guest_session: ssh session of the VM
-    @param test_timeout: timeout time for the cmds
+    :param guest_session: ssh session of the VM
+    :param test_timeout: timeout time for the cmds
     """
     cmd = "rpm -qa | grep spice-vdagent"
 
@@ -142,8 +142,8 @@ def verify_vdagent(guest_session, test_timeout):
 def get_vdagent_status(vm_session, test_timeout):
     """
     Return the status of vdagent
-    @param vm_session:  ssh session of the VM
-    @param test_timeout: timeout time for the cmd
+    :param vm_session:  ssh session of the VM
+    :param test_timeout: timeout time for the cmd
     """
     output = ""
     cmd = "service spice-vdagentd status"
@@ -168,8 +168,8 @@ def verify_virtio(guest_session, test_timeout):
     """
     Verify Virtio linux driver is properly loaded.
 
-    @param guest_session: ssh session of the VM
-    @param test_timeout: timeout time for the cmds
+    :param guest_session: ssh session of the VM
+    :param test_timeout: timeout time for the cmds
     """
     #cmd = "lsmod | grep virtio_console"
     cmd = "ls /dev/virtio-ports/"

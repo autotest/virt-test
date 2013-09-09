@@ -18,9 +18,9 @@ def make_sandboxes(params, env, extra_ns=None):
     """
     Return list of instantiated lvsb_testsandboxes classes from params
 
-    @param: params: an undiluted Params instance
-    @param: env: the current env instance
-    @param: extra_ns: An extra, optional namespace to search for classes
+    :param params: an undiluted Params instance
+    :param env: the current env instance
+    :param extra_ns: An extra, optional namespace to search for classes
     """
     namespace = globals()  # stuff in this module
     # For specialized sandbox types, allow their class to be defined

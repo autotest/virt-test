@@ -25,9 +25,9 @@ def run_rv_vmshutdown(test, params, env):
     (2)Verify the spice connection to the guest is no longer established
     (3)Verify the remote-viewer process is not running
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     # Get the required variables

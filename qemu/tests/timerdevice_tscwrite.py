@@ -13,9 +13,9 @@ def run_timerdevice_tscwrite(test, params, env):
     3) Download and compile the newest msr-tools.
     4) Execute cmd in guest.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     error.context("Check for an appropriate clocksource on host", logging.info)
     host_cmd = "cat /sys/devices/system/clocksource/"

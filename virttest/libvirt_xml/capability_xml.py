@@ -101,8 +101,8 @@ class CapabilityXML(base.LibvirtXMLBase):
         """
         Get assigned feature name
 
-        @param: num: Assigned feature number
-        @return: Assigned feature name
+        :param num: Assigned feature number
+        :return: Assigned feature name
         """
         count = len(self.feature_list)
         if num >= count:
@@ -126,7 +126,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         """
         Remove a assigned feature from xml
 
-        @param: num: Assigned feature number
+        :param num: Assigned feature number
         """
         xmltreefile = self.dict_get('xml')
         count = len(self.feature_list)
@@ -141,8 +141,8 @@ class CapabilityXML(base.LibvirtXMLBase):
         """
         Check feature name valid or not.
 
-        @param: name: The checked feature name
-        @return: True if check pass
+        :param name: The checked feature name
+        :return: True if check pass
         """
         sys_feature = []
         cpu_xml_file = open('/proc/cpuinfo', 'r')
@@ -158,8 +158,8 @@ class CapabilityXML(base.LibvirtXMLBase):
         """
         Set a assigned feature value to xml
 
-        @param: num: Assigned feature number
-        @param: value: The feature name modified to
+        :param num: Assigned feature number
+        :param value: The feature name modified to
         """
         count = len(self.feature_list)
         if num >= count:
@@ -172,7 +172,7 @@ class CapabilityXML(base.LibvirtXMLBase):
         """
         Add a feature Element to xml
 
-        @param: value: The added feature name
+        :param value: The added feature name
         """
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/host/cpu')

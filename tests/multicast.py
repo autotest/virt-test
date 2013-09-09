@@ -16,9 +16,9 @@ def run_multicast(test, params, env):
     4) Flood ping test with different size of packets.
     5) Final ping test and check if lose packet.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

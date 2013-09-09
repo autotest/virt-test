@@ -38,7 +38,7 @@ def get_status():
     """
     Get the status of selinux.
 
-    @return: string of status in STATUS_LIST.
+    :return: string of status in STATUS_LIST.
     @raise SeCmdError: if execute 'getenforce' failed.
     @raise SelinuxError: if 'getenforce' command exit 0,
                     but the output is not expected.
@@ -62,7 +62,7 @@ def set_status(status):
     """
     Set status of selinux.
 
-    @param status: status want to set selinux.
+    :param status: status want to set selinux.
     @raise SelinuxError: status is not supported.
     @raise SelinuxError: need to reboot host.
     @raise SeCmdError: execute setenforce failed.

@@ -25,7 +25,7 @@ class Machine(object):
 
     def is_virtual(self):
         """
-        @return True when Machine is virtual.
+        :return: True when Machine is virtual.
         """
         return not self.vm is None
 
@@ -54,8 +54,8 @@ class Machine(object):
         """
         Get IPv6 address with link range.
 
-        @param ifname: String or int. Int could be used only for virt Machine.
-        @return: IPv6 link address.
+        :param ifname: String or int. Int could be used only for virt Machine.
+        :return: IPv6 link address.
         """
         if self.is_virtual() and type(ifname) is int:
             ifname = self.vm.virtnet[ifname].g_nic_name
@@ -88,8 +88,8 @@ class Machine(object):
         """
         Add vlan link for interface
 
-        @param iface: Interface on which should be added vlan.
-        @param vlan_id: Id of vlan.
+        :param iface: Interface on which should be added vlan.
+        :param vlan_id: Id of vlan.
         """
         self.cmd("ip link add link %s name %s-vl%s type vlan id %s" %
                 (iface, iface, vlan_id, vlan_id))
@@ -98,8 +98,8 @@ class Machine(object):
         """
         Del vlan link for interface
 
-        @param iface: Interface from which should be deleted vlan.
-        @param vlan_id: Id of vlan.
+        :param iface: Interface from which should be deleted vlan.
+        :param vlan_id: Id of vlan.
         """
         self.cmd("ip link del %s" % (iface))
 
@@ -119,7 +119,7 @@ class Machine(object):
         """
         Return vlans interface name.
 
-        @return: dict of {"ifname": [(vlanid, ifname),(...)],...}
+        :return: dict of {"ifname": [(vlanid, ifname),(...)],...}
         """
         ret = dict()
         vlans = self.cmd("cat /proc/net/vlan/config")
@@ -153,8 +153,8 @@ class Machine(object):
         """
         Prepare dest directory. Create if directory not exist.
 
-        @param path: Path to directory
-        @param cleanup: It true clears the contents of directory.
+        :param path: Path to directory
+        :param cleanup: It true clears the contents of directory.
         """
         if self.cmd_state("test -x %s" % path):
             self.cmd("mkdir -p %s" % path)
@@ -172,8 +172,8 @@ class Machine(object):
         """
         Compile app on machine in src dir.
 
-        @param path: Path where shoule be program compiled.
-        @param dst_dir: Installation path.
+        :param path: Path where shoule be program compiled.
+        :param dst_dir: Installation path.
         """
         logging.debug("Install %s to %s.", package_name, self.src)
         self.prepare_directory(self.src)

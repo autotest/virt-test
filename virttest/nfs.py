@@ -14,7 +14,7 @@ def nfs_exported():
     """
     Get the list for nfs file system already exported
 
-    :return: a list of nfs that is already exported in system
+    :return:: a list of nfs that is already exported in system
     :rtype: a lit of nfs file system exported
     """
     exportfs = utils.system_output("exportfs -v")
@@ -57,7 +57,7 @@ class Exportfs(object):
         """
         Check if the directory is already exported.
 
-        :return: If the entry is exported
+        :return:: If the entry is exported
         :rtype: Boolean
         """
         ori_exported = self.ori_exported or nfs_exported()
@@ -70,7 +70,7 @@ class Exportfs(object):
         Check if the entry is already exported but the options are not
         the same as we required.
 
-        :return: Need re export the entry or not
+        :return:: Need re export the entry or not
         :rtype: Boolean
         """
         ori_exported = self.ori_exported or nfs_exported()
@@ -109,7 +109,7 @@ class Exportfs(object):
         """
         Export one directory if it is not in exported list.
 
-        :return: Export nfs file system succeed or not
+        :return:: Export nfs file system succeed or not
         "rtype": Boolean
         """
         if self.is_exported():
@@ -165,7 +165,7 @@ class Nfs(object):
         """
         Check the NFS is mouunted or not.
 
-        :return: If the src is mounted as expect
+        :return:: If the src is mounted as expect
         :rtype: Boolean
         """
         return utils_misc.is_mounted(self.mount_src, self.mount_dir, "nfs")

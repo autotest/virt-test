@@ -30,7 +30,7 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         Initialize instance with connection to virsh
 
-        @param: virsh_instance: virsh module or instance to use
+        :param virsh_instance: virsh module or instance to use
         """
         self.dict_set('xmltreefile', None)
         self.dict_set('validates', None)

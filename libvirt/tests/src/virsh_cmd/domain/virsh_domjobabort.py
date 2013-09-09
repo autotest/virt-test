@@ -38,9 +38,9 @@ def run_virsh_domjobabort(test, params, env):
         """
         Execute background virsh command, return subprocess w/o waiting for exit()
 
-        @param: cmd : virsh command.
-        @param: guest_name : VM's name
-        @param: file_source : virsh command's file option.
+        :param cmd : virsh command.
+        :param guest_name : VM's name
+        :param file_source : virsh command's file option.
         """
         if action == "managedsave":
             file = ""

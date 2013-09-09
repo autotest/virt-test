@@ -22,8 +22,8 @@ def run_virsh_change_media(test, params, env):
         """
         Prepare ISO image for test
 
-        @param: old_iso: sourse file for insert
-        @param: new_iso: sourse file for update
+        :param old_iso: sourse file for insert
+        :param new_iso: sourse file for update
         """
         error.context("Preparing ISO images")
         utils.run("dd if=/dev/urandom of=%s/old bs=10M count=1" % cdrom_dir)
@@ -36,8 +36,8 @@ def run_virsh_change_media(test, params, env):
         """
         Check guest cdrom files
 
-        @param: session: guest session
-        @param: target_file: the expected files
+        :param session: guest session
+        :param target_file: the expected files
         @action: action: test case action
         """
         if action != "--eject ":
@@ -55,8 +55,8 @@ def run_virsh_change_media(test, params, env):
         """
         Add cdrom device for test vm
 
-        @param: vm_name: guest name
-        @param: init_cdrom: source file
+        :param vm_name: guest name
+        :param init_cdrom: source file
         """
         if vm.is_alive():
             virsh.destroy(vm_name)
@@ -69,10 +69,10 @@ def run_virsh_change_media(test, params, env):
         """
         Update cdrom iso file for test case
 
-        @param: vm_name: guest name
-        @param: init_iso: source file
-        @param: options: update-device option
-        @param: start_vm: guest start flag
+        :param vm_name: guest name
+        :param init_iso: source file
+        :param options: update-device option
+        :param start_vm: guest start flag
         """
         snippet = """
 <disk type='file' device='cdrom'>

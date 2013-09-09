@@ -160,9 +160,9 @@ def make_installer(fullname, params, test=None):
     Param priority evaluation order is 'install_mode', then 'mode'. For virt
     type, 'vm_type' is consulted.
 
-    @param fullname: the full name of instance, eg: git_repo_foo
-    @param params: dictionary with parameters generated from cartersian config
-    @param test: the test instance
+    :param fullname: the full name of instance, eg: git_repo_foo
+    :param params: dictionary with parameters generated from cartersian config
+    :param test: the test instance
     '''
     virt = params.get("vm_type", None)
 

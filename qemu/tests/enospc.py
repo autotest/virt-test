@@ -117,9 +117,9 @@ def run_enospc(test, params, env):
     5) Continue paused guest
     6) Repeat step 3~5 several times
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     error.context("Create a virtual disk on lvm")
     enospc_config = EnospcConfig(test, params)

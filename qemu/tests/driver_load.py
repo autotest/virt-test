@@ -15,9 +15,9 @@ def run_driver_load(test, params, env):
     4) Check if the device still works properly(Optinal)
     5) Repeat step 3-4 several times
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     error.context("Try to log into guest.", logging.info)

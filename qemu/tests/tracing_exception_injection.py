@@ -12,9 +12,9 @@ def run_tracing_exception_injection(test, params, env):
     2) In host run kvm_stat, it should work.
     3) In host check host allow tracing of exception injection in KVM.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     error.context("Get the main VM", logging.info)
     vm = env.get_vm(params["main_vm"])

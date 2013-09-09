@@ -44,8 +44,8 @@ def log_last_traceback(msg=None, log=logging.error):
     @warning: This function is being moved into autotest and your code should
               use autotest.client.shared.base_utils function instead.
     Writes last traceback into specified log.
-    @param msg: Override the default message. ["Original traceback"]
-    @param log: Where to log the traceback [logging.error]
+    :param msg: Override the default message. ["Original traceback"]
+    :param log: Where to log the traceback [logging.error]
     """
     if not log:
         log = logging.error
@@ -78,8 +78,8 @@ def unique(llist):
     """
     Return a list of the elements in list, but without duplicates.
 
-    @param list: List with values.
-    @return: List with non duplicate elements.
+    :param list: List with values.
+    :return: List with non duplicate elements.
     """
     n = len(llist)
     if n == 0:
@@ -98,7 +98,7 @@ def find_command(cmd):
     """
     Try to find a command in the PATH, paranoid version.
 
-    @param cmd: Command to be found.
+    :param cmd: Command to be found.
     @raise: ValueError in case the command was not found.
     """
     common_bin_paths = ["/usr/libexec", "/usr/local/sbin", "/usr/local/bin",
@@ -121,7 +121,7 @@ def pid_exists(pid):
     """
     Return True if a given PID exists.
 
-    @param pid: Process ID number.
+    :param pid: Process ID number.
     """
     try:
         os.kill(pid, 0)
@@ -134,7 +134,7 @@ def safe_kill(pid, signal):
     """
     Attempt to send a signal to a given process that may or may not exist.
 
-    @param signal: Signal number.
+    :param signal: Signal number.
     """
     try:
         os.kill(pid, signal)
@@ -148,8 +148,8 @@ def kill_process_tree(pid, sig=signal.SIGKILL):
 
     If the process does not exist -- return.
 
-    @param pid: The pid of the process to signal.
-    @param sig: The signal to send to the processes.
+    :param pid: The pid of the process to signal.
+    :param sig: The signal to send to the processes.
     """
     if not safe_kill(pid, signal.SIGSTOP):
         return
@@ -166,7 +166,7 @@ def is_port_free(port, address):
     """
     Return True if the given port is available for use.
 
-    @param port: Port number
+    :param port: Port number
     """
     try:
         s = socket.socket()
@@ -190,8 +190,8 @@ def find_free_port(start_port, end_port, address="localhost"):
     """
     Return a host free port in the range [start_port, end_port].
 
-    @param start_port: First port that will be checked.
-    @param end_port: Port immediately after the last one that will be checked.
+    :param start_port: First port that will be checked.
+    :param end_port: Port immediately after the last one that will be checked.
     """
     for i in range(start_port, end_port):
         if is_port_free(i, address):
@@ -204,8 +204,8 @@ def find_free_ports(start_port, end_port, count, address="localhost"):
     Return count of host free ports in the range [start_port, end_port].
 
     @count: Initial number of ports known to be free in the range.
-    @param start_port: First port that will be checked.
-    @param end_port: Port immediately after the last one that will be checked.
+    :param start_port: First port that will be checked.
+    :param end_port: Port immediately after the last one that will be checked.
     """
     ports = []
     i = start_port
@@ -227,9 +227,9 @@ def log_line(filename, line):
     """
     Write a line to a file.  '\n' is appended to the line.
 
-    @param filename: Path of file to write to, either absolute or relative to
+    :param filename: Path of file to write to, either absolute or relative to
             the dir set by set_log_file_dir().
-    @param line: Line to write.
+    :param line: Line to write.
     """
     global _open_log_files, _log_file_dir
 
@@ -252,7 +252,7 @@ def set_log_file_dir(directory):
     """
     Set the base directory for log files created by log_line().
 
-    @param dir: Directory for log files.
+    :param dir: Directory for log files.
     """
     global _log_file_dir
     _log_file_dir = directory
@@ -279,8 +279,8 @@ def get_path(base_path, user_path):
     If user_path is relative, append it to base_path.
     If user_path is absolute, return it as is.
 
-    @param base_path: The base path of relative user specified paths.
-    @param user_path: The user specified path.
+    :param base_path: The base path of relative user specified paths.
+    :param user_path: The user specified path.
     """
     if os.path.isabs(user_path):
         return user_path
@@ -293,11 +293,11 @@ def generate_random_string(length, ignore_str=string.punctuation,
     """
     Return a random string using alphanumeric characters.
 
-    @param length: Length of the string that will be generated.
-    @param ignore_str: Characters that will not include in generated string.
-    @param convert_str: Characters that need to be escaped (prepend "\\").
+    :param length: Length of the string that will be generated.
+    :param ignore_str: Characters that will not include in generated string.
+    :param convert_str: Characters that need to be escaped (prepend "\\").
 
-    @return: The generated random string.
+    :return: The generated random string.
     """
     r = random.SystemRandom()
     sr = ""
@@ -345,7 +345,7 @@ def format_str_for_message(sr):
     If str consists of one line, prefix it with a space.
     If str consists of multiple lines, prefix it with a newline.
 
-    @param str: string that will be formatted.
+    :param str: string that will be formatted.
     """
     lines = str.splitlines()
     num_lines = len(lines)
@@ -365,10 +365,10 @@ def wait_for(func, timeout, first=0.0, step=1.0, text=None):
 
     @brief: Wait until func() evaluates to True.
 
-    @param timeout: Timeout in seconds
-    @param first: Time to sleep before first attempt
-    @param steps: Time to sleep between attempts in seconds
-    @param text: Text to print while waiting, for debug purposes
+    :param timeout: Timeout in seconds
+    :param first: Time to sleep before first attempt
+    :param steps: Time to sleep between attempts in seconds
+    :param text: Text to print while waiting, for debug purposes
     """
     start_time = time.time()
     end_time = time.time() + timeout
@@ -394,8 +394,8 @@ def get_hash_from_file(hash_path, dvd_basename):
     (Hash files are usually named MD5SUM or SHA1SUM and are located inside the
     download directories of the DVDs)
 
-    @param hash_path: Local path to a hash file.
-    @param cd_image: Basename of a CD image
+    :param hash_path: Local path to a hash file.
+    :param cd_image: Basename of a CD image
     """
     hash_file = open(hash_path, 'r')
     for line in hash_file.readlines():
@@ -408,10 +408,10 @@ def run_tests(parser, job):
     Runs the sequence of KVM tests based on the list of dictionaries
     generated by the configuration system, handling dependencies.
 
-    @param parser: Config parser object.
-    @param job: Autotest job object.
+    :param parser: Config parser object.
+    :param job: Autotest job object.
 
-    @return: True, if all tests ran passed, False if any of them failed.
+    :return: True, if all tests ran passed, False if any of them failed.
     """
     last_index = -1
     for i, d in enumerate(parser.get_dicts()):
@@ -515,7 +515,7 @@ def get_full_pci_id(pci_id):
     """
     Get full PCI ID of pci_id.
 
-    @param pci_id: PCI ID of a device.
+    :param pci_id: PCI ID of a device.
     """
     cmd = "lspci -D | awk '/%s/ {print $1}'" % pci_id
     status, full_id = commands.getstatusoutput(cmd)
@@ -528,7 +528,7 @@ def get_vendor_from_pci_id(pci_id):
     """
     Check out the device vendor ID according to pci_id.
 
-    @param pci_id: PCI ID of a device.
+    :param pci_id: PCI ID of a device.
     """
     cmd = "lspci -n | awk '/%s/ {print $3}'" % pci_id
     return re.sub(":", " ", commands.getoutput(cmd))
@@ -604,8 +604,8 @@ def kvm_flags_to_stresstests(flags):
     """
     Covert [cpu flags] to [tests]
 
-    @param cpuflags: list of cpuflags
-    @return: Return tests like string.
+    :param cpuflags: list of cpuflags
+    :return: Return tests like string.
     """
     tests = set([])
     for f in flags:
@@ -783,12 +783,12 @@ def parallel(targets):
     """
     Run multiple functions in parallel.
 
-    @param targets: A sequence of tuples or functions.  If it's a sequence of
+    :param targets: A sequence of tuples or functions.  If it's a sequence of
             tuples, each tuple will be interpreted as (target, args, kwargs) or
             (target, args) or (target,) depending on its length.  If it's a
             sequence of functions, the functions will be called without
             arguments.
-    @return: A list of the values returned by the functions called.
+    :return: A list of the values returned by the functions called.
     """
     threads = []
     for target in targets:
@@ -872,7 +872,7 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :type fstype: string
     :param perm: mount permission
     :type perm: string
-    :return: if the src is mounted as expect
+    :return:: if the src is mounted as expect
     :rtype: Boolean
     """
     mount_point = os.path.realpath(mount_point)
@@ -891,8 +891,8 @@ def install_host_kernel(job, params):
     """
     Install a host kernel, given the appropriate params.
 
-    @param job: Job object.
-    @param params: Dict with host kernel install params.
+    :param job: Job object.
+    :param params: Dict with host kernel install params.
     """
     install_type = params.get('host_kernel_install_type')
 
@@ -981,9 +981,9 @@ def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
     """
     Install stress to vm.
 
-    @param vm: virtual machine.
-    @param dst_dir: Installation path.
-    @param extra_flags: Extraflags for gcc compiler.
+    :param vm: virtual machine.
+    :param dst_dir: Installation path.
+    :param extra_flags: Extraflags for gcc compiler.
     """
     if not extra_flags:
         extra_flags = ""
@@ -1006,9 +1006,9 @@ def install_disktest_on_vm(test, vm, src_dir, dst_dir):
     """
     Install stress to vm.
 
-    @param vm: virtual machine.
-    @param src_dir: Source path.
-    @param dst_dir: Instaltation path.
+    :param vm: virtual machine.
+    :param src_dir: Source path.
+    :param dst_dir: Instaltation path.
     """
     disktest_src = src_dir
     disktest_dst = os.path.join(dst_dir, "disktest")
@@ -1028,8 +1028,8 @@ def qemu_has_option(option, qemu_path="/usr/bin/qemu-kvm"):
     """
     Helper function for command line option wrappers
 
-    @param option: Option need check.
-    @param qemu_path: Path for qemu-kvm.
+    :param option: Option need check.
+    :param qemu_path: Path for qemu-kvm.
     """
     hlp = commands.getoutput("%s -help" % qemu_path)
     return bool(re.search(r"^-%s(\s|$)" % option, hlp, re.MULTILINE))
@@ -1039,7 +1039,7 @@ def bitlist_to_string(data):
     """
     Transform from bit list to ASCII string.
 
-    @param data: Bit list to be transformed
+    :param data: Bit list to be transformed
     """
     result = []
     pos = 0
@@ -1057,7 +1057,7 @@ def string_to_bitlist(data):
     """
     Transform from ASCII string to bit list.
 
-    @param data: String to be transformed
+    :param data: String to be transformed
     """
     data = [ord(c) for c in data]
     result = []
@@ -1075,8 +1075,8 @@ def string_to_bitlist(data):
 def get_module_params(sys_path, module_name):
     """
     Get the kvm module params
-    @param sys_path: sysfs path for modules info
-    @param module_name: module to check
+    :param sys_path: sysfs path for modules info
+    :param module_name: module to check
     """
     dir_params = os.path.join(sys_path, "module", module_name, "parameters")
     module_params = {}
@@ -1096,13 +1096,13 @@ def create_x509_dir(path, cacert_subj, server_subj, passphrase,
     Creates directory with freshly generated:
     ca-cart.pem, ca-key.pem, server-cert.pem, server-key.pem,
 
-    @param path: defines path to directory which will be created
-    @param cacert_subj: ca-cert.pem subject
-    @param server_key.csr subject
-    @param passphrase - passphrase to ca-key.pem
-    @param secure = False - defines if the server-key.pem will use a passphrase
-    @param bits = 1024: bit length of keys
-    @param days = 1095: cert expiration
+    :param path: defines path to directory which will be created
+    :param cacert_subj: ca-cert.pem subject
+    :param server_key.csr subject
+    :param passphrase - passphrase to ca-key.pem
+    :param secure = False - defines if the server-key.pem will use a passphrase
+    :param bits = 1024: bit length of keys
+    :param days = 1095: cert expiration
 
     @raise ValueError: openssl not found or rc != 0
     @raise OSError: if os.makedirs() fails
@@ -1144,7 +1144,7 @@ def convert_ipv4_to_ipv6(ipv4):
     """
     Translates a passed in string of an ipv4 address to an ipv6 address.
 
-    @param ipv4: a string of an ipv4 address
+    :param ipv4: a string of an ipv4 address
     """
 
     converted_ip = "::ffff:"
@@ -1181,7 +1181,7 @@ def get_thread_cpu(thread):
 
     :param thread: thread checked
     :type thread: string
-    :return: A list include all cpus the thread used
+    :return:: A list include all cpus the thread used
     :rtype: list
     """
     cmd = "ps -o cpuid,lwp -eL | grep -w %s$" % thread
@@ -1197,7 +1197,7 @@ def get_pid_cpu(pid):
 
     :param pid: process id
     :type thread: string
-    :return: A list include all cpus the process used
+    :return:: A list include all cpus the process used
     :rtype: list
     """
     cmd = "ps -o cpuid -L -p %s" % pid
@@ -1211,7 +1211,7 @@ def get_node_count():
     """
     Get the number of nodes of current host.
 
-    :return: the number of nodes
+    :return:: the number of nodes
     :rtype: string
     """
     cmd = utils.run("numactl --hardware")
@@ -1225,7 +1225,7 @@ def cpu_str_to_list(origin_str):
 
     :param origin_str: the cpu info string read from system
     :type origin_str: string
-    :return: A list of the cpu ids
+    :return:: A list of the cpu ids
     :rtype: list
     """
     if isinstance(origin_str, str):
@@ -1269,7 +1269,7 @@ class NumaInfo(object):
         """
         Get all node ids in host.
 
-        :return: All node ids in host
+        :return:: All node ids in host
         :rtype: list
         """
         all_nodes = get_path(self.numa_sys_path, "possible")
@@ -1283,7 +1283,7 @@ class NumaInfo(object):
         """
         Get node ids online in host
 
-        :return: The ids of node which is online
+        :return:: The ids of node which is online
         :rtype: list
         """
         online_nodes = get_path(self.numa_sys_path, "online")
@@ -1299,7 +1299,7 @@ class NumaInfo(object):
 
         :param node_id: Node that you want to check
         :type node_id: string
-        :return: A list in of distance for the node in positive-sequence
+        :return:: A list in of distance for the node in positive-sequence
         :rtype: list
         """
         cmd = utils.run("numactl --hardware")
@@ -1330,7 +1330,7 @@ class NumaInfo(object):
         :type node_id: string
         :param key: The value you want to check such as MemTotal etc.
         :type key: string
-        :return: The value in KB
+        :return:: The value in KB
         :rtype: string
         """
         memory_path = os.path.join(self.numa_sys_path,
@@ -1364,7 +1364,7 @@ class NumaNode(object):
         """
         Get cpus of a specific node
 
-        @param i: Index of the CPU inside the node.
+        :param i: Index of the CPU inside the node.
         """
         cmd = utils.run("numactl --hardware")
         cpus = re.findall("node %s cpus: (.*)" % i, cmd.stdout)
@@ -1409,7 +1409,7 @@ class NumaNode(object):
         """
         Release pin of one node.
 
-        @param i: Index of the node.
+        :param i: Index of the node.
         """
         self.dict[i] = "free"
 
@@ -1428,7 +1428,7 @@ class NumaNode(object):
         """
         Pin one process to a single cpu.
 
-        @param process: Process ID.
+        :param process: Process ID.
         """
         self._flush_pin()
         error.context("Pinning process %s to the CPU" % process)
@@ -1526,8 +1526,8 @@ def extract_qemu_cpu_models(qemu_cpu_help_text):
     """
     Get all cpu models from qemu -cpu help text.
 
-    @param qemu_cpu_help_text: text produced by <qemu> -cpu '?'
-    @return: list of cpu models
+    :param qemu_cpu_help_text: text produced by <qemu> -cpu '?'
+    :return: list of cpu models
     """
     def check_model_list(pattern):
         cpu_re = re.compile(pattern)
@@ -1741,8 +1741,8 @@ def get_pid_from_file(program_name, pid_files_dir=None):
     """
     Reads the pid from <program_name>.pid in the autotest directory.
 
-    @param program_name the name of the program
-    @return the pid if the file exists, None otherwise.
+    :param program_name the name of the program
+    :return: the pid if the file exists, None otherwise.
     """
     pidfile_path = get_pid_path(program_name, pid_files_dir)
     if not os.path.exists(pidfile_path):
@@ -1767,8 +1767,8 @@ def program_is_alive(program_name, pid_files_dir=None):
     """
     Checks if the process is alive and not in Zombie state.
 
-    @param program_name the name of the program
-    @return True if still alive, False otherwise
+    :param program_name the name of the program
+    :return: True if still alive, False otherwise
     """
     pid = get_pid_from_file(program_name, pid_files_dir)
     if pid is None:
@@ -1780,8 +1780,8 @@ def signal_program(program_name, sig=signal.SIGTERM, pid_files_dir=None):
     """
     Sends a signal to the process listed in <program_name>.pid
 
-    @param program_name the name of the program
-    @param sig signal to send
+    :param program_name the name of the program
+    :param sig signal to send
     """
     pid = get_pid_from_file(program_name, pid_files_dir)
     if pid:
@@ -1793,9 +1793,9 @@ def normalize_data_size(value_str, order_magnitude="M", factor="1024"):
     Normalize a data size in one order of magnitude to another (MB to GB,
     for example).
 
-    @param value_str: a string include the data and unit
-    @param order_magnitude: the magnitude order of result
-    @param factor: the factor between two relative order of magnitude.
+    :param value_str: a string include the data and unit
+    :param order_magnitude: the magnitude order of result
+    :param factor: the factor between two relative order of magnitude.
                    Normally could be 1024 or 1000
     """
     def _get_magnitude_index(magnitude_list, magnitude_value):
@@ -1864,7 +1864,7 @@ def get_winutils_vol(session, label="WIN_UTILS"):
     @parm session: session Object
     @parm label:volum ID of WIN_UTILS.iso
 
-    @return: volum ID
+    :return: volum ID
     """
     cmd = "wmic logicaldisk where (VolumeName='%s') get DeviceID" % label
     output = session.cmd(cmd, timeout=120)
@@ -1878,11 +1878,11 @@ def valued_option_dict(options, split_pattern, start_count=0, dict_split=None):
     """
     Divide the valued options into key and value
 
-    @param options: the valued options get from cfg
-    @param split_pattern: patten used to split options
-    @param dict_split: patten used to split sub options and insert into dict
-    @param start_count: the start_count to insert option_dict
-    @return: dict include option and its value
+    :param options: the valued options get from cfg
+    :param split_pattern: patten used to split options
+    :param dict_split: patten used to split sub options and insert into dict
+    :param start_count: the start_count to insert option_dict
+    :return: dict include option and its value
     """
     option_dict = {}
     if options.strip() is not None:

@@ -62,10 +62,10 @@ class BaseInstaller(object):
         '''
         Instantiates a new base installer
 
-        @param mode: installer mode, such as git_repo, local_src, etc
-        @param name: installer short name, foo for git_repo_foo
-        @param test: test
-        @param params: params
+        :param mode: installer mode, such as git_repo, local_src, etc
+        :param name: installer short name, foo for git_repo_foo
+        :param test: test
+        :param params: params
         '''
         self.mode = mode
         self.name = name
@@ -338,7 +338,7 @@ class BaseInstaller(object):
         looked for in the system default module paths.
 
         @type module_list: list
-        @param module_list: list of kernel modules names to load
+        :param module_list: list of kernel modules names to load
         '''
         if module_list is None:
             module_list = self.module_list
@@ -432,10 +432,10 @@ class NoopInstaller(BaseInstaller):
         '''
         If no previous install test ran, try to figure out modules to load.
 
-        @param mode (str): Install mode (yum, git, etc).
-        @param name (str): Installer name.
-        @param test: Virt test object.
-        @param params: Dict with test params.
+        :param mode (str): Install mode (yum, git, etc).
+        :param name (str): Installer name.
+        :param test: Virt test object.
+        :param params: Dict with test params.
         '''
         if params['vm_type'] == 'qemu':
             params['module_list'] = arch.get_kvm_module_list()
@@ -526,7 +526,7 @@ class KojiInstaller(BaseInstaller):
         '''
         Include debuginfo RPMs on koji_pkgs
 
-        @returns: None
+        :return:s: None
         '''
         logging.debug("Koji package list to be updated with debuginfo pkgs")
 

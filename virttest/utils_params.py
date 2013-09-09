@@ -25,7 +25,7 @@ class Params(UserDict.IterableUserDict):
         """
         Return the names of objects defined using a given key.
 
-        @param key: The name of the key whose value lists the objects
+        :param key: The name of the key whose value lists the objects
                 (e.g. 'nics').
         """
         return self.get(key, "").split()
@@ -40,7 +40,7 @@ class Params(UserDict.IterableUserDict):
         The values of keys with the suffix overwrite the values of their
         suffixless versions.
 
-        @param obj_name: The name of the object (objects are listed by the
+        :param obj_name: The name of the object (objects are listed by the
                 objects() method).
         """
         suffix = "_" + obj_name

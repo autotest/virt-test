@@ -41,8 +41,8 @@ def preprocess_image(test, params, image_name):
     """
     Preprocess a single QEMU image according to the instructions in params.
 
-    @param test: Autotest test object.
-    @param params: A dict containing image preprocessing parameters.
+    :param test: Autotest test object.
+    :param params: A dict containing image preprocessing parameters.
     @note: Currently this function just creates an image if requested.
     """
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
@@ -71,10 +71,10 @@ def preprocess_vm(test, params, env, name):
     Preprocess a single VM object according to the instructions in params.
     Start the VM if requested and get a screendump.
 
-    @param test: An Autotest test object.
-    @param params: A dict containing VM preprocessing parameters.
-    @param env: The environment (a dict-like object).
-    @param name: The name of the VM object.
+    :param test: An Autotest test object.
+    :param params: A dict containing VM preprocessing parameters.
+    :param env: The environment (a dict-like object).
+    :param name: The name of the VM object.
     """
     vm = env.get_vm(name)
     vm_type = params.get('vm_type')
@@ -149,8 +149,8 @@ def postprocess_image(test, params, image_name):
     """
     Postprocess a single QEMU image according to the instructions in params.
 
-    @param test: An Autotest test object.
-    @param params: A dict containing image postprocessing parameters.
+    :param test: An Autotest test object.
+    :param params: A dict containing image postprocessing parameters.
     """
     clone_master = params.get("clone_master", None)
     base_dir = data_dir.get_data_dir()
@@ -187,10 +187,10 @@ def postprocess_vm(test, params, env, name):
     Postprocess a single VM object according to the instructions in params.
     Kill the VM if requested and get a screendump.
 
-    @param test: An Autotest test object.
-    @param params: A dict containing VM postprocessing parameters.
-    @param env: The environment (a dict-like object).
-    @param name: The name of the VM object.
+    :param test: An Autotest test object.
+    :param params: A dict containing VM postprocessing parameters.
+    :param env: The environment (a dict-like object).
+    :param name: The name of the VM object.
     """
     vm = env.get_vm(name)
     if not vm:
@@ -235,12 +235,12 @@ def process_command(test, params, env, command, command_timeout,
     """
     Pre- or post- custom commands to be executed before/after a test is run
 
-    @param test: An Autotest test object.
-    @param params: A dict containing all VM and image parameters.
-    @param env: The environment (a dict-like object).
-    @param command: Command to be run.
-    @param command_timeout: Timeout for command execution.
-    @param command_noncritical: If True test will not fail if command fails.
+    :param test: An Autotest test object.
+    :param params: A dict containing all VM and image parameters.
+    :param env: The environment (a dict-like object).
+    :param command: Command to be run.
+    :param command_timeout: Timeout for command execution.
+    :param command_noncritical: If True test will not fail if command fails.
     """
     # Export environment vars
     for k in params:
@@ -260,12 +260,12 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
     Pre- or post-process VMs and images according to the instructions in params.
     Call image_func for each image listed in params and vm_func for each VM.
 
-    @param test: An Autotest test object.
-    @param params: A dict containing all VM and image parameters.
-    @param env: The environment (a dict-like object).
-    @param image_func: A function to call for each image.
-    @param vm_func: A function to call for each VM.
-    @param vm_first: Call vm_func first or not.
+    :param test: An Autotest test object.
+    :param params: A dict containing all VM and image parameters.
+    :param env: The environment (a dict-like object).
+    :param image_func: A function to call for each image.
+    :param vm_func: A function to call for each VM.
+    :param vm_first: Call vm_func first or not.
     """
     def _call_vm_func():
         for vm_name in params.objects("vms"):
@@ -319,9 +319,9 @@ def preprocess(test, params, env):
     Preprocess all VMs and images according to the instructions in params.
     Also, collect some host information, such as the KVM version.
 
-    @param test: An Autotest test object.
-    @param params: A dict containing all VM and image parameters.
-    @param env: The environment (a dict-like object).
+    :param test: An Autotest test object.
+    :param params: A dict containing all VM and image parameters.
+    :param env: The environment (a dict-like object).
     """
     error.context("preprocessing")
     # First, let's verify if this test does require root or not. If it
@@ -540,9 +540,9 @@ def postprocess(test, params, env):
     """
     Postprocess all VMs and images according to the instructions in params.
 
-    @param test: An Autotest test object.
-    @param params: Dict containing all VM and image parameters.
-    @param env: The environment (a dict-like object).
+    :param test: An Autotest test object.
+    :param params: Dict containing all VM and image parameters.
+    :param env: The environment (a dict-like object).
     """
     error.context("postprocessing")
     err = ""
@@ -707,9 +707,9 @@ def postprocess_on_error(test, params, env):
     """
     Perform postprocessing operations required only if the test failed.
 
-    @param test: An Autotest test object.
-    @param params: A dict containing all VM and image parameters.
-    @param env: The environment (a dict-like object).
+    :param test: An Autotest test object.
+    :param params: A dict containing all VM and image parameters.
+    :param env: The environment (a dict-like object).
     """
     params.update(params.object_params("on_error"))
 
@@ -758,9 +758,9 @@ def _tcpdump_handler(address_cache, filename, line):
     """
     Helper for handler tcpdump output.
 
-    @params address_cache: address cache path.
-    @params filename: Log file name for tcpdump message.
-    @params line: Tcpdump output message.
+    :params address_cache: address cache path.
+    :params filename: Log file name for tcpdump message.
+    :params line: Tcpdump output message.
     """
     try:
         utils_misc.log_line(filename, line)

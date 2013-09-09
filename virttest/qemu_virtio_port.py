@@ -40,8 +40,8 @@ class _VirtioPort(object):
 
     def __init__(self, qemu_id, name, hostfile):
         """
-        @param name: Name of port for guest side.
-        @param hostfile: Path to port on host side.
+        :param name: Name of port for guest side.
+        :param hostfile: Path to port on host side.
         """
         self.qemu_id = qemu_id
         self.name = name
@@ -70,7 +70,7 @@ class _VirtioPort(object):
         return self.__dict__.copy()
 
     def is_open(self):
-        """ @return: host port status (open/closed) """
+        """ :return: host port status (open/closed) """
         if self.sock:
             return True
         else:
@@ -145,8 +145,8 @@ class VirtioSerial(_VirtioPort):
 
     def __init__(self, qemu_id, name, hostfile):
         """
-        @param name: Name of port for guest side.
-        @param hostfile: Path to port on host side.
+        :param name: Name of port for guest side.
+        :param hostfile: Path to port on host side.
         """
         super(VirtioSerial, self).__init__(qemu_id, name, hostfile)
         self.is_console = "no"
@@ -158,8 +158,8 @@ class VirtioConsole(_VirtioPort):
 
     def __init__(self, qemu_id, name, hostfile):
         """
-        @param name: Name of port for guest side.
-        @param hostfile: Path to port on host side.
+        :param name: Name of port for guest side.
+        :param hostfile: Path to port on host side.
         """
         super(VirtioConsole, self).__init__(qemu_id, name, hostfile)
         self.is_console = "yes"
@@ -267,7 +267,7 @@ class GuestWorker(object):
     def reconnect(self, vm, timeout=10):
         """
         Reconnect to guest_worker (eg. after migration)
-        @param vm: New VM object
+        :param vm: New VM object
         """
         self.vm = vm
         self.session = utils_test.wait_for_login(self.vm)
@@ -278,9 +278,9 @@ class GuestWorker(object):
         Wrapper around the self.cmd command which executes the command on
         guest. Unlike self._cmd command when the command fails it raises the
         test error.
-        @param command: Command that will be executed.
-        @param timeout: Timeout used to verify expected output.
-        @return: Tuple (match index, data)
+        :param command: Command that will be executed.
+        :param timeout: Timeout used to verify expected output.
+        :return: Tuple (match index, data)
         """
         match, data = self._cmd(cmd, timeout, patterns)
         if match == 1 or match is None:
@@ -293,10 +293,10 @@ class GuestWorker(object):
     def _cmd(self, cmd, timeout=10, patterns=None):
         """
         Execute given command inside the script's main loop.
-        @param command: Command that will be executed.
-        @param timeout: Timeout used to verify expected output.
-        @param patterns: Expected patterns; have to startwith ^PASS: or ^FAIL:
-        @return: Tuple (match index, data)
+        :param command: Command that will be executed.
+        :param timeout: Timeout used to verify expected output.
+        :param patterns: Expected patterns; have to startwith ^PASS: or ^FAIL:
+        :return: Tuple (match index, data)
         """
         if not patterns:
             patterns = ("^PASS:", "^FAIL:")
@@ -325,10 +325,10 @@ class GuestWorker(object):
     def read_nonblocking(self, internal_timeout=None, timeout=None):
         """
         Reads-out all remaining output from GuestWorker.
-        @param internal_timeout: Time (seconds) to wait before we give up
+        :param internal_timeout: Time (seconds) to wait before we give up
                                  reading from the child process, or None to
                                  use the default value.
-        @param timeout: Timeout for reading child process output.
+        :param timeout: Timeout for reading child process output.
         """
         return self.session.read_nonblocking(internal_timeout, timeout)
 
@@ -348,8 +348,8 @@ class GuestWorker(object):
         """
         Safely executes on_guest("virt.exit_threads()") using workaround of
         the stuck thread in loopback in mode=virt.LOOP_NONE .
-        @param send_pts: list of possible send sockets we need to work around.
-        @param recv_pts: list of possible recv sockets we need to read-out.
+        :param send_pts: list of possible send sockets we need to work around.
+        :param recv_pts: list of possible recv sockets we need to read-out.
         """
         # No need to clean ports when VM is dead
         if not self.vm or self.vm.is_dead():
@@ -459,10 +459,10 @@ class ThSend(Thread):
 
     def __init__(self, port, data, exit_event, quiet=False):
         """
-        @param port: Destination port.
-        @param data: The data intend to be send in a loop.
-        @param exit_event: Exit event.
-        @param quiet: If true don't raise event when crash.
+        :param port: Destination port.
+        :param data: The data intend to be send in a loop.
+        :param exit_event: Exit event.
+        :param quiet: If true don't raise event when crash.
         """
         Thread.__init__(self)
         self.port = port
@@ -500,11 +500,11 @@ class ThSendCheck(Thread):
     def __init__(self, port, exit_event, queues, blocklen=1024,
                  migrate_event=None, reduced_set=False):
         """
-        @param port: Destination port
-        @param exit_event: Exit event
-        @param queues: Queues for the control data (FIFOs)
-        @param blocklen: Block length
-        @param migrate_event: Event indicating port was changed and is ready.
+        :param port: Destination port
+        :param exit_event: Exit event
+        :param queues: Queues for the control data (FIFOs)
+        :param blocklen: Block length
+        :param migrate_event: Event indicating port was changed and is ready.
         """
         Thread.__init__(self)
         self.port = port
@@ -622,10 +622,10 @@ class ThRecv(Thread):
 
     def __init__(self, port, event, blocklen=1024, quiet=False):
         """
-        @param port: Data source port.
-        @param event: Exit event.
-        @param blocklen: Block length.
-        @param quiet: If true don't raise event when crash.
+        :param port: Data source port.
+        :param event: Exit event.
+        :param blocklen: Block length.
+        :param quiet: If true don't raise event when crash.
         """
         Thread.__init__(self)
         self.port = port
@@ -664,13 +664,13 @@ class ThRecvCheck(Thread):
     def __init__(self, port, buff, exit_event, blocklen=1024, sendlen=0,
                  migrate_event=None, debug=None):
         """
-        @param port: Source port.
-        @param buff: Control data buffer (FIFO).
-        @param exit_event: Exit event.
-        @param blocklen: Block length.
-        @param sendlen: Block length of the send function (on guest)
-        @param migrate_event: Event indicating port was changed and is ready.
-        @param debug: Set the execution mode, when nothing run normal.
+        :param port: Source port.
+        :param buff: Control data buffer (FIFO).
+        :param exit_event: Exit event.
+        :param blocklen: Block length.
+        :param sendlen: Block length of the send function (on guest)
+        :param migrate_event: Event indicating port was changed and is ready.
+        :param debug: Set the execution mode, when nothing run normal.
         """
         Thread.__init__(self)
         self.port = port

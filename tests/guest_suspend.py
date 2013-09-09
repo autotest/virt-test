@@ -54,8 +54,8 @@ class GuestSuspendBaseTest(utils_test.GuestSuspend):
           Because WinXP/2003 doesn't record ACPI event into log, this test
           always passes if the guest's driver supports S3
 
-        @param params: Dictionary with test parameters.
-        @param env: Dictionary with the test environment.
+        :param params: Dictionary with test parameters.
+        :param env: Dictionary with the test environment.
 
         """
         self.do_guest_suspend(
@@ -81,8 +81,8 @@ class GuestSuspendBaseTest(utils_test.GuestSuspend):
         6) Verify background program is still running.
         7) Verify guest system log.
 
-        @param params: Dictionary with test parameters.
-        @param env: Dictionary with the test environment.
+        :param params: Dictionary with test parameters.
+        :param env: Dictionary with the test environment.
         """
         self.do_guest_suspend(
             suspend_type=self.SUSPEND_TYPE_DISK,
@@ -113,9 +113,9 @@ def run_guest_suspend(test, params, env):
     """
     Suspend guest to memory/disk, supports both Linux and Windows.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     vms = params.get("vms").split(" ")
     vm = env.get_vm(vms[0])

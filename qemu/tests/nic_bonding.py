@@ -15,9 +15,9 @@ def run_nic_bonding(test, params, env):
     4) Repeatedly put down/up interfaces by set_link
     5) Execute file transfer test between guest and host.
 
-    @param test: Kvm test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def send_cmd_safe(session, cmd, timeout=60):
         logging.debug("Sending command: %s", cmd)

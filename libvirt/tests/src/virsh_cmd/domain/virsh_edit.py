@@ -37,9 +37,9 @@ def run_virsh_edit(test, params, env):
         """
         Modify vm's cpu information.
 
-        @param: source : virsh edit's option.
-        @param: dic_mode : a edit commad line .
-        @return: True if edit successed,False if edit failed.
+        :param source : virsh edit's option.
+        :param dic_mode : a edit commad line .
+        :return: True if edit successed,False if edit failed.
         """
         session = aexpect.ShellSession("sudo -s")
         try:
@@ -58,9 +58,9 @@ def run_virsh_edit(test, params, env):
         """
         Modify vm's cpu information by virsh edit command.
 
-        @param: source : virsh edit's option.
-        @param: guest_name : vm's name.
-        @return: True if edit successed,False if edit failed.
+        :param source : virsh edit's option.
+        :param guest_name : vm's name.
+        :return: True if edit successed,False if edit failed.
         """
         dic_mode = {
             "edit": ":%s /[0-9]*<\/vcpu>/" + expected_vcpu + "<\/vcpu>",

@@ -22,8 +22,8 @@ def run_virsh_domifstat(test, params, env):
         """
         Get interface device of VM.
 
-        @param guest_name: VM's name.
-        @return: interface device of VM.
+        :param guest_name: VM's name.
+        :return: interface device of VM.
         """
         interface = ""
         domxml = utils.system_output("virsh dumpxml %s" % guest_name)

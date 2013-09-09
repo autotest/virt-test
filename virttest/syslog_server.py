@@ -12,7 +12,7 @@ def set_default_format(message_format):
     Changes the default message format
 
     @type message_format: string
-    @param message_format: a message format string with 3 placeholders:
+    :param message_format: a message format string with 3 placeholders:
                            facility, priority and message.
     '''
     global DEFAULT_FORMAT
@@ -105,8 +105,8 @@ class RequestHandler(SocketServer.BaseRequestHandler):
         Decode both the facility and priority embedded in a syslog message
 
         @type priority: integer
-        @param priority: an integer with facility and priority encoded
-        @return: a tuple with two strings
+        :param priority: an integer with facility and priority encoded
+        :return: a tuple with two strings
         '''
         f = priority >> 3
         p = priority & 7

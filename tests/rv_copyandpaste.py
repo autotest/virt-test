@@ -16,7 +16,7 @@ def wait_timeout(timeout=10):
     """
     time.sleep(timeout) + logging.debug(timeout)
 
-    @param timeout=10
+    :param timeout=10
     """
     logging.debug("Waiting (timeout=%ss)", timeout)
     time.sleep(timeout)
@@ -26,8 +26,8 @@ def clear_cb(session, params):
     """
 
     Use the clipboard script to copy an image into the clipboard.
-    @param session: the ssh session where the clipboard is to be cleared
-    @param params: Dictionary with the test parameters.
+    :param session: the ssh session where the clipboard is to be cleared
+    :param params: Dictionary with the test parameters.
     """
     # Get the necessary parameters to clear the clipboard from the session
     script = params.get("guest_script")
@@ -53,12 +53,12 @@ def place_img_in_clipboard(session_to_copy_from, interpreter, script_call,
     """
     Use the clipboard script to copy an image into the clipboard.
 
-    @param session_to_copy_from: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param dst_image_path: location of the image to be copied
-    @param test_timeout: timeout time for the cmd
+    :param session_to_copy_from: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param dst_image_path: location of the image to be copied
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s %s %s" % (interpreter, script_call,
                            script_params, dst_image_path)
@@ -83,12 +83,12 @@ def verify_img_paste(session_to_copy_from, interpreter, script_call,
     """
     Use the clipboard script to paste an image from the clipboard.
 
-    @param session_to_copy_from: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param final_image_path: location of where the image should be pasted
-    @param test_timeout: timeout time for the cmd
+    :param session_to_copy_from: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param final_image_path: location of where the image should be pasted
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s %s %s" % (interpreter, script_call,
                            script_params, final_image_path)
@@ -130,13 +130,13 @@ def verify_img_paste_success(session_to_copy_from, interpreter, script_call,
     Verify an image paste is successful by pasting an image to a file and
     verify the checksum matches the expected value.
 
-    @param session_to_copy_from: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param final_image_path: location of where the image should be pasted
-    @param expected_checksum: the checksum value of the image to be verified
-    @param test_timeout: timeout time for the cmd
+    :param session_to_copy_from: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param final_image_path: location of where the image should be pasted
+    :param expected_checksum: the checksum value of the image to be verified
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s %s %s" % (interpreter, script_call,
                            script_params, final_image_path)
@@ -174,12 +174,12 @@ def verify_img_paste_fails(session_to_copy_from, interpreter, script_call,
     """
     Verify that pasting an image fails.
 
-    @param session_to_copy_from: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param final_image_path: location of where the image should be pasted
-    @param test_timeout: timeout time for the cmd
+    :param session_to_copy_from: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param final_image_path: location of where the image should be pasted
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s %s %s" % (interpreter, script_call,
                            script_params, final_image_path)
@@ -207,14 +207,14 @@ def verify_text_copy(session_to_copy_from, interpreter, script_call,
     Verify copying a large amount of textual data to the clipboard and to
     a file is successful, and return the checksum of the file.
 
-    @param session_to_copy_from: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param final_text_path: location of where the text file is created
-    @param test_timeout: timeout time for the cmd
+    :param session_to_copy_from: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param final_text_path: location of where the text file is created
+    :param test_timeout: timeout time for the cmd
 
-    @return file_checksum: checksum of the textfile that was created.
+    :return: file_checksum: checksum of the textfile that was created.
     """
     cmd = "%s %s %s %s" % (interpreter, script_call,
                            script_params, string_length)
@@ -254,13 +254,13 @@ def verify_txt_paste_success(session_to_paste_to, interpreter,
     """
     Use the clipboard script to copy text into the clipboard.
 
-    @param session_to_copy_from: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param final_image_path: location of where the image should be pasted
-    @param image_size: the size of the image to be verified
-    @param test_timeout: timeout time for the cmd
+    :param session_to_copy_from: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param final_image_path: location of where the image should be pasted
+    :param image_size: the size of the image to be verified
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s %s %s" % (interpreter, script_call,
                            script_params, final_text_path)
@@ -298,12 +298,12 @@ def place_text_in_clipboard(session_to_copy_from, interpreter, script_call,
     """
     Use the clipboard script to copy text into the clipboard.
 
-    @param session_to_copy_from: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param testing_text: text to be pasted
-    @param test_timeout: timeout time for the cmd
+    :param session_to_copy_from: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param testing_text: text to be pasted
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s %s %s" % (interpreter, script_call,
                            script_params, testing_text)
@@ -345,12 +345,12 @@ def verify_paste_fails(session_to_paste_to, testing_text, interpreter,
     Test that pasting to the other session fails (negative testing:
     spice-vdagentd stopped or copy-paste-disabled is set on the VM
 
-    @param session_to_paste_to: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param testing_text: text to be pasted
-    @param test_timeout: timeout time for the cmd
+    :param session_to_paste_to: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param testing_text: text to be pasted
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s" % (interpreter, script_call)
     try:
@@ -376,12 +376,12 @@ def verify_paste_successful(session_to_paste_to, testing_text, interpreter,
     Test that pasting to the other session fails (negative testing -
     spice-vdagentd stopped or copy-paste-disabled is set on the VM
 
-    @param session_to_paste_to: VM ssh session where text is to be copied
-    @param interpreter: script param
-    @param script_call: script param
-    @param script_params: script param
-    @param testing_text: text to be pasted
-    @param test_timeout: timeout time for the cmd
+    :param session_to_paste_to: VM ssh session where text is to be copied
+    :param interpreter: script param
+    :param script_call: script param
+    :param script_params: script param
+    :param testing_text: text to be pasted
+    :param test_timeout: timeout time for the cmd
     """
     cmd = "%s %s" % (interpreter, script_call)
     try:
@@ -405,10 +405,10 @@ def copy_and_paste_neg(session_to_copy_from, session_to_paste_to,
     Negative Test: Sending the commands to copy from one session to another,
     and make sure it does not work, because spice vdagent is off
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -441,10 +441,10 @@ def copy_and_paste_pos(session_to_copy_from, session_to_paste_to,
     Sending the commands to copy from one session to another, and make
     sure it works correctly
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -475,10 +475,10 @@ def restart_cppaste(session_to_copy_from, session_to_paste_to,
     Sending the commands to copy from one session to another, and make
     sure it works correctly after Restarting vdagent
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -526,10 +526,10 @@ def copy_and_paste_cpdisabled_neg(session_to_copy_from, session_to_paste_to,
     for this test cp/paste will be disabled from qemu-kvm, Verify with vdagent
     started that copy/paste will fail.
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -560,10 +560,10 @@ def copy_and_paste_largetext(session_to_copy_from, session_to_paste_to,
     Sending the commands to copy large text from one session to another, and
     make sure the data is still correct.
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -601,10 +601,10 @@ def restart_cppaste_lrgtext(session_to_copy_from, session_to_paste_to,
     Sending the commands to copy large text from one session to another, and
     make sure the data is still correct after restarting vdagent.
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -657,10 +657,10 @@ def copy_and_paste_image_pos(session_to_copy_from, session_to_paste_to,
     """
     Sending the commands to copy an image from one session to another.
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -724,10 +724,10 @@ def restart_cppaste_image(session_to_copy_from, session_to_paste_to,
     """
     Sending the commands to copy an image from one session to another.
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -830,10 +830,10 @@ def copy_and_paste_image_neg(session_to_copy_from, session_to_paste_to,
     session to another, with spice-vdagentd off, so copy and pasting
     the image should fail.
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -876,10 +876,10 @@ def copyandpasteimg_cpdisabled_neg(session_to_copy_from, session_to_paste_to,
     session to another; however, copy-paste will be disabled on the VM
     so the pasting should fail.
 
-    @param session_to_copy_from: ssh session of the vm to copy from
-    @param session_to_paste_to: ssh session of the vm to paste to
-    @param guest_session: guest ssh session
-    @param params: Dictionary with the test parameters.
+    :param session_to_copy_from: ssh session of the vm to copy from
+    :param session_to_paste_to: ssh session of the vm to paste to
+    :param guest_session: guest ssh session
+    :param params: Dictionary with the test parameters.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -924,9 +924,9 @@ def run_rv_copyandpaste(test, params, env):
     text_to_test: In config defines the text to copy, and if it is numeric it
     will copy that amount of textual data, which is generated by cb.py.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     # Collect test parameters
     test_type = params.get("config_test")

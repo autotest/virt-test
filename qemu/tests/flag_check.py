@@ -41,17 +41,17 @@ def run_flag_check(test, params, env):
        miss_flag = expected_flags - guest_flags
        unexpect_flag = guest_flags - expected_flags - option_flags
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def qemu_model_info(models_list, cpumodel):
         """
         Get cpumodel info from models_list
-        @param models_list: all models info
-        @param cpumodel: model name
-        @return model info of cpumodel
+        :param models_list: all models info
+        :param cpumodel: model name
+        :return: model info of cpumodel
         """
         for model in models_list:
             if cpumodel in model:
@@ -61,8 +61,8 @@ def run_flag_check(test, params, env):
     def qemu_support_flag(model_info, reg):
         """
         Get register's supported flags from model_info
-        @param model_info: model_info get from dump file
-        @param reg: reg name, e.g feature_edx
+        :param model_info: model_info get from dump file
+        :param reg: reg name, e.g feature_edx
         """
         reg_re = re.compile(r".*%s.*\((.*)\)\n" % reg)
         flag = reg_re.search(model_info)
@@ -90,9 +90,9 @@ def run_flag_check(test, params, env):
     def get_extra_flag(extra_flags, symbol, lack_check=False):
         """
         Get added/removed flags
-        @param extra_flags: exposed/removed flags. e.g "+sse4.1,+sse4.2"
-        @param symbol: "+","-"
-        @return: return all extra_flags if lack_check is true
+        :param extra_flags: exposed/removed flags. e.g "+sse4.1,+sse4.2"
+        :param symbol: "+","-"
+        :return: return all extra_flags if lack_check is true
                  return host supported flags if lack_check is false
         """
         flags = []
@@ -108,8 +108,8 @@ def run_flag_check(test, params, env):
         """
         Get guest system cpuflags.
 
-        @param vm_session: session to checked vm.
-        @return: [corespond flags]
+        :param vm_session: session to checked vm.
+        :return: [corespond flags]
         """
         flags_re = re.compile(r'^flags\s*:(.*)$', re.MULTILINE)
         out = vm_session.cmd_output("cat /proc/cpuinfo")

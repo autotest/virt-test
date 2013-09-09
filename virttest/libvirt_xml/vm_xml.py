@@ -180,7 +180,7 @@ class VMXMLBase(base.LibvirtXMLBase):
         """
         Return seclabel + child attribute dict or raise LibvirtXML error
 
-        @return: None if no seclabel in xml,
+        :return: None if no seclabel in xml,
                  dict of seclabel's attributs and children.
         """
         __children_list__ = ['label', 'baselabel', 'imagelabel']
@@ -268,9 +268,9 @@ class VMXML(VMXMLBase):
         """
         Return new VMXML instance from virsh dumpxml command
 
-        @param: vm_name: Name of VM to dumpxml
-        @param: virsh_instance: virsh module or instance to use
-        @return: New initialized VMXML instance
+        :param vm_name: Name of VM to dumpxml
+        :param virsh_instance: virsh module or instance to use
+        :return: New initialized VMXML instance
         """
         # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
@@ -302,10 +302,10 @@ class VMXML(VMXMLBase):
         """
         Rename a vm from its XML.
 
-        @param vm: VM class type instance
-        @param new_name: new name of vm
-        @param uuid: new_vm's uuid, if None libvirt will generate.
-        @return: a new VM instance
+        :param vm: VM class type instance
+        :param new_name: new name of vm
+        :param uuid: new_vm's uuid, if None libvirt will generate.
+        :return: a new VM instance
         """
         if vm.is_alive():
             vm.destroy(gracefully=True)
@@ -347,8 +347,8 @@ class VMXML(VMXMLBase):
         """
         Convenience method for updating 'vcpu' property of a defined VM
 
-        @param: vm_name: Name of defined vm to change vcpu elemnet data
-        @param: value: New data value, None to delete.
+        :param vm_name: Name of defined vm to change vcpu elemnet data
+        :param value: New data value, None to delete.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
         if value is not None:
@@ -365,7 +365,7 @@ class VMXML(VMXMLBase):
         """
         Check input cpu mode invalid or not.
 
-        @param mode: the mode of cpu:'host-model'...
+        :param mode: the mode of cpu:'host-model'...
         """
         # Possible values for the mode attribute are:
         # "custom", "host-model", "host-passthrough"
@@ -390,7 +390,7 @@ class VMXML(VMXMLBase):
         """
         Get block device  of a defined VM's disks.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
@@ -401,7 +401,7 @@ class VMXML(VMXMLBase):
         """
         Get block device  of a defined VM's disks.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
@@ -412,7 +412,7 @@ class VMXML(VMXMLBase):
         """
         Get count of VM's disks.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
@@ -450,10 +450,10 @@ class VMXML(VMXMLBase):
         """
         Set primary serial's features of vm_name.
 
-        @param vm_name: Name of defined vm to set primary serial.
-        @param dev_type: the type of serial:pty,file...
-        @param port: the port of serial
-        @param path: the path of serial, it is not necessary for pty
+        :param vm_name: Name of defined vm to set primary serial.
+        :param dev_type: the type of serial:pty,file...
+        :param port: the port of serial
+        :param path: the path of serial, it is not necessary for pty
         # TODO: More features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
@@ -490,7 +490,7 @@ class VMXML(VMXMLBase):
         """
         Add channel for guest agent running
 
-        @param vm_name: Name of defined vm to set agent channel
+        :param vm_name: Name of defined vm to set agent channel
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
 
@@ -528,9 +528,9 @@ class VMXML(VMXMLBase):
         """
         Get the interface if mac is matched.
 
-        @param vm_name: Name of defined vm.
-        @param mac: a mac address.
-        @return: return a dict include main interface's features
+        :param vm_name: Name of defined vm.
+        :param mac: a mac address.
+        :return: return a dict include main interface's features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         interfaces = vmxml.get_iface_all()
@@ -603,7 +603,7 @@ class VMXML(VMXMLBase):
         """
         Get net device of a defined VM's nets.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         nets = vmxml.get_net_all()
@@ -616,8 +616,8 @@ class VMXML(VMXMLBase):
         """
         Set cpu's mode of VM.
 
-        @param vm_name: Name of defined vm to set primary serial.
-        @param mode: the mode of cpu:'host-model'...
+        :param vm_name: Name of defined vm to set primary serial.
+        :param mode: the mode of cpu:'host-model'...
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         vmxml.check_cpu_mode(mode)
@@ -682,8 +682,8 @@ class VMCPUXML(VMXML):
         """
         Get assigned feature name
 
-        @param: num: Assigned feature number
-        @return: Assigned feature name
+        :param num: Assigned feature number
+        :return: Assigned feature name
         """
         count = len(self.feature_list)
         if num >= count:
@@ -696,7 +696,7 @@ class VMCPUXML(VMXML):
         """
         Remove a assigned feature from xml
 
-        @param: num: Assigned feature number
+        :param num: Assigned feature number
         """
         xmltreefile = self.dict_get('xml')
         count = len(self.feature_list)
@@ -712,8 +712,8 @@ class VMCPUXML(VMXML):
         """
         Check feature name valid or not.
 
-        @param: value: The feature name
-        @return: True if check pass
+        :param value: The feature name
+        :return: True if check pass
         """
         sys_feature = []
         cpu_xml_file = open('/proc/cpuinfo', 'r')
@@ -728,8 +728,8 @@ class VMCPUXML(VMXML):
         """
         Set a assigned feature value to xml
 
-        @param: num: Assigned feature number
-        @param: value: The feature name modified to
+        :param num: Assigned feature number
+        :param value: The feature name modified to
         """
         count = len(self.feature_list)
         if num >= count:
@@ -742,7 +742,7 @@ class VMCPUXML(VMXML):
         """
         Add a feature Element to xml
 
-        @param: num: Assigned feature number
+        :param num: Assigned feature number
         """
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/cpu')

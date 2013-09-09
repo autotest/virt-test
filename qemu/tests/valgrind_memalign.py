@@ -15,9 +15,9 @@ def run_valgrind_memalign(test, params, env):
     4.check the status and do continue the VM.
     5.quit the VM.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     interval = float(params.get("interval_time", "10"))
 

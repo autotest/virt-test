@@ -13,9 +13,9 @@ def run_mac_change(test, params, env):
     2) Set new mac in guest and regain new IP.
     3) Re-log into guest with new MAC.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

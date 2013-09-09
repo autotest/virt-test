@@ -10,9 +10,9 @@ def run_monitor_cmds_check(test, params, env):
     1). bootup vm with human and qmp monitor
     2). check commands in black_list is unavaliable in monitor
 
-    @param test: Qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
 
     Notes:
         Please run this test with qemu/control.kernel-version to ensure it

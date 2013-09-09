@@ -11,9 +11,9 @@ def run_qemu_nobody(test, params, env):
     1) Run the qemu command as nobody
     2) check the process is same as the user's
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def get_user_ugid(username):
         """

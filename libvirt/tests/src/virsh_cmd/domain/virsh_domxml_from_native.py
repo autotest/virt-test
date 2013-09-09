@@ -25,7 +25,7 @@ def run_virsh_domxml_from_native(test, params, env):
         """
         Put dumpxml vm'infomation to a file
 
-        @param: guest_args : File which will save config information.
+        :param guest_args : File which will save config information.
         """
         pid = vm.get_pid()
         cmdline = utils.system_output("cat -v /proc/%d/cmdline" % pid)

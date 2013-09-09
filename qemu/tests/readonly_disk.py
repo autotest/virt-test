@@ -14,9 +14,9 @@ def run_readonly_disk(test, params, env):
     4) Try to copy file to the data disk
     5) Try to copy file from the data disk
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     error.context("Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])

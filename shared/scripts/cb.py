@@ -10,7 +10,7 @@ def return_nonrandom_str(length):
     """
     A method to return a nonrandom_string of the length determined by the input
 
-    @param length, length of the string to be returned
+    :param length, length of the string to be returned
     """
     input_string = "anonrandomstring_"
     finalstring = ""

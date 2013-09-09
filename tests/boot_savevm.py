@@ -17,9 +17,9 @@ def run_boot_savevm(test, params, env):
     5) Check snapshot list for floppy and compare with the origin
        one(optional).
 
-    @param test: test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     if params.get("with_floppy") == "yes":

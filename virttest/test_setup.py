@@ -233,7 +233,7 @@ class HugePageConfig(object):
         Gets environment variable values and calculates the target number
         of huge memory pages.
 
-        @param params: Dict like object containing parameters for the test.
+        :param params: Dict like object containing parameters for the test.
         """
         self.vms = len(params.objects("vms"))
         self.mem = int(params.get("mem"))
@@ -406,7 +406,7 @@ class KSMConfig(object):
     def __init__(self, params, env):
         """
 
-        @param params: Dict like object containing parameters for the test.
+        :param params: Dict like object containing parameters for the test.
         """
         KSM_PATH = "/sys/kernel/mm/ksm"
 
@@ -750,20 +750,20 @@ class PciAssignable(object):
         If pass through Virtual Functions, we need to specify max vfs in driver
         e.g. max_vfs = 7 in config file.
 
-        @param type: PCI device type.
-        @param driver: Kernel module for the PCI assignable device.
-        @param driver_option: Module option to specify the maximum number of
+        :param type: PCI device type.
+        :param driver: Kernel module for the PCI assignable device.
+        :param driver_option: Module option to specify the maximum number of
                 VFs (eg 'max_vfs=7')
-        @param names: Physical NIC cards correspondent network interfaces,
+        :param names: Physical NIC cards correspondent network interfaces,
                 e.g.'eth1 eth2 ...'
-        @param host_set_flag: Flag for if the test should setup host env:
+        :param host_set_flag: Flag for if the test should setup host env:
                0: do nothing
                1: do setup env
                2: do cleanup env
                3: setup and cleanup env
-        @param kvm_params: a dict for kvm module parameters default value
-        @param vf_filter_re: Regex used to filter vf from lspci.
-        @param pf_filter_re: Regex used to filter pf from lspci.
+        :param kvm_params: a dict for kvm module parameters default value
+        :param vf_filter_re: Regex used to filter vf from lspci.
+        :param pf_filter_re: Regex used to filter pf from lspci.
         """
         self.type_list = []
         self.driver = driver
@@ -791,8 +791,8 @@ class PciAssignable(object):
         """
         Add device type and name to class.
 
-        @param device_type: vf/pf device is added.
-        @param name:  Device name is need.
+        :param device_type: vf/pf device is added.
+        :param name:  Device name is need.
         """
         self.type_list.append(device_type)
         if name is not None:
@@ -803,8 +803,8 @@ class PciAssignable(object):
         """
         Get the PF PCI ID according to name.
 
-        @param name: Name of the PCI device.
-        @param search_str: Search string to be used on lspci.
+        :param name: Name of the PCI device.
+        :param search_str: Search string to be used on lspci.
         """
         cmd = "ethtool -i %s | awk '/bus-info/ {print $2}'" % name
         s, pci_id = commands.getstatusoutput(cmd)
@@ -822,7 +822,7 @@ class PciAssignable(object):
         """
         Release a single PCI device.
 
-        @param pci_id: PCI ID of a given PCI device.
+        :param pci_id: PCI ID of a given PCI device.
         """
         base_dir = "/sys/bus/pci"
         full_id = utils_misc.get_full_pci_id(pci_id)
@@ -854,7 +854,7 @@ class PciAssignable(object):
         Check whether one vf is assigned to VM.
 
         vf_id: vf id to check.
-        @return: Return True if vf has already assinged to VM. Else
+        :return: Return True if vf has already assinged to VM. Else
         return false.
         """
         base_dir = "/sys/bus/pci"
@@ -871,7 +871,7 @@ class PciAssignable(object):
         """
         Catch all VFs PCI IDs.
 
-        @return: List with all PCI IDs for the Virtual Functions available
+        :return: List with all PCI IDs for the Virtual Functions available
         """
         if self.setup:
             if not self.sr_iov_setup():
@@ -884,7 +884,7 @@ class PciAssignable(object):
         """
         Catch all PFs PCI IDs.
 
-        @return: List with all PCI IDs for the physical hardware requested
+        :return: List with all PCI IDs for the physical hardware requested
         """
         pf_ids = []
         for name in self.name_list:
@@ -898,8 +898,8 @@ class PciAssignable(object):
         """
         Check out all devices' PCI IDs according to their name.
 
-        @param count: count number of PCI devices needed for pass through
-        @return: a list of all devices' PCI IDs
+        :param count: count number of PCI devices needed for pass through
+        :return: a list of all devices' PCI IDs
         """
         base_dir = "/sys/bus/pci"
         if type_list is None:
@@ -962,7 +962,7 @@ class PciAssignable(object):
         """
         Verify whether the device with full_id is already binded to pci-stub.
 
-        @param full_id: Full ID for the given PCI device
+        :param full_id: Full ID for the given PCI device
         """
         base_dir = "/sys/bus/pci"
         stub_path = os.path.join(base_dir, "drivers/pci-stub")
@@ -978,7 +978,7 @@ class PciAssignable(object):
         Check if the PCI hardware device drive is loaded with the appropriate,
         parameters (number of VFs), and if it's not, perform setup.
 
-        @return: True, if the setup was completed successfully, False otherwise.
+        :return: True, if the setup was completed successfully, False otherwise.
         """
         # Check if the host support interrupt remapping
         error.context("Set up host env for PCI assign test", logging.info)
@@ -1040,7 +1040,7 @@ class PciAssignable(object):
         Check if the PCI hardware device drive is loaded with the appropriate,
         parameters (none of VFs), and if it's not, perform cleanup.
 
-        @return: True, if the setup was completed successfully, False otherwise.
+        :return: True, if the setup was completed successfully, False otherwise.
         """
         # Check if the host support interrupt remapping
         error.context("Clean up host env after PCI assign test", logging.info)
@@ -1099,9 +1099,9 @@ class PciAssignable(object):
         Implement setup process: unbind the PCI device and then bind it
         to the pci-stub driver.
 
-        @param count: count number of PCI devices needed for pass through
+        :param count: count number of PCI devices needed for pass through
 
-        @return: a list of successfully requested devices' PCI IDs.
+        :return: a list of successfully requested devices' PCI IDs.
         """
         if count is None:
             count = self.devices_requested

@@ -20,7 +20,7 @@ def run_virsh_attach_detach_disk(test, params, env):
         """
         Create a device source file.
 
-        @param: device_source: Device source file.
+        :param device_source: Device source file.
         """
         try:
             f = open(device_source, 'wb')
@@ -34,10 +34,10 @@ def run_virsh_attach_detach_disk(test, params, env):
         """
         Check VM disk's partition.
 
-        @param: vm. VM guest.
-        @param: os_type. VM's operation system type.
-        @param: target_name. Device target type.
-        @return: True if check successfully.
+        :param vm. VM guest.
+        :param os_type. VM's operation system type.
+        :param target_name. Device target type.
+        :return: True if check successfully.
         """
         logging.info("Checking VM partittion...")
         if vm.is_dead():
@@ -65,9 +65,9 @@ def run_virsh_attach_detach_disk(test, params, env):
         """
         Add acpiphp module if VM's os type is rhle5.*
 
-        @param: vm. VM guest.
-        @param: os_type. VM's operation system type.
-        @return: True if operate successfully.
+        :param vm. VM guest.
+        :param os_type. VM's operation system type.
+        :return: True if operate successfully.
         """
         if vm.is_dead():
             vm.start()

@@ -18,9 +18,9 @@ def run_boot_time(test, params, env):
     3) Boot up the guest and measure the boot time
     4) set init run level back to the old one
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
 
     vm = env.get_vm(params["main_vm"])

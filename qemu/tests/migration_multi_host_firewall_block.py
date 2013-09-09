@@ -13,9 +13,9 @@ def run_migration_multi_host_firewall_block(test, params, env):
 
     Tests multi-host migration with network problem on destination side.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
     base_class = utils_test.MultihostMigration
@@ -108,7 +108,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             Migrate vms destination. This function is started on dest host during
             migration.
 
-            @param mig_Data: Data for migration.
+            :param mig_Data: Data for migration.
             """
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
                                 self.mig_timeout)
@@ -131,7 +131,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             for vm in mig_data.vms:
                 vm.resume()
@@ -152,7 +152,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             for vm in mig_data.vms:
                 try:
@@ -222,7 +222,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             Migrate vms destination. This function is started on dest host during
             migration.
 
-            @param mig_Data: Data for migration.
+            :param mig_Data: Data for migration.
             """
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
                                 self.mig_timeout)
@@ -245,7 +245,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             super(TestMultihostMigrationLongWait, self).check_vms_dst(mig_data)
 
@@ -253,7 +253,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             super(TestMultihostMigrationLongWait, self).check_vms_src(mig_data)
 

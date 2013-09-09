@@ -20,7 +20,7 @@ def run_virsh_managedsave(test, params, env):
         """
         Check if the vm can be recovered correctly.
 
-        @param: guest_name : Checked vm's name.
+        :param guest_name : Checked vm's name.
         """
         ret = virsh.dom_list()
         # This time vm should not be in the list

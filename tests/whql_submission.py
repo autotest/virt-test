@@ -16,9 +16,9 @@ def run_whql_submission(test, params, env):
     6) Parse and report job results
     (logs and HTML reports are placed in test.debugdir)
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     # Log into all client VMs
     login_timeout = int(params.get("login_timeout", 360))

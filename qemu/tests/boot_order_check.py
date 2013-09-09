@@ -15,9 +15,9 @@ def run_boot_order_check(test, params, env):
        should try device whose bootindex=2, and so on, till
        the guest os succeeds to boot or fails to boot
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     error.context("Boot vm by passing boot order decided", logging.info)
     vm = env.get_vm(params["main_vm"])

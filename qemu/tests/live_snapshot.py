@@ -13,9 +13,9 @@ def run_live_snapshot(test, params, env):
     3). Check if live snapshot is created
     4). Shutdown guest
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     @error.context_aware

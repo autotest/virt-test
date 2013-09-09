@@ -65,9 +65,9 @@ class VolXML(VolXMLBase):
         """
         Return new VolXML instance from virsh vol-dumpxml command
 
-        @param: vol_name: Name of vol to vol-dumpxml
-        @param: virsh_instance: virsh module or instance to use
-        @return: New initialized VolXML instance
+        :param vol_name: Name of vol to vol-dumpxml
+        :param virsh_instance: virsh module or instance to use
+        :return: New initialized VolXML instance
         """
         volxml = VolXML(virsh_instance=virsh_instance)
         volxml['xml'] = virsh_instance.vol_dumpxml(vol_name, pool_name)\
@@ -79,8 +79,8 @@ class VolXML(VolXMLBase):
         """
         Return Vol's uuid by Vol's name.
 
-        @param: vol_name: Vol's name
-        @return: Vol's uuid
+        :param vol_name: Vol's name
+        :return: Vol's uuid
         """
         volume_xml = {}
         vol_xml = VolXML.new_from_vol_dumpxml(vol_name, pool_name,

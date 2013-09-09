@@ -51,26 +51,26 @@ def run_ksm_overcommit(test, params, env):
     Every worker has unique random key so we are able to verify the filled
     values.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
 
-    @param cfg: ksm_swap - use swap?
-    @param cfg: ksm_overcommit_ratio - memory overcommit (serial mode only)
-    @param cfg: ksm_parallel_ratio - number of workers (parallel mode only)
-    @param cfg: ksm_host_reserve - override memory reserve on host in MB
-    @param cfg: ksm_guest_reserve - override memory reserve on guests in MB
-    @param cfg: ksm_mode - test mode {serial, parallel}
-    @param cfg: ksm_perf_ratio - performance ratio, increase it when your
+    :param cfg: ksm_swap - use swap?
+    :param cfg: ksm_overcommit_ratio - memory overcommit (serial mode only)
+    :param cfg: ksm_parallel_ratio - number of workers (parallel mode only)
+    :param cfg: ksm_host_reserve - override memory reserve on host in MB
+    :param cfg: ksm_guest_reserve - override memory reserve on guests in MB
+    :param cfg: ksm_mode - test mode {serial, parallel}
+    :param cfg: ksm_perf_ratio - performance ratio, increase it when your
                                  machine is too slow
     """
     def _start_allocator(vm, session, timeout):
         """
         Execute ksm_overcommit_guest.py on guest, wait until it's initialized.
 
-        @param vm: VM object.
-        @param session: Remote session to a VM object.
-        @param timeout: Timeout that will be used to verify if
+        :param vm: VM object.
+        :param session: Remote session to a VM object.
+        :param timeout: Timeout that will be used to verify if
                 ksm_overcommit_guest.py started properly.
         """
         logging.debug("Starting ksm_overcommit_guest.py on guest %s", vm.name)
@@ -87,12 +87,12 @@ def run_ksm_overcommit(test, params, env):
         Execute a given command on ksm_overcommit_guest.py main loop,
         indicating the vm the command was executed on.
 
-        @param command: Command that will be executed.
-        @param vm: VM object.
-        @param session: Remote session to VM object.
-        @param timeout: Timeout used to verify expected output.
+        :param command: Command that will be executed.
+        :param vm: VM object.
+        :param session: Remote session to VM object.
+        :param timeout: Timeout used to verify expected output.
 
-        @return: Tuple (match index, data)
+        :return: Tuple (match index, data)
         """
         logging.debug("Executing '%s' on ksm_overcommit_guest.py loop, "
                       "vm: %s, timeout: %s", command, vm.name, timeout)
@@ -112,7 +112,7 @@ def run_ksm_overcommit(test, params, env):
         """
         Return sharing memory by ksm in MB
 
-        @return: memory in MB
+        :return: memory in MB
         """
         fpages = open('/sys/kernel/mm/ksm/pages_sharing')
         ksm_pages = int(fpages.read())
