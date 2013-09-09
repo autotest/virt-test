@@ -533,8 +533,19 @@ class VM(virt_vm.BaseVM):
         # default to 'uname -m' output
         arch_name = params.get("vm_arch_name", utils.get_current_kernel_arch())
         capabs = libvirt_xml.CapabilityXML()
-        support_machine_type = capabs.os_arch_machine_map[hvm_or_pv][arch_name]
-        logging.debug("Machine types supported for %s\%s: %s",
+        try:
+            support_machine_type = capabs.os_arch_machine_map[hvm_or_pv][arch_name]
+        except KeyError, detail:
+            if detail.args[0] == hvm_or_pv:
+                raise KeyError("No libvirt support for %s virtualization, "
+                               "does system hardware + software support it?"
+                               % hvm_or_pv)
+            elif detail.args[0] == arch_name:
+                raise KeyError("No libvirt support for %s virtualization of "
+                               "%s, does system hardware + software support "
+                               "it?" % (hvm_or_pv, arch_name))
+            raise
+        logging.debug("Machine types supported for %s/%s: %s",
                       hvm_or_pv, arch_name, support_machine_type)
 
         # Start constructing the qemu command
@@ -548,7 +559,7 @@ class VM(virt_vm.BaseVM):
         # set connect uri
         virt_install_cmd += add_connect_uri(help_text, self.connect_uri)
 
-        # hvm or pv specificed by libvirt switch (pv used  by Xen only)
+        # hvm or pv specified by libvirt switch (pv used  by Xen only)
         if hvm_or_pv:
             virt_install_cmd += add_hvm_or_pv(help_text, hvm_or_pv)
 
