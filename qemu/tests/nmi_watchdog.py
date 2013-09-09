@@ -1,4 +1,5 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error
 
 
@@ -17,7 +18,7 @@ def run_nmi_watchdog(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    timeout=int(params.get("login_timeout", 360))
+    timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     get_nmi_cmd = params["get_nmi_cmd"]
     kernel_version = session.get_command_output("uname -r").strip()

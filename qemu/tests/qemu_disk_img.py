@@ -1,4 +1,5 @@
-import os, logging
+import os
+import logging
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, env_process
@@ -108,7 +109,7 @@ class QemuImgTest(qemu_storage.QemuImg):
     @error.context_aware
     def check_image(self, t_params={}):
         error.context("check image file ('%s')" % self.image_filename,
-            logging.info)
+                      logging.info)
         return super(QemuImgTest, self).check_image(t_params, self.data_dir)
 
     @error.context_aware
@@ -122,6 +123,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         self.destroy_vm()
         for _file in self.trash:
             utils.run("rm -f %s" % _file)
+
 
 def run_qemu_disk_img(test, params, env):
     pass

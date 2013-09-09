@@ -36,7 +36,6 @@ def run_vhost_with_cgroup(test, params, env):
             except Exception:   # Process might not already exist
                 raise error.TestFail("Failed to move all VM threads to cgroup")
 
-
     error.context("Test Setup: Cgroup initialize in host", logging.info)
     modules = CgroupModules()
     if (modules.init(['cpu']) != 1):

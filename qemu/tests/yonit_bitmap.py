@@ -1,4 +1,5 @@
-import logging, signal
+import logging
+import signal
 from autotest.client.shared import error
 from virttest import utils_misc
 from tests import guest_test
@@ -25,7 +26,7 @@ def run_yonit_bitmap(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-    sec_per_day = 86400 # seconds per day
+    sec_per_day = 86400  # seconds per day
     test_timeout = int(params.get("test_timeout", sec_per_day))
     login_timeout = int(params.get("login_timeout", 360))
 
@@ -50,31 +51,29 @@ def run_yonit_bitmap(test, params, env):
         raise error.TestError("Could not create child process to execute "
                               "guest_test background")
 
-
     def is_yonit_benchmark_launched():
         if session.get_command_status(
-            'tasklist | find /I "compress_benchmark_loop"') != 0:
+                'tasklist | find /I "compress_benchmark_loop"') != 0:
             logging.debug("yonit bitmap benchmark was not found")
             return False
         return True
 
-
     error.context("Watching Yonit bitmap benchmark is running until timeout",
-                   logging.info)
+                  logging.info)
     try:
         # Start detecting whether the benchmark is started a few mins
         # after the background test launched, as the downloading
         # will take some time.
         launch_timeout = login_timeout
         if utils_misc.wait_for(is_yonit_benchmark_launched,
-                              launch_timeout, 180, 5):
+                               launch_timeout, 180, 5):
             logging.debug("Yonit bitmap benchmark was launched successfully")
         else:
             raise error.TestError("Failed to launch yonit bitmap benchmark")
 
         # If the benchmark exits before timeout, errors happened.
         if utils_misc.wait_for(lambda: not is_yonit_benchmark_launched(),
-                              test_timeout, 60, 10):
+                               test_timeout, 60, 10):
             raise error.TestError("Yonit bitmap benchmark exits unexpectly")
         else:
             if session.is_responsive():

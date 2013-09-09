@@ -6,7 +6,14 @@ Helpers for cgroup testing.
 @copyright: 2011 Red Hat Inc.
 @author: Lukas Doktor <ldoktor@redhat.com>
 """
-import logging, os, shutil, subprocess, time, re, random, commands
+import logging
+import os
+import shutil
+import subprocess
+import time
+import re
+import random
+import commands
 from tempfile import mkdtemp
 from autotest.client import utils
 from autotest.client.shared import error
@@ -18,9 +25,11 @@ except ImportError:
 
 
 class Cgroup(object):
+
     """
     Cgroup handling class.
     """
+
     def __init__(self, module, _client):
         """
         Constructor
@@ -31,7 +40,6 @@ class Cgroup(object):
         self._client = _client
         self.root = None
         self.cgroups = []
-
 
     def __del__(self):
         """
@@ -53,8 +61,7 @@ class Cgroup(object):
         self.root = modules.get_pwd(self.module)
         if not self.root:
             raise error.TestError("cg.initialize(): Module %s not found"
-                                                                % self.module)
-
+                                  % self.module)
 
     def __get_cgroup_pwd(self, cgroup):
         """
@@ -66,7 +73,6 @@ class Cgroup(object):
         if not isinstance(cgroup, str):
             raise error.TestError("cgroup type isn't string!")
         return os.path.join(self.root, cgroup) + '/'
-
 
     def get_cgroup_name(self, pwd=None):
         """
@@ -87,7 +93,6 @@ class Cgroup(object):
             return pwd[len(self.root) + 1:]
         return None
 
-
     def get_cgroup_index(self, cgroup):
         """
         Get cgroup's index in cgroups
@@ -102,7 +107,6 @@ class Cgroup(object):
             return self.cgroups.index(cgroup_pwd)
         except error.CmdError:
             raise error.TestFail("Find index failed!")
-
 
     def mk_cgroup_cgcreate(self, pwd=None, cgroup=None):
         """
@@ -119,7 +123,7 @@ class Cgroup(object):
                                                  range.upper(), 6))
             else:
                 sub_cgroup = cgroup
-            if  parent_cgroup is None:
+            if parent_cgroup is None:
                 cgroup = sub_cgroup
             else:
                 # Parent cgroup:test. Created cgroup:test1.
@@ -134,7 +138,6 @@ class Cgroup(object):
             return len(self.cgroups) - 1
         except error.CmdError:
             raise error.TestFail("Make cgroup by cgcreate failed!")
-
 
     def mk_cgroup(self, pwd=None, cgroup=None):
         """
@@ -161,7 +164,6 @@ class Cgroup(object):
         self.cgroups.append(pwd)
         return len(self.cgroups) - 1
 
-
     def cgexec(self, cgroup, cmd, args=""):
         """
         Execute command in desired cgroup
@@ -182,7 +184,6 @@ class Cgroup(object):
             raise error.TestFail("Execute %s in cgroup failed!\n%s" %
                                  (cmd, detail))
 
-
     def rm_cgroup(self, pwd):
         """
         Removes cgroup.
@@ -200,7 +201,6 @@ class Cgroup(object):
         except Exception, inst:
             raise error.TestError("cg.rm_cgroup(): %s" % inst)
 
-
     def cgdelete_all_cgroups(self):
         """
         Delete all cgroups in the module
@@ -215,7 +215,6 @@ class Cgroup(object):
         except error.CmdError:
             raise error.TestFail("cgdelete all cgroups in %s failed!"
                                  % self.module)
-
 
     def cgdelete_cgroup(self, cgroup, recursive=False):
         """
@@ -237,7 +236,6 @@ class Cgroup(object):
             raise error.TestFail("cgdelete %s failed!\n%s" %
                                  (cgroup, detail))
 
-
     def cgclassify_cgroup(self, pid, cgroup):
         """
         Classify pid into cgroup
@@ -256,7 +254,6 @@ class Cgroup(object):
             raise error.TestFail("Classify process to tasks file failed!:%s" %
                                  detail)
 
-
     def get_pids(self, pwd=None):
         """
         Get all pids in cgroup
@@ -264,7 +261,7 @@ class Cgroup(object):
         @params: pwd: cgroup directory
         @return: all pids(list)
         """
-        if pwd == None:
+        if pwd is None:
             pwd = self.root
         if isinstance(pwd, int):
             pwd = self.cgroups[pwd]
@@ -272,7 +269,6 @@ class Cgroup(object):
             return [_.strip() for _ in open(os.path.join(pwd, 'tasks'), 'r')]
         except Exception, inst:
             raise error.TestError("cg.get_pids(): %s" % inst)
-
 
     def test(self, cmd):
         """
@@ -288,7 +284,6 @@ class Cgroup(object):
                                    stderr=subprocess.PIPE, close_fds=True)
         return process
 
-
     def is_cgroup(self, pid, pwd):
         """
         Checks if the 'pid' process is in 'pwd' cgroup
@@ -303,7 +298,6 @@ class Cgroup(object):
         else:
             return -1
 
-
     def is_root_cgroup(self, pid):
         """
         Checks if the 'pid' process is in root cgroup (WO cgroup)
@@ -311,7 +305,6 @@ class Cgroup(object):
         @return: 0 when is 'root' member
         """
         return self.is_cgroup(pid, self.root)
-
 
     def set_cgroup(self, pid, pwd=None):
         """
@@ -331,7 +324,6 @@ class Cgroup(object):
             raise error.TestError("cg.set_cgroup(): Setting %d pid into %s "
                                   "cgroup failed" % (pid, pwd))
 
-
     def set_root_cgroup(self, pid):
         """
         Resets the cgroup membership (sets to root)
@@ -339,7 +331,6 @@ class Cgroup(object):
         @return: 0 when PASSED
         """
         return self.set_cgroup(pid, self.root)
-
 
     def get_property(self, prop, pwd=None):
         """
@@ -362,7 +353,6 @@ class Cgroup(object):
         except Exception, inst:
             raise error.TestError("cg.get_property(): %s" % inst)
 
-
     def set_property_h(self, prop, value, pwd=None, check=True, checkprop=None):
         """
         Sets the one-line property value concerning the K,M,G postfix
@@ -380,14 +370,13 @@ class Cgroup(object):
                      'M': 1048576,
                      'G': 1073741824,
                      'T': 1099511627776
-                    }
+                     }
             if human.has_key(value[-1]):
                 value = int(value[:-1]) * human[value[-1]]
         except Exception:
             logging.warn("cg.set_prop() fallback into cg.set_property.")
             value = _value
         self.set_property(prop, value, pwd, check, checkprop)
-
 
     def set_property(self, prop, value, pwd=None, check=True, checkprop=None):
         """
@@ -420,7 +409,6 @@ class Cgroup(object):
                 raise error.TestError("cg.set_property(): Setting failed: "
                                       "desired = %s, real values = %s"
                                       % (repr(check), repr(_values)))
-
 
     def cgset_property(self, prop, value, pwd=None, check=True, checkprop=None):
         """
@@ -457,7 +445,6 @@ class Cgroup(object):
                                       "desired = %s, real values = %s"
                                       % (repr(check), repr(_values)))
 
-
     def smoke_test(self):
         """
         Smoke test
@@ -474,7 +461,8 @@ class Cgroup(object):
 
         # New process should be a root member
         if self.is_root_cgroup(ps.pid):
-            raise error.TestError("cg.smoke_test: Process is not a root member")
+            raise error.TestError(
+                "cg.smoke_test: Process is not a root member")
 
         # Change the cgroup
         self.set_cgroup(ps.pid, pwd)
@@ -486,7 +474,7 @@ class Cgroup(object):
             pass
         else:
             raise error.TestError("cg.smoke_test: Unexpected successful"
-                                 " deletion of the used cgroup")
+                                  " deletion of the used cgroup")
 
         # Return the process into the root cgroup
         self.set_root_cgroup(ps.pid)
@@ -502,9 +490,11 @@ class Cgroup(object):
 
 
 class CgroupModules(object):
+
     """
     Handles the list of different cgroup filesystems.
     """
+
     def __init__(self, mountdir=None):
         self.modules = []
         self.modules.append([])
@@ -516,8 +506,6 @@ class CgroupModules(object):
         else:
             self.mountdir = mountdir
             self.rm_mountdir = False
-
-
 
     def __del__(self):
         """
@@ -535,8 +523,8 @@ class CgroupModules(object):
                 # If delete /cgroup/, this action will break cgroup service.
                 shutil.rmtree(self.mountdir)
         except Exception:
-            logging.warn("CGM: Couldn't remove the %s directory", self.mountdir)
-
+            logging.warn(
+                "CGM: Couldn't remove the %s directory", self.mountdir)
 
     def init(self, _modules):
         """
@@ -561,7 +549,7 @@ class CgroupModules(object):
             _module = set(module.split(','))
             for mount in mounts:
                 # 'memory' or 'memory,cpuset'
-                if  _module.issubset(mount[3].split(',')):
+                if _module.issubset(mount[3].split(',')):
                     self.modules[0].append(module)
                     self.modules[1].append(mount[1] + '/')
                     self.modules[2].append(False)
@@ -584,7 +572,6 @@ class CgroupModules(object):
 
         logging.debug("Initialized cgroup modules: %s", self.modules[0])
         return len(self.modules[0])
-
 
     def get_pwd(self, module):
         """
@@ -652,8 +639,8 @@ def get_all_controllers():
             controller_sub_list = controller.split(",")
             controller_list += controller_sub_list
     except error.CmdError:
-        controller_list = [ 'cpuacct', 'cpu', 'memory', 'cpuset',
-                            'devices', 'freezer', 'blkio', 'netcls' ]
+        controller_list = ['cpuacct', 'cpu', 'memory', 'cpuset',
+                           'devices', 'freezer', 'blkio', 'netcls']
     return controller_list
 
 
@@ -686,12 +673,13 @@ def resolve_task_cgroup_path(pid, controller):
 
 
 class CgconfigService(object):
+
     """
     Cgconfig service class.
     """
+
     def __init__(self):
         self._service_manager = service.SpecificServiceManager("cgconfig")
-
 
     def _service_cgconfig_control(self, action):
         """
@@ -707,13 +695,11 @@ class CgconfigService(object):
             raise error.TestError("Unknown action: %s" % action)
         return getattr(self._service_manager, action)()
 
-
     def cgconfig_start(self):
         """
         Sart cgconfig service
         """
         return self._service_cgconfig_control("start")
-
 
     def cgconfig_stop(self):
         """
@@ -721,20 +707,17 @@ class CgconfigService(object):
         """
         return self._service_cgconfig_control("stop")
 
-
     def cgconfig_restart(self):
         """
         Restart cgconfig service
         """
         return self._service_cgconfig_control("restart")
 
-
     def cgconfig_condrestart(self):
         """
         Condrestart cgconfig service
         """
         return self._service_cgconfig_control("condrestart")
-
 
     def cgconfig_is_running(self):
         """

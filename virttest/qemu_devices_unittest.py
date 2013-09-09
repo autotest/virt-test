@@ -7,12 +7,17 @@ This is a unittest for qemu_devices library.
 """
 __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 
-import re, unittest, os
+import re
+import unittest
+import os
 import common
 from autotest.client.shared.test_utils import mock
-import qemu_devices, data_dir, qemu_monitor
+import qemu_devices
+import data_dir
+import qemu_monitor
 
-UNITTEST_DATA_DIR = os.path.join(data_dir.get_root_dir(), "virttest", "unittest_data")
+UNITTEST_DATA_DIR = os.path.join(
+    data_dir.get_root_dir(), "virttest", "unittest_data")
 
 # Dummy variables
 # qemu-1.5.0 human monitor help output
@@ -22,13 +27,17 @@ QEMU_QMP = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__qmp_help")).read()
 # qemu-1.5.0 -help
 QEMU_HELP = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__help")).read()
 # qemu-1.5.0 -devices ?
-QEMU_DEVICES = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__devices_help")).read()
+QEMU_DEVICES = open(
+    os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__devices_help")).read()
 # qemu-1.5.0 -M ?
-QEMU_MACHINE = open(os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__machine_help")).read()
+QEMU_MACHINE = open(
+    os.path.join(UNITTEST_DATA_DIR, "qemu-1.5.0__machine_help")).read()
 
 
 class MockHMPMonitor(qemu_monitor.HumanMonitor):
+
     """ Dummy class inherited from qemu_monitor.HumanMonitor """
+
     def __init__(self):     # pylint: disable=W0231
         pass
 
@@ -37,13 +46,16 @@ class MockHMPMonitor(qemu_monitor.HumanMonitor):
 
 
 class Devices(unittest.TestCase):
+
     """ set of qemu devices tests """
+
     def test_q_base_device(self):
         """ QBaseDevice tests """
         qdevice = qemu_devices.QBaseDevice('MyType',
-                                      {'ParamA': 'ValueA', 'AUTOREMOVE': None},
-                                      'Object1',
-                                      {'type': 'pci'})
+                                           {'ParamA': 'ValueA',
+                                               'AUTOREMOVE': None},
+                                           'Object1',
+                                           {'type': 'pci'})
         self.assertEqual(qdevice['ParamA'], 'ValueA', 'Param added during '
                          '__init__ is corrupted %s != %s' % (qdevice['ParamA'],
                                                              'ValueA'))
@@ -69,7 +81,7 @@ class Devices(unittest.TestCase):
     def test_q_string_device(self):
         """ QStringDevice tests """
         qdevice = qemu_devices.QStringDevice('MyType', {'addr': '0x7'},
-                                    cmdline='-qdevice ahci,addr=%(addr)s')
+                                             cmdline='-qdevice ahci,addr=%(addr)s')
         self.assertEqual(qdevice.cmdline(), '-qdevice ahci,addr=0x7', "Cmdline"
                          " doesn't match expected one:\n%s\n%s"
                          % (qdevice.cmdline(), '-qdevice ahci,addr=0x7'))
@@ -98,7 +110,9 @@ class Devices(unittest.TestCase):
 
 
 class Buses(unittest.TestCase):
+
     """ Set of bus-representation tests """
+
     def test_q_sparse_bus(self):
         """ Sparse bus tests (general bus testing) """
         bus = qemu_devices.QSparseBus('bus',
@@ -615,7 +629,7 @@ Slots:
 
         # Insert device into usb controller, default port
         self.assertTrue(usbc1.insert(qemu_devices.QDevice('usb-kbd',
-                                          parent_bus={'type': 'uhci'})))
+                                                          parent_bus={'type': 'uhci'})))
 
         # Insert usb-hub into usb controller, default port
         dev = qemu_devices.QDevice('usb-hub', parent_bus={'type': 'uhci'})
@@ -638,27 +652,27 @@ Slots:
 
         # Insert usb-device into usb-hub in usb-hub in usb-hub, exact port
         self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
-                                         {'port': '2.4.3.1'},
-                                         parent_bus={'type': 'uhci'})))
+                                                         {'port': '2.4.3.1'},
+                                                         parent_bus={'type': 'uhci'})))
         # Insert usb-device into usb-hub in usb-hub in usb-hub, default port
         self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
-                                         parent_bus={'type': 'uhci'})))
+                                                         parent_bus={'type': 'uhci'})))
 
         # Try to insert device into specific port which belongs to inferior bus
         self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                         {'port': '2.4.3.3'},
-                                         parent_bus={'type': 'uhci'})))
+                                                          {'port': '2.4.3.3'},
+                                                          parent_bus={'type': 'uhci'})))
 
         # Try to insert device into specific port which belongs to superior bus
         self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                         {'port': '2.4'},
-                                         parent_bus={'type': 'uhci'})))
+                                                          {'port': '2.4'},
+                                                          parent_bus={'type': 'uhci'})))
 
         # Try to insert device into specific port which belongs to same level
         # but different port
         self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                         {'port': '2.3.4'},
-                                         parent_bus={'type': 'uhci'})))
+                                                          {'port': '2.3.4'},
+                                                          parent_bus={'type': 'uhci'})))
 
         # Force insert device with port which belongs to other hub
         dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3.4'},
@@ -682,7 +696,9 @@ Slots:
 
 
 class Container(unittest.TestCase):
+
     """ Tests related to the abstract representation of qemu machine """
+
     def setUp(self):
         self.god = mock.mock_god(ut=self)
         self.god.stub_function(qemu_devices.utils, "system_output")
@@ -695,27 +711,27 @@ class Container(unittest.TestCase):
         """ @return: Initialized qemu_devices.DevContainer object """
         qemu_cmd = '/usr/bin/qemu_kvm'
         qemu_devices.utils.system_output.expect_call('%s -help' % qemu_cmd,
-                                 timeout=10, ignore_status=True
-                                 ).and_return(QEMU_HELP)
+                                                     timeout=10, ignore_status=True
+                                                     ).and_return(QEMU_HELP)
         qemu_devices.utils.system_output.expect_call("%s -device ? 2>&1"
-                                            % qemu_cmd, timeout=10,
-                                            ignore_status=True
-                                            ).and_return(QEMU_DEVICES)
+                                                     % qemu_cmd, timeout=10,
+                                                     ignore_status=True
+                                                     ).and_return(QEMU_DEVICES)
         qemu_devices.utils.system_output.expect_call("%s -M ?" % qemu_cmd,
-                                 timeout=10, ignore_status=True
-                                 ).and_return(QEMU_MACHINE)
+                                                     timeout=10, ignore_status=True
+                                                     ).and_return(QEMU_MACHINE)
         cmd = "echo -e 'help\nquit' | %s -monitor stdio -vnc none" % qemu_cmd
         qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                             ignore_status=True
-                                             ).and_return(QEMU_HMP)
+                                                     ignore_status=True
+                                                     ).and_return(QEMU_HMP)
         cmd = ('echo -e \'{ "execute": "qmp_capabilities" }\n'
                '{ "execute": "query-commands", "id": "RAND91" }\n'
                '{ "execute": "quit" }\''
                '| %s -qmp stdio -vnc none | grep return |'
                ' grep RAND91' % qemu_cmd)
         qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                             ignore_status=True
-                                             ).and_return('')
+                                                     ignore_status=True
+                                                     ).and_return('')
 
         cmd = ('echo -e \'{ "execute": "qmp_capabilities" }\n'
                '{ "execute": "query-commands", "id": "RAND91" }\n'
@@ -723,8 +739,8 @@ class Container(unittest.TestCase):
                '| %s -qmp stdio -vnc none | grep return |'
                ' grep RAND91' % qemu_cmd)
         qemu_devices.utils.system_output.expect_call(cmd, timeout=10,
-                                             ignore_status=True
-                                             ).and_return(QEMU_QMP)
+                                                     ignore_status=True
+                                                     ).and_return(QEMU_QMP)
 
         qdev = qemu_devices.DevContainer(qemu_cmd, vm_name, strict_mode, 'no',
                                          allow_hotplugged_vm)
@@ -943,7 +959,7 @@ PIIX3
 
         out = qdev.get_state()
         assert out == -1, ("Status after init is not -1"
-                                       " (%s)" % out)
+                           " (%s)" % out)
         out = len(qdev)
         assert out == 5, "Number of devices of this VM is not 5 (%s)" % out
 
@@ -1021,7 +1037,7 @@ PIIX3
         assert out == 6, "Number of devices of this VM is not 6 (%s)" % out
         # Removal of drive shoould also set drive of the disk device to None
         out = dev2.get_param('drive')
-        assert out == None, "Drive was not removed from disk device"
+        assert out is None, "Drive was not removed from disk device"
 
     # pylint: disable=W0212
     def test_qdev_low_level(self):
@@ -1125,7 +1141,7 @@ PIIX3
         # get_buses (all buses of this type)
         out = qdev.get_buses({'type': 'pci'})
         self.assertEqual(len(out), 3, 'get_buses should return 3 buses but '
-                        'returned %s instead:\n%s' % (len(out), out))
+                         'returned %s instead:\n%s' % (len(out), out))
 
         # get_first_free_bus (last added bus of this type)
         out = qdev.get_first_free_bus({'type': 'pci'}, [None])

@@ -1,4 +1,5 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc
 

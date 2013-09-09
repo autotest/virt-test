@@ -1,7 +1,13 @@
 """
 Library to perform pre/post test setup for KVM autotest.
 """
-import os, logging, time, re, random, commands, math
+import os
+import logging
+import time
+import re
+import random
+import commands
+import math
 from autotest.client.shared import error, utils
 from autotest.client import kvm_control, os_dep
 import utils_misc
@@ -13,6 +19,7 @@ except ImportError:
 
 
 class THPError(Exception):
+
     """
     Base exception for Transparent Hugepage setup.
     """
@@ -20,6 +27,7 @@ class THPError(Exception):
 
 
 class THPNotSupportedError(THPError):
+
     """
     Thrown when host does not support tansparent hugepages.
     """
@@ -27,6 +35,7 @@ class THPNotSupportedError(THPError):
 
 
 class THPWriteConfigError(THPError):
+
     """
     Thrown when host does not support tansparent hugepages.
     """
@@ -34,6 +43,7 @@ class THPWriteConfigError(THPError):
 
 
 class THPKhugepagedError(THPError):
+
     """
     Thrown when khugepaged is not behaving as expected.
     """
@@ -41,6 +51,7 @@ class THPKhugepagedError(THPError):
 
 
 class TransparentHugePageConfig(object):
+
     def __init__(self, test, params):
         """
         Find paths for transparent hugepages and kugepaged configuration. Also,
@@ -89,7 +100,7 @@ class TransparentHugePageConfig(object):
                         f.close()
                         if re.findall("\[(.*)\]", parameter):
                             original_config[f_dir] = re.findall("\[(.*)\]",
-                                                           parameter)[0]
+                                                                parameter)[0]
                             self.file_list_str.append(f_dir)
                         else:
                             original_config[f_dir] = int(parameter)
@@ -99,7 +110,6 @@ class TransparentHugePageConfig(object):
 
         self.test_config = test_cfg
         self.original_config = original_config
-
 
     def set_env(self):
         """
@@ -112,7 +122,6 @@ class TransparentHugePageConfig(object):
                              self.test_config[path])
                 file(path, 'w').write(self.test_config[path])
 
-
     def value_listed(self, value):
         """
         Get a parameters list from a string
@@ -122,7 +131,6 @@ class TransparentHugePageConfig(object):
             if i:
                 value_list.append(i)
         return value_list
-
 
     def khugepaged_test(self):
         """
@@ -159,7 +167,7 @@ class TransparentHugePageConfig(object):
             action_list = []
             if re.findall("enabled", file_path):
                 # Start and stop test for khugepaged
-                value_list = self.value_listed(open(file_path,"r").read())
+                value_list = self.value_listed(open(file_path, "r").read())
                 for i in value_list:
                     if re.match("n", i, re.I):
                         action_stop = (i, 256)
@@ -171,7 +179,7 @@ class TransparentHugePageConfig(object):
 
                 check_status_with_value(action_list, file_path)
             else:
-                value_list = self.value_listed(open(file_path,"r").read())
+                value_list = self.value_listed(open(file_path, "r").read())
                 for i in value_list:
                     action = (i, 0)
                     action_list.append(action)
@@ -185,14 +193,13 @@ class TransparentHugePageConfig(object):
             file_object.close()
             if value != 0 and value != 1:
                 new_value = random.random()
-                action_list.append((str(int(value * new_value)),0))
-                action_list.append((str(int(value * ( new_value + 1))),0))
+                action_list.append((str(int(value * new_value)), 0))
+                action_list.append((str(int(value * (new_value + 1))), 0))
             else:
                 action_list.append(("0", 0))
                 action_list.append(("1", 0))
 
             check_status_with_value(action_list, file_path)
-
 
     def setup(self):
         """
@@ -201,7 +208,6 @@ class TransparentHugePageConfig(object):
         """
         self.set_env()
         self.khugepaged_test()
-
 
     def cleanup(self):
         """:
@@ -221,6 +227,7 @@ class TransparentHugePageConfig(object):
 
 
 class HugePageConfig(object):
+
     def __init__(self, params):
         """
         Gets environment variable values and calculates the target number
@@ -249,7 +256,6 @@ class HugePageConfig(object):
 
         self.target_hugepages = target_hugepages
 
-
     def get_hugepage_size(self):
         """
         Get the current system setting for huge memory page size.
@@ -261,7 +267,6 @@ class HugePageConfig(object):
         except ValueError, e:
             raise ValueError("Could not get huge page size setting from "
                              "/proc/meminfo: %s" % e)
-
 
     def get_target_hugepages(self):
         """
@@ -290,7 +295,7 @@ class HugePageConfig(object):
             hugepage_allocated.close()
             chunk_bottom = int(math.log(self.hugepage_size / 4, 2))
             chunk_info = utils_memory.get_buddy_info(">=%s" % chunk_bottom,
-                                                      zones="DMA32 Normal")
+                                                     zones="DMA32 Normal")
             for size in chunk_info:
                 available_hugepages += int(chunk_info[size] * math.pow(2,
                                            int(int(size) - chunk_bottom)))
@@ -311,7 +316,6 @@ class HugePageConfig(object):
                                       "status." % self.suggest_mem)
 
         return target_hugepages
-
 
     @error.context_aware
     def set_hugepages(self):
@@ -335,7 +339,6 @@ class HugePageConfig(object):
         logging.debug("Successfully set %s large memory pages on host ",
                       self.target_hugepages)
 
-
     @error.context_aware
     def mount_hugepage_fs(self):
         """
@@ -350,7 +353,6 @@ class HugePageConfig(object):
             cmd = "mount -t hugetlbfs none %s" % self.hugepage_path
             utils.system(cmd)
 
-
     def setup(self):
         logging.debug("Number of VMs this test will use: %d", self.vms)
         logging.debug("Amount of memory used by each vm: %s", self.mem)
@@ -362,7 +364,6 @@ class HugePageConfig(object):
         self.mount_hugepage_fs()
 
         return self.suggest_mem
-
 
     @error.context_aware
     def cleanup(self):
@@ -377,6 +378,7 @@ class HugePageConfig(object):
 
 
 class KSMError(Exception):
+
     """
     Base exception for KSM setup
     """
@@ -384,6 +386,7 @@ class KSMError(Exception):
 
 
 class KSMNotSupportedError(KSMError):
+
     """
     Thrown when host does not support KSM.
     """
@@ -391,6 +394,7 @@ class KSMNotSupportedError(KSMError):
 
 
 class KSMConfigError(KSMError):
+
     """
     Thrown when host does not config KSM as expect.
     """
@@ -398,6 +402,7 @@ class KSMConfigError(KSMError):
 
 
 class KSMConfig(object):
+
     def __init__(self, params, env):
         """
 
@@ -467,7 +472,6 @@ class KSMConfig(object):
         self.default_status.append(int(self.ksmtuned_process))
         self.default_status.append(self.ksm_module_loaded)
 
-
     def setup(self, env):
         if self.ksmtuned_process != 0 and self.disable_ksmtuned:
             kill_cmd = "kill -1 %s" % self.ksmtuned_process
@@ -479,11 +483,11 @@ class KSMConfig(object):
             if self.run != self.default_status[0]:
                 ksm_cmd += " echo %s > KSM_PATH/run;" % self.run
             if (self.pages_to_scan
-                and self.pages_to_scan != self.default_status[1]):
+                    and self.pages_to_scan != self.default_status[1]):
                 ksm_cmd += " echo %s > KSM_PATH" % self.pages_to_scan
                 ksm_cmd += "/pages_to_scan;"
             if (self.sleep_ms
-                and self.sleep_ms != self.default_status[2]):
+                    and self.sleep_ms != self.default_status[2]):
                 ksm_cmd += " echo %s > KSM_PATH" % self.sleep_ms
                 ksm_cmd += "/sleep_millisecs"
             ksm_cmd = re.sub("KSM_PATH", self.ksm_path, ksm_cmd)
@@ -495,7 +499,6 @@ class KSMConfig(object):
                 ksm_cmd += "ksmctl stop"
 
         utils.system(ksm_cmd)
-
 
     def cleanup(self, env):
         default_status = env.data.get("KSM_default_config")
@@ -535,6 +538,7 @@ class KSMConfig(object):
 
 
 class PrivateBridgeError(Exception):
+
     def __init__(self, brname):
         self.brname = brname
 
@@ -544,6 +548,7 @@ class PrivateBridgeError(Exception):
 
 class PrivateBridgeConfig(object):
     __shared_state = {}
+
     def __init__(self, params=None):
         self.__dict__ = self.__shared_state
         if params is not None:
@@ -567,7 +572,6 @@ class PrivateBridgeConfig(object):
             if params.get("bridge_force_create", "no") == "yes":
                 self.force_create = True
 
-
     def _assemble_iptables_rules(self, port_list):
         rules = []
         index = 0
@@ -588,7 +592,6 @@ class PrivateBridgeConfig(object):
                      (self.brname, self.brname))
         return rules
 
-
     def _add_bridge(self):
         utils.system("brctl addbr %s" % self.brname)
         ip_fwd_path = "/proc/sys/net/%s/ip_forward" % self.ip_version
@@ -600,23 +603,18 @@ class PrivateBridgeConfig(object):
             utils.system("brctl addif %s %s" % (self.brname,
                                                 self.physical_nic))
 
-
     def _bring_bridge_up(self):
         utils.system("ifconfig %s %s.1 up" % (self.brname, self.subnet))
-
 
     def _iptables_add(self, cmd):
         return utils.system("iptables -I %s" % cmd)
 
-
     def _iptables_del(self, cmd):
         return utils.system("iptables -D %s" % cmd)
-
 
     def _enable_nat(self):
         for rule in self.iptables_rules:
             self._iptables_add(rule)
-
 
     def _start_dhcp_server(self):
         utils.system("service dnsmasq stop")
@@ -635,12 +633,10 @@ class PrivateBridgeConfig(object):
         logging.debug("Started internal DHCP server with PID %s",
                       self.dhcp_server_pid)
 
-
     def _verify_bridge(self):
         brctl_output = utils.system_output("brctl show")
         if self.brname not in brctl_output:
             raise PrivateBridgeError(self.brname)
-
 
     def setup(self):
         brctl_output = utils.system_output("brctl show")
@@ -684,7 +680,6 @@ class PrivateBridgeConfig(object):
 
             self._verify_bridge()
 
-
     def _stop_dhcp_server(self):
         if self.dhcp_server_pid is not None:
             try:
@@ -701,10 +696,8 @@ class PrivateBridgeConfig(object):
             except OSError:
                 pass
 
-
     def _bring_bridge_down(self):
         utils.system("ifconfig %s down" % self.brname, ignore_status=True)
-
 
     def _disable_nat(self):
         for rule in self.iptables_rules:
@@ -714,10 +707,8 @@ class PrivateBridgeConfig(object):
             rule = " ".join(split_list)
             self._iptables_del(rule)
 
-
     def _remove_bridge(self):
         utils.system("brctl delbr %s" % self.brname, ignore_status=True)
-
 
     def cleanup(self):
         brctl_output = utils.system_output("brctl show")
@@ -730,7 +721,8 @@ class PrivateBridgeConfig(object):
                     cleanup = True
                     break
         if cleanup:
-            logging.debug("Cleaning up KVM test private bridge %s", self.brname)
+            logging.debug(
+                "Cleaning up KVM test private bridge %s", self.brname)
             self._stop_dhcp_server()
             self._disable_nat()
             self._bring_bridge_down()
@@ -738,11 +730,13 @@ class PrivateBridgeConfig(object):
 
 
 class PciAssignable(object):
+
     """
     Request PCI assignable devices on host. It will check whether to request
     PF (physical Functions) or VF (Virtual Functions).
     """
-    def __init__(self,  driver=None, driver_option=None, host_set_flag=None,
+
+    def __init__(self, driver=None, driver_option=None, host_set_flag=None,
                  kvm_params=None, vf_filter_re=None, pf_filter_re=None):
         """
         Initialize parameter 'type' which could be:
@@ -793,7 +787,6 @@ class PciAssignable(object):
                 if "allow_unsafe_assigned_interrupts" in i:
                     self.auai_path = i
 
-
     def add_device(self, device_type="vf", name=None):
         """
         Add device type and name to class.
@@ -805,7 +798,6 @@ class PciAssignable(object):
         if name is not None:
             self.name_list.append(name)
         self.devices_requested += 1
-
 
     def _get_pf_pci_id(self, name, search_str):
         """
@@ -824,7 +816,6 @@ class PciAssignable(object):
         if (len(pci_ids) - 1) < nic_id:
             return None
         return pci_ids[nic_id]
-
 
     @error.context_aware
     def _release_dev(self, pci_id):
@@ -858,7 +849,6 @@ class PciAssignable(object):
                 return False
         return True
 
-
     def get_vf_status(self, vf_id):
         """
         Check whether one vf is assigned to VM.
@@ -877,7 +867,6 @@ class PciAssignable(object):
         else:
             return False
 
-
     def get_vf_devs(self):
         """
         Catch all VFs PCI IDs.
@@ -890,7 +879,6 @@ class PciAssignable(object):
         self.setup = None
         cmd = "lspci | awk '/%s/ {print $1}'" % self.vf_filter_re
         return utils.system_output(cmd, verbose=False).split()
-
 
     def get_pf_devs(self):
         """
@@ -905,7 +893,6 @@ class PciAssignable(object):
                 continue
             pf_ids.append(pf_id)
         return pf_ids
-
 
     def get_devs(self, count, type_list=None):
         """
@@ -923,7 +910,7 @@ class PciAssignable(object):
         for pf_id in pf_ids:
             for vf_id in vf_ids:
                 if vf_id[:2] == pf_id[:2] and\
-                    (int(vf_id[-1]) & 1 == int(pf_id[-1])):
+                        (int(vf_id[-1]) & 1 == int(pf_id[-1])):
                     vf_d.append(vf_id)
         for vf_id in vf_ids:
             if self.get_vf_status(vf_id):
@@ -941,16 +928,15 @@ class PciAssignable(object):
                 vf_id = vf_ids.pop(0)
                 dev_ids.append(vf_id)
                 self.dev_unbind_drivers[vf_id] = os.path.join(base_dir,
-                                                 "drivers/%svf" % self.driver)
+                                                              "drivers/%svf" % self.driver)
             elif d_type == "pf":
                 pf_id = pf_ids.pop(0)
                 dev_ids.append(pf_id)
                 self.dev_unbind_drivers[pf_id] = os.path.join(base_dir,
-                                                 "drivers/%s" % self.driver)
+                                                              "drivers/%s" % self.driver)
         if len(dev_ids) != count:
             logging.error("Did not get enough PCI Device")
         return dev_ids
-
 
     def get_vfs_count(self):
         """
@@ -962,7 +948,6 @@ class PciAssignable(object):
         cmd = "lspci | grep '%s' | wc -l" % self.vf_filter_re
         return int(utils.system_output(cmd, verbose=False))
 
-
     def check_vfs_count(self):
         """
         Check VFs count number according to the parameter driver_options.
@@ -972,7 +957,6 @@ class PciAssignable(object):
         # two for the value of driver_option 'max_vfs'.
         expected_count = int((re.findall("(\d)", self.driver_option)[0])) * 2
         return (self.get_vfs_count() == expected_count)
-
 
     def is_binded_to_stub(self, full_id):
         """
@@ -985,7 +969,6 @@ class PciAssignable(object):
         if os.path.exists(os.path.join(stub_path, full_id)):
             return True
         return False
-
 
     @error.context_aware
     def sr_iov_setup(self):
@@ -1042,14 +1025,13 @@ class PciAssignable(object):
         # Re-probe driver with proper number of VFs
         if re_probe:
             cmd = "modprobe %s %s" % (self.driver, self.driver_option)
-            error.context("Loading the driver '%s' with command '%s'" %\
+            error.context("Loading the driver '%s' with command '%s'" %
                           (self.driver, cmd), logging.info)
             s, o = commands.getstatusoutput(cmd)
             utils.system("/etc/init.d/network restart", ignore_status=True)
             if s:
                 return False
             return True
-
 
     def sr_iov_cleanup(self):
         """
@@ -1112,7 +1094,6 @@ class PciAssignable(object):
                 return False
             return True
 
-
     def request_devs(self, count=None):
         """
         Implement setup process: unbind the PCI device and then bind it
@@ -1169,7 +1150,6 @@ class PciAssignable(object):
             requested_pci_ids.append(pci_id)
         return requested_pci_ids
 
-
     @error.context_aware
     def release_devs(self):
         """
@@ -1179,7 +1159,8 @@ class PciAssignable(object):
         try:
             for pci_id in self.dev_drivers:
                 if not self._release_dev(pci_id):
-                    logging.error("Failed to release device %s to host", pci_id)
+                    logging.error(
+                        "Failed to release device %s to host", pci_id)
                 else:
                     logging.info("Released device %s successfully", pci_id)
             if self.cleanup:

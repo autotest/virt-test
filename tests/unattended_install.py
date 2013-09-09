@@ -1,5 +1,11 @@
-import logging, time, re, os, tempfile, ConfigParser
-import threading, shutil
+import logging
+import time
+import re
+import os
+import tempfile
+import ConfigParser
+import threading
+import shutil
 import xml.dom.minidom
 import errno
 from autotest.client.shared import error, iso9660
@@ -21,6 +27,7 @@ _unattended_server_thread_event = None
 
 _syslog_server_thread = None
 _syslog_server_thread_event = None
+
 
 def start_auto_content_server_thread(port, path):
     global _url_auto_content_server_thread
@@ -69,16 +76,18 @@ def terminate_unattended_server_thread():
     if _unattended_server_thread_event is None:
         return False
 
-    if  _unattended_server_thread_event.isSet():
+    if _unattended_server_thread_event.isSet():
         return True
 
     return False
 
 
 class RemoteInstall(object):
+
     """
     Represents a install http server that we can master according to our needs.
     """
+
     def __init__(self, path, ip, port, filename):
         self.path = path
         utils_disk.cleanup(self.path)
@@ -89,14 +98,11 @@ class RemoteInstall(object):
 
         start_unattended_server_thread(self.port, self.path)
 
-
     def get_url(self):
         return 'http://%s:%s/%s' % (self.ip, self.port, self.filename)
 
-
     def get_answer_file_path(self, filename):
         return os.path.join(self.path, filename)
-
 
     def close(self):
         os.chmod(self.path, 0755)
@@ -105,11 +111,13 @@ class RemoteInstall(object):
 
 
 class UnattendedInstallConfig(object):
+
     """
     Creates a floppy disk image that will contain a config file for unattended
     OS install. The parameters to the script are retrieved from environment
     variables.
     """
+
     def __init__(self, test, params, vm):
         """
         Sets class attributes from test parameters.
@@ -199,7 +207,8 @@ class UnattendedInstallConfig(object):
         # Content server params
         # lookup host ip address for first nic by interface name
         try:
-            auto_ip = utils_net.get_ip_address_by_interface(vm.virtnet[0].netdst)
+            auto_ip = utils_net.get_ip_address_by_interface(
+                vm.virtnet[0].netdst)
         except utils_net.NetError:
             auto_ip = None
 
@@ -219,7 +228,6 @@ class UnattendedInstallConfig(object):
 
         self.vm = vm
 
-
     @error.context_aware
     def get_driver_hardware_id(self, driver, run_cmd=True):
         """
@@ -235,10 +243,10 @@ class UnattendedInstallConfig(object):
             os.mkdir(self.floppy_mount_point)
         if not os.path.ismount(self.cdrom_mount_point):
             utils.system("mount %s %s -o loop" % (self.cdrom_virtio,
-                                         self.cdrom_mount_point), timeout=60)
+                                                  self.cdrom_mount_point), timeout=60)
         if not os.path.ismount(self.floppy_mount_point):
             utils.system("mount %s %s -o loop" % (self.virtio_floppy,
-                                        self.floppy_mount_point), timeout=60)
+                                                  self.floppy_mount_point), timeout=60)
         drivers_d = []
         driver_link = None
         if self.driver_in_floppy is not None:
@@ -259,7 +267,6 @@ class UnattendedInstallConfig(object):
             return hwid
         except Exception, e:
             logging.error("Fail to get hardware id with exception: %s" % e)
-
 
     @error.context_aware
     def update_driver_hardware_id(self, driver):
@@ -283,7 +290,6 @@ class UnattendedInstallConfig(object):
             if self.driver_in_floppy is not None:
                 drivers_in_floppy = self.driver_in_floppy.split()
 
-
             mount_point = self.cdrom_mount_point
             storage_path = self.cdrom_virtio
             for driver_in_floppy in drivers_in_floppy:
@@ -303,7 +309,6 @@ class UnattendedInstallConfig(object):
                 raise error.TestError("Can not find hwid from the driver"
                                       " inf file")
         return driver
-
 
     def answer_kickstart(self, answer_path):
         """
@@ -350,7 +355,6 @@ class UnattendedInstallConfig(object):
 
         utils.open_write_close(answer_path, contents)
 
-
     def answer_windows_ini(self, answer_path):
         parser = ConfigParser.ConfigParser()
         parser.read(self.unattended_file)
@@ -369,11 +373,11 @@ class UnattendedInstallConfig(object):
             parser.remove_option('Unattended', 'OemPnPDriversPath')
 
         dummy_re_dirver = {'KVM_TEST_VIRTIO_NETWORK_INSTALLER':
-                 'virtio_network_installer_path',
-                 'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
-                 'virtio_balloon_installer_path',
-                 'KVM_TEST_VIRTIO_QXL_INSTALLER':
-                 'virtio_qxl_installer_path'}
+                           'virtio_network_installer_path',
+                           'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
+                           'virtio_balloon_installer_path',
+                           'KVM_TEST_VIRTIO_QXL_INSTALLER':
+                           'virtio_qxl_installer_path'}
         dummy_re = ""
         for dummy in dummy_re_dirver:
             if dummy_re:
@@ -414,7 +418,6 @@ class UnattendedInstallConfig(object):
         for line in contents.splitlines():
             logging.debug(line)
 
-
     def answer_windows_xml(self, answer_path):
         doc = xml.dom.minidom.parse(self.unattended_file)
 
@@ -449,18 +452,18 @@ class UnattendedInstallConfig(object):
             for s in settings:
                 for c in s.getElementsByTagName("component"):
                     if (c.getAttribute('name') ==
-                        "Microsoft-Windows-PnpCustomizationsWinPE"):
+                            "Microsoft-Windows-PnpCustomizationsWinPE"):
                         s.removeChild(c)
 
         # Last but not least important, replacing the virtio installer command
         # And process check in finish command
         command_lines = doc.getElementsByTagName("CommandLine")
         dummy_re_dirver = {'KVM_TEST_VIRTIO_NETWORK_INSTALLER':
-                 'virtio_network_installer_path',
-                 'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
-                 'virtio_balloon_installer_path',
-                 'KVM_TEST_VIRTIO_QXL_INSTALLER':
-                 'virtio_qxl_installer_path'}
+                           'virtio_network_installer_path',
+                           'KVM_TEST_VIRTIO_BALLOON_INSTALLER':
+                           'virtio_balloon_installer_path',
+                           'KVM_TEST_VIRTIO_QXL_INSTALLER':
+                           'virtio_qxl_installer_path'}
         process_check_re = 'PROCESS_CHECK'
         dummy_re = ""
         for dummy in dummy_re_dirver:
@@ -499,7 +502,6 @@ class UnattendedInstallConfig(object):
         doc.writexml(fp)
         fp.close()
 
-
     def answer_suse_xml(self, answer_path):
         # There's nothing to replace on SUSE files to date. Yay!
         doc = xml.dom.minidom.parse(self.unattended_file)
@@ -512,7 +514,6 @@ class UnattendedInstallConfig(object):
         fp = open(answer_path, 'w')
         doc.writexml(fp)
         fp.close()
-
 
     def preseed_initrd(self):
         """
@@ -547,7 +548,6 @@ class UnattendedInstallConfig(object):
         for line in contents.splitlines():
             logging.debug(line)
 
-
     def setup_unattended_http_server(self):
         '''
         Setup a builtin http server for serving the kickstart file
@@ -576,14 +576,13 @@ class UnattendedInstallConfig(object):
                                            dest_fname)
         if 'ks=' in self.kernel_params:
             kernel_params = re.sub('ks\=[\w\d\:\.\/]+',
-                                  ks_param,
-                                  self.kernel_params)
+                                   ks_param,
+                                   self.kernel_params)
         else:
             kernel_params = '%s %s' % (self.kernel_params, ks_param)
 
         # reflect change on params
         self.kernel_params = kernel_params
-
 
     def setup_boot_disk(self):
         if self.unattended_file.endswith('.sif'):
@@ -643,8 +642,8 @@ class UnattendedInstallConfig(object):
                 kernel_params = self.kernel_params
                 if 'ks=' in kernel_params:
                     kernel_params = re.sub('ks\=[\w\d\:\.\/]+',
-                                          ks_param,
-                                          kernel_params)
+                                           ks_param,
+                                           kernel_params)
                 else:
                     kernel_params = '%s %s' % (kernel_params, ks_param)
 
@@ -658,7 +657,7 @@ class UnattendedInstallConfig(object):
                 self.kernel_params = kernel_params
             elif self.params.get('unattended_delivery_method') == 'cdrom':
                 boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
-                                                      self.tmpdir)
+                                                 self.tmpdir)
             elif self.params.get('unattended_delivery_method') == 'floppy':
                 boot_disk = utils_disk.FloppyDisk(self.floppy,
                                                   self.qemu_img_binary,
@@ -667,8 +666,8 @@ class UnattendedInstallConfig(object):
                 kernel_params = self.kernel_params
                 if 'ks=' in kernel_params:
                     kernel_params = re.sub('ks\=[\w\d\:\.\/]+',
-                                          ks_param,
-                                          kernel_params)
+                                           ks_param,
+                                           kernel_params)
                 else:
                     kernel_params = '%s %s' % (kernel_params, ks_param)
 
@@ -689,16 +688,17 @@ class UnattendedInstallConfig(object):
                 dest_fname = "autoinst.xml"
                 if self.cdrom_unattended:
                     boot_disk = utils_disk.CdromDisk(self.cdrom_unattended,
-                                                          self.tmpdir)
+                                                     self.tmpdir)
                 elif self.floppy:
                     autoyast_param = 'autoyast=floppy'
                     kernel_params = self.kernel_params
                     if 'autoyast=' in kernel_params:
                         kernel_params = re.sub('autoyast\=[\w\d\:\.\/]+',
-                                              autoyast_param,
-                                              kernel_params)
+                                               autoyast_param,
+                                               kernel_params)
                     else:
-                        kernel_params = '%s %s' % (kernel_params, autoyast_param)
+                        kernel_params = '%s %s' % (
+                            kernel_params, autoyast_param)
 
                     self.kernel_params = kernel_params
                     boot_disk = utils_disk.FloppyDisk(self.floppy,
@@ -730,7 +730,6 @@ class UnattendedInstallConfig(object):
 
         boot_disk.close()
 
-
     @error.context_aware
     def setup_cdrom(self):
         """
@@ -742,7 +741,7 @@ class UnattendedInstallConfig(object):
             os.makedirs(self.image_path)
 
         if (self.params.get('unattended_delivery_method') in
-            ['integrated', 'url']):
+                ['integrated', 'url']):
             i = iso9660.Iso9660Mount(self.cdrom_cd1)
             self.cdrom_cd1_mount = i.mnt_dir
         else:
@@ -772,7 +771,7 @@ class UnattendedInstallConfig(object):
                 if base_initrd != 'initrd.img':
                     utils.run("mv %s initrd.img" % base_initrd, verbose=DEBUG)
                 if (self.params.get('unattended_delivery_method') !=
-                    'integrated'):
+                        'integrated'):
                     i.close()
                     utils_disk.cleanup(self.cdrom_cd1_mount)
             elif ((self.vm.driver_type == 'xen') and
@@ -781,7 +780,7 @@ class UnattendedInstallConfig(object):
 
                 self.url_auto_content_port = utils_misc.find_free_port(8100,
                                                                        8199,
-                                                       self.url_auto_content_ip)
+                                                                       self.url_auto_content_ip)
 
                 start_auto_content_server_thread(self.url_auto_content_port,
                                                  self.cdrom_cd1_mount)
@@ -790,7 +789,8 @@ class UnattendedInstallConfig(object):
                 self.url = ('http://%s:%s' % (self.url_auto_content_ip,
                                               self.url_auto_content_port))
 
-                pxe_path = os.path.join(os.path.dirname(self.image_path), 'xen')
+                pxe_path = os.path.join(
+                    os.path.dirname(self.image_path), 'xen')
                 if not os.path.isdir(pxe_path):
                     os.makedirs(pxe_path)
 
@@ -804,11 +804,10 @@ class UnattendedInstallConfig(object):
                 if 'repo=cdrom' in self.kernel_params:
                     # Red Hat
                     self.kernel_params = re.sub('repo\=[\:\w\d\/]*',
-                                           'repo=http://%s:%s' %
-                                              (self.url_auto_content_ip,
-                                               self.url_auto_content_port),
-                                           self.kernel_params)
-
+                                                'repo=http://%s:%s' %
+                                               (self.url_auto_content_ip,
+                                                self.url_auto_content_port),
+                                                self.kernel_params)
 
     @error.context_aware
     def setup_url_auto(self):
@@ -818,7 +817,6 @@ class UnattendedInstallConfig(object):
         auto_content_url = 'http://%s:%s' % (self.url_auto_content_ip,
                                              self.url_auto_content_port)
         self.params['auto_content_url'] = auto_content_url
-
 
     @error.context_aware
     def setup_url(self):
@@ -849,8 +847,8 @@ class UnattendedInstallConfig(object):
             if 'repo=cdrom' in self.kernel_params:
                 # Red Hat
                 self.kernel_params = re.sub('repo\=[\:\w\d\/]*',
-                                       'repo=%s' % self.url,
-                                       self.kernel_params)
+                                            'repo=%s' % self.url,
+                                            self.kernel_params)
 
         elif self.vm_type == 'libvirt':
             logging.info("Not downloading vmlinuz/initrd.img from %s, "
@@ -859,7 +857,6 @@ class UnattendedInstallConfig(object):
         else:
             logging.info("No action defined/needed for the current virt "
                          "type: '%s'" % self.vm_type)
-
 
     def setup_nfs(self):
         """
@@ -874,20 +871,18 @@ class UnattendedInstallConfig(object):
         try:
             kernel_fetch_cmd = ("cp %s/%s/%s %s" %
                                 (self.nfs_mount, self.boot_path,
-                                os.path.basename(self.kernel), self.image_path))
+                                 os.path.basename(self.kernel), self.image_path))
             utils.run(kernel_fetch_cmd, verbose=DEBUG)
             initrd_fetch_cmd = ("cp %s/%s/%s %s" %
                                 (self.nfs_mount, self.boot_path,
-                                os.path.basename(self.initrd), self.image_path))
+                                 os.path.basename(self.initrd), self.image_path))
             utils.run(initrd_fetch_cmd, verbose=DEBUG)
         finally:
             utils_disk.cleanup(self.nfs_mount)
 
-
     def setup_import(self):
         self.unattended_file = None
         self.kernel_params = None
-
 
     def setup(self):
         """
@@ -927,7 +922,7 @@ class UnattendedInstallConfig(object):
 
         # Update params dictionary as some of the values could be updated
         for a in self.attributes:
-            self.params[a] =  getattr(self, a)
+            self.params[a] = getattr(self, a)
 
 
 def start_syslog_server_thread(address, port, tcp):
@@ -935,7 +930,7 @@ def start_syslog_server_thread(address, port, tcp):
     global _syslog_server_thread_event
 
     syslog_server.set_default_format('[UnattendedSyslog '
-                                          '(%s.%s)] %s')
+                                     '(%s.%s)] %s')
 
     if _syslog_server_thread is None:
         _syslog_server_thread_event = threading.Event()
@@ -953,7 +948,7 @@ def terminate_syslog_server_thread():
     if _syslog_server_thread_event is None:
         return False
 
-    if  _syslog_server_thread_event.isSet():
+    if _syslog_server_thread_event.isSet():
         return True
 
     return False
@@ -961,7 +956,7 @@ def terminate_syslog_server_thread():
 
 def copy_file_from_nfs(src, dst, mount_point, image_name):
     logging.info("Test failed before the install process start."
-                " So just copy a good image from nfs for following tests.")
+                 " So just copy a good image from nfs for following tests.")
     utils_misc.mount(src, mount_point, "nfs", perm="ro")
     image_src = utils_misc.get_path(mount_point, image_name)
     shutil.copy(image_src, dst)
@@ -1110,7 +1105,7 @@ def run_unattended_install(test, params, env):
                 serial_log_file.close()
 
         if (params.get("wait_no_ack", "no") == "no" and
-            (post_finish_str in serial_log_msg)):
+                (post_finish_str in serial_log_msg)):
             break
 
         # Due to libvirt automatically start guest after import
@@ -1163,7 +1158,7 @@ def run_unattended_install(test, params, env):
         shutdown_cleanly_timeout = int(params.get("shutdown_cleanly_timeout",
                                                   120))
         logging.info("Wait for guest to shutdown cleanly")
-        if params.get("medium","cdrom") == "import":
+        if params.get("medium", "cdrom") == "import":
             vm.shutdown()
         try:
             if utils_misc.wait_for(vm.is_dead, shutdown_cleanly_timeout, 1, 1):

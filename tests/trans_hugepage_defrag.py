@@ -1,4 +1,7 @@
-import logging, time, os, re
+import logging
+import time
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, test_setup
@@ -32,7 +35,6 @@ def run_trans_hugepage_defrag(test, params, env):
                 output = re.split('\s+', line)[1]
         return int(output)
 
-
     def set_libhugetlbfs(number):
         """
         Set the number of hugepages on the system.
@@ -47,10 +49,10 @@ def run_trans_hugepage_defrag(test, params, env):
         f.write(str(number))
         f.seek(0)
         ret = f.read()
-        logging.debug("Number of huge pages on libhugetlbfs: (post-write): %s" %
-                      ret.strip())
+        logging.debug(
+            "Number of huge pages on libhugetlbfs: (post-write): %s" %
+            ret.strip())
         return int(ret)
-
 
     def change_feature_status(status, feature_path, test_config):
         """
@@ -95,7 +97,6 @@ def run_trans_hugepage_defrag(test, params, env):
                                  (action, feature_path, e))
         time.sleep(1)
 
-
     def fragment_host_memory(mem_path):
         """
         Attempt to fragment host memory.
@@ -117,7 +118,6 @@ def run_trans_hugepage_defrag(test, params, env):
             utils.run(cmd)
         finally:
             utils.run("umount %s" % mem_path)
-
 
     test_config = test_setup.TransparentHugePageConfig(test, params)
     logging.info("Defrag test start")

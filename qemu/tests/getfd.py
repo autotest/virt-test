@@ -59,7 +59,7 @@ def run_getfd(test, params, env):
         # check if qemu process has a copy of the fd
         if not has_fd(pid, path):
             raise error.TestError("QEMU process does not seem to have a file "
-                                   "descriptor pointing to file %s" % path)
+                                  "descriptor pointing to file %s" % path)
 
     # clean up files
     for n in range(nofiles):

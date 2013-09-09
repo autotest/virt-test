@@ -1,7 +1,10 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir
+
 
 @error.context_aware
 def run_timerdevice_tscsync_longtime(test, params, env):

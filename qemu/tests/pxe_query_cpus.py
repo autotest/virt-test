@@ -1,4 +1,5 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error, utils
 from virttest import utils_test, env_process, utils_misc
 
@@ -53,6 +54,7 @@ class Modprobe(object):
         self.unload()
         time.sleep(0.5)
         return self.load()
+
 
 class PxeTest(Modprobe):
 
@@ -128,7 +130,7 @@ def run_pxe_query_cpus(test, params, env):
     params["restart_vm"] = "no"
     bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
                                  args=(test, params, env,),
-                                 kwargs={"sub_type":"pxe"})
+                                 kwargs={"sub_type": "pxe"})
     bg.start()
     count = 0
     try:

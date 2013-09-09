@@ -11,14 +11,16 @@ from virttest import libvirt_storage, virsh
 
 VIRSH_EXEC = virsh.VIRSH_EXEC
 
-##### Ensure the following tests ONLY run if a valid virsh command exists #####
+# Ensure the following tests ONLY run if a valid virsh command exists #####
+
+
 class ModuleLoadCheckVirsh(unittest.TestCase):
     import virsh
 
     def run(self, *args, **dargs):
         test_virsh = self.virsh.Virsh()
         if test_virsh['virsh_exec'] == '/bin/true':
-            return # Don't run any tests, no virsh executable was found
+            return  # Don't run any tests, no virsh executable was found
         else:
             super(ModuleLoadCheckVirsh, self).run(*args, **dargs)
 
@@ -30,6 +32,7 @@ _DEFAULT_POOL = ("Name                 State      Autostart\n"
 # Set output of virsh.pool_list
 global _pools_output
 _pools_output = _DEFAULT_POOL
+
 
 class PoolTestBase(ModuleLoadCheckVirsh):
 
@@ -44,14 +47,14 @@ class PoolTestBase(ModuleLoadCheckVirsh):
     def _pool_info(name="default", **dargs):
         cmd = "virsh pool-info %s" % name
         default_output = (
-                "Name:           default\n"
-                "UUID:           bfe5d630-ec5d-86c2-ecca-8a5210493db7\n"
-                "State:          running\n"
-                "Persistent:     yes\n"
-                "Autostart:      yes\n"
-                "Capacity:       47.93 GiB\n"
-                "Allocation:     36.74 GiB\n"
-                "Available:      11.20 GiB\n")
+            "Name:           default\n"
+            "UUID:           bfe5d630-ec5d-86c2-ecca-8a5210493db7\n"
+            "State:          running\n"
+            "Persistent:     yes\n"
+            "Autostart:      yes\n"
+            "Capacity:       47.93 GiB\n"
+            "Allocation:     36.74 GiB\n"
+            "Available:      11.20 GiB\n")
         if name == "default":
             return CmdResult(cmd, default_output)
         else:
@@ -140,6 +143,7 @@ class NewPoolTest(PoolTestBase):
     def tearDown(self):
         # Confirm created pool has been cleaned up
         self.sp.delete_pool(self.pool_name)
+
 
 class NotExpectedPoolTest(PoolTestBase):
 

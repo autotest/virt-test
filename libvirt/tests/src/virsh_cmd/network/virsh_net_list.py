@@ -1,6 +1,8 @@
-import re, os
+import re
+import os
 from autotest.client.shared import error
 from virttest import virsh
+
 
 def run_virsh_net_list(test, params, env):
     """

@@ -1,8 +1,11 @@
-import os, re, logging
+import os
+import re
+import logging
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import storage
 from virttest import utils_misc, data_dir
+
 
 @error.context_aware
 def run_block_stream_drop_backingfile(test, params, env):
@@ -63,7 +66,7 @@ def run_block_stream_drop_backingfile(test, params, env):
     try:
         error.context("Create snapshots-chain(base->sn1->sn2)", logging.info)
         for index, snapshot in enumerate(snapshots):
-            base_file = index and snapshots[index -1] or image_file
+            base_file = index and snapshots[index - 1] or image_file
             device_id = vm.live_snapshot(base_file, snapshot)
             if not device_id:
                 raise error.TestFail("Fail to create %s" % snapshot)

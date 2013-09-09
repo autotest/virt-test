@@ -1,4 +1,6 @@
-import logging, time, os
+import logging
+import time
+import os
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test, remote
 from virttest import rss_client
@@ -39,7 +41,7 @@ def run_whql_client_install(test, params, env):
     dsso_delete_machine_binary = params.get("dsso_delete_machine_binary",
                                             "deps/whql_delete_machine_15.exe")
     dsso_delete_machine_binary = utils_misc.get_path(test.bindir,
-                                                    dsso_delete_machine_binary)
+                                                     dsso_delete_machine_binary)
     install_timeout = float(params.get("install_timeout", 600))
     install_cmd = params.get("install_cmd")
     wtt_services = params.get("wtt_services")
@@ -50,13 +52,13 @@ def run_whql_client_install(test, params, env):
 
     # Copy dsso_delete_machine_binary to server
     rss_client.upload(server_address, server_file_transfer_port,
-                             dsso_delete_machine_binary, server_studio_path,
-                             timeout=60)
+                      dsso_delete_machine_binary, server_studio_path,
+                      timeout=60)
 
     # Open a shell session with server
     server_session = remote.remote_login("nc", server_address,
-                                              server_shell_port, "", "",
-                                              session.prompt, session.linesep)
+                                         server_shell_port, "", "",
+                                         session.prompt, session.linesep)
     server_session.set_status_test_command(session.status_test_command)
 
     # Get server and client information

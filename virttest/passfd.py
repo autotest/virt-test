@@ -82,7 +82,7 @@ def sendfd(sock, fd, message="NONE"):
     return _passfd.sendfd(__check_socket(sock), __check_fd(fd), message)
 
 
-def recvfd(sock, msg_buf = 4096):
+def recvfd(sock, msg_buf=4096):
     """
     Receive a message and a file descriptor from a Unix domain socket.
 
@@ -102,7 +102,7 @@ def recvfd(sock, msg_buf = 4096):
     # -1 should raise OSError
     if ret == -2:
         raise RuntimeError("The message received did not contain exactly one" +
-                " file descriptor")
+                           " file descriptor")
     if ret == -3:
         raise RuntimeError("The received file descriptor is not valid")
     assert ret >= 0

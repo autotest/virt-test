@@ -1,4 +1,5 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error
 
 
@@ -32,10 +33,9 @@ def run_nmi_bsod_catch(test, params, env):
     if del_dump_cmd:
         session.sendline(del_dump_cmd)
 
-
     if params.get("config_cmds"):
         error.context("Configure guest for dump", logging.info)
-        #Wait guest fully boot up, or configure command may fail in windows
+        # Wait guest fully boot up, or configure command may fail in windows
         time.sleep(30)
         reg_cmds = params.get("config_cmds").split(",")
         msg = "Configure the guest"

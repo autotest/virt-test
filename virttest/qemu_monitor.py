@@ -4,8 +4,15 @@ Interfaces to the QEMU monitor.
 @copyright: 2008-2010 Red Hat Inc.
 """
 
-import socket, time, threading, logging, select, re, os
-import utils_misc, passfd_setup
+import socket
+import time
+import threading
+import logging
+import select
+import re
+import os
+import utils_misc
+import passfd_setup
 from autotest.client.shared import utils
 try:
     import json
@@ -19,16 +26,17 @@ class MonitorError(Exception):
 
 
 class MonitorConnectError(MonitorError):
+
     def __init__(self, monitor_name):
         MonitorError.__init__(self)
         self.monitor_name = monitor_name
-
 
     def __str__(self):
         return "Could not connect to monitor '%s'" % self.monitor_name
 
 
 class MonitorSocketError(MonitorError):
+
     def __init__(self, msg, e):
         Exception.__init__(self, msg, e)
         self.msg = msg
@@ -51,6 +59,7 @@ class MonitorNotSupportedError(MonitorError):
 
 
 class MonitorNotSupportedCmdError(MonitorNotSupportedError):
+
     def __init__(self, monitor, cmd):
         MonitorError.__init__(self)
         self.monitor = monitor
@@ -62,6 +71,7 @@ class MonitorNotSupportedCmdError(MonitorNotSupportedError):
 
 
 class QMPCmdError(MonitorError):
+
     def __init__(self, cmd, qmp_args, data):
         MonitorError.__init__(self, cmd, qmp_args, data)
         self.cmd = cmd
@@ -141,6 +151,7 @@ def wait_for_create_monitor(vm, monitor_name, monitor_params, timeout):
 
 
 class Monitor:
+
     """
     Common code for monitor classes.
     """
@@ -176,30 +187,24 @@ class Monitor:
             raise MonitorConnectError("Could not connect to monitor socket: %s"
                                       % details)
 
-
     def __del__(self):
         # Automatically close the connection when the instance is garbage
         # collected
         self._close_sock()
         utils_misc.close_log_file(self.log_file)
 
-
     # The following two functions are defined to make sure the state is set
     # exclusively by the constructor call as specified in __getinitargs__().
-
     def __getstate__(self):
         pass
 
-
     def __setstate__(self, state):
         pass
-
 
     def __getinitargs__(self):
         # Save some information when pickling -- will be passed to the
         # constructor upon unpickling
         return self.vm, self.name, self.filename, True
-
 
     def _close_sock(self):
         try:
@@ -207,7 +212,6 @@ class Monitor:
         except socket.error:
             pass
         self._socket.close()
-
 
     def _acquire_lock(self, timeout=ACQUIRE_LOCK_TIMEOUT):
         end_time = time.time() + timeout
@@ -217,14 +221,12 @@ class Monitor:
             time.sleep(0.05)
         return False
 
-
     def _data_available(self, timeout=DATA_AVAILABLE_TIMEOUT):
         timeout = max(0, timeout)
         try:
             return bool(select.select([self._socket], [], [], timeout)[0])
         except socket.error, e:
             raise MonitorSocketError("Verifying data on monitor socket", e)
-
 
     def _recvall(self):
         s = ""
@@ -239,7 +241,6 @@ class Monitor:
             s += data
         return s
 
-
     def _has_command(self, cmd):
         """
         Check wheter kvm monitor support 'cmd'.
@@ -251,7 +252,6 @@ class Monitor:
         if cmd and cmd in self._supported_cmds:
             return True
         return False
-
 
     def _log_command(self, cmd, debug=True, extra_str=""):
         """
@@ -265,7 +265,6 @@ class Monitor:
             logging.debug("(monitor %s) Sending command '%s' %s",
                           self.name, cmd, extra_str)
 
-
     def _log_lines(self, log_str):
         """
         Record monitor cmd/output in log file.
@@ -275,7 +274,6 @@ class Monitor:
                 utils_misc.log_line(self.log_file, l)
         except Exception:
             pass
-
 
     def correct(self, cmd):
         """
@@ -292,7 +290,6 @@ class Monitor:
                     return _cmd
         return cmd
 
-
     def is_responsive(self):
         """
         Return True iff the monitor is responsive.
@@ -302,7 +299,6 @@ class Monitor:
             return True
         except MonitorError:
             return False
-
 
     def verify_supported_cmd(self, cmd):
         """
@@ -333,12 +329,11 @@ class Monitor:
         """
         raise NotImplementedError
 
-
     # Methods that should work on both classes, as long as human_monitor_cmd()
     # works:
-
     re_numa_nodes = re.compile(r"^([0-9]+) nodes$", re.M)
     re_numa_node_info = re.compile(r"^node ([0-9]+) (cpus|size): (.*)$", re.M)
+
     @classmethod
     def parse_info_numa(cls, r):
         """
@@ -349,14 +344,16 @@ class Monitor:
 
         nodes = cls.re_numa_nodes.search(r)
         if nodes is None:
-            raise Exception("Couldn't get number of nodes from 'info numa' output")
+            raise Exception(
+                "Couldn't get number of nodes from 'info numa' output")
         nodes = int(nodes.group(1))
 
         data = [[0, set()] for i in range(nodes)]
         for nodenr, field, value in cls.re_numa_node_info.findall(r):
             nodenr = int(nodenr)
             if nodenr > nodes:
-                raise Exception("Invalid node number on 'info numa' output: %d", nodenr)
+                raise Exception(
+                    "Invalid node number on 'info numa' output: %d", nodenr)
             if field == 'size':
                 if not value.endswith(' MB'):
                     raise Exception("Unexpected size value: %s", value)
@@ -505,6 +502,7 @@ class Monitor:
 
 
 class HumanMonitor(Monitor):
+
     """
     Wraps "human monitor" commands.
     """
@@ -548,9 +546,7 @@ class HumanMonitor(Monitor):
             else:
                 raise
 
-
     # Private methods
-
     def _read_up_to_qemu_prompt(self, timeout=PROMPT_TIMEOUT):
         s = ""
         end_time = time.time() + timeout
@@ -572,7 +568,6 @@ class HumanMonitor(Monitor):
             except IndexError:
                 pass
         return False, "\n".join(s.splitlines())
-
 
     def _send(self, cmd):
         """
@@ -597,7 +592,6 @@ class HumanMonitor(Monitor):
         finally:
             self._lock.release()
 
-
     def _get_supported_cmds(self):
         """
         Get supported human monitor cmds list.
@@ -609,7 +603,6 @@ class HumanMonitor(Monitor):
 
         if not self._supported_cmds:
             logging.warn("Could not get supported monitor cmds list")
-
 
     def _log_response(self, cmd, resp, debug=True):
         """
@@ -624,9 +617,7 @@ class HumanMonitor(Monitor):
             for l in resp.splitlines():
                 logging.debug("(monitor %s)    %s", self.name, l)
 
-
     # Public methods
-
     def cmd(self, cmd, timeout=CMD_TIMEOUT, debug=True, fd=None):
         """
         Send command to the monitor.
@@ -695,10 +686,8 @@ class HumanMonitor(Monitor):
         """
         self.cmd("info status", debug=False)
 
-
     def get_status(self):
         return self.cmd("info status", debug=False)
-
 
     def verify_status(self, status):
         """
@@ -708,7 +697,6 @@ class HumanMonitor(Monitor):
         @return: return True if VM status is same as we expected
         """
         return (status in self.get_status())
-
 
     # Command wrappers
     # Notes:
@@ -754,14 +742,11 @@ class HumanMonitor(Monitor):
             return cmd_output[0]
         return cmd_output
 
-
-
     def quit(self):
         """
         Send "quit" without waiting for output.
         """
         self._send("quit")
-
 
     def info(self, what, debug=True):
         """
@@ -770,13 +755,11 @@ class HumanMonitor(Monitor):
         """
         return self.cmd("info %s" % what, debug=debug)
 
-
     def query(self, what):
         """
         Alias for info.
         """
         return self.info(what)
-
 
     def screendump(self, filename, debug=True):
         """
@@ -786,7 +769,6 @@ class HumanMonitor(Monitor):
         @return: The command's output
         """
         return self.cmd(cmd="screendump %s" % filename, debug=debug)
-
 
     def set_link(self, name, up):
         """
@@ -813,7 +795,6 @@ class HumanMonitor(Monitor):
             status = on_str
         return self.cmd("%s %s %s" % (set_link_cmd, name, status))
 
-
     def live_snapshot(self, device, snapshot_file, snapshot_format="qcow2"):
         """
         Take a live disk snapshot.
@@ -827,7 +808,6 @@ class HumanMonitor(Monitor):
         cmd = ("snapshot_blkdev %s %s %s" %
                (device, snapshot_file, snapshot_format))
         return self.cmd(cmd)
-
 
     def block_stream(self, device, speed=None, base=None,
                      cmd="block_stream", correct=True):
@@ -851,7 +831,6 @@ class HumanMonitor(Monitor):
             cmd += " %s" % base
         return self.cmd(cmd)
 
-
     def set_block_job_speed(self, device, speed=0,
                             cmd="block_job_set_speed", correct=True):
         """
@@ -869,7 +848,6 @@ class HumanMonitor(Monitor):
         cmd += " %s %sB" % (device, speed)
         return self.cmd(cmd)
 
-
     def cancel_block_job(self, device, cmd="block_job_cancel", correct=True):
         """
         Cancel running block stream/mirror job on the device
@@ -884,7 +862,6 @@ class HumanMonitor(Monitor):
         self.verify_supported_cmd(cmd)
         cmd += " %s" % device
         return self.send_args_cmd(cmd)
-
 
     def query_block_job(self, device):
         """
@@ -911,7 +888,6 @@ class HumanMonitor(Monitor):
                 break
         return job
 
-
     def get_backingfile(self, device):
         """
         Return "backing_file" path of the device
@@ -929,9 +905,8 @@ class HumanMonitor(Monitor):
             pass
         return backing_file
 
-
     def block_mirror(self, device, target, speed, sync, format, mode,
-            cmd="drive_mirror", correct=True):
+                     cmd="drive_mirror", correct=True):
         """
         Start mirror type block device copy job
 
@@ -960,7 +935,6 @@ class HumanMonitor(Monitor):
         cmd = "%s %s" % (cmd, args)
         return self.cmd(cmd)
 
-
     def block_reopen(self, device, new_image_file, image_format,
                      cmd="block_job_complete", correct=True):
         """
@@ -984,7 +958,6 @@ class HumanMonitor(Monitor):
         cmd = "%s %s" % (cmd, args)
         return self.cmd(cmd)
 
-
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
         """
         Migrate.
@@ -1005,7 +978,6 @@ class HumanMonitor(Monitor):
         cmd += " %s" % uri
         return self.cmd(cmd)
 
-
     def migrate_set_speed(self, value):
         """
         Set maximum speed (in bytes/sec) for migrations.
@@ -1015,7 +987,6 @@ class HumanMonitor(Monitor):
         """
         return self.cmd("migrate_set_speed %s" % value)
 
-
     def migrate_set_downtime(self, value):
         """
         Set maximum tolerated downtime (in seconds) for migration.
@@ -1024,7 +995,6 @@ class HumanMonitor(Monitor):
         @return: The command's output
         """
         return self.cmd("migrate_set_downtime %s" % value)
-
 
     def sendkey(self, keystr, hold_time=1):
         """
@@ -1036,7 +1006,6 @@ class HumanMonitor(Monitor):
         """
         return self.cmd("sendkey %s %s" % (keystr, hold_time))
 
-
     def mouse_move(self, dx, dy):
         """
         Move mouse.
@@ -1047,7 +1016,6 @@ class HumanMonitor(Monitor):
         """
         return self.cmd("mouse_move %s %s" % (dx, dy))
 
-
     def mouse_button(self, state):
         """
         Set mouse button state.
@@ -1056,7 +1024,6 @@ class HumanMonitor(Monitor):
         @return: The command's output
         """
         return self.cmd("mouse_button %s" % state)
-
 
     def getfd(self, fd, name):
         """
@@ -1068,7 +1035,6 @@ class HumanMonitor(Monitor):
         """
         return self.cmd("getfd %s" % name, fd=fd)
 
-
     def system_wakeup(self):
         """
         Wakeup suspended guest.
@@ -1077,13 +1043,11 @@ class HumanMonitor(Monitor):
         self.verify_supported_cmd(cmd)
         return self.cmd(cmd)
 
-
     def nmi(self):
         """
         Inject a NMI on all guest's CPUs.
         """
         return self.cmd("nmi")
-
 
     def block_resize(self, device, size):
         """
@@ -1100,6 +1064,7 @@ class HumanMonitor(Monitor):
 
 
 class QMPMonitor(Monitor):
+
     """
     Wraps QMP monitor commands.
     """
@@ -1168,9 +1133,7 @@ class QMPMonitor(Monitor):
             else:
                 raise
 
-
     # Private methods
-
     def _build_cmd(self, cmd, args=None, q_id=None):
         obj = {"execute": cmd}
         if args is not None:
@@ -1178,7 +1141,6 @@ class QMPMonitor(Monitor):
         if q_id is not None:
             obj["id"] = q_id
         return obj
-
 
     def _read_objects(self, timeout=READ_OBJECTS_TIMEOUT):
         """
@@ -1219,7 +1181,6 @@ class QMPMonitor(Monitor):
         self._events += [obj for obj in objs if "event" in obj]
         return objs
 
-
     def _send(self, data):
         """
         Send raw data without waiting for response.
@@ -1232,7 +1193,6 @@ class QMPMonitor(Monitor):
             self._log_lines(str(data))
         except socket.error, e:
             raise MonitorSocketError("Could not send data: %r" % data, e)
-
 
     def _get_response(self, q_id=None, timeout=RESPONSE_TIMEOUT):
         """
@@ -1251,7 +1211,6 @@ class QMPMonitor(Monitor):
                     if "return" in obj or "error" in obj:
                         return obj
 
-
     def _get_supported_cmds(self):
         """
         Get supported qmp cmds list.
@@ -1264,19 +1223,18 @@ class QMPMonitor(Monitor):
         if not self._supported_cmds:
             logging.warn("Could not get supported monitor cmds list")
 
-
     def _get_supported_hmp_cmds(self):
         """
         Get supported human monitor cmds list.
         """
         cmds = self.human_monitor_cmd("help", debug=False)
         if cmds:
-            cmd_list = re.findall(r"(?:^\w+\|(\w+)\s)|(?:^(\w+?)\s)", cmds, re.M)
+            cmd_list = re.findall(
+                r"(?:^\w+\|(\w+)\s)|(?:^(\w+?)\s)", cmds, re.M)
             self._supported_hmp_cmds = [(i + j) for i, j in cmd_list if i or j]
 
         if not self._supported_cmds:
             logging.warn("Could not get supported monitor cmds list")
-
 
     def _has_hmp_command(self, cmd):
         """
@@ -1290,7 +1248,6 @@ class QMPMonitor(Monitor):
             return True
         return False
 
-
     def verify_supported_hmp_cmd(self, cmd):
         """
         Verify whether cmd is supported by hmp monitor.
@@ -1300,7 +1257,6 @@ class QMPMonitor(Monitor):
         """
         if not self._has_hmp_command(cmd):
             raise MonitorNotSupportedCmdError(self.name, cmd)
-
 
     def _log_response(self, cmd, resp, debug=True):
         """
@@ -1345,9 +1301,7 @@ class QMPMonitor(Monitor):
                 for l in str(resp).splitlines():
                     _log_output(l)
 
-
     # Public methods
-
     def cmd(self, cmd, args=None, timeout=CMD_TIMEOUT, debug=True, fd=None):
         """
         Send a QMP monitor command and return the response.
@@ -1387,7 +1341,8 @@ class QMPMonitor(Monitor):
                 if self._passfd is None:
                     self._passfd = passfd_setup.import_passfd()
                 # If command includes a file descriptor, use passfd module
-                self._passfd.sendfd(self._socket, fd, json.dumps(cmdobj) + "\n")
+                self._passfd.sendfd(
+                    self._socket, fd, json.dumps(cmdobj) + "\n")
             else:
                 self._send(json.dumps(cmdobj) + "\n")
             # Read response
@@ -1407,7 +1362,6 @@ class QMPMonitor(Monitor):
 
         finally:
             self._lock.release()
-
 
     def cmd_raw(self, data, timeout=CMD_TIMEOUT):
         """
@@ -1438,7 +1392,6 @@ class QMPMonitor(Monitor):
         finally:
             self._lock.release()
 
-
     def cmd_obj(self, obj, timeout=CMD_TIMEOUT):
         """
         Transform a Python object to JSON, send the resulting string to the QMP
@@ -1454,7 +1407,6 @@ class QMPMonitor(Monitor):
         @raise MonitorProtocolError: Raised if no response is received
         """
         return self.cmd_raw(json.dumps(obj) + "\n", timeout)
-
 
     def cmd_qmp(self, cmd, args=None, q_id=None, timeout=CMD_TIMEOUT):
         """
@@ -1474,13 +1426,11 @@ class QMPMonitor(Monitor):
         """
         return self.cmd_obj(self._build_cmd(cmd, args, q_id), timeout)
 
-
     def verify_responsive(self):
         """
         Make sure the monitor is responsive by sending a command.
         """
         self.cmd(cmd="query-status", debug=False)
-
 
     def get_status(self):
         """
@@ -1489,7 +1439,6 @@ class QMPMonitor(Monitor):
         @return: return VM status
         """
         return self.cmd(cmd="query-status", debug=False)
-
 
     def verify_status(self, status):
         """
@@ -1500,13 +1449,12 @@ class QMPMonitor(Monitor):
         """
         o = dict(self.cmd(cmd="query-status", debug=False))
         if status == 'paused':
-            return (o['running'] == False)
+            return (o['running'] is False)
         if status == 'running':
-            return (o['running'] == True)
+            return (o['running'] is True)
         if o['status'] == status:
             return True
         return False
-
 
     def get_events(self):
         """
@@ -1525,7 +1473,6 @@ class QMPMonitor(Monitor):
         finally:
             self._lock.release()
 
-
     def get_event(self, name):
         """
         Look for an event with the given name in the list of events.
@@ -1536,7 +1483,6 @@ class QMPMonitor(Monitor):
         for e in self.get_events():
             if e.get("event") == name:
                 return e
-
 
     def human_monitor_cmd(self, cmd="", timeout=CMD_TIMEOUT,
                           debug=True, fd=None):
@@ -1559,7 +1505,6 @@ class QMPMonitor(Monitor):
             self._log_response(cmd, ret, debug)
         return ret
 
-
     def clear_events(self):
         """
         Clear the list of asynchronous events.
@@ -1571,7 +1516,6 @@ class QMPMonitor(Monitor):
                                    "QMP event list")
         self._events = []
         self._lock.release()
-
 
     def clear_event(self, name):
         """
@@ -1590,13 +1534,11 @@ class QMPMonitor(Monitor):
                 break
         self._lock.release()
 
-
     def get_greeting(self):
         """
         Return QMP greeting message.
         """
         return self._greeting
-
 
     # Command wrappers
     # Note: all of the following functions raise exceptions in a similar manner
@@ -1666,7 +1608,6 @@ class QMPMonitor(Monitor):
         """
         return self.cmd("quit")
 
-
     def info(self, what, debug=True):
         """
         Request info about something and return the response.
@@ -1678,13 +1619,11 @@ class QMPMonitor(Monitor):
 
         return self.cmd(cmd, debug=debug)
 
-
     def query(self, what, debug=True):
         """
         Alias for info.
         """
         return self.info(what, debug)
-
 
     def screendump(self, filename, debug=True):
         """
@@ -1704,7 +1643,6 @@ class QMPMonitor(Monitor):
         args = {"filename": filename}
         return self.cmd(cmd=cmd, args=args, debug=debug)
 
-
     def sendkey(self, keystr, hold_time=1):
         """
         Send key combination to VM.
@@ -1715,7 +1653,6 @@ class QMPMonitor(Monitor):
         @return: The response to the command
         """
         return self.human_monitor_cmd("sendkey %s %s" % (keystr, hold_time))
-
 
     def migrate(self, uri, full_copy=False, incremental_copy=False, wait=False):
         """
@@ -1735,10 +1672,10 @@ class QMPMonitor(Monitor):
             return self.cmd("migrate", args)
         except QMPCmdError, e:
             if e.data['class'] in ['SockConnectInprogress', 'GenericError']:
-                logging.debug("Migrate socket connection still initializing...")
+                logging.debug(
+                    "Migrate socket connection still initializing...")
             else:
                 raise e
-
 
     def migrate_set_speed(self, value):
         """
@@ -1751,7 +1688,6 @@ class QMPMonitor(Monitor):
         args = {"value": value}
         return self.cmd("migrate_set_speed", args)
 
-
     def set_link(self, name, up):
         """
         Set link up/down.
@@ -1762,7 +1698,6 @@ class QMPMonitor(Monitor):
         @return: The response to the command
         """
         return self.send_args_cmd("set_link name=%s,up=%s" % (name, str(up)))
-
 
     def migrate_set_downtime(self, value):
         """
@@ -1775,7 +1710,6 @@ class QMPMonitor(Monitor):
         val = value * 10 ** 9
         args = {"value": val}
         return self.cmd("migrate_set_downtime", args)
-
 
     def live_snapshot(self, device, snapshot_file, snapshot_format="qcow2"):
         """
@@ -1791,7 +1725,6 @@ class QMPMonitor(Monitor):
                 "snapshot-file": snapshot_file,
                 "format": snapshot_format}
         return self.cmd("blockdev-snapshot-sync", args)
-
 
     def block_stream(self, device, speed=None, base=None,
                      cmd="block-stream", correct=True):
@@ -1815,7 +1748,6 @@ class QMPMonitor(Monitor):
             args["base"] = base
         return self.cmd(cmd, args)
 
-
     def set_block_job_speed(self, device, speed=0,
                             cmd="block-job-set-speed", correct=True):
         """
@@ -1834,7 +1766,6 @@ class QMPMonitor(Monitor):
                 "speed": speed}
         return self.cmd(cmd, args)
 
-
     def cancel_block_job(self, device, cmd="block-job-cancel", correct=True):
         """
         Cancel running block stream/mirror job on the device
@@ -1849,7 +1780,6 @@ class QMPMonitor(Monitor):
         self.verify_supported_cmd(cmd)
         args = {"device": device}
         return self.cmd(cmd, args)
-
 
     def query_block_job(self, device):
         """
@@ -1868,7 +1798,6 @@ class QMPMonitor(Monitor):
             pass
         return job
 
-
     def get_backingfile(self, device):
         """
         Return "backing_file" path of the device
@@ -1880,15 +1809,14 @@ class QMPMonitor(Monitor):
         backing_file = None
         block_info = self.query("block")
         try:
-            image_info = filter(lambda x:x["device"] == device, block_info)[0]
+            image_info = filter(lambda x: x["device"] == device, block_info)[0]
             backing_file = image_info["inserted"].get("backing_file")
         except Exception:
             pass
         return backing_file
 
-
     def block_mirror(self, device, target, speed, sync, format, mode,
-            cmd="drive-mirror", correct=True):
+                     cmd="drive-mirror", correct=True):
         """
         Start mirror type block device copy job
 
@@ -1921,9 +1849,8 @@ class QMPMonitor(Monitor):
             args["speed"] = speed
         return self.cmd(cmd, args)
 
-
     def block_reopen(self, device, new_image_file, image_format,
-            cmd="block-job-complete", correct=True):
+                     cmd="block-job-complete", correct=True):
         """
         Reopen new target image;
 
@@ -1944,7 +1871,6 @@ class QMPMonitor(Monitor):
             args["format"] = image_format
         return self.cmd(cmd, args)
 
-
     def getfd(self, fd, name):
         """
         Receives a file descriptor
@@ -1957,7 +1883,6 @@ class QMPMonitor(Monitor):
         args = {"fdname": name}
         return self.cmd("getfd", args, fd=fd)
 
-
     def system_wakeup(self):
         """
         Wakeup suspended guest.
@@ -1966,13 +1891,11 @@ class QMPMonitor(Monitor):
         self.verify_supported_cmd(cmd)
         return self.cmd(cmd)
 
-
     def nmi(self):
         """
         Inject a NMI on all guest's CPUs.
         """
         return self.cmd("inject-nmi")
-
 
     def block_resize(self, device, size):
         """

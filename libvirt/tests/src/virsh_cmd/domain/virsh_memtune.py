@@ -1,4 +1,9 @@
-import logging, re, os, commands, string, math
+import logging
+import re
+import os
+import commands
+import string
+import math
 from autotest.client.shared import error
 from virttest import virsh, libvirt_vm
 
@@ -35,33 +40,32 @@ def run_virsh_memtune(test, params, env):
         """
         status_value = True
         # Check 1
-        actual_value = virsh.memtune_get(domname,"hard_limit")
+        actual_value = virsh.memtune_get(domname, "hard_limit")
         if actual_value == -1:
             raise error.TestFail("the key hard_limit not found in the "
                                  "virsh memtune output")
         if actual_value != int(expected_value):
             status_value = False
             logging.error("Hard limit virsh output:\n\tExpected value:%d"
-                        "\n\tActual value: "
-                        "%d", int(expected_value), int(actual_value))
+                          "\n\tActual value: "
+                          "%d", int(expected_value), int(actual_value))
 
         # Check 2
         cmd = "cat %s/memory.limit_in_bytes" % path
         (status, output) = commands.getstatusoutput(cmd)
         # To normalize to kB
-        value = int(output)/1024
+        value = int(output) / 1024
         if status == 0:
             if int(expected_value) != int(value):
                 status_value = False
                 logging.error("Hard limit cgroup fs:\n\tExpected Value: %d"
-                            "\n\tActual Value: "
-                            "%d", int(expected_value), int(value))
+                              "\n\tActual Value: "
+                              "%d", int(expected_value), int(value))
 
         else:
             status_value = False
             logging.error("Error while reading:\n%s", output)
         return status_value
-
 
     def check_softlimit(path, expected_value):
         """
@@ -84,25 +88,24 @@ def run_virsh_memtune(test, params, env):
         if actual_value != int(expected_value):
             status_value = False
             logging.error("Soft limit virsh output:\n\tExpected value: %d"
-                        "\n\tActual value: "
-                        "%d", int(expected_value), int(actual_value))
+                          "\n\tActual value: "
+                          "%d", int(expected_value), int(actual_value))
 
         # Check 2
         cmd = "cat %s/memory.soft_limit_in_bytes" % path
         (status, output) = commands.getstatusoutput(cmd)
         # To normalize to kB
-        value = int(output) /1024
+        value = int(output) / 1024
         if status == 0:
             if int(expected_value) != int(value):
                 status_value = False
                 logging.error("Soft limit cgroup fs:\n\tExpected Value: %d"
-                            "\n\tActual Value: "
-                            "%d", int(expected_value), int(value))
+                              "\n\tActual Value: "
+                              "%d", int(expected_value), int(value))
         else:
             status_value = False
             logging.error("Error while reading:\n%s", output)
         return status_value
-
 
     def check_hardswaplimit(path, expected_value):
         """
@@ -124,20 +127,20 @@ def run_virsh_memtune(test, params, env):
         if actual_value != int(expected_value):
             status_value = False
             logging.error("Swap hard limit virsh output:\n\tExpected value: "
-                        "%d\n\tActual value: "
-                        "%d", int(expected_value), int(actual_value))
+                          "%d\n\tActual value: "
+                          "%d", int(expected_value), int(actual_value))
 
         # Check 2
         cmd = "cat %s/memory.memsw.limit_in_bytes" % path
         (status, output) = commands.getstatusoutput(cmd)
         # To normalize to kB
-        value = int(output)/1024
+        value = int(output) / 1024
         if status == 0:
             if int(expected_value) != int(value):
                 status_value = False
                 logging.error("Swap hard limit cgroup fs:\n\tExpected Value: "
-                            "%d\n\tActual Value: "
-                            "%d", int(expected_value), int(value))
+                              "%d\n\tActual Value: "
+                              "%d", int(expected_value), int(value))
 
         else:
             status_value = False
@@ -171,8 +174,8 @@ def run_virsh_memtune(test, params, env):
 
     # Check for memtune command is available in the libvirt version under test
     if not virsh.has_help_command("memtune"):
-        raise error.TestNAError("Memtune not available in this libvirt version")
-
+        raise error.TestNAError(
+            "Memtune not available in this libvirt version")
 
     # Run test case with 100kB increase in memory value for each iteration
     while (Mem < Memtotal):
@@ -196,7 +199,7 @@ def run_virsh_memtune(test, params, env):
             raise error.TestNAError("softlimit option not available in memtune "
                                     "cmd in this libvirt version")
 
-        if virsh.has_command_help_match("memtune","swap-hard-limit"):
+        if virsh.has_command_help_match("memtune", "swap-hard-limit"):
             swaphard = Mem
             options = " --swap-hard-limit %d --live" % swaphard
             virsh.memtune_set(domname, options)
@@ -209,4 +212,5 @@ def run_virsh_memtune(test, params, env):
 
     # Raise error based on error_counter
     if error_counter > 0:
-        raise error.TestFail("Test failed, consult the previous error messages")
+        raise error.TestFail(
+            "Test failed, consult the previous error messages")

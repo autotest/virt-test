@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, utils_libvirtd
 
+
 def run_virsh_uri(test, params, env):
     """
     Test the command virsh uri
@@ -12,15 +13,16 @@ def run_virsh_uri(test, params, env):
     (4) Call virsh uri with libvirtd service stop
     """
 
-    connect_uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
-                                                               "default") )
+    connect_uri = libvirt_vm.normalize_connect_uri(params.get("connect_uri",
+                                                              "default"))
 
     option = params.get("virsh_uri_options")
     target_uri = params.get("target_uri")
     remote_ref = params.get("uri_remote_ref", "")
     if target_uri:
         if target_uri.count('EXAMPLE.COM'):
-            raise error.TestError('target_uri configuration set to sample value')
+            raise error.TestError(
+                'target_uri configuration set to sample value')
         logging.info("The target_uri: %s", target_uri)
         cmd = "virsh -c %s uri" % target_uri
     else:
@@ -39,11 +41,11 @@ def run_virsh_uri(test, params, env):
         if remote_ref == "remote":
             connect_uri = target_uri
         uri_test = virsh.canonical_uri(option, uri=connect_uri,
-                             ignore_status=False,
-                             debug=True)
-        status = 0 # good
+                                       ignore_status=False,
+                                       debug=True)
+        status = 0  # good
     except error.CmdError:
-        status = 1 # bad
+        status = 1  # bad
         uri_test = ''
 
     # Recover libvirtd service start

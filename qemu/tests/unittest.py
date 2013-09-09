@@ -1,4 +1,8 @@
-import logging, os, shutil, glob, ConfigParser
+import logging
+import os
+import shutil
+import glob
+import ConfigParser
 from autotest.client.shared import error
 from virttest import utils_misc, env_process
 

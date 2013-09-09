@@ -1,7 +1,9 @@
-import re, os
+import re
+import os
 from autotest.client.shared import error
 from virttest import virsh
 from xml.dom.minidom import parseString
+
 
 def run_virsh_cpu_baseline(test, params, env):
     """

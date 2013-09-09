@@ -3,9 +3,18 @@ This script is used to execute a program and collect the monitor
 information in background, redirect the outputs to log files.
 """
 
-import threading, shelve, commands, re, os, sys, random, string
+import threading
+import shelve
+import commands
+import re
+import os
+import sys
+import random
+import string
+
 
 class Runner(object):
+
     def __init__(self):
         """
         Set the global parameter for thread clean up
@@ -20,7 +29,7 @@ class Runner(object):
         fd = shelve.open(p_file)
         fd["pid"] = os.getpid()
         fd.close()
-        commands.getoutput("%s &> %s_monitor" %(m_cmd, r_path))
+        commands.getoutput("%s &> %s_monitor" % (m_cmd, r_path))
 
     def thread_kill(self, cmd, p_file):
         """
@@ -57,8 +66,8 @@ class Runner(object):
         Main thread for testing, will do clean up afterwards
         """
         pid_file = "/tmp/pid_file_%s" % "".join(random.sample(string.letters,
-                                                 4))
-        monitor = threading.Thread(target=self.monitor_thread,args=(m_cmd,
+                                                              4))
+        monitor = threading.Thread(target=self.monitor_thread, args=(m_cmd,
                                    pid_file, r_path))
         test_runner = threading.Thread(target=self.test_thread, args=(m_cmd,
                                        t_cmd, pid_file))

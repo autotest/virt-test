@@ -1,7 +1,10 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_net, utils_misc, remote, data_dir
+
 
 def ssh_cmd(session, cmd, timeout=60):
     """
@@ -56,7 +59,7 @@ def run_multi_nic_stress(test, params, env):
     server_ctl_ip = server_ip
     server_ctl_mac = vm.get_mac_address()
 
-    #the first nic used for server control.
+    # the first nic used for server control.
     params_server_nic = params.object_params(vm.name)
     nics_count = len(params_server_nic.get("nics", "").split())
     if nics_count > 1:
@@ -120,7 +123,6 @@ def run_multi_nic_stress(test, params, env):
             username = params_tmp["username"]
             env_setup(session, clients_ips[client_ctl_session.index(session)],
                       username, shell_port, password)
-
 
     error.context("Start netperf testing", logging.info)
     try:
@@ -212,7 +214,7 @@ def launch_client(sessions, servers, server_ctl, clients,
         ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
     logging.info("Netserver start successfully")
 
-    #start netperf
+    # start netperf
     error.context("Start netperf client threads", logging.info)
     client_threads = []
 

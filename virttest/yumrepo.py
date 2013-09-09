@@ -14,6 +14,7 @@ REPO_DIR = '/etc/yum.repos.d'
 
 
 class YumRepo(object):
+
     '''
     Represents a YUM repository
 
@@ -34,6 +35,7 @@ class YumRepo(object):
     When it comes to the repo URL, currently there's no support for setting a
     mirrorlist, only a baseurl.
     '''
+
     def __init__(self, name, baseurl, path=None):
         '''
         Initilizes a new YumRepo object
@@ -55,7 +57,6 @@ class YumRepo(object):
         self.gpgcheck = False
         self.gpgkey = ''
 
-
     @classmethod
     def _get_path_from_name(cls, name):
         '''
@@ -66,7 +67,6 @@ class YumRepo(object):
         '''
         return os.path.join(REPO_DIR, "%s.repo" % name)
 
-
     @classmethod
     def _yum_value_for_boolean(cls, boolean):
         '''
@@ -76,7 +76,6 @@ class YumRepo(object):
             return '1'
         else:
             return '0'
-
 
     def render(self):
         '''
@@ -96,11 +95,9 @@ class YumRepo(object):
                   'baseurl': self.baseurl,
                   'enabled': self._yum_value_for_boolean(self.enabled),
                   'gpgcheck': self._yum_value_for_boolean(self.gpgcheck),
-                  'gpgkey' : self.gpgkey}
-
+                  'gpgkey': self.gpgkey}
 
         return template % values
-
 
     def save(self):
         '''
@@ -109,7 +106,6 @@ class YumRepo(object):
         output_file = open(self.path, 'w')
         output_file.write(self.render())
         output_file.close()
-
 
     def remove(self):
         '''

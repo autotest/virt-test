@@ -1,4 +1,6 @@
-import re, logging, os
+import re
+import logging
+import os
 from autotest.client.shared import utils, error
 from virttest import virsh
 
@@ -54,7 +56,6 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
         else:
             return None
 
-
     def schedinfo_output_analyse(result, set_ref, scheduler="posix"):
         """
         Get the value of set_ref.
@@ -82,14 +83,13 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
                 break
         return set_value
 
-
-    #Prepare vm test environment
+    # Prepare vm test environment
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     domid = vm.get_id()
     domuuid = vm.get_uuid()
 
-    #Prepare test options
+    # Prepare test options
     vm_ref = params.get("schedinfo_vm_ref", "domname")
     options_ref = params.get("schedinfo_options_ref", "")
     options_suffix = params.get("schedinfo_options_suffix", "")
@@ -150,8 +150,8 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
                              "set value in output:%s\n"
                              "set value in cgroup:%s\n"
                              "expected value:%s" % (
-                             set_value, set_value_of_output,
-                             set_value_of_cgroup, set_value_expected))
+                                 set_value, set_value_of_output,
+                                 set_value_of_cgroup, set_value_expected))
                 if set_value_of_output is None:
                     raise error.TestFail("Get parameter %s failed." % set_ref)
                 if not (set_value_expected == set_value_of_output):

@@ -1,6 +1,8 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test
+
 
 @error.context_aware
 def run_sr_iov_hotunplug(test, params, env):
@@ -36,11 +38,10 @@ def run_sr_iov_hotunplug(test, params, env):
             raise error.TestFail("device_del command is not supported")
 
         if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1)
-            and not ignore_failure):
+                and not ignore_failure):
             raise error.TestFail("Failed to hot remove PCI device: %s. "
                                  "Monitor command: %s" %
                                  (pci_model, cmd))
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -58,12 +59,12 @@ def run_sr_iov_hotunplug(test, params, env):
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
     if module:
-        error.context("modprobe the module %s" %module, logging.info)
+        error.context("modprobe the module %s" % module, logging.info)
         session.cmd("modprobe %s" % module)
 
     # check monitor type
     is_qmp_monitor = (utils_misc.qemu_has_option("qmp")
-                     and params.get("monitor_type") == "qmp")
+                      and params.get("monitor_type") == "qmp")
     # Probe qemu to verify what is the supported syntax for PCI hotplug
     if is_qmp_monitor:
         cmd_o = vm.monitor.info("commands")
@@ -77,6 +78,7 @@ def run_sr_iov_hotunplug(test, params, env):
     devices = find_pci(pci_model)
     if devices:
         for device in devices[:pci_num]:
-            pci_info = [] # (lmr) I think here is the place where pci_info should go
+            # (lmr) I think here is the place where pci_info should go
+            pci_info = []
             error.context("Hot unplug device %s" % device, logging.info)
             pci_del(device)

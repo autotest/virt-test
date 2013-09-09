@@ -1,4 +1,8 @@
-import logging, time, random, math, os
+import logging
+import time
+import random
+import math
+import os
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
 
@@ -95,8 +99,8 @@ def run_ksm_overcommit(test, params, env):
         session.sendline(command)
         try:
             (match, data) = session.read_until_last_line_matches(
-                                                            ["PASS:", "FAIL:"],
-                                                            timeout)
+                ["PASS:", "FAIL:"],
+                timeout)
         except aexpect.ExpectProcessTerminatedError, details:
             e_msg = ("Failed to execute command '%s' on "
                      "ksm_overcommit_guest.py, vm '%s': %s" %
@@ -229,7 +233,7 @@ def run_ksm_overcommit(test, params, env):
 
                     # We need to keep some memory for python to run.
                     if (free_mem < 64000) or (ksm_swap and
-                                            free_mem < (450000 * perf_ratio)):
+                       free_mem < (450000 * perf_ratio)):
                         vm.pause()
                         for j in range(0, i):
                             lvms[j].destroy(gracefully=False)
@@ -303,7 +307,7 @@ def run_ksm_overcommit(test, params, env):
 
         for i in range(0, max_alloc):
             cmd = "mem = MemFill(%d, %s, %s)" % ((ksm_size / max_alloc),
-                                                   skeys[i], dkeys[i])
+                                                 skeys[i], dkeys[i])
             _execute_allocator(cmd, vm, lsessions[i], 60 * perf_ratio)
 
             cmd = "mem.value_fill(%d)" % (skeys[0])
@@ -378,7 +382,7 @@ def run_ksm_overcommit(test, params, env):
             data = data.splitlines()[-1]
             out = int(data.split()[4])
             logging.debug("Performance: %dMB * 1000 / %dms = %dMB/s",
-                         ksm_size / max_alloc, out,
+                          ksm_size / max_alloc, out,
                          (ksm_size * 1000 / out / max_alloc))
 
         logging.debug(utils_test.get_memory_info([vm]))
@@ -570,7 +574,7 @@ def run_ksm_overcommit(test, params, env):
     params['vms'] = vm_name
     # Associate pidfile name
     params['pid_' + vm_name] = utils_misc.generate_tmp_file_name(vm_name,
-                                                                'pid')
+                                                                 'pid')
     if not params.get('extra_params'):
         params['extra_params'] = ' '
     params['extra_params_' + vm_name] = params.get('extra_params')
@@ -605,7 +609,7 @@ def run_ksm_overcommit(test, params, env):
     for i in range(1, vmsc):
         vm_name = "vm" + str(i + 1)
         params['pid_' + vm_name] = utils_misc.generate_tmp_file_name(vm_name,
-                                                                    'pid')
+                                                                     'pid')
         params['extra_params_' + vm_name] = params.get('extra_params')
         params['extra_params_' + vm_name] += (" -pidfile %s" %
                                              (params.get('pid_' + vm_name)))

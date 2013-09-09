@@ -3,6 +3,7 @@ from virttest import virt_vm, utils_misc, utils_net
 
 
 class VMCreateSuccess(Exception):
+
     def __str__(self):
         return "VM succeeded to create. This was not expected"
 

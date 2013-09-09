@@ -7,7 +7,13 @@ Step file creator/editor.
 @version: "20090401"
 """
 
-import pygtk, gtk, os, glob, shutil, sys, logging
+import pygtk
+import gtk
+import os
+import glob
+import shutil
+import sys
+import logging
 import ppm_utils
 pygtk.require('2.0')
 
@@ -45,49 +51,49 @@ def key_event_to_qemu_string(event):
     keyval = keyvals[0][0]
     keyname = gtk.gdk.keyval_name(keyval)
 
-    keymap = { "Return": "ret",
-               "Tab": "tab",
-               "space": "spc",
-               "Left": "left",
-               "Right": "right",
-               "Up": "up",
-               "Down": "down",
-               "F1": "f1",
-               "F2": "f2",
-               "F3": "f3",
-               "F4": "f4",
-               "F5": "f5",
-               "F6": "f6",
-               "F7": "f7",
-               "F8": "f8",
-               "F9": "f9",
-               "F10": "f10",
-               "F11": "f11",
-               "F12": "f12",
-               "Escape": "esc",
-               "minus": "minus",
-               "equal": "equal",
-               "BackSpace": "backspace",
-               "comma": "comma",
-               "period": "dot",
-               "slash": "slash",
-               "Insert": "insert",
-               "Delete": "delete",
-               "Home": "home",
-               "End": "end",
-               "Page_Up": "pgup",
-               "Page_Down": "pgdn",
-               "Menu": "menu",
-               "semicolon": "0x27",
-               "backslash": "0x2b",
-               "apostrophe": "0x28",
-               "grave": "0x29",
-               "less": "0x2b",
-               "bracketleft": "0x1a",
-               "bracketright": "0x1b",
-               "Super_L": "0xdc",
-               "Super_R": "0xdb",
-               }
+    keymap = {"Return": "ret",
+              "Tab": "tab",
+              "space": "spc",
+              "Left": "left",
+              "Right": "right",
+              "Up": "up",
+              "Down": "down",
+              "F1": "f1",
+              "F2": "f2",
+              "F3": "f3",
+              "F4": "f4",
+              "F5": "f5",
+              "F6": "f6",
+              "F7": "f7",
+              "F8": "f8",
+              "F9": "f9",
+              "F10": "f10",
+              "F11": "f11",
+              "F12": "f12",
+              "Escape": "esc",
+              "minus": "minus",
+              "equal": "equal",
+              "BackSpace": "backspace",
+              "comma": "comma",
+              "period": "dot",
+              "slash": "slash",
+              "Insert": "insert",
+              "Delete": "delete",
+              "Home": "home",
+              "End": "end",
+              "Page_Up": "pgup",
+              "Page_Down": "pgdn",
+              "Menu": "menu",
+              "semicolon": "0x27",
+              "backslash": "0x2b",
+              "apostrophe": "0x28",
+              "grave": "0x29",
+              "less": "0x2b",
+              "bracketleft": "0x1a",
+              "bracketright": "0x1b",
+              "Super_L": "0xdc",
+              "Super_R": "0xdb",
+              }
 
     if ord('a') <= keyval <= ord('z') or ord('0') <= keyval <= ord('9'):
         sr = keyname
@@ -107,6 +113,7 @@ def key_event_to_qemu_string(event):
 
 
 class StepMakerWindow(object):
+
     def __init__(self):
         # Window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -245,7 +252,7 @@ class StepMakerWindow(object):
 
         self.spin_barrier_timeout = gtk.SpinButton(gtk.Adjustment(0, 0, 50000,
                                                                   1, 10, 0),
-                                                                 climb_rate=0.0)
+                                                   climb_rate=0.0)
         box.pack_start(self.spin_barrier_timeout, False)
         self.spin_barrier_timeout.show()
 
@@ -307,7 +314,7 @@ class StepMakerWindow(object):
 
         self.spin_sensitivity = gtk.SpinButton(gtk.Adjustment(1, 1, 100, 1, 10,
                                                               0),
-                                                              climb_rate=0.0)
+                                               climb_rate=0.0)
         box.pack_end(self.spin_sensitivity, False)
         self.spin_sensitivity.show()
 
@@ -315,8 +322,9 @@ class StepMakerWindow(object):
         box.pack_end(label, False)
         label.show()
 
-        self.spin_latency = gtk.SpinButton(gtk.Adjustment(10, 1, 500, 1, 10, 0),
-                                           climb_rate=0.0)
+        self.spin_latency = gtk.SpinButton(
+            gtk.Adjustment(10, 1, 500, 1, 10, 0),
+            climb_rate=0.0)
         box.pack_end(self.spin_latency, False)
         self.spin_latency.show()
 
@@ -339,22 +347,21 @@ class StepMakerWindow(object):
 
     def message(self, text, title):
         dlg = gtk.MessageDialog(self.window,
-                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                gtk.MESSAGE_INFO,
-                gtk.BUTTONS_CLOSE,
-                title)
+                                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                                gtk.MESSAGE_INFO,
+                                gtk.BUTTONS_CLOSE,
+                                title)
         dlg.set_title(title)
         dlg.format_secondary_text(text)
         dlg.run()
         dlg.destroy()
 
-
     def question_yes_no(self, text, title):
         dlg = gtk.MessageDialog(self.window,
-                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                gtk.MESSAGE_QUESTION,
-                gtk.BUTTONS_YES_NO,
-                title)
+                                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                                gtk.MESSAGE_QUESTION,
+                                gtk.BUTTONS_YES_NO,
+                                title)
         dlg.set_title(title)
         dlg.format_secondary_text(text)
         response = dlg.run()
@@ -363,7 +370,6 @@ class StepMakerWindow(object):
             return True
         return False
 
-
     def inputdialog(self, text, title, default_response=""):
         # Define a little helper function
         def inputdialog_entry_activated(entry):
@@ -371,10 +377,10 @@ class StepMakerWindow(object):
 
         # Create the dialog
         dlg = gtk.MessageDialog(self.window,
-                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-                gtk.MESSAGE_QUESTION,
-                gtk.BUTTONS_OK_CANCEL,
-                title)
+                                gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
+                                gtk.MESSAGE_QUESTION,
+                                gtk.BUTTONS_OK_CANCEL,
+                                title)
         dlg.set_title(title)
         dlg.format_secondary_text(text)
 
@@ -392,12 +398,12 @@ class StepMakerWindow(object):
             return entry.get_text()
         return None
 
-
     def filedialog(self, title=None, default_filename=None):
         chooser = gtk.FileChooserDialog(title=title, parent=self.window,
                                         action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN,
-                         gtk.RESPONSE_OK))
+                                        buttons=(
+                                            gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN,
+                                            gtk.RESPONSE_OK))
         chooser.resize(700, 500)
         if default_filename:
             chooser.set_filename(os.path.abspath(default_filename))
@@ -407,7 +413,6 @@ class StepMakerWindow(object):
             filename = chooser.get_filename()
         chooser.destroy()
         return filename
-
 
     def redirect_event_box_input(self, press=None, release=None, scroll=None,
                                  motion=None, expose=None):
@@ -428,26 +433,24 @@ class StepMakerWindow(object):
         self.handler_event_box_expose = None
         if press is not None:
             self.handler_event_box_press = (
-                        self.event_box.connect("button-press-event", press))
+                self.event_box.connect("button-press-event", press))
         if release is not None:
             self.handler_event_box_release = (
-                        self.event_box.connect("button-release-event", release))
+                self.event_box.connect("button-release-event", release))
         if scroll is not None:
             self.handler_event_box_scroll = (
-                        self.event_box.connect("scroll-event", scroll))
+                self.event_box.connect("scroll-event", scroll))
         if motion is not None:
             self.handler_event_box_motion = (
-                        self.event_box.connect("motion-notify-event", motion))
+                self.event_box.connect("motion-notify-event", motion))
         if expose is not None:
             self.handler_event_box_expose = (
-                        self.event_box.connect_after("expose-event", expose))
-
+                self.event_box.connect_after("expose-event", expose))
 
     def get_keys(self):
         return self.text_buffer.get_text(
-                self.text_buffer.get_start_iter(),
-                self.text_buffer.get_end_iter())
-
+            self.text_buffer.get_start_iter(),
+            self.text_buffer.get_end_iter())
 
     def add_key(self, key):
         text = self.get_keys()
@@ -456,10 +459,8 @@ class StepMakerWindow(object):
         text += key
         self.text_buffer.set_text(text)
 
-
     def clear_keys(self):
         self.text_buffer.set_text("")
-
 
     def update_barrier_info(self):
         if self.barrier_selected:
@@ -471,7 +472,6 @@ class StepMakerWindow(object):
             self.label_barrier_region.set_text("No region selected.")
         self.label_barrier_md5sum.set_text("MD5: " + self.barrier_md5sum)
 
-
     def update_mouse_click_info(self):
         if self.mouse_click_captured:
             self.check_mousemove.set_label("Move: " +
@@ -481,7 +481,6 @@ class StepMakerWindow(object):
         else:
             self.check_mousemove.set_label("Move: ...")
             self.check_mouseclick.set_label("Click: ...")
-
 
     def clear_state(self, clear_screendump=True):
         # Recording time
@@ -512,7 +511,6 @@ class StepMakerWindow(object):
         self.mouse_click_button = 0
         self.update_mouse_click_info()
 
-
     def clear_barrier_state(self):
         self.check_barrier.set_active(True)
         self.check_barrier.set_active(False)
@@ -527,17 +525,15 @@ class StepMakerWindow(object):
         self.barrier_md5sum = ""
         self.update_barrier_info()
 
-
     def set_image(self, w, h, data):
         (self.image_width, self.image_height, self.image_data) = (w, h, data)
         self.image.set_from_pixbuf(gtk.gdk.pixbuf_new_from_data(
             data, gtk.gdk.COLORSPACE_RGB, False, 8,
-            w, h, w*3))
+            w, h, w * 3))
         hscrollbar = self.scrolledwindow.get_hscrollbar()
         hscrollbar.set_range(0, w)
         vscrollbar = self.scrolledwindow.get_vscrollbar()
         vscrollbar.set_range(0, h)
-
 
     def set_image_from_file(self, filename):
         if not ppm_utils.image_verify_ppm_file(filename):
@@ -547,13 +543,11 @@ class StepMakerWindow(object):
         (w, h, data) = ppm_utils.image_read_from_ppm_file(filename)
         self.set_image(w, h, data)
 
-
     def clear_image(self):
         self.image.clear()
         self.image_width = 0
         self.image_height = 0
         self.image_data = ""
-
 
     def update_screendump_id(self, data_dir):
         if not self.image_data:
@@ -568,7 +562,6 @@ class StepMakerWindow(object):
             scrdump_id = ppm_utils.generate_id_for_screendump(scrdump_md5sum,
                                                               data_dir)
         self.entry_screendump.set_text(scrdump_id)
-
 
     def get_step_lines(self, data_dir=None):
         if self.check_barrier.get_active() and not self.barrier_selected:
@@ -598,9 +591,9 @@ class StepMakerWindow(object):
         # Add barrier_2 line
         if self.check_barrier.get_active():
             sr += "barrier_2 %d %d %d %d %s %d" % (
-                    self.barrier_size[0], self.barrier_size[1],
-                    self.barrier_corner[0], self.barrier_corner[1],
-                    self.barrier_md5sum, self.spin_barrier_timeout.get_value())
+                self.barrier_size[0], self.barrier_size[1],
+                self.barrier_corner[0], self.barrier_corner[1],
+                self.barrier_md5sum, self.spin_barrier_timeout.get_value())
             if self.check_barrier_optional.get_active():
                 sr += " optional"
             sr += "\n"
@@ -621,13 +614,13 @@ class StepMakerWindow(object):
         # Add mousemove line
         if self.check_mousemove.get_active():
             sr += "mousemove %d %d\n" % (self.mouse_click_coords[0],
-                                          self.mouse_click_coords[1])
+                                         self.mouse_click_coords[1])
 
         # Add mouseclick line
         if self.check_mouseclick.get_active():
-            mapping = { 1 : 1,
-                        2 : 2,
-                        3 : 4 }
+            mapping = {1: 1,
+                       2: 2,
+                       3: 4}
             sr += "mouseclick %d\n" % mapping[self.mouse_click_button]
 
         # Write screendump and cropped screendump image files
@@ -661,7 +654,7 @@ class StepMakerWindow(object):
             if (line.startswith("#") and not
                 self.entry_comment.get_text() and not
                 line.startswith("# Sending keys:") and not
-                line.startswith("# ----")):
+                    line.startswith("# ----")):
 
                 self.entry_comment.set_text(line.strip("#").strip())
 
@@ -723,10 +716,10 @@ class StepMakerWindow(object):
                     # See if the computed md5sum matches the one recorded in
                     # the file
                     computed_md5sum = ppm_utils.get_region_md5sum(
-                            self.image_width, self.image_height,
-                            self.image_data, self.barrier_corner[0],
-                            self.barrier_corner[1], self.barrier_size[0],
-                            self.barrier_size[1])
+                        self.image_width, self.image_height,
+                        self.image_data, self.barrier_corner[0],
+                        self.barrier_corner[1], self.barrier_size[0],
+                        self.barrier_size[1])
                     if computed_md5sum != self.barrier_md5sum:
                         self.message("Computed MD5 sum (%s) differs from MD5"
                                      " sum recorded in steps file (%s)" %
@@ -744,11 +737,11 @@ class StepMakerWindow(object):
     def event_check_barrier_toggled(self, widget):
         if self.check_barrier.get_active():
             self.redirect_event_box_input(
-                    self.event_button_press,
-                    self.event_button_release,
-                    None,
-                    None,
-                    self.event_expose)
+                self.event_button_press,
+                self.event_button_release,
+                None,
+                None,
+                self.event_expose)
             self.event_box.queue_draw()
             self.event_box.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
             self.label_barrier_region.set_sensitive(True)
@@ -791,9 +784,9 @@ class StepMakerWindow(object):
         gc.set_background(gc.get_colormap().alloc_color("dark red"))
         gc.set_dashes(0, (4, 4))
         self.event_box.window.draw_rectangle(
-                gc, False,
-                corner[0], corner[1],
-                size[0]-1, size[1]-1)
+            gc, False,
+            corner[0], corner[1],
+            size[0] - 1, size[1] - 1)
 
     def event_drag_motion(self, widget, event):
         old_corner1 = self.barrier_corner1
@@ -803,13 +796,15 @@ class StepMakerWindow(object):
                                                  self.event_box.size_request())
         (old_corner, old_size) = corner_and_size_clipped(self.barrier_corner0,
                                                          old_corner1,
-                                                  self.event_box.size_request())
-        corner0 = [min(corner[0], old_corner[0]), min(corner[1], old_corner[1])]
+                                                         self.event_box.size_request())
+        corner0 = [
+            min(corner[0], old_corner[0]), min(corner[1], old_corner[1])]
         corner1 = [max(corner[0] + size[0], old_corner[0] + old_size[0]),
                    max(corner[1] + size[1], old_corner[1] + old_size[1])]
         size = [corner1[0] - corner0[0] + 1,
                 corner1[1] - corner0[1] + 1]
-        self.event_box.queue_draw_area(corner0[0], corner0[1], size[0], size[1])
+        self.event_box.queue_draw_area(
+            corner0[0], corner0[1], size[0], size[1])
 
     def event_button_press(self, widget, event):
         (corner, size) = corner_and_size_clipped(self.barrier_corner0,
@@ -819,27 +814,27 @@ class StepMakerWindow(object):
         self.barrier_corner0 = [int(event.x), int(event.y)]
         self.barrier_corner1 = [int(event.x), int(event.y)]
         self.redirect_event_box_input(
-                self.event_button_press,
-                self.event_button_release,
-                None,
-                self.event_drag_motion,
-                self.event_expose)
+            self.event_button_press,
+            self.event_button_release,
+            None,
+            self.event_drag_motion,
+            self.event_expose)
         self.barrier_selection_started = True
 
     def event_button_release(self, widget, event):
         self.redirect_event_box_input(
-                self.event_button_press,
-                self.event_button_release,
-                None,
-                None,
-                self.event_expose)
+            self.event_button_press,
+            self.event_button_release,
+            None,
+            None,
+            self.event_expose)
         (self.barrier_corner, self.barrier_size) = \
-        corner_and_size_clipped(self.barrier_corner0, self.barrier_corner1,
-                                self.event_box.size_request())
+            corner_and_size_clipped(self.barrier_corner0, self.barrier_corner1,
+                                    self.event_box.size_request())
         self.barrier_md5sum = ppm_utils.get_region_md5sum(
-                self.image_width, self.image_height, self.image_data,
-                self.barrier_corner[0], self.barrier_corner[1],
-                self.barrier_size[0], self.barrier_size[1])
+            self.image_width, self.image_height, self.image_data,
+            self.barrier_corner[0], self.barrier_corner[1],
+            self.barrier_size[0], self.barrier_size[1])
         self.barrier_selected = True
         self.update_barrier_info()
 
@@ -920,7 +915,7 @@ class StepEditor(StepMakerWindow):
             ('Edit', None, '_Edit'),
             ('Insert', None, '_Insert'),
             ('Tools', None, '_Tools')
-            ])
+        ])
 
         def create_shortcut(name, callback, keyname):
             # Create an action
@@ -979,7 +974,8 @@ class StepEditor(StepMakerWindow):
         self.label_step.show()
 
         self.entry_step_num = gtk.Entry()
-        self.entry_step_num.connect("activate", self.event_entry_step_activated)
+        self.entry_step_num.connect(
+            "activate", self.event_entry_step_activated)
         self.entry_step_num.set_width_chars(3)
         hbox.pack_start(self.entry_step_num, False)
         self.entry_step_num.show()
@@ -1365,7 +1361,7 @@ class StepEditor(StepMakerWindow):
 
     def save_step(self):
         lines = self.get_step_lines(self.steps_data_dir)
-        if lines != None:
+        if lines is not None:
             self.steps[self.current_step_index] = lines
             self.current_step = lines
             self.write_steps_file(self.steps_filename)

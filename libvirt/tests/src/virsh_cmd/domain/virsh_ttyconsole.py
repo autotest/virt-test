@@ -93,7 +93,7 @@ def run_virsh_ttyconsole(test, params, env):
         vm.destroy()
     xml_console_recover(vmxml_backup)
 
-    #check status_error
+    # check status_error
     status_error = params.get("status_error")
     if status_error == "yes":
         if status == 0:

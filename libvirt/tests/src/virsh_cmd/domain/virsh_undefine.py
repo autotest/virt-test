@@ -1,6 +1,8 @@
-import os, logging
+import os
+import logging
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, remote, utils_libvirtd
+
 
 def run_virsh_undefine(test, params, env):
     """
@@ -59,7 +61,7 @@ def run_virsh_undefine(test, params, env):
         status = 1
         uri = None
     if vm_ref != "remote":
-        vm_ref = "%s %s"% (vm_ref, extra)
+        vm_ref = "%s %s" % (vm_ref, extra)
         cmdresult = virsh.undefine(vm_ref, uri=uri,
                                    ignore_status=True, debug=True)
         status = cmdresult.exit_status
@@ -96,13 +98,13 @@ def run_virsh_undefine(test, params, env):
     # Check if xml file exists.
     xml_exist = False
     if (os.path.exists("/etc/libvirt/qemu/%s.xml" % vm_name) or
-        os.path.exists("/etc/xen/%s" % vm_name)):
+            os.path.exists("/etc/xen/%s" % vm_name)):
         xml_exist = True
 
     # Recover main VM.
     if not virsh.domain_exists(vm.name, uri=uri):
         s_define = virsh.define(xml_file)
-        if s_define != True or not virsh.domain_exists(vm.name, uri=uri):
+        if s_define is not True or not virsh.domain_exists(vm.name, uri=uri):
             logging.error("Failed to define %s.", vm.name)
 
     # Check results.

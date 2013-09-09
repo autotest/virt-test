@@ -1,6 +1,8 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error, utils
 from virttest import utils_misc
+
 
 @error.context_aware
 def run_cpuinfo_query(test, params, env):

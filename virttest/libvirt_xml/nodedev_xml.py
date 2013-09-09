@@ -8,9 +8,11 @@ from virttest.libvirt_xml import base, xcepts, accessors
 
 
 class CAPXML(base.LibvirtXMLBase):
+
     """
     The base class for capability.
     """
+
     def get_sysfs_sub_path(self):
         """
         return the sub path store the info of capibility.
@@ -25,7 +27,6 @@ class CAPXML(base.LibvirtXMLBase):
         """
         raise NotImplementedError('get_key2filename_dict is not implemeneted.')
 
-
     def get_key2value_dict(self):
         """
         Reutn a dict which contain the key and the value
@@ -34,25 +35,25 @@ class CAPXML(base.LibvirtXMLBase):
         raise NotImplementedError('get_key2value_dict is not implemented.')
 
 
-
 class SystemXML(CAPXML):
+
     """
     class for capability which type is system.
     """
     __slots__ = CAPXML.__slots__ + ('product', 'hdware_vendor',
                                     'hdware_serial', 'hdware_uuid',
-                                    'firmware_vendor','firmversion'
+                                    'firmware_vendor', 'firmversion'
                                     'firm_release_date')
 
     __sysfs_sub_path__ = 'dmi/id/'
 
-    __key2filename_dict__ = {'product':'product_name',
-                             'hdware_vendor':'sys_vendor',
-                             'hdware_serial':'product_serial',
-                             'hdware_uuid':'product_uuid',
-                             'firmware_vendor':'bios_vendor',
-                             'firmversion':'bios_version',
-                             'firm_release_date':'bios_date'}
+    __key2filename_dict__ = {'product': 'product_name',
+                             'hdware_vendor': 'sys_vendor',
+                             'hdware_serial': 'product_serial',
+                             'hdware_uuid': 'product_uuid',
+                             'firmware_vendor': 'bios_vendor',
+                             'firmversion': 'bios_version',
+                             'firm_release_date': 'bios_date'}
 
     @staticmethod
     def get_key2filename_dict():
@@ -82,7 +83,6 @@ class SystemXML(CAPXML):
         """
         return SystemXML.__sysfs_sub_path__
 
-
     def get_sysfs_sub_path(self):
         """
         Return the sysfs_subdir.
@@ -91,6 +91,7 @@ class SystemXML(CAPXML):
 
 
 class PCIXML(CAPXML):
+
     """
     class for capability whose type is pci.
     """
@@ -108,12 +109,11 @@ class PCIXML(CAPXML):
         accessors.XMLElementInt('function', self, parent_xpath='/',
                                 tag_name='function')
         accessors.XMLAttribute('product_id', self, parent_xpath='/',
-                                tag_name='product', attribute='id')
+                               tag_name='product', attribute='id')
         accessors.XMLAttribute('vendor_id', self, parent_xpath='/',
-                                tag_name='vendor', attribute='id')
+                               tag_name='vendor', attribute='id')
         super(PCIXML, self).__init__(virsh_instance=virsh_instance)
-        self.xml = ( ' <capability type=\'pci\'></capability>')
-
+        self.xml = (' <capability type=\'pci\'></capability>')
 
     @staticmethod
     def make_sysfs_sub_path(domain, bus, slot, function):
@@ -127,7 +127,6 @@ class PCIXML(CAPXML):
                               % (pci_bus_path, pci_device_path))
 
         return pci_sysfs_sub_path
-
 
     def get_sysfs_sub_path(self):
         """
@@ -143,9 +142,8 @@ class PCIXML(CAPXML):
 
         return PCIXML.make_sysfs_sub_path(domain, bus, slot, function)
 
-
-    __key2filename_dict__ = {'product_id':'device',
-                             'vendor_id':'vendor'}
+    __key2filename_dict__ = {'product_id': 'device',
+                             'vendor_id': 'vendor'}
 
     @staticmethod
     def get_key2filename_dict():
@@ -155,7 +153,6 @@ class PCIXML(CAPXML):
         filename: the name of file stored info for this key.
         """
         return PCIXML.__key2filename_dict__
-
 
     def get_key2value_dict(self):
         """
@@ -172,6 +169,7 @@ class PCIXML(CAPXML):
 
 
 class NodedevXMLBase(base.LibvirtXMLBase):
+
     """
     Accessor methods for NodedevXML class.
 
@@ -185,14 +183,14 @@ class NodedevXMLBase(base.LibvirtXMLBase):
 
     __sysfs_dir__ = "/sys/class"
 
-    __type2class_dict__ = {'system':'SystemXML',
-                           'pci':'PCIXML',
-                           'usb_device':'USBDeviceXML',
-                           'usb':'USBXML',
-                           'net':'NetXML',
-                           'scsi_host':'SCSIHostXML',
-                           'scsi':'SCSIXML',
-                           'storage':'StorageXML'}
+    __type2class_dict__ = {'system': 'SystemXML',
+                           'pci': 'PCIXML',
+                           'usb_device': 'USBDeviceXML',
+                           'usb': 'USBXML',
+                           'net': 'NetXML',
+                           'scsi_host': 'SCSIHostXML',
+                           'scsi': 'SCSIXML',
+                           'storage': 'StorageXML'}
 
     def __init__(self, virsh_instance=base.virsh):
         accessors.XMLElementText('name', self, parent_xpath='/',
@@ -203,7 +201,6 @@ class NodedevXMLBase(base.LibvirtXMLBase):
                                tag_name='capability', attribute='type')
         super(NodedevXMLBase, self).__init__(virsh_instance=virsh_instance)
         self.xml = '<device></device>'
-
 
     @staticmethod
     def get_cap_by_type(cap_type):
@@ -243,7 +240,6 @@ class NodedevXMLBase(base.LibvirtXMLBase):
         root.append(value.getroot())
         self.xmltreefile.write()
 
-
     def del_cap(self):
         """
         Delete the capability from nodedev xml.
@@ -253,7 +249,6 @@ class NodedevXMLBase(base.LibvirtXMLBase):
             self.mltreefile.remove(element)
         self.xmltreefile.write()
 
-
     def get_sysfs_sub_path(self):
         """
         Get the sub sysfs path of the capability.
@@ -262,7 +257,6 @@ class NodedevXMLBase(base.LibvirtXMLBase):
         sysfs_sub_path = capxml.get_sysfs_sub_path()
 
         return sysfs_sub_path
-
 
     def get_sysfs_path(self):
         """
@@ -276,12 +270,12 @@ class NodedevXMLBase(base.LibvirtXMLBase):
 
 
 class NodedevXML(NodedevXMLBase):
+
     """
     class for Node device XML.
     """
 
     __slots__ = NodedevXMLBase.__slots__
-
 
     def __init__(self, virsh_instance=base.virsh):
         """
@@ -289,7 +283,6 @@ class NodedevXML(NodedevXMLBase):
         """
         super(NodedevXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = ('<device></device>')
-
 
     @staticmethod
     def new_from_dumpxml(dev_name, virsh_instance=base.virsh):
@@ -306,7 +299,6 @@ class NodedevXML(NodedevXMLBase):
 
         return nodedevxml
 
-
     def get_key2value_dict(self):
         """
         Get the dict which contain key and value in xml.
@@ -317,7 +309,6 @@ class NodedevXML(NodedevXMLBase):
         key2value_dict = capxml.get_key2value_dict()
 
         return key2value_dict
-
 
     def get_key2syspath_dict(self):
         """

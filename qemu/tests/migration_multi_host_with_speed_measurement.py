@@ -1,4 +1,8 @@
-import os, re, logging, time, socket
+import os
+import re
+import logging
+import time
+import socket
 from autotest.client.shared import error, utils
 from autotest.client.shared.barrier import listen_server
 from autotest.client.shared.syncdata import SyncData
@@ -79,6 +83,7 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
         return mig_stat
 
     class TestMultihostMigration(base_class):
+
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.mig_stat = None
@@ -123,11 +128,11 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
                 utils_misc.install_cpuflags_util_on_vm(test, vm, install_path,
-                                                    extra_flags="-msse3 -msse2")
+                                                       extra_flags="-msse3 -msse2")
 
                 cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-                    (os.path.join(install_path, "test_cpu_flags"),
-                     vm_mem * 4, vm_mem / 2))
+                      (os.path.join(install_path, "test_cpu_flags"),
+                       vm_mem * 4, vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
 
@@ -169,10 +174,10 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
             self.migrate_wait(vms, srchost, dsthost, worker)
 
     mig = TestMultihostMigration(test, params, env)
-    #Start migration
+    # Start migration
     mig.run()
 
-    #If machine is migration master check migration statistic.
+    # If machine is migration master check migration statistic.
     if mig.master_id() == mig.hostid:
         mig_speed = utils.convert_data_size(mig_speed, "M")
 
@@ -184,21 +189,22 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
 
         logging.info("Target migration speed: %d MB/s", mig_speed)
         logging.info("Real Link speed: %d MB/s", mig.link_speed)
-        logging.info("Average migration speed: %d MB/s", mig_stat.get_average())
+        logging.info(
+            "Average migration speed: %d MB/s", mig_stat.get_average())
         logging.info("Minimum migration speed: %d MB/s", mig_stat.get_min())
         logging.info("Maximum migration speed: %d MB/s", mig_stat.get_max())
 
         logging.info("Maximum tolerable divergence: %3.1f%%",
-                     mig_speed_accuracy*100)
+                     mig_speed_accuracy * 100)
 
         if real_speed < mig_speed - ack_speed:
-            divergence = (1 - float(real_speed)/float(mig_speed)) * 100
+            divergence = (1 - float(real_speed) / float(mig_speed)) * 100
             raise error.TestWarn("Average migration speed (%s MB/s) "
                                  "is %3.1f%% lower than target (%s MB/s)" %
                                  (real_speed, divergence, mig_speed))
 
         if real_speed > mig_speed + ack_speed:
-            divergence = (1 - float(mig_speed)/float(real_speed)) * 100
+            divergence = (1 - float(mig_speed) / float(real_speed)) * 100
             raise error.TestWarn("Average migration speed (%s MB/s) "
                                  "is %3.1f %% higher than target (%s MB/s)" %
                                  (real_speed, divergence, mig_speed))

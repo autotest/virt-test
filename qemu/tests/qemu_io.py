@@ -1,15 +1,21 @@
-import os, re, logging, time
+import os
+import re
+import logging
+import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import aexpect, utils_misc, data_dir
 
+
 class QemuIOConfig(object):
+
     """
     Performs setup for the test qemu_io. This is a borg class, similar to a
     singleton. The idea is to keep state in memory for when we call cleanup()
     on postprocessing.
     """
     __shared_state = {}
+
     def __init__(self, test, params):
         self.__dict__ = self.__shared_state
         root_dir = test.bindir
@@ -26,12 +32,12 @@ class QemuIOConfig(object):
         # likely that we run in conflict with other devices in the system
         self.vgtest_name = params.get("vgtest_name", "vg_kvm_test_qemu_io")
         self.lvtest_name = params.get("lvtest_name", "lv_kvm_test_qemu_io")
-        self.lvtest_device = "/dev/%s/%s" % (self.vgtest_name, self.lvtest_name)
+        self.lvtest_device = "/dev/%s/%s" % (
+            self.vgtest_name, self.lvtest_name)
         try:
             getattr(self, 'loopback')
         except AttributeError:
             self.loopback = []
-
 
     @error.context_aware
     def setup(self):
@@ -41,7 +47,8 @@ class QemuIOConfig(object):
         self.cleanup()
         try:
             for f in self.raw_files:
-                utils.run("%s create -f raw %s 10G" % (self.qemu_img_binary, f))
+                utils.run("%s create -f raw %s 10G" %
+                          (self.qemu_img_binary, f))
                 # Associate a loopback device with the raw file.
                 # Subject to race conditions, that's why try here to associate
                 # it with the raw file as quickly as possible
@@ -63,7 +70,6 @@ class QemuIOConfig(object):
             except Exception, e:
                 logging.warn(e)
             raise
-
 
     @error.context_aware
     def cleanup(self):
@@ -119,25 +125,25 @@ def run_qemu_io(test, params, env):
     logging.info("Running script now: %s" % test_script)
     test_image = params.get("test_image", "/tmp/test.qcow2")
     s, test_result = aexpect.run_fg("sh %s %s" % (test_script,
-                                                         test_image),
-                                           logging.debug, timeout = 1800)
+                                                  test_image),
+                                    logging.debug, timeout=1800)
 
     err_string = {
-       "err_nums":    "\d errors were found on the image.",
-       "an_err":      "An error occurred during the check",
-       "unsupt_err":  "This image format does not support checks",
-       "mem_err":     "Not enough memory",
-       "open_err":    "Could not open",
-       "fmt_err":     "Unknown file format",
-       "commit_err":  "Error while committing image",
-       "bootable_err":  "no bootable device",
-       }
+        "err_nums": "\d errors were found on the image.",
+        "an_err": "An error occurred during the check",
+        "unsupt_err": "This image format does not support checks",
+        "mem_err": "Not enough memory",
+        "open_err": "Could not open",
+        "fmt_err": "Unknown file format",
+        "commit_err": "Error while committing image",
+        "bootable_err": "no bootable device",
+    }
 
     try:
         for err_type in err_string.keys():
             msg = re.findall(err_string.get(err_type), test_result)
             if msg:
-                raise error.TestFail, msg
+                raise error.TestFail(msg)
     finally:
         try:
             if qemu_io_config:

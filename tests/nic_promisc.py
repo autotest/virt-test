@@ -1,7 +1,10 @@
-import logging, os, time
+import logging
+import os
+import time
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_net, aexpect
+
 
 @error.context_aware
 def run_nic_promisc(test, params, env):

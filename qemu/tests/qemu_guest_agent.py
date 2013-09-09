@@ -1,4 +1,6 @@
-import logging, time, os
+import logging
+import time
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import guest_agent
@@ -7,11 +9,11 @@ from virttest import aexpect
 
 
 class BaseVirtTest(object):
+
     def __init__(self, test, params, env):
         self.test = test
         self.params = params
         self.env = env
-
 
     def initialize(self, test, params, env):
         if test:
@@ -21,7 +23,6 @@ class BaseVirtTest(object):
         if env:
             self.env = env
 
-
     def setup(self, test, params, env):
         if test:
             self.test = test
@@ -29,7 +30,6 @@ class BaseVirtTest(object):
             self.params = params
         if env:
             self.env = env
-
 
     def run_once(self, test, params, env):
         if test:
@@ -39,17 +39,14 @@ class BaseVirtTest(object):
         if env:
             self.env = env
 
-
     def before_run_once(self, test, params, env):
         pass
-
 
     def after_run_once(self, test, params, env):
         pass
 
     def cleanup(self, test, params, env):
         pass
-
 
     def execute(self, test, params, env):
         self.initialize(test, params, env)
@@ -71,7 +68,6 @@ class QemuGuestAgentTest(BaseVirtTest):
         self.gagent = None
         self.vm = None
 
-
     def _get_session(self, params, vm):
         if not vm:
             vm = self.vm
@@ -79,7 +75,6 @@ class QemuGuestAgentTest(BaseVirtTest):
         timeout = int(params.get("login_timeout", 360))
         session = vm.wait_for_login(timeout=timeout)
         return session
-
 
     def _session_cmd_close(self, session, cmd):
         try:
@@ -90,7 +85,6 @@ class QemuGuestAgentTest(BaseVirtTest):
             except Exception:
                 pass
 
-
     def _cleanup_open_session(self):
         try:
             for s in self._open_session_list:
@@ -98,7 +92,6 @@ class QemuGuestAgentTest(BaseVirtTest):
                     s.close()
         except Exception:
             pass
-
 
     @error.context_aware
     def gagent_install(self, params, vm, *args):
@@ -116,8 +109,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         s, o = self._session_cmd_close(session, gagent_install_cmd)
         if bool(s):
             raise error.TestFail("Could not install qemu-guest-agent package"
-                                  " in VM '%s', detail: '%s'" %(vm.name, o))
-
+                                 " in VM '%s', detail: '%s'" % (vm.name, o))
 
     @error.context_aware
     def gagent_start(self, params, vm, *args):
@@ -134,8 +126,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         s, o = self._session_cmd_close(session, gagent_start_cmd)
         if bool(s):
             raise error.TestFail("Could not start qemu-guest-agent in VM"
-                                  " '%s', detail: '%s'" % (vm.name, o))
-
+                                 " '%s', detail: '%s'" % (vm.name, o))
 
     @error.context_aware
     def gagent_create(self, params, vm, *args):
@@ -162,7 +153,6 @@ class QemuGuestAgentTest(BaseVirtTest):
 
         return self.gagent
 
-
     @error.context_aware
     def setup_gagent_in_guest(self, params, vm):
         error.context("Setup guest agent in VM '%s'" % vm.name)
@@ -170,7 +160,6 @@ class QemuGuestAgentTest(BaseVirtTest):
         self.gagent_start(params, vm, *[params.get("gagent_start_cmd")])
         args = [params.get("gagent_serial_type"), params.get("gagent_name")]
         self.gagent_create(params, vm, *args)
-
 
     @error.context_aware
     def gagent_verify(self, params, vm):
@@ -183,7 +172,6 @@ class QemuGuestAgentTest(BaseVirtTest):
         self.gagent.verify_responsive()
         logging.info(self.gagent.cmd("guest-info"))
 
-
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
 
@@ -192,7 +180,6 @@ class QemuGuestAgentTest(BaseVirtTest):
             vm.verify_alive()
             self.vm = vm
         self.setup_gagent_in_guest(params, self.vm)
-
 
     def run_once(self, test, params, env):
         BaseVirtTest.run_once(self, test, params, env)
@@ -203,7 +190,6 @@ class QemuGuestAgentTest(BaseVirtTest):
             self.vm = vm
 
         self.gagent_verify(self.params, self.vm)
-
 
     def cleanup(self, test, params, env):
         self._cleanup_open_session()
@@ -218,7 +204,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     def gagent_check_install(self, test, params, env):
         pass
-
 
     @error.context_aware
     def gagent_check_sync(self, test, params, env):
@@ -235,7 +220,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error.context("Check guest agent command 'guest-sync'", logging.info)
         self.gagent.sync()
 
-
     @error.context_aware
     def __gagent_check_shutdown(self, shutdown_mode):
         error.context("Check guest agent command 'guest-shutdown'"
@@ -249,14 +233,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.vm = vm
         self.gagent.shutdown(shutdown_mode)
 
-
     def __gagent_check_serial_output(self, pattern):
         start_time = time.time()
         while (time.time() - start_time) < self.vm.REBOOT_TIMEOUT:
             if pattern in self.vm.serial_console.get_output():
                 return True
         return False
-
 
     def gagent_check_powerdown(self, test, params, env):
         """
@@ -269,7 +251,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
         if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
             raise error.TestFail("Could not shutdown VM via guest agent'")
-
 
     @error.context_aware
     def gagent_check_reboot(self, test, params, env):
@@ -294,8 +275,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             raise error.TestFail("Could not login to guest,"
                                  " detail: '%s'" % detail)
 
-
-
     @error.context_aware
     def gagent_check_halt(self, test, params, env):
         """
@@ -318,12 +297,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             logging.warn("Got an exception when force destroying guest:"
                          " '%s'", detail)
 
-
     @error.context_aware
     def _action_before_fsfreeze(self, *args):
         session = self._get_session(self.params, None)
         self._open_session_list.append(session)
-
 
     @error.context_aware
     def _action_after_fsfreeze(self, *args):
@@ -343,16 +320,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             raise error.TestFail("FS freeze failed, guest still can"
                                  " write file")
 
-
     @error.context_aware
     def _action_before_fsthaw(self, *args):
         pass
 
-
     @error.context_aware
     def _action_after_fsthaw(self, *args):
         pass
-
 
     @error.context_aware
     def gagent_check_fsfreeze(self, test, params, env):
@@ -370,7 +344,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         @param env: Dictionary with test environmen.
         """
         error.base_context("Check guest agent command 'guest-fsfreeze-freeze'",
-                      logging.info)
+                           logging.info)
         error.context("Verify FS is thawed and freeze the FS.")
 
         try:
@@ -402,7 +376,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # Finally, do something after thaw.
         self._action_after_fsthaw(test, params, env)
 
-
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 
@@ -417,6 +390,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
 
 class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
+
     """
     Qemu guest agent test class for windows guest.
     """
@@ -429,7 +403,8 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         error.context("Install dependence packages on host", logging.info)
         gagent_host_dep_install_cmd = params.get("gagent_host_dep_install_cmd",
                                                  "")
-        utils.run(gagent_host_dep_install_cmd, params.get("login_timeout", 360))
+        utils.run(gagent_host_dep_install_cmd,
+                  params.get("login_timeout", 360))
 
         error.context("Copy necessary DLLs to guest", logging.info)
         gagent_guest_dir = params["gagent_guest_dir"]
@@ -446,7 +421,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 self._session_cmd_close(session, gagent_remove_service_cmd)
             else:
                 raise error.TestError("Could not create qemu-ga directory"
-                                      " in VM '%s', detail: '%s'" %(vm.name, o))
+                                      " in VM '%s', detail: '%s'" % (vm.name, o))
         dlls_list = session.cmd("dir %s" % gagent_guest_dir)
         missing_dlls_list = [_ for _ in gagent_dep_dlls_list
                              if os.path.basename(_) not in dlls_list]
@@ -455,7 +430,6 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         error.context("Copy qemu guest agent program to guest", logging.info)
         gagent_host_path = params["gagent_host_path"]
         vm.copy_files_to(gagent_host_path, gagent_guest_dir)
-
 
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)

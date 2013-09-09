@@ -1,6 +1,9 @@
-import logging, time, random
+import logging
+import time
+import random
 from autotest.client.shared import error
 from qemu.tests import drive_mirror
+
 
 class DriveMirrorSimple(drive_mirror.DriveMirror):
 
@@ -34,7 +37,7 @@ def run_drive_mirror_simple(test, params, env):
     simple_test = DriveMirrorSimple(test, params, env, tag)
     try:
         for i in range(repeats):
-            v_max,v_min = int(params.get("login_timeout", 360)) / 4, 0
+            v_max, v_min = int(params.get("login_timeout", 360)) / 4, 0
             time.sleep(random.randint(v_min, v_max))
             simple_test.start()
             simple_test.action_before_steady()

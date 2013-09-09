@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import virsh
 
+
 def run_virsh_help(test, params, env):
     """
     Test command: virsh help.
@@ -77,4 +78,5 @@ def run_virsh_help(test, params, env):
                 raise error.TestFail("Cannot see help information")
         else:
             if not check_result:
-                raise error.TestFail("virsh help command or groups test failed")
+                raise error.TestFail(
+                    "virsh help command or groups test failed")

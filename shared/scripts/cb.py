@@ -31,24 +31,24 @@ def main(argv):
     # Command line parser alternative
     parser = OptionParser()
     parser.add_option("-c", "--clear", dest="clear",
-                     action="store_true", help="clear the clipboard")
+                      action="store_true", help="clear the clipboard")
     parser.add_option("-s", "--set", dest="setcb",
-                     default='', help="Sets the local clip board")
+                      default='', help="Sets the local clip board")
     parser.add_option("-p", "--print", dest="setcb",
-                     default='', help="Prints the text that was set")
+                      default='', help="Prints the text that was set")
     parser.add_option("-i", "--set_image", dest="setcbimage",
-                     default='', help="Sets an image to local clip board")
+                      default='', help="Sets an image to local clip board")
     parser.add_option("-m", help="Saves an image to the /tmp directory",
-                     dest="setfilename")
+                      dest="setfilename")
     parser.add_option("-r", "--file_copy", dest="setcb_file",
-                     default='', help="Creates a file, Reads the text from " +
-                     "a file and puts it onto the clipboard")
+                      default='', help="Creates a file, Reads the text from " +
+                      "a file and puts it onto the clipboard")
     parser.add_option("-f", "--file_paste", dest="pastecb_filename",
-                     default='', help="Given a filename, the clipboard " +
-                     "contents will be pasted")
+                      default='', help="Given a filename, the clipboard " +
+                      "contents will be pasted")
     parser.add_option("-n", "--create_file", dest="setcb_lrgstr_file",
-                     default='', help="Given a integer value a file will " +
-                     "be created and put on the clipboard")
+                      default='', help="Given a integer value a file will " +
+                      "be created and put on the clipboard")
 
     # Read the command line parameters now
     (options, _) = parser.parse_args()
@@ -72,7 +72,7 @@ def main(argv):
         print "Is there an image: " + str(clipboard.wait_is_image_available())
 
         image = clipboard.wait_for_image()
-        if image == None:
+        if image is None:
             print 'No image stored'
         else:
             location_to_save = options.setfilename
@@ -121,9 +121,9 @@ def main(argv):
         file_contents = open("/tmp/StringLengthTest.txt", 'r')
         clipboard.set_text(file_contents.read())
         file_contents.close()
-        print  ("Non random string put into file: /tmp/StringLengthTest. " +
-                " The string has also been placed in the clipboard. " +
-                "String of size " + options.setcb_lrgstr_file)
+        print ("Non random string put into file: /tmp/StringLengthTest. " +
+               " The string has also been placed in the clipboard. " +
+               "String of size " + options.setcb_lrgstr_file)
         clipboard.store()
     else:
         # Read the clipboard text data.

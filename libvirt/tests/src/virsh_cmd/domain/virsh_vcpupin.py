@@ -1,4 +1,6 @@
-import logging, re, math
+import logging
+import re
+import math
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import virsh
@@ -30,7 +32,6 @@ def run_virsh_vcpupin(test, params, env):
         actual_affinity = list(total_affinity)
         return actual_affinity
 
-
     def build_expected_info(cpu):
         """
         This function returns the list of vcpu's expected affinity build
@@ -49,7 +50,6 @@ def run_virsh_vcpupin(test, params, env):
 
         expected_affinity_proc = int(math.pow(2, cpu))
         return expected_affinity, expected_affinity_proc
-
 
     def virsh_check_vcpupin(domname, vcpu, cpu, pid):
         """
@@ -78,18 +78,16 @@ def run_virsh_vcpupin(test, params, env):
             raise error.TestFail("Command 'virsh vcpupin %s %s %s'not succeeded"
                                  ", cpu pinning details not updated properly in"
                                  " virsh vcpuinfo command output"
-                                                         % (vm_name, vcpu, cpu))
+                                 % (vm_name, vcpu, cpu))
 
         if expected_output_proc == actual_output_proc:
             logging.info("successfully pinned cpu: %s --> vcpu: %s"
-                         " in respective proc entry"
-                                                  ,cpu, vcpu)
+                         " in respective proc entry", cpu, vcpu)
         else:
             raise error.TestFail("Command 'virsh vcpupin %s %s %s'not succeeded"
                                  " cpu pinning details not updated properly in"
                                  " /proc/%s/task/%s/status"
-                                          %(vm_name, vcpu, cpu, pid, vcpu_pid))
-
+                                 % (vm_name, vcpu, cpu, pid, vcpu_pid))
 
     if not virsh.has_help_command('vcpucount'):
         raise error.TestNAError("This version of libvirt doesn't"

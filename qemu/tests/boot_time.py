@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 
 try:
@@ -57,10 +58,11 @@ def run_boot_time(test, params, env):
             vm.wait_for_login(timeout=timeout)
         except Exception:
             logging.warning("Can not restore guest run level, "
-                         "need restore the image")
+                            "need restore the image")
             params["restore_image_after_testing"] = "yes"
 
     if boot_time > expect_time:
-        raise error.TestFail("Guest boot up is taking too long: %ss" % boot_time)
+        raise error.TestFail(
+            "Guest boot up is taking too long: %ss" % boot_time)
 
     session.close()

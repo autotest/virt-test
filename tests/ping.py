@@ -27,7 +27,6 @@ def run_ping(test, params, env):
             if ratio != 0:
                 raise error.TestFail("Loss ratio is %s" % ratio)
 
-
     timeout = int(params.get("login_timeout", 360))
     ping_ext_host = params.get("ping_ext_host", "no") == "yes"
 
@@ -79,7 +78,7 @@ def run_ping(test, params, env):
 
         error.context("Flood ping test", logging.info)
         utils_test.ping(ip, None, flood=True, output_func=None,
-                            timeout=flood_minutes * 60)
+                        timeout=flood_minutes * 60)
 
         error.context("Ping test after flood ping, Check if the network is"
                       " still alive", logging.info)
@@ -96,7 +95,7 @@ def run_ping(test, params, env):
             pkt_sizes = packet_sizes
             # There is no ping program for guest, so let's hardcode...
             cmd = ['ping']
-            cmd.append(ext_host) # external host
+            cmd.append(ext_host)  # external host
 
             if params.get("os_type") == "windows":
                 cmd.append("-n 10")
@@ -107,8 +106,8 @@ def run_ping(test, params, env):
                 # Add a packet size just equal '65500' for windows
                 pkt_sizes.append(65500)
             else:
-                cmd.append("-c 10") # ping 10 times
-                cmd.append("-s %s") # packet size
+                cmd.append("-c 10")  # ping 10 times
+                cmd.append("-s %s")  # packet size
             cmd = " ".join(cmd)
             for size in pkt_sizes:
                 error.context("Ping with packet size %s" % size,

@@ -1,6 +1,8 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error, utils
 from virttest import env_process
+
 
 @error.context_aware
 def run_valgrind_memalign(test, params, env):
@@ -18,6 +20,7 @@ def run_valgrind_memalign(test, params, env):
     @param env: Dictionary with test environment
     """
     interval = float(params.get("interval_time", "10"))
+
     def valgrind_intall():
         valgrind_install_cmd = params.get("valgrind_install_cmd")
         s = utils.system(valgrind_install_cmd, timeout=3600)
@@ -28,7 +31,7 @@ def run_valgrind_memalign(test, params, env):
 
     valgring_support_check_cmd = params.get("valgring_support_check_cmd")
     try:
-        utils.system(valgring_support_check_cmd,timeout=interval)
+        utils.system(valgring_support_check_cmd, timeout=interval)
     except Exception:
         valgrind_intall()
 

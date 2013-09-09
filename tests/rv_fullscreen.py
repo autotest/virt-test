@@ -29,11 +29,11 @@ def run_rv_fullscreen(test, params, env):
 
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360)))
 
     client_vm.verify_alive()
     client_session = client_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360)))
 
     # Get the resolution of the client & guest
     logging.info("Getting the Resolution on the client")

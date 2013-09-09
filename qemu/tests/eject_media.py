@@ -1,4 +1,6 @@
-import logging, time, commands
+import logging
+import time
+import commands
 from autotest.client.shared import error
 from virttest import utils_misc
 

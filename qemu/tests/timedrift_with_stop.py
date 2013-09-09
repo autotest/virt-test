@@ -1,4 +1,7 @@
-import logging, time, os, signal
+import logging
+import time
+import os
+import signal
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -53,13 +56,13 @@ def run_timedrift_with_stop(test, params, env):
         # Get initial time
         # (ht stands for host time, gt stands for guest time)
         (ht0, gt0) = utils_test.get_time(session, time_command,
-                                             time_filter_re, time_format)
+                                         time_filter_re, time_format)
 
         # Stop the guest
         for i in range(stop_iterations):
             # Get time before current iteration
             (ht0_, gt0_) = utils_test.get_time(session, time_command,
-                                                   time_filter_re, time_format)
+                                               time_filter_re, time_format)
             # Run current iteration
             logging.info("Stop %s second: iteration %d of %d...",
                          stop_time, (i + 1), stop_iterations)
@@ -80,7 +83,7 @@ def run_timedrift_with_stop(test, params, env):
 
             # Get time after current iteration
             (ht1_, gt1_) = utils_test.get_time(session, time_command,
-                                                   time_filter_re, time_format)
+                                               time_filter_re, time_format)
             # Report iteration results
             host_delta = ht1_ - ht0_
             guest_delta = gt1_ - gt0_
@@ -98,7 +101,7 @@ def run_timedrift_with_stop(test, params, env):
 
         # Get final time
         (ht1, gt1) = utils_test.get_time(session, time_command,
-                                             time_filter_re, time_format)
+                                         time_filter_re, time_format)
 
     finally:
         if session:

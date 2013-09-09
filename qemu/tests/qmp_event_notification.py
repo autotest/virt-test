@@ -1,4 +1,6 @@
-import logging, time, commands
+import logging
+import time
+import commands
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -69,7 +71,7 @@ def run_qmp_event_notification(test, params, env):
 
     if qmp_num > 0:
         raise error.TestFail("Did not receive qmp %s event notification"
-                       % event_check)
+                             % event_check)
 
     if params.get("post_event_cmd"):
         send_cmd(params.get("post_event_cmd"))

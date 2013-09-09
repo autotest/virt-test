@@ -1,4 +1,7 @@
-import re, string, logging, random
+import re
+import string
+import logging
+import random
 from autotest.client.shared import error
 from virttest import qemu_monitor, storage, utils_misc, env_process, data_dir
 from virttest import qemu_qtree
@@ -26,14 +29,14 @@ def run_physical_resources_check(test, params, env):
         try:
             o = vm.monitor.human_monitor_cmd("info %s " % info_cmd)
         except qemu_monitor.MonitorError, e:
-            fail_log =  e + "\n"
+            fail_log = e + "\n"
             fail_log += "info/query monitor command failed (%s)" % info_cmd
             f_fail.append(fail_log)
             logging.error(fail_log)
 
         actual_num = string.count(o, check_str)
         if expected_num != actual_num:
-            fail_log =  "%s number mismatch:\n" % str(devices)
+            fail_log = "%s number mismatch:\n" % str(devices)
             fail_log += "    Assigned to VM: %d\n" % expected_num
             fail_log += "    Reported by OS: %d" % actual_num
             f_fail.append(fail_log)
@@ -65,7 +68,7 @@ def run_physical_resources_check(test, params, env):
                     found = True
 
             if not found:
-                fail_log =  "%s model mismatch:\n" % str(device)
+                fail_log = "%s model mismatch:\n" % str(device)
                 fail_log += "    Assigned to VM: %s\n" % expected
                 fail_log += "    Reported by OS: %s" % device_found
                 f_fail.append(fail_log)
@@ -78,13 +81,12 @@ def run_physical_resources_check(test, params, env):
         if verify_cmd:
             actual = session.cmd_output(verify_cmd)
             if not re.findall(expect, actual, re.I):
-                fail_log =  "%s mismatch:\n" % name
+                fail_log = "%s mismatch:\n" % name
                 fail_log += "    Assigned to VM: %s\n" % string.upper(expect)
                 fail_log += "    Reported by OS: %s" % actual
                 f_fail.append(fail_log)
                 logging.error(fail_log)
         return f_fail
-
 
     def check_cpu_number(chk_type, expected_n, chk_timeout):
         """
@@ -131,7 +133,6 @@ def run_physical_resources_check(test, params, env):
                       string.capitalize(chk_type), expected_n, actual_n)
         return f_fail
 
-
     def verify_machine_type():
         f_fail = []
         pattern = params["mtype_pattern"]
@@ -148,13 +149,14 @@ def run_physical_resources_check(test, params, env):
         actual_mtype = re.findall(pattern, o)
         try:
             if actual_mtype[0] != expect_mtype[0]:
-                fail_log =  "Machine type mismatch:\n"
+                fail_log = "Machine type mismatch:\n"
                 fail_log += "    Assigned to VM: %s \n" % expect_mtype[0]
                 fail_log += "    Reported by OS: %s" % actual_mtype[0]
                 f_fail.append(fail_log)
                 logging.error(fail_log)
             else:
-                logging.info("MachineType check pass. Expected: %s, Actual: %s" %
+                logging.info(
+                    "MachineType check pass. Expected: %s, Actual: %s" %
                             (expect_mtype[0], actual_mtype[0]))
             return f_fail
         except IndexError, e:
@@ -163,14 +165,13 @@ def run_physical_resources_check(test, params, env):
             logging.error(fail_log)
             return f_fail
 
-
     if params.get("catch_serial_cmd") is not None:
         length = int(params.get("length", "20"))
         id_leng = random.randint(0, length)
         drive_serial = ""
         convert_str = "!\"#$%&\'()*+./:;<=>?@[\\]^`{|}~"
         drive_serial = utils_misc.generate_random_string(id_leng,
-                                      ignore_str=",", convert_str=convert_str)
+                                                         ignore_str=",", convert_str=convert_str)
 
         params["drive_serial"] = drive_serial
         params["start_vm"] = "yes"
@@ -203,7 +204,7 @@ def run_physical_resources_check(test, params, env):
     logging.info("CPU count check")
     actual_cpu_nr = vm.get_cpu_count()
     if vm.cpuinfo.smp != actual_cpu_nr:
-        fail_log =  "CPU count mismatch:\n"
+        fail_log = "CPU count mismatch:\n"
         fail_log += "    Assigned to VM: %s \n" % vm.cpuinfo.smp
         fail_log += "    Reported by OS: %s" % actual_cpu_nr
         n_fail.append(fail_log)
@@ -233,12 +234,11 @@ def run_physical_resources_check(test, params, env):
     expected_mem = int(params["mem"])
     actual_mem = vm.get_memory_size()
     if actual_mem != expected_mem:
-        fail_log =  "Memory size mismatch:\n"
+        fail_log = "Memory size mismatch:\n"
         fail_log += "    Assigned to VM: %s\n" % expected_mem
         fail_log += "    Reported by OS: %s\n" % actual_mem
         n_fail.append(fail_log)
         logging.error(fail_log)
-
 
     logging.info("Hard drive count check")
     _, f_fail = check_num("images", "block", image_name)
@@ -256,7 +256,7 @@ def run_physical_resources_check(test, params, env):
     logging.debug("Found devices: %s", params.objects('images'))
     qdisks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
     _ = sum(qdisks.parse_info_block(
-                                vm.monitor.info_block()))
+        vm.monitor.info_block()))
     _ += qdisks.generate_params()
     _ += qdisks.check_disk_params(params)
     if _:
@@ -270,7 +270,7 @@ def run_physical_resources_check(test, params, env):
     try:
         o = vm.monitor.human_monitor_cmd("info network")
     except qemu_monitor.MonitorError, e:
-        fail_log =  e + "\n"
+        fail_log = e + "\n"
         fail_log += "info/query monitor command failed (network)"
         n_fail.append(fail_log)
         logging.error(fail_log)
@@ -281,7 +281,7 @@ def run_physical_resources_check(test, params, env):
     for nic_index in range(num_nics):
         mac = vm.get_mac_address(nic_index)
         if not string.lower(mac) in found_mac_addresses:
-            fail_log =  "MAC address mismatch:\n"
+            fail_log = "MAC address mismatch:\n"
             fail_log += "    Assigned to VM (not found): %s" % mac
             n_fail.append(fail_log)
             logging.error(fail_log)

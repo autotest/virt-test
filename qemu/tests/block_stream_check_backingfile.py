@@ -3,12 +3,12 @@ from autotest.client.shared import error
 from virttest import utils_misc
 from qemu.tests import blk_stream
 
-class BlockStreamCheckBackingfile(blk_stream.BlockStream):
 
+class BlockStreamCheckBackingfile(blk_stream.BlockStream):
 
     def __init__(self, test, params, env, tag):
         super(BlockStreamCheckBackingfile, self).__init__(test,
-                params, env, tag)
+                                                          params, env, tag)
 
     @error.context_aware
     def check_backingfile(self):

@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from qemu.tests import blk_stream
 
+
 class BlockStreamSimple(blk_stream.BlockStream):
 
     def __init__(self, test, params, env, tag):

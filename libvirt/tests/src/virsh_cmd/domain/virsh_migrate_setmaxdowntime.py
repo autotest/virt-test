@@ -1,4 +1,7 @@
-import re, logging, threading, time
+import re
+import logging
+import threading
+import time
 from autotest.client.shared import error
 from virttest import virsh
 
@@ -41,7 +44,7 @@ def thread_func_live_migration(vm, dest_uri, dargs):
         logging.error("Migrate %s to %s failed." % (vm.name, dest_uri))
         return
 
-    if vm.is_alive(): # vm.connect_uri has been updated to dest_uri
+    if vm.is_alive():  # vm.connect_uri has been updated to dest_uri
         logging.info("Alive guest found on destination %s." % dest_uri)
     else:
         logging.error("VM not alive on destination %s" % dest_uri)
@@ -74,7 +77,8 @@ def run_virsh_migrate_setmaxdowntime(test, params, env):
     4) Check result
     """
     vm_ref = params.get("vm_ref", "name")
-    dest_uri = params.get("virsh_migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
+    dest_uri = params.get(
+        "virsh_migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
     pre_vm_state = params.get("pre_vm_state", "running")
     status_error = "yes" == params.get("status_error", "no")
     do_migrate = "yes" == params.get("do_migrate", "yes")
@@ -99,8 +103,8 @@ def run_virsh_migrate_setmaxdowntime(test, params, env):
     if src_uri == dest_uri:
         raise error.TestNAError("You should not set dest uri same as local.")
 
-    setmmdt_dargs = {'debug':True, 'ignore_status':False, 'uri': src_uri}
-    migrate_dargs = {'debug':True, 'ignore_status':False}
+    setmmdt_dargs = {'debug': True, 'ignore_status': False, 'uri': src_uri}
+    migrate_dargs = {'debug': True, 'ignore_status': False}
 
     # Confirm how to reference a VM.
     if vm_ref == "domname":

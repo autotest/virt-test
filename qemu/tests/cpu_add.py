@@ -1,6 +1,9 @@
-import logging, re, time
+import logging
+import re
+import time
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc
+
 
 @error.context_aware
 def run_cpu_add(test, params, env):
@@ -40,7 +43,6 @@ def run_cpu_add(test, params, env):
         err_msg += "in guest %s cpus works." % vm.get_cpu_count()
         raise error.TestFail(err_msg)
 
-
     def cpu_online_offline(session, cpu_id, online=""):
         """
         Do cpu online/offline in guest
@@ -55,7 +57,6 @@ def run_cpu_add(test, params, env):
                          (online_file, cpu_id))
             return
         session.cmd("echo %s > %s " % (online, online_file))
-
 
     def onoff_para_opt(onoff_params):
         """
@@ -72,7 +73,6 @@ def run_cpu_add(test, params, env):
                 onoff_list.append(item)
         return [str(i) for i in onoff_list]
 
-
     timeout = int(params.get("login_timeout", 360))
     onoff_iterations = int(params.get("onoff_iterations", 2))
     vcpu_need_hotplug = int(params.get("vcpu_need_hotplug", 1))
@@ -87,7 +87,7 @@ def run_cpu_add(test, params, env):
                   logging.info)
     qemu_guest_cpu_match(vm)
 
-    #do pre_operation like stop, before vcpu Hotplug
+    # do pre_operation like stop, before vcpu Hotplug
     stop_before_hotplug = params.get("stop_before_hotplug", "no")
     if stop_before_hotplug == 'yes':
         error.context("Stop the guest before hotplug vcpu", logging.info)
@@ -160,7 +160,6 @@ def run_cpu_add(test, params, env):
                       logging.info)
         qemu_guest_cpu_match(vm, vcpu_been_pluged)
 
-
     error.context("Do cpu online/offline in guest", logging.info)
     # Window guest doesn't support online/offline test
     if params['os_type'] == "windows":
@@ -190,16 +189,16 @@ def run_cpu_add(test, params, env):
 
     # do sub test after cpu hotplug
     if (params.get("run_sub_test", "no") == "yes" and
-        'sub_test_name' in params):
+            'sub_test_name' in params):
         sub_test = params['sub_test_name']
         error.context("Run subtest %s after cpu hotplug" % sub_test,
                       logging.info)
         if (sub_test == "guest_suspend" and
-            params["guest_suspend_type"] == "disk"):
+                params["guest_suspend_type"] == "disk"):
             vm.params["smp"] = int(vm.cpuinfo.smp) + vcpu_been_pluged
             vcpu_been_pluged = 0
         utils_test.run_virt_sub_test(test, params, env, sub_type=sub_test)
-        if sub_test == "shutdown" :
+        if sub_test == "shutdown":
             logging.info("Guest shutdown normally after cpu hotplug")
             return
         if params.get("session_need_update", "no") == "yes":

@@ -3,7 +3,10 @@ cgroup autotest test (on KVM guest)
 @author: Lukas Doktor <ldoktor@redhat.com>
 @copyright: 2011 Red Hat, Inc.
 """
-import logging, os, re, time
+import logging
+import os
+import re
+import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest.env_process import preprocess
@@ -110,7 +113,7 @@ def run_cgroup(test, params, env):
             ret = (os.major(rdev), os.minor(rdev))
         except Exception, details:
             raise error.TestFail("get_maj_min(%s) failed: %s" %
-                                  (dev, details))
+                                (dev, details))
         return ret
 
     def rm_scsi_disks(no_disks):
@@ -157,7 +160,7 @@ def run_cgroup(test, params, env):
         """
         for name in params['vms'].split(' '):
             vm_disks = params.get('images_%s' % name,
-                               params.get('images', 'image1'))
+                                  params.get('images', 'image1'))
             disk_name = prefix + name
             params['images_%s' % name] = "%s %s" % (vm_disks, disk_name)
             params['image_size_%s' % disk_name] = size
@@ -208,14 +211,14 @@ def run_cgroup(test, params, env):
                 sessions[i * 2 + 1].sendline(stat_cmd)
             for i in range(no_vms):
                 out.append(sessions[i * 2].read_until_output_matches(
-                                                                [re_dd])[1])
+                    [re_dd])[1])
             # Stop all transfers (on 2nd sessions)
             for i in range(no_vms):
                 sessions[i * 2 + 1].sendline(kill_cmd)
             # Read the rest of the stats
             for i in range(no_vms):
                 out[-1] = out[-1] + sessions[i * 2].read_up_to_prompt(
-                                                      timeout=120 + test_time)
+                    timeout=120 + test_time)
 
             for i in range(no_vms):
                 # Get all dd loops' statistics
@@ -224,7 +227,7 @@ def run_cgroup(test, params, env):
                 data = 0
                 if len(out[i]) > 5:
                     out[i] = out[i][1:-1]
-                for _ in  re.findall(re_dd, out[i])[1:-1]:
+                for _ in re.findall(re_dd, out[i])[1:-1]:
                     data += int(_[0])
                     duration += float(_[1])
                 out[i] = int(data / duration)
@@ -250,11 +253,11 @@ def run_cgroup(test, params, env):
 
             logging.info("blkio_bandwidth_%s: dd statistics\n%s", direction,
                          utils.matrix_to_string(out, ['status', 'norm_weights',
-                                'norm_out', 'actual']))
+                                                      'norm_out', 'actual']))
 
             if err:
                 err = ("blkio_bandwidth_%s: limits [%s] were broken"
-                                                    % (direction, err[:-2]))
+                       % (direction, err[:-2]))
                 logging.debug(err)
                 return err + '\n'
             return ""
@@ -266,7 +269,7 @@ def run_cgroup(test, params, env):
                 raise TypeError
         except TypeError:
             raise error.TestError("Incorrect configuration: param "
-                        "cgroup_weights have to be list-like string '[1, 2]'")
+                                  "cgroup_weights have to be list-like string '[1, 2]'")
         test_time = int(params.get("cgroup_test_time", 60))
         error.context("Prepare VMs")
         # Prepare enough VMs each with 1 disk for testing
@@ -299,7 +302,7 @@ def run_cgroup(test, params, env):
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
         re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*\) copied, (\d+\.*\d*) s, '
-                  '\d+\.*\d* \w./s')
+                 '\d+\.*\d* \w./s')
         err = ""
         try:
             error.context("Read test")
@@ -401,7 +404,7 @@ def run_cgroup(test, params, env):
                     assign_vm_into_cgroup(vms[i], blkio, i * no_speeds + j)
                     _ += "vm%d:%d, " % (i, speeds[i][j])
                 logging.debug("blkio_throttle_%s: Current speeds: %s",
-                             direction, _[:-2])
+                              direction, _[:-2])
                 time.sleep(test_time)
                 # Read stats
                 for i in range(no_vms):
@@ -409,15 +412,15 @@ def run_cgroup(test, params, env):
                     sessions[i * 2 + 1].sendline(stat_cmd)
                 for i in range(no_vms):
                     out[i].append(sessions[i * 2].read_until_output_matches(
-                                                                [re_dd])[1])
+                        [re_dd])[1])
                 # Stop all transfers (on 2nd sessions)
                 for i in range(no_vms):
                     sessions[i * 2 + 1].sendline(kill_cmd)
                 # Read the rest of the stats
                 for i in range(no_vms):
                     out[i][-1] = (out[i][-1] +
-                                    sessions[i * 2].read_up_to_prompt(
-                                                      timeout=120 + test_time))
+                                  sessions[i * 2].read_up_to_prompt(
+                                      timeout=120 + test_time))
                 # Restart all transfers (on 1st sessions)
                 for i in range(no_vms):
                     sessions[i * 2].sendline(dd_cmd)
@@ -436,7 +439,7 @@ def run_cgroup(test, params, env):
                     # calculate avg from duration and data
                     duration = 0
                     data = 0
-                    for _ in  re.findall(re_dd, out[i][j]):
+                    for _ in re.findall(re_dd, out[i][j]):
                         data += int(_[0])
                         duration += float(_[1])
                     output.append(['PASS', j, 'vm%d' % i, speeds[i][j],
@@ -452,10 +455,10 @@ def run_cgroup(test, params, env):
             # TODO: Unlimited speed fluctates during test
             logging.info("blkio_throttle_%s: dd statistics\n%s", direction,
                          utils.matrix_to_string(output, ['result', 'it',
-                            'vm', 'speed', 'actual']))
+                                                         'vm', 'speed', 'actual']))
             if err:
                 err = ("blkio_throttle_%s: limits [%s] were broken"
-                                                    % (direction, err[:-2]))
+                       % (direction, err[:-2]))
                 logging.debug(err)
                 return err + '\n'
             return ""
@@ -531,17 +534,17 @@ def run_cgroup(test, params, env):
                     blkio.set_property("blkio.throttle.write_bps_device",
                                        "%s:%s %s" % (dev[0], dev[1], speed),
                                        i * no_speeds + j, check="%s:%s\t%s"
-                                                    % (dev[0], dev[1], speed))
+                                       % (dev[0], dev[1], speed))
                     blkio.set_property("blkio.throttle.read_bps_device",
                                        "%s:%s %s" % (dev[0], dev[1], speed),
                                        i * no_speeds + j, check="%s:%s\t%s"
-                                                    % (dev[0], dev[1], speed))
+                                       % (dev[0], dev[1], speed))
 
         # ; true is necessarily when there is no dd present at the time
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
         re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*\) copied, (\d+\.*\d*) s, '
-                  '\d+\.*\d* \w./s')
+                 '\d+\.*\d* \w./s')
         err = ""
         try:
             error.context("Read test")
@@ -698,7 +701,7 @@ def run_cgroup(test, params, env):
                 stats[i] = [int(_) for _ in stats[i].split()[1:]]
                 try:
                     stats[i] = (float(sum(stats[i][8:]) - stats[0][1]) /
-                                        (sum(stats[i][0:8]) - stats[0][0]))
+                                (sum(stats[i][0:8]) - stats[0][0]))
                 except ZeroDivisionError:
                     logging.error("ZeroDivisionError in stats calculation")
                     stats[i] = False
@@ -708,7 +711,7 @@ def run_cgroup(test, params, env):
                 # Utilisation should be 100% - allowed treshold (limit)
                 if stats[i] < (100 - limit):
                     logging.debug("%d: guest time is not >%s%% %s" % (i, limit,
-                                                                     stats[i]))
+                                                                      stats[i]))
 
             if err:
                 err = "Guest time is not >%s%% %s" % (limit, stats[1:])
@@ -770,7 +773,7 @@ def run_cgroup(test, params, env):
                 raise TypeError
         except TypeError:
             raise error.TestError("Incorrect configuration: param "
-                        "cgroup_speeds have to be list-like string '[1, 2]'")
+                                  "cgroup_speeds have to be list-like string '[1, 2]'")
 
         host_cpus = open('/proc/cpuinfo').read().count('processor')
         # when smp <= 0 use smp = no_host_cpus
@@ -894,7 +897,7 @@ def run_cgroup(test, params, env):
             i += 1
             for i in range(i, len(stats)):
                 norm_stats = [float(stats[i][_]) / speeds[_]
-                                                for _ in range(len(stats[i]))]
+                              for _ in range(len(stats[i]))]
                 dist = distance(min(norm_stats), max(norm_stats))
                 if dist > min(0.10 + 0.02 * len(vms), 0.25):
                     err += "3, "
@@ -1108,7 +1111,7 @@ def run_cgroup(test, params, env):
         # None == all_cpus
         for i in range(len(cpusets)):
             for j in range(len(cpusets[i])):
-                if cpusets[i][j] == None:
+                if cpusets[i][j] is None:
                     cpusets[i][j] = all_cpus
 
         if verify:  # Verify exists, check if it's correct
@@ -1181,10 +1184,10 @@ def run_cgroup(test, params, env):
                             (stats[i][j] > (verify[i][j] + limit))):
                         err += "%d(%d), " % (i, j)
                         matrix[-1].append("%3d ! %d" % (verify[i][j],
-                                                         stats[i][j]))
+                                                        stats[i][j]))
                     else:
                         matrix[-1].append("%3d ~ %d" % (verify[i][j],
-                                                         stats[i][j]))
+                                                        stats[i][j]))
             logging.info("Results (theoretical ~ actual):\n%s" %
                          utils.matrix_to_string(matrix, header))
             if err:
@@ -1370,10 +1373,10 @@ def run_cgroup(test, params, env):
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(
-                                                ['(\d+)\+\d records out'])[1]
+                    ['(\d+)\+\d records out'])[1]
                 if len(re.findall(r'(\d+)\+\d records out', out)) < 2:
                     out += sessions[0].read_until_output_matches(
-                                                ['(\d+)\+\d records out'])[1]
+                        ['(\d+)\+\d records out'])[1]
             except ExpectTimeoutError:
                 err = ("dd didn't produce expected output: %s" % out)
 
@@ -1529,37 +1532,37 @@ def run_cgroup(test, params, env):
         disk = utils.system_output("ls /dev/sd* | tail -n 1")
         dev = "%s:%s" % get_maj_min(disk)
         permissions = [
-                       {'property':     'deny',
-                        'value':        'a',
-                        'check_value':  '',
-                        'result':       False,
-                        'result_read':  False},
-                       {'property':     'allow',
-                        'value':        'b %s r' % dev,
-                        'check_value':  True,
-                        'result':       False,
-                        'result_read':  True},
-                       {'property':     'allow',
-                        'value':        'b %s w' % dev,
-                        'check_value':  'b %s rw' % dev,
-                        'result':       True,
-                        'result_read':  True},
-                       {'property':     'deny',
-                        'value':        'b %s r' % dev,
-                        'check_value':  'b %s w' % dev,
-                        'result':       False,
-                        'result_read':  False},
-                       {'property':     'deny',
-                        'value':        'b %s w' % dev,
-                        'check_value':  '',
-                        'result':       False,
-                        'result_read':  False},
-                       {'property':     'allow',
-                        'value':        'a',
-                        'check_value':  'a *:* rwm',
-                        'result':       True,
-                        'result_read':  True},
-                      ]
+            {'property': 'deny',
+             'value': 'a',
+             'check_value': '',
+             'result': False,
+             'result_read': False},
+            {'property': 'allow',
+             'value': 'b %s r' % dev,
+             'check_value': True,
+             'result': False,
+             'result_read': True},
+            {'property': 'allow',
+             'value': 'b %s w' % dev,
+             'check_value': 'b %s rw' % dev,
+             'result': True,
+             'result_read': True},
+            {'property': 'deny',
+             'value': 'b %s r' % dev,
+             'check_value': 'b %s w' % dev,
+             'result': False,
+             'result_read': False},
+            {'property': 'deny',
+             'value': 'b %s w' % dev,
+             'check_value': '',
+             'result': False,
+             'result_read': False},
+            {'property': 'allow',
+             'value': 'a',
+             'check_value': 'a *:* rwm',
+             'result': True,
+             'result_read': True},
+        ]
 
         assign_vm_into_cgroup(vm, devices, 0)
 
@@ -1576,7 +1579,7 @@ def run_cgroup(test, params, env):
                               devices.get_property('devices.list', 0))
                 results = ""
                 out = _add_drive(monitor, monitor_type, disk, name % ("R", i),
-                                True)
+                                 True)
                 if out == -1:
                     logging.warn("All PCIs full, recreating VM")
                     vm.create()
@@ -1589,7 +1592,7 @@ def run_cgroup(test, params, env):
                     results += "ReadAttached, "
 
                 out = _add_drive(monitor, monitor_type, disk, name % ("RW", i),
-                                False)
+                                 False)
                 if out == -1:
                     logging.warn("All PCIs full, recreating VM")
                     vm.create()
@@ -1644,7 +1647,7 @@ def run_cgroup(test, params, env):
             for i in range(10):
                 try:
                     out = utils.system_output("cat /proc/%s/task/*/stat" %
-                                               pid)
+                                              pid)
                 except error.CmdError:
                     out = None
                 else:
@@ -1840,10 +1843,10 @@ def run_cgroup(test, params, env):
                     fstats.seek(0)
                     status = fstats.read()
                     rss = int(re.search(r'VmRSS:[\t ]*(\d+) kB', status)
-                                                                    .group(1))
+                              .group(1))
                     max_rss = max(rss, max_rss)
                     swap = int(re.search(r'VmSwap:[\t ]*(\d+) kB', status)
-                                                                    .group(1))
+                               .group(1))
                     max_rssswap = max(rss + swap, max_rssswap)
                 except Exception, details:
                     if memsw and not vm.is_alive():
@@ -1855,7 +1858,7 @@ def run_cgroup(test, params, env):
                 try:
                     out += session.read_up_to_prompt(timeout=0.1)
                 except ExpectTimeoutError:
-                    #0.1s passed, lets begin the next round
+                    # 0.1s passed, lets begin the next round
                     pass
                 except ShellTimeoutError, detail:
                     if memsw and not vm.is_alive():
@@ -1977,10 +1980,10 @@ def run_cgroup(test, params, env):
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(
-                                                ['(\d+)\+\d records out'])[1]
+                    ['(\d+)\+\d records out'])[1]
                 if len(re.findall(r'(\d+)\+\d records out', out)) < 2:
                     out += sessions[0].read_until_output_matches(
-                                                ['(\d+)\+\d records out'])[1]
+                        ['(\d+)\+\d records out'])[1]
             except ExpectTimeoutError:
                 err = ("dd didn't produce expected output: %s" % out)
 

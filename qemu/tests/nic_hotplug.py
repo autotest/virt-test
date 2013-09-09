@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_test, utils_net, virt_vm
 
+
 @error.context_aware
 def run_nic_hotplug(test, params, env):
     """

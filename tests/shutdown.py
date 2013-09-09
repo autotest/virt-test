@@ -1,4 +1,5 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -27,7 +28,7 @@ def run_shutdown(test, params, env):
             # Send a shutdown command to the guest's shell
             session.sendline(vm.get_params().get("shutdown_command"))
             error.context("waiting VM to go down (shutdown shell cmd)",
-                                                          logging.info)
+                          logging.info)
         elif params.get("shutdown_method") == "system_powerdown":
             # Sleep for a while -- give the guest a chance to finish booting
             time.sleep(float(params.get("sleep_before_powerdown", 10)))

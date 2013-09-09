@@ -1,6 +1,7 @@
 from autotest.client.shared import error
 from virttest import libvirt_vm, remote, virsh, utils_libvirtd
 
+
 def run_virsh_destroy(test, params, env):
     """
     Test command: virsh destroy.
@@ -25,7 +26,8 @@ def run_virsh_destroy(test, params, env):
     local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
     if vm_ref == "remote" and (remote_ip.count("EXAMPLE.COM")
                  or local_ip.count("EXAMPLE.COM")):
-        raise error.TestNAError("Remote test parameters unchanged from default")
+        raise error.TestNAError(
+            "Remote test parameters unchanged from default")
 
     if vm_ref == "id":
         vm_ref = domid
@@ -33,9 +35,9 @@ def run_virsh_destroy(test, params, env):
         vm_ref = hex(int(domid))
     elif vm_ref.find("invalid") != -1:
         vm_ref = params.get(vm_ref)
-    elif  vm_ref == "name":
+    elif vm_ref == "name":
         vm_ref = "%s %s" % (vm_name, params.get("destroy_extra"))
-    elif  vm_ref == "uuid":
+    elif vm_ref == "uuid":
         vm_ref = domuuid
 
     if libvirtd == "off":
@@ -61,7 +63,7 @@ def run_virsh_destroy(test, params, env):
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command! "
@@ -69,4 +71,4 @@ def run_virsh_destroy(test, params, env):
     elif status_error == "no":
         if status != 0:
             raise error.TestFail("Run failed with right command! Output:\n%s"
-                                  % output)
+                                 % output)

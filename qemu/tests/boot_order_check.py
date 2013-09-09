@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client import utils
 from virttest import utils_misc
 from autotest.client.shared import error
@@ -52,7 +53,7 @@ def run_boot_order_check(test, params, env):
         bootindex = "0%x" % int(params['bootindex_%s' % nic.nic_name])
         list_nic_addr.append((nic_addr, bootindex[-2]))
 
-    list_nic_addr.sort(cmp = lambda x,y: cmp(x[1], y[1]))
+    list_nic_addr.sort(cmp=lambda x, y: cmp(x[1], y[1]))
 
     boot_fail_infos = boot_fail_infos % (list_nic_addr[0][0],
                                          list_nic_addr[1][0],
@@ -76,7 +77,7 @@ def run_boot_order_check(test, params, env):
         data = re.sub(r".%s" % backspace_char, "", output)
     else:
         data = output
-    result = re.findall(boot_fail_infos, data, re.S|re.M|re.I)
+    result = re.findall(boot_fail_infos, data, re.S | re.M | re.I)
 
     if not result:
         raise error.TestFail("Got a wrong boot order, "

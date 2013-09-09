@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import sys, os, getpass, datetime
+import sys
+import os
+import getpass
+import datetime
 from github import Github
 from github_issues import GithubIssues
 

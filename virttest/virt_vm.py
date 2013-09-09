@@ -1,6 +1,13 @@
-import logging, time, glob, os, re
+import logging
+import time
+import glob
+import os
+import re
 from autotest.client.shared import error
-import utils_misc, utils_net, remote, aexpect
+import utils_misc
+import utils_net
+import remote
+import aexpect
 
 
 class VMError(Exception):
@@ -8,6 +15,7 @@ class VMError(Exception):
 
 
 class VMCreateError(VMError):
+
     def __init__(self, cmd, status, output):
         VMError.__init__(self, cmd, status, output)
         self.cmd = cmd
@@ -20,6 +28,7 @@ class VMCreateError(VMError):
 
 
 class VMStartError(VMError):
+
     def __init__(self, name, reason=None):
         VMError.__init__(self, name, reason)
         self.name = name
@@ -33,6 +42,7 @@ class VMStartError(VMError):
 
 
 class VMConfigMissingError(VMError):
+
     def __init__(self, name, config):
         VMError.__init__(self, name, config)
         self.name = name
@@ -43,6 +53,7 @@ class VMConfigMissingError(VMError):
 
 
 class VMHashMismatchError(VMError):
+
     def __init__(self, actual, expected):
         VMError.__init__(self, actual, expected)
         self.actual_hash = actual
@@ -54,6 +65,7 @@ class VMHashMismatchError(VMError):
 
 
 class VMImageMissingError(VMError):
+
     def __init__(self, filename):
         VMError.__init__(self, filename)
         self.filename = filename
@@ -63,6 +75,7 @@ class VMImageMissingError(VMError):
 
 
 class VMImageCheckError(VMError):
+
     def __init__(self, filename):
         VMError.__init__(self, filename)
         self.filename = filename
@@ -72,6 +85,7 @@ class VMImageCheckError(VMError):
 
 
 class VMBadPATypeError(VMError):
+
     def __init__(self, pa_type):
         VMError.__init__(self, pa_type)
         self.pa_type = pa_type
@@ -81,6 +95,7 @@ class VMBadPATypeError(VMError):
 
 
 class VMPAError(VMError):
+
     def __init__(self, pa_type):
         VMError.__init__(self, pa_type)
         self.pa_type = pa_type
@@ -91,6 +106,7 @@ class VMPAError(VMError):
 
 
 class VMPostCreateError(VMError):
+
     def __init__(self, cmd, output):
         VMError.__init__(self, cmd, output)
         self.cmd = cmd
@@ -98,18 +114,21 @@ class VMPostCreateError(VMError):
 
 
 class VMHugePageError(VMPostCreateError):
+
     def __str__(self):
         return ("Cannot allocate hugepage memory    (command: %r,    "
                 "output: %r)" % (self.cmd, self.output))
 
 
 class VMKVMInitError(VMPostCreateError):
+
     def __str__(self):
         return ("Cannot initialize KVM    (command: %r,    output: %r)" %
                 (self.cmd, self.output))
 
 
 class VMDeadError(VMError):
+
     def __init__(self, reason='', detail=''):
         VMError.__init__(self)
         self.reason = reason
@@ -125,6 +144,7 @@ class VMDeadError(VMError):
 
 
 class VMDeadKernelCrashError(VMError):
+
     def __init__(self, kernel_crash):
         VMError.__init__(self, kernel_crash)
         self.kernel_crash = kernel_crash
@@ -134,6 +154,7 @@ class VMDeadKernelCrashError(VMError):
 
 
 class VMInvalidInstructionCode(VMError):
+
     def __init__(self, invalid_code):
         VMError.__init__(self, invalid_code)
         self.invalid_code = invalid_code
@@ -150,6 +171,7 @@ class VMAddressError(VMError):
 
 
 class VMPortNotRedirectedError(VMAddressError):
+
     def __init__(self, port):
         VMAddressError.__init__(self, port)
         self.port = port
@@ -159,6 +181,7 @@ class VMPortNotRedirectedError(VMAddressError):
 
 
 class VMAddressVerificationError(VMAddressError):
+
     def __init__(self, mac, ip):
         VMAddressError.__init__(self, mac, ip)
         self.mac = mac
@@ -170,6 +193,7 @@ class VMAddressVerificationError(VMAddressError):
 
 
 class VMMACAddressMissingError(VMAddressError):
+
     def __init__(self, nic_index):
         VMAddressError.__init__(self, nic_index)
         self.nic_index = nic_index
@@ -179,6 +203,7 @@ class VMMACAddressMissingError(VMAddressError):
 
 
 class VMIPAddressMissingError(VMAddressError):
+
     def __init__(self, mac):
         VMAddressError.__init__(self, mac)
         self.mac = mac
@@ -186,7 +211,9 @@ class VMIPAddressMissingError(VMAddressError):
     def __str__(self):
         return "No DHCP lease for MAC %s" % self.mac
 
+
 class VMUnknownNetTypeError(VMError):
+
     def __init__(self, vmname, nicname, nettype):
         super(VMUnknownNetTypeError, self).__init__()
         self.vmname = vmname
@@ -196,6 +223,7 @@ class VMUnknownNetTypeError(VMError):
     def __str__(self):
         return "Unknown nettype '%s' requested for NIC %s on VM %s" % (
             self.nettype, self.nicname, self.vmname)
+
 
 class VMAddNetDevError(VMError):
     pass
@@ -230,6 +258,7 @@ class VMMigrateFailedError(VMMigrateError):
 
 
 class VMMigrateProtoUnknownError(error.TestNAError):
+
     def __init__(self, protocol):
         self.protocol = protocol
 
@@ -240,6 +269,7 @@ class VMMigrateProtoUnknownError(error.TestNAError):
 
 
 class VMMigrateStateMismatchError(VMMigrateError):
+
     def __init__(self):
         VMMigrateError.__init__(self)
 
@@ -250,16 +280,21 @@ class VMMigrateStateMismatchError(VMMigrateError):
 class VMRebootError(VMError):
     pass
 
+
 class VMStatusError(VMError):
     pass
+
 
 class VMRemoveError(VMError):
     pass
 
+
 class VMDeviceError(VMError):
     pass
 
+
 class VMDeviceNotSupportedError(VMDeviceError):
+
     def __init__(self, name, device):
         VMDeviceError.__init__(self, name, device)
         self.name = name
@@ -269,10 +304,13 @@ class VMDeviceNotSupportedError(VMDeviceError):
         return ("Device '%s' is not supported for vm '%s' on this Host." %
                 (self.device, self.name))
 
+
 class VMPCIDeviceError(VMDeviceError):
     pass
 
+
 class VMPCISlotInUseError(VMPCIDeviceError):
+
     def __init__(self, name, slot):
         VMPCIDeviceError.__init__(self, name, slot)
         self.name = name
@@ -282,7 +320,9 @@ class VMPCISlotInUseError(VMPCIDeviceError):
         return ("PCI slot '0x%s' is already in use on vm '%s'. Please assign"
                 " another slot in config file." % (self.slot, self.name))
 
+
 class VMPCIOutOfRangeError(VMPCIDeviceError):
+
     def __init__(self, name, max_dev_num):
         VMPCIDeviceError.__init__(self, name, max_dev_num)
         self.name = name
@@ -291,6 +331,7 @@ class VMPCIOutOfRangeError(VMPCIDeviceError):
     def __str__(self):
         return ("Too many PCI devices added on vm '%s', max supported '%s'" %
                 (self.name, str(self.max_dev_num)))
+
 
 class VMUSBError(VMError):
     pass
@@ -301,6 +342,7 @@ class VMUSBControllerError(VMUSBError):
 
 
 class VMUSBControllerMissingError(VMUSBControllerError):
+
     def __init__(self, name, controller_type):
         VMUSBControllerError.__init__(self, name, controller_type)
         self.name = name
@@ -312,6 +354,7 @@ class VMUSBControllerMissingError(VMUSBControllerError):
 
 
 class VMUSBControllerPortFullError(VMUSBControllerError):
+
     def __init__(self, name, usb_dev_dict):
         VMUSBControllerError.__init__(self, name, usb_dev_dict)
         self.name = name
@@ -321,7 +364,7 @@ class VMUSBControllerPortFullError(VMUSBControllerError):
         output = ""
         try:
             for ctl, dev_list in self.usb_dev_dict.iteritems():
-                output += "%s: %s\n" %(ctl, dev_list)
+                output += "%s: %s\n" % (ctl, dev_list)
         except Exception:
             pass
 
@@ -330,6 +373,7 @@ class VMUSBControllerPortFullError(VMUSBControllerError):
 
 
 class VMUSBPortInUseError(VMUSBError):
+
     def __init__(self, vm_name, controller, port):
         VMUSBError.__init__(self, vm_name, controller, port)
         self.vm_name = vm_name
@@ -343,6 +387,7 @@ class VMUSBPortInUseError(VMUSBError):
 
 
 class VMScreenInactiveError(VMError):
+
     def __init__(self, vm, inactive_time):
         VMError.__init__(self)
         self.vm = vm
@@ -350,14 +395,16 @@ class VMScreenInactiveError(VMError):
 
     def __str__(self):
         msg = ("%s screen is inactive for %d s (%d min)" %
-               (self.vm.name, self.inactive_time, self.inactive_time/60))
+               (self.vm.name, self.inactive_time, self.inactive_time / 60))
         return msg
 
 
 class CpuInfo(object):
+
     """
     A class for VM's cpu information.
     """
+
     def __init__(self, model=None, vendor=None, flags=None, family=None,
                  smp=0, maxcpus=0, sockets=0, cores=0, threads=0):
         """
@@ -384,6 +431,7 @@ class CpuInfo(object):
 
 
 class BaseVM(object):
+
     """
     Base class for all hypervisor specific VM subclasses.
 
@@ -454,14 +502,13 @@ class BaseVM(object):
             getattr(self, 'virtnet').__init__(self.params,
                                               self.name,
                                               self.instance)
-        else: # Create new
+        else:  # Create new
             self.virtnet = utils_net.VirtNet(self.params,
                                              self.name,
                                              self.instance)
 
         if not hasattr(self, 'cpuinfo'):
             self.cpuinfo = CpuInfo()
-
 
     def _generate_unique_id(self):
         """
@@ -472,7 +519,6 @@ class BaseVM(object):
                              utils_misc.generate_random_string(8))
             if not glob.glob("/tmp/*%s" % self.instance):
                 break
-
 
     @staticmethod
     def lookup_vm_class(vm_type, target):
@@ -490,12 +536,9 @@ class BaseVM(object):
                 import ovirt
                 return ovirt.VMManager
 
-
     #
     # Public API - could be reimplemented with virt specific code
     #
-
-
     def needs_restart(self, name, params, basedir):
         """
         Verifies whether the current virt_install commandline matches the
@@ -503,11 +546,12 @@ class BaseVM(object):
         """
         try:
             need_restart = (self.make_create_command() !=
-                           self.make_create_command(name, params, basedir))
+                            self.make_create_command(name, params, basedir))
         except Exception:
             need_restart = True
         if need_restart:
-            logging.debug("VM params in env don't match requested, restarting.")
+            logging.debug(
+                "VM params in env don't match requested, restarting.")
             return True
         else:
             # Command-line encoded state doesn't include all params
@@ -521,9 +565,9 @@ class BaseVM(object):
                 logging.debug("\t" + str(other_virtnet))
                 return True
             else:
-                logging.debug("VM params in env do match requested, continuing.")
+                logging.debug(
+                    "VM params in env do match requested, continuing.")
                 return False
-
 
     def verify_alive(self):
         """
@@ -538,7 +582,6 @@ class BaseVM(object):
         if self.is_dead():
             raise VMDeadError
 
-
     def get_mac_address(self, nic_index=0):
         """
         Return the MAC address of a NIC.
@@ -552,7 +595,6 @@ class BaseVM(object):
             return mac
         except KeyError:
             raise VMMACAddressMissingError(nic_index)
-
 
     def get_address(self, index=0):
         """
@@ -601,9 +643,8 @@ class BaseVM(object):
         if not utils_net.verify_ip_address_ownership(arp_ip, macs):
             raise VMAddressVerificationError(nic.mac, arp_ip)
         logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
-                        arp_ip, self.name, str(index)))
+            arp_ip, self.name, str(index)))
         return arp_ip
-
 
     def fill_addrs(self, addrs):
         """
@@ -622,7 +663,6 @@ class BaseVM(object):
                     virtnet.ip = {"ipv4": iface["ipv4"],
                                   "ipv6": iface["ipv6"]}
                     virtnet.g_nic_name = iface_name
-
 
     def get_port(self, port, nic_index=0):
         """
@@ -643,7 +683,6 @@ class BaseVM(object):
                 return self.redirs[port]
             except KeyError:
                 raise VMPortNotRedirectedError(port)
-
 
     def free_mac_address(self, nic_index_or_name=0):
         """
@@ -689,7 +728,7 @@ class BaseVM(object):
         else:
             self.virtnet.append(params)
         nic = self.virtnet[nic_name]
-        if not nic.has_key('mac'): # generate random mac
+        if not nic.has_key('mac'):  # generate random mac
             logging.debug("Generating random mac address for nic")
             self.virtnet.generate_mac_address(nic_name)
         # mac of '' or invaid format results in not setting a mac
@@ -701,10 +740,9 @@ class BaseVM(object):
                 logging.debug("(address cache) Updating static "
                               "cache entry from: %s ---> %s"
                               " to: %s ---> %s" % (nic.mac,
-                              self.address_cache[nic.mac], nic.mac, nic.ip))
+                                                   self.address_cache[nic.mac], nic.mac, nic.ip))
             self.address_cache[nic.mac] = nic.ip
         return nic
-
 
     def del_nic(self, nic_index_or_name):
         """
@@ -717,10 +755,9 @@ class BaseVM(object):
             del self.virtnet[nic_index_or_name]
             del self.address_cache[nic_mac]
         except IndexError:
-            pass # continue to not exist
+            pass  # continue to not exist
         except KeyError:
-            pass # continue to not exist
-
+            pass  # continue to not exist
 
     def verify_kernel_crash(self):
         """
@@ -735,10 +772,9 @@ class BaseVM(object):
         panic_re = "|".join(panic_re)
         if self.serial_console is not None:
             data = self.serial_console.get_output()
-            match = re.search(panic_re, data, re.DOTALL|re.MULTILINE|re.I)
+            match = re.search(panic_re, data, re.DOTALL | re.MULTILINE | re.I)
             if match is not None:
                 raise VMDeadKernelCrashError(match.group(0))
-
 
     def verify_illegal_instruction(self):
         """
@@ -754,7 +790,6 @@ class BaseVM(object):
             if match:
                 raise VMInvalidInstructionCode(match)
 
-
     def get_params(self):
         """
         Return the VM's params dict. Most modified params take effect only
@@ -762,20 +797,17 @@ class BaseVM(object):
         """
         return self.params
 
-
     def get_testlog_filename(self):
         """
         Return the testlog filename.
         """
         return "/tmp/testlog-%s" % self.instance
 
-
     def get_virtio_port_filename(self, port_name):
         """
         Return the filename corresponding to a givven monitor name.
         """
         return "/tmp/virtio_port-%s-%s" % (port_name, self.instance)
-
 
     def get_virtio_port_filenames(self):
         """
@@ -784,7 +816,6 @@ class BaseVM(object):
         """
         return [self.get_virtio_port_filename(v) for v in
                 self.params.objects("virtio_ports")]
-
 
     @error.context_aware
     def login(self, nic_index=0, timeout=LOGIN_TIMEOUT,
@@ -812,13 +843,12 @@ class BaseVM(object):
         log_filename = ("session-%s-%s.log" %
                         (self.name, utils_misc.generate_random_string(4)))
         session = remote.remote_login(client, address, port, username,
-                                           password, prompt, linesep,
-                                           log_filename, timeout)
+                                      password, prompt, linesep,
+                                      log_filename, timeout)
         session.set_status_test_command(self.params.get("status_test_command",
                                                         ""))
         self.remote_sessions.append(session)
         return session
-
 
     def remote_login(self, nic_index=0, timeout=LOGIN_TIMEOUT,
                      username=None, password=None):
@@ -826,7 +856,6 @@ class BaseVM(object):
         Alias for login() for backward compatibility.
         """
         return self.login(nic_index, timeout, username, password)
-
 
     def wait_for_login(self, nic_index=0, timeout=LOGIN_WAIT_TIMEOUT,
                        internal_timeout=LOGIN_TIMEOUT,
@@ -868,7 +897,6 @@ class BaseVM(object):
             # Try one more time but don't catch exceptions
             return self.login(nic_index, internal_timeout, username, password)
 
-
     @error.context_aware
     def copy_files_to(self, host_path, guest_path, nic_index=0, limit="",
                       verbose=False, timeout=COPY_FILES_TIMEOUT,
@@ -894,17 +922,16 @@ class BaseVM(object):
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-to-%s-%s.log" %
                         (self.name, address,
-                        utils_misc.generate_random_string(4)))
+                         utils_misc.generate_random_string(4)))
         remote.copy_files_to(address, client, username, password, port,
-                                  host_path, guest_path, limit, log_filename,
-                                  verbose, timeout)
+                             host_path, guest_path, limit, log_filename,
+                             verbose, timeout)
         utils_misc.close_log_file(log_filename)
-
 
     @error.context_aware
     def copy_files_from(self, guest_path, host_path, nic_index=0, limit="",
                         verbose=False, timeout=COPY_FILES_TIMEOUT,
-                        username=None,password=None):
+                        username=None, password=None):
         """
         Transfer files from the guest.
 
@@ -926,12 +953,11 @@ class BaseVM(object):
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-from-%s-%s.log" %
                         (self.name, address,
-                        utils_misc.generate_random_string(4)))
+                         utils_misc.generate_random_string(4)))
         remote.copy_files_from(address, client, username, password, port,
-                                    guest_path, host_path, limit, log_filename,
-                                    verbose, timeout)
+                               guest_path, host_path, limit, log_filename,
+                               verbose, timeout)
         utils_misc.close_log_file(log_filename)
-
 
     @error.context_aware
     def serial_login(self, timeout=LOGIN_TIMEOUT,
@@ -953,7 +979,7 @@ class BaseVM(object):
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         status_test_command = self.params.get("status_test_command", "")
 
-        #Some times need recreate the serial_console.
+        # Some times need recreate the serial_console.
         if not os.path.exists(self.serial_console.inpipe_filename):
             try:
                 tmp_serial = self.serial_ports[0]
@@ -974,9 +1000,8 @@ class BaseVM(object):
         self.serial_console.sendline()
 
         remote.handle_prompts(self.serial_console, username, password,
-                                  prompt, timeout)
+                              prompt, timeout)
         return self.serial_console
-
 
     def wait_for_serial_login(self, timeout=LOGIN_WAIT_TIMEOUT,
                               internal_timeout=LOGIN_TIMEOUT,
@@ -1013,7 +1038,6 @@ class BaseVM(object):
         # Timeout expired; try one more time but don't catch exceptions
         return self.serial_login(internal_timeout, username, password)
 
-
     def get_uuid(self):
         """
         Catch UUID of the VM.
@@ -1024,7 +1048,6 @@ class BaseVM(object):
             return self.uuid
         else:
             return self.params.get("uuid", None)
-
 
     def send_string(self, sr):
         """
@@ -1039,7 +1062,6 @@ class BaseVM(object):
             else:
                 self.send_key(char)
 
-
     def get_cpu_count(self):
         """
         Get the cpu count of the VM.
@@ -1049,7 +1071,6 @@ class BaseVM(object):
             return int(session.cmd(self.params.get("cpu_chk_cmd")))
         finally:
             session.close()
-
 
     def get_memory_size(self, cmd=None, timeout=60, re_str=None):
         """
@@ -1084,14 +1105,12 @@ class BaseVM(object):
         finally:
             session.close()
 
-
     def get_current_memory_size(self):
         """
         Get current memory size of the VM, rather than bootup memory.
         """
         cmd = self.params.get("mem_chk_cur_cmd")
         return self.get_memory_size(cmd)
-
 
     #
     # Public API - *must* be reimplemented with virt specific code
@@ -1102,20 +1121,17 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def is_dead(self):
         """
         Return True if the VM is dead.
         """
         raise NotImplementedError
 
-
     def is_paused(self):
         """
         Return True if the VM is paused
         """
         raise NotImplementedError
-
 
     def activate_nic(self, nic_index_or_name):
         """
@@ -1125,7 +1141,6 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def deactivate_nic(self, nic_index_or_name):
         """
         Deactivate an active network device
@@ -1134,13 +1149,11 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def verify_userspace_crash(self):
         """
         Verify if the userspace component of the virtualization backend crashed.
         """
         pass
-
 
     def clone(self, name, **params):
         """
@@ -1149,7 +1162,6 @@ class BaseVM(object):
         This method should be implemented by
         """
         raise NotImplementedError
-
 
     def destroy(self, gracefully=True, free_mac_addresses=True):
         """
@@ -1166,7 +1178,6 @@ class BaseVM(object):
                 will be freed.
         """
         raise NotImplementedError
-
 
     def migrate(self, timeout=MIGRATE_TIMEOUT, protocol="tcp",
                 cancel_delay=None, offline=False, stable_check=False,
@@ -1195,7 +1206,6 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def reboot(self, session=None, method="shell", nic_index=0,
                timeout=REBOOT_TIMEOUT):
         """
@@ -1211,7 +1221,6 @@ class BaseVM(object):
         @return: A new shell session object.
         """
         raise NotImplementedError
-
 
     # should this really be expected from VMs of all hypervisor types?
     def send_key(self, keystr):
@@ -1243,7 +1252,6 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def savevm(self, tag_name):
         """
         Save the virtual machine as the tag 'tag_name'
@@ -1253,7 +1261,6 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def loadvm(self, tag_name):
         """
         Load the virtual machine tagged 'tag_name'.
@@ -1262,13 +1269,11 @@ class BaseVM(object):
         """
         raise NotImplementedError
 
-
     def pause(self):
         """
         Stop the VM operation.
         """
         raise NotImplementedError
-
 
     def resume(self):
         """

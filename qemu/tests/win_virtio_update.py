@@ -1,4 +1,8 @@
-import time, sys, re, logging, os
+import time
+import sys
+import re
+import logging
+import os
 
 from autotest.client.shared import error, utils
 from virttest import utils_test
@@ -57,7 +61,7 @@ def run_win_virtio_update(test, params, env):
         utils.system("mkdir /tmp/virtio_win")
 
         virtio_win = utils.unmap_url("/tmp/virtio_win", url_virtio_win,
-                              "/tmp/virtio_win")
+                                     "/tmp/virtio_win")
         if re.findall("zip$", url_virtio_win):
             utils.system("cd /tmp/virtio_win; unzip *; rm -f *.zip")
 
@@ -87,11 +91,12 @@ def run_win_virtio_update(test, params, env):
                                        "\s+\w:(.[^\s]+)\s+hwidcmd")
             driver_path = re.findall(pattern_drive, driver_install_cmd)[0]
             driver_path = "/".join(driver_path.split("\\\\")[1:])
-            storage_path = utils_misc.get_path(data_dir.get_data_dir(), storage_path)
+            storage_path = utils_misc.get_path(
+                data_dir.get_data_dir(), storage_path)
             hw_id = utils_test.get_driver_hardware_id(driver_path,
-                                                   mount_point=mount_point,
-                                                 storage_path=storage_path,
-                                                         re_hw_id=re_hw_id)
+                                                      mount_point=mount_point,
+                                                      storage_path=storage_path,
+                                                      re_hw_id=re_hw_id)
             install_cmds[driver] = re.sub("hwidcmd", hw_id,
                                           driver_install_cmd)
         else:
@@ -140,8 +145,8 @@ def run_win_virtio_update(test, params, env):
                                params_driver.get("sys_file_path", ""),
                                cmd_c)
                 cmd_c = re.sub("DRIVER_PATTERN_%s" % cmd_n,
-                              params_driver.get("info_pattern_%s" % cmd_n,
-                                               ""),
+                               params_driver.get("info_pattern_%s" % cmd_n,
+                                                 ""),
                                cmd_c)
                 check_cmds[driver][cmd_n] = cmd_c
 

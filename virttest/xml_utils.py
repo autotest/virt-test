@@ -36,7 +36,12 @@
     module for examples.
 """
 
-import os, shutil, tempfile, string, StringIO, logging
+import os
+import shutil
+import tempfile
+import string
+import StringIO
+import logging
 from xml.parsers import expat
 # We *have* to use our ElementTree fork :(
 from virttest import element_tree as ElementTree
@@ -47,7 +52,9 @@ TMPSFX = '.xml'
 EXSFX = '_exception_retained'
 ENCODING = "UTF-8"
 
+
 class TempXMLFile(file):
+
     """
     Temporary XML file auto-removed on instance del / module exit.
     """
@@ -65,13 +72,11 @@ class TempXMLFile(file):
         os.close(fd)
         super(TempXMLFile, self).__init__(path, mode, buffsz)
 
-
     def _info(self):
         """
         Inform user that file was not auto-deleted due to exceptional exit.
         """
         logging.info("Retaining %s", self.name + EXSFX)
-
 
     def unlink(self):
         """
@@ -81,8 +86,7 @@ class TempXMLFile(file):
             os.unlink(self.name)
             self.close()
         except (OSError, IOError):
-            pass # don't care if delete fails
-
+            pass  # don't care if delete fails
 
     def __exit__(self, exc_type, exc_value, traceback):
         """
@@ -93,10 +97,9 @@ class TempXMLFile(file):
         if None not in (exc_type, exc_value, traceback):
             os.rename(self.name, self.name + EXSFX)
         else:
-            self.unlink() # safe if file was renamed
+            self.unlink()  # safe if file was renamed
         if hasattr(super(TempXMLFile, self), '__exit__'):
             super(TempXMLFile, self).__exit__(exc_type, exc_value, traceback)
-
 
     def __del__(self):
         """
@@ -107,6 +110,7 @@ class TempXMLFile(file):
 
 
 class XMLBackup(TempXMLFile):
+
     """
     Backup file copy of XML data, automatically removed on instance destruction.
     """
@@ -123,20 +127,17 @@ class XMLBackup(TempXMLFile):
         self.sourcefilename = sourcefilename
         self.backup()
 
-
     def __del__(self):
         # Drop reference, don't delete source!
         self.sourcefilename = None
         super(XMLBackup, self).__del__()
-
 
     def _info(self):
         """
         Inform user that file was not auto-deleted due to exceptional exit.
         """
         logging.info("Retaining backup of %s in %s", self.sourcefilename,
-                                                     self.name + EXSFX)
-
+                     self.name + EXSFX)
 
     def backup(self):
         """
@@ -148,7 +149,6 @@ class XMLBackup(TempXMLFile):
         shutil.copyfileobj(file(self.sourcefilename, "rb"),
                            super(XMLBackup, self))
         self.seek(0)
-
 
     def restore(self):
         """
@@ -163,6 +163,7 @@ class XMLBackup(TempXMLFile):
 
 
 class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
+
     """
     Combination of ElementTree root and auto-cleaned XML backup file.
     """
@@ -200,8 +201,7 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
             raise IOError("Error parsing XML: '%s'" % xml)
         # Required for TemplateXML class to work
         self.write()
-        self.flush() # make sure it's on-disk
-
+        self.flush()  # make sure it's on-disk
 
     def __str__(self):
         self.write()
@@ -210,11 +210,9 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         self.write(xmlstr)
         return xmlstr.getvalue()
 
-
     def backup_copy(self):
         """Return a copy of instance, including copies of files"""
         return self.__class__(self.name)
-
 
     def reroot(self, xpath):
         """
@@ -223,11 +221,10 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         rerooted = self.backup_copy()
         element = rerooted.find(xpath)
         if element is None:
-            del rerooted # cleanup files
+            del rerooted  # cleanup files
             raise KeyError("No element found at %s" % xpath)
         rerooted._setroot(element)
         return rerooted
-
 
     def get_parent_map(self, element=None):
         """
@@ -241,7 +238,6 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
                 d[c] = p
         return d
 
-
     def get_parent(self, element, relative_root=None):
         """
         Return the parent node of an element or None
@@ -253,7 +249,6 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
             return self.get_parent_map(relative_root)[element]
         except KeyError:
             return None
-
 
     def get_xpath(self, element):
         """Return the XPath string formed from first-match tag names"""
@@ -278,7 +273,6 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         path_list.reverse()
         return "/".join(path_list)
 
-
     def remove(self, element):
         """
         Removes a matching subelement.
@@ -287,15 +281,13 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         """
         self.get_parent(element).remove(element)
 
-
     def remove_by_xpath(self, xpath):
         """
         Remove an element found by xpath
 
         @param: xpath: element name or path to remove
         """
-        self.remove(self.find(xpath)) # can't remove root
-
+        self.remove(self.find(xpath))  # can't remove root
 
     def create_by_xpath(self, xpath):
         """
@@ -308,7 +300,6 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
                 next_element = ElementTree.SubElement(cur_element, tag)
             cur_element = next_element
 
-
     # This overrides the file.write() method
     def write(self, filename=None, encoding=ENCODING):
         """
@@ -320,20 +311,19 @@ class XMLTreeFile(ElementTree.ElementTree, XMLBackup):
         # Avoid calling file.write() by mistake
         ElementTree.ElementTree.write(self, filename, encoding)
 
-
     def read(self, xml):
         self.__del__()
         self.__init__(xml)
 
 
 class Sub(object):
+
     """String substituter using string.Template"""
 
     def __init__(self, **mapping):
         """Initialize substitution mapping."""
 
         self._mapping = mapping
-
 
     def substitute(self, text):
         """
@@ -346,6 +336,7 @@ class Sub(object):
 
 
 class TemplateXMLTreeBuilder(ElementTree.XMLTreeBuilder, Sub):
+
     """Resolve XML templates into temporary file-backed ElementTrees"""
 
     BuilderClass = ElementTree.TreeBuilder
@@ -360,12 +351,12 @@ class TemplateXMLTreeBuilder(ElementTree.XMLTreeBuilder, Sub):
         Sub.__init__(self, **mapping)
         ElementTree.XMLTreeBuilder.__init__(self, target=self.BuilderClass())
 
-
     def feed(self, data):
         ElementTree.XMLTreeBuilder.feed(self, self.substitute(data))
 
 
 class TemplateXML(XMLTreeFile):
+
     """Template-sourced XML ElementTree backed by temporary file."""
 
     ParserClass = TemplateXMLTreeBuilder
@@ -383,7 +374,6 @@ class TemplateXML(XMLTreeFile):
         super(TemplateXML, self).__init__(xml)
         # XMLBase.__init__ calls self.write() after super init
 
-
     def parse(self, source, parser=None):
         """
         Parse source XML file or filename using TemplateXMLTreeBuilder
@@ -396,11 +386,10 @@ class TemplateXML(XMLTreeFile):
         else:
             return super(TemplateXML, self).parse(source, parser)
 
-
     def restore(self):
         """
         Raise an IOError to protect the original template source.
         """
 
         raise IOError("Protecting template source, disallowing restore to %s" %
-                        self.sourcefilename)
+                      self.sourcefilename)

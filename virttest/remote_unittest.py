@@ -1,7 +1,11 @@
 #!/usr/bin/python
 
-import unittest, os
-import common, remote, data_dir
+import unittest
+import os
+import common
+import remote
+import data_dir
+
 
 class RemoteFileTest(unittest.TestCase):
     tmp_dir = data_dir.get_tmp_dir()
@@ -19,7 +23,7 @@ class RemoteFileTest(unittest.TestCase):
         test_file.writelines(self.default_data)
         test_file.close()
         remote_file = remote.RemoteFile(None, "test", None, None, None,
-                                       self.test_file_path)
+                                        self.test_file_path)
         return remote_file
 
     def _read_test_file(self):
@@ -46,7 +50,7 @@ class RemoteFileTest(unittest.TestCase):
 
     def testSub(self):
         remote_file = self._new_remote_file()
-        _pattern2repl = {r"Remote":"Local", r"^Pat.*$":"Replace Line"}
+        _pattern2repl = {r"Remote": "Local", r"^Pat.*$": "Replace Line"}
         remote_file.sub(_pattern2repl)
         test_data = self._read_test_file()
         except_data = ["LocalFile Test.\n",
@@ -71,7 +75,7 @@ class RemoteFileTest(unittest.TestCase):
 
     def testSEEA(self):
         remote_file = self._new_remote_file()
-        _pattern2repl = {r"Remote":"Local", r"NoMatch":"ADD line."}
+        _pattern2repl = {r"Remote": "Local", r"NoMatch": "ADD line."}
         remote_file.sub_else_add(_pattern2repl)
         test_data = self._read_test_file()
         except_data = ["LocalFile Test.\n",

@@ -1,9 +1,11 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import utils_libguestfs as lgf
 
 
 class GuestfishTools(lgf.GuestfishPersistent):
+
     """Useful Tools for Guestfish class."""
 
     __slots__ = lgf.GuestfishPersistent.__slots__ + ('params', )
@@ -21,7 +23,6 @@ class GuestfishTools(lgf.GuestfishPersistent):
         super(GuestfishTools, self).__init__(disk_img, ro_mode,
                                              libvirt_domain, inspector,
                                              mount_options=mount_options)
-
 
     def get_root(self):
         """

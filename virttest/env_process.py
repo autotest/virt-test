@@ -1,9 +1,28 @@
-import os, time, commands, re, logging, glob, threading, shutil, sys
+import os
+import time
+import commands
+import re
+import logging
+import glob
+import threading
+import shutil
+import sys
 from autotest.client import utils
 from autotest.client.shared import error
-import aexpect, qemu_monitor, ppm_utils, test_setup, virt_vm
-import video_maker, utils_misc, storage, qemu_storage, utils_libvirtd
-import remote, data_dir, utils_net, utils_disk
+import aexpect
+import qemu_monitor
+import ppm_utils
+import test_setup
+import virt_vm
+import video_maker
+import utils_misc
+import storage
+import qemu_storage
+import utils_libvirtd
+import remote
+import data_dir
+import utils_net
+import utils_disk
 
 
 try:
@@ -188,7 +207,7 @@ def postprocess_vm(test, params, env, name):
     # Encode an HTML 5 compatible video from the screenshots produced
     screendump_dir = os.path.join(test.debugdir, "screendumps_%s" % vm.name)
     if (params.get("encode_video_files", "yes") == "yes" and
-        glob.glob("%s/*" % screendump_dir)):
+            glob.glob("%s/*" % screendump_dir)):
         try:
             video = video_maker.GstPythonVideoMaker()
             if (video.has_element('vp8enc') and video.has_element('webmmux')):
@@ -201,7 +220,8 @@ def postprocess_vm(test, params, env, name):
             video.start(screendump_dir, video_file)
 
         except Exception, detail:
-            logging.info("Video creation failed for vm %s: %s", vm.name, detail)
+            logging.info(
+                "Video creation failed for vm %s: %s", vm.name, detail)
 
     if params.get("kill_vm") == "yes":
         kill_vm_timeout = float(params.get("kill_vm_timeout", 0))
@@ -275,7 +295,7 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                             err += "\n%s: %s" % (image_name, details)
                     if err:
                         raise virt_vm.VMImageCheckError("Error(s) occurred "
-                                        "while processing images: %s" % err)
+                                                        "while processing images: %s" % err)
                 finally:
                     if unpause_vm:
                         vm.resume()
@@ -359,7 +379,7 @@ def preprocess(test, params, env):
                 output_params=(env["address_cache"], "tcpdump.log",))
 
         if utils_misc.wait_for(lambda: not env["tcpdump"].is_alive(),
-                              0.1, 0.1, 1.0):
+                               0.1, 0.1, 1.0):
             logging.warn("Could not start tcpdump")
             logging.warn("Status: %s" % env["tcpdump"].get_status())
             logging.warn("Output:" + utils_misc.format_str_for_message(
@@ -376,7 +396,7 @@ def preprocess(test, params, env):
             del env[key]
 
     if (params.get("auto_cpu_model") == "yes" and
-        params.get("vm_type") == "qemu"):
+            params.get("vm_type") == "qemu"):
         if not env.get("cpu_model"):
             env["cpu_model"] = utils_misc.get_qemu_best_cpu_model(params)
         params["cpu_model"] = env.get("cpu_model")
@@ -436,7 +456,6 @@ def preprocess(test, params, env):
         thp = test_setup.TransparentHugePageConfig(test, params)
         thp.setup()
 
-
     if params.get("setup_ksm") == "yes":
         ksm = test_setup.KSMConfig(params, env)
         ksm.setup(env)
@@ -447,7 +466,6 @@ def preprocess(test, params, env):
                         int(params.get("pre_command_timeout", "600")),
                         params.get("pre_command_noncritical") == "yes")
 
-
     # if you want set "pci=nomsi" before test, set "disable_pci_msi = yes"
     # and pci_msi_sensitive = "yes"
     if params.get("pci_msi_sensitive", "no") == "yes":
@@ -456,7 +474,7 @@ def preprocess(test, params, env):
                                                     data_dir.get_data_dir())
         grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
         kernel_cfg_pos_reg = params.get("kernel_cfg_pos_reg",
-                                         r".*vmlinuz-\d+.*")
+                                        r".*vmlinuz-\d+.*")
         msi_keyword = params.get("msi_keyword", " pci=nomsi")
 
         disk_obj = utils_disk.GuestFSModiDisk(image_filename)
@@ -485,7 +503,7 @@ def preprocess(test, params, env):
             disk_obj.replace_image_file_content(grub_file, kernel_config_line,
                                                 kernel_config_set)
         logging.debug("Guest cmdline 'pci=nomsi' setting is: [ %s ]" %
-                       disable_pci_msi)
+                      disable_pci_msi)
 
     # Clone master image from vms.
     base_dir = data_dir.get_data_dir()
@@ -757,7 +775,7 @@ def _take_screendumps(test, params, env):
     temp_dir = test.debugdir
     if params.get("screendump_temp_dir"):
         temp_dir = utils_misc.get_path(test.bindir,
-                                      params.get("screendump_temp_dir"))
+                                       params.get("screendump_temp_dir"))
         try:
             os.makedirs(temp_dir)
         except OSError:
@@ -809,8 +827,9 @@ def _take_screendumps(test, params, env):
             if image_hash in cache:
                 time_inactive = time.time() - inactivity[vm]
                 if time_inactive > inactivity_treshold:
-                    msg = ("%s screen is inactive for more than %d s (%d min)" %
-                           (vm.name, time_inactive, time_inactive / 60))
+                    msg = (
+                        "%s screen is inactive for more than %d s (%d min)" %
+                        (vm.name, time_inactive, time_inactive / 60))
                     if inactivity_watcher == "error":
                         try:
                             raise virt_vm.VMScreenInactiveError(vm,

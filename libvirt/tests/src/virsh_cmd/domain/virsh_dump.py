@@ -1,6 +1,11 @@
-import os, logging, commands, thread, time
+import os
+import logging
+import commands
+import thread
+import time
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
+
 
 def check_flag(file_flag):
     """
@@ -88,9 +93,9 @@ def run_virsh_dump(test, params, env):
 
         if options.find('live') >= 0:
             domstate = "running"
-            if options.find('crash') >= 0 or options.find('reset') >0:
+            if options.find('crash') >= 0 or options.find('reset') > 0:
                 domstate = "running"
-        elif options.find('crash') >=0:
+        elif options.find('crash') >= 0:
             domstate = "shut off"
             if options.find('reset') >= 0:
                 domstate = "running"
@@ -142,7 +147,6 @@ def run_virsh_dump(test, params, env):
                 logging.error("Fail to check dumped file %s", dump_file)
                 return False
 
-
     # Configure dump_image_format in /etc/libvirt/qemu.conf.
     if len(dump_image_format) != 0:
         conf_cmd = ("echo dump_image_format = \\\"%s\\\" >> %s" %
@@ -154,7 +158,7 @@ def run_virsh_dump(test, params, env):
 
     # Deal with bypass-cache option
     if options.find('bypass-cache') >= 0:
-        thread.start_new_thread(check_bypass,(dump_file,))
+        thread.start_new_thread(check_bypass, (dump_file,))
         # Guarantee check_bypass function has run before dump
         time.sleep(5)
 
@@ -181,7 +185,8 @@ def run_virsh_dump(test, params, env):
                             raise error.TestFail("The format of dumped file "
                                                  "is wrong.")
                     else:
-                        raise error.TestFail("Fail to find domain dumped file.")
+                        raise error.TestFail(
+                            "Fail to find domain dumped file.")
 
         else:
             raise error.TestFail("Domain status check fail.")

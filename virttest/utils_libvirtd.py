@@ -1,13 +1,15 @@
 """
 Module to control libvirtd service.
 """
-import logging, re
+import logging
+import re
 from virttest import remote, aexpect, utils_misc
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
 
 
 class LibvirtdError(Exception):
+
     """
     Base Error of libvirtd.
     """
@@ -15,9 +17,11 @@ class LibvirtdError(Exception):
 
 
 class LibvirtdActionError(LibvirtdError):
+
     """
     Error in service command.
     """
+
     def __init__(self, action, detail):
         LibvirtdError.__init__(self)
         self.action = action
@@ -29,9 +33,11 @@ class LibvirtdActionError(LibvirtdError):
 
 
 class LibvirtdActionUnknownError(LibvirtdActionError):
+
     """
     Error in service command when service name is unknown.
     """
+
     def __init__(self, action):
         self.action = action
         self.detail = 'Action %s is Unknown.' % self.action

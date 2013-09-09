@@ -5,7 +5,8 @@ oVirt SDK wrapper module.
 """
 
 
-import time, logging
+import time
+import logging
 
 try:
     from ovirtsdk.api import API
@@ -65,6 +66,7 @@ def disconnect():
 
 
 class VMManager(virt_vm.BaseVM):
+
     """
     This class handles all basic VM operations for oVirt.
     """
@@ -110,7 +112,6 @@ class VMManager(virt_vm.BaseVM):
         if self.name:
             self.instance = self.api.vms.get(self.name)
 
-
     def list(self):
         """
         List all of VMs.
@@ -124,7 +125,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to get vms:\n%s' % str(e))
 
-
     def state(self):
         """
         Return VM state.
@@ -134,7 +134,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to get %s status:\n%s' % (self.name, str(e)))
 
-
     def get_mac_address(self):
         """
         Return MAC address of a VM.
@@ -143,7 +142,6 @@ class VMManager(virt_vm.BaseVM):
             return self.instance.nics.get().get_mac().get_address()
         except Exception, e:
             logging.error('Failed to get %s status:\n%s' % (self.name, str(e)))
-
 
     def lookup_by_storagedomains(self, storage_name):
         """
@@ -156,7 +154,6 @@ class VMManager(virt_vm.BaseVM):
             logging.error('Failed to get %s from %s:\n%s' % (self.name,
                           storage_name, str(e)))
 
-
     def is_alive(self):
         """
         Judge if a VM is alive.
@@ -167,7 +164,6 @@ class VMManager(virt_vm.BaseVM):
         else:
             logging.debug('The %s status is <not Up>' % self.name)
             return False
-
 
     def is_dead(self):
         """
@@ -180,10 +176,8 @@ class VMManager(virt_vm.BaseVM):
             logging.debug('The %s status is <not Down>' % self.name)
             return False
 
-
     def is_paused(self):
         return False
-
 
     def start(self):
         """
@@ -202,7 +196,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to start VM:\n%s' % str(e))
 
-
     def suspend(self):
         """
         Suspend a VM.
@@ -218,14 +211,13 @@ class VMManager(virt_vm.BaseVM):
 
             except Exception, e:
                 if e.reason == 'Bad Request' \
-                    and 'asynchronous running tasks' in e.detail:
+                        and 'asynchronous running tasks' in e.detail:
                     logging.warning("VM has asynchronous running tasks, "
                                     "trying again")
                     time.sleep(1)
                 else:
                     logging.error('Failed to suspend VM:\n%s' % str(e))
                     break
-
 
     def resume(self):
         """
@@ -244,7 +236,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to resume VM:\n%s' % str(e))
 
-
     def shutdown(self):
         """
         Shut down a running VM.
@@ -262,7 +253,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to Stop VM:\n%s' % str(e))
 
-
     def delete(self):
         """
         Delete a VM.
@@ -272,7 +262,7 @@ class VMManager(virt_vm.BaseVM):
                 logging.info('Delete VM %s' % self.name)
                 self.instance.delete()
                 logging.info('Waiting for VM to be <Deleted> ...')
-                while self.name in [self.instance.name for self.instance \
+                while self.name in [self.instance.name for self.instance
                                     in self.api.vms.list()]:
                     time.sleep(1)
                 logging.info('VM was removed successfully')
@@ -280,7 +270,6 @@ class VMManager(virt_vm.BaseVM):
                 logging.debug('VM already is down status')
         except Exception, e:
             logging.error('Failed to remove VM:\n%s' % str(e))
-
 
     def destroy(self):
         """
@@ -290,7 +279,6 @@ class VMManager(virt_vm.BaseVM):
             return
 
         self.shutdown()
-
 
     def delete_from_export_domain(self, export_name):
         """
@@ -303,7 +291,6 @@ class VMManager(virt_vm.BaseVM):
             vm.delete()
         except Exception, e:
             logging.error('Failed to remove VM:\n%s' % str(e))
-
 
     def import_from_export_domain(self, export_name, storage_name,
                                   cluster_name):
@@ -329,7 +316,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to import VM:\n%s' % str(e))
 
-
     def export_from_export_domain(self, export_name):
         """
         Export a VM from storage domain to export domain.
@@ -347,7 +333,6 @@ class VMManager(virt_vm.BaseVM):
             logging.info('VM was exported successfully')
         except Exception, e:
             logging.error('Failed to export VM:\n%s' % str(e))
-
 
     def snapshot(self, snapshot_name='my_snapshot'):
         """
@@ -368,7 +353,6 @@ class VMManager(virt_vm.BaseVM):
             logging.info('Snapshot was created successfully')
         except Exception, e:
             logging.error('Failed to create a snapshot:\n%s' % str(e))
-
 
     def create_template(self, cluster_name, template_name='my_template'):
         """
@@ -393,11 +377,10 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to create a template from VM:\n%s' % str(e))
 
-
     def add(self, memory, disk_size, cluster_name, storage_name,
-               nic_name='eth0', network_interface='virtio',
-               network_name='ovirtmgmt', disk_interface='virtio',
-               disk_format='raw', template_name='Blank'):
+            nic_name='eth0', network_interface='virtio',
+            network_name='ovirtmgmt', disk_interface='virtio',
+            disk_format='raw', template_name='Blank'):
         """
         Create VM with one NIC and one Disk.
 
@@ -451,7 +434,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to create VM with disk and NIC\n%s' % str(e))
 
-
     def add_vm_from_template(self, cluster_name, template_name='Blank',
                              new_name='my_new_vm'):
         """
@@ -476,7 +458,6 @@ class VMManager(virt_vm.BaseVM):
         except Exception, e:
             logging.error('Failed to create VM from template:\n%s' % str(e))
 
-
     def get_address(self, index=0):
         """
         Return the address of the guest through ovirt node tcpdump cache.
@@ -499,6 +480,7 @@ class VMManager(virt_vm.BaseVM):
 
 
 class DataCenterManager(object):
+
     """
     This class handles all basic datacenter operations.
     """
@@ -510,7 +492,6 @@ class DataCenterManager(object):
 
         if self.name:
             self.instance = self.api.datacenters.get(self.name)
-
 
     def list(self):
         """
@@ -526,7 +507,6 @@ class DataCenterManager(object):
         except Exception, e:
             logging.error('Failed to get data centers:\n%s' % str(e))
 
-
     def add(self, storage_type):
         """
         Add a new data center.
@@ -539,13 +519,14 @@ class DataCenterManager(object):
             if self.api.datacenters.add(param.DataCenter(
                 name=self.name,
                 storage_type=storage_type,
-                version=self.version)):
+                                        version=self.version)):
                 logging.info('Data center was created successfully')
         except Exception, e:
             logging.error('Failed to create data center:\n%s' % str(e))
 
 
 class ClusterManager(object):
+
     """
     This class handles all basic cluster operations.
     """
@@ -557,7 +538,6 @@ class ClusterManager(object):
 
         if self.name:
             self.instance = self.api.clusters.get(self.name)
-
 
     def list(self):
         """
@@ -572,7 +552,6 @@ class ClusterManager(object):
             return cluster_list
         except Exception, e:
             logging.error('Failed to get clusters:\n%s' % str(e))
-
 
     def add(self, dc_name, cpu_type='Intel Nehalem Family'):
         """
@@ -595,6 +574,7 @@ class ClusterManager(object):
 
 
 class HostManager(object):
+
     """
     This class handles all basic host operations.
     """
@@ -606,7 +586,6 @@ class HostManager(object):
 
         if self.name:
             self.instance = self.api.hosts.get(self.name)
-
 
     def list(self):
         """
@@ -622,7 +601,6 @@ class HostManager(object):
         except Exception, e:
             logging.error('Failed to get hosts:\n%s' % str(e))
 
-
     def state(self):
         """
         Return host state.
@@ -631,7 +609,6 @@ class HostManager(object):
             return self.instance.status.state
         except Exception, e:
             logging.error('Failed to get %s status:\n%s' % (self.name, str(e)))
-
 
     def add(self, host_address, host_password, cluster_name):
         """
@@ -656,7 +633,6 @@ class HostManager(object):
         except Exception, e:
             logging.error('Failed to install host:\n%s' % str(e))
 
-
     def get_address(self):
         """
         Return host IP address.
@@ -670,6 +646,7 @@ class HostManager(object):
 
 
 class StorageDomainManager(object):
+
     """
     This class handles all basic storage domain operations.
     """
@@ -681,7 +658,6 @@ class StorageDomainManager(object):
 
         if self.name:
             self.instance = self.api.storagedomains.get(self.name)
-
 
     def list(self):
         """
@@ -696,7 +672,6 @@ class StorageDomainManager(object):
             return storage_list
         except Exception, e:
             logging.error('Failed to get storage domains:\n%s' % str(e))
-
 
     def attach_iso_export_domain_into_datacenter(self, address, path,
                                                  dc_name, host_name,
@@ -724,7 +699,7 @@ class StorageDomainManager(object):
                                                      data_center=dc,
                                                      type_=domain_type,
                                                      host=host,
-                                                     storage = storage_params)
+                                                     storage=storage_params)
 
         try:
             logging.info('Create/import ISO storage domain %s' % name)
@@ -734,13 +709,13 @@ class StorageDomainManager(object):
 
             logging.info('Attach ISO storage domain %s' % name)
             if self.api.datacenters.get(dc_name).storagedomains.add(
-                self.api.storagedomains.get(name)):
+                    self.api.storagedomains.get(name)):
                 logging.info('%s domain was attached successfully'
                              % domain_type)
 
             logging.info('Activate ISO storage domain %s' % name)
             if self.api.datacenters.get(dc_name).storagedomains.get(
-                name).activate():
+                    name).activate():
                 logging.info('%s domain was activated successfully'
                              % domain_type)
         except Exception, e:

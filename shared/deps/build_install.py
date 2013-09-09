@@ -4,7 +4,8 @@
 Script to build and install packages from git in VMs
 '''
 
-import os, sys
+import os
+import sys
 import optparse
 import subprocess
 
@@ -20,7 +21,8 @@ git_repo["spice-vd-agent"] = "git://git.freedesktop.org/git/spice/linux/vd_agent
 git_repo["xf86-video-qxl"] = "git://anongit.freedesktop.org/xorg/driver/xf86-video-qxl"
 
 # options to pass
-autogen_options["spice-gtk"] = "--with-gtk=2.0 --disable-gtk-doc --disable-introspection"
+autogen_options[
+    "spice-gtk"] = "--with-gtk=2.0 --disable-gtk-doc --disable-introspection"
 autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\""
 prefix_defaults["spice-protocol"] = "/usr/local"
 prefix_defaults["spice-vd-agent"] = "/usr/local"
@@ -41,19 +43,19 @@ usageMsg += "\n\txf86-video-qxl\t ->\t QXL device driver"
 # Getting all parameters
 parser = optparse.OptionParser(usage=usageMsg)
 parser.add_option("-p", "--package", dest="pkgName",
-                 help="Name of package to build. Required.")
+                  help="Name of package to build. Required.")
 parser.add_option("-g", "--gitRepo", dest="gitRepo",
-                 help="Repo to download and build package from")
+                  help="Repo to download and build package from")
 parser.add_option("-b", "--branch", dest="branch", default="master",
-                 help="Branch to checkout and use")
+                  help="Branch to checkout and use")
 parser.add_option("-d", "--destDir", dest="destDir",
-                 help="Destination Dir to store repo at")
+                  help="Destination Dir to store repo at")
 parser.add_option("-c", "--commit", dest="commit",
-                 help="Specific commit to download")
-parser.add_option("-l","--prefix", dest="prefix",
-                 help="Location to store built binaries/libraries")
-parser.add_option("-o","--buildOptions", dest="buildOptions",
-                 help="Options to pass to autogen.sh while building")
+                  help="Specific commit to download")
+parser.add_option("-l", "--prefix", dest="prefix",
+                  help="Location to store built binaries/libraries")
+parser.add_option("-o", "--buildOptions", dest="buildOptions",
+                  help="Options to pass to autogen.sh while building")
 
 
 (options, args) = parser.parse_args()
@@ -101,7 +103,8 @@ else:
 
 # Fetch the contents of the repo
 print "Fetching git [REP '%s' BRANCH '%s'] -> %s" % (git_repo[pkgName], branch, destDir)
-subprocess.check_call(("git fetch -q -f -u -t %s %s:%s" % (git_repo[pkgName], branch, branch)).split())
+subprocess.check_call(("git fetch -q -f -u -t %s %s:%s" %
+                      (git_repo[pkgName], branch, branch)).split())
 
 # checkout the branch specified, master by default
 print "Checking out branch %s" % branch
@@ -119,27 +122,27 @@ else:
 print "Adding remote origin"
 args = ("git remote add origin %s" % git_repo[pkgName]).split()
 output = subprocess.Popen(args, shell=False,
-                                      stdin=subprocess.PIPE,
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      close_fds=True).stdout.read().strip()
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          close_fds=True).stdout.read().strip()
 
 # Get the commit and tag which repo is at
 args = 'git log --pretty=format:%H -1'.split()
 print "Running 'git log --pretty=format:%H -1' to get top commit"
 top_commit = subprocess.Popen(args, shell=False,
-                                      stdin=subprocess.PIPE,
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      close_fds=True).stdout.read().strip()
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              close_fds=True).stdout.read().strip()
 
 args = 'git describe'.split()
 print "Running 'git describe' to get top tag"
 top_tag = subprocess.Popen(args, shell=False,
-                                      stdin=subprocess.PIPE,
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      close_fds=True).stdout.read().strip()
+                           stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           close_fds=True).stdout.read().strip()
 if top_tag is None:
     top_tag_desc = 'no tag found'
 else:
@@ -151,7 +154,8 @@ print "git commit ID is %s (%s)" % (top_commit, top_tag_desc)
 if pkgName in prefix_defaults.keys() and options.prefix is None:
     prefix = prefix_defaults[pkgName]
 
-# if no prefix is set, the use default PKG_CONFIG_PATH. If not, set to prefix's PKG_CONFIG_PATH
+# if no prefix is set, the use default PKG_CONFIG_PATH. If not, set to
+# prefix's PKG_CONFIG_PATH
 if prefix is None:
     env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:/usr/local/lib:"
 else:

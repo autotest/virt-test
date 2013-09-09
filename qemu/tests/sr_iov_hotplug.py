@@ -1,6 +1,8 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc, aexpect, utils_test
+
 
 @error.context_aware
 def run_sr_iov_hotplug(test, params, env):
@@ -22,7 +24,6 @@ def run_sr_iov_hotplug(test, params, env):
     @param env:    Dictionary with test environment.
     """
 
-
     def pci_add_iov(pci_num):
         pci_add_cmd = ("pci_add pci_addr=auto host host=%s,if=%s" %
                        (pa_pci_ids[pci_num], pci_model))
@@ -38,13 +39,13 @@ def run_sr_iov_hotplug(test, params, env):
     def pci_add(pci_add_cmd):
         error.context("Adding pci device with command 'pci_add'")
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
-        pci_info.append(['' , add_output])
+        pci_info.append(['', add_output])
 
         if not "OK domain" in add_output:
             raise error.TestFail("Add PCI device failed. "
                                  "Monitor command is: %s, Output: %r" %
                                  (pci_add_cmd, add_output))
-        return  vm.monitor.info("pci")
+        return vm.monitor.info("pci")
 
     def check_support_device(dev):
         if vm.monitor.protocol == 'qmp':
@@ -56,7 +57,6 @@ def run_sr_iov_hotplug(test, params, env):
         if not is_support:
             raise error.TestError("%s doesn't support device: %s" %
                                   (cmd_type, dev))
-
 
     def device_add_iov(pci_num):
         device_id = "%s" % pci_model + "-" + utils_misc.generate_random_id()
@@ -98,8 +98,9 @@ def run_sr_iov_hotplug(test, params, env):
             # get function for adding device.
             add_fuction = local_functions["%s_iov" % cmd_type]
         except Exception:
-            raise error.TestError("No function for adding sr-iov dev with '%s'" %
-                                  cmd_type)
+            raise error.TestError(
+                "No function for adding sr-iov dev with '%s'" %
+                cmd_type)
         after_add = None
         if add_fuction:
             # Do add pci device.
@@ -137,7 +138,7 @@ def run_sr_iov_hotplug(test, params, env):
 
             # Test the newly added device
             try:
-                session.cmd(params["pci_test_cmd"] % (pci_num+1))
+                session.cmd(params["pci_test_cmd"] % (pci_num + 1))
             except aexpect.ShellError, e:
                 raise error.TestFail("Check for sr-iov device failed after PCI "
                                      "hotplug. Output: %r" % e.output)
@@ -162,11 +163,10 @@ def run_sr_iov_hotplug(test, params, env):
             vm.monitor.send_args_cmd(cmd)
 
         if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1)
-            and not ignore_failure):
+                and not ignore_failure):
             raise error.TestFail("Failed to hot remove PCI device: %s. "
                                  "Monitor command: %s" %
                                  (pci_model, cmd))
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -186,7 +186,7 @@ def run_sr_iov_hotplug(test, params, env):
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
     if module:
-        error.context("modprobe the module %s" %module, logging.info)
+        error.context("modprobe the module %s" % module, logging.info)
         session.cmd("modprobe %s" % module)
 
     # Probe qemu to verify what is the supported syntax for PCI hotplug
@@ -199,7 +199,6 @@ def run_sr_iov_hotplug(test, params, env):
     if not cmd_o:
         raise error.TestError("Unknow version of qemu")
 
-
     local_functions = locals()
 
     for j in range(rp_times):
@@ -210,7 +209,7 @@ def run_sr_iov_hotplug(test, params, env):
         pci_info = []
         for pci_num in xrange(pci_num_range):
             msg = "Start hot-adding %sth pci device, repeat %d" % (pci_num + 1,
-                                                                  j + 1)
+                                                                   j + 1)
             error.context(msg, logging.info)
             add_device(pci_num)
         for pci_num in xrange(pci_num_range):

@@ -1,4 +1,5 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error, utils
 from virttest import libvirt_xml, virsh, utils_libvirtd
 try:
@@ -40,7 +41,7 @@ def nodeset_parser(nodeset):
             for nodeset in nodeset_list:
                 if "-" in nodeset:
                     tmp = re.split("-", nodeset)
-                    hyphens = hyphens + range(int(tmp[0]), int(tmp[-1])+1)
+                    hyphens = hyphens + range(int(tmp[0]), int(tmp[-1]) + 1)
                 elif "^" in nodeset:
                     tmp = re.split(r"\^", nodeset)[-1]
                     carets.append(int(tmp))
@@ -52,7 +53,7 @@ def nodeset_parser(nodeset):
                                       "integer. (%s)", nodeset)
         elif "-" in nodeset:
             tmp = re.split("-", nodeset)
-            hyphens = range(int(tmp[0]), int(tmp[-1])+1)
+            hyphens = range(int(tmp[0]), int(tmp[-1]) + 1)
         elif "^" in nodeset:
             tmp = re.split("^", nodeset)[-1]
             carets.append(int(tmp))
@@ -79,8 +80,8 @@ def check_numatune_xml(params):
     #--config option will act after vm shutdown.
     if options == "config":
         virsh.shutdown(vm_name)
-    #The verification of the numa params should
-    #be done when vm is running.
+    # The verification of the numa params should
+    # be done when vm is running.
     if not virsh.is_alive(vm_name):
         virsh.start(vm_name)
 
@@ -90,7 +91,7 @@ def check_numatune_xml(params):
         return False
 
     mode_from_xml = numa_params['mode']
-    #if the placement is auto, there is no nodeset in numa param.
+    # if the placement is auto, there is no nodeset in numa param.
     try:
         nodeset_from_xml = numa_params['nodeset']
     except KeyError():
@@ -178,7 +179,8 @@ def set_numa_parameter(params):
     elif status_error == "no":
         if status:
             if len(nodeset_parser(nodeset)) > num_numa_nodes():
-                raise error.TestNAError("Host does not support requested nodeset")
+                raise error.TestNAError(
+                    "Host does not support requested nodeset")
             else:
                 raise error.TestFail(result.stderr)
         else:
@@ -225,7 +227,7 @@ def run_virsh_numatune(test, params, env):
     if start_vm == "no" and vm.is_alive():
         vm.destroy()
 
-    ########## positive and negative testing #########
+    # positive and negative testing #########
 
     try:
         if status_error == "no":
@@ -245,7 +247,7 @@ def run_virsh_numatune(test, params, env):
             utils_libvirtd.libvirtd_restart()
         # Recover previous running guest
         if cgconfig == "off" and libvirtd == "restart" \
-            and not vm.is_alive() and start_vm == "yes":
+                and not vm.is_alive() and start_vm == "yes":
             vm.start()
         if status_error == "yes":
             if change_parameters == "no":

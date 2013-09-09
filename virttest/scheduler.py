@@ -1,8 +1,12 @@
-import os, select
-import utils_env, virt_vm, aexpect
+import os
+import select
+import utils_env
+import virt_vm
+import aexpect
 
 
 class scheduler:
+
     """
     A scheduler that manages several parallel test execution pipelines on a
     single host.
@@ -34,7 +38,6 @@ class scheduler:
         # specifically to each worker.  For example, each worker must use a
         # different environment file and a different MAC address pool.
         self.worker_dicts = [{"env": "env%d" % i} for i in range(num_workers)]
-
 
     def worker(self, index, run_test_func):
         """
@@ -87,7 +90,6 @@ class scheduler:
             elif cmd[0] == "terminate":
                 break
 
-
     def scheduler(self):
         """
         The scheduler function.
@@ -125,7 +127,8 @@ class scheduler:
                     test = self.tests[test_index]
                     status = int(eval(msg[2]))
                     test_status[test_index] = ("fail", "pass")[status]
-                    # If the test failed, mark all dependent tests as "failed" too
+                    # If the test failed, mark all dependent tests as "failed"
+                    # too
                     if not status:
                         for i, other_test in enumerate(self.tests):
                             for dep in other_test.get("dep", []):

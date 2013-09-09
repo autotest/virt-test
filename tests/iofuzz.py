@@ -1,4 +1,6 @@
-import logging, re, random
+import logging
+import re
+import random
 from autotest.client.shared import error
 from virttest import aexpect
 
@@ -38,7 +40,6 @@ def run_iofuzz(test, params, env):
         except aexpect.ShellError, e:
             logging.debug(e)
 
-
     def inb(session, port):
         """
         Read from a given port.
@@ -52,7 +53,6 @@ def run_iofuzz(test, params, env):
             session.cmd(inb_cmd)
         except aexpect.ShellError, e:
             logging.debug(e)
-
 
     def fuzz(session, inst_list):
         """
@@ -87,7 +87,6 @@ def run_iofuzz(test, params, env):
                     raise error.TestFail("VM has quit abnormally during "
                                          "%s: %s" % (op, operand))
 
-
     login_timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -102,7 +101,7 @@ def run_iofuzz(test, params, env):
         logging.debug(ioports)
         devices = re.findall("(\w+)-(\w+)\ : (.*)", ioports)
 
-        skip_devices = params.get("skip_devices","")
+        skip_devices = params.get("skip_devices", "")
         fuzz_count = int(params.get("fuzz_count", 10))
 
         for (beg, end, name) in devices:
@@ -128,7 +127,7 @@ def run_iofuzz(test, params, env):
             # Write random values to random ports of the range
             for _ in range(fuzz_count * (end - beg + 1)):
                 inst.append(("write",
-                             [r.randint(beg, end), r.randint(0,255)]))
+                             [r.randint(beg, end), r.randint(0, 255)]))
 
             fuzz(session, inst)
 

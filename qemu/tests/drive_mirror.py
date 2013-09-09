@@ -1,9 +1,12 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import utils_misc, storage
 from qemu.tests import block_copy
 
+
 class DriveMirror(block_copy.BlockCopy):
+
     """
     base class for block mirror tests;
     """
@@ -71,7 +74,7 @@ class DriveMirror(block_copy.BlockCopy):
             ret = (device == self.device)
             if self.vm.monitor.protocol == "qmp":
                 ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
-            return  ret
+            return ret
 
         error.context("reopen new target image", logging.info)
         if self.vm.monitor.protocol == "qmp":
@@ -105,7 +108,7 @@ class DriveMirror(block_copy.BlockCopy):
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_READY")
         steady = utils_misc.wait_for(self.is_steady, step=2.0,
-                                         timeout=timeout)
+                                     timeout=timeout)
         if not steady:
             raise error.TestFail("Wait mirroring job ready "
                                  "timeout in %ss" % timeout)
@@ -134,6 +137,7 @@ class DriveMirror(block_copy.BlockCopy):
         run steps after reopened new target image;
         """
         return self.do_steps("after_reopen")
+
 
 def run_drive_mirror(test, params, env):
     pass

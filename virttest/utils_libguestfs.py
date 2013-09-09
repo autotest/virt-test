@@ -2,14 +2,17 @@
 libguestfs tools test utility functions.
 """
 
-import logging, signal
+import logging
+import signal
 
 from autotest.client import os_dep, utils
 from autotest.client.shared import error
-import aexpect, propcan
+import aexpect
+import propcan
 
 
 class LibguestfsCmdError(Exception):
+
     """
     Error of libguestfs-tool command.
     """
@@ -17,7 +20,6 @@ class LibguestfsCmdError(Exception):
     def __init__(self, details=''):
         self.details = details
         Exception.__init__(self)
-
 
     def __str__(self):
         return str(self.details)
@@ -41,7 +43,8 @@ def lgf_cmd_check(cmd):
                        'virt-win-reg']
 
     if not (cmd in libguestfs_cmds):
-        raise LibguestfsCmdError("Command %s is not supported by libguestfs yet." % cmd)
+        raise LibguestfsCmdError(
+            "Command %s is not supported by libguestfs yet." % cmd)
 
     try:
         return os_dep.command(cmd)
@@ -62,7 +65,7 @@ def lgf_command(cmd, ignore_status=True, debug=False, timeout=60):
     if debug:
         logging.debug("Running command %s in debug mode.", cmd)
 
-    # Raise exception if ignore_status == False
+    # Raise exception if ignore_status is False
     try:
         ret = utils.run(cmd, ignore_status=ignore_status,
                         verbose=debug, timeout=timeout)
@@ -79,6 +82,7 @@ def lgf_command(cmd, ignore_status=True, debug=False, timeout=60):
 
 
 class LibguestfsBase(propcan.PropCanBase):
+
     """
     Base class of libguestfs tools.
     """
@@ -95,7 +99,6 @@ class LibguestfsBase(propcan.PropCanBase):
         init_dict['lgf_exec'] = lgf_exec
         super(LibguestfsBase, self).__init__(init_dict)
 
-
     def set_ignore_status(self, ignore_status):
         """
         Enforce setting ignore_status as a boolean.
@@ -104,7 +107,6 @@ class LibguestfsBase(propcan.PropCanBase):
             self.dict_set('ignore_status', True)
         else:
             self.dict_set('ignore_status', False)
-
 
     def set_debug(self, debug):
         """
@@ -123,7 +125,6 @@ class LibguestfsBase(propcan.PropCanBase):
                 self.dict_set('debug', False)
                 logging.debug("Libguestfs debugging disabled")
 
-
     def set_timeout(self, timeout):
         """
         Accessor method for 'timeout' property, timeout should be digit
@@ -136,7 +137,6 @@ class LibguestfsBase(propcan.PropCanBase):
                 self.dict_set('timeout', timeout)
             except ValueError:
                 logging.debug("Set timeout failed.")
-
 
     def get_uri(self):
         """
@@ -154,6 +154,7 @@ class LibguestfsBase(propcan.PropCanBase):
 # 2.guestfs module provided in system libguestfs package
 
 class Guestfish(LibguestfsBase):
+
     """
     Execute guestfish, using a new guestfish shell each time.
     """
@@ -194,7 +195,6 @@ class Guestfish(LibguestfsBase):
 
         super(Guestfish, self).__init__(guestfs_exec)
 
-
     def complete_cmd(self, command):
         """
         Execute built-in command in a complete guestfish command
@@ -213,6 +213,7 @@ class Guestfish(LibguestfsBase):
 
 
 class GuestfishSession(aexpect.ShellSession):
+
     """
     A shell session of guestfish.
     """
@@ -233,7 +234,6 @@ class GuestfishSession(aexpect.ShellSession):
         super(GuestfishSession, self).__init__(guestfs_exec, a_id,
                                                prompt=prompt,
                                                auto_close=False)
-
 
     def cmd_status_output(self, cmd, timeout=60, internal_timeout=None,
                           print_func=None):
@@ -260,19 +260,19 @@ class GuestfishSession(aexpect.ShellSession):
                 return 1, out
         return 0, out
 
-
     def cmd_result(self, cmd, ignore_status=False):
         """Mimic utils.run()"""
         exit_status, stdout = self.cmd_status_output(cmd)
-        stderr = '' # no way to retrieve this separately
+        stderr = ''  # no way to retrieve this separately
         result = utils.CmdResult(cmd, stdout, stderr, exit_status)
         if not ignore_status and exit_status:
             raise error.CmdError(cmd, result,
-                  "Guestfish Command returned non-zero exit status")
+                                 "Guestfish Command returned non-zero exit status")
         return result
 
 
 class GuestfishPersistent(Guestfish):
+
     """
     Execute operations using persistent guestfish session.
     """
@@ -299,7 +299,6 @@ class GuestfishPersistent(Guestfish):
             logging.debug("Persistent guestfish session is not responding.")
             raise aexpect.ShellStatusError(self.lgf_exec, 'is-ready')
 
-
     def close_session(self):
         """
         If a persistent session exists, close it down.
@@ -314,7 +313,7 @@ class GuestfishPersistent(Guestfish):
             except aexpect.ShellProcessTerminatedError:
                 self.__class__.SESSION_COUNTER -= 1
                 self.dict_del('session_id')
-                return # guestfish session was closed normally
+                return  # guestfish session was closed normally
             # Close with 'quit' did not respond
             # So close with aexpect functions
             if existing.is_alive():
@@ -328,15 +327,14 @@ class GuestfishPersistent(Guestfish):
                 self.dict_del('session_id')
         except LibguestfsCmdError:
             # Allow other exceptions to be raised
-            pass # session was closed already
-
+            pass  # session was closed already
 
     def new_session(self):
         """
         Open new session, closing any existing
         """
         # Accessors may call this method, avoid recursion
-        guestfs_exec = self.dict_get('lgf_exec') # Must exist, can't be None
+        guestfs_exec = self.dict_get('lgf_exec')  # Must exist, can't be None
         self.close_session()
         # Always create new session
         new_session = GuestfishSession(guestfs_exec)
@@ -344,7 +342,6 @@ class GuestfishPersistent(Guestfish):
         self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
         self.dict_set('session_id', session_id)
-
 
     def open_session(self):
         """
@@ -359,10 +356,9 @@ class GuestfishPersistent(Guestfish):
                     # session was already closed
                     self.dict_del('session_id')
                     raise LibguestfsCmdError(
-                          "Open session '%s' failed." % session_id)
+                        "Open session '%s' failed." % session_id)
         except KeyError:
             raise LibguestfsCmdError("No session id.")
-
 
     # Inner command for guestfish should be executed in a guestfish session
     def inner_cmd(self, command):
@@ -376,7 +372,6 @@ class GuestfishPersistent(Guestfish):
         ignore_status = self.dict_get('ignore_status')
         return session.cmd_result(command, ignore_status=ignore_status)
 
-
     def add_drive(self, filename):
         """
         add-drive - add an image to examine or modify
@@ -386,7 +381,6 @@ class GuestfishPersistent(Guestfish):
         being detected automatically.
         """
         return self.inner_cmd("add-drive %s" % filename)
-
 
     def add_drive_opts(self, filename, readonly=False, format=None,
                        iface=None, name=None):
@@ -411,7 +405,6 @@ class GuestfishPersistent(Guestfish):
 
         return self.inner_cmd(cmd)
 
-
     def add_drive_ro(self, filename):
         """
         add-ro/add-drive-ro - add a drive in snapshot mode (read-only)
@@ -421,7 +414,6 @@ class GuestfishPersistent(Guestfish):
         disk is added read-only, with the format being detected automatically.
         """
         return self.inner_cmd("add-drive-ro %s" % filename)
-
 
     def add_domain(self, domain, libvirturi=None, readonly=False, iface=None,
                    live=False, allowuuid=False, readonlydisk=None):
@@ -452,7 +444,6 @@ class GuestfishPersistent(Guestfish):
 
         return self.inner_cmd(cmd)
 
-
     def run(self):
         """
         run/launch - launch the qemu subprocess
@@ -462,7 +453,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("launch")
 
-
     def df(self):
         """
         df - report file system disk space usage
@@ -470,7 +460,6 @@ class GuestfishPersistent(Guestfish):
         This command runs the "df" command to report disk space used.
         """
         return self.inner_cmd("df")
-
 
     def list_partitions(self):
         """
@@ -480,7 +469,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("list-partitions")
 
-
     def mount(self, device, mountpoint):
         """
         mount - mount a guest disk at a position in the filesystem
@@ -488,7 +476,6 @@ class GuestfishPersistent(Guestfish):
         Mount a guest disk at a position in the filesystem.
         """
         return self.inner_cmd("mount %s %s" % (device, mountpoint))
-
 
     def mount_ro(self, device, mountpoint):
         """
@@ -499,7 +486,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("mount-ro %s %s" % (device, mountpoint))
 
-
     def mount_options(self, options, device, mountpoint):
         """
         mount - mount a guest disk at a position in the filesystem
@@ -508,7 +494,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("mount %s %s %s" % (options, device, mountpoint))
 
-
     def mounts(self):
         """
         mounts - show mounted filesystems
@@ -516,7 +501,6 @@ class GuestfishPersistent(Guestfish):
         This returns the list of currently mounted filesystems.
         """
         return self.inner_cmd("mounts")
-
 
     def mountpoints(self):
         """
@@ -527,7 +511,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("mountpoints")
 
-
     def read_file(self, path):
         """
         read-file - read a file
@@ -536,7 +519,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("read-file %s" % path)
 
-
     def cat(self, path):
         """
         cat - list the contents of a file
@@ -544,7 +526,6 @@ class GuestfishPersistent(Guestfish):
         Return the contents of the file named "path".
         """
         return self.inner_cmd("cat %s" % path)
-
 
     def write(self, path, content):
         """
@@ -555,7 +536,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("write %s %s" % (path, content))
 
-
     def write_append(self, path, content):
         """
         write-append - append content to end of file
@@ -564,7 +544,6 @@ class GuestfishPersistent(Guestfish):
         If "path" does not exist, then a new file is created.
         """
         return self.inner_cmd("write-append %s %s" % (path, content))
-
 
     def inspect_os(self):
         """
@@ -576,7 +555,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("inspect-os")
 
-
     def list_filesystems(self):
         """
         list-filesystems - list filesystems
@@ -587,7 +565,6 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("list-filesystems")
 
-
     def list_devices(self):
         """
         list-devices - list the block devices
@@ -597,9 +574,7 @@ class GuestfishPersistent(Guestfish):
         return self.inner_cmd("list-devices")
 
 
-
-##### libguestfs module functions follow #####
-
+# libguestfs module functions follow #####
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
                            timeoutarg=None, ignore_status=True,
                            debug=False, timeout=60):

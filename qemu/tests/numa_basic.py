@@ -53,8 +53,8 @@ def run_numa_basic(test, params, env):
                           " %s" % (memory_status[index], node_list[index]))
         if node_used_most != node_id:
             raise error.TestFail("Qemu still use memory from other node."
-                                  " Expect: %s, used: %s" % (node_id,
-                                                             node_used_most))
+                                 " Expect: %s, used: %s" % (node_id,
+                                                            node_used_most))
 
         error.context("Destroy guest.", logging.info)
         vm.destroy()

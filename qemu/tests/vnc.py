@@ -1,19 +1,25 @@
-import logging, time, socket, struct, random
+import logging
+import time
+import socket
+import struct
+import random
 from autotest.client.shared import error
 from virttest import utils_misc
 from virttest.RFBDes import Des
 
+
 class VNC(object):
+
     """
     Simple VNC client which can only connect to and authenticate with
     vnc server.
     """
+
     def __init__(self, host="localhost", port="5900", rfb_version="3.8"):
         self.sock = socket.socket()
         self.sock.settimeout(5)
         self.sock.connect((host, int(port)))
         self.rfb_version = rfb_version
-
 
     def hand_shake(self, password=None):
         """
@@ -24,7 +30,7 @@ class VNC(object):
         logging.debug("Handshake with rfb protocol version: %s",
                       self.rfb_version)
         rfb_version = "RFB 00%s.00%s\n" % (self.rfb_version.split(".")[0],
-                                          self.rfb_version.split(".")[1])
+                                           self.rfb_version.split(".")[1])
         self.sock.send(rfb_version)
         if self.rfb_version != "3.3":
             rec = self.sock.recv(1)
@@ -72,7 +78,6 @@ class VNC(object):
             elif status == 0:
                 return True
 
-
     def initialize(self, shared_flag=0):
         """
         Dealing with VNC initial message.
@@ -80,13 +85,12 @@ class VNC(object):
         (shared_flag, ) = struct.pack('!B', shared_flag)
         self.sock.send(shared_flag)
         rec = self.sock.recv(24)
-        (width, height, pixformat, name_len) = struct.unpack('!HH16sI',rec)
+        (width, height, pixformat, name_len) = struct.unpack('!HH16sI', rec)
         (bits_per_pixel, depth, big_endian, true_color,
          red_max, green_max, blue_max, red_shift, green_shift,
          blue_shift) = struct.unpack("!BBBBHHHBBBxxx", pixformat)
         server_name = self.sock.recv(name_len)
         logging.info("vnc server name: %s", server_name)
-
 
     def close(self):
         self.sock.close()

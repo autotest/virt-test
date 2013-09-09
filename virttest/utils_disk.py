@@ -3,7 +3,13 @@ Virtualization test - Virtual disk related utility functions
 
 @copyright: Red Hat Inc.
 """
-import os, glob, shutil, tempfile, logging, ConfigParser,re
+import os
+import glob
+import shutil
+import tempfile
+import logging
+import ConfigParser
+import re
 from autotest.client import utils
 from autotest.client.shared import error
 
@@ -48,16 +54,16 @@ def clean_old_image(image):
 
 
 class Disk(object):
+
     """
     Abstract class for Disk objects, with the common methods implemented.
     """
+
     def __init__(self):
         self.path = None
 
-
     def get_answer_file_path(self, filename):
         return os.path.join(self.mount, filename)
-
 
     def copy_to(self, src):
         logging.debug("Copying %s to disk image mount", src)
@@ -67,7 +73,6 @@ class Disk(object):
         elif os.path.isfile(src):
             shutil.copyfile(src, dst)
 
-
     def close(self):
         os.chmod(self.path, 0755)
         cleanup(self.mount)
@@ -75,6 +80,7 @@ class Disk(object):
 
 
 class FloppyDisk(Disk):
+
     """
     Represents a floppy disk. We can copy files to it, and setup it in
     convenient ways.
@@ -97,7 +103,6 @@ class FloppyDisk(Disk):
             cleanup(self.mount)
             raise
 
-
     def close(self):
         """
         Copy everything that is in the mountpoint to the floppy.
@@ -113,12 +118,10 @@ class FloppyDisk(Disk):
 
         cleanup(self.mount)
 
-
     def copy_to(self, src):
         logging.debug("Copying %s to floppy image", src)
         mcopy_cmd = "mcopy -s -o -n -i %s %s ::/" % (self.path, src)
         utils.run(mcopy_cmd, verbose=DEBUG)
-
 
     def _copy_virtio_drivers(self, virtio_floppy):
         """
@@ -129,11 +132,11 @@ class FloppyDisk(Disk):
         """
         pwd = os.getcwd()
         try:
-            m_cmd = 'mcopy -s -o -n -i %s ::/* %s' % (virtio_floppy, self.mount)
+            m_cmd = 'mcopy -s -o -n -i %s ::/* %s' % (
+                virtio_floppy, self.mount)
             utils.run(m_cmd, verbose=DEBUG)
         finally:
             os.chdir(pwd)
-
 
     def setup_virtio_win2003(self, virtio_floppy, virtio_oemsetup_id):
         """
@@ -171,7 +174,6 @@ class FloppyDisk(Disk):
             parser.write(fp)
             fp.close()
 
-
     def setup_virtio_win2008(self, virtio_floppy):
         """
         Setup the install floppy with the virtio storage drivers, win2008 style.
@@ -188,20 +190,22 @@ class FloppyDisk(Disk):
         if os.path.isfile(virtio_floppy):
             self._copy_virtio_drivers(virtio_floppy)
         else:
-            logging.debug("No virtio floppy present, not needed for this OS anyway")
+            logging.debug(
+                "No virtio floppy present, not needed for this OS anyway")
 
 
 class CdromDisk(Disk):
+
     """
     Represents a CDROM disk that we can master according to our needs.
     """
+
     def __init__(self, path, tmpdir):
         self.mount = tempfile.mkdtemp(prefix='cdrom_virttest_', dir=tmpdir)
         self.path = path
         clean_old_image(path)
         if not os.path.isdir(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
-
 
     @error.context_aware
     def close(self):
@@ -218,9 +222,11 @@ class CdromDisk(Disk):
 
 
 class CdromInstallDisk(Disk):
+
     """
     Represents a install CDROM disk that we can master according to our needs.
     """
+
     def __init__(self, path, tmpdir, source_cdrom, extra_params):
         self.mount = tempfile.mkdtemp(prefix='cdrom_unattended_', dir=tmpdir)
         self.path = path
@@ -238,10 +244,8 @@ class CdromInstallDisk(Disk):
                        os.path.join(self.mount, i))
         utils.run(cp_cmd)
 
-
     def get_answer_file_path(self, filename):
         return os.path.join(self.mount, 'isolinux', filename)
-
 
     @error.context_aware
     def close(self):
@@ -262,6 +266,7 @@ class CdromInstallDisk(Disk):
 
 
 class GuestFSModiDisk(object):
+
     """
     class of guest disk using guestfs lib to do some operation(like read/write)
     on guest disk:
@@ -298,7 +303,7 @@ class GuestFSModiDisk(object):
         return self.g.mounts()
 
     def mount_all(self):
-        def compare (a, b):
+        def compare(a, b):
             if len(a[0]) > len(b[0]):
                 return 1
             elif len(a[0]) == len(b[0]):
@@ -321,7 +326,7 @@ class GuestFSModiDisk(object):
         else:
             raise error.TestError("inspect_vm: no operating systems found")
 
-    def umount_all (self):
+    def umount_all(self):
         logging.debug("Umount all device partitions")
         if self.mounts():
             self.g.umount_all()
@@ -365,7 +370,7 @@ class GuestFSModiDisk(object):
                     self.g.write(file_name, content)
             except Exception:
                 raise error.TestError("write '%s' to file '%s' error!"
-                                      % (content, file_name ))
+                                      % (content, file_name))
         finally:
             self.umount_all()
 

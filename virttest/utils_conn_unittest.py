@@ -4,7 +4,9 @@ import os
 import tempfile
 import shutil
 
-import common, utils_conn, data_dir
+import common
+import utils_conn
+import data_dir
 
 
 class UtilsConnTest(unittest.TestCase):
@@ -12,21 +14,21 @@ class UtilsConnTest(unittest.TestCase):
     def test_connbase(self):
         connbase = utils_conn.ConnectionBase()
         self.assertRaises(utils_conn.ConnNotImplementedError,
-                                            connbase.conn_setup)
+                          connbase.conn_setup)
         self.assertRaises(utils_conn.ConnNotImplementedError,
-                                            connbase.conn_check)
+                          connbase.conn_check)
         self.assertRaises(utils_conn.ConnNotImplementedError,
-                                            connbase.conn_recover)
+                          connbase.conn_recover)
 
         self.assertRaises(utils_conn.ConnForbiddenError,
-                        connbase.set_server_session, None)
+                          connbase.set_server_session, None)
         self.assertRaises(utils_conn.ConnForbiddenError,
-                        connbase.set_client_session, None)
+                          connbase.set_client_session, None)
 
         self.assertRaises(utils_conn.ConnForbiddenError,
-                        connbase.del_server_session)
+                          connbase.del_server_session)
         self.assertRaises(utils_conn.ConnForbiddenError,
-                        connbase.del_client_session)
+                          connbase.del_client_session)
 
         self.assertIsNotNone(connbase.tmp_dir)
         tmp_dir = connbase.tmp_dir

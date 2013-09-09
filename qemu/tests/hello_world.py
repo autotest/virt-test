@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client import utils
 from autotest.client.shared import error
 

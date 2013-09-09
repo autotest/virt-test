@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
-import unittest, cPickle, sys
+import unittest
+import cPickle
+import sys
 try:
     import autotest.common as common
 except ImportError:
@@ -34,23 +36,18 @@ class VM(object):
         else:
             return False
 
-
     def __new__(cls, *args, **kargs):
         return super(VM, cls).__new__(cls, *args, **kargs)
-
 
     def __init__(self, *args, **kargs):
         super(VM, self).__init__()
         self.cls = self.__class__.__name__
 
-
     def __str__(self):
         return "%s" % self.cls
 
-
     def func1(self):
         print "VM_func1"
-
 
     def func3(self):
         pass
@@ -58,6 +55,7 @@ class VM(object):
 
 class VM1(VM):
     __slot__ = ["VM1_cls"]
+
     @classmethod
     def _is_right_ver(cls, *args, **kargs):
         ver = None
@@ -75,18 +73,14 @@ class VM1(VM):
         self.cls = self.__class__.__name__
         self.VM1_cls = "VM1"
 
-
     def __str__(self):
         return "%s" % self.cls
-
 
     def func1(self):
         super(VM1, self).func1()
 
-
     def func2(self):
         print "func2"
-
 
     def func3(self):
         pass
@@ -105,10 +99,8 @@ class BB(VM_container):
     def __new__(cls, *args, **kargs):
         return super(man[cls, BB], cls).__new__(cls, *args, **kargs)
 
-
     def func1(self):
         super(man[self.__class__, BB], self).func1()
-
 
     def func2(self):
         super(man[self.__class__, BB], self).func2()
@@ -119,6 +111,7 @@ def system_version():
 
 
 class System(object):
+
     @classmethod
     def _is_right_ver(cls, *args, **kargs):
         ver = None
@@ -131,18 +124,16 @@ class System(object):
         else:
             return False
 
-
     def __init__(self, *args, **kargs):
         super(System, self).__init__()
         self.aa = self.__class__.__name__
-
 
     def __str__(self):
         return "VM1 %s" % self.aa
 
 
-
 class System1(System):
+
     @classmethod
     def _is_right_ver(cls, *args, **kargs):
         ver = None
@@ -159,7 +150,6 @@ class System1(System):
         super(System1, self).__init__(*args, **kargs)
         self.aa = self.__class__.__name__
 
-
     def __str__(self):
         return "VM1 %s" % self.aa
 
@@ -172,6 +162,7 @@ class System_Container(VersionableClass):
 
 
 class Q(object):
+
     @classmethod
     def _is_right_ver(cls, *args, **kargs):
         ver = None
@@ -184,18 +175,16 @@ class Q(object):
         else:
             return False
 
-
     def __init__(self, *args, **kargs):
         super(Q, self).__init__()
         self.cls = self.__class__.__name__
-
 
     def __str__(self):
         return "%s" % self.cls
 
 
-
 class Q1(Q):
+
     @classmethod
     def _is_right_ver(cls, *args, **kargs):
         ver = None
@@ -212,7 +201,6 @@ class Q1(Q):
         super(man[self.__class__, Q1], self).__init__(*args, **kargs)
         self.cls = self.__class__.__name__
 
-
     def __str__(self):
         return "%s" % self.cls
 
@@ -222,6 +210,7 @@ class Q_Container(VersionableClass):
 
 
 class Sys(Q_Container):
+
     @classmethod
     def _is_right_ver(cls, *args, **kargs):
         ver = None
@@ -234,18 +223,16 @@ class Sys(Q_Container):
         else:
             return False
 
-
     def __init__(self, *args, **kargs):
         super(man[self.__class__, Sys], self).__init__(*args, **kargs)
         self.cls = self.__class__.__name__
-
 
     def __str__(self):
         return "%s" % self.cls
 
 
-
 class Sys1(Sys):
+
     @classmethod
     def _is_right_ver(cls, *args, **kargs):
         ver = None
@@ -262,7 +249,6 @@ class Sys1(Sys):
         super(man[self.__class__, Sys1], self).__init__(*args, **kargs)
         self.cls = self.__class__.__name__
 
-
     def __str__(self):
         return "%s" % self.cls
 
@@ -275,21 +261,21 @@ class Sys_Container(VersionableClass):
 
 
 class AA(Sys_Container, BB, System_Container):
+
     def __new__(cls, *args, **kargs):
         return super(man[cls, AA], cls).__new__(cls, *args, **kargs)
 
 
 class TestVersionableClass(unittest.TestCase):
+
     def setUp(self):
         self.god = mock.mock_god(ut=self)
         self.god.stub_function(base_utils.logging, 'warn')
         self.god.stub_function(base_utils.logging, 'debug')
         self.version = 1
 
-
     def tearDown(self):
         self.god.unstub_all()
-
 
     def test_simple_versioning(self):
         self.god.stub_function(VM, "func1")
@@ -305,7 +291,6 @@ class TestVersionableClass(unittest.TestCase):
         mm.func1()   # call VM1.func1(m) -> VM.func1
 
         self.god.check_playback()
-
 
     def test_simple_create_by_params_v0(self):
         def wrap(mm):
@@ -324,7 +309,6 @@ class TestVersionableClass(unittest.TestCase):
 
         self.god.check_playback()
 
-
     def test_simple_create_by_params_v1(self):
         self.god.stub_function(VM, "func3")
         self.god.stub_function(VM1, "func3")
@@ -339,12 +323,10 @@ class TestVersionableClass(unittest.TestCase):
 
         self.god.check_playback()
 
-
     def test_sharing_data_in_same_version(self):
         mm = factory(BB)()
         bb = factory(BB)()
         cc = factory(BB, qemu_version=0)()
-
 
         # Get corespond class in versionable class
         man[bb.__class__, VM].test_class_vm1 = 1
@@ -354,7 +336,7 @@ class TestVersionableClass(unittest.TestCase):
         self.assertEqual(bb.__class__.test_class_vm1,
                          mm.__class__.test_class_vm1)
         self.assertEqual(bb.__class__.test_class_bb,
-                            mm.__class__.test_class_bb)
+                         mm.__class__.test_class_bb)
 
         # In class hierarchy is class which don't have to be versioned
         # because that first value should be equal and second one shouldn't.
@@ -362,8 +344,6 @@ class TestVersionableClass(unittest.TestCase):
                          cc.__class__.test_class_vm1)
         self.assertNotEqual(bb.__class__.test_class_bb,
                             cc.__class__.test_class_bb)
-
-
 
     def test_complicated_versioning(self):
         self.god.stub_function(VM, "func3")
@@ -378,7 +358,6 @@ class TestVersionableClass(unittest.TestCase):
 
         self.god.check_playback()
 
-
     def test_complicated_multiple_create_params(self):
         self.god.stub_function(VM, "func3")
         self.god.stub_function(VM1, "func3")
@@ -391,7 +370,6 @@ class TestVersionableClass(unittest.TestCase):
         mm.func3()   # call VM1.func1(m) -> VM.func1
 
         self.god.check_playback()
-
 
     def test_pickleing(self):
         """

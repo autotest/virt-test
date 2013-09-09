@@ -1,4 +1,5 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import virsh
 
@@ -44,14 +45,13 @@ def run_virsh_schedinfo_xen_credit(test, params, env):
                 break
         return set_value
 
-
-    #Prepare vm test environment
+    # Prepare vm test environment
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)
     domid = vm.get_id()
     domuuid = vm.get_uuid()
 
-    #Prepare test options
+    # Prepare test options
     vm_ref = params.get("schedinfo_vm_ref", "domname")
     options_ref = params.get("schedinfo_options_ref", "")
     options_suffix = params.get("schedinfo_options_suffix", "")
@@ -106,7 +106,7 @@ def run_virsh_schedinfo_xen_credit(test, params, env):
                 logging.info("value will be set:%s\n"
                              "set value in output:%s\n"
                              "expected value:%s" % (set_value,
-                             set_value_of_output, set_value_expected))
+                                                    set_value_of_output, set_value_expected))
                 if set_value_of_output is None:
                     raise error.TestFail("Get parameter %s failed." % set_ref)
                 if not (set_value_expected == set_value_of_output):

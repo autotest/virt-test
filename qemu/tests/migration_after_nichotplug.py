@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import utils_test, virt_vm, utils_net
 
@@ -24,7 +25,6 @@ def run_migration_after_nichotplug(test, params, env):
     @param params: Dictionary with test parameters.
     @param env: Dictionary with the test environment.
     """
-
 
     def set_link(nic_name, up=False):
         for nic in vm.virtnet:

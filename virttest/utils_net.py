@@ -1,9 +1,21 @@
-import openvswitch, re, os, socket, fcntl, struct, logging, random
-import math, time
-import shelve, commands
+import openvswitch
+import re
+import os
+import socket
+import fcntl
+import struct
+import logging
+import random
+import math
+import time
+import shelve
+import commands
 from autotest.client import utils, os_dep
 from autotest.client.shared import error
-import propcan, utils_misc, arch, aexpect
+import propcan
+import utils_misc
+import arch
+import aexpect
 from versionable_class import factory
 
 CTYPES_SUPPORT = True
@@ -14,15 +26,17 @@ except ImportError:
 
 SYSFS_NET_PATH = "/sys/class/net"
 PROCFS_NET_PATH = "/proc/net/dev"
-#globals
+# globals
 sock = None
-sockfd =None
+sockfd = None
+
 
 class NetError(Exception):
     pass
 
 
 class TAPModuleError(NetError):
+
     def __init__(self, devname, action="open", details=None):
         NetError.__init__(self, devname)
         self.devname = devname
@@ -36,6 +50,7 @@ class TAPModuleError(NetError):
 
 
 class TAPNotExistError(NetError):
+
     def __init__(self, ifname):
         NetError.__init__(self, ifname)
         self.ifname = ifname
@@ -45,6 +60,7 @@ class TAPNotExistError(NetError):
 
 
 class TAPCreationError(NetError):
+
     def __init__(self, ifname, details=None):
         NetError.__init__(self, ifname, details)
         self.ifname = ifname
@@ -58,6 +74,7 @@ class TAPCreationError(NetError):
 
 
 class TAPBringUpError(NetError):
+
     def __init__(self, ifname):
         NetError.__init__(self, ifname)
         self.ifname = ifname
@@ -67,6 +84,7 @@ class TAPBringUpError(NetError):
 
 
 class BRAddIfError(NetError):
+
     def __init__(self, ifname, brname, details):
         NetError.__init__(self, ifname, brname, details)
         self.ifname = ifname
@@ -79,6 +97,7 @@ class BRAddIfError(NetError):
 
 
 class BRDelIfError(NetError):
+
     def __init__(self, ifname, brname, details):
         NetError.__init__(self, ifname, brname, details)
         self.ifname = ifname
@@ -91,6 +110,7 @@ class BRDelIfError(NetError):
 
 
 class IfNotInBridgeError(NetError):
+
     def __init__(self, ifname, details):
         NetError.__init__(self, ifname, details)
         self.ifname = ifname
@@ -102,6 +122,7 @@ class IfNotInBridgeError(NetError):
 
 
 class BRNotExistError(NetError):
+
     def __init__(self, brname, details):
         NetError.__init__(self, brname, details)
         self.brname = brname
@@ -112,6 +133,7 @@ class BRNotExistError(NetError):
 
 
 class IfChangeBrError(NetError):
+
     def __init__(self, ifname, old_brname, new_brname, details):
         NetError.__init__(self, ifname, old_brname, new_brname, details)
         self.ifname = ifname
@@ -125,6 +147,7 @@ class IfChangeBrError(NetError):
 
 
 class IfChangeAddrError(NetError):
+
     def __init__(self, ifname, ipaddr, details):
         NetError.__init__(self, ifname, ipaddr, details)
         self.ifname = ifname
@@ -137,6 +160,7 @@ class IfChangeAddrError(NetError):
 
 
 class BRIpError(NetError):
+
     def __init__(self, brname):
         NetError.__init__(self, brname)
         self.brname = brname
@@ -144,10 +168,11 @@ class BRIpError(NetError):
     def __str__(self):
         return ("Bridge %s doesn't have an IP address assigned. It's"
                 " impossible to start dnsmasq for this bridge." %
-                   (self.brname))
+               (self.brname))
 
 
 class HwAddrSetError(NetError):
+
     def __init__(self, ifname, mac):
         NetError.__init__(self, ifname, mac)
         self.ifname = ifname
@@ -158,6 +183,7 @@ class HwAddrSetError(NetError):
 
 
 class HwAddrGetError(NetError):
+
     def __init__(self, ifname):
         NetError.__init__(self, ifname)
         self.ifname = ifname
@@ -167,6 +193,7 @@ class HwAddrGetError(NetError):
 
 
 class VlanError(NetError):
+
     def __init__(self, ifname, details):
         NetError.__init__(self, ifname, details)
         self.ifname = ifname
@@ -178,12 +205,14 @@ class VlanError(NetError):
 
 
 class VMNetError(NetError):
+
     def __str__(self):
         return ("VMNet instance items must be dict-like and contain "
                 "a 'nic_name' mapping")
 
 
 class DbNoLockError(NetError):
+
     def __str__(self):
         return "Attempt made to access database with improper locking"
 
@@ -198,10 +227,11 @@ def warp_init_del(func):
             globals()["sock"].close()
             globals()["sock"] = None
             globals()["sockfd"] = None
-    return  new_func
+    return new_func
 
 
 class Interface(object):
+
     ''' Class representing a Linux network device. '''
 
     def __init__(self, name):
@@ -264,7 +294,7 @@ class Interface(object):
         '''
         Obtain the device's mac address.
         '''
-        ifreq = struct.pack('16sH14s', self.name, socket.AF_UNIX, '\x00'*14)
+        ifreq = struct.pack('16sH14s', self.name, socket.AF_UNIX, '\x00' * 14)
         res = fcntl.ioctl(sockfd, arch.SIOCGIFHWADDR, ifreq)
         address = struct.unpack('16sH14s', res)[2]
         mac = struct.unpack('6B8x', address)
@@ -286,7 +316,7 @@ class Interface(object):
         """
         Get ip address of this interface
         """
-        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00'*14)
+        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00' * 14)
         try:
             res = fcntl.ioctl(sockfd, arch.SIOCGIFADDR, ifreq)
         except IOError:
@@ -302,7 +332,7 @@ class Interface(object):
         """
         ipbytes = socket.inet_aton(newip)
         ifreq = struct.pack('16sH2s4s8s', self.name,
-                            socket.AF_INET, '\x00'*2, ipbytes, '\x00'*8)
+                            socket.AF_INET, '\x00' * 2, ipbytes, '\x00' * 8)
         fcntl.ioctl(sockfd, arch.SIOCSIFADDR, ifreq)
 
     @warp_init_del
@@ -311,8 +341,9 @@ class Interface(object):
         Get ip network netmask
         """
         if not CTYPES_SUPPORT:
-            raise error.TestNAError("Getting the netmask requires python > 2.4")
-        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00'*14)
+            raise error.TestNAError(
+                "Getting the netmask requires python > 2.4")
+        ifreq = struct.pack('16sH14s', self.name, socket.AF_INET, '\x00' * 14)
         try:
             res = fcntl.ioctl(sockfd, arch.SIOCGIFNETMASK, ifreq)
         except IOError:
@@ -327,11 +358,12 @@ class Interface(object):
         Set netmask
         """
         if not CTYPES_SUPPORT:
-            raise error.TestNAError("Setting the netmask requires python > 2.4")
+            raise error.TestNAError(
+                "Setting the netmask requires python > 2.4")
         netmask = ctypes.c_uint32(~((2 ** (32 - netmask)) - 1)).value
         nmbytes = socket.htonl(netmask)
         ifreq = struct.pack('16sH2si8s', self.name,
-                            socket.AF_INET, '\x00'*2, nmbytes, '\x00'*8)
+                            socket.AF_INET, '\x00' * 2, nmbytes, '\x00' * 8)
         fcntl.ioctl(sockfd, arch.SIOCSIFNETMASK, ifreq)
 
     @warp_init_del
@@ -384,30 +416,28 @@ class Interface(object):
 
 
 class Macvtap(Interface):
+
     """
     class of macvtap, base Interface
     """
+
     def __init__(self, tapname=None):
-        if tapname == None:
+        if tapname is None:
             self.tapname = "macvtap" + utils_misc.generate_random_id()
         else:
             self.tapname = tapname
         Interface.__init__(self, self.tapname)
 
-
     def get_tapname(self):
         return self.tapname
 
-
     def get_device(self):
-        return "/dev/tap%s" %  self.get_index()
-
+        return "/dev/tap%s" % self.get_index()
 
     def ip_link_ctl(self, params, ignore_status=False):
         return utils.run(os_dep.command("ip"), timeout=10,
                          ignore_status=ignore_status, verbose=False,
                          args=params)
-
 
     def create(self, device, mode="vepa"):
         """
@@ -421,14 +451,12 @@ class Macvtap(Interface):
             return
 
         self.ip_link_ctl(["link", "add", "link", device, "name",
-                          self.tapname,"type", "macvtap", "mode", mode])
-
+                          self.tapname, "type", "macvtap", "mode", mode])
 
     def delete(self):
         path = os.path.join(SYSFS_NET_PATH, self.tapname)
         if os.path.exists(path):
             self.ip_link_ctl(["link", "delete", self.tapname])
-
 
     def open(self):
         device = self.get_device()
@@ -481,8 +509,8 @@ def add_nic_macvtap(nic, base_interface=None):
     tap.up()
 
 
-
 class Bridge(object):
+
     def get_structure(self):
         """
         Get bridge list.
@@ -517,10 +545,8 @@ class Bridge(object):
 
         return result
 
-
     def list_br(self):
         return self.get_structure().keys()
-
 
     def port_to_br(self, port_name):
         """
@@ -535,7 +561,6 @@ class Bridge(object):
                 bridge = br
         return bridge
 
-
     def _br_ioctl(self, io_cmd, brname, ifname):
         ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
         index = if_nametoindex(ifname)
@@ -544,7 +569,6 @@ class Bridge(object):
         ifr = struct.pack("16si", brname, index)
         _ = fcntl.ioctl(ctrl_sock, io_cmd, ifr)
         ctrl_sock.close()
-
 
     def add_port(self, brname, ifname):
         """
@@ -557,7 +581,6 @@ class Bridge(object):
             self._br_ioctl(arch.SIOCBRADDIF, brname, ifname)
         except IOError, details:
             raise BRAddIfError(ifname, brname, details)
-
 
     def del_port(self, brname, ifname):
         """
@@ -592,7 +615,7 @@ def __init_openvswitch(func):
     return wrap_init
 
 
-#Global variable for OpenVSwitch
+# Global variable for OpenVSwitch
 __ovs = None
 __bridge = Bridge()
 
@@ -611,6 +634,7 @@ def if_nametoindex(ifname):
     ctrl_sock.close()
     return index
 
+
 def vnet_mq_probe(tapfd):
     """
     Check if the IFF_MULTI_QUEUE is support by tun.
@@ -628,6 +652,7 @@ def vnet_mq_probe(tapfd):
         return True
     else:
         return False
+
 
 def vnet_hdr_probe(tapfd):
     """
@@ -940,13 +965,13 @@ def add_to_bridge(ifname, brname, ovs=None):
         _ifname = ifname.ifname
 
     if brname in __bridge.list_br():
-        #Try add port to standard bridge or openvswitch in compatible mode.
+        # Try add port to standard bridge or openvswitch in compatible mode.
         __bridge.add_port(brname, _ifname)
         return
 
     if ovs is None:
         raise BRAddIfError(ifname, brname, "There is no bridge in system.")
-    #Try add port to OpenVSwitch bridge.
+    # Try add port to OpenVSwitch bridge.
     if brname in ovs.list_br():
         ovs.add_port(brname, ifname)
 
@@ -973,11 +998,11 @@ def del_from_bridge(ifname, brname, ovs=None):
         raise BRDelIfError(ifname, brname, "There is no bridge in system.")
 
     if brname in __bridge.list_br():
-        #Try add port to standard bridge or openvswitch in compatible mode.
+        # Try add port to standard bridge or openvswitch in compatible mode.
         __bridge.del_port(brname, _ifname)
         return
 
-    #Try add port to OpenVSwitch bridge.
+    # Try add port to OpenVSwitch bridge.
     if brname in ovs.list_br():
         ovs.del_port(brname, _ifname)
 
@@ -1042,6 +1067,7 @@ def if_set_macaddress(ifname, mac):
 
 
 class VirtIface(propcan.PropCan):
+
     """
     Networking information for single guest interface and host connection.
     """
@@ -1060,10 +1086,8 @@ class VirtIface(propcan.PropCan):
                 state[key] = self[key]
         return state
 
-
     def __setstate__(self, state):
         self.__init__(state)
-
 
     @classmethod
     def name_is_valid(cls, nic_name):
@@ -1075,15 +1099,13 @@ class VirtIface(propcan.PropCan):
         except (TypeError, KeyError, AttributeError):
             return False
 
-
     @classmethod
     def mac_is_valid(cls, mac):
         try:
             mac = cls.mac_str_to_int_list(mac)
         except TypeError:
             return False
-        return True # Though may be less than 6 bytes
-
+        return True  # Though may be less than 6 bytes
 
     @classmethod
     def mac_str_to_int_list(cls, mac):
@@ -1094,8 +1116,8 @@ class VirtIface(propcan.PropCan):
             mac = mac.split(':')
         # strip off any trailing empties
         for rindex in xrange(len(mac), 0, -1):
-            if not mac[rindex-1].strip():
-                del mac[rindex-1]
+            if not mac[rindex - 1].strip():
+                del mac[rindex - 1]
             else:
                 break
         try:
@@ -1114,9 +1136,8 @@ class VirtIface(propcan.PropCan):
         except AssertionError:
             raise TypeError("%s %s is not a valid MAC format "
                             "string or list" % (str(mac.__class__),
-                             str(mac)))
+                                                str(mac)))
         return mac
-
 
     @classmethod
     def int_list_to_mac_str(cls, mac_bytes):
@@ -1132,7 +1153,6 @@ class VirtIface(propcan.PropCan):
                 mac_bytes[byte_index] = "%x" % mac
         return mac_bytes
 
-
     @classmethod
     def generate_bytes(cls):
         """
@@ -1142,7 +1162,6 @@ class VirtIface(propcan.PropCan):
         if cls.LASTBYTE > 0xff:
             cls.LASTBYTE = 0
         yield cls.LASTBYTE
-
 
     @classmethod
     def complete_mac_address(cls, mac):
@@ -1161,6 +1180,7 @@ class VirtIface(propcan.PropCan):
 
 
 class LibvirtIface(VirtIface):
+
     """
     Networking information specific to libvirt
     """
@@ -1168,6 +1188,7 @@ class LibvirtIface(VirtIface):
 
 
 class QemuIface(VirtIface):
+
     """
     Networking information specific to Qemu
     """
@@ -1179,6 +1200,7 @@ class QemuIface(VirtIface):
 
 
 class VMNet(list):
+
     """
     Collection of networking information.
     """
@@ -1194,7 +1216,7 @@ class VMNet(list):
         Initialize from list-like virtiface_list using container_class
         """
         if container_class != VirtIface and (
-                        not issubclass(container_class, VirtIface)):
+                not issubclass(container_class, VirtIface)):
             raise TypeError("Container class must be Base_VirtIface "
                             "or subclass not a %s" % str(container_class))
         self.container_class = container_class
@@ -1205,20 +1227,16 @@ class VMNet(list):
         else:
             raise VMNetError
 
-
     def __getstate__(self):
         return [nic for nic in self]
 
-
     def __setstate__(self, state):
         VMNet.__init__(self, self.container_class, state)
-
 
     def __getitem__(self, index_or_name):
         if isinstance(index_or_name, str):
             index_or_name = self.nic_name_index(index_or_name)
         return super(VMNet, self).__getitem__(index_or_name)
-
 
     def __setitem__(self, index_or_name, value):
         if not isinstance(value, dict):
@@ -1232,18 +1250,16 @@ class VMNet(list):
         else:
             raise VMNetError
 
-
     def __delitem__(self, index_or_name):
         if isinstance(index_or_name, str):
             index_or_name = self.nic_name_index(index_or_name)
         super(VMNet, self).__delitem__(index_or_name)
 
-
     def subclass_pre_init(self, params, vm_name):
         """
         Subclasses must establish style before calling VMNet. __init__()
         """
-        #TODO: Get rid of this function.  it's main purpose is to provide
+        # TODO: Get rid of this function.  it's main purpose is to provide
         # a shared way to setup style (container_class) from params+vm_name
         # so that unittests can run independently for each subclass.
         self.vm_name = vm_name
@@ -1251,9 +1267,8 @@ class VMNet(list):
         self.vm_type = self.params.get('vm_type', 'default')
         self.driver_type = self.params.get('driver_type', 'default')
         for key, value in VMNetStyle(self.vm_type,
-                                    self.driver_type).items():
+                                     self.driver_type).items():
             setattr(self, key, value)
-
 
     def process_mac(self, value):
         """
@@ -1263,10 +1278,10 @@ class VMNet(list):
         if mac:
             mac = value['mac'] = value['mac'].lower()
             if len(mac.split(':')
-                            ) == 6 and self.container_class.mac_is_valid(mac):
+                   ) == 6 and self.container_class.mac_is_valid(mac):
                 return
             else:
-                del value['mac'] # don't store invalid macs
+                del value['mac']  # don't store invalid macs
                 # Notify user about these, but don't go crazy
                 if self.__class__.DISCARD_WARNINGS >= 0:
                     logging.warning('Discarded invalid mac "%s" for nic "%s" '
@@ -1276,24 +1291,21 @@ class VMNet(list):
                                        self.__class__.DISCARD_WARNINGS))
                     self.__class__.DISCARD_WARNINGS -= 1
 
-
     def mac_list(self):
         """
         Return a list of all mac addresses used by defined interfaces
         """
         return [nic.mac for nic in self if hasattr(nic, 'mac')]
 
-
     def append(self, value):
         newone = self.container_class(value)
         newone_name = newone['nic_name']
         if newone.name_is_valid(newone_name) and (
-                          newone_name not in self.nic_name_list()):
+                newone_name not in self.nic_name_list()):
             self.process_mac(newone)
             super(VMNet, self).append(newone)
         else:
             raise VMNetError
-
 
     def nic_name_index(self, name):
         """
@@ -1308,7 +1320,6 @@ class VMNet(list):
             raise IndexError("Can't find nic named '%s' among '%s'" %
                              (name, nic_name_list))
 
-
     def nic_name_list(self):
         """
         Obtain list of nic names from lookup of contents 'nic_name' key.
@@ -1318,7 +1329,6 @@ class VMNet(list):
             # Rely on others to throw exceptions on 'None' names
             namelist.append(item['nic_name'])
         return namelist
-
 
     def nic_lookup(self, prop_name, prop_value):
         """
@@ -1338,29 +1348,30 @@ class VMNet(list):
 # for xen networking.  This will also enable further extensions
 # to network information handing in the future.
 class VMNetStyle(dict):
+
     """
     Make decisions about needed info from vm_type and driver_type params.
     """
 
     # Keyd first by vm_type, then by driver_type.
     VMNet_Style_Map = {
-        'default':{
-            'default':{
-                'mac_prefix':'9a',
+        'default': {
+            'default': {
+                'mac_prefix': '9a',
                 'container_class': QemuIface,
             }
         },
-        'libvirt':{
-            'default':{
-                'mac_prefix':'9a',
+        'libvirt': {
+            'default': {
+                'mac_prefix': '9a',
                 'container_class': LibvirtIface,
             },
-            'qemu':{
-                'mac_prefix':'52:54:00',
+            'qemu': {
+                'mac_prefix': '52:54:00',
                 'container_class': LibvirtIface,
             },
-            'xen':{
-                'mac_prefix':'00:16:3e',
+            'xen': {
+                'mac_prefix': '00:16:3e',
                 'container_class': LibvirtIface,
             }
         }
@@ -1369,27 +1380,25 @@ class VMNetStyle(dict):
     def __new__(cls, vm_type, driver_type):
         return cls.get_style(vm_type, driver_type)
 
-
     @classmethod
     def get_vm_type_map(cls, vm_type):
         return cls.VMNet_Style_Map.get(vm_type,
-                                        cls.VMNet_Style_Map['default'])
-
+                                       cls.VMNet_Style_Map['default'])
 
     @classmethod
     def get_driver_type_map(cls, vm_type_map, driver_type):
         return vm_type_map.get(driver_type,
                                vm_type_map['default'])
 
-
     @classmethod
     def get_style(cls, vm_type, driver_type):
-        style = cls.get_driver_type_map( cls.get_vm_type_map(vm_type),
-                                         driver_type )
+        style = cls.get_driver_type_map(cls.get_vm_type_map(vm_type),
+                                        driver_type)
         return style
 
 
 class ParamsNet(VMNet):
+
     """
     Networking information from Params
 
@@ -1412,7 +1421,7 @@ class ParamsNet(VMNet):
         nic_name_list = self.params.objects('nics')
         for nic_name in nic_name_list:
             # nic name is only in params scope
-            nic_dict = {'nic_name':nic_name}
+            nic_dict = {'nic_name': nic_name}
             nic_params = self.params.object_params(nic_name)
             # avoid processing unsupported properties
             proplist = list(self.container_class.__slots__)
@@ -1430,7 +1439,6 @@ class ParamsNet(VMNet):
             result_list.append(nic_dict)
         VMNet.__init__(self, self.container_class, result_list)
 
-
     def mac_index(self):
         """
         Generator over mac addresses found in params
@@ -1442,7 +1450,6 @@ class ParamsNet(VMNet):
                 yield mac
             else:
                 continue
-
 
     def reset_mac(self, index_or_name):
         """
@@ -1457,7 +1464,6 @@ class ParamsNet(VMNet):
         else:
             new_mac = None
         nic.mac = new_mac
-
 
     def reset_ip(self, index_or_name):
         """
@@ -1475,6 +1481,7 @@ class ParamsNet(VMNet):
 
 
 class DbNet(VMNet):
+
     """
     Networking information from database
 
@@ -1508,11 +1515,11 @@ class DbNet(VMNet):
                 for propertea in proplist:
                     # only set properties in db but not in self
                     if db_nic.has_key(propertea):
-                        self[nic_name].set_if_none(propertea, db_nic[propertea])
+                        self[nic_name].set_if_none(
+                            propertea, db_nic[propertea])
         if entry:
             VMNet.__init__(self, self.container_class, entry)
         # Assume self.update_db() called elsewhere
-
 
     def lock_db(self):
         if not hasattr(self, 'lock'):
@@ -1523,7 +1530,6 @@ class DbNet(VMNet):
                 raise DbNoLockError
         else:
             raise DbNoLockError
-
 
     def unlock_db(self):
         if hasattr(self, 'db'):
@@ -1537,7 +1543,6 @@ class DbNet(VMNet):
         else:
             raise DbNoLockError
 
-
     def db_entry(self, db_key=None):
         """
         Returns a python list of dictionaries from locked DB string-format entry
@@ -1546,7 +1551,7 @@ class DbNet(VMNet):
             db_key = self.db_key
         try:
             db_entry = self.db[db_key]
-        except AttributeError: # self.db doesn't exist:
+        except AttributeError:  # self.db doesn't exist:
             raise DbNoLockError
         # Always wear protection
         try:
@@ -1557,21 +1562,20 @@ class DbNet(VMNet):
                                                 self.db_filename))
         if not isinstance(eval_result, list):
             raise ValueError("Unexpected database data: %s" % (
-                                    str(eval_result)))
+                str(eval_result)))
         result = []
         for result_dict in eval_result:
             if not isinstance(result_dict, dict):
                 raise ValueError("Unexpected database sub-entry data %s" % (
-                                    str(result_dict)))
+                    str(result_dict)))
             result.append(result_dict)
         return result
-
 
     def save_to_db(self, db_key=None):
         """
         Writes string representation out to database
         """
-        if db_key == None:
+        if db_key is None:
             db_key = self.db_key
         data = str(self)
         # Avoid saving empty entries
@@ -1587,12 +1591,10 @@ class DbNet(VMNet):
             except KeyError:
                 pass
 
-
     def update_db(self):
         self.lock_db()
         self.save_to_db()
         self.unlock_db()
-
 
     def mac_index(self):
         """Generator of mac addresses found in database"""
@@ -1609,14 +1611,16 @@ class DbNet(VMNet):
 
 
 class VirtNet(DbNet, ParamsNet):
+
     """
     Persistent collection of VM's networking information.
     """
     # __init__ must not presume clean state, it should behave
     # assuming there is existing properties/data on the instance
     # and take steps to preserve or update it as appropriate.
+
     def __init__(self, params, vm_name, db_key,
-                                        db_filename="/tmp/address_pool"):
+                 db_filename="/tmp/address_pool"):
         """
         Load networking info. from db, then from params, then update db.
 
@@ -1630,14 +1634,13 @@ class VirtNet(DbNet, ParamsNet):
         ParamsNet.__init__(self, params, vm_name)
         self.update_db()
 
-
     # Delegating get/setstate() details more to ancestor classes
     # doesn't play well with multi-inheritence.  While possibly
     # more difficult to maintain, hard-coding important property
     # names for pickling works. The possibility also remains open
     # for extensions via style-class updates.
     def __getstate__(self):
-        state = {'container_items':VMNet.__getstate__(self)}
+        state = {'container_items': VMNet.__getstate__(self)}
         for attrname in ['params', 'vm_name', 'db_key', 'db_filename',
                          'vm_type', 'driver_type', 'db_lockfile']:
             state[attrname] = getattr(self, attrname)
@@ -1645,14 +1648,12 @@ class VirtNet(DbNet, ParamsNet):
             state[style_attr] = getattr(self, style_attr)
         return state
 
-
     def __setstate__(self, state):
         for key in state.keys():
             if key == 'container_items':
-                continue # handle outside loop
+                continue  # handle outside loop
             setattr(self, key, state.pop(key))
         VMNet.__setstate__(self, state.pop('container_items'))
-
 
     def __eq__(self, other):
         if len(self) != len(other):
@@ -1663,10 +1664,8 @@ class VirtNet(DbNet, ParamsNet):
                 return False
         return True
 
-
     def __ne__(self, other):
         return not self.__eq__(other)
-
 
     def mac_index(self):
         """
@@ -1676,7 +1675,6 @@ class VirtNet(DbNet, ParamsNet):
             yield mac
         for mac in ParamsNet.mac_index(self):
             yield mac
-
 
     def generate_mac_address(self, nic_index_or_name, attempts=1024):
         """
@@ -1689,7 +1687,7 @@ class VirtNet(DbNet, ParamsNet):
         nic = self[nic_index_or_name]
         if nic.has_key('mac'):
             logging.warning("Overwriting mac %s for nic %s with random"
-                                % (nic.mac, str(nic_index_or_name)))
+                            % (nic.mac, str(nic_index_or_name)))
         self.free_mac_address(nic_index_or_name)
         attempts_remaining = attempts
         while attempts_remaining > 0:
@@ -1705,14 +1703,13 @@ class VirtNet(DbNet, ParamsNet):
                 self.unlock_db()
         raise NetError("%s/%s MAC generation failed with prefix %s after %d "
                        "attempts for NIC %s on VM %s (%s)" % (
-                            self.vm_type,
-                            self.driver_type,
-                            self.mac_prefix,
-                            attempts,
-                            str(nic_index_or_name),
-                            self.vm_name,
-                            self.db_key))
-
+                           self.vm_type,
+                           self.driver_type,
+                           self.mac_prefix,
+                           attempts,
+                           str(nic_index_or_name),
+                           self.vm_name,
+                           self.db_key))
 
     def free_mac_address(self, nic_index_or_name):
         """
@@ -1725,7 +1722,6 @@ class VirtNet(DbNet, ParamsNet):
             # Reset to params definition if any, or None
             self.reset_mac(nic_index_or_name)
         self.update_db()
-
 
     def set_mac_address(self, nic_index_or_name, mac):
         """
@@ -1741,7 +1737,6 @@ class VirtNet(DbNet, ParamsNet):
         nic.mac = mac.lower()
         self.update_db()
 
-
     def get_mac_address(self, nic_index_or_name):
         """
         Return a MAC address for nic_index_or_name
@@ -1750,7 +1745,6 @@ class VirtNet(DbNet, ParamsNet):
         @return: MAC address string.
         """
         return self[nic_index_or_name].mac.lower()
-
 
     def generate_ifname(self, nic_index_or_name):
         """
@@ -1807,7 +1801,8 @@ def verify_ip_address_ownership(ip, macs, timeout=10.0):
     regex = re.compile(r"\b%s\b.*\b(%s)\b" % (ip, mac_regex), re.IGNORECASE)
 
     # Get the name of the bridge device for arping
-    o = commands.getoutput("%s route get %s" % (utils_misc.find_command("ip"), ip))
+    o = commands.getoutput("%s route get %s" %
+                           (utils_misc.find_command("ip"), ip))
     dev = re.findall("dev\s+\S+", o, re.IGNORECASE)
     if not dev:
         return False
@@ -1843,12 +1838,14 @@ def get_ip_address_by_interface(ifname):
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         return socket.inet_ntoa(fcntl.ioctl(
-                    mysocket.fileno(),
-                    arch.SIOCGIFADDR,
-                    struct.pack('256s', ifname[:15]) # ifname to binary IFNAMSIZ == 16
-                )[20:24])
+            mysocket.fileno(),
+            arch.SIOCGIFADDR,
+            # ifname to binary IFNAMSIZ == 16
+            struct.pack('256s', ifname[:15])
+        )[20:24])
     except IOError:
-        raise NetError("Error while retrieving IP address from interface %s." % ifname)
+        raise NetError(
+            "Error while retrieving IP address from interface %s." % ifname)
 
 
 def get_host_ip_address(params):
@@ -1957,7 +1954,7 @@ def update_mac_ip_address(vm, params, timeout=None):
             # Get nics number
         except Exception, e:
             logging.warn(e)
-        nics =  params.get("nics")
+        nics = params.get("nics")
         nic_minimum = len(re.split("\s+", nics.strip()))
         if len(macs_ips) == nic_minimum:
             break
@@ -1987,7 +1984,7 @@ def get_windows_nic_attribute(session, key, value, target, timeout=240):
     """
     cmd = 'wmic nic where %s="%s" get %s' % (key, value, target)
     o = session.cmd(cmd, timeout=timeout).strip()
-    if not o :
+    if not o:
         raise error.TestError("Get guest nic attribute %s failed!" % target)
     return o.splitlines()[-1]
 
@@ -2050,10 +2047,10 @@ def restart_windows_guest_network_by_key(session, key, value, timeout=240,
         oper_key = "pnpdeviceid"
 
     id = get_windows_nic_attribute(session, key, value, oper_key, timeout)
-    if not  id:
+    if not id:
         raise error.TestError("Get nic %s failed" % oper_key)
     if mode == "devcon":
-        id =  id.split("&")[-1]
+        id = id.split("&")[-1]
 
     restart_windows_guest_network(session, id, timeout, mode)
 

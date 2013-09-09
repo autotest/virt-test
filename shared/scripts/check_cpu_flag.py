@@ -1,8 +1,11 @@
 #!/usr/bin/python
-import os, sys
+import os
+import sys
+
 
 class check_error(Exception):
     pass
+
 
 def check_cpu_flag():
     cpuinfo = file('/proc/cpuinfo').read()

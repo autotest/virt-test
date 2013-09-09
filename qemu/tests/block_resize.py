@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import qemu_monitor, utils_misc, storage, data_dir
 
@@ -26,24 +27,23 @@ def run_block_resize(test, params, env):
                 return int(block_size[0])
             else:
                 return float(utils_misc.normalize_data_size(block_size[0],
-                                                         order_magnitude="B"))
+                                                            order_magnitude="B"))
         else:
             raise error.TestError("Can not find the block size for the"
                                   " deivce. The output of command"
                                   " is: %s" % output)
 
-
     error.context("Check image size in guest", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
-    session =  vm.wait_for_login(timeout=timeout)
+    session = vm.wait_for_login(timeout=timeout)
 
     data_image = params.get("images").split()[-1]
     data_image_params = params.object_params(data_image)
     data_image_size = data_image_params.get("image_size")
     data_image_size = float(utils_misc.normalize_data_size(data_image_size,
-                                                         order_magnitude="B"))
+                                                           order_magnitude="B"))
     data_image_filename = storage.get_image_filename(data_image_params,
                                                      data_dir.get_data_dir())
     data_image_dev = vm.get_block({'file': data_image_filename})
@@ -55,7 +55,7 @@ def run_block_resize(test, params, env):
 
     block_size = get_block_size(session, block_size_cmd, block_size_pattern)
     if (block_size > data_image_size
-        or block_size < data_image_size * (1 - accept_ratio)):
+            or block_size < data_image_size * (1 - accept_ratio)):
         raise error.TestError("Please check your system and image size check"
                               " command. The command output is not compatible"
                               " with the image size.")
@@ -106,7 +106,7 @@ def run_block_resize(test, params, env):
         current_size = get_block_size(session, block_size_cmd,
                                       block_size_pattern)
         if (current_size > block_size
-            or current_size < block_size * (1 - accept_ratio)):
+                or current_size < block_size * (1 - accept_ratio)):
             raise error.TestFail("Guest reported a wrong disk size:\n"
                                  "    reported: %s\n"
                                  "    expect: %s\n" % (current_size,

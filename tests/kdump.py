@@ -47,7 +47,7 @@ def run_kdump(test, params, env):
             session.sendline("taskset -c %d %s" % (vcpu, crash_cmd))
 
         if not utils_misc.wait_for(lambda: not session.is_responsive(), 240, 0,
-                                  1):
+                                   1):
             raise error.TestFail("Could not trigger crash on vcpu %d" % vcpu)
 
         logging.info("Waiting for kernel crash dump to complete")
@@ -78,7 +78,7 @@ def run_kdump(test, params, env):
         else:
             # trigger crash for each vcpu
             nvcpu = int(params.get("smp", 1))
-            for i in range (nvcpu):
+            for i in range(nvcpu):
                 crash_test(i)
 
     finally:

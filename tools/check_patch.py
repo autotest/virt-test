@@ -529,7 +529,6 @@ class FileChecker(object):
                 path, details)
             success = False
 
-
         return success
 
     def _check_codespell(self):

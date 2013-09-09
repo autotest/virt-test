@@ -1,5 +1,6 @@
 from qemu.tests import drive_mirror
 
+
 def run_drive_mirror_reboot(test, params, env):
     """
     drive_mirror_reboot test:

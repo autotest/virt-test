@@ -1,4 +1,6 @@
-import re, logging, SocketServer
+import re
+import logging
+import SocketServer
 
 
 SYSLOG_PORT = 514
@@ -25,6 +27,7 @@ def get_default_format():
 
 
 class RequestHandler(SocketServer.BaseRequestHandler):
+
     '''
     A request handler that relays all received messages as DEBUG
     '''
@@ -63,40 +66,39 @@ class RequestHandler(SocketServer.BaseRequestHandler):
      LOG_LOCAL7) = range(16, 24)
 
     PRIORITY_NAMES = {
-        LOG_ALERT : "alert",
-        LOG_CRIT : "critical",
-        LOG_DEBUG : "debug",
-        LOG_EMERG : "emerg",
-        LOG_ERR : "err",
-        LOG_INFO : "info",
-        LOG_NOTICE : "notice",
+        LOG_ALERT: "alert",
+        LOG_CRIT: "critical",
+        LOG_DEBUG: "debug",
+        LOG_EMERG: "emerg",
+        LOG_ERR: "err",
+        LOG_INFO: "info",
+        LOG_NOTICE: "notice",
         LOG_WARNING: "warning"
-        }
+    }
 
     FACILITY_NAMES = {
-        LOG_AUTH : "auth",
-        LOG_AUTHPRIV : "authpriv",
-        LOG_CRON : "cron",
-        LOG_DAEMON : "daemon",
-        LOG_FTP : "ftp",
-        LOG_KERN : "kern",
-        LOG_LPR : "lpr",
-        LOG_MAIL : "mail",
-        LOG_NEWS : "news",
-        LOG_AUTH : "security",
-        LOG_SYSLOG : "syslog",
-        LOG_USER : "user",
-        LOG_UUCP : "uucp",
-        LOG_LOCAL0 : "local0",
-        LOG_LOCAL1 : "local1",
-        LOG_LOCAL2 : "local2",
-        LOG_LOCAL3 : "local3",
-        LOG_LOCAL4 : "local4",
-        LOG_LOCAL5 : "local5",
-        LOG_LOCAL6 : "local6",
-        LOG_LOCAL7 : "local7",
-        }
-
+        LOG_AUTH: "auth",
+        LOG_AUTHPRIV: "authpriv",
+        LOG_CRON: "cron",
+        LOG_DAEMON: "daemon",
+        LOG_FTP: "ftp",
+        LOG_KERN: "kern",
+        LOG_LPR: "lpr",
+        LOG_MAIL: "mail",
+        LOG_NEWS: "news",
+        LOG_AUTH: "security",
+        LOG_SYSLOG: "syslog",
+        LOG_USER: "user",
+        LOG_UUCP: "uucp",
+        LOG_LOCAL0: "local0",
+        LOG_LOCAL1: "local1",
+        LOG_LOCAL2: "local2",
+        LOG_LOCAL3: "local3",
+        LOG_LOCAL4: "local4",
+        LOG_LOCAL5: "local5",
+        LOG_LOCAL6: "local6",
+        LOG_LOCAL7: "local7",
+    }
 
     def decodeFacilityPriority(self, priority):
         '''
@@ -110,7 +112,6 @@ class RequestHandler(SocketServer.BaseRequestHandler):
         p = priority & 7
         return (self.FACILITY_NAMES.get(f, 'unknown'),
                 self.PRIORITY_NAMES.get(p, 'unknown'))
-
 
     def log(self, data, message_format=None):
         '''
@@ -127,6 +128,7 @@ class RequestHandler(SocketServer.BaseRequestHandler):
 
 
 class RequestHandlerTcp(RequestHandler):
+
     def handle(self):
         '''
         Handles a single request
@@ -136,6 +138,7 @@ class RequestHandlerTcp(RequestHandler):
 
 
 class RequestHandlerUdp(RequestHandler):
+
     def handle(self):
         '''
         Handles a single request
@@ -145,11 +148,13 @@ class RequestHandlerUdp(RequestHandler):
 
 
 class SysLogServerUdp(SocketServer.UDPServer):
+
     def __init__(self, address):
         SocketServer.UDPServer.__init__(self, address, RequestHandlerUdp)
 
 
 class SysLogServerTcp(SocketServer.TCPServer):
+
     def __init__(self, address):
         SocketServer.TCPServer.__init__(self, address, RequestHandlerTcp)
 

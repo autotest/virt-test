@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import env_process
 
@@ -37,12 +38,12 @@ def run_device_bit_check(test, params, env):
             for index, value in enumerate(properties):
                 if value != default_value[index]:
                     extra_params += ",%s=%s" % (options[index],
-                                                    option_add[index])
+                                                option_add[index])
             params[dev_param_name] = extra_params.lstrip(",")
         else:
             properties = default_value
 
-        error.context("Boot up guest with properites: %s value as: %s"\
+        error.context("Boot up guest with properites: %s value as: %s"
                       % (str(options), properties), logging.info)
         vm_name = params["main_vm"]
         params["start_vm"] = 'yes'
@@ -60,7 +61,7 @@ def run_device_bit_check(test, params, env):
             option_value = re.findall("%s\s+=\s+(\w+)" % option, dev_info[0])
             if not option_value:
                 raise error.TestError("Can't get the property info from qtree"
-                                " result")
+                                      " result")
             if option_value[0] != convert_dict[properties[index]]:
                 raise error.TestFail("Properity bit for %s is wrong." % option)
 

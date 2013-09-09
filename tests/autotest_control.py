@@ -1,4 +1,6 @@
-import os, logging, sys
+import os
+import logging
+import sys
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -82,7 +84,7 @@ def wait_autotest_background(pid):
     """
     logging.info("Waiting for background autotest to finish ...")
 
-    (pid, s) = os.waitpid(pid,0)
+    (pid, s) = os.waitpid(pid, 0)
     status = os.WEXITSTATUS(s)
     if status != 0:
         return False

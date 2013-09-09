@@ -8,6 +8,7 @@ from autotest.client.shared import error
 from virttest.aexpect import ShellCmdError
 from virttest import utils_misc
 
+
 def is_pid_alive(session, pid):
 
     try:
@@ -17,12 +18,13 @@ def is_pid_alive(session, pid):
 
     return True
 
+
 def run_rv_clearx(test, params, env):
     for vm_name in params.get("vms").split():
         vm = env.get_vm(vm_name)
         logging.info("restarting X on: %s", vm_name)
-        session = vm.wait_for_login(username = "root", password = "123456",
-                    timeout=int(params.get("login_timeout", 360)))
+        session = vm.wait_for_login(username="root", password="123456",
+                                    timeout=int(params.get("login_timeout", 360)))
         pid = session.cmd("pgrep Xorg")
         session.cmd("killall Xorg")
 

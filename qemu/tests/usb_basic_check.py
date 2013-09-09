@@ -1,4 +1,6 @@
-import time, re, logging
+import time
+import re
+import logging
 from autotest.client.shared import error
 from virttest import aexpect
 
@@ -16,6 +18,7 @@ def check_usb_device_monitor(test, params, env):
     if info_usb_name and (info_usb_name not in o):
         raise error.TestFail("Could not find '%s' device, monitor "
                              "returns: \n%s" % (params.get("product"), o))
+
 
 @error.context_aware
 def check_usb_device(test, params, env):

@@ -1,7 +1,9 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, utils_misc, aexpect
+
 
 @error.context_aware
 def run_timerdevice_clock_drift_with_ntp(test, params, env):

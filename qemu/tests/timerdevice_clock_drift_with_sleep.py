@@ -1,7 +1,9 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, storage, utils_disk, env_process
+
 
 @error.context_aware
 def run_timerdevice_clock_drift_with_sleep(test, params, env):
@@ -37,7 +39,6 @@ def run_timerdevice_clock_drift_with_sleep(test, params, env):
             raise error.TestFail("Unexpected time drift found:"
                                  " Detail: '%s'" % output)
 
-
     error.context("Sync the host system time with ntp server", logging.info)
     utils.system("yum install -y ntpdate; ntpdate clock.redhat.com")
 
@@ -63,9 +64,9 @@ def run_timerdevice_clock_drift_with_sleep(test, params, env):
         error.context("Update guest kernel cli to kvm-clock",
                       logging.info)
         image_filename = storage.get_image_filename(params,
-                                                data_dir.get_data_dir())
+                                                    data_dir.get_data_dir())
         kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                         r".*vmlinuz-\d+.*")
+                                        r".*vmlinuz-\d+.*")
 
         disk_obj = utils_disk.GuestFSModiDisk(image_filename)
         kernel_cfg_original = disk_obj.read_file(grub_file)

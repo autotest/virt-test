@@ -1,6 +1,12 @@
-import urllib2, logging, os, glob, ConfigParser
+import urllib2
+import logging
+import os
+import glob
+import ConfigParser
 from autotest.client import utils
-import data_dir, re
+import data_dir
+import re
+
 
 def get_all_assets():
     asset_data_list = []
@@ -19,10 +25,11 @@ def get_file_asset(title, src_path, destination):
         if os.path.exists(src_path + ext):
             destination = destination + ext
             logging.debug('Found source image %s', destination)
-            return {'url': None, 'sha1_url': None, 'destination': src_path + ext,
-                    'destination_uncompressed': destination,
-                    'uncompress_cmd': None, 'shortname': title, 'title': title,
-                    'downloaded': True}
+            return {
+                'url': None, 'sha1_url': None, 'destination': src_path + ext,
+                'destination_uncompressed': destination,
+                'uncompress_cmd': None, 'shortname': title, 'title': title,
+                'downloaded': True}
 
     if os.path.exists(src_path):
         logging.debug('Found source image %s', destination)
@@ -64,7 +71,6 @@ def get_asset_info(asset):
         uncompress_cmd = asset_cfg.get(asset, 'uncompress_cmd')
     except:
         uncompress_cmd = None
-
 
     return {'url': url, 'sha1_url': sha1_url, 'destination': destination,
             'destination_uncompressed': destination_uncompressed,
@@ -148,7 +154,8 @@ def download_file(asset_info, interactive=False, force=False):
         else:
             answer = 'y'
         if answer == 'y':
-            utils.interactive_download(url, destination, "Downloading %s" % title)
+            utils.interactive_download(
+                url, destination, "Downloading %s" % title)
             had_to_download = True
         else:
             logging.warning("Missing file %s", destination)

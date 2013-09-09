@@ -3,7 +3,10 @@ multi_disk test for Autotest framework.
 
 @copyright: 2011-2012 Red Hat Inc.
 """
-import logging, re, random, string
+import logging
+import re
+import random
+import string
 from autotest.client.shared import error, utils
 from virttest import qemu_qtree, env_process, utils_misc
 
@@ -92,7 +95,6 @@ def run_multi_disk(test, params, env):
         else:
             return ''
 
-
     def _do_post_cmd(session):
         cmd = params.get("post_cmd")
         if cmd:
@@ -121,7 +123,7 @@ def run_multi_disk(test, params, env):
             continue
         if stg_params[i][-1] == '\\':
             stg_params[i] = '%s %s' % (stg_params[i][:-1],
-                                          stg_params.pop(i + 1))
+                                       stg_params.pop(i + 1))
         i += 1
 
     rerange = []
@@ -134,7 +136,7 @@ def run_multi_disk(test, params, env):
             has_name = True
         if _RE_RANGE1.match(parm):
             parm = _range(parm)
-            if parm == False:
+            if parm is False:
                 raise error.TestError("Incorrect cfg: stg_params %s looks "
                                       "like range(..) but doesn't contain "
                                       "numbers." % cmd)
@@ -219,7 +221,7 @@ def run_multi_disk(test, params, env):
         err += disks.generate_params()
         err += disks.check_disk_params(params)
         (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(
-                                    session.cmd_output('cat /proc/scsi/scsi'))
+            session.cmd_output('cat /proc/scsi/scsi'))
         err += tmp1 + tmp2
 
         if err:

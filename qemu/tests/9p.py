@@ -1,4 +1,5 @@
-import os,logging
+import os
+import logging
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -52,4 +53,4 @@ def run_9p(test, params, env):
         outputdir = test.outputdir
 
         utils_test.run_autotest(vm, session, control_path,
-                                     timeout, outputdir, params)
+                                timeout, outputdir, params)

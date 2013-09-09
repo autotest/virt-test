@@ -27,7 +27,7 @@ def run_virsh_edit(test, params, env):
         raise error.TestError("Failed to get vcpucount. Detail:\n%s"
                               % vcpucount_result)
     original_vcpu = vcpucount_result.stdout.strip()
-    expected_vcpu = str(int(original_vcpu)+1)
+    expected_vcpu = str(int(original_vcpu) + 1)
 
     libvirtd = params.get("libvirtd", "on")
     vm_ref = params.get("edit_vm_ref")
@@ -62,8 +62,9 @@ def run_virsh_edit(test, params, env):
         @param: guest_name : vm's name.
         @return: True if edit successed,False if edit failed.
         """
-        dic_mode = {"edit": ":%s /[0-9]*<\/vcpu>/"+expected_vcpu+"<\/vcpu>",
-                    "recover": ":%s /[0-9]*<\/vcpu>/"+original_vcpu+"<\/vcpu>"}
+        dic_mode = {
+            "edit": ":%s /[0-9]*<\/vcpu>/" + expected_vcpu + "<\/vcpu>",
+                    "recover": ":%s /[0-9]*<\/vcpu>/" + original_vcpu + "<\/vcpu>"}
         status = modify_vcpu(source, dic_mode["edit"])
         if not status:
             return status
@@ -73,13 +74,13 @@ def run_virsh_edit(test, params, env):
         elif params.get("start_vm") == "yes":
             virsh.destroy(guest_name)
         vcpus = vm.dominfo()["CPU(s)"]
-        #Recover cpuinfo
+        # Recover cpuinfo
         status = modify_vcpu(source, dic_mode["recover"])
         if status and vcpus != expected_vcpu:
             return False
         return status
 
-    #run test case
+    # run test case
     xml_file = os.path.join(test.tmpdir, 'tmp.xml')
     virsh.dumpxml(vm_name, extra="", to_file=xml_file)
 
@@ -105,17 +106,17 @@ def run_virsh_edit(test, params, env):
     except:
         status = False
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #Recover VM
+    # Recover VM
     if vm.is_alive():
         vm.destroy()
     virsh.undefine(vm_name)
     virsh.define(xml_file)
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status:
             raise error.TestFail("Run successfully with wrong command!")

@@ -1,4 +1,8 @@
-import logging, os, signal, re, time
+import logging
+import os
+import signal
+import re
+import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import aexpect
@@ -25,7 +29,6 @@ def run_netstress_kill_guest(test, params, env):
             ip = ip.groups()[0]
         return ip
 
-
     def get_ethernet_driver(session):
         """
         Get driver of network cards.
@@ -41,7 +44,6 @@ def run_netstress_kill_guest(test, params, env):
         modules.remove("")
         return set(modules)
 
-
     def kill_and_check(vm):
         vm_pid = vm.get_pid()
         vm.destroy(gracefully=False)
@@ -52,7 +54,6 @@ def run_netstress_kill_guest(test, params, env):
             raise error.TestFail("VM is not dead after sending signal 0 to it")
         except OSError:
             logging.info("VM is dead")
-
 
     def netload_kill_problem(session_serial):
         netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
@@ -89,10 +90,11 @@ def run_netstress_kill_guest(test, params, env):
         utils.run(clean_cmd, ignore_status=True)
         utils.run(params.get("netserver_cmd") % netperf_dir)
 
-        server_netperf_cmd = params.get("netperf_cmd") % (netperf_dir, "TCP_STREAM",
-                                        guest_ip, params.get("packet_size", "1500"))
+        server_netperf_cmd = params.get(
+            "netperf_cmd") % (netperf_dir, "TCP_STREAM",
+                              guest_ip, params.get("packet_size", "1500"))
         guest_netperf_cmd = params.get("netperf_cmd") % ("/tmp", "TCP_STREAM",
-                                       server_ip, params.get("packet_size", "1500"))
+                                                         server_ip, params.get("packet_size", "1500"))
 
         tcpdump = env.get("tcpdump")
         pid = None
@@ -110,7 +112,7 @@ def run_netstress_kill_guest(test, params, env):
             session_serial.sendline(guest_netperf_cmd)
             utils.BgJob(server_netperf_cmd)
 
-            #Wait for create big network usage.
+            # Wait for create big network usage.
             time.sleep(10)
             kill_and_check(vm)
 
@@ -120,7 +122,6 @@ def run_netstress_kill_guest(test, params, env):
                 logging.debug("Resuming the background tcpdump")
                 logging.info("pid is %s" % pid)
                 os.kill(pid, signal.SIGCONT)
-
 
     def send_cmd_safe(session_serial, cmd):
         logging.debug("Sending command: %s", cmd)
@@ -135,7 +136,6 @@ def run_netstress_kill_guest(test, params, env):
             except aexpect.ExpectTimeoutError:
                 pass
 
-
     def netdriver_kill_problem(session_serial):
         modules = get_ethernet_driver(session_serial)
         logging.debug(modules)
@@ -146,7 +146,6 @@ def run_netstress_kill_guest(test, params, env):
                 send_cmd_safe(session_serial, "modprobe %s" % module)
 
         kill_and_check(vm)
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

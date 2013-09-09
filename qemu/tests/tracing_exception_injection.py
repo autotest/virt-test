@@ -31,8 +31,9 @@ def run_tracing_exception_injection(test, params, env):
         logging.info("kvm_stat provided the expected output")
     logging.info("Host cmd output '%s'", host_cmd_output)
 
-    error.context("Check that host allows tracing of exception injection in KVM",
-                  logging.info)
+    error.context(
+        "Check that host allows tracing of exception injection in KVM",
+        logging.info)
     exec_cmd = "grep kvm:kvm_inj_exception "
     exec_cmd += " /sys/kernel/debug/tracing/available_events"
     inj_check_cmd = params.get("injection_check_cmd", exec_cmd)

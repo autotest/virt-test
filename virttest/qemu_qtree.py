@@ -4,18 +4,23 @@ Utility classes and functions to handle KVM Qtree parsing and verification.
 @author: Lukas Doktor <ldoktor@redhat.com>
 @copyright: 2012 Red Hat Inc.
 """
-import logging, os, re
-import storage, data_dir, utils_misc
+import logging
+import os
+import re
+import storage
+import data_dir
+import utils_misc
 
 
 OFFSET_PER_LEVEL = 2
 
 _RE_BLANKS = re.compile(r'^([ ]*)')
 _RE_CLASS = re.compile(r'^class ([^,]*), addr (\d\d:\d\d.\d+), pci id '
-                        '(\w{4}:\w{4}) \(sub (\w{4}:\w{4})\)')
+                       '(\w{4}:\w{4}) \(sub (\w{4}:\w{4})\)')
 
 
 class IncompatibleTypeError(TypeError):
+
     def __init__(self, prop, desired_type, value):
         TypeError.__init__(self)
         self.prop = prop
@@ -28,9 +33,11 @@ class IncompatibleTypeError(TypeError):
 
 
 class QtreeNode(object):
+
     """
     Generic Qtree node
     """
+
     def __init__(self):
         self.parent = None      # Parent node
         self.qtree = {}         # List of qtree attributes
@@ -71,7 +78,7 @@ class QtreeNode(object):
     def replace_child(self, oldchild, newchild):
         if not oldchild in self.children:
             raise ValueError('child %s not in children %s' % (oldchild,
-                                                               self.children))
+                                                              self.children))
         self.add_child(newchild)
         self.children.remove(oldchild)
 
@@ -127,7 +134,9 @@ class QtreeNode(object):
 
 
 class QtreeBus(QtreeNode):
+
     """ bus: qtree object """
+
     def __init__(self):
         super(QtreeBus, self).__init__()
 
@@ -141,7 +150,9 @@ class QtreeBus(QtreeNode):
 
 
 class QtreeDev(QtreeNode):
+
     """ dev: qtree object """
+
     def __init__(self):
         super(QtreeDev, self).__init__()
 
@@ -161,7 +172,9 @@ class QtreeDev(QtreeNode):
 
 
 class QtreeDisk(QtreeDev):
+
     """ qtree disk object """
+
     def __init__(self):
         super(QtreeDisk, self).__init__()
         self.block = {}     # Info from 'info block'
@@ -196,10 +209,10 @@ class QtreeDisk(QtreeDev):
         if self.block.get('backing_file'):
             self.params['image_snapshot'] = 'yes'
             self.params['image_name'] = os.path.realpath(
-                                                self.block.get('backing_file'))
+                self.block.get('backing_file'))
         elif self.block.get('file'):
             self.params['image_name'] = os.path.realpath(
-                                                        self.block.get('file'))
+                self.block.get('file'))
         else:
             raise ValueError("Missing 'file' or 'backing_file' information "
                              "in self.block.")
@@ -212,7 +225,9 @@ class QtreeDisk(QtreeDev):
 
 
 class QtreeContainer(object):
+
     """ Container for Qtree """
+
     def __init__(self):
         self.nodes = None
 
@@ -258,7 +273,7 @@ class QtreeContainer(object):
             if not (node.get_parent() and node.get_parent().get_parent()):
                 return  # Doesn't have grand-grand parent
             if not (node.get_parent().get_parent().get_qtree().get('type') ==
-                                                                'usb-storage'):
+                    'usb-storage'):
                 return  # grand-grand parent is not usb-storage
             # This disk is not scsi disk, it's virtual usb-storage drive
             node.update_qtree_prop('type', 'usb2')
@@ -350,11 +365,13 @@ class QtreeContainer(object):
 
 
 class QtreeDisksContainer(object):
+
     """
     Container for QtreeDisks verification.
     It's necessary because some information can be verified only from
     informations about all disks, not only from single disk.
     """
+
     def __init__(self, nodes):
         """ work only with QtreeDisks instances """
         self.disks = []
@@ -417,8 +434,8 @@ class QtreeDisksContainer(object):
         proc_not_scsi = 0
         # host, channel, id, lun, vendor
         _scsis = re.findall(r'Host:\s+(\w+)\s+Channel:\s+(\d+)\s+Id:\s+(\d+)'
-                             '\s+Lun:\s+(\d+)\n\s+Vendor:\s+([a-zA-Z0-9_-]+)'
-                             '\s+Model:.*\n.*Type:\s+([a-zA-Z0-9_-]+)', info)
+                            '\s+Lun:\s+(\d+)\n\s+Vendor:\s+([a-zA-Z0-9_-]+)'
+                            '\s+Model:.*\n.*Type:\s+([a-zA-Z0-9_-]+)', info)
         disks = set()
         # Check only scsi disks
         for disk in self.disks:
@@ -486,7 +503,7 @@ class QtreeDisksContainer(object):
         qname = None
         for name in params.objects('cdroms'):
             image_name = utils_misc.get_path(data_dir.get_data_dir(),
-                                params.object_params(name).get('cdrom', ''))
+                                             params.object_params(name).get('cdrom', ''))
             image_name = os.path.realpath(image_name)
             for (qname, disk) in disks.iteritems():
                 if disk[0].get('image_name') == image_name:
@@ -502,8 +519,8 @@ class QtreeDisksContainer(object):
                                         data_dir.get_data_dir())
 
             image_name = os.path.realpath(
-                        storage.get_image_filename(image_params,
-                                                   base_dir))
+                storage.get_image_filename(image_params,
+                                           base_dir))
             for (qname, disk) in disks.iteritems():
                 if disk[0].get('image_name') == image_name:
                     current = disk[0]

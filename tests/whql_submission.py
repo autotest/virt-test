@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from virttest import aexpect, utils_misc, remote, rss_client
 
@@ -46,19 +48,19 @@ def run_whql_submission(test, params, env):
     dsso_delete_machine_binary = params.get("dsso_delete_machine_binary",
                                             "deps/whql_delete_machine_15.exe")
     dsso_delete_machine_binary = utils_misc.get_path(test.virtdir,
-                                                    dsso_delete_machine_binary)
+                                                     dsso_delete_machine_binary)
     test_timeout = float(params.get("test_timeout", 600))
 
     # Copy dsso binaries to the server
     for filename in dsso_test_binary, dsso_delete_machine_binary:
         rss_client.upload(server_address, server_file_transfer_port,
-                                 filename, server_studio_path, timeout=60)
+                          filename, server_studio_path, timeout=60)
 
     # Open a shell session with the server
     server_session = remote.remote_login("nc", server_address,
-                                              server_shell_port, "", "",
-                                              sessions[0].prompt,
-                                              sessions[0].linesep)
+                                         server_shell_port, "", "",
+                                         sessions[0].prompt,
+                                         sessions[0].linesep)
     server_session.set_status_test_command(sessions[0].status_test_command)
 
     # Get the computer names of the server and clients
@@ -75,7 +77,7 @@ def run_whql_submission(test, params, env):
 
     # Reboot the client machines
     sessions = utils_misc.parallel((vm.reboot, (session,))
-                                  for vm, session in zip(vms, sessions))
+                                   for vm, session in zip(vms, sessions))
 
     # Check the NICs again
     for vm in vms:
@@ -189,15 +191,15 @@ def run_whql_submission(test, params, env):
         if "report" in r:
             try:
                 rss_client.download(server_address,
-                                           server_file_transfer_port,
-                                           r["report"], test.debugdir)
+                                    server_file_transfer_port,
+                                    r["report"], test.debugdir)
             except rss_client.FileTransferNotFoundError:
                 pass
         if "logs" in r:
             try:
                 rss_client.download(server_address,
-                                           server_file_transfer_port,
-                                           r["logs"], test.debugdir)
+                                    server_file_transfer_port,
+                                    r["logs"], test.debugdir)
             except rss_client.FileTransferNotFoundError:
                 pass
             else:

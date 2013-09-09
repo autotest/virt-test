@@ -1,4 +1,7 @@
-import os, re, shutil, logging
+import os
+import re
+import shutil
+import logging
 from autotest.client.shared import utils, error
 from virttest import utils_misc, virsh
 from virttest.libvirt_xml import vol_xml
@@ -34,19 +37,18 @@ def run_virsh_volume(test, params, env):
                 raise error.TestFail("Command virsh pool-define-as"
                                      " failed:\n%s" % result.stderr.strip())
             else:
-                logging.debug("%s type pool: %s defined successfully"
-                              , pool_type, pool_name)
+                logging.debug(
+                    "%s type pool: %s defined successfully", pool_type, pool_name)
             result = virsh.pool_start(pool_name, ignore_status=True)
             if result.exit_status != 0:
                 raise error.TestFail("Command virsh pool-start failed:\n%s" %
-                                 result.stderr)
+                                     result.stderr)
             else:
                 logging.debug("Pool: %s successfully started", pool_name)
         else:
             raise error.TestNAError("pool type %s has not yet been"
-                                 " supported in the test" % pool_type)
+                                    " supported in the test" % pool_type)
         return True
-
 
     def cleanup_pool(pool_name, pool_target):
         """
@@ -60,12 +62,12 @@ def run_virsh_volume(test, params, env):
             raise error.TestFail("Command virsh pool-undefine failed:\n%s" %
                                  result.stderr.strip())
         try:
-            logging.debug("Deleting the pool target: %s directory", pool_target)
+            logging.debug(
+                "Deleting the pool target: %s directory", pool_target)
             shutil.rmtree(pool_target)
         except OSError, detail:
             raise error.TestFail("Failed to delete the pool target directory"
-                                 "%s:\n %s" % (pool_target, detail) )
-
+                                 "%s:\n %s" % (pool_target, detail))
 
     def create_volume(expected_vol):
         """
@@ -77,16 +79,15 @@ def run_virsh_volume(test, params, env):
                                      expected_vol['capacity'],
                                      expected_vol['allocation'],
                                      expected_vol['format'],
-                                     ignore_status = True)
+                                     ignore_status=True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh vol-create-as failed:\n%s" %
                                  result.stderr.strip())
         else:
             logging.info("Volume: %s successfully created on pool: %s",
-                          expected_vol['name'], expected_vol['pool_name'])
+                         expected_vol['name'], expected_vol['pool_name'])
 
         return True
-
 
     def delete_volume(expected_vol):
         """
@@ -94,7 +95,7 @@ def run_virsh_volume(test, params, env):
         """
         result = virsh.vol_delete(expected_vol['name'],
                                   expected_vol['pool_name'],
-                                  ignore_status = True)
+                                  ignore_status=True)
         if result.exit_status != 0:
             raise error.TestFail("Command virsh vol-delete failed:\n%s" %
                                  result.stderr.strip())
@@ -102,13 +103,13 @@ def run_virsh_volume(test, params, env):
             logging.debug("Volume: %s successfully created on pool: %s",
                           expected_vol['name'], expected_vol['pool_name'])
 
-
     def get_vol_list(pool_name, vol_name):
         """
         Parse the volume list
         """
         output = virsh.vol_list(pool_name, "--details")
-        rg = re.compile(r'^(\S+)\s+(\S+)\s+(\S+)\s+(\d+.\d+\s\S+)\s+(\d+.\d+.*)')
+        rg = re.compile(
+            r'^(\S+)\s+(\S+)\s+(\S+)\s+(\d+.\d+\s\S+)\s+(\d+.\d+.*)')
         vol = {}
         vols = []
         volume_detail = None
@@ -129,7 +130,6 @@ def run_virsh_volume(test, params, env):
                 found = True
         return (found, volume_detail)
 
-
     def get_vol_info(pool_name, vol_name):
         """
         Parse the volume info
@@ -148,13 +148,12 @@ def run_virsh_volume(test, params, env):
             if match1 is not None:
                 vol_info['name'] = match1.group(1)
             if match2 is not None:
-                vol_info['type'] =  match2.group(1)
+                vol_info['type'] = match2.group(1)
             if match3 is not None:
                 vol_info['capacity'] = match3.group(1)
             if match4 is not None:
                 vol_info['allocation'] = match4.group(1)
         return vol_info
-
 
     def get_image_info(image_name):
         """
@@ -180,13 +179,12 @@ def run_virsh_volume(test, params, env):
             if match1 is not None:
                 image_info['name'] = match1.group(1)
             if match2 is not None:
-                image_info['format'] =  match2.group(1)
+                image_info['format'] = match2.group(1)
             if match3 is not None:
                 image_info['capacity'] = match3.group(1)
             if match4 is not None:
                 image_info['allocation'] = match4.group(1)
         return image_info
-
 
     def norm_capacity(capacity):
         """
@@ -194,19 +192,19 @@ def run_virsh_volume(test, params, env):
         """
         # Normaize all values to bytes
         norm_capacity = {}
-        des = {'B': 'B', 'bytes': 'B', 'b':'B', 'kib':'K',
-              'KiB':'K', 'K':'K', 'k':'K', 'KB':'K',
-              'mib':'M', 'MiB':'M', 'M':'M', 'm':'M',
-              'MB':'M', 'gib':'G', 'GiB':'G', 'G':'G',
-              'g':'G', 'GB':'G', 'Gb':'G', 'tib':'T',
-              'TiB':'T', 'TB':'T', 'T':'T', 't':'T'
-           }
+        des = {'B': 'B', 'bytes': 'B', 'b': 'B', 'kib': 'K',
+               'KiB': 'K', 'K': 'K', 'k': 'K', 'KB': 'K',
+               'mib': 'M', 'MiB': 'M', 'M': 'M', 'm': 'M',
+               'MB': 'M', 'gib': 'G', 'GiB': 'G', 'G': 'G',
+               'g': 'G', 'GB': 'G', 'Gb': 'G', 'tib': 'T',
+               'TiB': 'T', 'TB': 'T', 'T': 'T', 't': 'T'
+               }
         val = {'B': 1,
                'K': 1024,
                'M': 1048576,
                'G': 1073741824,
                'T': 1099511627776
-           }
+               }
 
         reg_list = re.compile(r'(\S+)\s(\S+)')
         match_list = re.search(reg_list, capacity['list'])
@@ -239,8 +237,7 @@ def run_virsh_volume(test, params, env):
 
         return norm_capacity
 
-
-    def check_vol(expected, avail= True):
+    def check_vol(expected, avail=True):
         """
         Checks the expected volume details with actual volume details from
         vol-dumpxml
@@ -268,20 +265,19 @@ def run_virsh_volume(test, params, env):
         else:
             if not isavail:
                 logging.error("Volume list does not show volume %s",
-                              expected['name'] )
+                              expected['name'])
                 logging.error("Volume creation failed")
                 error_count += 1
 
         # Get values from vol-dumpxml
         volume_xml = vol_xml.VolXML.get_vol_details_by_name(expected['name'],
-                                                       expected['pool_name'])
+                                                            expected['pool_name'])
 
         # Check against virsh vol-key
         vol_key = virsh.vol_key(expected['name'], expected['pool_name'])
         if vol_key.stdout.strip() != volume_xml['key']:
             logging.error("Volume key is mismatch \n%s"
-                          "Key from xml: %s\n Key from command: %s"
-                          , expected['name'], volume_xml['key'], vol_key)
+                          "Key from xml: %s\n Key from command: %s", expected['name'], volume_xml['key'], vol_key)
             error_count += 1
         else:
             logging.debug("virsh vol-key for volume: %s successfully"
@@ -303,8 +299,8 @@ def run_virsh_volume(test, params, env):
         if isavail:
             if expected['path'] != actual_list['path']:
                 logging.error("Volume path mismatch for volume:%s\n"
-                              "Expected Path: %s\n Path from virsh vol-list: %s"
-                              , expected['name'], expected['path'],
+                              "Expected Path: %s\n Path from virsh vol-list: %s", expected[
+                                  'name'], expected['path'],
                               actual_list['path'])
                 error_count += 1
             else:
@@ -315,9 +311,7 @@ def run_virsh_volume(test, params, env):
         # Check path against virsh vol-dumpxml
         if expected['path'] != volume_xml['path']:
             logging.error("Volume path mismatch for volume: %s\n"
-                          "Expected Path: %s\n Path from virsh vol-dumpxml: %s"
-                          , expected['name'], expected['path']
-                          , volume_xml['path'])
+                          "Expected Path: %s\n Path from virsh vol-dumpxml: %s", expected['name'], expected['path'], volume_xml['path'])
             error_count += 1
 
         else:
@@ -427,7 +421,7 @@ def run_virsh_volume(test, params, env):
         if expected['capacity'] != norm_cap['xml']:
             logging.error("Capacity mismatch for volume: %s against virsh"
                           " vol-dumpxml\nExpected: %s\nActual: %s",
-                          expected['name'] ,expected['capacity'],
+                          expected['name'], expected['capacity'],
                           norm_cap['xml'])
             error_count += 1
         else:
@@ -447,8 +441,6 @@ def run_virsh_volume(test, params, env):
                           expected['name'])
 
         return error_count
-
-
 
     # Initialize the variables
     pool_name = params.get("pool_name")
@@ -484,7 +476,7 @@ def run_virsh_volume(test, params, env):
             expected_vol['capacity'] = capacity
             expected_vol['allocation'] = allocation
             expected_vol['format'] = vol_format
-            expected_vol['path'] = pool_target+'/'+volume_name
+            expected_vol['path'] = pool_target + '/' + volume_name
             expected_vol['type'] = vol_type
             # Creates volume
             create_volume(expected_vol)

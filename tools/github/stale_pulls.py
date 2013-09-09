@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import sys, os, getpass, datetime
+import sys
+import os
+import getpass
+import datetime
 from github import Github
 from github_issues import GithubIssues
 
@@ -25,7 +28,7 @@ while True:
     if label:
         try:
             # http://jacquev6.github.io
-            #       /PyGithub/github_objects/Label.html#github.Label.Label
+            # /PyGithub/github_objects/Label.html#github.Label.Label
             labels.append(issues.get_gh_label(label).name)
         except ValueError, detail:
             print str(detail)
@@ -33,8 +36,8 @@ while True:
         break
 print
 
-criteria = {'state':'open', 'labels':labels,
-            'sort':'updated', 'direction':'asc'}
+criteria = {'state': 'open', 'labels': labels,
+            'sort': 'updated', 'direction': 'asc'}
 
 heading = ("Oldest updates for Open %s pull requests from %s, past 1 day old:"
            % (",".join(labels), repo_full_name))

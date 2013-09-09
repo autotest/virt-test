@@ -1,6 +1,8 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import utils_misc, aexpect
+
 
 @error.context_aware
 def run_format_disk(test, params, env):
@@ -35,21 +37,22 @@ def run_format_disk(test, params, env):
             error.context("Get disk list in guest")
             list_disk_cmd = params.get("list_disk_cmd")
             s, o = session.cmd_status_output(list_disk_cmd,
-                                                     timeout=cmd_timeout)
-            for i in re.findall("Disk*.(\d+)\s+Offline",o):
+                                             timeout=cmd_timeout)
+            for i in re.findall("Disk*.(\d+)\s+Offline", o):
                 error.context("Set disk '%s' to online status" % i,
                               logging.info)
                 set_online_cmd = params.get("set_online_cmd") % i
                 s, o = session.cmd_status_output(set_online_cmd,
-                                                     timeout=cmd_timeout)
-                if s !=0:
+                                                 timeout=cmd_timeout)
+                if s != 0:
                     raise error.TestFail("Can not set disk online %s" % o)
 
         error.context("Create partition on disk", logging.info)
         s, o = session.cmd_status_output(create_partition_cmd,
-                                                 timeout=cmd_timeout)
+                                         timeout=cmd_timeout)
         if s != 0:
-            raise error.TestFail("Failed to create partition with error: %s" % o)
+            raise error.TestFail(
+                "Failed to create partition with error: %s" % o)
         logging.info("Output of command of create partition on disk: %s" % o)
 
     format_cmd = params.get("format_cmd")
@@ -57,7 +60,7 @@ def run_format_disk(test, params, env):
         error.context("Format the disk with cmd '%s'" % format_cmd,
                       logging.info)
         s, o = session.cmd_status_output(format_cmd,
-                                                 timeout=cmd_timeout)
+                                         timeout=cmd_timeout)
         if s != 0:
             raise error.TestFail("Failed to format with error: %s" % o)
         logging.info("Output of format disk command: %s" % o)

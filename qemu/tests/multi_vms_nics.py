@@ -1,4 +1,6 @@
-import logging, time, re
+import logging
+import time
+import re
 from autotest.client.shared import error
 from virttest import utils_test, remote, utils_net
 
@@ -32,7 +34,6 @@ def run_multi_vms_nics(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-
     def ping(session, nic, dst_ip, strick_check, flood_minutes):
         d_packet_size = [1, 4, 48, 512, 1440, 1500, 1505, 4054, 4055, 4096,
                          4192, 8878, 9000, 32767, 65507]
@@ -40,8 +41,8 @@ def run_multi_vms_nics(test, params, env):
         for size in packet_size:
             error.context("Ping with packet size %s" % size, logging.info)
             status, output = utils_test.ping(dst_ip, 10, interface=nic,
-                                                packetsize=size,
-                                                timeout=30, session=session)
+                                             packetsize=size,
+                                             timeout=30, session=session)
             if strict_check:
                 ratio = utils_test.get_loss_ratio(output)
                 if ratio != 0:
@@ -54,13 +55,13 @@ def run_multi_vms_nics(test, params, env):
 
         error.context("Flood ping test", logging.info)
         utils_test.ping(dst_ip, None, interface=nic, flood=True,
-                          output_func=None, timeout=flood_minutes * 60,
-                          session=session)
+                        output_func=None, timeout=flood_minutes * 60,
+                        session=session)
         error.context("Final ping test", logging.info)
         counts = params.get("ping_counts", 100)
         status, output = utils_test.ping(dst_ip, counts, interface=nic,
-                                            timeout=float(counts) * 1.5,
-                                            session=session)
+                                         timeout=float(counts) * 1.5,
+                                         session=session)
         if strick_check == "yes":
             ratio = utils_test.get_loss_ratio(output)
             if ratio != 0:
@@ -70,7 +71,6 @@ def run_multi_vms_nics(test, params, env):
             if status != 0:
                 raise error.TestFail("Ping returns non-zero value %s" %
                                      output)
-
 
     def file_transfer(session, src, dst):
         username = params.get("username", "")
@@ -157,7 +157,7 @@ def run_multi_vms_nics(test, params, env):
         ping(src_ip_info[3], src_ip_info[0], host_ip, strict_check,
              flood_minutes)
         error.context("File transfer test between guest and host",
-                                                     logging.info)
+                      logging.info)
         file_transfer(src_ip_info[3], src_ip_info[2], host_ip)
         for dst_ip in ip_list[src_ip_index:]:
             txt = "Ping test between %s and %s" % (src_ip_info[2], dst_ip[2])

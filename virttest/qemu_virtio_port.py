@@ -21,19 +21,23 @@ SOCKET_SIZE = 2048
 
 
 class VirtioPortException(Exception):
+
     """ General virtio_port exception """
     pass
 
 
 class VirtioPortFatalException(VirtioPortException):
+
     """ Fatal virtio_port exception """
     pass
 
 
 class _VirtioPort(object):
+
     """
     Define structure to keep information about used port.
     """
+
     def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
@@ -136,7 +140,9 @@ class _VirtioPort(object):
 
 
 class VirtioSerial(_VirtioPort):
+
     """ Class for handling virtio-serialport """
+
     def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
@@ -147,7 +153,9 @@ class VirtioSerial(_VirtioPort):
 
 
 class VirtioConsole(_VirtioPort):
+
     """ Class for handling virtio-console """
+
     def __init__(self, qemu_id, name, hostfile):
         """
         @param name: Name of port for guest side.
@@ -158,9 +166,11 @@ class VirtioConsole(_VirtioPort):
 
 
 class GuestWorker(object):
+
     """
     Class for executing "virtio_console_guest" script on guest
     """
+
     def __init__(self, vm):
         """ Initialize worker for use (including port init on guest) """
         self.vm = vm
@@ -177,11 +187,11 @@ class GuestWorker(object):
             cmd_compile = ("python -OO %s -c "
                            "&& echo -n 'PASS: Compile virtio_guest finished' "
                            "|| echo -n 'FAIL: Compile virtio_guest failed'"
-                     % guest_script_path)
+                           % guest_script_path)
             self.__cmd_execute_worker = ("python %so"
-                                    "&& echo -n 'PASS: virtio_guest finished' "
-                                    "|| echo -n 'FAIL: virtio_guest failed'"
-                                    % guest_script_path)
+                                         "&& echo -n 'PASS: virtio_guest finished' "
+                                         "|| echo -n 'FAIL: virtio_guest failed'"
+                                         % guest_script_path)
         else:
             self.os_linux = False
             guest_script_path = "C:\\%s" % guest_script_py
@@ -191,9 +201,9 @@ class GuestWorker(object):
                            "|| echo FAIL: Compile virtio_guest failed"
                            % guest_script_path)
             self.__cmd_execute_worker = ("%so "
-                                    "&& echo PASS: virtio_guest finished "
-                                    "|| echo FAIL: virtio_guest failed"
-                                    % guest_script_path)
+                                         "&& echo PASS: virtio_guest finished "
+                                         "|| echo FAIL: virtio_guest failed"
+                                         % guest_script_path)
 
         # Copy, compile and run the worker
         timeout = 10
@@ -295,7 +305,7 @@ class GuestWorker(object):
         self.session.sendline(cmd)
         try:
             (match, data) = self.session.read_until_any_line_matches(patterns,
-                                        timeout=timeout)
+                                                                     timeout=timeout)
             if patterns[match].startswith('^PASS:'):
                 match = 0
             elif patterns[match].startswith('^FAIL:'):
@@ -380,7 +390,7 @@ class GuestWorker(object):
             except Exception, inst:
                 logging.error(inst)
                 raise VirtioPortFatalException("virtio-console driver is "
-                            "irreparably blocked, further tests might FAIL.")
+                                               "irreparably blocked, further tests might FAIL.")
 
     def cleanup_ports(self):
         """
@@ -398,7 +408,7 @@ class GuestWorker(object):
                 self.vm.verify_kernel_crash()
 
                 match, tmp = self._cmd("guest_exit()", 10, ('^FAIL:',
-                                            '^PASS: virtio_guest finished'))
+                                                            '^PASS: virtio_guest finished'))
                 self.session.close()
                 self.session = utils_test.wait_for_login(self.vm)
                 # On windows it dies with the connection
@@ -415,7 +425,7 @@ class GuestWorker(object):
             except Exception, inst:
                 logging.error(inst)
                 raise VirtioPortFatalException("virtio-console driver is "
-                            "irreparably blocked, further tests might FAIL.")
+                                               "irreparably blocked, further tests might FAIL.")
 
     def cleanup(self):
         """ Cleanup ports and quit the worker """
@@ -442,9 +452,11 @@ class GuestWorker(object):
 
 
 class ThSend(Thread):
+
     """
     Random data sender thread.
     """
+
     def __init__(self, port, data, exit_event, quiet=False):
         """
         @param port: Destination port.
@@ -465,7 +477,6 @@ class ThSend(Thread):
         self.quiet = quiet
         self.ret_code = 1    # sets to 0 when finish properly
 
-
     def run(self):
         logging.debug("ThSend %s: run", self.getName())
         try:
@@ -481,9 +492,11 @@ class ThSend(Thread):
 
 
 class ThSendCheck(Thread):
+
     """
     Random data sender thread.
     """
+
     def __init__(self, port, exit_event, queues, blocklen=1024,
                  migrate_event=None, reduced_set=False):
         """
@@ -536,8 +549,8 @@ class ThSendCheck(Thread):
                 # self.port is not yet set while reconnecting
                 if self.migrate_event is None:
                     raise error.TestFail("ThSendCheck %s: Broken pipe. If this"
-                                   " is expected behavior set migrate_event "
-                                   "to support reconnection." % self.getName())
+                                         " is expected behavior set migrate_event "
+                                         "to support reconnection." % self.getName())
                 if self.port.sock is None:
                     logging.debug(_err_msg_disconnect)
                     while self.port.sock is None:
@@ -566,9 +579,9 @@ class ThSendCheck(Thread):
                         if self.migrate_event is None:
                             self.exitevent.set()
                             raise error.TestFail("ThSendCheck %s: Broken "
-                                    "pipe. If this is expected behavior "
-                                    "set migrate_event to support "
-                                    "reconnection." % self.getName())
+                                                 "pipe. If this is expected behavior "
+                                                 "set migrate_event to support "
+                                                 "reconnection." % self.getName())
                         logging.debug("ThSendCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
                         attempt = 10
@@ -576,7 +589,7 @@ class ThSendCheck(Thread):
                                and not self.exitevent.isSet()):
                             # Wait until main thread sets the new self.port
                             while not (self.exitevent.isSet()
-                                            or self.migrate_event.wait(1)):
+                                       or self.migrate_event.wait(1)):
                                 pass
                             if self.exitevent.isSet():
                                 break
@@ -602,9 +615,11 @@ class ThSendCheck(Thread):
 
 
 class ThRecv(Thread):
+
     """
     Receives data and throws it away.
     """
+
     def __init__(self, port, event, blocklen=1024, quiet=False):
         """
         @param port: Data source port.
@@ -641,9 +656,11 @@ class ThRecv(Thread):
 
 
 class ThRecvCheck(Thread):
+
     """
     Random data receiver/checker thread.
     """
+
     def __init__(self, port, buff, exit_event, blocklen=1024, sendlen=0,
                  migrate_event=None, debug=None):
         """
@@ -692,8 +709,8 @@ class ThRecvCheck(Thread):
         """
         logging.debug("ThRecvCheck %s: run", self.getName())
         _err_msg_missing_migrate_ev = ("ThRecvCheck %s: Broken pipe. If "
-                        "this is expected behavior set migrate_event to "
-                        "support reconnection." % self.getName())
+                                       "this is expected behavior set migrate_event to "
+                                       "support reconnection." % self.getName())
         _err_msg_exception = ('ThRecvCheck ' + str(self.getName()) + ': Got '
                               'exception %s, continuing')
         _err_msg_disconnect = ('ThRecvCheck ' + str(self.getName()) + ': Port '
@@ -764,8 +781,8 @@ class ThRecvCheck(Thread):
                                                   "Queue = %s",
                                                   self.getName(), repr(_char))
                                     logging.info("ThRecvCheck %s: "
-                                                "MaxSendIDX = %d",
-                                                self.getName(),
+                                                 "MaxSendIDX = %d",
+                                                 self.getName(),
                                                 (self.sendlen - self.sendidx))
                                     raise error.TestFail("ThRecvCheck %s: "
                                                          "incorrect data" %
@@ -913,7 +930,7 @@ class ThRecvCheck(Thread):
                                               self.getName(), repr(verif),
                                               repr(buf), repr(queue))
                                 raise error.TestFail("Recv and sendqueue "
-                                                "don't match with any offset.")
+                                                     "don't match with any offset.")
                             # buf was changed, break from this loop
                             attempt = 10
                             break
@@ -925,9 +942,9 @@ class ThRecvCheck(Thread):
                         if self.migrate_event is None:
                             self.exitevent.set()
                             raise error.TestFail("ThRecvCheck %s: Broken pipe."
-                                    " If this is expected behavior set migrate"
-                                    "_event to support reconnection." %
-                                    self.getName())
+                                                 " If this is expected behavior set migrate"
+                                                 "_event to support reconnection." %
+                                                 self.getName())
                         logging.debug("ThRecvCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
                         # TODO BUG: data from the socket on host can be lost

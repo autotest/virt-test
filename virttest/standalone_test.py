@@ -1,8 +1,25 @@
-import os, logging, imp, sys, time, traceback, Queue, glob, shutil
+import os
+import logging
+import imp
+import sys
+import time
+import traceback
+import Queue
+import glob
+import shutil
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, utils_params, utils_env, env_process, data_dir, bootstrap
-import storage, cartesian_config, arch, funcatexit, version
+import utils_misc
+import utils_params
+import utils_env
+import env_process
+import data_dir
+import bootstrap
+import storage
+import cartesian_config
+import arch
+import funcatexit
+import version
 
 global GUEST_NAME_LIST
 GUEST_NAME_LIST = None
@@ -40,11 +57,13 @@ def get_tag(params, index):
 
 
 class Test(object):
+
     """
     Mininal test class used to run a virt test.
     """
 
     env_version = utils_env.get_env_version()
+
     def __init__(self, params, options):
         self.params = utils_params.Params(params)
         self.bindir = data_dir.get_root_dir()
@@ -70,7 +89,6 @@ class Test(object):
         self.file_handler = None
         self.background_errors = Queue.Queue()
 
-
     def set_debugdir(self, debugdir):
         self.debugdir = os.path.join(debugdir, self.tag)
         self.outputdir = self.debugdir
@@ -85,19 +103,15 @@ class Test(object):
         utils_misc.set_log_file_dir(self.debugdir)
         self.logfile = os.path.join(self.debugdir, 'debug.log')
 
-
     def write_test_keyval(self, d):
         utils.write_keyval(self.debugdir, d)
-
 
     def start_file_logging(self):
         self.file_handler = configure_file_logging(self.logfile)
 
-
     def stop_file_logging(self):
         logger = logging.getLogger()
         logger.removeHandler(self.file_handler)
-
 
     def verify_background_errors(self):
         """
@@ -111,7 +125,6 @@ class Test(object):
             pass
         else:
             raise exc[1], None, exc[2]
-
 
     def run_once(self):
         params = self.params
@@ -153,7 +166,7 @@ class Test(object):
                             raise error.TestError("Directory %s does not "
                                                   "exist" % (subtestdir))
                         subtest_dirs += data_dir.SubdirList(subtestdir,
-                                                         bootstrap.test_filter)
+                                                            bootstrap.test_filter)
 
                     # Verify if we have the correspondent source file for it
                     subtest_dirs += data_dir.SubdirList(self.testdir,
@@ -269,6 +282,7 @@ def print_stdout(sr, end=True):
 
 
 class Bcolors(object):
+
     """
     Very simple class with color support.
     """
@@ -327,28 +341,32 @@ def print_error(t_elapsed):
     """
     Print ERROR to stdout with ERROR (red) color.
     """
-    print_stdout(bcolors.ERROR + "ERROR" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    print_stdout(bcolors.ERROR + "ERROR" +
+                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
 
 
 def print_pass(t_elapsed):
     """
     Print PASS to stdout with PASS (green) color.
     """
-    print_stdout(bcolors.PASS + "PASS" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    print_stdout(bcolors.PASS + "PASS" +
+                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
 
 
 def print_fail(t_elapsed):
     """
     Print FAIL to stdout with FAIL (red) color.
     """
-    print_stdout(bcolors.FAIL + "FAIL" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    print_stdout(bcolors.FAIL + "FAIL" +
+                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
 
 
 def print_warn(t_elapsed):
     """
     Print WARN to stdout with WARN (yellow) color.
     """
-    print_stdout(bcolors.WARN + "WARN" + bcolors.ENDC + " (%.2f s)" % t_elapsed)
+    print_stdout(bcolors.WARN + "WARN" +
+                 bcolors.ENDC + " (%.2f s)" % t_elapsed)
 
 
 def reset_logging():
@@ -417,7 +435,8 @@ def create_config_files(options):
         test_dir = os.path.join(test_dir, parent_config_dir)
 
     if not os.path.exists(os.path.join(test_dir, "cfg")):
-        print_stdout("Setup error: %s does not exist" % os.path.join(test_dir, "cfg"))
+        print_stdout("Setup error: %s does not exist" %
+                     os.path.join(test_dir, "cfg"))
         print_stdout("Perhaps you have not specified -t?")
         sys.exit(1)
     # lvsb test doesn't use shared configs
@@ -433,6 +452,7 @@ def get_paginator():
         return os.popen('%s -FRSX' % less_cmd, 'w')
     except ValueError:
         return sys.stdout
+
 
 def get_cartesian_parser_details(cartesian_parser):
     """
@@ -499,7 +519,7 @@ def print_test_list(options, cartesian_parser):
                          shortname)
             if needs_root:
                 out = (basic_out + bcolors.yellow + " (requires root)" +
-                        bcolors.end + "\n")
+                       bcolors.end + "\n")
             else:
                 out = basic_out + "\n"
             pipe.write(out)
@@ -530,7 +550,6 @@ def get_guest_name_list(options):
         GUEST_NAME_LIST = guest_name_list
 
     return GUEST_NAME_LIST
-
 
 
 def print_guest_list(options):
@@ -812,7 +831,7 @@ def run_tests(parser, options):
 
         # Add kvm module status
         dct["kvm_default"] = utils_misc.get_module_params(
-                                           dct.get("sysfs_dir", "/sys"), "kvm")
+            dct.get("sysfs_dir", "/sys"), "kvm")
 
         if dct.get("skip") == "yes":
             continue

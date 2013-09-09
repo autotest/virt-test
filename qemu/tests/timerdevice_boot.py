@@ -1,8 +1,11 @@
-import logging, re, time
+import logging
+import re
+import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, storage, utils_disk, utils_test, env_process
 from virttest import funcatexit
+
 
 @error.context_aware
 def run_timerdevice_boot(test, params, env):
@@ -30,8 +33,8 @@ def run_timerdevice_boot(test, params, env):
         cmd = "cat /sys/devices/system/clocksource/"
         cmd += "clocksource0/current_clocksource"
         if not expected in session.cmd(cmd):
-            raise error.TestFail("Guest didn't use '%s' clocksource" % expected)
-
+            raise error.TestFail(
+                "Guest didn't use '%s' clocksource" % expected)
 
     error.context("Sync the host system time with ntp server", logging.info)
     utils.system("ntpdate clock.redhat.com")
@@ -63,10 +66,10 @@ def run_timerdevice_boot(test, params, env):
             error.context("Update guest kernel cli to '%s'" % clksrc,
                           logging.info)
             image_filename = storage.get_image_filename(params,
-                                                    data_dir.get_data_dir())
+                                                        data_dir.get_data_dir())
             grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
             kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                             r".*vmlinuz-\d+.*")
+                                            r".*vmlinuz-\d+.*")
 
             disk_obj = utils_disk.GuestFSModiDisk(image_filename)
             kernel_cfg_original = disk_obj.read_file(grub_file)
@@ -82,7 +85,7 @@ def run_timerdevice_boot(test, params, env):
 
             if "clocksource=" in kernel_cfg:
                 kernel_cfg_new = re.sub("clocksource=.*?\s",
-                                    "clocksource=%s" % clksrc, kernel_cfg)
+                                        "clocksource=%s" % clksrc, kernel_cfg)
             else:
                 kernel_cfg_new = "%s %s" % (kernel_cfg,
                                             "clocksource=%s" % clksrc)
@@ -105,7 +108,6 @@ def run_timerdevice_boot(test, params, env):
 
         error.context("Kill all ntp related processes")
         session.cmd("pkill ntp; true")
-
 
     if params.get("timerdevice_file_operation") == "yes":
         error.context("Do some file operation on guest", logging.info)
@@ -131,7 +133,8 @@ def run_timerdevice_boot(test, params, env):
 
     get_hw_time_cmd = params.get("get_hw_time_cmd")
     if get_hw_time_cmd:
-        error.context("Check the hardware time on guest and host", logging.info)
+        error.context(
+            "Check the hardware time on guest and host", logging.info)
         host_time = utils.system_output(get_hw_time_cmd)
         guest_time = session.cmd(get_hw_time_cmd)
         drift = abs(float(host_time) - float(guest_time))
@@ -151,7 +154,7 @@ def run_timerdevice_boot(test, params, env):
         session = vm.reboot()
         error.context("Check the system time on guest and host", logging.info)
         (host_time, guest_time) = utils_test.get_time(session, time_command,
-                                                  time_filter_re, time_format)
+                                                      time_filter_re, time_format)
         drift = abs(float(host_time) - float(guest_time))
         if drift > timerdevice_drift_threshold:
             raise error.TestFail("The guest's system time is different with"
@@ -160,7 +163,8 @@ def run_timerdevice_boot(test, params, env):
 
         get_hw_time_cmd = params.get("get_hw_time_cmd")
         if get_hw_time_cmd:
-            error.context("Check the hardware time on guest and host", logging.info)
+            error.context(
+                "Check the hardware time on guest and host", logging.info)
             host_time = utils.system_output(get_hw_time_cmd)
             guest_time = session.cmd(get_hw_time_cmd)
             drift = abs(float(host_time) - float(guest_time))

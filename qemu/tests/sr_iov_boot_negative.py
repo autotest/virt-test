@@ -29,7 +29,8 @@ def run_sr_iov_boot_negative(test, params, env):
         if neg_msg:
             error.context("Check qemu-qemu error message", logging.info)
             if neg_msg not in str(e):
-                msg = "Could not find '%s' in error message '%s'" % (neg_msg, e)
+                msg = "Could not find '%s' in error message '%s'" % (
+                    neg_msg, e)
                 raise error.TestFail(msg)
         logging.debug("Could not boot up vm, %s" % e)
     if case_fail:
