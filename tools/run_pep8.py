@@ -3,9 +3,8 @@
 Usage: run_pep8.py [options] [list of files]
 
 Options:
--h, --help    show this help message and exit
--q, --quiet   Ignore pep8 errors
--d, --dryrun  Analyze, but don't make any changes to files
+-h, --help  show this help message and exit
+-f, --fix   Auto fix files in place
 '''
 
 import os
