@@ -36,7 +36,7 @@ E_MSG = ("The utilities 'pep8' and 'autopep8' are not available. You have "
 
 # Classes of errors we ignore on quiet runs
 # TODO: I am not sure which ERROR we need to ignore.
-IGNORED_ERRORS = ''
+IGNORED_ERRORS = 'E501,W601'
 
 
 def _check(path):
