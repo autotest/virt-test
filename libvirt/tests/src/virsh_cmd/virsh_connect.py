@@ -67,7 +67,7 @@ def run_virsh_connect(test, params, env):
         libvirtdconf_file.writelines(line_list)
         libvirtdconf_file.close()
 
-        #restart libvirtd service
+        # restart libvirtd service
         utils_libvirtd.libvirtd_restart()
 
     def unix_transport_recover():
@@ -78,13 +78,13 @@ def run_virsh_connect(test, params, env):
             shutil.copy(libvirtd_conf_bak_path, libvirtd_conf_path)
             utils_libvirtd.libvirtd_restart()
 
-    #get the params from subtests.
-    #params for general.
+    # get the params from subtests.
+    # params for general.
     connect_arg = params.get("connect_arg", "")
     connect_opt = params.get("connect_opt", "")
     status_error = params.get("status_error", "no")
 
-    #params for transport connect.
+    # params for transport connect.
     local_ip = params.get("local_ip", "ENTER.YOUR.LOCAL.IP")
     local_pwd = params.get("local_pwd", "ENTER.YOUR.LOCAL.ROOT.PASSWORD")
     transport_type = params.get("connect_transport_type", "local")
@@ -94,30 +94,30 @@ def run_virsh_connect(test, params, env):
     server_ip = local_ip
     server_pwd = local_pwd
 
-    #params special for tls connect.
+    # params special for tls connect.
     server_cn = params.get("connect_server_cn", "TLSServer")
     client_cn = params.get("connect_client_cn", "TLSClient")
 
-    #params special for tcp connect.
+    # params special for tcp connect.
     tcp_port = params.get("tcp_port", '16509')
 
-    #params special for unix transport.
+    # params special for unix transport.
     libvirtd_conf_path = '/etc/libvirt/libvirtd.conf'
     libvirtd_conf_bak_path = '%s/libvirtd.conf.bak' % test.tmpdir
 
-    #check the config
+    # check the config
     if (connect_arg == "transport" and
-                            transport_type == "remote" and
-                            local_ip.count("ENTER")):
+       transport_type == "remote" and
+       local_ip.count("ENTER")):
         raise error.TestNAError("Parameter local_ip is not configured"
-                                                    "in remote test.")
+                                "in remote test.")
     if (connect_arg == "transport" and
-                            transport_type == "remote" and
-                            local_pwd.count("ENTER")):
+       transport_type == "remote" and
+       local_pwd.count("ENTER")):
         raise error.TestNAError("Parameter local_pwd is not configured"
-                                                    "in remote test.")
+                                "in remote test.")
     if (connect_arg.count("lxc") and
-                (not os.path.exists("/usr/libexec/libvirt_lxc"))):
+       (not os.path.exists("/usr/libexec/libvirt_lxc"))):
         raise error.TestNAError("Connect test of lxc:/// is not suggested on "
                                 "the host with no lxc driver.")
     if connect_arg.count("xen") and (not os.path.exists("/var/run/xend")):
@@ -135,9 +135,9 @@ def run_virsh_connect(test, params, env):
 
         if transport == "ssh":
             ssh_connection = utils_conn.SSHConnection(server_ip=server_ip,
-                                        server_pwd=server_pwd,
-                                        client_ip=client_ip,
-                                        client_pwd=client_pwd)
+                                                      server_pwd=server_pwd,
+                                                      client_ip=client_ip,
+                                                      client_pwd=client_pwd)
             try:
                 ssh_connection.conn_check()
             except utils_conn.ConnectionError:
@@ -145,37 +145,37 @@ def run_virsh_connect(test, params, env):
                 ssh_connection.conn_check()
 
             connect_uri = libvirt_vm.get_uri_with_transport(
-                                        uri_type=canonical_uri_type,
-                                        transport=transport, dest_ip=server_ip)
+                uri_type=canonical_uri_type,
+                transport=transport, dest_ip=server_ip)
         elif transport == "tls":
             tls_connection = utils_conn.TLSConnection(server_ip=server_ip,
-                                        server_pwd=server_pwd,
-                                        client_ip=client_ip,
-                                        client_pwd=client_pwd,
-                                        server_cn=server_cn,
-                                        client_cn=client_cn)
+                                                      server_pwd=server_pwd,
+                                                      client_ip=client_ip,
+                                                      client_pwd=client_pwd,
+                                                      server_cn=server_cn,
+                                                      client_cn=client_cn)
             tls_connection.conn_setup()
 
             connect_uri = libvirt_vm.get_uri_with_transport(
-                                        uri_type=canonical_uri_type,
-                                        transport=transport, dest_ip=server_cn)
+                uri_type=canonical_uri_type,
+                transport=transport, dest_ip=server_cn)
         elif transport == "tcp":
             tcp_connection = utils_conn.TCPConnection(server_ip=server_ip,
-                                        server_pwd=server_pwd,
-                                        tcp_port=tcp_port)
+                                                      server_pwd=server_pwd,
+                                                      tcp_port=tcp_port)
             tcp_connection.conn_setup()
 
             connect_uri = libvirt_vm.get_uri_with_transport(
-                                        uri_type=canonical_uri_type,
-                                        transport=transport,
-                                        dest_ip="%s:%s"
-                                        % (server_ip, tcp_port))
+                uri_type=canonical_uri_type,
+                transport=transport,
+                dest_ip="%s:%s"
+                % (server_ip, tcp_port))
         elif transport == "unix":
             unix_transport_setup()
             connect_uri = libvirt_vm.get_uri_with_transport(
-                                        uri_type=canonical_uri_type,
-                                        transport=transport,
-                                        dest_ip="")
+                uri_type=canonical_uri_type,
+                transport=transport,
+                dest_ip="")
         else:
             raise error.TestNAError("Configuration of transport=%s is "
                                     "not recognized." % transport)
@@ -185,11 +185,11 @@ def run_virsh_connect(test, params, env):
     try:
         try:
             uri = do_virsh_connect(connect_uri, connect_opt)
-            #connect sucessfully
+            # connect successfully
             if status_error == "yes":
-                raise error.TestFail("Connect sucessfully in the "
+                raise error.TestFail("Connect successfully in the "
                                      "case expected to fail.")
-            #get the expect uri when connect argument is ""
+            # get the expect uri when connect argument is ""
             if connect_uri == "":
                 connect_uri = virsh.canonical_uri().split()[-1]
 

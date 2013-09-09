@@ -1,7 +1,13 @@
-import logging, os, glob, shutil
+import logging
+import os
+import glob
+import shutil
 from autotest.client.shared import logging_manager, error
 from autotest.client import utils
-import utils_misc, data_dir, asset, cartesian_config
+import utils_misc
+import data_dir
+import asset
+import cartesian_config
 
 basic_program_requirements = ['7za', 'tcpdump', 'nc', 'ip', 'arping']
 
@@ -9,7 +15,7 @@ recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',),
                                  ('qemu-io',)],
                         'libvirt': [('virsh',), ('virt-install',),
                                     ('fakeroot',)],
-                        'lvsb':[],
+                        'lvsb': [],
                         'libguestfs': [('perl',)]}
 
 mandatory_programs = {'qemu': basic_program_requirements + ['gcc'],
@@ -23,25 +29,25 @@ mandatory_headers = {'qemu': ['Python.h', 'types.h', 'socket.h', 'unistd.h'],
                      'libvirt': [],
                      'openvswitch': [],
                      'v2v': [],
-                     'lvsb':[],
+                     'lvsb': [],
                      'libguestfs': []}
 
 first_subtest = {'qemu': ['unattended_install', 'steps'],
-                'libvirt': ['unattended_install'],
-                'openvswitch': ['unattended_install'],
-                'v2v': ['unattended_install'],
-                'libguestfs': ['unattended_install'],
-                'lvsb':[]}
+                 'libvirt': ['unattended_install'],
+                 'openvswitch': ['unattended_install'],
+                 'v2v': ['unattended_install'],
+                 'libguestfs': ['unattended_install'],
+                 'lvsb': []}
 
 last_subtest = {'qemu': ['shutdown'],
                 'libvirt': ['shutdown', 'remove_guest'],
                 'openvswitch': ['shutdown'],
                 'v2v': ['shutdown'],
                 'libguestfs': ['shutdown'],
-                'lvsb':[]}
+                'lvsb': []}
 
 test_filter = ['__init__', 'cfg']
-config_filter = ['__init__',]
+config_filter = ['__init__', ]
 
 
 def verify_recommended_programs(t_type):
@@ -64,6 +70,7 @@ def verify_recommended_programs(t_type):
                 logging.info("Recommended command missing. You may "
                              "want to install it if not building it from "
                              "source. Aliases searched: %s", cmd_aliases)
+
 
 def verify_mandatory_programs(t_type):
     failed_cmds = []
@@ -211,7 +218,7 @@ def create_subtests_cfg(t_type):
     all_test_list = set(all_specific_test_list + all_shared_test_list)
 
     specific_test_cfg = os.path.join(root_dir, t_type,
-                                   'tests', 'cfg')
+                                     'tests', 'cfg')
     shared_test_cfg = os.path.join(root_dir, 'tests', 'cfg')
 
     # lvsb tests can't use VM shared tests
@@ -303,7 +310,8 @@ def create_subtests_cfg(t_type):
 
     subtests_cfg = os.path.join(root_dir, t_type, 'cfg', 'subtests.cfg')
     subtests_file = open(subtests_cfg, 'w')
-    subtests_file.write("# Do not edit, auto generated file from subtests config\n")
+    subtests_file.write(
+        "# Do not edit, auto generated file from subtests config\n")
     subtests_file.write("variants:\n")
     write_subtests_files(first_subtest_file, subtests_file)
     write_subtests_files(specific_file_list, subtests_file, t_type)
@@ -353,10 +361,11 @@ def create_config_files(test_dir, shared_dir, interactive, step=None,
             shutil.copyfile(src_file, dst_file)
         else:
             diff_cmd = "diff -Naur %s %s" % (dst_file, src_file)
-            diff_result = utils.run(diff_cmd, ignore_status=True, verbose=False)
+            diff_result = utils.run(
+                diff_cmd, ignore_status=True, verbose=False)
             if diff_result.exit_status != 0:
                 logging.info("%s result:\n %s",
-                              diff_result.command, diff_result.stdout)
+                             diff_result.command, diff_result.stdout)
                 if interactive:
                     answer = utils.ask("Config file  %s differs from %s."
                                        "Overwrite?" % (dst_file, src_file))

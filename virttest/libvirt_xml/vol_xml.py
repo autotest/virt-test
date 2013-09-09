@@ -5,7 +5,9 @@ http://libvirt.org/
 
 from virttest.libvirt_xml import base, accessors
 
+
 class VolXMLBase(base.LibvirtXMLBase):
+
     """
     Accessor methods for VolXML class.
 
@@ -21,7 +23,7 @@ class VolXMLBase(base.LibvirtXMLBase):
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'key',
                                                  'capacity', 'allocation',
-                                                  'format', 'path')
+                                                 'format', 'path')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -33,24 +35,23 @@ class VolXMLBase(base.LibvirtXMLBase):
         accessors.XMLElementText('key', self, parent_xpath='/',
                                  tag_name='key')
         accessors.XMLElementInt('capacity', self, parent_xpath='/',
-                                 tag_name='capacity')
+                                tag_name='capacity')
         accessors.XMLElementInt('allocation', self, parent_xpath='/',
-                                 tag_name='allocation')
+                                tag_name='allocation')
         accessors.XMLAttribute('format', self, parent_xpath='/target',
-                                 tag_name='format', attribute='type')
+                               tag_name='format', attribute='type')
         accessors.XMLElementText('path', self, parent_xpath='/target',
                                  tag_name='path')
         super(VolXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 
-
 class VolXML(VolXMLBase):
+
     """
     Manipulators of a Virtual Vol through it's XML definition.
     """
 
     __slots__ = VolXMLBase.__slots__
-
 
     def __init__(self, vol_name='default', virsh_instance=base.virsh):
         """
@@ -58,7 +59,6 @@ class VolXML(VolXMLBase):
         """
         super(VolXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<volume><name>%s</name></volume>" % vol_name
-
 
     @staticmethod
     def new_from_vol_dumpxml(vol_name, pool_name, virsh_instance=base.virsh):
@@ -74,7 +74,6 @@ class VolXML(VolXMLBase):
                                       .stdout.strip()
         return volxml
 
-
     @staticmethod
     def get_vol_details_by_name(vol_name, pool_name, virsh_instance=base.virsh):
         """
@@ -85,7 +84,7 @@ class VolXML(VolXMLBase):
         """
         volume_xml = {}
         vol_xml = VolXML.new_from_vol_dumpxml(vol_name, pool_name,
-                                                      virsh_instance)
+                                              virsh_instance)
         volume_xml['key'] = vol_xml.key
         volume_xml['path'] = vol_xml.path
         volume_xml['format'] = vol_xml.format

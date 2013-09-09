@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import sys, os, getpass, datetime
+import sys
+import os
+import getpass
+import datetime
 
 # PyGithub >= 1.13 is required https://pypi.python.org/pypi/PyGithub
 from github import Github
@@ -13,7 +16,8 @@ username = sys.stdin.readline().strip()
 print
 password = getpass.getpass('Enter github password: ')
 
-gh = Github(login_or_token=username, password=password, user_agent='PyGithub/Python')
+gh = Github(login_or_token=username,
+            password=password, user_agent='PyGithub/Python')
 # needed to fetch fresh rate_limiting data
 repo = gh.get_repo('autotest/virt-test')
 
@@ -63,7 +67,7 @@ last_week = datetime.datetime.now() - two_days
 #            sort - str - 'created', 'updated', 'comments'
 #            direction - str - 'asc', 'desc'
 #            since - datetime.datetime
-criteria = {'state':'open', 'since':last_week}
+criteria = {'state': 'open', 'since': last_week}
 # Search results are cached for 10-minutes, otherwise searches can be slow
 for number in issues.search(criteria):
     issue = issues[number]

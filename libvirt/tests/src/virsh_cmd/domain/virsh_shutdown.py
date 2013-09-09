@@ -24,7 +24,7 @@ def run_virsh_shutdown(test, params, env):
     vm_ref = params.get("shutdown_vm_ref")
     libvirtd = params.get("libvirtd", "on")
 
-    #run test case
+    # run test case
     if vm_ref == "id":
         vm_ref = domid
     elif vm_ref == "hex_id":
@@ -40,7 +40,7 @@ def run_virsh_shutdown(test, params, env):
         utils_libvirtd.libvirtd_stop()
 
     if vm_ref != "remote":
-        status = virsh.shutdown(vm_ref, ignore_status = True).exit_status
+        status = virsh.shutdown(vm_ref, ignore_status=True).exit_status
     else:
         remote_ip = params.get("remote_ip", None)
         remote_pwd = params.get("remote_pwd", None)
@@ -57,11 +57,11 @@ def run_virsh_shutdown(test, params, env):
         except error.CmdError:
             status = 1
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #check status_error
+    # check status_error
     status_error = params.get("status_error")
     if status_error == "yes":
         if status == 0:

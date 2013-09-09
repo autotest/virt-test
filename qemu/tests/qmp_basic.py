@@ -38,7 +38,6 @@ def run_qmp_basic(test, params, env):
             raise error.TestFail("'%s' key doesn't exist in dict ('%s')" %
                                  (key, str(qmp_dict)))
 
-
     def check_dict_key(qmp_dict, key, keytype):
         """
         Performs the following checks on a QMP dict key:
@@ -54,25 +53,20 @@ def run_qmp_basic(test, params, env):
             raise error.TestFail("'%s' key is not of type '%s', it's '%s'" %
                                  (key, keytype, type(qmp_dict[key])))
 
-
     def check_key_is_dict(qmp_dict, key):
         check_dict_key(qmp_dict, key, dict)
-
 
     def check_key_is_list(qmp_dict, key):
         check_dict_key(qmp_dict, key, list)
 
-
     def check_key_is_str(qmp_dict, key):
         check_dict_key(qmp_dict, key, unicode)
-
 
     def check_str_key(qmp_dict, keyname, value=None):
         check_dict_key(qmp_dict, keyname, unicode)
         if value and value != qmp_dict[keyname]:
             raise error.TestFail("'%s' key value '%s' should be '%s'" %
                                  (keyname, str(qmp_dict[keyname]), str(value)))
-
 
     def check_key_is_int(qmp_dict, key):
         fail_no_key(qmp_dict, key)
@@ -82,13 +76,11 @@ def run_qmp_basic(test, params, env):
             raise error.TestFail("'%s' key is not of type int, it's '%s'" %
                                  (key, type(qmp_dict[key])))
 
-
     def check_bool_key(qmp_dict, keyname, value=None):
         check_dict_key(qmp_dict, keyname, bool)
         if value and value != qmp_dict[keyname]:
             raise error.TestFail("'%s' key value '%s' should be '%s'" %
                                  (keyname, str(qmp_dict[keyname]), str(value)))
-
 
     def check_success_resp(resp, empty=False):
         """
@@ -101,7 +93,6 @@ def run_qmp_basic(test, params, env):
         if empty and len(resp["return"]) > 0:
             raise error.TestFail("success response is not empty ('%s')" %
                                  str(resp))
-
 
     def check_error_resp(resp, classname=None, datadict=None):
         """
@@ -117,7 +108,6 @@ def run_qmp_basic(test, params, env):
             raise error.TestFail("got error class '%s' expected '%s'" %
                                  (resp["error"]["class"], classname))
 
-
     def test_version(version):
         """
         Check the QMP greeting message version key which, according to QMP's
@@ -131,12 +121,10 @@ def run_qmp_basic(test, params, env):
             check_key_is_int(version["qemu"], key)
         check_key_is_str(version, "package")
 
-
     def test_greeting(greeting):
         check_key_is_dict(greeting, "QMP")
         check_key_is_dict(greeting["QMP"], "version")
         check_key_is_list(greeting["QMP"], "capabilities")
-
 
     def greeting_suite(monitor):
         """
@@ -148,7 +136,6 @@ def run_qmp_basic(test, params, env):
         greeting = monitor.get_greeting()
         test_greeting(greeting)
         test_version(greeting["QMP"]["version"])
-
 
     def json_parsing_errors_suite(monitor):
         """
@@ -188,7 +175,6 @@ def run_qmp_basic(test, params, env):
             resp = monitor.cmd_raw(cmd)
             check_error_resp(resp, "GenericError")
 
-
     def test_id_key(monitor):
         """
         Check that QMP's "id" key is correctly handled.
@@ -213,7 +199,6 @@ def run_qmp_basic(test, params, env):
                 raise error.TestFail("expected id '%s' but got '%s'" %
                                      (str(id_key), str(resp["id"])))
 
-
     def test_invalid_arg_key(monitor):
         """
         Currently, the only supported keys in the input object are: "execute",
@@ -222,7 +207,6 @@ def run_qmp_basic(test, params, env):
         """
         resp = monitor.cmd_obj({"execute": "eject", "foobar": True})
         check_error_resp(resp, "GenericError", {"member": "foobar"})
-
 
     def test_bad_arguments_key_type(monitor):
         """
@@ -237,7 +221,6 @@ def run_qmp_basic(test, params, env):
             check_error_resp(resp, "GenericError",
                              {"member": "arguments", "expected": "object"})
 
-
     def test_bad_execute_key_type(monitor):
         """
         The "execute" key must be a json-string.
@@ -247,17 +230,15 @@ def run_qmp_basic(test, params, env):
             check_error_resp(resp, "GenericError",
                              {"member": "execute", "expected": "string"})
 
-
     def test_no_execute_key(monitor):
         """
         The "execute" key must exist, we also test for some stupid parsing
         errors.
         """
-        for cmd in ({}, { "execut": "qmp_capabilities" },
-                    { "executee": "qmp_capabilities" }, { "foo": "bar" }):
+        for cmd in ({}, {"execut": "qmp_capabilities"},
+                    {"executee": "qmp_capabilities"}, {"foo": "bar"}):
             resp = monitor.cmd_obj(cmd)
             check_error_resp(resp)  # XXX: check class and data dict?
-
 
     def test_bad_input_obj_type(monitor):
         """
@@ -266,7 +247,6 @@ def run_qmp_basic(test, params, env):
         for cmd in ("foo", [], True, 1):
             resp = monitor.cmd_obj(cmd)
             check_error_resp(resp, "GenericError", {"expected": "object"})
-
 
     def test_good_input_obj(monitor):
         """
@@ -289,7 +269,6 @@ def run_qmp_basic(test, params, env):
         # TODO: would be good to test simple argument usage, but we don't have
         # a read-only command that accepts arguments.
 
-
     def input_object_suite(monitor):
         """
         Check the input object format, as described in the QMP specfication
@@ -304,7 +283,6 @@ def run_qmp_basic(test, params, env):
         test_bad_arguments_key_type(monitor)
         test_id_key(monitor)
         test_invalid_arg_key(monitor)
-
 
     def argument_checker_suite(monitor):
         """
@@ -366,7 +344,6 @@ def run_qmp_basic(test, params, env):
         check_error_resp(resp, "GenericError",
                                {"device": "e1000", "property": "foo"})
 
-
     def unknown_commands_suite(monitor):
         """
         Check that QMP handles unknown commands correctly.
@@ -375,7 +352,6 @@ def run_qmp_basic(test, params, env):
         for cmd in ("bar", "query-", "query-foo", "q", "help"):
             resp = monitor.cmd_qmp(cmd)
             check_error_resp(resp, "CommandNotFound", {"name": cmd})
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

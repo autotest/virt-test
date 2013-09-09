@@ -5,14 +5,19 @@ This exports:
   - two functions for get image/blkdebug filename
   - class for image operates and basic parameters
 """
-import logging, os, shutil, re
+import logging
+import os
+import shutil
+import re
 from autotest.client import utils
 try:
     from autotest.client.shared import iscsi
 except ImportError:
     from virttest import iscsi
 
-import utils_misc, virt_vm, gluster
+import utils_misc
+import virt_vm
+import gluster
 
 
 def preprocess_images(bindir, params, env):
@@ -75,7 +80,7 @@ def get_image_filename(params, root_dir):
         first_contains_digit = re.findall(r'[vhs]d[a-z]*[\d]+', first)
         second_contains_digit = re.findall(r'[vhs]d[a-z]*[\d]+', second)
 
-        if not first_contains_digit and  not second_contains_digit:
+        if not first_contains_digit and not second_contains_digit:
             if len(first) > len(second):
                 return 1
             elif len(first) < len(second):
@@ -133,9 +138,11 @@ def get_image_filename(params, root_dir):
 
 
 class OptionMissing(Exception):
+
     """
     Option not found in the odbject
     """
+
     def __init__(self, option):
         self.option = option
 
@@ -144,9 +151,11 @@ class OptionMissing(Exception):
 
 
 class QemuImg(object):
+
     """
     A basic class for handling operations of disk/block images.
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
@@ -175,14 +184,13 @@ class QemuImg(object):
         if self.base_tag:
             base_params = params.object_params(self.base_tag)
             self.base_image_filename = get_image_filename(base_params,
-                                                           root_dir)
+                                                          root_dir)
             self.base_format = base_params.get("image_format")
         if self.snapshot_tag:
             ss_params = params.object_params(self.snapshot_tag)
             self.snapshot_image_filename = get_image_filename(ss_params,
-                                                               root_dir)
+                                                              root_dir)
             self.snapshot_format = ss_params.get("image_format")
-
 
     def check_option(self, option):
         """
@@ -192,7 +200,6 @@ class QemuImg(object):
         """
         if option not in self.__dict__:
             raise OptionMissing(option)
-
 
     def backup_image(self, params, root_dir, action, good=True,
                      skip_existing=False):
@@ -302,7 +309,6 @@ class QemuImg(object):
                 continue
             backup_func(src, dst)
 
-
     @staticmethod
     def clone_image(params, vm_name, image_name, root_dir):
         """
@@ -331,7 +337,6 @@ class QemuImg(object):
 
             params["image_name_%s_%s" % (image_name, vm_name)] = vm_image_name
 
-
     @staticmethod
     def rm_cloned_image(params, vm_name, image_name, root_dir):
         """
@@ -359,9 +364,11 @@ class QemuImg(object):
 
 
 class Rawdev(object):
+
     """
     Base class for raw storage devices such as iscsi and local disks
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
@@ -381,9 +388,11 @@ class Rawdev(object):
 
 
 class Iscsidev(Rawdev):
+
     """
     Class for handle iscsi devices for VM
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.

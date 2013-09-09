@@ -1,4 +1,4 @@
-from autotest.client.shared import  error
+from autotest.client.shared import error
 from virttest import libvirt_vm, remote, virsh, utils_libvirtd
 
 
@@ -27,7 +27,6 @@ def run_virsh_domid(test, params, env):
     status_error = params.get("status_error", "no")
     libvirtd = params.get("libvirtd", "on")
 
-
     def remote_test(params, vm_name):
         """
         Test remote case.
@@ -41,7 +40,7 @@ def run_virsh_domid(test, params, env):
         try:
             if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
                 raise error.TestNAError("remote_ip and/or local_ip parameters "
-                                  "not changed from default values.")
+                                        "not changed from default values.")
             uri = libvirt_vm.complete_uri(local_ip)
             session = remote.remote_login("ssh", remote_ip, "22", "root",
                                           remote_pwd, "#")
@@ -58,8 +57,7 @@ def run_virsh_domid(test, params, env):
             err = "remote test failed"
         return status, output, err
 
-
-    #run test case
+    # run test case
     if vm_ref == "id":
         vm_ref = domid
     elif vm_ref.find("invalid") != -1:
@@ -80,11 +78,11 @@ def run_virsh_domid(test, params, env):
     else:
         status, output, err = remote_test(params, vm_name)
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0 or err == "":
             raise error.TestFail("Run successfully with wrong command!")

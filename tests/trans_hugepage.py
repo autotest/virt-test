@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client.shared import utils
 from virttest import utils_test, funcatexit
@@ -36,7 +38,6 @@ def run_trans_hugepage(test, params, env):
                 output = re.split('\s+', h)[1]
         return output
 
-
     dd_timeout = float(params.get("dd_timeout", 900))
     mem = params['mem']
     failures = []
@@ -69,7 +70,7 @@ def run_trans_hugepage(test, params, env):
         failures.append(e_msg)
 
     # Protect system from oom killer
-    if int(get_mem_status('MemFree', 'guest')) / 1024 < mem :
+    if int(get_mem_status('MemFree', 'guest')) / 1024 < mem:
         mem = int(get_mem_status('MemFree', 'guest')) / 1024
 
     session.cmd("mkdir -p %s" % mem_path)

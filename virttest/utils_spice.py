@@ -2,13 +2,19 @@
 Common spice test utility functions.
 
 """
-import os, logging, time, sys
+import os
+import logging
+import time
+import sys
 from autotest.client.shared import error
 from aexpect import ShellCmdError, ShellStatusError, ShellTimeoutError
 
+
 class RVConnectError(Exception):
+
     """Exception raised in case that remote-viewer fails to connect"""
     pass
+
 
 def wait_timeout(timeout=10):
     """
@@ -18,6 +24,7 @@ def wait_timeout(timeout=10):
     """
     logging.debug("Waiting (timeout=%ss)", timeout)
     time.sleep(timeout)
+
 
 def verify_established(client_vm, host, port, rv_binary):
     """
@@ -44,7 +51,7 @@ def verify_established(client_vm, host, port, rv_binary):
 
     else:
         logging.info("%s connection to %s:%s successful.",
-               rv_binary, host, port)
+                     rv_binary, host, port)
     client_session.close()
 
 
@@ -58,7 +65,7 @@ def start_vdagent(guest_session, test_timeout):
     cmd = "service spice-vdagentd start"
     try:
         guest_session.cmd(cmd, print_func=logging.info,
-                                   timeout=test_timeout)
+                          timeout=test_timeout)
     except ShellStatusError:
         logging.debug("Status code of \"%s\" was not obtained, most likely"
                       "due to a problem with colored output" % cmd)
@@ -80,14 +87,14 @@ def restart_vdagent(guest_session, test_timeout):
     cmd = "service spice-vdagentd restart"
     try:
         guest_session.cmd(cmd, print_func=logging.info,
-                                   timeout=test_timeout)
+                          timeout=test_timeout)
     except ShellCmdError:
         raise error.TestFail("Couldn't restart spice vdagent process")
     except:
         raise error.TestFail("Guest Vdagent Daemon Check failed")
 
     logging.debug("------------ End of Spice Vdagent"
-                     " Daemon  Restart ------------")
+                  " Daemon  Restart ------------")
     wait_timeout(3)
 
 
@@ -101,7 +108,7 @@ def stop_vdagent(guest_session, test_timeout):
     cmd = "service spice-vdagentd stop"
     try:
         guest_session.cmd(cmd, print_func=logging.info,
-                                   timeout=test_timeout)
+                          timeout=test_timeout)
     except ShellStatusError:
         logging.debug("Status code of \"%s\" was not obtained, most likely"
                       "due to a problem with colored output" % cmd)
@@ -128,8 +135,9 @@ def verify_vdagent(guest_session, test_timeout):
         guest_session.cmd(cmd, print_func=logging.info, timeout=test_timeout)
     finally:
         logging.debug("----------- End of guest check to see if vdagent package"
-                     " is available ------------")
+                      " is available ------------")
     wait_timeout(3)
+
 
 def get_vdagent_status(vm_session, test_timeout):
     """
@@ -142,15 +150,19 @@ def get_vdagent_status(vm_session, test_timeout):
 
     wait_timeout(3)
     try:
-        output = vm_session.cmd(cmd, print_func=logging.info, timeout=test_timeout)
+        output = vm_session.cmd(
+            cmd, print_func=logging.info, timeout=test_timeout)
     except ShellCmdError:
-        #getting the status of vdagent stopped returns 3, which results in a ShellCmdError
+        # getting the status of vdagent stopped returns 3, which results in a
+        # ShellCmdError
         return("stopped")
     except:
         print "Unexpected error:", sys.exc_info()[0]
-        raise error.TestFail("Failed attempting to get status of spice-vdagentd")
+        raise error.TestFail(
+            "Failed attempting to get status of spice-vdagentd")
     wait_timeout(3)
     return(output)
+
 
 def verify_virtio(guest_session, test_timeout):
     """
@@ -165,5 +177,5 @@ def verify_virtio(guest_session, test_timeout):
         guest_session.cmd(cmd, print_func=logging.info, timeout=test_timeout)
     finally:
         logging.debug("------------ End of guest check of the Virtio-Serial"
-                     " Driver------------")
+                      " Driver------------")
     wait_timeout(3)

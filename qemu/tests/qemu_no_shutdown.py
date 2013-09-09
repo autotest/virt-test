@@ -1,6 +1,8 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import utils_misc
+
 
 @error.context_aware
 def run_qemu_no_shutdown(test, params, env):
@@ -18,7 +20,7 @@ def run_qemu_no_shutdown(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment
     """
-    timeout  = int(params.get("login_timeout", 360))
+    timeout = int(params.get("login_timeout", 360))
     repeat_times = int(params.get("repeat_times", 5))
 
     error.base_context("Qemu -no-shutdown test")
@@ -31,12 +33,12 @@ def run_qemu_no_shutdown(test, params, env):
 
     for i in xrange(repeat_times):
         error.context("Round %s : Send monitor cmd system_powerdown."
-                       % str(i + 1), logging.info)
+                      % str(i + 1), logging.info)
         # Send a system_powerdown monitor command
         vm.monitor.cmd("system_powerdown")
         # Wait for the session to become unresponsive and close it
         if not utils_misc.wait_for(lambda: not session.is_responsive(),
-                                    timeout, 0, 1):
+                                   timeout, 0, 1):
             raise error.TestFail("Oops, Guest refuses to go down!")
         if session:
             session.close()
@@ -50,7 +52,7 @@ def run_qemu_no_shutdown(test, params, env):
 
         # Send monitor command system_reset and cont
         error.context("Round %s : Send monitor command system_reset and cont."
-                       % str(i + 1), logging.info)
+                      % str(i + 1), logging.info)
         vm.monitor.cmd("system_reset")
         vm.resume()
 

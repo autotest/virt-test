@@ -1,6 +1,9 @@
-import logging, time, random
+import logging
+import time
+import random
 from autotest.client.shared import error
 from qemu.tests import drive_mirror
+
 
 class DriveMirrorSimple(drive_mirror.DriveMirror):
 
@@ -10,7 +13,7 @@ class DriveMirrorSimple(drive_mirror.DriveMirror):
     @error.context_aware
     def query_status(self):
         """
-        query runing block mirroring job info;
+        query running block mirroring job info;
         """
         error.context("query job status", logging.info)
         if not self.get_status():
@@ -34,7 +37,7 @@ def run_drive_mirror_simple(test, params, env):
     simple_test = DriveMirrorSimple(test, params, env, tag)
     try:
         for i in range(repeats):
-            v_max,v_min = int(params.get("login_timeout", 360)) / 4, 0
+            v_max, v_min = int(params.get("login_timeout", 360)) / 4, 0
             time.sleep(random.randint(v_min, v_max))
             simple_test.start()
             simple_test.action_before_steady()

@@ -1,4 +1,11 @@
-import logging, os, commands, threading, re, glob, time, shutil
+import logging
+import os
+import commands
+import threading
+import re
+import glob
+import time
+import shutil
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc, remote, data_dir
@@ -87,10 +94,10 @@ def run_netperf(test, params, env):
         netperf_dir = os.path.join(data_dir.get_root_dir(), "shared/deps")
         for i in params.get("netperf_files").split():
             remote.scp_to_remote(ip, shell_port, username, password,
-                                     "%s/%s" % (netperf_dir, i), "/tmp/")
+                                 "%s/%s" % (netperf_dir, i), "/tmp/")
         ssh_cmd(session, params.get("setup_cmd"))
 
-        agent_path =  os.path.join(test.virtdir, "scripts/netperf_agent.py")
+        agent_path = os.path.join(test.virtdir, "scripts/netperf_agent.py")
         remote.scp_to_remote(ip, shell_port, username, password,
                              agent_path, "/tmp/")
 
@@ -101,7 +108,6 @@ def run_netperf(test, params, env):
             utils_test.pin_vm_threads(vm, node)
 
         return node
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -128,7 +134,7 @@ def run_netperf(test, params, env):
     server_ctl = vm.wait_for_login(timeout=login_timeout)
     server_ctl_ip = server_ip
     if (params.get("os_type") == "windows"
-        and params.get("use_cygwin") == "yes"):
+            and params.get("use_cygwin") == "yes"):
         cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")
         cygwin_start = params.get("cygwin_start")
         server_cyg = vm.wait_for_login(timeout=login_timeout)
@@ -253,19 +259,18 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
-    test.write_test_keyval({ 'kvm-userspace-ver': \
-                                        commands.getoutput(ver_cmd).strip() })
-    test.write_test_keyval({ 'guest-kernel-ver': ssh_cmd(server_ctl,
-                                                     guest_ver_cmd).strip() })
-    test.write_test_keyval({ 'session-length': l })
+    test.write_test_keyval({'kvm-userspace-ver':
+                            commands.getoutput(ver_cmd).strip()})
+    test.write_test_keyval({'guest-kernel-ver': ssh_cmd(server_ctl,
+                                                        guest_ver_cmd).strip()})
+    test.write_test_keyval({'session-length': l})
 
-    fd.write('### kvm-userspace-ver : %s\n' % \
-                                         commands.getoutput(ver_cmd).strip() )
+    fd.write('### kvm-userspace-ver : %s\n' %
+             commands.getoutput(ver_cmd).strip())
     fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl,
-                                                      guest_ver_cmd).strip() )
-    fd.write('### kvm_version : %s\n' % os.uname()[2] )
-    fd.write('### session-length : %s\n' % l )
-
+                                                     guest_ver_cmd).strip())
+    fd.write('### kvm_version : %s\n' % os.uname()[2])
+    fd.write('### session-length : %s\n' % l)
 
     record_list = ['size', 'sessions', 'throughput', 'trans.rate', 'CPU',
                    'thr_per_CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
@@ -295,27 +300,31 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 protocol_log = protocol + " (RX)"
             elif protocol == "TCP_MAERTS":
                 protocol_log = protocol + " (TX)"
-        fd.write("Category:" + protocol_log+ "\n")
+        fd.write("Category:" + protocol_log + "\n")
 
         record_header = True
         for i in sizes_test:
             for j in sessions_test:
                 if protocol in ("TCP_RR", "TCP_CRR"):
-                    ret = launch_client(j, server, server_ctl, host, clients, l,
-                    "-t %s -v 1 -- -r %s,%s" % (protocol, i, i),
-                    netserver_port, params, server_cyg)
+                    ret = launch_client(
+                        j, server, server_ctl, host, clients, l,
+                        "-t %s -v 1 -- -r %s,%s" % (protocol, i, i),
+                        netserver_port, params, server_cyg)
                 else:
-                    ret = launch_client(j, server, server_ctl, host, clients, l,
-                                     "-C -c -t %s -- -m %s" % (protocol, i),
-                                     netserver_port, params, server_cyg)
+                    ret = launch_client(
+                        j, server, server_ctl, host, clients, l,
+                        "-C -c -t %s -- -m %s" % (protocol, i),
+                        netserver_port, params, server_cyg)
 
                 thu = float(ret['thu'])
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
                 if ret.get('rx_pkts') and ret.get('irq_inj'):
-                    ret['tpkt_per_exit'] = float(ret['rx_pkts']) / float(ret['irq_inj'])
+                    ret['tpkt_per_exit'] = float(
+                        ret['rx_pkts']) / float(ret['irq_inj'])
                 if ret.get('tx_pkts') and ret.get('io_exit'):
-                    ret['rpkt_per_irq'] = float(ret['tx_pkts']) / float(ret['io_exit'])
+                    ret['rpkt_per_irq'] = float(
+                        ret['tx_pkts']) / float(ret['io_exit'])
                 ret['size'] = int(i)
                 ret['sessions'] = int(j)
                 if protocol in ("TCP_RR", "TCP_CRR"):
@@ -324,19 +333,19 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                     ret['throughput'] = thu
                 ret['CPU'] = cpu
                 ret['thr_per_CPU'] = normal
-                row, key_list =  netperf_record(ret, record_list,
-                                                header=record_header,
-                                                base=base,
-                                                fbase=fbase)
+                row, key_list = netperf_record(ret, record_list,
+                                               header=record_header,
+                                               base=base,
+                                               fbase=fbase)
                 if record_header:
                     record_header = False
                     category = row.split('\n')[0]
 
-                test.write_test_keyval({ 'category': category })
+                test.write_test_keyval({'category': category})
                 prefix = '%s--%s--%s' % (protocol, i, j)
                 for key in key_list:
-                    test.write_perf_keyval({'%s--%s' % (prefix, key)
-                                            : ret[key]})
+                    test.write_perf_keyval(
+                        {'%s--%s' % (prefix, key): ret[key]})
 
                 logging.info(row)
                 fd.write(row + "\n")
@@ -421,7 +430,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         stat = ssh_cmd(server_ctl, "cat /proc/interrupts |grep %s" % name)
         stat = stat.strip().split("\n")[-1]
         for cpu in range(int(ncpu)):
-            intr += int(stat.split()[cpu+1])
+            intr += int(stat.split()[cpu + 1])
         return intr
 
     def get_state():
@@ -431,8 +440,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
 
         path = "find /sys/devices|grep net/%s/statistics" % ifname
         cmd = "%s/rx_packets|xargs cat;%s/tx_packets|xargs cat;" \
-             "%s/rx_bytes|xargs cat;%s/tx_bytes|xargs cat" % (path,
-                                                   path, path, path)
+            "%s/rx_bytes|xargs cat;%s/tx_bytes|xargs cat" % (path,
+                                                             path, path, path)
         output = ssh_cmd(server_ctl, cmd).split()[-4:]
 
         nrx = int(output[0])
@@ -441,7 +450,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         ntxb = int(output[3])
 
         nre = int(ssh_cmd(server_ctl, "grep Tcp /proc/net/snmp|tail -1"
-                 ).split()[12])
+                          ).split()[12])
         state_list = ['rx_pkts', nrx, 'tx_pkts', ntx, 'rx_byts', nrxb,
                       'tx_byts', ntxb, 're_pkts', nre]
         try:
@@ -457,13 +466,13 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             state_list.append(ninit)
 
         io_exit = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/io_exits"))
-        irq_inj = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
+        irq_inj = int(
+            ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
         state_list.append('io_exit')
         state_list.append(io_exit)
         state_list.append('irq_inj')
         state_list.append(irq_inj)
         return state_list
-
 
     def netperf_thread(i, numa_enable, client_s):
         cmd = ""
@@ -473,7 +482,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
         cmd += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (i,
-               client_path, server, int(l)*1.5, nf_args)
+               client_path, server, int(l) * 1.5, nf_args)
         cmd += " >> %s" % fname
         logging.info("Start netperf thread by cmd '%s'" % cmd)
         ssh_cmd(client_s, cmd)
@@ -492,7 +501,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         lines = fd.readlines()
         fd.close()
 
-        for i in range(1, len(lines)+1):
+        for i in range(1, len(lines) + 1):
             if "AF_INET" in lines[-i]:
                 break
         nresult = i - 1
@@ -516,8 +525,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     numa_enable = params.get("netperf_with_numa", "yes") == "yes"
     client_thread = threading.Thread(target=netperf_thread,
                                      kwargs={"i": int(sessions),
-                                     "numa_enable": numa_enable,
-                                     "client_s":clients[0]})
+                                             "numa_enable": numa_enable,
+                                             "client_s": clients[0]})
     client_thread.start()
 
     ret = {}

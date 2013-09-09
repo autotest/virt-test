@@ -7,12 +7,15 @@ The most common use case is to simply call make_installer() inside your tests.
 '''
 
 from autotest.client.shared import error
-import base_installer, qemu_installer
+import base_installer
+import qemu_installer
 
 __all__ = ['InstallerRegistry', 'INSTALLER_REGISTRY', 'make_installer',
            'run_installers']
 
+
 class InstallerRegistry(dict):
+
     '''
     Holds information on known installer classes
 
@@ -40,7 +43,6 @@ class InstallerRegistry(dict):
         dict.__init__(self, **kwargs)
         self[self.DEFAULT_VIRT_NAME] = {}
 
-
     def register(self, mode, klass, virt=None):
         '''
         Register a class as responsible for installing virt software components
@@ -53,7 +55,6 @@ class InstallerRegistry(dict):
             self[virt] = {}
 
         self[virt][mode] = klass
-
 
     def get_installer(self, mode, virt=None, get_default_virt=False):
         '''
@@ -73,7 +74,6 @@ class InstallerRegistry(dict):
                 return self[self.DEFAULT_VIRT_NAME].get(mode)
         else:
             return self[virt].get(mode)
-
 
     def get_modes(self, virt=None):
         '''
@@ -131,7 +131,6 @@ INSTALLER_REGISTRY.register('local_tar',
 INSTALLER_REGISTRY.register('remote_tar',
                             qemu_installer.RemoteSourceTarInstaller,
                             'qemu')
-
 
 
 def installer_name_split(fullname, virt=None):

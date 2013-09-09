@@ -1,4 +1,6 @@
-import logging, time, random
+import logging
+import time
+import random
 from autotest.client.shared import error
 
 
@@ -48,7 +50,7 @@ def run_system_reset_bootable(test, params, env):
             interval_tmp = random.randint(0, interval)
 
         logging.debug("Reset the system by monitor cmd"
-                     " after %ssecs" % interval_tmp)
+                      " after %ssecs" % interval_tmp)
         time.sleep(interval_tmp)
 
     error.context("Try to login guest after reset", logging.info)

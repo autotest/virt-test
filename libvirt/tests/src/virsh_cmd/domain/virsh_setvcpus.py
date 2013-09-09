@@ -1,7 +1,11 @@
-import re, os, logging, commands
+import re
+import os
+import logging
+import commands
 from autotest.client.shared import error
 from virttest import remote, virsh, libvirt_xml
 from xml.dom.minidom import parse
+
 
 def run_virsh_setvcpus(test, params, env):
     """
@@ -69,9 +73,10 @@ def run_virsh_setvcpus(test, params, env):
         elif host_type == "xen":
             remote_string = "xen+ssh://%s" % remote_addr
         command = "virsh -c %s setvcpus %s 1 --live" % (remote_string, vm_name)
-        if virsh.has_command_help_match(command, "--live") == None:
+        if virsh.has_command_help_match(command, "--live") is None:
             status_error = "yes"
-        session = remote.remote_login("ssh", remote_ssh_addr, "22", "root", remote_password, "#")
+        session = remote.remote_login(
+            "ssh", remote_ssh_addr, "22", "root", remote_password, "#")
         session.cmd_output('LANG=C')
         status, output = session.cmd_status_output(command, internal_timeout=5)
         session.close()
@@ -81,22 +86,23 @@ def run_virsh_setvcpus(test, params, env):
             dom_option = vm_name
         elif domain == "id":
             dom_option = domid
-            if params.get("setvcpus_hex_id") != None:
+            if params.get("setvcpus_hex_id") is not None:
                 dom_option = hex(int(domid))
-            elif params.get("setvcpus_invalid_id") != None:
+            elif params.get("setvcpus_invalid_id") is not None:
                 dom_option = params.get("setvcpus_invalid_id")
         elif domain == "uuid":
             dom_option = domuuid
-            if params.get("setvcpus_invalid_uuid") != None:
+            if params.get("setvcpus_invalid_uuid") is not None:
                 dom_option = params.get("setvcpus_invalid_uuid")
         else:
             dom_option = domain
         option_list = options.split(" ")
         for item in option_list:
-            if virsh.has_command_help_match(command, item) == None:
+            if virsh.has_command_help_match(command, item) is None:
                 status_error = "yes"
                 break
-        status = virsh.setvcpus(dom_option, count_option, options, ignore_status=True).exit_status
+        status = virsh.setvcpus(
+            dom_option, count_option, options, ignore_status=True).exit_status
         if pre_vm_state == "paused":
             virsh.resume(vm_name, ignore_status=True)
         if status_error == "no":
@@ -109,7 +115,8 @@ def run_virsh_setvcpus(test, params, env):
                     elif options == "--maximum --config":
                         vcpus_set = ""
                         dom = parse("/etc/libvirt/qemu/%s.xml" % vm_name)
-                        vcpus_set = dom.getElementsByTagName("vcpu")[0].firstChild.data
+                        vcpus_set = dom.getElementsByTagName(
+                            "vcpu")[0].firstChild.data
                         vcpus_set = int(vcpus_set)
                         dom.unlink()
                 else:
@@ -127,7 +134,7 @@ def run_virsh_setvcpus(test, params, env):
     if os.path.exists(tmp_file):
         os.remove(tmp_file)
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command!")

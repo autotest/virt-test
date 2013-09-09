@@ -12,6 +12,7 @@ import logging
 from virttest import utils_misc, utils_spice, aexpect
 from autotest.client.shared import error
 
+
 def run_smartcard_setup(test, params, env):
     """
     Simple setup test to create certs on the client to be passed to VM's
@@ -34,22 +35,21 @@ def run_smartcard_setup(test, params, env):
         logging.debug("CN=" + cert)
         logging.debug(cert_db)
 
-
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
 
     client_session = client_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)),
-            username="root", password="123456")
+        timeout=int(params.get("login_timeout", 360)),
+        username="root", password="123456")
 
-    #generate a random string, used to create a random key for the certs
+    # generate a random string, used to create a random key for the certs
     randomstring = utils_misc.generate_random_string(2048)
     cmd = "echo '" + randomstring + "' > /tmp/randomtext.txt"
     output = client_session.cmd(cmd)
     #output2 = client_session.cmd("cat /tmp/randomtext.txt")
     utils_spice.wait_timeout(5)
 
-    #for each cert listed by the test, create it on the client
+    # for each cert listed by the test, create it on the client
     for cert in cert_list:
         cmd = "certutil "
         if self_sign:
@@ -65,7 +65,7 @@ def run_smartcard_setup(test, params, env):
     output = client_session.cmd(cmd)
     logging.info("Listing all certs on the client: " + output)
 
-    #Verify that all the certs have been generated on the client
+    # Verify that all the certs have been generated on the client
     for cert in cert_list:
         if not(cert in output):
             raise error.TestFail("Certificate %s not found" % cert)

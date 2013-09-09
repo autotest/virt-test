@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, utils_misc
@@ -18,7 +19,6 @@ def run_sr_iov_hotplug_negative(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-
 
     def make_pci_add_cmd(pa_pci_id, pci_addr="auto"):
         pci_add_cmd = ("pci_add pci_addr=%s host host=%s,if=%s" %
@@ -45,7 +45,6 @@ def run_sr_iov_hotplug_negative(test, params, env):
                     pci_add_cmd += ",%s=%s" % (param, value)
         return pci_add_cmd
 
-
     neg_msg = params.get("negative_msg")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -55,7 +54,7 @@ def run_sr_iov_hotplug_negative(test, params, env):
     modprobe_cmd = params.get("modprobe_cmd")
 
     if modprobe_cmd:
-        #negative test, both guest and host should still work well.
+        # negative test, both guest and host should still work well.
         msg = "Try to remove sr-iov module in host."
         error.context(msg, logging.info)
         utils.system(modprobe_cmd)
@@ -88,7 +87,8 @@ def run_sr_iov_hotplug_negative(test, params, env):
                 msg = "Check negative hotplug error message"
                 error.context(msg, logging.info)
                 if neg_msg not in str(e):
-                    msg = "Could not find '%s' in error msg '%s'" % (neg_msg, e)
+                    msg = "Could not find '%s' in error msg '%s'" % (
+                        neg_msg, e)
                     raise error.TestFail(msg)
             logging.debug("Could not boot up vm, %s" % e)
         if case_fail:

@@ -1,4 +1,8 @@
-import logging, time, commands, os, re
+import logging
+import time
+import commands
+import os
+import re
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -47,7 +51,7 @@ def run_trans_hugepage_relocated(test, params, env):
     free_memory = utils_memory.read_from_meminfo("MemFree")
     hugepage_size = utils_memory.read_from_meminfo("Hugepagesize")
     mem = params.get("mem")
-    vmsm =  int(mem) + 128
+    vmsm = int(mem) + 128
     hugetlbfs_path = params.get("hugetlbfs_path", "/proc/sys/vm/nr_hugepages")
     if vmsm < int(free_memory) / 1024:
         nr_hugetlbfs = vmsm * 1024 / int(hugepage_size)
@@ -81,7 +85,7 @@ def run_trans_hugepage_relocated(test, params, env):
         else:
             guest_mem_free = str(int(guest_mem_free) / 1024 / 1024)
 
-        file_size = min(1024, int(guest_mem_free)/2)
+        file_size = min(1024, int(guest_mem_free) / 2)
         cmd = "mount -t tmpfs -o size=%sM none /mnt" % file_size
         s, o = session.cmd_status_output(cmd)
         if nr_hugetlbfs:
@@ -105,7 +109,6 @@ def run_trans_hugepage_relocated(test, params, env):
             raise error.TestError("Can not dd in host")
     finally:
         s, o = commands.getstatusoutput("umount /space")
-
 
     bg = utils_test.BackgroundTest(nr_hugepage_check, (s_time, w_time))
     bg.start()
@@ -134,9 +137,9 @@ def run_trans_hugepage_relocated(test, params, env):
             count = 0
         if count > w_step:
             logging.warning("Memory didn't increase in %s s" % (count
-                             * s_time))
+                                                                * s_time))
     if mem_increase < file_size * 0.5:
-        raise error.TestError("Hugepages allocated can not reach a half: %s/%s"\
+        raise error.TestError("Hugepages allocated can not reach a half: %s/%s"
                               % (mem_increase, file_size))
     session.close()
     logging.info("Relocated test succeed")

@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from virttest import utils_misc
@@ -6,9 +8,11 @@ from virttest import env_process
 
 
 class NFSCorruptConfig(object):
+
     """
     This class sets up nfs_corrupt test environment.
     """
+
     def __init__(self, test, params):
         self.nfs_dir = os.path.join(test.tmpdir, "nfs_dir")
         self.mnt_dir = os.path.join(test.tmpdir, "mnt_dir")
@@ -161,7 +165,6 @@ def run_nfs_corrupt(test, params, env):
         cmd += " | tail -n 1"
         return session.cmd_output(cmd)
 
-
     def check_vm_status(vm, status):
         """
         Check if VM has the given status or not.
@@ -177,7 +180,6 @@ def run_nfs_corrupt(test, params, env):
             return False
         else:
             return True
-
 
     config = NFSCorruptConfig(test, params)
     config.setup()
@@ -225,8 +227,8 @@ def run_nfs_corrupt(test, params, env):
 
             error.context("Check if VM status is 'paused'")
             if not utils_misc.wait_for(
-                                lambda: check_vm_status(vm, "paused"),
-                                int(params.get('wait_paused_timeout', 120))):
+                lambda: check_vm_status(vm, "paused"),
+                    int(params.get('wait_paused_timeout', 120))):
                 raise error.TestError("Guest is not paused after stop NFS")
         finally:
             error.context("Accept NFS connection on host")

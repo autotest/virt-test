@@ -5,16 +5,22 @@ This exports:
   - two functions for get image/blkdebug filename
   - class for image operates and basic parameters
 """
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, virt_vm, storage, data_dir
+import utils_misc
+import virt_vm
+import storage
+import data_dir
 
 
 class QemuImg(storage.QemuImg):
+
     """
     KVM class for handling operations of disk/block images.
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
@@ -28,7 +34,6 @@ class QemuImg(storage.QemuImg):
         q_result = utils.run(self.image_cmd, ignore_status=True,
                              verbose=False)
         self.help_text = q_result.stdout
-
 
     @error.context_aware
     def create(self, params, ignore_errors=False):
@@ -63,7 +68,7 @@ class QemuImg(storage.QemuImg):
                      'M': (1, 1024),
                      'G': (1024, 1024),
                      'T': (1024, 1048576),
-                    }
+                     }
             if human.has_key(self.size[-1]):
                 block_size = human[self.size[-1]][1]
                 size = int(self.size[:-1]) * human[self.size[-1]][0]
@@ -131,7 +136,6 @@ class QemuImg(storage.QemuImg):
 
         return self.image_filename, cmd_result
 
-
     def convert(self, params, root_dir, cache_mode=None):
         """
         Convert image
@@ -175,12 +179,11 @@ class QemuImg(storage.QemuImg):
         cmd += " %s %s" % (self.image_filename, convert_image_filename)
 
         logging.info("Convert image %s from %s to %s", self.image_filename,
-                      self.image_format,convert_format)
+                     self.image_format, convert_format)
 
         utils.system(cmd)
 
         return convert_image_tag
-
 
     def rebase(self, params, cache_mode=None):
         """
@@ -220,12 +223,10 @@ class QemuImg(storage.QemuImg):
                                   " for rebase.")
 
         logging.info("Rebase snapshot %s to %s..." % (self.image_filename,
-                                                    self.base_image_filename))
+                                                      self.base_image_filename))
         utils.system(cmd)
 
         return self.base_tag
-
-
 
     def commit(self, params={}, cache_mode=None):
         """
@@ -244,7 +245,6 @@ class QemuImg(storage.QemuImg):
         utils.system(cmd)
 
         return self.image_filename
-
 
     def snapshot_create(self):
         """
@@ -265,7 +265,6 @@ class QemuImg(storage.QemuImg):
         utils.system_output(cmd)
 
         return self.snapshot_tag
-
 
     def snapshot_del(self, blkdebug_cfg=""):
         """
@@ -290,7 +289,6 @@ class QemuImg(storage.QemuImg):
 
         utils.system_output(cmd)
 
-
     def snapshot_list(self):
         """
         List all snapshots in the given image
@@ -299,7 +297,6 @@ class QemuImg(storage.QemuImg):
         cmd += " snapshot -l %s" % self.image_filename
 
         return utils.system_output(cmd)
-
 
     def remove(self):
         """
@@ -310,7 +307,6 @@ class QemuImg(storage.QemuImg):
             os.unlink(self.image_filename)
         else:
             logging.debug("Image file %s not found", self.image_filename)
-
 
     def info(self):
         """
@@ -326,7 +322,6 @@ class QemuImg(storage.QemuImg):
             output = None
         return output
 
-
     def support_cmd(self, cmd):
         """
         Verifies whether qemu-img supports command cmd.
@@ -341,7 +336,6 @@ class QemuImg(storage.QemuImg):
             supports_cmd = False
 
         return supports_cmd
-
 
     def compare_images(self, image1, image2):
         """
@@ -371,7 +365,6 @@ class QemuImg(storage.QemuImg):
                 raise error.TestFail("Compared images differ")
             else:
                 raise error.TestError("Error in image comparison")
-
 
     def check_image(self, params, root_dir):
         """
@@ -446,14 +439,17 @@ class QemuImg(storage.QemuImg):
                 logging.debug("Image file %s not found, skipping check",
                               image_filename)
             elif not image_is_checkable:
-                logging.debug("Image format %s is not checkable, skipping check",
-                              self.image_format)
+                logging.debug(
+                    "Image format %s is not checkable, skipping check",
+                    self.image_format)
 
 
 class Iscsidev(storage.Iscsidev):
+
     """
     Class for handle iscsi devices for VM
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
@@ -464,7 +460,6 @@ class Iscsidev(storage.Iscsidev):
         """
         super(Iscsidev, self).__init__(params, root_dir, tag)
 
-
     def setup(self):
         """
         Access the iscsi target. And return the local raw device name.
@@ -474,7 +469,6 @@ class Iscsidev(storage.Iscsidev):
         if self.device_id:
             device_name += self.device_id
         return device_name
-
 
     def cleanup(self):
         """

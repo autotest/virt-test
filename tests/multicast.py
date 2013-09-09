@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, aexpect
@@ -76,7 +78,7 @@ def run_multicast(test, params, env):
 
             logging.info("Flood ping test, mcast: %s", mcast)
             utils_test.ping(mcast, None, interface=ifname, flood=True,
-                                output_func=None, timeout=flood_minutes*60)
+                            output_func=None, timeout=flood_minutes * 60)
 
             logging.info("Final ping test, mcast: %s", mcast)
             s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)

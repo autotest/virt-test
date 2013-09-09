@@ -23,7 +23,9 @@ These are there to allow convenient access to the internal dictionary
 values and subclass-defined attributes (such as __slots__).
 """
 
+
 class PropCanInternal(object):
+
     """
     Semi-private methods for use only by PropCanBase subclasses (NOT instances)
     """
@@ -37,13 +39,11 @@ class PropCanInternal(object):
         """
         return dict.__getitem__(self, key)
 
-
     def dict_set(self, key, value):
         """
         Set a key unconditionally, w/o checking for accessor method or __slots__
         """
         dict.__setitem__(self, key, value)
-
 
     def dict_del(self, key):
         """
@@ -51,20 +51,17 @@ class PropCanInternal(object):
         """
         return dict.__delitem__(self, key)
 
-
     def super_get(self, key):
         """
         Get attribute unconditionally, w/o checking accessor method or __slots__
         """
         return object.__getattribute__(self, key)
 
-
     def super_set(self, key, value):
         """
         Set attribute unconditionally, w/o checking accessor method or __slots__
         """
         object.__setattr__(self, key, value)
-
 
     def super_del(self, key):
         """
@@ -74,6 +71,7 @@ class PropCanInternal(object):
 
 
 class PropCanBase(dict, PropCanInternal):
+
     """
     Objects with optional accessor methods and dict-like access to fixed set of keys
     """
@@ -86,7 +84,6 @@ class PropCanBase(dict, PropCanInternal):
         # Let accessor methods know initialization is running
         newone.super_set('INITIALIZED', False)
         return newone
-
 
     def __init__(self, *args, **dargs):
         """
@@ -107,7 +104,6 @@ class PropCanBase(dict, PropCanInternal):
         # Let accessor methods know initialization is complete
         self.super_set('INITIALIZED', True)
 
-
     def __getitem__(self, key):
         try:
             accessor = super(PropCanBase,
@@ -115,7 +111,6 @@ class PropCanBase(dict, PropCanInternal):
         except AttributeError:
             return super(PropCanBase, self).__getitem__(key)
         return accessor()
-
 
     def __setitem__(self, key, value):
         self.__canhaz__(key, KeyError)
@@ -126,7 +121,6 @@ class PropCanBase(dict, PropCanInternal):
             return super(PropCanBase, self).__setitem__(key, value)
         return accessor(value)
 
-
     def __delitem__(self, key):
         try:
             accessor = super(PropCanBase,
@@ -134,7 +128,6 @@ class PropCanBase(dict, PropCanInternal):
         except AttributeError:
             return super(PropCanBase, self).__delitem__(key)
         return accessor()
-
 
     def __getattr__(self, key):
         try:
@@ -145,7 +138,6 @@ class PropCanBase(dict, PropCanInternal):
             # Allow subclasses to define attributes if required
             return super(PropCanBase, self).__getattribute__(key)
 
-
     def __setattr__(self, key, value):
         self.__canhaz__(key)
         try:
@@ -154,7 +146,6 @@ class PropCanBase(dict, PropCanInternal):
             # Prevent subclass instances from defining normal attributes
             raise AttributeError(str(detail))
 
-
     def __delattr__(self, key):
         self.__canhaz__(key)
         try:
@@ -162,7 +153,6 @@ class PropCanBase(dict, PropCanInternal):
         except KeyError, detail:
             # Prevent subclass instances from deleting normal attributes
             raise AttributeError(str(detail))
-
 
     def __canhaz__(self, key, excpt=AttributeError):
         """
@@ -174,7 +164,6 @@ class PropCanBase(dict, PropCanInternal):
             raise excpt("Key '%s' not found in super class attributes or in %s"
                         % (str(key), str(keys)))
 
-
     def copy(self):
         """
         Copy properties by value, not by reference.
@@ -183,6 +172,7 @@ class PropCanBase(dict, PropCanInternal):
 
 
 class PropCan(PropCanBase):
+
     """
     Special value handling on retrieval of None values
     """
@@ -195,7 +185,6 @@ class PropCan(PropCanBase):
                 length += 1
         return length
 
-
     def __contains__(self, key):
         try:
             value = self.dict_get(key)
@@ -206,32 +195,25 @@ class PropCan(PropCanBase):
             return True
         return False
 
-
     def __eq__(self, other):
         # special None/False value handling
         return dict([(key, value) for key, value in self.items()]) == other
 
-
     def __ne__(self, other):
         return not self.__eq__(other)
-
 
     def keys(self):
         # special None/False value handling
         return [key for key in self.__slots__ if self.__contains__(key)]
 
-
     def values(self):
         # special None/False value handling
         return [self[key] for key in self.keys()]
 
-
     def items(self):
-        return tuple( [(key, self[key]) for key in self.keys()] )
-
+        return tuple([(key, self[key]) for key in self.keys()])
 
     has_key = __contains__
-
 
     def set_if_none(self, key, value):
         """
@@ -240,7 +222,6 @@ class PropCan(PropCanBase):
         if not self.has_key(key):
             self[key] = value
 
-
     def set_if_value_not_none(self, key, value):
         """
         Set the value of key, only if value is not None
@@ -248,14 +229,12 @@ class PropCan(PropCanBase):
         if value:
             self[key] = value
 
-
     def __str__(self):
         """
         Guarantee return of string format dictionary representation
         """
         acceptable_types = (str, unicode, int, float, long)
-        return str( dict([(key, value) for key, value in self.items()
-                                if issubclass(type(value), acceptable_types)]) )
-
+        return str(dict([(key, value) for key, value in self.items()
+                         if issubclass(type(value), acceptable_types)]))
 
     __repr__ = __str__

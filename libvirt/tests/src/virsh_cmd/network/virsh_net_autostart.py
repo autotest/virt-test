@@ -14,10 +14,10 @@ def run_virsh_net_autostart(test, params, env):
     status_error = "yes" == params.get("status_error", "no")
     net_ref = params.get("net_autostart_net_ref", "netname")
     disable = "yes" == params.get("net_autostart_disable", "no")
-    extra = params.get("net_autostart_extra", "") # extra cmd-line params.
+    extra = params.get("net_autostart_extra", "")  # extra cmd-line params.
 
     # Make easy to maintain
-    virsh_dargs = {'uri':uri, 'debug':False, 'ignore_status':True}
+    virsh_dargs = {'uri': uri, 'debug': False, 'ignore_status': True}
     virsh_instance = virsh.VirshPersistent(**virsh_dargs)
 
     # Prepare environment and record current net_state_dict
@@ -89,7 +89,8 @@ def run_virsh_net_autostart(test, params, env):
 
     finally:
         # Recover environment
-        leftovers = network_xml.NetworkXML.new_all_networks_dict(virsh_instance)
+        leftovers = network_xml.NetworkXML.new_all_networks_dict(
+            virsh_instance)
         for netxml in leftovers.values():
             netxml.orbital_nuclear_strike()
 

@@ -1,4 +1,6 @@
-import os, logging, re
+import os
+import logging
+import re
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc
 
@@ -64,7 +66,7 @@ def run_cpu_hotplug(test, params, env):
     error.context("hotplugging finished, let's wait a few sec and"
                   " check CPUs quantity in guest.", logging.info)
     if not utils_misc.wait_for(lambda: utils_misc.check_if_vm_vcpu_match(
-                                                              total_cpus, vm),
+                               total_cpus, vm),
                                60 + total_cpus, first=10,
                                step=5.0, text="retry later"):
         raise error.TestFail("CPU quantity mismatch cmd after hotplug !")
@@ -98,7 +100,7 @@ def run_cpu_hotplug(test, params, env):
     timeout = int(params.get("cpu_hotplug_timeout", 300))
     error.context("running cpu_hotplug autotest after cpu addition")
     utils_test.run_autotest(vm, session, control_path, timeout,
-                                 test.outputdir, params)
+                            test.outputdir, params)
 
     # Last, but not least, let's offline/online the CPUs in the guest
     # several times

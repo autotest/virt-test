@@ -4,7 +4,10 @@ Interfaces to the virt agent.
 @copyright: 2008-2012 Red Hat Inc.
 """
 
-import socket, time, logging, random
+import socket
+import time
+import logging
+import random
 from autotest.client.shared import error
 from qemu_monitor import Monitor, MonitorError
 
@@ -24,6 +27,7 @@ class VAgentConnectError(VAgentError):
 
 
 class VAgentSocketError(VAgentError):
+
     def __init__(self, msg, e):
         VAgentError.__init__(self)
         self.msg = msg
@@ -46,6 +50,7 @@ class VAgentNotSupportedError(VAgentError):
 
 
 class VAgentCmdError(VAgentError):
+
     def __init__(self, cmd, args, data):
         VAgentError.__init__(self)
         self.ecmd = cmd
@@ -58,6 +63,7 @@ class VAgentCmdError(VAgentError):
 
 
 class VAgentSyncError(VAgentError):
+
     def __init__(self, vm_name):
         VAgentError.__init__(self)
         self.vm_name = vm_name
@@ -71,6 +77,7 @@ class VAgentSuspendError(VAgentError):
 
 
 class VAgentSuspendUnknownModeError(VAgentSuspendError):
+
     def __init__(self, mode):
         VAgentSuspendError.__init__(self)
         self.mode = mode
@@ -80,12 +87,12 @@ class VAgentSuspendUnknownModeError(VAgentSuspendError):
 
 
 class VAgentFreezeStatusError(VAgentError):
+
     def __init__(self, vm_name, status, expected):
         VAgentError.__init__(self)
         self.vm_name = vm_name
         self.status = status
         self.expected = expected
-
 
     def __str__(self):
         return ("Unexpected guest FS status '%s' (expected '%s') in vm "
@@ -93,6 +100,7 @@ class VAgentFreezeStatusError(VAgentError):
 
 
 class QemuAgent(Monitor):
+
     """
     Wraps qemu guest agent commands.
     """
@@ -116,7 +124,6 @@ class QemuAgent(Monitor):
 
     FSFREEZE_STATUS_FROZEN = "frozen"
     FSFREEZE_STATUS_THAWED = "thawed"
-
 
     def __init__(self, vm, name, serial_type, serial_filename,
                  get_supported_cmds=False, suppress_exceptions=False):
@@ -165,15 +172,12 @@ class QemuAgent(Monitor):
             else:
                 raise
 
-
     # Methods only used inside this class
-
     def _build_cmd(self, cmd, args=None):
         obj = {"execute": cmd}
         if args is not None:
             obj["arguments"] = args
         return obj
-
 
     def _read_objects(self, timeout=READ_OBJECTS_TIMEOUT):
         """
@@ -211,7 +215,6 @@ class QemuAgent(Monitor):
                 pass
         return objs
 
-
     def _send(self, data):
         """
         Send raw data without waiting for response.
@@ -224,7 +227,6 @@ class QemuAgent(Monitor):
             self._log_lines(str(data))
         except socket.error, e:
             raise VAgentSocketError("Could not send data: %r" % data, e)
-
 
     def _get_response(self, timeout=RESPONSE_TIMEOUT):
         """
@@ -242,7 +244,6 @@ class QemuAgent(Monitor):
                         return obj
         # Return empty dict when timeout.
         return {}
-
 
     def _sync(self, timeout=RESPONSE_TIMEOUT * 3):
         """
@@ -286,7 +287,6 @@ class QemuAgent(Monitor):
                 return True
         return False
 
-
     def _get_supported_cmds(self):
         """
         Get supported qmp cmds list.
@@ -302,7 +302,6 @@ class QemuAgent(Monitor):
             # If initiation fails, set supported list to a None-only list.
             self._supported_cmds = [None]
             logging.warn("Could not get supported guest agent cmds list")
-
 
     def _has_command(self, cmd):
         """
@@ -325,7 +324,6 @@ class QemuAgent(Monitor):
             return True
         return False
 
-
     def _log_command(self, cmd, debug=True, extra_str=""):
         """
         Print log message beening sent.
@@ -337,7 +335,6 @@ class QemuAgent(Monitor):
         if self.debug_log or debug:
             logging.debug("(vagent %s) Sending command '%s' %s",
                           self.name, cmd, extra_str)
-
 
     def _log_response(self, cmd, resp, debug=True):
         """
@@ -382,9 +379,7 @@ class QemuAgent(Monitor):
                 for l in str(resp).splitlines():
                     _log_output(l)
 
-
     # Public methods
-
     def cmd(self, cmd, args=None, timeout=CMD_TIMEOUT, debug=True,
             success_resp=True):
         """
@@ -423,8 +418,6 @@ class QemuAgent(Monitor):
         if "error" in r:
             raise VAgentCmdError(cmd, args, r["error"])
 
-
-
     def cmd_raw(self, data, timeout=CMD_TIMEOUT, success_resp=True):
         """
         Send a raw string to the guest agent and return the response.
@@ -456,9 +449,9 @@ class QemuAgent(Monitor):
             self._lock.release()
 
         if r is None:
-            raise VAgentProtocolError("Received no response to data: %r" % data)
+            raise VAgentProtocolError(
+                "Received no response to data: %r" % data)
         return r
-
 
     def cmd_obj(self, obj, timeout=CMD_TIMEOUT):
         """
@@ -476,7 +469,6 @@ class QemuAgent(Monitor):
         """
         return self.cmd_raw(json.dumps(obj) + "\n", timeout)
 
-
     def verify_responsive(self):
         """
         Make sure the guest agent is responsive by sending a command.
@@ -484,7 +476,6 @@ class QemuAgent(Monitor):
         cmd = "guest-ping"
         if self._has_command(cmd):
             self.cmd(cmd=cmd, debug=False)
-
 
     @error.context_aware
     def shutdown(self, mode=SHUTDOWN_MODE_POWERDOWN):
@@ -507,7 +498,6 @@ class QemuAgent(Monitor):
         self.cmd(cmd=cmd, args=args, success_resp=False)
         return True
 
-
     @error.context_aware
     def sync(self):
         """
@@ -520,7 +510,6 @@ class QemuAgent(Monitor):
         synced = self._sync()
         if not synced:
             raise VAgentSyncError(self.vm.name)
-
 
     @error.context_aware
     def suspend(self, mode=SUSPEND_MODE_RAM):
@@ -561,7 +550,6 @@ class QemuAgent(Monitor):
 
         return True
 
-
     def get_fsfreeze_status(self):
         """
         Get guest 'fsfreeze' status. The status could be 'frozen' or 'thawed'.
@@ -569,7 +557,6 @@ class QemuAgent(Monitor):
         cmd = "guest-fsfreeze-status"
         if self._has_command(cmd):
             return self.cmd(cmd=cmd)
-
 
     def verify_fsfreeze_status(self, expected):
         """
@@ -583,7 +570,6 @@ class QemuAgent(Monitor):
         status = self.get_fsfreeze_status()
         if status != expected:
             raise VAgentFreezeStatusError(self.vm.name, status, expected)
-
 
     @error.context_aware
     def fsfreeze(self, check_status=True):
@@ -612,7 +598,6 @@ class QemuAgent(Monitor):
                     raise
             return ret
         return -1
-
 
     @error.context_aware
     def fsthaw(self, check_status=True):

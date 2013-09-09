@@ -1,9 +1,12 @@
-import logging, re, os
+import logging
+import re
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_misc
 
 STEP_1, STEP_2, STEP_3, STEP_4, STEP_5, STEP_6 = range(6)
+
 
 @error.context_aware
 def run_nfs_perf(test, params, env):
@@ -74,7 +77,6 @@ def run_nfs_perf(test, params, env):
             _clean_up(STEP_4)
             raise
 
-
         return out
 
     def _do_read_test(blk_size, test_file):
@@ -109,7 +111,8 @@ def run_nfs_perf(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     guest_ver = session.cmd_output("uname -r").strip()
     host_ver = os.uname()[2]
-    kvm_ver = utils.system_output(params.get('kvm_userspace_ver_cmd', "rpm -q qemu-kvm"))
+    kvm_ver = utils.system_output(
+        params.get('kvm_userspace_ver_cmd', "rpm -q qemu-kvm"))
     # After STEP 1
 
     try:
@@ -127,7 +130,7 @@ def run_nfs_perf(test, params, env):
     mnt_option = params.get("mnt_option")
     mnt_point = "/tmp/nfs_perf_%s" % utils_misc.generate_random_string(4)
     test_file_prefix = os.path.join(mnt_point, "test_%si_" %
-                                        utils_misc.generate_random_string(4))
+                                    utils_misc.generate_random_string(4))
 
     blk_size_list = params.get("blk_size_list", "8k").split()
     test_file_list = map(lambda x: test_file_prefix + x, blk_size_list)
@@ -187,7 +190,7 @@ def run_nfs_perf(test, params, env):
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
             result += "%016s|" % speed
-            test.write_perf_keyval({ "%s--%s" % (prefix, "write"): speed })
+            test.write_perf_keyval({"%s--%s" % (prefix, "write"): speed})
 
             # Get read test result.
             out = _do_read_test(blk_size, test_file)
@@ -199,7 +202,7 @@ def run_nfs_perf(test, params, env):
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
             result += "%016s" % speed
-            test.write_perf_keyval({ "%s--%s" % (prefix, "read"): speed })
+            test.write_perf_keyval({"%s--%s" % (prefix, "read"): speed})
             # Append result into result list.
             result_list.append(result)
     finally:

@@ -4,13 +4,17 @@ Utility functions to deal with ppm (qemu screendump format) files.
 @copyright: Red Hat 2008-2009
 """
 
-import os, struct, time, re
+import os
+import struct
+import time
+import re
 try:
     import hashlib
 except ImportError:
     import md5
 
 # Some directory/filename utils, for consistency
+
 
 def md5eval(data):
     """
@@ -79,7 +83,7 @@ def image_read_from_ppm_file(filename):
     @return: A 3 element tuple containing the width, height and data of the
             image.
     """
-    fin = open(filename,"rb")
+    fin = open(filename, "rb")
     fin.readline()
     l2 = fin.readline()
     fin.readline()
@@ -98,7 +102,7 @@ def image_write_to_ppm_file(filename, width, height, data):
     @param width: PPM file width (pixels)
     @param height: PPM file height (pixels)
     """
-    fout = open(filename,"wb")
+    fout = open(filename, "wb")
     fout.write("P6\n")
     fout.write("%d %d\n" % (width, height))
     fout.write("255\n")
@@ -120,15 +124,19 @@ def image_crop(width, height, data, x1, y1, dx, dy):
     @return: A 3-tuple containing the width, height and data of the
     cropped image.
     """
-    if x1 > width - 1: x1 = width - 1
-    if y1 > height - 1: y1 = height - 1
-    if dx > width - x1: dx = width - x1
-    if dy > height - y1: dy = height - y1
+    if x1 > width - 1:
+        x1 = width - 1
+    if y1 > height - 1:
+        y1 = height - 1
+    if dx > width - x1:
+        dx = width - x1
+    if dy > height - y1:
+        dy = height - y1
     newdata = ""
-    index = (x1 + y1*width) * 3
+    index = (x1 + y1 * width) * 3
     for _ in range(dy):
-        newdata += data[index:(index+dx*3)]
-        index += width*3
+        newdata += data[index:(index + dx * 3)]
+        index += width * 3
     return (dx, dy, newdata)
 
 
@@ -185,7 +193,7 @@ def image_verify_ppm_file(filename):
         assert(fin.readline().strip() == "255")
         size_read = fin.tell()
         fin.close()
-        assert(size - size_read == width*height*3)
+        assert(size - size_read == width * height * 3)
         return True
     except Exception:
         return False
@@ -206,13 +214,13 @@ def image_comparison(width, height, data1, data2):
     """
     newdata = ""
     i = 0
-    while i < width*height*3:
+    while i < width * height * 3:
         # Compute monochromatic value of current pixel in data1
-        pixel1_str = data1[i:i+3]
+        pixel1_str = data1[i:i + 3]
         temp = struct.unpack("BBB", pixel1_str)
         value1 = int((temp[0] + temp[1] + temp[2]) / 3)
         # Compute monochromatic value of current pixel in data2
-        pixel2_str = data2[i:i+3]
+        pixel2_str = data2[i:i + 3]
         temp = struct.unpack("BBB", pixel2_str)
         value2 = int((temp[0] + temp[1] + temp[2]) / 3)
         # Compute average of the two values
@@ -246,9 +254,9 @@ def image_fuzzy_compare(width, height, data1, data2):
     equal = 0.0
     different = 0.0
     i = 0
-    while i < width*height*3:
-        pixel1_str = data1[i:i+3]
-        pixel2_str = data2[i:i+3]
+    while i < width * height * 3:
+        pixel1_str = data1[i:i + 3]
+        pixel2_str = data2[i:i + 3]
         # Compare pixels
         if pixel1_str == pixel2_str:
             equal += 1.0

@@ -1,4 +1,6 @@
-import logging, time, random
+import logging
+import time
+import random
 from autotest.client.shared import error
 
 

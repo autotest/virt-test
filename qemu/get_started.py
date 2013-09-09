@@ -4,7 +4,9 @@ Program to help setup kvm test environment
 
 @copyright: Red Hat 2010
 """
-import os, sys, logging
+import os
+import sys
+import logging
 import common
 from virttest import utils_misc, data_dir, bootstrap, arch
 
@@ -22,13 +24,13 @@ if __name__ == "__main__":
     import optparse
     option_parser = optparse.OptionParser()
     option_parser.add_option("-v", "--verbose",
-                      action="store_true", dest="verbose",
-                      help="Exhibit debug messages")
+                             action="store_true", dest="verbose",
+                             help="Exhibit debug messages")
     option_parser.add_option("-r", "--restore-image",
-                  action="store_true", dest="restore",
-                  help="Restore image from pristine image")
+                             action="store_true", dest="restore",
+                             help="Restore image from pristine image")
     option_parser.add_option("--data-dir", action="store", dest="datadir",
-                      help="Path to a data dir (that locates ISOS and images)")
+                             help="Path to a data dir (that locates ISOS and images)")
     options, args = option_parser.parse_args()
 
     if options.datadir:
@@ -36,9 +38,9 @@ if __name__ == "__main__":
 
     try:
         bootstrap.bootstrap(test_name, test_dir, base_dir,
-                                       default_userspace_paths, check_modules,
-                                       online_docs_url, interactive=interactive,
-                                       restore_image=options.restore,
-                                       verbose=options.verbose)
+                            default_userspace_paths, check_modules,
+                            online_docs_url, interactive=interactive,
+                            restore_image=options.restore,
+                            verbose=options.verbose)
     except Exception, details:
         logging.error("Setup error: %s", details)

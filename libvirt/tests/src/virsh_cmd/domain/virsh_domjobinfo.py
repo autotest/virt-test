@@ -24,9 +24,9 @@ def run_virsh_domjobinfo(test, params, env):
     vm_ref = params.get("domjobinfo_vm_ref")
     status_error = params.get("status_error", "no")
     libvirtd = params.get("libvirtd", "on")
-    tmp_file = os.path.join(test.tmpdir, '%s.tmp' % vm_name )
+    tmp_file = os.path.join(test.tmpdir, '%s.tmp' % vm_name)
 
-    #prepare the state of vm
+    # prepare the state of vm
     if pre_vm_state == "dump":
         virsh.dump(vm_name, tmp_file)
     elif pre_vm_state == "save":
@@ -37,7 +37,7 @@ def run_virsh_domjobinfo(test, params, env):
     elif pre_vm_state == "managedsave":
         virsh.managedsave(vm_name)
 
-    #run test case
+    # run test case
     if vm_ref == "id":
         vm_ref = domid
     elif vm_ref == "hex_id":
@@ -54,11 +54,11 @@ def run_virsh_domjobinfo(test, params, env):
 
     status = virsh.domjobinfo(vm_ref, ignore_status=True).exit_status
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command!")

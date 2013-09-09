@@ -3,6 +3,7 @@ from autotest.client import utils
 from virttest import utils_misc, storage, data_dir
 from autotest.client.shared import error
 
+
 @error.context_aware
 def run_live_snapshot_base(test, params, env):
     """
@@ -47,7 +48,8 @@ def run_live_snapshot_base(test, params, env):
             raise error.TestFail("Fail to create snapshot")
         backing_file = vm.monitor.get_backingfile(device)
         if backing_file != base_file:
-            logging.error("backing file: %s, base file: %s", backing_file, base_file)
+            logging.error(
+                "backing file: %s, base file: %s", backing_file, base_file)
             raise error.TestFail("Got incorrect backing file")
         error.context("copy file to host, check content not changed",
                       logging.info)

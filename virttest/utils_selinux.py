@@ -2,11 +2,13 @@
 selinux test utility functions.
 """
 
-import logging, re
+import logging
+import re
 from autotest.client import utils
 
 
 class SelinuxError(Exception):
+
     """
     Error selinux utility functions.
     """
@@ -14,9 +16,11 @@ class SelinuxError(Exception):
 
 
 class SeCmdError(SelinuxError):
+
     """
     Error in executing cmd.
     """
+
     def __init__(self, cmd, detail):
         SelinuxError.__init__(self)
         self.cmd = cmd
@@ -29,6 +33,7 @@ class SeCmdError(SelinuxError):
 
 STATUS_LIST = ['enforcing', 'permissive', 'disabled']
 
+
 def get_status():
     """
     Get the status of selinux.
@@ -39,7 +44,7 @@ def get_status():
                     but the output is not expected.
     """
     cmd = 'getenforce'
-    result = utils.run(cmd, ignore_status = True)
+    result = utils.run(cmd, ignore_status=True)
     if result.exit_status:
         raise SeCmdError(cmd, result.stderr)
 
@@ -149,8 +154,8 @@ def set_context_of_file(filename, context):
     """
     context = context.strip()
     cmd = ("setfattr --name security.selinux --value \"%s\" %s"
-                                            % (context, filename))
-    result = utils.run(cmd, ignore_status = True)
+           % (context, filename))
+    result = utils.run(cmd, ignore_status=True)
     if result.exit_status:
         raise SeCmdError(cmd, result.stderr)
 

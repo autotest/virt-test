@@ -1,7 +1,9 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh
 from virttest.libvirt_xml import vm_xml
+
 
 def run_virsh_domif_setlink_getlink(test, params, env):
     """
@@ -99,7 +101,7 @@ def run_virsh_domif_setlink_getlink(test, params, env):
         cmd = ("ip add |grep -i '%s' -B1|grep -i 'state %s' "
                % (mac_address, if_operation))
         cmd_status, output = session.cmd_status_output(cmd)
-        logging.info("====%s==%s===", cmd_status, output )
+        logging.info("====%s==%s===", cmd_status, output)
         # Set the link up make host connect with vm
         domif_setlink(vm_name, device, "up", "")
         # Bring up referenced guest nic
@@ -110,7 +112,7 @@ def run_virsh_domif_setlink_getlink(test, params, env):
         if cmd_status != 0:
             raise error.TestFail("Could not bring up interface %s inside guest"
                                  % guest_if_name)
-    else: # negative test
+    else:  # negative test
         # stop guest, so state is always consistent on next start
         vm.destroy()
 

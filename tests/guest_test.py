@@ -1,4 +1,6 @@
-import os, logging, sys
+import os
+import logging
+import sys
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -56,7 +58,8 @@ def run_guest_test(test, params, env):
             logging.debug("Clean directory succeeded.")
 
             # then download the resource.
-            rsc_cmd = "cd %s && %s %s" % (dst_rsc_dir, download_cmd, rsc_server)
+            rsc_cmd = "cd %s && %s %s" % (
+                dst_rsc_dir, download_cmd, rsc_server)
             session.cmd(rsc_cmd, timeout=test_timeout)
             logging.info("Download resource finished.")
         else:
@@ -139,7 +142,7 @@ def wait_guest_test_background(pid):
     """
     logging.info("Waiting for background guest_test to finish ...")
 
-    (pid, s) = os.waitpid(pid,0)
+    (pid, s) = os.waitpid(pid, 0)
     status = os.WEXITSTATUS(s)
     if status != 0:
         return False

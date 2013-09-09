@@ -1,4 +1,10 @@
-import re, os, logging, commands, shutil, threading, time
+import re
+import os
+import logging
+import commands
+import shutil
+import threading
+import time
 from autotest.client.shared import utils, error
 from virttest import libvirt_vm, virsh
 
@@ -57,6 +63,7 @@ def make_migration_cmd(vm_name, method, desturi, options=""):
 
 
 class MigrationHelper(object):
+
     """A class to help migration."""
 
     def __init__(self, vm_name, test, params, env):
@@ -75,7 +82,7 @@ class MigrationHelper(object):
         Create a virsh instance for migration.
         TODO: support remote instance VirshConnectBack
         """
-        #rs_dargs = {'remote_ip': remote_host, 'remote_user': host_user,
+        # rs_dargs = {'remote_ip': remote_host, 'remote_user': host_user,
         #            'remote_pwd': host_passwd, 'uri': srcuri}
         #rvirsh = virsh.VirshConnectBack(**rs_dargs)
         self.virsh_instance = virsh.VirshPersistent()
@@ -85,8 +92,8 @@ class MigrationHelper(object):
         Set command for migration.
         """
         self.migration_cmd = make_migration_cmd(
-                             self.vm_name, method, desturi,
-                             make_migration_options(options, timeout))
+            self.vm_name, method, desturi,
+            make_migration_options(options, timeout))
 
     def cleanup_vm(self, srcuri, desturi):
         """

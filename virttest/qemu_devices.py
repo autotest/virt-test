@@ -27,10 +27,12 @@ try:
     from collections import OrderedDict
 except ImportError:
     class OrderedDict(dict):
+
         """
         Dictionary which keeps the order of items when using .itervalues()
         @warning: This is not the full OrderedDict implementation!
         """
+
         def itervalues(self, *args, **kwargs):
             return (_[1] for _ in sorted(dict.iteritems(self, *args, **kwargs)))
 
@@ -40,12 +42,15 @@ except ImportError:
 
 
 class DeviceError(Exception):
+
     """ General device exception """
     pass
 
 
 class DeviceInsertError(DeviceError):
+
     """ Fail to insert device """
+
     def __init__(self, device, reason, vmdev):
         self.device = device
         self.reason = reason
@@ -59,21 +64,27 @@ class DeviceInsertError(DeviceError):
 
 
 class DeviceRemoveError(DeviceInsertError):
+
     """ Fail to remove device """
+
     def __init__(self, device, reason, vmdev):
         super(DeviceRemoveError, self).__init__(device, reason, vmdev)
         self.issue = "remove"
 
 
 class DeviceHotplugError(DeviceInsertError):
+
     """ Fail to hotplug device """
+
     def __init__(self, device, reason, vmdev):
         super(DeviceHotplugError, self).__init__(device, reason, vmdev)
         self.issue = "hotplug"
 
 
 class DeviceUnplugError(DeviceHotplugError):
+
     """ Fail to unplug device """
+
     def __init__(self, device, reason, vmdev):
         super(DeviceUnplugError, self).__init__(device, reason, vmdev)
         self.issue = "unplug"
@@ -119,11 +130,13 @@ def _build_cmd(cmd, args=None, q_id=None):
     return obj
 
 
-##############################################################################
+#
 # Device objects
-##############################################################################
+#
 class QBaseDevice(object):
+
     """ Base class of qemu objects """
+
     def __init__(self, dev_type="QBaseDevice", params=None, aobject=None,
                  parent_bus=None, child_bus=None):
         """
@@ -353,11 +366,13 @@ class QBaseDevice(object):
 
 
 class QStringDevice(QBaseDevice):
+
     """
     General device which allows to specify methods by fixed or parametrizable
     strings in this format:
       "%(type)s,id=%(id)s,addr=%(addr)s" -- params will be used to subst %()s
     """
+
     def __init__(self, dev_type="dummy", params=None, aobject=None,
                  parent_bus=None, child_bus=None, cmdline=""):
         """
@@ -383,10 +398,12 @@ class QStringDevice(QBaseDevice):
 
 
 class QCustomDevice(QBaseDevice):
+
     """
     Representation of the '-$option $param1=$value1,$param2...' qemu object.
     This representation handles only cmdline.
     """
+
     def __init__(self, dev_type, params=None, aobject=None,
                  parent_bus=None, child_bus=None, backend=None):
         """
@@ -419,13 +436,15 @@ class QCustomDevice(QBaseDevice):
 
 
 class QDrive(QCustomDevice):
+
     """
     Representation of the '-drive' qemu object without hotplug support.
     """
+
     def __init__(self, aobject, use_device=True):
         child_bus = QDriveBus('drive_%s' % aobject, aobject)
         super(QDrive, self).__init__("drive", {}, aobject, (),
-                                      child_bus)
+                                     child_bus)
         if use_device:
             self.params['id'] = 'drive_%s' % aobject
 
@@ -449,9 +468,11 @@ class QDrive(QCustomDevice):
 
 
 class QHPDrive(QDrive):
+
     """
     Representation of the '-drive' qemu object with hotplug support.
     """
+
     def __init__(self, aobject):
         super(QHPDrive, self).__init__(aobject)
         self.__hook_drive_bus = None
@@ -512,9 +533,11 @@ class QHPDrive(QDrive):
 
 
 class QRHDrive(QDrive):
+
     """
     Representation of the '-drive' qemu object with RedHat hotplug support.
     """
+
     def __init__(self, aobject):
         super(QRHDrive, self).__init__(aobject)
         self.__hook_drive_bus = None
@@ -584,10 +607,12 @@ class QRHDrive(QDrive):
 
 
 class QDevice(QCustomDevice):
+
     """
     Representation of the '-device' qemu object. It supports all methods.
     @note: Use driver format in full form - 'driver' = '...' (usb-ehci, ide-hd)
     """
+
     def __init__(self, driver=None, params=None, aobject=None,
                  parent_bus=None, child_bus=None):
         super(QDevice, self).__init__("device", params, aobject, parent_bus,
@@ -640,9 +665,11 @@ class QDevice(QCustomDevice):
 
 
 class QGlobal(QBaseDevice):
+
     """
     Representation of qemu global setting (-global driver.property=value)
     """
+
     def __init__(self, driver, prop, value, aobject=None,
                  parent_bus=None, child_bus=None):
         """
@@ -668,9 +695,11 @@ class QGlobal(QBaseDevice):
 
 
 class QFloppy(QGlobal):
+
     """
     Imitation of qemu floppy disk defined by -global isa-fdc.drive?=$drive
     """
+
     def __init__(self, unit=None, drive=None, aobject=None, parent_bus=None,
                  child_bus=None):
         """
@@ -697,15 +726,16 @@ class QFloppy(QGlobal):
         super(QFloppy, self).set_param(option, value, option_type)
 
 
-##############################################################################
+#
 # Bus representations
 # HDA, I2C, IDE, ISA, PCI, SCSI, System, uhci, ehci, ohci, xhci, ccid,
 # virtio-serial-bus
-##############################################################################
+#
 class QSparseBus(object):
+
     """
     Universal bus representation object.
-    It creates an abstraction of the way how buses works in qemu. Additionaly
+    It creates an abstraction of the way how buses works in qemu. Additionally
     it can store incorrect records (out-of-range addr, multiple devs, ...).
     Everything with bad* prefix means it concerns the bad records (badbus).
     You can insert and remove device to certain address, address ranges or let
@@ -719,6 +749,7 @@ class QSparseBus(object):
 
     @note: When you insert a device, it's properties might be updated (addr,..)
     """
+
     def __init__(self, bus_item, addr_spec, busid, bus_type, aobject=None):
         """
         @param bus_item: Name of the parameter which specifies bus (bus)
@@ -788,7 +819,7 @@ class QSparseBus(object):
         """
         if isinstance(item, QBaseDevice):
             if (item in self.bus.itervalues() or
-                        item in self.badbus.itervalues()):
+               item in self.badbus.itervalues()):
                 return True
         elif item:
             for device in self:
@@ -829,7 +860,7 @@ class QSparseBus(object):
     def str_long(self):
         """ long string representation """
         return "Bus %s, type=%s\nSlots:\n%s\n%s" % (self.busid, self.type,
-                    self._str_devices_long(), self._str_bad_devices_long())
+                                                    self._str_devices_long(), self._str_bad_devices_long())
 
     def _str_devices_long(self):
         """ long string representation of devices in the good bus """
@@ -946,7 +977,7 @@ class QSparseBus(object):
             if self._addr2stor(last_addr) not in self.bus:
                 return last_addr
             if (use_reserved and
-                        self.bus[self._addr2stor(last_addr)] == "reserved"):
+               self.bus[self._addr2stor(last_addr)] == "reserved"):
                 return last_addr
             last_addr = self._increment_addr(addr_pattern, last_addr)
         return None     # No free matching address found
@@ -958,7 +989,7 @@ class QSparseBus(object):
         @return: True in case ids are correct, False when not
         """
         if (device.get_param(self.bus_item) and
-                    device.get_param(self.bus_item) != self.busid):
+           device.get_param(self.bus_item) != self.busid):
             return False
         else:
             return True
@@ -1132,9 +1163,11 @@ class QSparseBus(object):
 
 
 class QUSBBus(QSparseBus):
+
     """
     USB bus representation including usb-hub handling.
     """
+
     def __init__(self, length, busid, bus_type, aobject=None,
                  port_prefix=None):
         """
@@ -1146,7 +1179,7 @@ class QUSBBus(QSparseBus):
             if bus in bus_type:
                 bus_type = bus
                 break
-        # Usb ports are counted from 1 so the lenght have to be +1
+        # Usb ports are counted from 1 so the length have to be +1
         super(QUSBBus, self).__init__('bus', [['port'], [length + 1]], busid,
                                       bus_type, aobject)
         self.__port_prefix = port_prefix
@@ -1195,7 +1228,8 @@ class QUSBBus(QSparseBus):
 
     def __hook_child_bus(self, device, addr):
         """ If this is usb-hub, add child bus """
-        if device.get_param('driver') != 'usb-hub':    # only usb hub needs customization
+        # only usb hub needs customization
+        if device.get_param('driver') != 'usb-hub':
             return
         _bus = [_ for _ in device.child_bus if not isinstance(_, QUSBBus)]
         _bus.append(QUSBBus(8, self.busid, self.type, device.get_aid(),
@@ -1224,9 +1258,11 @@ class QUSBBus(QSparseBus):
 
 
 class QDriveBus(QSparseBus):
+
     """
     QDrive bus representation (single slot, drive=...)
     """
+
     def __init__(self, busid, aobject=None):
         """
         @param busid: id of the bus (pci.0)
@@ -1258,11 +1294,13 @@ class QDriveBus(QSparseBus):
 
 
 class QDenseBus(QSparseBus):
+
     """
     Dense bus representation. The only difference from SparseBus is the output
     string format. DenseBus iterates over all addresses and show free slots
     too. SparseBus on the other hand prints always the device address.
     """
+
     def _str_devices_long(self):
         """ Show all addresses even when they are unused """
         out = ""
@@ -1321,9 +1359,11 @@ class QDenseBus(QSparseBus):
 
 
 class QPCIBus(QDenseBus):
+
     """
     PCI Bus representation (bus&addr, uses hex digits)
     """
+
     def __init__(self, busid, bus_type, aobject=None):
         """ bus&addr, 32 slots """
         super(QPCIBus, self).__init__('bus', [['addr'], [32]], busid, bus_type,
@@ -1368,9 +1408,11 @@ class QPCIBus(QDenseBus):
 
 
 class QSCSIBus(QSparseBus):
+
     """
     SCSI bus representation (bus + 2 leves, don't iterate over lun by default)
     """
+
     def __init__(self, busid, bus_type, addr_spec, aobject=None):
         """
         @param busid: id of the bus (mybus.0)
@@ -1386,13 +1428,15 @@ class QSCSIBus(QSparseBus):
         Qemu doesn't increment lun automatically so don't use it when
         it's not explicitelly specified.
         """
-        if addr[1] == None:
+        if addr[1] is None:
             addr[1] = 0
         return super(QSCSIBus, self)._increment_addr(addr, last_addr=last_addr)
 
 
 class QBusUnitBus(QDenseBus):
+
     """ Implementation of bus-unit bus (ahci, ide) """
+
     def __init__(self, busid, bus_type, lengths, aobject=None):
         """
         @param busid: id of the bus (mybus.0)
@@ -1448,9 +1492,11 @@ class QBusUnitBus(QDenseBus):
 
 
 class QAHCIBus(QBusUnitBus):
+
     """ AHCI bus (ich9-ahci, ahci) """
     # TODO: Search for 'ide' and 'ahci' buses when strict_mode not specified
     # since qemu doesn't differentiate between those buses.
+
     def __init__(self, busid, bus_type=None, aobject=None):
         """ 6xbus, 2xunit """
         if bus_type is None:
@@ -1459,7 +1505,9 @@ class QAHCIBus(QBusUnitBus):
 
 
 class QIDEBus(QBusUnitBus):
+
     """ IDE bus (piix3-ide) """
+
     def __init__(self, busid, bus_type=None, aobject=None):
         """ 2xbus, 2xunit """
         if bus_type is None:
@@ -1468,9 +1516,11 @@ class QIDEBus(QBusUnitBus):
 
 
 class QFloppyBus(QDenseBus):
+
     """
     Floppy bus (-global isa-fdc.drive?=$drive)
     """
+
     def __init__(self, busid, aobject=None):
         """ property <= [driveA, driveB] """
         super(QFloppyBus, self).__init__(None, [['property'], [2]], busid,
@@ -1500,15 +1550,17 @@ class QFloppyBus(QDenseBus):
         device.set_param('property', self._addr2stor(addr))
 
 
-###############################################################################
+#
 # Device container (device representation of VM)
 # This class represents VM by storing all devices and their connections (buses)
-###############################################################################
+#
 class DevContainer(object):
+
     """
     Device container class
     """
     # General methods
+
     def __init__(self, qemu_binary, vmname, strict_mode="no",
                  workaround_qemu_qmp_crash="no", allow_hotplugged_vm="yes"):
         """
@@ -1536,34 +1588,35 @@ class DevContainer(object):
             cmds = None
             if not workaround_qemu_qmp_crash:
                 cmds = utils.system_output('echo -e \''
-                            '{ "execute": "qmp_capabilities" }\n'
-                            '{ "execute": "query-commands", "id": "RAND91" }\n'
-                            '{ "execute": "quit" }\''
-                            '| %s -qmp stdio -vnc none | grep return |'
-                            ' grep RAND91' % qemu_binary, timeout=10,
-                            ignore_status=True).splitlines()
+                                           '{ "execute": "qmp_capabilities" }\n'
+                                           '{ "execute": "query-commands", "id": "RAND91" }\n'
+                                           '{ "execute": "quit" }\''
+                                           '| %s -qmp stdio -vnc none | grep return |'
+                                           ' grep RAND91' % qemu_binary, timeout=10,
+                                           ignore_status=True).splitlines()
             if not cmds:
                 # Some qemu versions crashes when qmp used too early; add sleep
                 cmds = utils.system_output('echo -e \''
-                            '{ "execute": "qmp_capabilities" }\n'
-                            '{ "execute": "query-commands", "id": "RAND91" }\n'
-                            '{ "execute": "quit" }\' | (sleep 1; cat )'
-                            '| %s -qmp stdio -vnc none | grep return |'
-                            ' grep RAND91' % qemu_binary, timeout=10,
-                            ignore_status=True).splitlines()
+                                           '{ "execute": "qmp_capabilities" }\n'
+                                           '{ "execute": "query-commands", "id": "RAND91" }\n'
+                                           '{ "execute": "quit" }\' | (sleep 1; cat )'
+                                           '| %s -qmp stdio -vnc none | grep return |'
+                                           ' grep RAND91' % qemu_binary, timeout=10,
+                                           ignore_status=True).splitlines()
             if cmds:
                 cmds = re.findall(r'{\s*"name"\s*:\s*"([^"]+)"\s*}', cmds[0])
             if cmds:    # If no mathes, return None
                 return cmds
 
-        self.__state = -1    # is representation sync with VM (0 = synchronized)
+        self.__state = - \
+            1    # is representation sync with VM (0 = synchronized)
         self.__qemu_help = utils.system_output("%s -help" % qemu_binary,
-                                timeout=10, ignore_status=True)
+                                               timeout=10, ignore_status=True)
         self.__device_help = utils.system_output("%s -device ? 2>&1"
-                                            % qemu_binary, timeout=10,
-                                            ignore_status=True)
+                                                 % qemu_binary, timeout=10,
+                                                 ignore_status=True)
         self.__machine_types = utils.system_output("%s -M ?" % qemu_binary,
-                                timeout=10, ignore_status=True)
+                                                   timeout=10, ignore_status=True)
         self.__hmp_cmds = get_hmp_cmds(qemu_binary)
         self.__qmp_cmds = get_qmp_cmds(qemu_binary,
                                        workaround_qemu_qmp_crash == 'always')
@@ -1943,7 +1996,7 @@ class DevContainer(object):
         device.set_aid(self.__create_unique_aid(device.get_qid()))
         self.__devices.append(device)
         if err:
-            return ("Errors occured while adding device %s into %s:\n%s"
+            return ("Errors occurred while adding device %s into %s:\n%s"
                     % (device, self, err))
 
     def hotplug(self, device, monitor, verify=True, force=False):
@@ -2001,7 +2054,7 @@ class DevContainer(object):
     def hotplug_verified(self):
         """
         This function should be used after you verify, that hotplug was
-        successfull. For each hotplug call, hotplug_verified have to be
+        successful. For each hotplug call, hotplug_verified have to be
         executed in order to mark VM as clear.
         @warning: If you can't verify, that hotplug was successful, don't
                   use this function! You could screw-up following tests.
@@ -2085,7 +2138,7 @@ class DevContainer(object):
         for i in xrange(i / 7):     # Autocreated lsi hba
             _name = 'lsi53c895a%s' % i
             bus = QSCSIBus("scsi.0", 'lsi53c895a',
-                                        [8, 16384])
+                           [8, 16384])
             self.insert(QStringDevice('lsi53c895a%s' % i,
                                       parent_bus={'type': 'pci'},
                                       child_bus=bus))
@@ -2223,7 +2276,7 @@ class DevContainer(object):
 
         if not self.has_device(usb_type):
             raise error.TestNAError("usb controller %s not available"
-                                        % usb_type)
+                                    % usb_type)
 
         usb = QDevice(usb_type, {}, usb_id, {'type': 'pci'},
                       QUSBBus(max_ports, '%s.0' % usb_id, usb_type, usb_id))
@@ -2281,7 +2334,7 @@ class DevContainer(object):
         """
         if not self.has_device(usb_type):
             raise error.TestNAError("usb device %s not available"
-                                        % usb_type)
+                                    % usb_type)
         if self.has_option('device'):
             device = QDevice(usb_type, aobject=usb_name)
             device.set_param('id', 'usb-%s' % usb_name)
@@ -2313,15 +2366,15 @@ class DevContainer(object):
 
     # Images (disk, cdrom, floppy) device related methods
     def images_define_by_variables(self, name, filename, index=None, fmt=None,
-                        cache=None, werror=None, rerror=None, serial=None,
-                        snapshot=None, boot=None, blkdebug=None, bus=None,
-                        unit=None, port=None, bootindex=None, removable=None,
-                        min_io_size=None, opt_io_size=None,
-                        physical_block_size=None, logical_block_size=None,
-                        readonly=None, scsiid=None, lun=None, aio=None,
-                        strict_mode=None, media=None, imgfmt=None,
-                        pci_addr=None, scsi_hba=None, x_data_plane=None,
-                        blk_extra_params=None, scsi=None):
+                                   cache=None, werror=None, rerror=None, serial=None,
+                                   snapshot=None, boot=None, blkdebug=None, bus=None,
+                                   unit=None, port=None, bootindex=None, removable=None,
+                                   min_io_size=None, opt_io_size=None,
+                                   physical_block_size=None, logical_block_size=None,
+                                   readonly=None, scsiid=None, lun=None, aio=None,
+                                   strict_mode=None, media=None, imgfmt=None,
+                                   pci_addr=None, scsi_hba=None, x_data_plane=None,
+                                   blk_extra_params=None, scsi=None):
         """
         Creates related devices by variables
         @note: To skip the argument use None, to disable it use False
@@ -2375,7 +2428,7 @@ class DevContainer(object):
                     bus = bus.busid
             if isinstance(bus, int):
                 for bus_name in self.list_missing_named_buses(
-                                            _hba, hba, bus + 1):
+                        _hba, hba, bus + 1):
                     _bus_name = bus_name.rsplit('.')[0]
                     if addr_spec:
                         dev = QDevice(params={'id': _bus_name, 'driver': hba},
@@ -2394,9 +2447,9 @@ class DevContainer(object):
                 bus += ".%d" % unit
             return devices, bus, {'type': hba}
 
-        #######################################################################
+        #
         # Parse params
-        #######################################################################
+        #
         devices = []    # All related devices
 
         use_device = self.has_option("device")
@@ -2447,21 +2500,21 @@ class DevContainer(object):
                          "(disk %s)", name)
             bus = none_or_int(pci_addr)
 
-        #######################################################################
+        #
         # HBA
         # fmt: ide, scsi, virtio, scsi-hd, ahci, usb1,2,3 + hba
         # device: ide-drive, usb-storage, scsi-hd, scsi-cd, virtio-blk-pci
         # bus: ahci, virtio-scsi-pci, USB
-        #######################################################################
+        #
         if not use_device:
             if fmt and (fmt == "scsi" or (fmt.startswith('scsi') and
-                                  scsi_hba == 'lsi53c895a')):
+                                          scsi_hba == 'lsi53c895a')):
                 if not (bus is None and unit is None and port is None):
                     logging.warn("Using scsi interface without -device "
                                  "support; ignoring bus/unit/port. (%s)", name)
                     bus, unit, port = None, None, None
                 if (self.get_first_free_bus({'type': 'scsi'}, None)
-                            is None):
+                   is None):
                     bus = QSparseBus(None, [[None], [7]], None, 'scsi')
                     devices.append(QStringDevice('scsi',
                                                  parent_bus={'type': 'pci'},
@@ -2475,7 +2528,7 @@ class DevContainer(object):
             dev_parent = {'type': 'ide'}
         elif fmt == "ahci":
             _, bus, dev_parent = define_hbas('ahci', bus, unit, port,
-                                              QAHCIBus)
+                                             QAHCIBus)
             devices.extend(_)
         elif fmt.startswith('scsi-'):
             if not scsi_hba:
@@ -2486,7 +2539,7 @@ class DevContainer(object):
             elif scsi_hba == 'virtio-scsi-pci':
                 addr_spec = [['scsi-id', 'lun'], [256, 16384]]
             _, bus, dev_parent = define_hbas(scsi_hba, bus, unit, port,
-                                              QSCSIBus, addr_spec)
+                                             QSCSIBus, addr_spec)
             devices.extend(_)
         elif fmt in ('usb1', 'usb2', 'usb3'):
             if bus:
@@ -2504,10 +2557,10 @@ class DevContainer(object):
         else:
             dev_parent = {'type': fmt}
 
-        #######################################################################
+        #
         # Drive
         # -drive fmt or -drive fmt=none -device ...
-        #######################################################################
+        #
         # TODO: Add QRHDrive and PCIDrive for hotplug purposes
         # TODO: Add special parameter to override the drive method
         if self.has_hmp_cmd('__com.redhat_drive_add') and use_device:
@@ -2553,9 +2606,9 @@ class DevContainer(object):
                          "false errors might occur.", name)
             return devices
 
-        #######################################################################
+        #
         # Device
-        #######################################################################
+        #
         devices.append(QDevice(params={}, aobject=name))
         devices[-1].parent_bus += ({'busid': 'drive_%s' % name}, dev_parent)
         if fmt in ("ide", "ahci"):
@@ -2585,7 +2638,7 @@ class DevContainer(object):
         elif fmt == 'floppy':
             # Overwrite QDevice with QFloppy
             devices[-1] = QFloppy(unit, 'drive_%s' % name, name,
-                                ({'busid': 'drive_%s' % name}, {'type': fmt}))
+                                  ({'busid': 'drive_%s' % name}, {'type': fmt}))
         else:
             logging.warn('Using default device handling (disk %s)', name)
             devices[-1].set_param('driver', fmt)
@@ -2605,7 +2658,7 @@ class DevContainer(object):
             devices[-2].set_param('serial', None)   # remove serial from drive
         if blk_extra_params:
             blk_extra_params = (_.split('=', 1) for _ in
-                                            blk_extra_params.split(',') if _)
+                                blk_extra_params.split(',') if _)
             for key, value in blk_extra_params:
                 devices[-1].set_param(key, value)
 
@@ -2619,45 +2672,61 @@ class DevContainer(object):
         @note: To skip the argument use None, to disable it use False
         @note: Strictly bool options accept "yes", "on" and True ("no"...)
         @note: Options starting with '_' are optional and used only when
-               strict_mode == True
+               strict_mode is True
         @param name: Name of the new disk
         @param params: Disk params (params.object_params(name))
         """
         shared_dir = os.path.join(data_dir.get_data_dir(), "shared")
         return self.images_define_by_variables(name,
-                          storage.get_image_filename(image_params,
-                                                     data_dir.get_data_dir()),
-                          index,
-                          image_params.get("drive_format"),
-                          image_params.get("drive_cache"),
-                          image_params.get("drive_werror"),
-                          image_params.get("drive_rerror"),
-                          image_params.get("drive_serial"),
-                          image_params.get("image_snapshot"),
-                          image_boot,
-                          storage.get_image_blkdebug_filename(image_params,
-                                                                shared_dir),
-                          image_params.get("drive_bus"),
-                          image_params.get("drive_unit"),
-                          image_params.get("drive_port"),
-                          image_bootindex,
-                          image_params.get("removable"),
-                          image_params.get("min_io_size"),
-                          image_params.get("opt_io_size"),
-                          image_params.get("physical_block_size"),
-                          image_params.get("logical_block_size"),
-                          image_params.get("image_readonly"),
-                          image_params.get("drive_scsiid"),
-                          image_params.get("drive_lun"),
-                          image_params.get("image_aio"),
-                          image_params.get("strict_mode") == "yes",
-                          media,
-                          image_params.get("image_format"),
-                          image_params.get("drive_pci_addr"),
-                          image_params.get("scsi_hba"),
-                          image_params.get("x-data-plane"),
-                          image_params.get("blk_extra_params"),
-                          image_params.get("virtio-blk-pci_scsi"))
+                                               storage.get_image_filename(
+                                                   image_params,
+                                                   data_dir.get_data_dir()),
+                                               index,
+                                               image_params.get(
+                                                   "drive_format"),
+                                               image_params.get("drive_cache"),
+                                               image_params.get(
+                                                   "drive_werror"),
+                                               image_params.get(
+                                                   "drive_rerror"),
+                                               image_params.get(
+                                                   "drive_serial"),
+                                               image_params.get(
+                                                   "image_snapshot"),
+                                               image_boot,
+                                               storage.get_image_blkdebug_filename(
+                                                   image_params,
+                                                   shared_dir),
+                                               image_params.get("drive_bus"),
+                                               image_params.get("drive_unit"),
+                                               image_params.get("drive_port"),
+                                               image_bootindex,
+                                               image_params.get("removable"),
+                                               image_params.get("min_io_size"),
+                                               image_params.get("opt_io_size"),
+                                               image_params.get(
+                                                   "physical_block_size"),
+                                               image_params.get(
+                                                   "logical_block_size"),
+                                               image_params.get(
+                                                   "image_readonly"),
+                                               image_params.get(
+                                                   "drive_scsiid"),
+                                               image_params.get("drive_lun"),
+                                               image_params.get("image_aio"),
+                                               image_params.get(
+                                                   "strict_mode") == "yes",
+                                               media,
+                                               image_params.get(
+                                                   "image_format"),
+                                               image_params.get(
+                                                   "drive_pci_addr"),
+                                               image_params.get("scsi_hba"),
+                                               image_params.get(
+                                                   "x-data-plane"),
+                                               image_params.get(
+                                                   "blk_extra_params"),
+                                               image_params.get("virtio-blk-pci_scsi"))
 
     def cdroms_define_by_params(self, name, image_params, media=None,
                                 index=None, image_boot=None,
@@ -2667,47 +2736,61 @@ class DevContainer(object):
         @note: To skip the argument use None, to disable it use False
         @note: Strictly bool options accept "yes", "on" and True ("no"...)
         @note: Options starting with '_' are optional and used only when
-               strict_mode == True
+               strict_mode is True
         @param name: Name of the new disk
         @param params: Disk params (params.object_params(name))
         """
         iso = image_params.get('cdrom')
         if iso:
             image_params['image_name'] = os.path.join(data_dir.get_data_dir(),
-                                                    image_params.get('cdrom'))
+                                                      image_params.get('cdrom'))
         image_params['image_format'] = None
         shared_dir = os.path.join(data_dir.get_data_dir(), "shared")
         return self.images_define_by_variables(name,
-                          storage.get_image_filename(image_params,
-                                                     data_dir.get_data_dir()),
-                          index,
-                          image_params.get('cd_format'),
-                          '',     # skip drive_cache
-                          image_params.get("drive_werror"),
-                          image_params.get("drive_rerror"),
-                          image_params.get("drive_serial"),
-                          image_params.get("image_snapshot"),
-                          image_boot,
-                          storage.get_image_blkdebug_filename(image_params,
-                                                                shared_dir),
-                          image_params.get("drive_bus"),
-                          image_params.get("drive_unit"),
-                          image_params.get("drive_port"),
-                          image_bootindex,
-                          image_params.get("removable"),
-                          image_params.get("min_io_size"),
-                          image_params.get("opt_io_size"),
-                          image_params.get("physical_block_size"),
-                          image_params.get("logical_block_size"),
-                          image_params.get("image_readonly"),
-                          image_params.get("drive_scsiid"),
-                          image_params.get("drive_lun"),
-                          image_params.get("image_aio"),
-                          image_params.get("strict_mode") == "yes",
-                          media,
-                          None,     # skip img_fmt
-                          image_params.get("drive_pci_addr"),
-                          image_params.get("scsi_hba"),
-                          image_params.get("x-data-plane"),
-                          image_params.get("blk_extra_params"),
-                          image_params.get("virtio-blk-pci_scsi"))
+                                               storage.get_image_filename(
+                                                   image_params,
+                                                   data_dir.get_data_dir()),
+                                               index,
+                                               image_params.get('cd_format'),
+                                               '',     # skip drive_cache
+                                               image_params.get(
+                                                   "drive_werror"),
+                                               image_params.get(
+                                                   "drive_rerror"),
+                                               image_params.get(
+                                                   "drive_serial"),
+                                               image_params.get(
+                                                   "image_snapshot"),
+                                               image_boot,
+                                               storage.get_image_blkdebug_filename(
+                                                   image_params,
+                                                   shared_dir),
+                                               image_params.get("drive_bus"),
+                                               image_params.get("drive_unit"),
+                                               image_params.get("drive_port"),
+                                               image_bootindex,
+                                               image_params.get("removable"),
+                                               image_params.get("min_io_size"),
+                                               image_params.get("opt_io_size"),
+                                               image_params.get(
+                                                   "physical_block_size"),
+                                               image_params.get(
+                                                   "logical_block_size"),
+                                               image_params.get(
+                                                   "image_readonly"),
+                                               image_params.get(
+                                                   "drive_scsiid"),
+                                               image_params.get("drive_lun"),
+                                               image_params.get("image_aio"),
+                                               image_params.get(
+                                                   "strict_mode") == "yes",
+                                               media,
+                                               None,     # skip img_fmt
+                                               image_params.get(
+                                                   "drive_pci_addr"),
+                                               image_params.get("scsi_hba"),
+                                               image_params.get(
+                                                   "x-data-plane"),
+                                               image_params.get(
+                                                   "blk_extra_params"),
+                                               image_params.get("virtio-blk-pci_scsi"))

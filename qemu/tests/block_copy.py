@@ -1,4 +1,6 @@
-import os, re, logging
+import os
+import re
+import logging
 from autotest.client.shared import error, utils
 from virttest import utils_misc, storage, data_dir
 
@@ -14,12 +16,12 @@ def speed2byte(speed):
 
 
 class BlockCopy(object):
+
     """
     Base class for block copy test;
     """
     sessions = []
     trash = []
-
 
     def __init__(self, test, params, env, tag):
         self.test = test
@@ -30,7 +32,6 @@ class BlockCopy(object):
         self.data_dir = data_dir.get_data_dir()
         self.device = self.get_device()
         self.image_file = self.get_image_file()
-
 
     def parser_test_args(self):
         """
@@ -46,7 +47,6 @@ class BlockCopy(object):
         params["default_speed"] = speed2byte(params.get("default_speed", 0))
         return params
 
-
     def get_vm(self):
         """
         return live vm object;
@@ -54,7 +54,6 @@ class BlockCopy(object):
         vm = self.env.get_vm(self.params["main_vm"])
         vm.verify_alive()
         return vm
-
 
     def get_device(self):
         """
@@ -66,7 +65,6 @@ class BlockCopy(object):
         device = self.vm.get_block({"file": image_file})
         return device
 
-
     def get_session(self):
         """
         get a session object;
@@ -77,13 +75,11 @@ class BlockCopy(object):
         self.sessions.append(session)
         return session
 
-
     def get_status(self):
         """
         return block job info dict;
         """
         return self.vm.get_job_status(self.device)
-
 
     def do_steps(self, tag=None):
         if not tag:
@@ -95,7 +91,6 @@ class BlockCopy(object):
                 fun()
             else:
                 error.TestError("undefined step %s" % step)
-
 
     @error.context_aware
     def cancel(self):
@@ -121,7 +116,6 @@ class BlockCopy(object):
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
 
-
     @error.context_aware
     def set_speed(self):
         """
@@ -138,7 +132,6 @@ class BlockCopy(object):
             msg += "actual speed: %s B/s)" % speed
             raise error.TestFail(msg)
 
-
     @error.context_aware
     def fsck(self):
         """
@@ -153,7 +146,6 @@ class BlockCopy(object):
         if status != 0:
             msg = "guest filesystem is dirty, filesystem info: %s" % output
             raise error.TestFail(msg)
-
 
     @error.context_aware
     def reboot(self, method="shell", boot_check=True):
@@ -176,13 +168,12 @@ class BlockCopy(object):
                                           self.vm.monitor.get_event("RESET"),
                                           timeout=timeout)
             if not reseted:
-                raise error.TestFail("No RESET event recived after"
+                raise error.TestFail("No RESET event received after"
                                      "execute system_reset %ss" % timeout)
             self.vm.monitor.clear_event("RESET")
         else:
             self.vm.monitor.cmd("system_reset")
         return None
-
 
     @error.context_aware
     def stop(self):
@@ -193,7 +184,6 @@ class BlockCopy(object):
         self.vm.pause()
         return self.vm.verify_status("paused")
 
-
     @error.context_aware
     def resume(self):
         """
@@ -202,7 +192,6 @@ class BlockCopy(object):
         error.context("resume vm", logging.info)
         self.vm.resume()
         return self.vm.verify_status("running")
-
 
     @error.context_aware
     def verify_alive(self):
@@ -214,7 +203,6 @@ class BlockCopy(object):
         session = self.get_session()
         cmd = params.get("alive_check_cmd", "dir")
         return session.cmd(cmd, timeout=120)
-
 
     def get_image_file(self):
         """
@@ -235,7 +223,6 @@ class BlockCopy(object):
                         continue
         return image_file
 
-
     def get_backingfile(self, method="monitor"):
         """
         return backingfile of the device, if not return None;
@@ -254,7 +241,6 @@ class BlockCopy(object):
         if backing_file:
             backing_file = os.path.abspath(backing_file)
         return backing_file
-
 
     def clean(self):
         """

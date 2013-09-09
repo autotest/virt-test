@@ -6,8 +6,17 @@ A boottool clone, but written in python and relying mostly on grubby[1].
 [1] - http://git.fedorahosted.org/git/?p=grubby.git
 '''
 
-import os, re, sys, optparse, logging, subprocess
-import urllib, tarfile, tempfile, shutil, struct
+import os
+import re
+import sys
+import optparse
+import logging
+import subprocess
+import urllib
+import tarfile
+import tempfile
+import shutil
+import struct
 
 #
 # Get rid of DeprecationWarning messages on newer Python version while still
@@ -89,6 +98,7 @@ def find_header(hdr):
 
 
 class EfiVar(object):
+
     '''
     Helper class to manipulate EFI firmware variables
 
@@ -107,7 +117,7 @@ class EfiVar(object):
     GUID_FMT = '16B'
     GUID_CONTENT = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    ATTR_NON_VOLATILE =  0x0000000000000001
+    ATTR_NON_VOLATILE = 0x0000000000000001
     ATTR_BOOTSERVICE_ACCESS = 0x0000000000000002
     ATTR_RUNTIME_ACCESS = 0x0000000000000004
 
@@ -121,7 +131,6 @@ class EfiVar(object):
            '512H' +
            '1L' +
            '1I')
-
 
     def __init__(self, name, data, guid=None, attributes=None):
         '''
@@ -149,7 +158,6 @@ class EfiVar(object):
             attributes = self.DEFAULT_ATTRIBUTES
         self.attributes = attributes
 
-
     def get_name(self):
         '''
         Returns the variable name in a list ready for struct.pack()
@@ -162,7 +170,6 @@ class EfiVar(object):
             l[i] = ord(self.name[i])
         return l
 
-
     def get_data(self):
         '''
         Returns the variable data in a list ready for struct.pack()
@@ -174,7 +181,6 @@ class EfiVar(object):
         for i in range(len(self.data)):
             l[i] = ord(self.data[i])
         return l
-
 
     def get_packed(self):
         '''
@@ -194,6 +200,7 @@ class EfiVar(object):
 
 
 class EfiToolSys(object):
+
     '''
     Interfaces with /sys/firmware/efi/vars provided by the kernel
 
@@ -209,7 +216,6 @@ class EfiToolSys(object):
         if not os.path.exists(self.BASE_PATH):
             sys.exit(-1)
         self.log = logging.getLogger(self.__class__.__name__)
-
 
     def create_variable(self, name, data, guid=None, attributes=None):
         '''
@@ -234,7 +240,6 @@ class EfiToolSys(object):
         f.write(var.get_packed())
         return True
 
-
     def delete_variable(self, name, data, guid=None, attributes=None):
         '''
         Delets an existing EFI variable
@@ -257,7 +262,6 @@ class EfiToolSys(object):
         f = open(self.DEL_VAR, 'w')
         f.write(var.get_packed())
         return True
-
 
     def check_basic_structure(self):
         '''
@@ -283,12 +287,14 @@ class EfiToolSys(object):
 
 
 class EliloConf(object):
+
     '''
     A simple parser for elilo configuration file
 
     Has simple features to add and remove global options only, as this is all
     we need. grubby takes care of manipulating the boot entries themselves.
     '''
+
     def __init__(self, path='/etc/elilo.conf'):
         '''
         Instantiates a new EliloConf
@@ -301,7 +307,6 @@ class EliloConf(object):
         self.global_options_to_remove = {}
 
         self._follow_symlink()
-
 
     def _follow_symlink(self):
         '''
@@ -316,7 +321,6 @@ class EliloConf(object):
 
         self.path = os.path.abspath(self.path)
 
-
     def add_global_option(self, key, val=None):
         '''
         Adds a global option to the updated elilo configuration file
@@ -329,7 +333,6 @@ class EliloConf(object):
         '''
         self.global_options_to_add[key] = val
 
-
     def remove_global_option(self, key, val=None):
         '''
         Removes a global option to the updated elilo configuration file
@@ -341,7 +344,6 @@ class EliloConf(object):
         @returns: None
         '''
         self.global_options_to_remove[key] = val
-
 
     def line_to_keyval(self, line):
         '''
@@ -359,7 +361,6 @@ class EliloConf(object):
             val = parts[1].strip()
         return (key, val)
 
-
     def keyval_to_line(self, keyval):
         '''
         Transforms a tuple into a text line suitable for the config file
@@ -373,7 +374,6 @@ class EliloConf(object):
             return '%s\n' % key
         else:
             return '%s=%s\n' % (key, val)
-
 
     def matches_global_option_to_remove(self, line):
         '''
@@ -389,7 +389,6 @@ class EliloConf(object):
         else:
             return False
 
-
     def matches_global_option_to_add(self, line):
         '''
         Utility method to check if option is to be added
@@ -403,7 +402,6 @@ class EliloConf(object):
             return True
         else:
             return False
-
 
     def get_updated_content(self):
         '''
@@ -425,7 +423,6 @@ class EliloConf(object):
 
         eliloconf.close()
         return output
-
 
     def update(self):
         '''
@@ -505,6 +502,7 @@ def detect_distro_type():
 
 
 class DebianBuildDeps(object):
+
     '''
     Checks and install grubby build dependencies on Debian (like) systems
 
@@ -513,9 +511,7 @@ class DebianBuildDeps(object):
        * Ubuntu 12.04 LTS
     '''
 
-
     PKGS = ['gcc', 'make', 'libpopt-dev', 'libblkid-dev']
-
 
     def check(self):
         '''
@@ -532,7 +528,6 @@ class DebianBuildDeps(object):
             if not output == 'install ok installed':
                 result = False
         return result
-
 
     def install(self):
         '''
@@ -557,9 +552,11 @@ class DebianBuildDeps(object):
 
 
 class RPMBuildDeps(object):
+
     '''
     Base class for RPM based systems
     '''
+
     def check(self):
         '''
         Checks if necessary packages are already installed
@@ -579,6 +576,7 @@ class RPMBuildDeps(object):
 
 
 class SuseBuildDeps(RPMBuildDeps):
+
     '''
     Checks and install grubby build dependencies on SuSE (like) systems
 
@@ -586,9 +584,7 @@ class SuseBuildDeps(RPMBuildDeps):
        * OpenSuSE 12.2
     '''
 
-
     PKGS = ['gcc', 'make', 'popt-devel', 'libblkid-devel']
-
 
     def install(self):
         '''
@@ -608,6 +604,7 @@ class SuseBuildDeps(RPMBuildDeps):
 
 
 class RedHatBuildDeps(RPMBuildDeps):
+
     '''
     Checks and install grubby build dependencies on RedHat (like) systems
 
@@ -617,23 +614,21 @@ class RedHatBuildDeps(RPMBuildDeps):
        * RHEL 6
     '''
 
-
     PKGS = ['gcc', 'make']
     REDHAT_RELEASE_RE = re.compile('.*\srelease\s(\d)\.(\d)\s.*')
-
 
     def __init__(self):
         '''
         Initializes a new dep installer, taking into account RHEL version
         '''
-        match = self.REDHAT_RELEASE_RE.match(open('/etc/redhat-release').read())
+        match = self.REDHAT_RELEASE_RE.match(
+            open('/etc/redhat-release').read())
         if match:
             major, minor = match.groups()
             if int(major) <= 5:
                 self.PKGS += ['popt', 'e2fsprogs-devel']
             else:
                 self.PKGS += ['popt-devel', 'libblkid-devel']
-
 
     def install(self):
         '''
@@ -662,7 +657,7 @@ DISTRO_DEPS_MAPPING = {
     'debian': DebianBuildDeps,
     'redhat': RedHatBuildDeps,
     'suse': SuseBuildDeps
-    }
+}
 
 
 def install_grubby_if_necessary(path=None):
@@ -709,6 +704,7 @@ def install_grubby_if_necessary(path=None):
 
 
 class GrubbyInstallException(Exception):
+
     '''
     Exception that signals failure when doing grubby installation
     '''
@@ -716,6 +712,7 @@ class GrubbyInstallException(Exception):
 
 
 class Grubby(object):
+
     '''
     Grubby wrapper
 
@@ -740,7 +737,6 @@ class Grubby(object):
 
         self._check_grubby_version()
         self._set_bootloader()
-
 
     def _set_path(self, path=None):
         """
@@ -780,7 +776,6 @@ class Grubby(object):
                           current_version[0], current_version[1],
                           GRUBBY_REQ_VERSION[0], GRUBBY_REQ_VERSION[1])
 
-
     def _run_get_output(self, arguments):
         '''
         Utility function that runs a command and returns command output
@@ -805,7 +800,6 @@ class Grubby(object):
             self.log.error('_run_get_output error while running: "%s"',
                            ' '.join(arguments))
         return result
-
 
     def _run_get_output_err(self, arguments):
         '''
@@ -833,7 +827,6 @@ class Grubby(object):
                            ' '.join(arguments))
         return result
 
-
     def _run_get_return(self, arguments):
         '''
         Utility function that runs a command and returns status code
@@ -852,7 +845,6 @@ class Grubby(object):
 
         return result
 
-
     def _set_bootloader(self, bootloader=None):
         '''
         Attempts to detect what bootloader is installed on the system
@@ -870,7 +862,6 @@ class Grubby(object):
             else:
                 raise ValueError('Bootloader "%s" is not supported' %
                                  bootloader)
-
 
     def _run_grubby_prepare_args(self, arguments, include_bootloader=True):
         '''
@@ -901,7 +892,6 @@ class Grubby(object):
         args += arguments
         return args
 
-
     def _run_grubby_get_output(self, arguments, include_bootloader=True):
         '''
         Utility function that runs grubby with arguments and returns output
@@ -909,14 +899,12 @@ class Grubby(object):
         args = self._run_grubby_prepare_args(arguments, include_bootloader)
         return self._run_get_output(args)
 
-
     def _run_grubby_get_return(self, arguments, include_bootloader=True):
         '''
         Utility function that runs grubby with and returns status code
         '''
         args = self._run_grubby_prepare_args(arguments, include_bootloader)
         return self._run_get_return(args)
-
 
     def _extract_tarball(self, tarball, directory):
         '''
@@ -939,7 +927,6 @@ class Grubby(object):
             f.extract(m, directory)
         return os.path.join(directory, topdir.name)
 
-
     def _get_entry_indexes(self, info):
         '''
         Returns the indexes found in a get_info() output
@@ -957,7 +944,6 @@ class Grubby(object):
             except ValueError:
                 pass
         return indexes
-
 
     def _index_for_title(self, title):
         '''
@@ -984,7 +970,6 @@ class Grubby(object):
                     return i
         return None
 
-
     def _info_filter(self, info, key, value=None):
         '''
         Filters info, looking for keys, optionally set with a given value
@@ -1007,7 +992,6 @@ class Grubby(object):
                     return line.split("=")[1]
         return None
 
-
     def _kernel_for_title(self, title):
         '''
         Returns the kernel path for an entry based on its title
@@ -1024,7 +1008,6 @@ class Grubby(object):
         else:
             return None
 
-
     def _is_number(self, data):
         '''
         Returns true if supplied data is an int or string with digits
@@ -1034,7 +1017,6 @@ class Grubby(object):
         elif isinstance(data, str) and data.isdigit():
             return True
         return False
-
 
     def _get_entry_selection(self, data):
         '''
@@ -1051,7 +1033,6 @@ class Grubby(object):
             raise ValueError("Bad value for 'kernel' parameter. Expecting "
                              "either and int (index) or string (kernel or "
                              "title)")
-
 
     def _remove_duplicate_cmdline_args(self, cmdline):
         """
@@ -1073,7 +1054,6 @@ class Grubby(object):
                 new_args.insert(0, arg)
                 copied.add(arg)
         return ' '.join(new_args)
-
 
     #
     # The following methods implement a form of "API" that action methods
@@ -1099,13 +1079,11 @@ class Grubby(object):
             return None
         return output
 
-
     # Alias for client side boottool.py API
     get_type = get_bootloader
 
     # Alias for boottool app
     bootloader_probe = get_bootloader
-
 
     def get_architecture(self):
         '''
@@ -1119,10 +1097,8 @@ class Grubby(object):
         '''
         return os.uname()[4]
 
-
     # Alias for boottool app
     arch_probe = get_architecture
-
 
     def get_titles(self):
         '''
@@ -1140,7 +1116,6 @@ class Grubby(object):
                 pass
         return titles
 
-
     def get_default_index(self):
         '''
         Get the default entry index.
@@ -1155,13 +1130,11 @@ class Grubby(object):
             default_index = int(default_index)
         return default_index
 
-
     # Alias for client side boottool.py API
     get_default = get_default_index
 
     # Alias for boottool app
     default = get_default_index
-
 
     def set_default_by_index(self, index):
         """
@@ -1181,10 +1154,8 @@ class Grubby(object):
         """
         return self._run_grubby_get_return(['--set-default-index=%s' % index])
 
-
     # Alias for client side boottool.py API
     set_default = set_default_by_index
-
 
     def get_default_title(self):
         '''
@@ -1196,7 +1167,6 @@ class Grubby(object):
         @returns: a string of the default entry title.
         '''
         return self._run_grubby_get_output(['--default-title'])
-
 
     def get_entry(self, search_info):
         """
@@ -1213,7 +1183,6 @@ class Grubby(object):
         """
         info = self.get_info(search_info)
         return parse_entry(info)
-
 
     def get_entries(self):
         """
@@ -1256,7 +1225,6 @@ class Grubby(object):
         if info:
             return info
 
-
     def get_title_for_kernel(self, path):
         """
         Returns a title for a particular kernel.
@@ -1271,7 +1239,6 @@ class Grubby(object):
                 return entry['title']
         return None
 
-
     def add_args(self, kernel, args):
         """
         Add cmdline arguments for the specified kernel.
@@ -1284,7 +1251,6 @@ class Grubby(object):
                              '--args=%s' % args]
         self._run_grubby_get_return(command_arguments)
 
-
     def remove_args(self, kernel, args):
         """
         Removes specified cmdline arguments.
@@ -1296,7 +1262,6 @@ class Grubby(object):
         command_arguments = ['--update-kernel=%s' % entry_selection,
                              '--remove-args=%s' % args]
         self._run_grubby_get_return(command_arguments)
-
 
     def add_kernel(self, path, title='autoserv', root=None, args=None,
                    initrd=None, default=False, position='end'):
@@ -1351,7 +1316,6 @@ class Grubby(object):
         parameters.append("--copy-default")
         return self._run_grubby_get_return(parameters)
 
-
     def remove_kernel(self, kernel):
         """
         Removes a specific entry from the bootloader configuration.
@@ -1368,7 +1332,6 @@ class Grubby(object):
 
         command_arguments = ['--remove-kernel=%s' % entry_selection]
         return self._run_grubby_get_return(command_arguments)
-
 
     #
     # The following methods are not present in the original client side
@@ -1389,7 +1352,6 @@ class Grubby(object):
         if info:
             return info.splitlines()
 
-
     def get_grubby_version_raw(self):
         '''
         Get the version of grubby that is installed on this machine as is
@@ -1397,7 +1359,6 @@ class Grubby(object):
         @returns: string with raw output from grubby --version
         '''
         return self._run_grubby_get_output(['--version'], False)
-
 
     def get_grubby_version(self):
         '''
@@ -1417,7 +1378,6 @@ class Grubby(object):
         else:
             return None
 
-
     def grubby_install_patch_makefile(self):
         '''
         Patch makefile, making CFLAGS more forgivable to older toolchains
@@ -1435,7 +1395,6 @@ class Grubby(object):
                 o.write(l)
         o.close()
 
-
     def grubby_install_backup(self, path):
         '''
         Backs up the current grubby binary to make room the one we'll build
@@ -1445,12 +1404,11 @@ class Grubby(object):
         '''
         backup_path = '%s.boottool.bkp' % path
         if (os.path.exists(path)
-            and not os.path.exists(backup_path)):
+                and not os.path.exists(backup_path)):
             try:
                 shutil.move(path, backup_path)
             except:
                 self.log.warn('Failed to backup the current grubby binary')
-
 
     def grubby_install_fetch_tarball(self, topdir):
         '''
@@ -1483,7 +1441,6 @@ class Grubby(object):
             return None
 
         return tarball
-
 
     def grubby_build(self, topdir, tarball):
         '''
@@ -1523,7 +1480,6 @@ class Grubby(object):
             log_lines(result.stderr.read().splitlines())
             return False
         return True
-
 
     def grubby_install(self, path=None):
         '''
@@ -1582,7 +1538,6 @@ class Grubby(object):
 
         return path
 
-
     def boot_once(self, title=None):
         '''
         Configures the bootloader to boot an entry only once
@@ -1607,7 +1562,6 @@ class Grubby(object):
         else:
             self.log.debug('Setting boot once for entry: %s', title)
 
-
         bootloader = self.get_bootloader()
         if bootloader in ('grub', 'grub2', 'elilo'):
             entry_index = self._index_for_title(title)
@@ -1627,7 +1581,6 @@ class Grubby(object):
         else:
             self.log.error("Detected bootloader does not implement boot once")
             return -1
-
 
     def boot_once_grub(self, entry_index):
         '''
@@ -1679,7 +1632,6 @@ class Grubby(object):
                                grubonce_cmd)
             return rc
 
-
     def boot_once_grub2(self, entry_index):
         '''
         Implements the boot once feature for the grub2 bootloader
@@ -1698,7 +1650,7 @@ class Grubby(object):
 
         if grub_reboot_exec is None:
             self.log.error('Could not find executable among searched names: '
-                           '%s',' ,'.join(grub_reboot_names))
+                           '%s', ' ,'.join(grub_reboot_names))
             return -1
 
         grub_set_default_names = ['grub-set-default', 'grub2-set-default']
@@ -1710,11 +1662,12 @@ class Grubby(object):
 
         if grub_set_default_exec is None:
             self.log.error('Could not find executable among searched names: '
-                           '%s',' ,'.join(grub_set_default_names))
+                           '%s', ' ,'.join(grub_set_default_names))
             return -1
 
         # Make sure the "set default" entry in the configuration file is set
-        # to "${saved_entry}. Assuming the config file is at /boot/grub/grub.cfg
+        # to "${saved_entry}. Assuming the config file is at
+        # /boot/grub/grub.cfg
         deb_grub_cfg_path = '/boot/grub/grub.cfg'
         deb_grub_cfg_bkp_path = '%s.boottool.bak' % deb_grub_cfg_path
 
@@ -1748,14 +1701,14 @@ class Grubby(object):
             prev_saved_return = self._run_get_return([grub_set_default_exec,
                                                       '%s' % default_index])
             if prev_saved_return != 0:
-                self.log.error('Could not make entry %s the previous saved entry',
-                               default_index)
+                self.log.error(
+                    'Could not make entry %s the previous saved entry',
+                    default_index)
                 return prev_saved_return
 
         # Finally set the boot once entry
         return self._run_get_return([grub_reboot_exec,
                                      '%s' % entry_index])
-
 
     def boot_once_yaboot(self, entry_title):
         '''
@@ -1768,7 +1721,6 @@ class Grubby(object):
         return self._run_get_return([nvsetenv_cmd,
                                      'boot-once',
                                      entry_title])
-
 
     def boot_once_elilo(self, entry_index):
         '''
@@ -1803,6 +1755,7 @@ class Grubby(object):
 
 
 class OptionParser(optparse.OptionParser):
+
     '''
     Command line option parser
 
@@ -1862,9 +1815,9 @@ class OptionParser(optparse.OptionParser):
                            '--remove-args')
 
         actions.add_option('--info',
-                        help='Display information about the bootloader entry '
-                        'at the given position number. Also accepts \'all\' '
-                        'or \'default\'')
+                           help='Display information about the bootloader entry '
+                           'at the given position number. Also accepts \'all\' '
+                           'or \'default\'')
 
         actions.add_option('--default', action='store_true',
                            help='Prints the current default kernel for the '
@@ -1941,7 +1894,6 @@ class OptionParser(optparse.OptionParser):
                           help='Use a different grubby binary, located at the '
                           'given path')
 
-
     def opts_has_action(self, opts):
         '''
         Checks if (parsed) opts has a first class action
@@ -1954,7 +1906,6 @@ class OptionParser(optparse.OptionParser):
                 has_action = True
         return has_action
 
-
     def opts_get_action(self, opts):
         '''
         Gets the selected action from the parsed opts
@@ -1965,7 +1916,6 @@ class OptionParser(optparse.OptionParser):
             if value is not None:
                 return action
         return None
-
 
     def check_values(self, opts, args):
         '''
@@ -1987,16 +1937,17 @@ class OptionParser(optparse.OptionParser):
 
 
 class BoottoolApp(object):
+
     '''
     The boottool application itself
     '''
+
     def __init__(self):
         self.opts = None
         self.args = None
         self.option_parser = OptionParser()
         self.grubby = None
         self.log = logging.getLogger(self.__class__.__name__)
-
 
     def _parse_command_line(self):
         '''
@@ -2005,7 +1956,6 @@ class BoottoolApp(object):
         (self.opts,
          self.args) = self.option_parser.parse_args()
 
-
     def _configure_logging(self):
         '''
         Configures logging based on --debug= command line switch
@@ -2013,9 +1963,9 @@ class BoottoolApp(object):
         We do not have as many levels as the original boottool(.pl) had, but
         we accept the same range of parameters and adjust it to our levels.
         '''
-        log_map = {0 : logging.WARNING,
-                   1 : logging.INFO,
-                   2 : logging.DEBUG}
+        log_map = {0: logging.WARNING,
+                   1: logging.INFO,
+                   2: logging.DEBUG}
         try:
             level = int(self.opts.debug)
         except ValueError:
@@ -2032,7 +1982,6 @@ class BoottoolApp(object):
 
         logging.basicConfig(level=logging_level,
                             format=LOGGING_FORMAT)
-
 
     def run(self):
         self._parse_command_line()
@@ -2074,7 +2023,6 @@ class BoottoolApp(object):
                 result = 0
             sys.exit(result)
 
-
     #
     # The following block implements actions. Actions are methods that will be
     # called because of user supplied parameters on the command line. Most
@@ -2093,7 +2041,6 @@ class BoottoolApp(object):
         version = self.grubby.get_grubby_version_raw()
         if version is not None:
             print version
-
 
     def action_grubby_version_check(self):
         '''
@@ -2117,13 +2064,11 @@ class BoottoolApp(object):
         else:
             return -1
 
-
     def action_grubby_install(self):
         '''
         Attempts to install a recent enough version of grubby
         '''
         return self.grubby.grubby_install()
-
 
     def action_info(self):
         '''
@@ -2149,7 +2094,7 @@ class BoottoolApp(object):
         if info_index == 'ALL':
             entries = self.grubby.get_entries()
         else:
-            entries = { info_index : self.grubby.get_entry(info_index) }
+            entries = {info_index: self.grubby.get_entry(info_index)}
 
         for index, entry in entries.items():
             print
@@ -2160,7 +2105,6 @@ class BoottoolApp(object):
                         val = val[1:-1]
 
                 print '%-8s: %s' % (key, val)
-
 
     def action_add_kernel(self):
         '''
@@ -2187,7 +2131,6 @@ class BoottoolApp(object):
                                       args=self.opts.args,
                                       initrd=self.opts.initrd)
 
-
     def action_update_kernel(self):
         '''
         Updates a kernel entry
@@ -2210,7 +2153,6 @@ class BoottoolApp(object):
 
         return self.grubby._run_grubby_get_return(args)
 
-
     def action_remove_kernel(self):
         '''
         Removes a boot entry by the specified title
@@ -2224,7 +2166,6 @@ class BoottoolApp(object):
 
         return self.grubby.remove_kernel(self.opts.remove_kernel)
 
-
     def action_boot_once(self):
         """
         Sets a specific entry for the next boot only
@@ -2236,13 +2177,11 @@ class BoottoolApp(object):
 
         return self.grubby.boot_once(self.opts.title)
 
-
     def action_default(self):
         """
         Get the default entry index
         """
         print self.grubby.get_default_index()
-
 
     def action_set_default(self):
         """

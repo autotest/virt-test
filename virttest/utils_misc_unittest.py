@@ -4,9 +4,13 @@ import unittest
 import common
 from autotest.client import utils
 from autotest.client.shared.test_utils import mock
-import utils_misc, cartesian_config, build_helper
+import utils_misc
+import cartesian_config
+import build_helper
+
 
 class TestUtilsMisc(unittest.TestCase):
+
     def test_cpu_vendor_intel(self):
         flags = ['fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce',
                  'cx8', 'apic', 'sep', 'mtrr', 'pge', 'mca', 'cmov',
@@ -19,7 +23,6 @@ class TestUtilsMisc(unittest.TestCase):
                  'tpr_shadow', 'vnmi', 'flexpriority']
         vendor = utils_misc.get_cpu_vendor(flags, False)
         self.assertEqual(vendor, 'intel')
-
 
     def test_cpu_vendor_amd(self):
         flags = ['fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce',
@@ -36,12 +39,10 @@ class TestUtilsMisc(unittest.TestCase):
         vendor = utils_misc.get_cpu_vendor(flags, False)
         self.assertEqual(vendor, 'amd')
 
-
     def test_vendor_unknown(self):
         flags = ['non', 'sense', 'flags']
         vendor = utils_misc.get_cpu_vendor(flags, False)
         self.assertEqual(vendor, 'unknown')
-
 
     def test_get_archive_tarball_name(self):
         tarball_name = utils_misc.get_archive_tarball_name('/tmp',
@@ -49,20 +50,17 @@ class TestUtilsMisc(unittest.TestCase):
                                                            'bz2')
         self.assertEqual(tarball_name, 'tmp-archive.tar.bz2')
 
-
     def test_get_archive_tarball_name_absolute(self):
         tarball_name = utils_misc.get_archive_tarball_name('/tmp',
                                                            '/var/tmp/tmp',
                                                            'bz2')
         self.assertEqual(tarball_name, '/var/tmp/tmp.tar.bz2')
 
-
     def test_get_archive_tarball_name_from_dir(self):
         tarball_name = utils_misc.get_archive_tarball_name('/tmp',
                                                            None,
                                                            'bz2')
         self.assertEqual(tarball_name, 'tmp.tar.bz2')
-
 
     def test_git_repo_param_helper(self):
         config = """git_repo_foo_uri = git://git.foo.org/foo.git
@@ -80,7 +78,6 @@ git_repo_foo_commit = bc732ad8b2ed8be52160b893735417b43a1e91a8
         self.assertEqual(h.lbranch, 'local')
         self.assertEqual(h.commit, 'bc732ad8b2ed8be52160b893735417b43a1e91a8')
 
-
     def test_normalize_data_size(self):
         n1 = utils_misc.normalize_data_size("12M")
         n2 = utils_misc.normalize_data_size("1024M", "G")
@@ -97,10 +94,11 @@ git_repo_foo_commit = bc732ad8b2ed8be52160b893735417b43a1e91a8
 
 
 class FakeCmd(object):
+
     def __init__(self, cmd):
         self.fake_cmds = [
-{"cmd": "numactl --hardware",
-"stdout": """
+            {"cmd": "numactl --hardware",
+             "stdout": """
 available: 1 nodes (0)
 node 0 cpus: 0 1 2 3 4 5 6 7
 node 0 size: 18431 MB
@@ -109,8 +107,8 @@ node distances:
 node   0
   0:  10
 """},
-{"cmd": "ps -eLf | awk '{print $4}'",
-"stdout": """
+            {"cmd": "ps -eLf | awk '{print $4}'",
+             "stdout": """
 1230
 1231
 1232
@@ -120,19 +118,18 @@ node   0
 1236
 1237
 """},
-{"cmd": "taskset -p 0x1 1230", "stdout": ""},
-{"cmd": "taskset -p 0x2 1231", "stdout": ""},
-{"cmd": "taskset -p 0x4 1232", "stdout": ""},
-{"cmd": "taskset -p 0x8 1233", "stdout": ""},
-{"cmd": "taskset -p 0x10 1234", "stdout": ""},
-{"cmd": "taskset -p 0x20 1235", "stdout": ""},
-{"cmd": "taskset -p 0x40 1236", "stdout": ""},
-{"cmd": "taskset -p 0x80 1237", "stdout": ""},
+            {"cmd": "taskset -p 0x1 1230", "stdout": ""},
+            {"cmd": "taskset -p 0x2 1231", "stdout": ""},
+            {"cmd": "taskset -p 0x4 1232", "stdout": ""},
+            {"cmd": "taskset -p 0x8 1233", "stdout": ""},
+            {"cmd": "taskset -p 0x10 1234", "stdout": ""},
+            {"cmd": "taskset -p 0x20 1235", "stdout": ""},
+            {"cmd": "taskset -p 0x40 1236", "stdout": ""},
+            {"cmd": "taskset -p 0x80 1237", "stdout": ""},
 
-]
+        ]
 
         self.stdout = self.get_stdout(cmd)
-
 
     def get_stdout(self, cmd):
         for fake_cmd in self.fake_cmds:
@@ -146,15 +143,14 @@ def utils_run(cmd):
 
 
 class TestNumaNode(unittest.TestCase):
+
     def setUp(self):
         self.god = mock.mock_god(ut=self)
         self.god.stub_with(utils, 'run', utils_run)
         self.numa_node = utils_misc.NumaNode(-1)
 
-
     def test_get_node_cpus(self):
         self.assertEqual(self.numa_node.get_node_cpus(0), '0 1 2 3 4 5 6 7')
-
 
     def test_pin_cpu(self):
         self.assertEqual(self.numa_node.pin_cpu("1230"), "0")
@@ -183,7 +179,6 @@ class TestNumaNode(unittest.TestCase):
 
         self.assertTrue("free" not in self.numa_node.dict.values())
 
-
     def test_free_cpu(self):
         self.assertEqual(self.numa_node.pin_cpu("1230"), "0")
         self.assertEqual(self.numa_node.dict["0"], "1230")
@@ -195,18 +190,17 @@ class TestNumaNode(unittest.TestCase):
         self.assertEqual(self.numa_node.dict["0"], "free")
         self.assertEqual(self.numa_node.dict["1"], "1231")
 
-
     def test_bitlist_to_string(self):
         string = 'foo'
-        bitlist = [0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1]
+        bitlist = [0, 1, 1, 0, 0, 1, 1, 0, 0, 1,
+                   1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1]
         self.assertEqual(utils_misc.string_to_bitlist(string), bitlist)
 
-
     def test_string_to_bitlist(self):
-        bitlist = [0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0]
+        bitlist = [0, 1, 1, 0, 0, 0, 1, 0, 0, 1,
+                   1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0]
         string = 'bar'
         self.assertEqual(utils_misc.bitlist_to_string(bitlist), string)
-
 
     def tearDown(self):
         self.god.unstub_all()

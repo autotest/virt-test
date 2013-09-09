@@ -1,4 +1,5 @@
-import os, logging
+import os
+import logging
 from autotest.client.shared import error
 
 
@@ -48,7 +49,7 @@ def run_lvm(test, params, env):
         session.cmd("pvcreate %s" % disks)
 
         error.context("creating a volume group out of %s" % disks,
-                       logging.info)
+                      logging.info)
         session.cmd("vgcreate %s %s" % (vg_name, disks))
 
         error.context("activating volume group %s" % vg_name)
@@ -58,7 +59,8 @@ def run_lvm(test, params, env):
                       logging.info)
         session.cmd("lvcreate -L2000 -n %s %s" % (lv_name, vg_name))
 
-        error.context("creating ext3 filesystem on logical volume %s" % lv_name)
+        error.context(
+            "creating ext3 filesystem on logical volume %s" % lv_name)
         session.cmd("yes | mkfs.ext3 %s" % lv_path, timeout=int(timeout))
 
         mount_lv(lv_path, session)

@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 
 
 def internal_yum_update(session, command, prompt, timeout):
@@ -15,8 +16,8 @@ def internal_yum_update(session, command, prompt, timeout):
     end_time = time.time() + timeout
     while time.time() < end_time:
         match = session.read_until_last_line_matches(
-                                                ["[Ii]s this [Oo][Kk]", prompt],
-                                                timeout=timeout)[0]
+            ["[Ii]s this [Oo][Kk]", prompt],
+            timeout=timeout)[0]
         if match == 0:
             logging.info("Got 'Is this ok'; sending 'y'")
             session.sendline("y")

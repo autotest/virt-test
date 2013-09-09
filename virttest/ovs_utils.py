@@ -1,9 +1,13 @@
-import logging, os, re, shutil
+import logging
+import os
+import re
+import shutil
 from autotest.client.shared import error, utils
 from virttest import utils_net
 
 
 class Machine(object):
+
     def __init__(self, vm=None, src=None):
         self.vm = vm
         self.session = None
@@ -19,13 +23,11 @@ class Machine(object):
             self.bg_runner = self.session.sendline
             self.src = os.path.join("/", "tmp", "src")
 
-
     def is_virtual(self):
         """
         @return True when Machine is virtual.
         """
         return not self.vm is None
-
 
     def cmd(self, cmd, timeout=60):
         """
@@ -33,24 +35,20 @@ class Machine(object):
         """
         return self.runner(cmd, timeout=timeout)
 
-
     def cmd_state(self, cmd, timeout=60):
         """
         Return status of command.
         """
         return self.runner_status(cmd, timeout=timeout)
 
-
     def cmd_in_src(self, cmd, timeout=60):
         cmd = os.path.join(self.src, cmd)
         return self.runner(cmd, timeout=timeout)
-
 
     def fill_addrs(self):
         self.addrs = utils_net.get_net_if_and_addrs(self.runner)
         if self.vm:
             self.vm.fill_addrs(self.addrs)
-
 
     def get_linkv6_addr(self, ifname):
         """
@@ -62,7 +60,6 @@ class Machine(object):
         if self.is_virtual() and type(ifname) is int:
             ifname = self.vm.virtnet[ifname].g_nic_name
         return utils_net.ipv6_from_mac_addr(self.addrs[ifname]['mac'])
-
 
     def ping(self, dst, iface=None, count=1, vlan=0, ipv=None):
         """
@@ -76,8 +73,9 @@ class Machine(object):
                 raise error.TestError("For ipv6 ping, interface can't be None")
 
             if self.vm:
-                iface = self.get_if_vlan_name(self.vm.virtnet[iface].g_nic_name,
-                                              vlan)
+                iface = self.get_if_vlan_name(
+                    self.vm.virtnet[iface].g_nic_name,
+                    vlan)
                 return ping6(iface, dst, count,
                              self.runner)
             else:
@@ -85,7 +83,6 @@ class Machine(object):
                 return ping6(iface, dst, count, self.runner)
         elif ipv == "ipv4":
             return ping4(dst, count, self.runner)
-
 
     def add_vlan_iface(self, iface, vlan_id):
         """
@@ -95,8 +92,7 @@ class Machine(object):
         @param vlan_id: Id of vlan.
         """
         self.cmd("ip link add link %s name %s-vl%s type vlan id %s" %
-                    (iface, iface, vlan_id, vlan_id))
-
+                (iface, iface, vlan_id, vlan_id))
 
     def del_vlan_iface(self, iface, vlan_id):
         """
@@ -107,20 +103,17 @@ class Machine(object):
         """
         self.cmd("ip link del %s" % (iface))
 
-
     def bring_iface_up(self, iface):
         """
         Bring interface up
         """
         self.cmd("ip link set %s up" % (iface))
 
-
     def bring_iface_down(self, iface):
         """
         Bring interface up
         """
         self.cmd("ip link set %s down" % (iface))
-
 
     def get_vlans_ifname(self):
         """
@@ -131,7 +124,7 @@ class Machine(object):
         ret = dict()
         vlans = self.cmd("cat /proc/net/vlan/config")
         v = re.findall("^(\S+)\s*\|\s*(\S+)\s*\|\s*(\S+)\s*$",
-                          vlans, re.MULTILINE)
+                       vlans, re.MULTILINE)
         for vl_ifname, vl_id, ifname in v:
             if ifname in ret:
                 ret[ifname][int(vl_id)] = vl_ifname
@@ -139,7 +132,6 @@ class Machine(object):
                 ret[ifname] = {int(vl_id): vl_ifname}
 
         return ret
-
 
     def get_if_vlan_name(self, ifname, vlan_id=0):
         if vlan_id == 0:
@@ -157,7 +149,6 @@ class Machine(object):
             raise utils_net.VlanError(ifname,
                                       "Interface %s has no vlans" % (ifname))
 
-
     def prepare_directory(self, path, cleanup=False):
         """
         Prepare dest directory. Create if directory not exist.
@@ -171,13 +162,11 @@ class Machine(object):
         if cleanup:
             self.cmd("rm -rf %s" % (os.path.join(path, "*")))
 
-
     def copy_to(self, src, dst):
         if self.vm:
             self.vm.copy_files_to(src, dst)
         else:
             shutil.copy(src, dst)
-
 
     def compile_autotools_app_tar(self, path, package_name):
         """
@@ -203,9 +192,8 @@ class Machine(object):
         self.copy_to(os.path.join(path, package_name), self.src)
         self.cmd("sync")
         self.cmd("cd %s; %s ./configure && make;" % (self.src, unpack_cmd),
-                     timeout=240)
+                 timeout=240)
         self.cmd("sync")
-
 
     def __getattr__(self, name):
         if self.vm:
@@ -220,7 +208,7 @@ def ping6(iface, dst_ip, count=1, runner=None):
     """
     Format command for ipv6.
     """
-    if runner == None:
+    if runner is None:
         runner = utils.run
     return runner("ping6 -I %s %s -c %s" % (iface, dst_ip, count))
 
@@ -229,6 +217,6 @@ def ping4(iface, dst_ip, count=1, runner=None):
     """
     Format command for ipv6.
     """
-    if runner == None:
+    if runner is None:
         runner = utils.run
     return runner("ping  %s -c %s" % (dst_ip, count))

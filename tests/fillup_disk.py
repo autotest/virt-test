@@ -24,7 +24,7 @@ def run_fillup_disk(test, params, env):
 
     fillup_timeout = int(params.get("fillup_timeout"))
     fillup_size = int(params.get("fillup_size"))
-    fill_dir = params.get("guest_testdir","/tmp")
+    fill_dir = params.get("guest_testdir", "/tmp")
     filled = False
     number = 0
 
@@ -38,7 +38,7 @@ def run_fillup_disk(test, params, env):
             s, o = session.cmd_status_output(tmp_cmd, timeout=fillup_timeout)
             if "No space left on device" in o:
                 logging.debug("Successfully filled up the disk")
-                filled = True;
+                filled = True
             elif s != 0:
                 raise error.TestFail("Command dd failed to execute: %s" % o)
             number += 1

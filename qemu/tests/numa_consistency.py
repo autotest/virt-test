@@ -8,6 +8,7 @@ try:
 except ImportError:
     from virttest.staging import utils_memory
 
+
 @error.context_aware
 def run_numa_consistency(test, params, env):
     """

@@ -7,7 +7,9 @@ import logging
 from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, xcepts, accessors
 
+
 class RangeList(list):
+
     """
     A list of start & end address tuples
     """
@@ -27,19 +29,20 @@ class RangeList(list):
             newone.append(tuple(item))
         super(RangeList, self).__init__(newone)
 
-
     def append_to_element(self, element):
         """
         Adds range described by instance to ElementTree.element
         """
         if not issubclass(type(element), xml_utils.ElementTree.Element):
-            raise ValueError("Element is not a ElementTree.Element or subclass")
+            raise ValueError(
+                "Element is not a ElementTree.Element or subclass")
         for start, end in self:
-            serange = {'start':start, 'end':end}
+            serange = {'start': start, 'end': end}
             element.append(xml_utils.ElementTree.Element('range', serange))
 
 
 class IPXML(base.LibvirtXMLBase):
+
     """
     IP address block, optionally containing DHCP range information
 
@@ -52,19 +55,19 @@ class IPXML(base.LibvirtXMLBase):
     __slots__ = base.LibvirtXMLBase.__slots__ + ('dhcp_ranges', 'address',
                                                  'netmask')
 
-
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
         """
         Create new IPXML instance based on address/mask
         """
-        accessors.XMLAttribute('address', self, parent_xpath='/', tag_name='ip',
-                               attribute='address')
-        accessors.XMLAttribute('netmask', self, parent_xpath='/', tag_name='ip',
-                               attribute='netmask')
+        accessors.XMLAttribute(
+            'address', self, parent_xpath='/', tag_name='ip',
+            attribute='address')
+        accessors.XMLAttribute(
+            'netmask', self, parent_xpath='/', tag_name='ip',
+            attribute='netmask')
         super(IPXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<ip address='%s' netmask='%s'></ip>" % (address, netmask)
-
 
     def get_dhcp_ranges(self):
         """
@@ -73,11 +76,10 @@ class IPXML(base.LibvirtXMLBase):
         xmltreefile = self.dict_get('xml')
         newlist = []
         for element in xmltreefile.findall('/ip/dhcp/range'):
-            start = element.get('start') # attribute of range tag
+            start = element.get('start')  # attribute of range tag
             end = element.get('end')
             newlist.append((start, end, ))
         return RangeList(newlist)
-
 
     def set_dhcp_ranges(self, value):
         """
@@ -89,7 +91,7 @@ class IPXML(base.LibvirtXMLBase):
         # Always start from clean-slate
         self.del_dhcp_ranges()
         if value is None:
-            return # ip element has no dhcp block
+            return  # ip element has no dhcp block
         xmltreefile = self.dict_get('xml')
         dhcp = xml_utils.ElementTree.Element('dhcp')
         ip_elem = xmltreefile.find('/ip')
@@ -98,7 +100,6 @@ class IPXML(base.LibvirtXMLBase):
         ip_elem.append(dhcp)
         value.append_to_element(dhcp)
         xmltreefile.write()
-
 
     def del_dhcp_ranges(self):
         """
@@ -111,6 +112,7 @@ class IPXML(base.LibvirtXMLBase):
 
 
 class NetworkXMLBase(base.LibvirtXMLBase):
+
     """
     Accessor methods for NetworkXML class.
 
@@ -145,8 +147,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                                                  'fwd_mode', 'mac', 'ip')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
-                                            'defined', 'active',
-                                            'autostart', 'persistent')
+        'defined', 'active',
+        'autostart', 'persistent')
 
     __schema_name__ = "network"
 
@@ -158,16 +160,14 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         accessors.XMLAttribute('fwd_mode', self, parent_xpath='/',
                                tag_name='forward', attribute='mode')
         accessors.XMLAttribute('mac', self, parent_xpath='/',
-                               tag_name='mac', attribute='address');
+                               tag_name='mac', attribute='address')
         accessors.XMLElementDict('bridge', self, parent_xpath='/',
                                  tag_name='bridge')
         super(NetworkXMLBase, self).__init__(virsh_instance=virsh_instance)
 
-
     def __check_undefined__(self, errmsg):
         if not self.defined:
             raise xcepts.LibvirtXMLError(errmsg)
-
 
     def get_defined(self):
         """
@@ -175,23 +175,20 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         """
         return self.name in self.virsh.net_state_dict(only_names=True).keys()
 
-
     def set_defined(self, value):
         """Accessor method for 'define' property, set True to define."""
         if not self.super_get('INITIALIZED'):
-            pass # do nothing
+            pass  # do nothing
         value = bool(value)
         if value:
-            self.virsh.net_define(self.xml) # send it the filename
+            self.virsh.net_define(self.xml)  # send it the filename
         else:
             del self.defined
-
 
     def del_defined(self):
         """Accessor method for 'define' property, undefines network"""
         self.__check_undefined__("Cannot undefine non-existant network")
         self.virsh.net_undefine(self.name)
-
 
     def get_active(self):
         """Accessor method for 'active' property (True/False)"""
@@ -200,24 +197,22 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         state_dict = self.virsh.net_state_dict()
         return state_dict[self.name]['active']
 
-
     def set_active(self, value):
         """Accessor method for 'active' property, sets network active"""
         if not self.super_get('INITIALIZED'):
-            pass # do nothing
+            pass  # do nothing
         self.__check_undefined__("Cannot activate undefined network")
         value = bool(value)
         if value:
             if not self.active:
                 self.virsh.net_start(self.name)
             else:
-                pass # don't activate twice
+                pass  # don't activate twice
         else:
             if self.active:
                 del self.active
             else:
-                pass # don't deactivate twice
-
+                pass  # don't deactivate twice
 
     def del_active(self):
         """Accessor method for 'active' property, stops network"""
@@ -225,8 +220,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         if self.active:
             self.virsh.net_destroy(self.name)
         else:
-            pass # don't destroy twice
-
+            pass  # don't destroy twice
 
     def get_autostart(self):
         """Accessor method for 'autostart' property, True if set"""
@@ -235,31 +229,28 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         state_dict = self.virsh.net_state_dict()
         return state_dict[self.name]['autostart']
 
-
     def set_autostart(self, value):
         """Accessor method for 'autostart' property, sets/unsets autostart"""
         if not self.super_get('INITIALIZED'):
-            pass # do nothing
+            pass  # do nothing
         self.__check_undefined__("Cannot set autostart for undefined network")
         value = bool(value)
         if value:
             if not self.autostart:
                 self.virsh.net_autostart(self.name)
             else:
-                pass # don't set autostart twice
+                pass  # don't set autostart twice
         else:
             if self.autostart:
                 del self.autostart
             else:
-                pass # don't unset autostart twice
-
+                pass  # don't unset autostart twice
 
     def del_autostart(self):
         """Accessor method for 'autostart' property, unsets autostart"""
         if not self.defined:
             raise xcepts.LibvirtXMLError("Can't autostart nonexistant network")
         self.virsh.net_autostart(self.name, "--disable")
-
 
     def get_persistent(self):
         """Accessor method for 'persistent' property"""
@@ -270,17 +261,15 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     set_persistent = set_defined
     del_persistent = del_defined
 
-
     def get_ip(self):
         xmltreefile = self.dict_get('xml')
         try:
             ip_root = xmltreefile.reroot('/ip')
         except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
-        ipxml = IPXML(virsh_instance = self.dict_get('virsh'))
+        ipxml = IPXML(virsh_instance=self.dict_get('virsh'))
         ipxml.xmltreefile = ip_root
         return ipxml
-
 
     def set_ip(self, value):
         if not issubclass(type(value), IPXML):
@@ -293,7 +282,6 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         root.append(value.xmltreefile.getroot())
         xmltreefile.write()
 
-
     def del_ip(self):
         xmltreefile = self.dict_get('xml')
         element = xmltreefile.find('/ip')
@@ -303,12 +291,12 @@ class NetworkXMLBase(base.LibvirtXMLBase):
 
 
 class NetworkXML(NetworkXMLBase):
+
     """
     Manipulators of a Virtual Network through it's XML definition.
     """
 
     __slots__ = NetworkXMLBase.__slots__
-
 
     def __init__(self, network_name='default', virsh_instance=base.virsh):
         """
@@ -317,8 +305,7 @@ class NetworkXML(NetworkXMLBase):
         super(NetworkXML, self).__init__(virsh_instance=virsh_instance)
         self.xml = u"<network><name>%s</name></network>" % network_name
 
-
-    @staticmethod # wraps __new__
+    @staticmethod  # wraps __new__
     def new_all_networks_dict(virsh_instance=base.virsh):
         """
         Return a dictionary of names to NetworkXML instances for all networks
@@ -336,7 +323,6 @@ class NetworkXML(NetworkXMLBase):
             result[net_name] = new_copy
         return result
 
-
     @staticmethod
     def new_from_net_dumpxml(network_name, virsh_instance=base.virsh):
         """
@@ -350,7 +336,6 @@ class NetworkXML(NetworkXMLBase):
         netxml['xml'] = virsh_instance.net_dumpxml(network_name).stdout.strip()
         return netxml
 
-
     @staticmethod
     def get_uuid_by_name(network_name, virsh_instance=base.virsh):
         """
@@ -363,15 +348,13 @@ class NetworkXML(NetworkXMLBase):
                                                       virsh_instance)
         return network_xml.uuid
 
-
     def debug_xml(self):
         """
         Dump contents of XML file for debugging
         """
-        xml = str(self) # LibvirtXMLBase.__str__ returns XML content
+        xml = str(self)  # LibvirtXMLBase.__str__ returns XML content
         for debug_line in str(xml).splitlines():
             logging.debug("Network XML: %s", debug_line)
-
 
     def create(self):
         """
@@ -379,16 +362,15 @@ class NetworkXML(NetworkXMLBase):
         """
         self.virsh.net_create(self.xml)
 
-
     def orbital_nuclear_strike(self):
         """It's the only way to really be sure.  Remove all libvirt state"""
         try:
-            self['active'] = False # deactivate (stop) network if active
+            self['active'] = False  # deactivate (stop) network if active
         except xcepts.LibvirtXMLError, detail:
             # inconsequential, network will be removed
             logging.warning(detail)
         try:
-            self['defined'] = False # undefine (delete) network if persistent
+            self['defined'] = False  # undefine (delete) network if persistent
         except xcepts.LibvirtXMLError, detail:
             # network already gone
             logging.warning(detail)

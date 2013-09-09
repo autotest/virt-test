@@ -7,6 +7,7 @@ http://libvirt.org/formatdomain.html#elementsDevices
 from virttest.libvirt_xml import accessors
 from virttest.libvirt_xml.devices import base
 
+
 class Emulator(base.UntypedDeviceBase):
 
     __slots__ = base.UntypedDeviceBase.__slots__ + ('path',)

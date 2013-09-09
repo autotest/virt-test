@@ -92,7 +92,7 @@ def run_dd_test(test, params, env):
         (stat, out) = session.cmd_status_output(dd_cmd, timeout=dd_timeout)
     except aexpect.ShellTimeoutError:
         err = ("dd command timed-out (cmd='%s', timeout=%d)"
-                                                    % (dd_cmd, dd_timeout))
+               % (dd_cmd, dd_timeout))
         logging.error(err)
         raise error.TestFail(err)
     except aexpect.ShellCmdError, details:
@@ -108,7 +108,7 @@ def run_dd_test(test, params, env):
         raise error.TestFail(err)
     if dd_output not in out:
         err = ("Output doesn't match:\nExpected:\n%s\nActual:\n%s"
-                                                        % (dd_output, out))
+               % (dd_output, out))
         raise error.TestFail(err)
     logging.info("dd test succeeded.")
     return

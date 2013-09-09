@@ -1,7 +1,7 @@
 import logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import  remote, utils_misc
+from virttest import remote, utils_misc
 
 
 @error.context_aware
@@ -30,13 +30,12 @@ def run_virtual_nic_send_buffer(test, params, env):
             lib_path = "/usr/lib"
         cmd = r"git clone %s udt-git; " % params.get("udt_url")
         cmd += r"cd udt-git/udt4; make; make install; "
-        cmd += r"cp -u src/*.so %s ; " %  lib_path
+        cmd += r"cp -u src/*.so %s ; " % lib_path
         cmd += r"cp -u app/sendfile app/recvfile /usr/bin/; "
         cmd += r"iptables -I INPUT -p udp  -j ACCEPT; "
         cmd += r"iptables -I OUTPUT -p udp -j ACCEPT "
         if session.cmd_status(cmd):
             raise error.TestError("Install udt on guest failed")
-
 
     timeout = int(params.get("login_timeout", '360'))
     transfer_timeout = int(params.get("transfer_timeout", '120'))
@@ -49,7 +48,7 @@ def run_virtual_nic_send_buffer(test, params, env):
     tmp_dir = params.get("tmp_dir", "/tmp/")
     host_file = (test.tmpdir + "tmp-%s" % utils_misc.generate_random_string(8))
     src_file = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
-    dst_file = (tmp_dir + "dst-%s" %  utils_misc.generate_random_string(8))
+    dst_file = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))
     data_port = params.get("data_port", "9000")
     clean_cmd = params.get("clean_cmd", "rm -f")
     filesize = int(params.get("filesize", '100'))
@@ -62,19 +61,19 @@ def run_virtual_nic_send_buffer(test, params, env):
     error.context("Init boot the vms")
     for vm in params.get("vms", "vm1 vm2 vm3 vm4").split():
         vms.append(env.get_vm(vm))
-    for vm in vms :
+    for vm in vms:
         vm.verify_alive()
         sessions.append(vm.wait_for_login(timeout=timeout))
         addresses.append(vm.get_address())
 
-    logging.info("Creating %dMb file on host" , filesize)
+    logging.info("Creating %dMb file on host", filesize)
     cmd = dd_cmd % (host_file, filesize)
     utils.run(cmd)
 
     try:
         error.context("Transfer data from host to each guest")
         for vm in vms:
-            error.context("Transfering data from host to guest %s " % vm.name,
+            error.context("Transferring data from host to guest %s " % vm.name,
                           logging.info)
             vm.copy_files_to(host_file, src_file, timeout=transfer_timeout)
 
@@ -84,7 +83,7 @@ def run_virtual_nic_send_buffer(test, params, env):
                           logging.info)
             vm.copy_files_from(src_file, host_file, timeout=transfer_timeout)
 
-        #transfer data between guest
+        # transfer data between guest
         error.context("Transfer data between every guest")
         if params.get("os_type") == "linux":
             for session in sessions:
@@ -93,7 +92,7 @@ def run_virtual_nic_send_buffer(test, params, env):
         for vm_src in addresses:
             for vm_dst in addresses:
                 if vm_src != vm_dst:
-                    error.context("Transfering data %s to %s" %
+                    error.context("Transferring data %s to %s" %
                                   (vm_src, vm_dst), logging.info)
                     remote.udp_copy_between_remotes(vm_src, vm_dst,
                                                     shell_port,

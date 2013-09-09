@@ -9,15 +9,15 @@ def run_virsh_net_start(test, params, env):
     Test command: virsh net-start.
     """
     # Gather test parameters
-    uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
-                                                       "default"))
+    uri = libvirt_vm.normalize_connect_uri(params.get("connect_uri",
+                                                      "default"))
     status_error = "yes" == params.get("status_error", "no")
     inactive_default = "yes" == params.get("net_start_inactive_default", "yes")
-    net_ref = params.get("net_start_net_ref", "netname") # default is tested
-    extra = params.get("net_start_options_extra", "") # extra cmd-line params.
+    net_ref = params.get("net_start_net_ref", "netname")  # default is tested
+    extra = params.get("net_start_options_extra", "")  # extra cmd-line params.
 
     # make easy to maintain
-    virsh_dargs = {'uri':uri, 'debug':False, 'ignore_status':True}
+    virsh_dargs = {'uri': uri, 'debug': False, 'ignore_status': True}
     virsh_instance = virsh.VirshPersistent(**virsh_dargs)
 
     # Get all network instance

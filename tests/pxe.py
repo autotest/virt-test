@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import aexpect
 
+
 @error.context_aware
 def run_pxe(test, params, env):
     """
@@ -22,10 +23,11 @@ def run_pxe(test, params, env):
 
     error.context("Snoop packet in the tap device", logging.info)
     output = aexpect.run_fg("tcpdump -nli %s" % vm.get_ifname(),
-                                   logging.debug, "(pxe capture) ", timeout)[1]
+                            logging.debug, "(pxe capture) ", timeout)[1]
 
     error.context("Analyzing the tcpdump result", logging.info)
     if not "tftp" in output:
-        raise error.TestFail("Couldn't find any TFTP packets after %s seconds" %
-                             timeout)
+        raise error.TestFail(
+            "Couldn't find any TFTP packets after %s seconds" %
+            timeout)
     logging.info("Found TFTP packet")

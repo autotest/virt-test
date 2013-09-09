@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
 
@@ -41,15 +42,14 @@ def run_virsh_nodememstats(test, params, env):
                                          " succeeded as the value for %s is "
                                          "deviated by %d\nThe total memory "
                                          "value is deviating-check"
-                                            % (name, delta_stats[name]))
+                                         % (name, delta_stats[name]))
             else:
                 if delta_stats[name] > delta:
                     raise error.TestFail("Command 'virsh nodememstats' not "
                                          "succeeded as the value for %s"
-                                          " is deviated by %d"
-                                            % (name, delta_stats[name]))
+                                         " is deviated by %d"
+                                         % (name, delta_stats[name]))
         return delta_stats
-
 
     # Prepare libvirtd service
     check_libvirtd = params.has_key("libvirtd")
@@ -110,8 +110,10 @@ def run_virsh_nodememstats(test, params, env):
                 # Get the actual value from /proc/meminfo and normalise to MBs
                 actual['total'] = int(utils_memory.memtotal()) / 1024
                 actual['free'] = int(utils_memory.freememtotal()) / 1024
-                actual['buffers'] = int(utils_memory.read_from_meminfo('Buffers'))/1024
-                actual['cached'] = int(utils_memory.read_from_meminfo('Cached')) / 1024
+                actual['buffers'] = int(
+                    utils_memory.read_from_meminfo('Buffers')) / 1024
+                actual['cached'] = int(
+                    utils_memory.read_from_meminfo('Cached')) / 1024
 
                 # Currently the delta value is kept at 200 MB this can be
                 # tuned based on the accuracy

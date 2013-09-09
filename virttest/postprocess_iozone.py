@@ -8,7 +8,12 @@ is not present, functionality degrates gracefully.
 
 @copyright: Red Hat 2010
 """
-import os, sys, optparse, logging, math, time
+import os
+import sys
+import optparse
+import logging
+import math
+import time
 import common
 from autotest.client.shared import logging_config, logging_manager
 from autotest.client.shared import error
@@ -36,7 +41,7 @@ def geometric_mean(values):
     n = len(values)
     if n == 0:
         return None
-    return math.exp(sum([math.log(x) for x in values])/n)
+    return math.exp(sum([math.log(x) for x in values]) / n)
 
 
 def compare_matrices(matrix1, matrix2, treshold=0.05):
@@ -77,6 +82,7 @@ def compare_matrices(matrix1, matrix2, treshold=0.05):
 
 
 class IOzoneAnalyzer(object):
+
     """
     Analyze an unprocessed IOzone file, and generate the following types of
     report:
@@ -88,13 +94,13 @@ class IOzoneAnalyzer(object):
     If more than one file is provided to the analyzer object, a comparison
     between the two runs is made, searching for regressions in performance.
     """
+
     def __init__(self, list_files, output_dir):
         self.list_files = list_files
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
         self.output_dir = output_dir
         logging.info("Results will be stored in %s", output_dir)
-
 
     def average_performance(self, results, size=None):
         """
@@ -114,7 +120,6 @@ class IOzoneAnalyzer(object):
             average = int(average)
             average_line.append(average)
         return average_line
-
 
     def process_results(self, results, label=None):
         """
@@ -140,7 +145,6 @@ class IOzoneAnalyzer(object):
 
         return performance
 
-
     def parse_file(self, fileobj):
         """
         Parse an IOzone results file.
@@ -158,7 +162,6 @@ class IOzoneAnalyzer(object):
             except ValueError:
                 continue
         return lines
-
 
     def report(self, overall_results, record_size_results, file_size_results):
         """
@@ -180,23 +183,33 @@ class IOzoneAnalyzer(object):
         formatter = logging.Formatter("")
 
         logging.info("")
-        logging.info("TABLE:  SUMMARY of ALL FILE and RECORD SIZES                        Results in MB/sec")
+        logging.info(
+            "TABLE:  SUMMARY of ALL FILE and RECORD SIZES                        Results in MB/sec")
         logging.info("")
-        logging.info("FILE & RECORD  INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE")
-        logging.info("SIZES (KB)     WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
-        logging.info("-------------------------------------------------------------------------------------------------------------------")
+        logging.info(
+            "FILE & RECORD  INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE")
+        logging.info(
+            "SIZES (KB)     WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
+        logging.info(
+            "-------------------------------------------------------------------------------------------------------------------")
         for result_line in overall_results:
-            logging.info("ALL            %-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s" % tuple(result_line))
+            logging.info(
+                "ALL            %-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s" %
+                tuple(result_line))
         logging.info("")
 
         logging.info("DRILLED DATA:")
 
         logging.info("")
-        logging.info("TABLE:  RECORD Size against all FILE Sizes                          Results in MB/sec")
+        logging.info(
+            "TABLE:  RECORD Size against all FILE Sizes                          Results in MB/sec")
         logging.info("")
-        logging.info("RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
-        logging.info("SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
-        logging.info("--------------------------------------------------------------------------------------------------------------")
+        logging.info(
+            "RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
+        logging.info(
+            "SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
+        logging.info(
+            "--------------------------------------------------------------------------------------------------------------")
 
         foutput_path = os.path.join(self.output_dir, '2d-datasource-file')
         if os.path.isfile(foutput_path):
@@ -205,17 +218,23 @@ class IOzoneAnalyzer(object):
         foutput.setFormatter(formatter)
         logger.addHandler(foutput)
         for result_line in record_size_results:
-            logging.info("%-10s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s" % tuple(result_line))
+            logging.info(
+                "%-10s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s" %
+                tuple(result_line))
         logger.removeHandler(foutput)
 
         logging.info("")
 
         logging.info("")
-        logging.info("TABLE:  FILE Size against all RECORD Sizes                          Results in MB/sec")
+        logging.info(
+            "TABLE:  FILE Size against all RECORD Sizes                          Results in MB/sec")
         logging.info("")
-        logging.info("RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
-        logging.info("SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
-        logging.info("--------------------------------------------------------------------------------------------------------------")
+        logging.info(
+            "RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
+        logging.info(
+            "SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
+        logging.info(
+            "--------------------------------------------------------------------------------------------------------------")
 
         routput_path = os.path.join(self.output_dir, '2d-datasource-record')
         if os.path.isfile(routput_path):
@@ -224,11 +243,12 @@ class IOzoneAnalyzer(object):
         routput.setFormatter(formatter)
         logger.addHandler(routput)
         for result_line in file_size_results:
-            logging.info("%-10s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s" % tuple(result_line))
+            logging.info(
+                "%-10s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s%-8s" %
+                tuple(result_line))
         logger.removeHandler(routput)
 
         logging.info("")
-
 
     def report_comparison(self, record, file_size_results):
         """
@@ -248,35 +268,46 @@ class IOzoneAnalyzer(object):
         logging.info("ANALYSIS of DRILLED DATA:")
 
         logging.info("")
-        logging.info("TABLE:  RECsize Difference between runs                            Results are % DIFF")
+        logging.info(
+            "TABLE:  RECsize Difference between runs                            Results are % DIFF")
         logging.info("")
-        logging.info("RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
-        logging.info("SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
-        logging.info("--------------------------------------------------------------------------------------------------------------")
+        logging.info(
+            "RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
+        logging.info(
+            "SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
+        logging.info(
+            "--------------------------------------------------------------------------------------------------------------")
         for result_line in record_size:
-            logging.info("%-10s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s" % tuple(result_line))
+            logging.info(
+                "%-10s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s" %
+                tuple(result_line))
         logging.info("REGRESSIONS: %d (%.2f%%)    Improvements: %d (%.2f%%)",
                      record_regressions,
-                     (100 * record_regressions/float(record_total)),
+                     (100 * record_regressions / float(record_total)),
                      record_improvements,
-                     (100 * record_improvements/float(record_total)))
+                     (100 * record_improvements / float(record_total)))
         logging.info("")
 
         logging.info("")
-        logging.info("TABLE:  FILEsize Difference between runs                           Results are % DIFF")
+        logging.info(
+            "TABLE:  FILEsize Difference between runs                           Results are % DIFF")
         logging.info("")
-        logging.info("RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
-        logging.info("SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
-        logging.info("--------------------------------------------------------------------------------------------------------------")
+        logging.info(
+            "RECORD    INIT    RE              RE    RANDOM  RANDOM  BACKWD   RECRE  STRIDE    F       FRE     F       FRE ")
+        logging.info(
+            "SIZE (KB) WRITE   WRITE   READ    READ    READ   WRITE    READ   WRITE    READ    WRITE   WRITE   READ    READ")
+        logging.info(
+            "--------------------------------------------------------------------------------------------------------------")
         for result_line in file_size:
-            logging.info("%-10s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s" % tuple(result_line))
+            logging.info(
+                "%-10s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s%-8.6s" %
+                tuple(result_line))
         logging.info("REGRESSIONS: %d (%.2f%%)    Improvements: %d (%.2f%%)",
                      file_regressions,
-                     (100 * file_regressions/float(file_total)),
+                     (100 * file_regressions / float(file_total)),
                      file_improvements,
-                     (100 * file_improvements/float(file_total)))
+                     (100 * file_improvements / float(file_total)))
         logging.info("")
-
 
     def analyze(self):
         """
@@ -294,7 +325,8 @@ class IOzoneAnalyzer(object):
             overall_results = self.process_results(results)
             record_size_results = self.process_results(results, 'record_size')
             file_size_results = self.process_results(results, 'file_size')
-            self.report(overall_results, record_size_results, file_size_results)
+            self.report(
+                overall_results, record_size_results, file_size_results)
 
             if len(self.list_files) == 2:
                 overall.append(overall_results)
@@ -308,12 +340,14 @@ class IOzoneAnalyzer(object):
 
 
 class IOzonePlotter(object):
+
     """
     Plots graphs based on the results of an IOzone run.
 
     Plots graphs based on the results of an IOzone run. Uses gnuplot to
     generate the graphs.
     """
+
     def __init__(self, results_file, output_dir):
         self.active = True
         try:
@@ -336,7 +370,6 @@ class IOzonePlotter(object):
             self.results_file = results_file
             self.generate_data_source()
 
-
     def generate_data_source(self):
         """
         Creates data file without headers for gnuplot consumption.
@@ -355,7 +388,6 @@ class IOzonePlotter(object):
             except ValueError:
                 continue
         datasource.close()
-
 
     def plot_2d_graphs(self):
         """
@@ -384,7 +416,6 @@ class IOzonePlotter(object):
             except error.CmdError:
                 logging.error("Problem plotting from commands file %s",
                               commands_path)
-
 
     def plot_3d_graphs(self):
         """
@@ -424,7 +455,6 @@ class IOzonePlotter(object):
                 logging.error("Problem plotting from commands file %s",
                               commands_path)
 
-
     def plot_all(self):
         """
         Plot all graphs that are to be plotted, provided that we have gnuplot.
@@ -435,9 +465,10 @@ class IOzonePlotter(object):
 
 
 class AnalyzerLoggingConfig(logging_config.LoggingConfig):
+
     def configure_logging(self, results_dir=None, verbose=False):
         super(AnalyzerLoggingConfig, self).configure_logging(use_console=True,
-                                                        verbose=verbose)
+                                                             verbose=verbose)
 
 
 if __name__ == "__main__":

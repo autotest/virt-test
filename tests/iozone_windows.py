@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client import utils
 from virttest import postprocess_iozone
 from virttest import utils_misc

@@ -30,7 +30,7 @@ def run_rv_vmshutdown(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-    #Get the required variables
+    # Get the required variables
     rv_binary = params.get("rv_binary", "remote-viewer")
     host_ip = utils_net.get_host_ip_address(params)
     shutdownfrom = params.get("shutdownfrom")
@@ -41,21 +41,21 @@ def run_rv_vmshutdown(test, params, env):
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)),
-                    username="root", password="123456")
+        timeout=int(params.get("login_timeout", 360)),
+        username="root", password="123456")
 
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
     client_session = client_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)),
-                     username="root", password="123456")
+        timeout=int(params.get("login_timeout", 360)),
+        username="root", password="123456")
 
     if guest_vm.get_spice_var("spice_ssl") == "yes":
         host_port = guest_vm.get_spice_var("spice_tls_port")
     else:
         host_port = guest_vm.get_spice_var("spice_port")
 
-    #Determine if the test is to shutdown from cli or qemu monitor
+    # Determine if the test is to shutdown from cli or qemu monitor
     if shutdownfrom == "cmd":
         logging.info("Shutting down guest from command line:"
                      " %s\n" % cmd_cli_shutdown)
@@ -69,12 +69,12 @@ def run_rv_vmshutdown(test, params, env):
         raise error.TestFail("shutdownfrom var not set, valid values are"
                              " cmd or qemu_monitor")
 
-    #wait for the guest vm to be shutoff
+    # wait for the guest vm to be shutoff
     logging.info("Waiting for the guest VM to be shutoff")
     utils_misc.wait_for(guest_vm.is_dead, 90, 30, 1, "waiting...")
     logging.info("Guest VM is now shutoff")
 
-    #Verify there was a clean exit by
+    # Verify there was a clean exit by
     #(1)Verifying the guest is down
     #(2)Verify the spice connection to the guest is no longer established
     #(3)Verify the remote-viewer process is not running
@@ -85,7 +85,8 @@ def run_rv_vmshutdown(test, params, env):
         logging.info("Guest VM is verified to be shutdown")
 
     try:
-        utils_spice.verify_established(client_vm, host_ip, host_port, rv_binary)
+        utils_spice.verify_established(
+            client_vm, host_ip, host_port, rv_binary)
         raise error.TestFail("Remote-Viewer connection to guest"
                              "is still established.")
     except utils_spice.RVConnectError:
@@ -94,7 +95,7 @@ def run_rv_vmshutdown(test, params, env):
         raise error.TestFail("Unexpected error while trying to see if there"
                              " was no spice connection to the guest")
 
-    #Verify the remote-viewer process is not running
+    # Verify the remote-viewer process is not running
     logging.info("Checking to see if remote-viewer process is still running on"
                  " client after VM has been shutdown")
     try:

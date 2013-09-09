@@ -1,7 +1,9 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error
 from virttest import utils_test
 from tests import file_transfer
+
 
 def run_live_snapshot(test, params, env):
     """

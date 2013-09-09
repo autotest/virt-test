@@ -1,4 +1,6 @@
-import logging, time, re
+import logging
+import time
+import re
 from autotest.client.shared import error
 
 
@@ -34,7 +36,7 @@ def run_readonly_floppy(test, params, env):
     # are ready for testing
     if sleep:
         logging.info("Windows system being tested,sleep for 20"
-        " seconds until floppies are ready to be use")
+                     " seconds until floppies are ready to be use")
         time.sleep(20)
     try:
     # if it is a linux OS,load the floppy module
@@ -53,20 +55,20 @@ def run_readonly_floppy(test, params, env):
 
         for floppy_index in range(floppy_count):
             error.context("Format the %s floppy disk" % floppy_index,
-                           logging.info)
+                          logging.info)
             s, o = session.get_command_status_output(
-             format_cmd_list[floppy_index],
-             timeout = float(params.get("format_floppy_timeout", 60)))
+                format_cmd_list[floppy_index],
+                timeout=float(params.get("format_floppy_timeout", 60)))
             if s == 0:
                 raise error.TestError("Floppy disk %s is not readonly and"
-                       " it's formatted successfully" %floppy_index )
+                                      " it's formatted successfully" % floppy_index)
             error.context("Check the %s floppy is readonly" % floppy_index,
-                           logging.info)
+                          logging.info)
             found = re.search('(Read-only)|(protected)', o)
             logging.debug("Output of format command: %s" % o)
             if not found:
                 raise error.TestError("Floppy disk %s cannot be formatted"
-                 " for reasons other than readonly" %floppy_index )
+                                      " for reasons other than readonly" % floppy_index)
             else:
                 logging.info("Floppy disk %s is Read-only and cannot be"
                              " formatted" % floppy_index)

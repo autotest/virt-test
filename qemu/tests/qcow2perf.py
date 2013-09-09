@@ -1,8 +1,11 @@
-import re, logging, time
+import re
+import logging
+import time
 from autotest.client.shared import error
 from virttest import qemu_io, data_dir
 from virttest.qemu_storage import QemuImg
 from autotest.client import utils
+
 
 @error.context_aware
 def run_qcow2perf(test, params, env):
@@ -41,7 +44,7 @@ def run_qcow2perf(test, params, env):
     sn_list = []
     for img in re.split("\s+", image_chain.strip()):
         image_params = params.object_params(img)
-        sn_tmp =  QemuImg(image_params, image_dir, img)
+        sn_tmp = QemuImg(image_params, image_dir, img)
         sn_tmp.create(image_params)
         sn_list.append((sn_tmp, image_params))
 
@@ -53,16 +56,16 @@ def run_qcow2perf(test, params, env):
 
     if op_type != "writeoffset1":
         offset = 0
-        writecmd0 = writecmd % (write_round,offset,interval_size,
-                      write_unit,interval_size,write_unit)
+        writecmd0 = writecmd % (write_round, offset, interval_size,
+                                write_unit, interval_size, write_unit)
         iocmd0 = iocmd % (writecmd0, io_options, snapshot_file)
         logging.info("writecmd-offset-0: %s", writecmd0)
         utils.run(dropcache)
         output = utils.run(iocmd0)
     else:
         offset = 1
-        writecmd1 = writecmd % (write_round,offset,interval_size,
-                     write_unit,interval_size,write_unit)
+        writecmd1 = writecmd % (write_round, offset, interval_size,
+                                write_unit, interval_size, write_unit)
         iocmd1 = iocmd % (writecmd1, io_options, snapshot_file)
         logging.info("writecmd-offset-1: %s", writecmd1)
         utils.run(dropcache)
@@ -86,8 +89,8 @@ def run_qcow2perf(test, params, env):
                                new_base)
         new_base_img.create(params.object_params(new_base))
         rebasecmd = opcmd % (new_base_img.image_filename,
-                      cache_mode, snapshot_file)
-        logging.info ("rebase: %s", rebasecmd)
+                             cache_mode, snapshot_file)
+        logging.info("rebase: %s", rebasecmd)
         utils.run(dropcache)
         output = utils.run(rebasecmd)
     elif op_type == "convert":
@@ -98,7 +101,8 @@ def run_qcow2perf(test, params, env):
         output = utils.run(convertcmd)
 
     error.context("Result recording", logging.info)
-    result_file = open("%s/%s_%s_results" % (test.resultsdir, "qcow2perf", op_type), 'w')
+    result_file = open("%s/%s_%s_results" %
+                       (test.resultsdir, "qcow2perf", op_type), 'w')
     result_file.write("%s:%s\n" % (op_type, output))
     logging.info("%s takes %s" % (op_type, output))
     result_file.close()

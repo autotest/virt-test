@@ -1,4 +1,8 @@
-import time, os, logging, commands, re
+import time
+import os
+import logging
+import commands
+import re
 from autotest.client.shared import error
 from autotest.client import local_host
 from virttest import data_dir
@@ -36,7 +40,7 @@ def run_tsc_drift(test, params, env):
             s, o = session.get_command_status_output(cmd)
         if s != 0:
             raise error.TestError("Fail to get tsc of host, ncpu: %d" % i)
-        o = re.findall("(\d+)",o)[0]
+        o = re.findall("(\d+)", o)[0]
         return float(o)
 
     vm = env.get_vm(params["main_vm"])
@@ -62,7 +66,7 @@ def run_tsc_drift(test, params, env):
         host_freq += delta / ncpu
     logging.info("Average frequency of host's cpus: %s" % host_freq)
 
-    vm.copy_files_to(tsc_freq_path,'/tmp/get_tsc.c')
+    vm.copy_files_to(tsc_freq_path, '/tmp/get_tsc.c')
     if session.get_command_status("gcc /tmp/get_tsc.c") != 0:
         raise error.TestError("Fail to compile program on guest")
 

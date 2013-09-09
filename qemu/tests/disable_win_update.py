@@ -12,7 +12,8 @@ def run_disable_win_update(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=float(params.get("login_timeout", 240)))
+    session = vm.wait_for_login(
+        timeout=float(params.get("login_timeout", 240)))
 
     stop_update_service_cmd = params.get("stop_update_service_cmd")
     s, o = session.get_command_status_output(stop_update_service_cmd)

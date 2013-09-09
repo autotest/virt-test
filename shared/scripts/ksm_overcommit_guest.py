@@ -8,17 +8,26 @@ Auxiliary script used to allocate memory on guests.
 """
 
 
-import os, array, sys, random, copy, tempfile, datetime, math
+import os
+import array
+import sys
+import random
+import copy
+import tempfile
+import datetime
+import math
 
-PAGE_SIZE = 4096 # machine page size
+PAGE_SIZE = 4096  # machine page size
 
-TMPFS_OVERHEAD = 0.0022 # overhead on 1MB of write data
+TMPFS_OVERHEAD = 0.0022  # overhead on 1MB of write data
 
 
 class MemFill(object):
+
     """
     Fills guest memory according to certain patterns.
     """
+
     def __init__(self, mem, static_value, random_key):
         """
         Constructor of MemFill class.
@@ -50,12 +59,10 @@ class MemFill(object):
             self.static_value = static_value
             print "PASS: Initialization (tmpfs size: %dM)" % tmpfs_size
 
-
     def __del__(self):
         if os.path.ismount(self.tmpdp):
             self.f.close()
             os.system("umount %s" % (self.tmpdp))
-
 
     def compare_page(self, original, inmem):
         """
@@ -65,18 +72,17 @@ class MemFill(object):
         @param inmem: Data in memory.
         """
         for ip in range(PAGE_SIZE / original.itemsize):
-            if (not original[ip] == inmem[ip]): # find which item is wrong
+            if (not original[ip] == inmem[ip]):  # find which item is wrong
                 originalp = array.array("B")
                 inmemp = array.array("B")
-                originalp.fromstring(original[ip:ip+1].tostring())
-                inmemp.fromstring(inmem[ip:ip+1].tostring())
-                for ib in range(len(originalp)): # find wrong byte in item
+                originalp.fromstring(original[ip:ip + 1].tostring())
+                inmemp.fromstring(inmem[ip:ip + 1].tostring())
+                for ib in range(len(originalp)):  # find wrong byte in item
                     if not (originalp[ib] == inmemp[ib]):
                         position = (self.f.tell() - PAGE_SIZE + ip *
                                     original.itemsize + ib)
                         print ("Mem error on position %d wanted 0x%Lx and is "
                                "0x%Lx" % (position, originalp[ib], inmemp[ib]))
-
 
     def value_page(self, value):
         """
@@ -93,7 +99,6 @@ class MemFill(object):
                 print "FAIL: Value can be only in range (0..255)"
         return a
 
-
     def random_page(self, seed):
         """
         Create page filled by static random series.
@@ -106,7 +111,6 @@ class MemFill(object):
         for _ in range(PAGE_SIZE / a.itemsize):
             a.append(random.randrange(0, sys.maxint))
         return a
-
 
     def value_fill(self, value=None):
         """
@@ -122,7 +126,6 @@ class MemFill(object):
         for _ in range(self.npages):
             page.tofile(self.f)
         print "PASS: Mem value fill"
-
 
     def value_check(self, value=None):
         """
@@ -153,7 +156,6 @@ class MemFill(object):
         else:
             print "PASS: value verification"
 
-
     def static_random_fill(self, n_bytes_on_end=PAGE_SIZE):
         """
         Fill memory by page with static random series with added special value
@@ -171,7 +173,7 @@ class MemFill(object):
         for pages in range(self.npages):
             rand = random.randint(((PAGE_SIZE / page.itemsize) - 1) -
                                   (n_bytes_on_end / page.itemsize),
-                                  (PAGE_SIZE/page.itemsize) - 1)
+                                  (PAGE_SIZE / page.itemsize) - 1)
             p[rand] = pages
             p.tofile(self.f)
             p[rand] = page[rand]
@@ -180,7 +182,6 @@ class MemFill(object):
         delta = t_end - t_start
         milisec = delta.microseconds / 1e3 + delta.seconds * 1e3
         print "PASS: filling duration = %Ld ms" % milisec
-
 
     def static_random_verify(self, n_bytes_on_end=PAGE_SIZE):
         """
@@ -196,9 +197,9 @@ class MemFill(object):
         p = copy.copy(page)
         failure = False
         for pages in range(self.npages):
-            rand = random.randint(((PAGE_SIZE/page.itemsize) - 1) -
-                                  (n_bytes_on_end/page.itemsize),
-                                  (PAGE_SIZE/page.itemsize) - 1)
+            rand = random.randint(((PAGE_SIZE / page.itemsize) - 1) -
+                                  (n_bytes_on_end / page.itemsize),
+                                  (PAGE_SIZE / page.itemsize) - 1)
             p[rand] = pages
             pf = array.array(self.allocate_by)
             pf.fromfile(self.f, PAGE_SIZE / pf.itemsize)

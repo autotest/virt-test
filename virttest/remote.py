@@ -1,12 +1,21 @@
 """
 Functions and classes used for logging into guests and transferring files.
 """
-import logging, time, re, os, shutil, tempfile
-import aexpect, utils_misc, rss_client
+import logging
+import time
+import re
+import os
+import shutil
+import tempfile
+import aexpect
+import utils_misc
+import rss_client
 from autotest.client.shared import error
 import data_dir
 
+
 class LoginError(Exception):
+
     def __init__(self, msg, output):
         Exception.__init__(self, msg, output)
         self.msg = msg
@@ -21,11 +30,13 @@ class LoginAuthenticationError(LoginError):
 
 
 class LoginTimeoutError(LoginError):
+
     def __init__(self, output):
         LoginError.__init__(self, "Login timeout expired", output)
 
 
 class LoginProcessTerminatedError(LoginError):
+
     def __init__(self, status, output):
         LoginError.__init__(self, None, output)
         self.status = status
@@ -36,6 +47,7 @@ class LoginProcessTerminatedError(LoginError):
 
 
 class LoginBadClientError(LoginError):
+
     def __init__(self, client):
         LoginError.__init__(self, None, None)
         self.client = client
@@ -45,6 +57,7 @@ class LoginBadClientError(LoginError):
 
 
 class SCPError(Exception):
+
     def __init__(self, msg, output):
         Exception.__init__(self, msg, output)
         self.msg = msg
@@ -59,17 +72,20 @@ class SCPAuthenticationError(SCPError):
 
 
 class SCPAuthenticationTimeoutError(SCPAuthenticationError):
+
     def __init__(self, output):
         SCPAuthenticationError.__init__(self, "Authentication timeout expired",
                                         output)
 
 
 class SCPTransferTimeoutError(SCPError):
+
     def __init__(self, output):
         SCPError.__init__(self, "Transfer timeout expired", output)
 
 
 class SCPTransferFailedError(SCPError):
+
     def __init__(self, status, output):
         SCPError.__init__(self, None, output)
         self.status = status
@@ -117,7 +133,8 @@ def handle_prompts(session, username, password, prompt, timeout=10, debug=False)
             elif match == 1:  # "password:"
                 if password_prompt_count == 0:
                     if debug:
-                        logging.debug("Got password prompt, sending '%s'", password)
+                        logging.debug(
+                            "Got password prompt, sending '%s'", password)
                     session.sendline(password)
                     password_prompt_count += 1
                     continue
@@ -127,7 +144,8 @@ def handle_prompts(session, username, password, prompt, timeout=10, debug=False)
             elif match == 2:  # "login:"
                 if login_prompt_count == 0 and password_prompt_count == 0:
                     if debug:
-                        logging.debug("Got username prompt; sending '%s'", username)
+                        logging.debug(
+                            "Got username prompt; sending '%s'", username)
                     session.sendline(username)
                     login_prompt_count += 1
                     continue
@@ -206,8 +224,9 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     return session
 
 
-def wait_for_login(client, host, port, username, password, prompt, linesep="\n",
-                   log_filename=None, timeout=240, internal_timeout=10):
+def wait_for_login(
+    client, host, port, username, password, prompt, linesep="\n",
+        log_filename=None, timeout=240, internal_timeout=10):
     """
     Make multiple attempts to log into a remote host (guest) until one succeeds
     or timeout expires.
@@ -275,7 +294,7 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
             elif match == 1:  # "password:"
                 if password_prompt_count == 0:
                     logging.debug("Got password prompt, sending '%s'" %
-                                   password_list[password_prompt_count])
+                                  password_list[password_prompt_count])
                     session.sendline(password_list[password_prompt_count])
                     password_prompt_count += 1
                     timeout = transfer_timeout
@@ -284,7 +303,7 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
                     continue
                 elif password_prompt_count == 1 and scp_type == 2:
                     logging.debug("Got password prompt, sending '%s'" %
-                                   password_list[password_prompt_count])
+                                  password_list[password_prompt_count])
                     session.sendline(password_list[password_prompt_count])
                     password_prompt_count += 1
                     timeout = transfer_timeout
@@ -335,8 +354,8 @@ def remote_scp(command, password_list, log_filename=None, transfer_timeout=600,
         output_func = None
         output_params = ()
     session = aexpect.Expect(command,
-                                    output_func=output_func,
-                                    output_params=output_params)
+                             output_func=output_func,
+                             output_params=output_params)
     try:
         _remote_scp(session, password_list, transfer_timeout, login_timeout)
     finally:
@@ -468,7 +487,7 @@ def nc_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
 
     if check_sum:
         if (s_session.cmd("md5sum %s" % s_path).split()[0] !=
-            d_session.cmd("md5sum %s" % d_path).split()[0]):
+                d_session.cmd("md5sum %s" % d_path).split()[0]):
             return False
     return True
 
@@ -517,7 +536,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
         """
         cmd_tmp = "wmic datafile where \"Filename='%s' and "
         cmd_tmp += "extension='%s'\" get drive^,path"
-        cmd = cmd_tmp %  (filename, extension)
+        cmd = cmd_tmp % (filename, extension)
         info = session.cmd_output(cmd, timeout=360).strip()
         drive_path = re.search(r'(\w):\s+(\S+)', info, re.M)
         if not drive_path:
@@ -537,7 +556,7 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
             filename = file_path.split("\\")[-1]
             md5_reg = r"%s\s+(\w+)" % filename
             md5_cmd = '%smd5sums.exe %s | find "%s"' % (drive_path, file_path,
-                                                         filename)
+                                                        filename)
         o = session.cmd_output(md5_cmd)
         file_md5 = re.findall(md5_reg, o)
         if not o:
@@ -558,11 +577,11 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
 
     def start_server(session):
         if c_type == "ssh":
-            start_cmd = "sendfile %s &"  % d_port
+            start_cmd = "sendfile %s &" % d_port
         else:
-            drive_path =  get_abs_path(session, "sendfile", "exe")
+            drive_path = get_abs_path(session, "sendfile", "exe")
             start_cmd = "start /b %ssendfile.exe %s" % (drive_path,
-                                                           d_port)
+                                                        d_port)
         send_cmd_safe(session, start_cmd)
         if not server_alive(session):
             raise error.TestError("Start udt server failed")
@@ -572,11 +591,11 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
             client_cmd = "recvfile %s %s %s %s" % (src, d_port,
                                                    s_path, d_path)
         else:
-            drive_path =  get_abs_path(session, "recvfile", "exe")
+            drive_path = get_abs_path(session, "recvfile", "exe")
             client_cmd_tmp = "%srecvfile.exe %s %s %s %s"
-            client_cmd = client_cmd_tmp  % (drive_path, src, d_port,
-                                            s_path.split("\\")[-1],
-                                            d_path.split("\\")[-1])
+            client_cmd = client_cmd_tmp % (drive_path, src, d_port,
+                                           s_path.split("\\")[-1],
+                                           d_path.split("\\")[-1])
         send_cmd_safe(session, client_cmd, timeout)
 
     def stop_server(session):
@@ -596,8 +615,8 @@ def udp_copy_between_remotes(src, dst, s_port, s_passwd, d_passwd,
         if src_md5 != dst_md5:
             err_msg = "Files md5sum mismatch, file %s md5sum is '%s', "
             err_msg = "but the file %s md5sum is %s"
-            raise error.TestError(err_msg  % (s_path, src_md5,
-                                              d_path, dst_md5))
+            raise error.TestError(err_msg % (s_path, src_md5,
+                                             d_path, dst_md5))
     finally:
         stop_server(s_session)
         s_session.close()
@@ -667,9 +686,11 @@ def copy_files_from(address, client, username, password, port, remote_path,
 
 
 class RemoteFile(object):
+
     """
     Class to handle the operations of file on remote host or guest.
     """
+
     def __init__(self, address, client, username, password, port,
                  remote_path, limit="", log_filename=None,
                  verbose=False, timeout=600):
@@ -698,25 +719,25 @@ class RemoteFile(object):
         self.verbose = verbose
         self.timeout = timeout
 
-        #Get a local_path and all actions is taken on it.
+        # Get a local_path and all actions is taken on it.
         filename = os.path.basename(self.remote_path)
 
-        #Get a local_path.
+        # Get a local_path.
         tmp_dir = data_dir.get_tmp_dir()
         local_file = tempfile.NamedTemporaryFile(prefix=("%s_" % filename),
                                                  dir=tmp_dir)
         self.local_path = local_file.name
         local_file.close()
 
-        #Get a backup_path.
+        # Get a backup_path.
         backup_file = tempfile.NamedTemporaryFile(prefix=("%s_" % filename),
                                                   dir=tmp_dir)
         self.backup_path = backup_file.name
         backup_file.close()
 
-        #Get file from remote.
+        # Get file from remote.
         self._pull_file()
-        #Save a backup.
+        # Save a backup.
         shutil.copy(self.local_path, self.backup_path)
 
     def __del__(self):
@@ -752,6 +773,7 @@ class RemoteFile(object):
                           self.password, self.port, self.local_path,
                           self.remote_path, self.limit, self.log_filename,
                           self.verbose, self.timeout)
+
     def _reset_file(self):
         """
         Copy backup from local to remote.
@@ -763,7 +785,6 @@ class RemoteFile(object):
                           self.password, self.port, self.backup_path,
                           self.remote_path, self.limit, self.log_filename,
                           self.verbose, self.timeout)
-
 
     def _read_local(self):
         """
@@ -818,9 +839,9 @@ class RemoteFile(object):
                 line = lines[index]
                 if re.match(pattern, line):
                     lines.remove(line)
-                    #Check this line is the last one or not.
-                    if (not line.endswith('\n') and (index >0)):
-                        lines[index-1] = lines[index-1].rstrip("\n")
+                    # Check this line is the last one or not.
+                    if (not line.endswith('\n') and (index > 0)):
+                        lines[index - 1] = lines[index - 1].rstrip("\n")
         self._write_local(lines)
         self._push_file()
 

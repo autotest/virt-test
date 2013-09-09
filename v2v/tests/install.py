@@ -1,4 +1,6 @@
-import os, time, glob
+import os
+import time
+import glob
 
 from autotest.client.shared import error
 from virttest import installer
@@ -18,7 +20,7 @@ def run_install(test, params, env):
     srcdir = params.get("srcdir", test.srcdir)
     params["srcdir"] = srcdir
 
-    # Flag if a installer minor failure ocurred
+    # Flag if a installer minor failure occurred
     minor_failure = False
     minor_failure_reasons = []
 
@@ -28,8 +30,9 @@ def run_install(test, params, env):
         for name in params.get("installers", "").split():
             installer_obj = installer.make_installer(name, params, test)
             if installer_obj.name == "ovirt_engine_sdk":
-                installer_obj.install(cleanup=False, build=False, install=False)
-                if installer_obj.minor_failure == True:
+                installer_obj.install(
+                    cleanup=False, build=False, install=False)
+                if installer_obj.minor_failure is True:
                     minor_failure = True
                     reason = "%s_%s: %s" % (installer_obj.name,
                                             installer_obj.mode,
@@ -41,20 +44,20 @@ def run_install(test, params, env):
                 os.chdir(ovirt_src)
                 utils.make("rpm")
                 os.chdir(topdir)
-                pkgs = glob.glob(os.path.join(ovirt_src, "rpmtop/RPMS/noarch/*"))
+                pkgs = glob.glob(
+                    os.path.join(ovirt_src, "rpmtop/RPMS/noarch/*"))
                 for pkg in pkgs:
                     sm.install(pkg)
             else:
                 installer_obj.install(cleanup=False, build=False)
                 time.sleep(5)
-                if installer_obj.minor_failure == True:
+                if installer_obj.minor_failure is True:
                     minor_failure = True
                     reason = "%s_%s: %s" % (installer_obj.name,
                                             installer_obj.mode,
                                             installer_obj.minor_failure_reason)
                     minor_failure_reasons.append(reason)
                 env.register_installer(installer_obj)
-
 
     except Exception, e:
         # if the build/install fails, don't allow other tests

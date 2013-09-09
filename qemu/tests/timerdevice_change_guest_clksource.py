@@ -1,6 +1,8 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import data_dir, storage, utils_disk, env_process
+
 
 @error.context_aware
 def run_timerdevice_change_guest_clksource(test, params, env):
@@ -23,8 +25,8 @@ def run_timerdevice_change_guest_clksource(test, params, env):
         cmd = "cat /sys/devices/system/clocksource/"
         cmd += "clocksource0/current_clocksource"
         if not expected in session.cmd(cmd):
-            raise error.TestFail("Guest didn't use '%s' clocksource" % expected)
-
+            raise error.TestFail(
+                "Guest didn't use '%s' clocksource" % expected)
 
     error.context("Boot a guest with kvm-clock", logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -47,9 +49,9 @@ def run_timerdevice_change_guest_clksource(test, params, env):
         error.context("Update guest kernel cli to kvm-clock",
                       logging.info)
         image_filename = storage.get_image_filename(params,
-                                                data_dir.get_data_dir())
+                                                    data_dir.get_data_dir())
         kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                         r".*vmlinuz-\d+.*")
+                                        r".*vmlinuz-\d+.*")
 
         disk_obj = utils_disk.GuestFSModiDisk(image_filename)
         kernel_cfg_original = disk_obj.read_file(grub_file)
@@ -77,7 +79,6 @@ def run_timerdevice_change_guest_clksource(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
 
-
     error.context("Check the available clocksource in guest", logging.info)
     cmd = "cat /sys/devices/system/clocksource/"
     cmd += "clocksource0/available_clocksource"
@@ -96,10 +97,10 @@ def run_timerdevice_change_guest_clksource(test, params, env):
             error.context("Update guest kernel cli to '%s'" % clksrc,
                           logging.info)
             image_filename = storage.get_image_filename(params,
-                                                    data_dir.get_data_dir())
+                                                        data_dir.get_data_dir())
             grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
             kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                             r".*vmlinuz-\d+.*")
+                                            r".*vmlinuz-\d+.*")
 
             disk_obj = utils_disk.GuestFSModiDisk(image_filename)
             kernel_cfg_original = disk_obj.read_file(grub_file)
@@ -115,7 +116,7 @@ def run_timerdevice_change_guest_clksource(test, params, env):
 
             if "clocksource=" in kernel_cfg:
                 kernel_cfg_new = re.sub("clocksource=[a-z \-_]+",
-                                    "clocksource=%s " % clksrc, kernel_cfg)
+                                        "clocksource=%s " % clksrc, kernel_cfg)
             else:
                 kernel_cfg_new = "%s %s" % (kernel_cfg,
                                             "clocksource=%s" % clksrc)
@@ -142,10 +143,10 @@ def run_timerdevice_change_guest_clksource(test, params, env):
             vm.destroy()
             error.context("Restore guest kernel cli", logging.info)
             image_filename = storage.get_image_filename(params,
-                                                    data_dir.get_data_dir())
+                                                        data_dir.get_data_dir())
             grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
             kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                             r".*vmlinuz-\d+.*")
+                                            r".*vmlinuz-\d+.*")
 
             disk_obj = utils_disk.GuestFSModiDisk(image_filename)
             kernel_cfg_original = disk_obj.read_file(grub_file)
@@ -158,7 +159,8 @@ def run_timerdevice_change_guest_clksource(test, params, env):
                                       (kernel_cfg_pattern, detail))
 
             if "clocksource=" in kernel_cfg:
-                kernel_cfg_new = re.sub("clocksource=[a-z \-_]+", " ", kernel_cfg)
+                kernel_cfg_new = re.sub(
+                    "clocksource=[a-z \-_]+", " ", kernel_cfg)
                 disk_obj.replace_image_file_content(grub_file, kernel_cfg,
                                                     kernel_cfg_new)
         except Exception, detail:

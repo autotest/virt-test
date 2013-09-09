@@ -6,27 +6,33 @@ Client for file transfer services offered by RSS (Remote Shell Server).
 @copyright: 2008-2010 Red Hat Inc.
 """
 
-import socket, struct, time, sys, os, glob
+import socket
+import struct
+import time
+import sys
+import os
+import glob
 
 # Globals
 CHUNKSIZE = 65536
 
 # Protocol message constants
-RSS_MAGIC           = 0x525353
-RSS_OK              = 1
-RSS_ERROR           = 2
-RSS_UPLOAD          = 3
-RSS_DOWNLOAD        = 4
-RSS_SET_PATH        = 5
-RSS_CREATE_FILE     = 6
-RSS_CREATE_DIR      = 7
-RSS_LEAVE_DIR       = 8
-RSS_DONE            = 9
+RSS_MAGIC = 0x525353
+RSS_OK = 1
+RSS_ERROR = 2
+RSS_UPLOAD = 3
+RSS_DOWNLOAD = 4
+RSS_SET_PATH = 5
+RSS_CREATE_FILE = 6
+RSS_CREATE_DIR = 7
+RSS_LEAVE_DIR = 8
+RSS_DONE = 9
 
 # See rss.cpp for protocol details.
 
 
 class FileTransferError(Exception):
+
     def __init__(self, msg, e=None, filename=None):
         Exception.__init__(self, msg, e, filename)
         self.msg = msg
@@ -61,6 +67,7 @@ class FileTransferSocketError(FileTransferError):
 
 
 class FileTransferServerError(FileTransferError):
+
     def __init__(self, errmsg):
         FileTransferError.__init__(self, None, errmsg)
 
@@ -76,6 +83,7 @@ class FileTransferNotFoundError(FileTransferError):
 
 
 class FileTransferClient(object):
+
     """
     Connect to a RSS (remote shell server) and transfer files.
     """
@@ -110,17 +118,14 @@ class FileTransferClient(object):
         self._last_transferred = 0
         self.transferred = 0
 
-
     def __del__(self):
         self.close()
-
 
     def close(self):
         """
         Close the connection.
         """
         self._socket.close()
-
 
     def _send(self, sr, timeout=60):
         try:
@@ -133,7 +138,6 @@ class FileTransferClient(object):
                                            "data to server")
         except socket.error, e:
             raise FileTransferSocketError("Could not send data to server", e)
-
 
     def _receive(self, size, timeout=60):
         strs = []
@@ -160,7 +164,6 @@ class FileTransferClient(object):
                                           e)
         return "".join(strs)
 
-
     def _report_stats(self, sr):
         if self._log_func:
             dt = time.time() - self._last_time
@@ -173,13 +176,11 @@ class FileTransferClient(object):
                 self._last_time = time.time()
                 self._last_transferred = self.transferred
 
-
     def _send_packet(self, sr, timeout=60):
         self._send(struct.pack("=I", len(sr)))
         self._send(sr, timeout)
         self.transferred += len(sr) + 4
         self._report_stats("Sent")
-
 
     def _receive_packet(self, timeout=60):
         size = struct.unpack("=I", self._receive(4))[0]
@@ -187,7 +188,6 @@ class FileTransferClient(object):
         self.transferred += len(sr) + 4
         self._report_stats("Received")
         return sr
-
 
     def _send_file_chunks(self, filename, timeout=60):
         if self._log_func:
@@ -207,7 +207,6 @@ class FileTransferClient(object):
         finally:
             f.close()
 
-
     def _receive_file_chunks(self, filename, timeout=60):
         if self._log_func:
             self._log_func("Receiving file %s" % filename)
@@ -226,15 +225,12 @@ class FileTransferClient(object):
         finally:
             f.close()
 
-
     def _send_msg(self, msg, timeout=60):
         self._send(struct.pack("=I", msg))
-
 
     def _receive_msg(self, timeout=60):
         s = self._receive(4, timeout)
         return struct.unpack("=I", s)[0]
-
 
     def _handle_transfer_error(self):
         # Save original exception
@@ -252,6 +248,7 @@ class FileTransferClient(object):
 
 
 class FileUploadClient(FileTransferClient):
+
     """
     Connect to a RSS (remote shell server) and upload files or directory trees.
     """
@@ -271,9 +268,9 @@ class FileUploadClient(FileTransferClient):
         @raise FileTransferSocketError: Raised if the RSS_UPLOAD message cannot
                 be sent to the server
         """
-        super(FileUploadClient, self).__init__(address, port, log_func, timeout)
+        super(FileUploadClient, self).__init__(
+            address, port, log_func, timeout)
         self._send_msg(RSS_UPLOAD)
-
 
     def _upload_file(self, path, end_time):
         if os.path.isfile(path):
@@ -286,7 +283,6 @@ class FileUploadClient(FileTransferClient):
             for filename in os.listdir(path):
                 self._upload_file(os.path.join(path, filename), end_time)
             self._send_msg(RSS_LEAVE_DIR)
-
 
     def upload(self, src_pattern, dst_path, timeout=600):
         """
@@ -351,6 +347,7 @@ class FileUploadClient(FileTransferClient):
 
 
 class FileDownloadClient(FileTransferClient):
+
     """
     Connect to a RSS (remote shell server) and download files or directory trees.
     """
@@ -370,9 +367,9 @@ class FileDownloadClient(FileTransferClient):
         @raise FileTransferSendError: Raised if the RSS_UPLOAD message cannot
                 be sent to the server
         """
-        super(FileDownloadClient, self).__init__(address, port, log_func, timeout)
+        super(FileDownloadClient, self).__init__(
+            address, port, log_func, timeout)
         self._send_msg(RSS_DOWNLOAD)
-
 
     def download(self, src_pattern, dst_path, timeout=600):
         """

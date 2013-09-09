@@ -1,4 +1,9 @@
-import logging, time, random, os, commands, re
+import logging
+import time
+import random
+import os
+import commands
+import re
 from autotest.client.shared import error
 from virttest import aexpect, utils_test, data_dir
 
@@ -50,8 +55,8 @@ def run_ksm_base(test, params, env):
         session.sendline(command)
         try:
             (match, data) = session.read_until_last_line_matches(
-                                                            ["PASS:", "FAIL:"],
-                                                            timeout)
+                ["PASS:", "FAIL:"],
+                timeout)
         except aexpect.ExpectProcessTerminatedError, exc:
             e_str = ("Failed to execute command '%s' on guest script, "
                      "vm '%s': %s" % (command, vm.name, str(exc)))

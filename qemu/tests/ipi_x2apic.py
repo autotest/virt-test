@@ -1,9 +1,11 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from virttest import env_process, aexpect
 
 
-def get_re_average(opt,re_str):
+def get_re_average(opt, re_str):
     """
     Get the average value which match re string.
 
@@ -16,7 +18,7 @@ def get_re_average(opt,re_str):
     for val in values:
         val = float(val)
         vals += val
-    return vals/len(values)
+    return vals / len(values)
 
 
 @error.context_aware

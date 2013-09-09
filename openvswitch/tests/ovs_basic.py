@@ -1,4 +1,6 @@
-import logging, time, os
+import logging
+import time
+import os
 from virttest import utils_misc, aexpect, utils_net, openvswitch, ovs_utils
 from virttest import versionable_class
 from autotest.client.shared import error
@@ -10,6 +12,7 @@ def allow_iperf_firewall(machine):
 
 
 class MiniSubtest(object):
+
     def __new__(cls, *args, **kargs):
         self = super(MiniSubtest, cls).__new__(cls)
         ret = None
@@ -27,6 +30,7 @@ class MiniSubtest(object):
 
 
 class InfrastructureInit(MiniSubtest):
+
     def setup(self, test, params, env):
         self.br0_name = "br0-%s" % (utils_misc.generate_random_string(3))
         while self.br0_name in utils_net.get_net_if():
@@ -49,26 +53,24 @@ class InfrastructureInit(MiniSubtest):
         utils_net.set_net_if_ip(self.br0_name, self.br0_ip)
         utils_net.bring_up_ifname(self.br0_name)
         self.dns_pidf = (utils_net.check_add_dnsmasq_to_br(self.br0_name,
-                                                            test.tmpdir))
+                                                           test.tmpdir))
         error.context("Add new ports from vms %s to bridge %s." %
-                        (self.vms, self.br0_name))
+                     (self.vms, self.br0_name))
 
         for vm in self.vms:
             utils_net.change_iface_bridge(vm.virtnet[1],
-                                           self.br0_name,
-                                           self.ovs)
-
+                                          self.br0_name,
+                                          self.ovs)
 
         logging.debug(self.ovs.status())
         self.host = ovs_utils.Machine(src=test.srcdir)
         self.mvms = [ovs_utils.Machine(vm) for vm in self.vms]
         self.machines = [self.host] + self.mvms
 
-        #ForAllP(self.mvms).cmd("dhclinet")
+        # ForAllP(self.mvms).cmd("dhclinet")
 
         time.sleep(5)
         utils_misc.ForAllP(self.machines).fill_addrs()
-
 
     def clean(self, test, params, env):
         if self.ovs:
@@ -92,6 +94,7 @@ def run_ovs_basic(test, params, env):
     Run basic test of OpenVSwitch driver.
     """
     class test_ping(InfrastructureInit):
+
         def test(self, test, params, env):
             count = params.get("ping_count", 10)
             for mvm in self.mvms:
@@ -107,22 +110,22 @@ def run_ovs_basic(test, params, env):
                     else:
                         mvm.ping(addr, self.br0_name, count)
 
-
     class test_iperf(InfrastructureInit):
-        def start_servers(self):
-            utils_misc.ForAllP(self.machines).cmd_in_src("%s -s &> /dev/null &" %
-                                               (self.iperf_b_path))
-            utils_misc.ForAllP(self.machines).cmd_in_src("%s -s -u &> /dev/null &" %
-                                               (self.iperf_b_path))
 
+        def start_servers(self):
+            utils_misc.ForAllP(
+                self.machines).cmd_in_src("%s -s &> /dev/null &" %
+                                          (self.iperf_b_path))
+            utils_misc.ForAllP(
+                self.machines).cmd_in_src("%s -s -u &> /dev/null &" %
+                                          (self.iperf_b_path))
 
         def iperf_client(self, machine, server_ip, add_params):
             out = machine.cmd_in_src("%s -c %s %s" %
-                                (self.iperf_b_path,
-                                 server_ip,
-                                 add_params))
+                                    (self.iperf_b_path,
+                                     server_ip,
+                                     add_params))
             return " ".join(out.splitlines()[-1].split()[6:8])
-
 
         def test_bandwidth(self, add_params=None):
             if add_params is None:
@@ -130,28 +133,29 @@ def run_ovs_basic(test, params, env):
 
             speeds = []
             speeds.append(self.iperf_client(self.mvms[0],
-                                    self.host.addrs[self.br0_name]["ipv4"][0],
-                                    add_params))
-
+                                            self.host.addrs[
+                                                self.br0_name]["ipv4"][0],
+                                            add_params))
 
             speeds.append(self.iperf_client(self.host,
-                                    self.mvms[0].virtnet[1].ip["ipv4"][0],
-                                    add_params))
-
+                                            self.mvms[0].virtnet[
+                                                1].ip["ipv4"][0],
+                                            add_params))
 
             speeds.append(self.iperf_client(self.mvms[0],
-                                         self.mvms[1].virtnet[1].ip["ipv4"][0],
-                                         add_params))
+                                            self.mvms[1].virtnet[
+                                                1].ip["ipv4"][0],
+                                            add_params))
 
             return speeds
-
 
         def test(self, test, params, env):
             iperf_src_path = os.path.join(test.virtdir, "deps")
             self.iperf_b_path = os.path.join("iperf-2.0.4", "src", "iperf")
 
             error.context("Install iperf to vms machine.")
-            utils_misc.ForAllP(self.machines).compile_autotools_app_tar(iperf_src_path,
+            utils_misc.ForAllP(
+                self.machines).compile_autotools_app_tar(iperf_src_path,
                                                          "iperf-2.0.4.tar.gz")
 
             allow_iperf_firewall(self.host)
@@ -159,37 +163,35 @@ def run_ovs_basic(test, params, env):
 
             self.start_servers()
 
-            #Test TCP bandwidth
+            # Test TCP bandwidth
             error.context("Test iperf bandwidth tcp.")
             speeds = self.test_bandwidth()
             logging.info("TCP Bandwidth from vm->host: %s", speeds[0])
             logging.info("TCP Bandwidth from host->vm: %s", speeds[1])
             logging.info("TCP Bandwidth from vm->vm: %s", speeds[2])
 
-            #test udp bandwidth limited to 1Gb
+            # test udp bandwidth limited to 1Gb
             error.context("Test iperf bandwidth udp.")
             speeds = self.test_bandwidth("-u -b 1G")
             logging.info("UDP Bandwidth from vm->host: %s", speeds[0])
             logging.info("UDP Bandwidth from host->vm: %s", speeds[1])
             logging.info("UDP Bandwidth from vm->vm: %s", speeds[2])
 
-
         def clean(self, test, params, env):
             self.host.cmd("killall -9 iperf")
             super(test_iperf, self).clean(test, params, env)
 
-
     class test_vlan_ping(InfrastructureInit):
+
         def test(self, test, params, env):
             count = params.get("ping_count", 10)
             ret = utils_misc.ForAllPSE(self.mvms).ping(
-                                    self.host.addrs[self.br0_name]["ipv6"][0],
-                                    1, count)
+                self.host.addrs[self.br0_name]["ipv6"][0],
+                1, count)
             for ret, vm in zip(ret, self.mvms):
                 if "exception" in ret:
                     raise error.TestError("VM %s can't ping host:\n %s" %
                                           (vm.name, ret.exception))
-
 
             error.context("Add OpenVSwitch device to vlan.")
             self.ovs.add_port_tag(self.mvms[0].virtnet[1].ifname, "1")
@@ -206,7 +208,7 @@ def run_ovs_basic(test, params, env):
 
             try:
                 self.mvms[0].ping(self.mvms[2].virtnet[1].ip["ipv6"][0],
-                                     1, 2)
+                                  1, 2)
                 raise error.TestError("VM %s can't ping host:\n %s" %
                                       (vm.name, ret.exception))
             except (error.CmdError, aexpect.ShellError):
@@ -221,22 +223,21 @@ def run_ovs_basic(test, params, env):
             time.sleep(1)
             error.context("Ping all devices in vlan.")
             self.mvms[0].ping(self.mvms[1].virtnet[1].ip["ipv6"][0], 1,
-                                 count, vlan=1)
+                              count, vlan=1)
             self.mvms[0].ping(self.mvms[2].virtnet[1].ip["ipv6"][0], 1,
-                                 count, vlan=2)
+                              count, vlan=2)
             self.mvms[1].ping(self.mvms[0].virtnet[1].ip["ipv6"][0], 1,
-                                 count)
+                              count)
             self.mvms[2].ping(self.mvms[0].virtnet[1].ip["ipv6"][0], 1,
-                                 count)
+                              count)
 
             try:
                 self.mvms[0].ping(self.mvms[2].virtnet[1].ip["ipv6"][0],
-                                     1, 2)
+                                  1, 2)
                 raise error.TestError("VM %s shouldn't be able to ping"
                                       " host:\n %s" % (vm.name, ret.exception))
             except (error.CmdError, aexpect.ShellError):
                 pass
-
 
             for i in range(0, 4095, 10):
                 self.ovs.add_port_tag(self.mvms[0].virtnet[1].ifname, "[]")
@@ -248,8 +249,7 @@ def run_ovs_basic(test, params, env):
             self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname, [1])
 
             self.mvms[0].ping(self.mvms[1].virtnet[1].ip["ipv6"][0], 1,
-                                count, vlan=1)
-
+                              count, vlan=1)
 
     test_type = "test_" + params.get("test_type")
     if (test_type in locals()):

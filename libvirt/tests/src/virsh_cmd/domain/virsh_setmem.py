@@ -1,4 +1,6 @@
-import re, logging, time
+import re
+import logging
+import time
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
 
@@ -21,7 +23,6 @@ def run_virsh_setmem(test, params, env):
         # verify format and units are expected
         return int(re.search(r'MemTotal:\s+(\d+)\s+kB', proc_meminfo).group(1))
 
-
     def make_domref(domarg, vm_ref, domid, vm_name, domuuid):
         # Specify domain as argument or parameter
         if domarg == "yes":
@@ -40,11 +41,10 @@ def run_virsh_setmem(test, params, env):
             dom_darg_value = None
         elif vm_ref == "emptystring":
             dom_darg_value = '""'
-        else: # stick in value directly
+        else:  # stick in value directly
             dom_darg_value = vm_ref
 
-        return {dom_darg_key:dom_darg_value}
-
+        return {dom_darg_key: dom_darg_value}
 
     def make_sizeref(sizearg, mem_ref, original_mem):
         if sizearg == "yes":
@@ -55,7 +55,7 @@ def run_virsh_setmem(test, params, env):
         if mem_ref == "halfless":
             size_darg_value = "%d" % (original_mem / 2)
         elif mem_ref == "halfmore":
-            size_darg_value = "%d" % int(original_mem * 1.5) # no fraction
+            size_darg_value = "%d" % int(original_mem * 1.5)  # no fraction
         elif mem_ref == "same":
             size_darg_value = "%d" % original_mem
         elif mem_ref == "emptystring":
@@ -65,25 +65,22 @@ def run_virsh_setmem(test, params, env):
         elif mem_ref == "toosmall":
             size_darg_value = "1024"
         elif mem_ref == "toobig":
-            size_darg_value = "1099511627776" # (KiB) One Petabyte
+            size_darg_value = "1099511627776"  # (KiB) One Petabyte
         elif mem_ref == "none":
             size_darg_value = None
-        else: # stick in value directly
+        else:  # stick in value directly
             size_darg_value = mem_ref
 
-        return {size_darg_key:size_darg_value}
-
+        return {size_darg_key: size_darg_value}
 
     def is_in_range(actual, expected, error_percent):
         deviation = 100 - (100 * (float(actual) / float(expected)))
         logging.debug("Deviation: %0.2f%%" % float(deviation))
         return float(deviation) <= float(error_percent)
 
-
     def is_old_libvirt():
         regex = r'\s+\[--size\]\s+'
-        return bool( not virsh.has_command_help_match('setmem', regex) )
-
+        return bool(not virsh.has_command_help_match('setmem', regex))
 
     def print_debug_stats(original_inside_mem, original_outside_mem,
                           test_inside_mem, test_outside_mem,
@@ -97,22 +94,21 @@ def run_virsh_setmem(test, params, env):
                   "Actual outside mem   : %d KiB\n"
                   "Outside mem deviation: %0.2f%%\n"
                   "Acceptable deviation %0.2f%%" % (
-                  original_inside_mem,
-                  expected_mem,
-                  test_inside_mem,
-                  100 - (100 * (float(test_inside_mem) / float(expected_mem))),
-                  original_outside_mem,
-                  expected_mem,
-                  test_outside_mem,
-                  100 - (100 * (float(test_outside_mem) / float(expected_mem))),
-                  float(delta_percentage) ))
+                      original_inside_mem,
+                      expected_mem,
+                      test_inside_mem,
+                      100 -
+                      (100 * (float(test_inside_mem) / float(expected_mem))),
+                      original_outside_mem,
+                      expected_mem,
+                      test_outside_mem,
+                      100 -
+                      (100 * (float(test_outside_mem) / float(expected_mem))),
+                      float(delta_percentage)))
         for dbgline in dbgmsg.splitlines():
             logging.debug(dbgline)
 
-
-    ### MAIN TEST CODE ###
-
-
+    # MAIN TEST CODE ###
     # Process cartesian parameters
     vm_ref = params.get("setmem_vm_ref", "")
     mem_ref = params.get("setmem_mem_ref", "")
@@ -156,16 +152,16 @@ def run_virsh_setmem(test, params, env):
         use_kilobytes = False
 
     # Argument pattern is complex, build with dargs
-    dargs = {'flagstr':flags,
-             'use_kilobytes':use_kilobytes,
-             'uri':uri, 'ignore_status':True, "debug":True}
-    dargs.update( make_domref(domarg, vm_ref, domid, vm_name, domuuid) )
-    dargs.update( make_sizeref(sizearg, mem_ref, original_outside_mem) )
+    dargs = {'flagstr': flags,
+             'use_kilobytes': use_kilobytes,
+             'uri': uri, 'ignore_status': True, "debug": True}
+    dargs.update(make_domref(domarg, vm_ref, domid, vm_name, domuuid))
+    dargs.update(make_sizeref(sizearg, mem_ref, original_outside_mem))
 
     # Prepare libvirtd status
     if libvirt == "off":
         utils_libvirtd.libvirtd_stop()
-    else: # make sure it's running
+    else:  # make sure it's running
         utils_libvirtd.libvirtd_restart()
 
     if status_error == "yes" or old_libvirt_fail == "yes":
@@ -179,7 +175,8 @@ def run_virsh_setmem(test, params, env):
         utils_libvirtd.libvirtd_start()
 
     if status is 0:
-        logging.info("Waiting %d seconds for VM memory to settle", quiesce_delay)
+        logging.info(
+            "Waiting %d seconds for VM memory to settle", quiesce_delay)
         # It takes time for kernel to settle on new memory
         # and current clean pages is not predictable. Therefor,
         # extremely difficult to determine quiescence, so
@@ -209,8 +206,7 @@ def run_virsh_setmem(test, params, env):
                           test_inside_mem, test_outside_mem,
                           expected_mem, delta_percentage)
 
-
-    if status is 0: # Restore original memory
+    if status is 0:  # Restore original memory
         restore_status = virsh.setmem(domainarg=vm_name,
                                       sizearg=original_inside_mem,
                                       ignore_status=True).exit_status
@@ -221,7 +217,6 @@ def run_virsh_setmem(test, params, env):
         # virsh setmem failed, no need to restore
         pass
 
-
     # Don't care about memory comparison on error test
     if status_error == "no" and old_libvirt_fail == "no":
         outside_in_range = is_in_range(test_outside_mem, expected_mem,
@@ -231,21 +226,21 @@ def run_virsh_setmem(test, params, env):
         if status is not 0 or not outside_in_range or not inside_in_range:
             msg = "test conditions not met: "
             if status is not 0:
-                msg += "Non-zero virsh setmem exit code. " # maybe multiple
+                msg += "Non-zero virsh setmem exit code. "  # maybe multiple
             if not outside_in_range:                       # errors
                 msg += "Outside memory deviated. "
             if not inside_in_range:
                 msg += "Inside memory deviated. "
             raise error.TestFail(msg)
 
-        return # Normal test passed
+        return  # Normal test passed
 
-    else: # Verify an error test resulted in error
+    else:  # Verify an error test resulted in error
         if status is 0:
             raise error.TestFail("Error test did not result in an error")
-        else: # status != 0
-            if not old_libvirt: # new libvirt should not have returnd error
+        else:  # status != 0
+            if not old_libvirt:  # new libvirt should not have returned error
                 raise error.TestFail("Newer libvirt failed when it should not")
             else:
-                # Test passes for old_libvirt == True
+                # Test passes for old_libvirt is True
                 pass

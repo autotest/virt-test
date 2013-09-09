@@ -21,6 +21,7 @@ class SuspendViaGA(GuestSuspendBaseTest):
 
 
 class QemuGASuspendTest(QemuGuestAgentTest):
+
     """
     Test qemu guest agent, this case will:
     1) Start VM with virtio serial port.
@@ -28,6 +29,7 @@ class QemuGASuspendTest(QemuGuestAgentTest):
     3) Create QemuAgent object.
     4) Run suspend test with guest agent.
     """
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

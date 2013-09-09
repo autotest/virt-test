@@ -45,27 +45,29 @@
 # Licensed to PSF under a Contributor Agreement.
 # See http://www.python.org/2.4/license for licensing details.
 
-##
+#
 # Implementation module for XPath support.  There's usually no reason
 # to import this module directly; the <b>ElementTree</b> does this for
 # you, if needed.
-##
+#
 
 import re
 
 xpath_tokenizer = re.compile(
     "(::|\.\.|\(\)|[/.*:\[\]\(\)@=])|((?:\{[^}]+\})?[^/:\[\]\(\)@=\s]+)|\s+"
-    ).findall
+).findall
+
 
 class xpath_descendant_or_self:
     pass
 
-##
+#
 # Wrapper for a compiled XPath.
+
 
 class Path:
 
-    ##
+    #
     # Create an Path instance from an XPath expression.
 
     def __init__(self, path):
@@ -91,13 +93,13 @@ class Path:
                 if op != "/":
                     raise SyntaxError(
                         "expected path separator (%s)" % (op or tag)
-                        )
+                    )
         if self.path and isinstance(self.path[-1], xpath_descendant_or_self):
             raise SyntaxError("path cannot end with //")
         if len(self.path) == 1 and isinstance(self.path[0], type("")):
             self.tag = self.path[0]
 
-    ##
+    #
     # Find first matching object.
 
     def find(self, element):
@@ -112,7 +114,7 @@ class Path:
                 return elem
         return None
 
-    ##
+    #
     # Find text for first matching object.
 
     def findtext(self, element, default=None):
@@ -127,7 +129,7 @@ class Path:
                 return elem.text or ""
         return default
 
-    ##
+    #
     # Find all matching objects.
 
     def findall(self, element):
@@ -148,7 +150,7 @@ class Path:
                     else:
                         index = index + 1
                 except IndexError:
-                    tag = None # invalid path
+                    tag = None  # invalid path
                 for node in nodeset:
                     new = list(node.getiterator(tag))
                     if new and new[0] is node:
@@ -166,8 +168,9 @@ class Path:
 
 _cache = {}
 
-##
+#
 # (Internal) Compile path.
+
 
 def _compile(path):
     p = _cache.get(path)
@@ -179,20 +182,23 @@ def _compile(path):
     _cache[path] = p
     return p
 
-##
+#
 # Find first matching object.
+
 
 def find(element, path):
     return _compile(path).find(element)
 
-##
+#
 # Find text for first matching object.
+
 
 def findtext(element, path, default=None):
     return _compile(path).findtext(element, default)
 
-##
+#
 # Find all matching objects.
+
 
 def findall(element, path):
     return _compile(path).findall(element)

@@ -45,20 +45,20 @@ def run_timedrift_with_reboot(test, params, env):
         # Get initial time
         # (ht stands for host time, gt stands for guest time)
         (ht0, gt0) = utils_test.get_time(session, time_command,
-                                             time_filter_re, time_format)
+                                         time_filter_re, time_format)
 
         # Reboot
         for i in range(reboot_iterations):
             # Get time before current iteration
             (ht0_, gt0_) = utils_test.get_time(session, time_command,
-                                                   time_filter_re, time_format)
+                                               time_filter_re, time_format)
             # Run current iteration
             logging.info("Rebooting: iteration %d of %d...",
                          (i + 1), reboot_iterations)
             session = vm.reboot(session, timeout=timeout)
             # Get time after current iteration
             (ht1_, gt1_) = utils_test.get_time(session, time_command,
-                                                   time_filter_re, time_format)
+                                               time_filter_re, time_format)
             # Report iteration results
             host_delta = ht1_ - ht0_
             guest_delta = gt1_ - gt0_
@@ -76,7 +76,7 @@ def run_timedrift_with_reboot(test, params, env):
 
         # Get final time
         (ht1, gt1) = utils_test.get_time(session, time_command,
-                                             time_filter_re, time_format)
+                                         time_filter_re, time_format)
 
     finally:
         if session:

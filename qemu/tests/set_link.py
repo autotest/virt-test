@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_test
 
+
 @error.context_aware
 def run_set_link(test, params, env):
     """
@@ -27,7 +28,6 @@ def run_set_link(test, params, env):
     # Waiting for guest boot up.
     session = vm.wait_for_login(timeout=timeout)
     session.close()
-
 
     def set_link_test(linkid):
         """

@@ -22,7 +22,7 @@ See http://www.nas.nasa.gov/Software/NPB/
 #   sp.A sp.B sp.C sp.D sp.E sp.S sp.W
 #   ua.A ua.B ua.C ua.S ua.W
 #
-# Please refer to npb.py for more infomation about
+# Please refer to npb.py for more information about
 # the arguments.
 job.run_test(url='npb', tests='ep.A ep.B')
 

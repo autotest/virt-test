@@ -1,4 +1,6 @@
-import logging, time, os
+import logging
+import time
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 

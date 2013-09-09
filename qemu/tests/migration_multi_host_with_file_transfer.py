@@ -1,4 +1,5 @@
-import logging, threading
+import logging
+import threading
 from autotest.client import utils as client_utils
 from autotest.client.shared import utils, error
 from autotest.client.shared.syncdata import SyncData
@@ -59,11 +60,11 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
     shell_port = int(params.get("shell_port", "22"))
     shell_prompt = params["shell_prompt"]
 
-    #Path where file is stored on guest.
+    # Path where file is stored on guest.
     guest_path = params.get("guest_path", "/tmp/file")
-    #Path where file is generated.
+    # Path where file is generated.
     host_path = "/tmp/file-%s" % utils_misc.generate_random_string(6)
-    #Path on host for file copied from vm.
+    # Path on host for file copied from vm.
     host_path_returned = "%s-returned" % host_path
     file_size = params.get("file_size", "500")
     transfer_timeout = int(params.get("transfer_timeout", "240"))
@@ -71,10 +72,11 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
     d_transfer_timeout = 2 * transfer_timeout
     del_file_with_err = params.get("del_file_with_err", "no")
 
-    #Count of migration during file transfer.
+    # Count of migration during file transfer.
     migrate_count = int(params.get("migrate_count", "3"))
 
     class TestMultihostMigration(base_class):
+
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.vm = None
@@ -118,33 +120,33 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
             new_params['start_vm'] = 'yes'
             self.vm_lock.acquire()
             env_process.process(self.test, new_params, self.env,
-                                     env_process.preprocess_image,
-                                     env_process.preprocess_vm)
+                                env_process.preprocess_image,
+                                env_process.preprocess_vm)
             self.vm_lock.release()
             vm = self.env.get_vm(vm_name)
             vm.wait_for_login(timeout=self.login_timeout)
             return vm
 
         def _copy_until_end(self, end_event):
-            #Copy until migration not end.
+            # Copy until migration not end.
             while not end_event.isSet():
                 logging.info("Copy file to guest %s.", self.vm_addr)
                 remote.copy_files_to(self.vm_addr, "scp", guest_root,
-                                          guest_pass, 22, host_path,
-                                          guest_path, limit=transfer_speed,
-                                          verbose=True,
-                                          timeout=transfer_timeout)
+                                     guest_pass, 22, host_path,
+                                     guest_path, limit=transfer_speed,
+                                     verbose=True,
+                                     timeout=transfer_timeout)
                 logging.info("Copy file to guests %s done.", self.vm_addr)
 
                 logging.info("Copy file from guest %s.", self.vm_addr)
                 remote.copy_files_from(self.vm_addr, "scp", guest_root,
-                                            guest_pass, 22, guest_path,
-                                            host_path_returned,
-                                            limit=transfer_speed, verbose=True,
-                                            timeout=transfer_timeout)
+                                       guest_pass, 22, guest_path,
+                                       host_path_returned,
+                                       limit=transfer_speed, verbose=True,
+                                       timeout=transfer_timeout)
                 logging.info("Copy file from guests %s done.", self.vm_addr)
                 check_sum = client_utils.hash_file(host_path_returned)
-                #store checksum for later check.
+                # store checksum for later check.
                 self.file_check_sums.append(check_sum)
 
         def _run_and_migrate(self, bg, end_event, sync, migrate_count):
@@ -214,8 +216,8 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
 
                     # Check if guest lives.
                     remote.wait_for_login(shell_client, self.vm_addr,
-                                               shell_port, guest_root,
-                                               guest_pass, shell_prompt)
+                                          shell_port, guest_root,
+                                          guest_pass, shell_prompt)
                     self._hosts_barrier(self.hosts, self.id,
                                         "After_check", 120)
 
@@ -223,7 +225,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
                     orig_hash = client_utils.hash_file(host_path)
                     returned_hash = client_utils.hash_file(host_path_returned)
 
-                    #Check all check sum
+                    # Check all check sum
                     wrong_check_sum = False
                     for i in range(len(self.file_check_sums)):
                         check_sum = self.file_check_sums[i]
@@ -235,9 +237,9 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
                     if wrong_check_sum:
                         raise error.TestFail("Returned file hash (%s) differs"
                                              "from original one (%s)" %
-                                                 (returned_hash, orig_hash))
+                                            (returned_hash, orig_hash))
                     else:
-                        #clean temp
+                        # clean temp
                         utils.run("rm -rf %s" % (host_path))
                         utils.run("rm -rf %s" % (host_path_returned))
 
@@ -252,7 +254,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
                 logging.debug("Address cache updated to %s" % address_cache)
                 self._slave_migrate(sync)
 
-                #Wait for check if guest lives.
+                # Wait for check if guest lives.
                 self._hosts_barrier(self.hosts, self.id, "After_check", 120)
 
     mig = TestMultihostMigration(test, params, env)

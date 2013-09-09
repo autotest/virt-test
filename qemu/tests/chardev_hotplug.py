@@ -1,6 +1,9 @@
-import logging, os, fcntl
+import logging
+import os
+import fcntl
 from autotest.client.shared import error
 from autotest.client import utils
+
 
 @error.context_aware
 def run_chardev_hotplug(test, params, env):
@@ -34,24 +37,24 @@ def run_chardev_hotplug(test, params, env):
         return reply
 
     def pci_serial_add(vm, name, addr, chardev):
-        reply = cmd_qmp_log(vm, 'device_add', { 'driver'  : 'pci-serial',
-                                                'id'      : name,
-                                                'addr'    : addr,
-                                                'chardev' : chardev } )
+        reply = cmd_qmp_log(vm, 'device_add', {'driver': 'pci-serial',
+                                               'id': name,
+                                               'addr': addr,
+                                               'chardev': chardev})
         return reply
 
     def device_del(vm, name):
-        reply = cmd_qmp_log(vm, 'device_del', { 'id' : name } )
+        reply = cmd_qmp_log(vm, 'device_del', {'id': name})
         return reply
 
     def chardev_add(vm, name, kind, args):
-        backend = { 'type': kind, 'data' : args }
-        reply = cmd_qmp_log(vm, 'chardev-add', { 'id'      : name,
-                                                 'backend' : backend } )
+        backend = {'type': kind, 'data': args}
+        reply = cmd_qmp_log(vm, 'chardev-add', {'id': name,
+                                                'backend': backend})
         return reply
 
     def chardev_del(vm, name):
-        reply = cmd_qmp_log(vm, 'chardev-remove', { 'id' : name } )
+        reply = cmd_qmp_log(vm, 'chardev-remove', {'id': name})
         return reply
 
     def chardev_use(vm, name):
@@ -95,7 +98,7 @@ def run_chardev_hotplug(test, params, env):
 
     error.context("Test file chardev", logging.info)
     filename = "/tmp/chardev-file-%s" % vm.instance
-    args = { 'out' : filename }
+    args = {'out': filename}
     chardev_add(vm, "chardev-file", "file", args)
     chardev_use(vm, "chardev-file")
     chardev_del(vm, "chardev-file")

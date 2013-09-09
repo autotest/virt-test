@@ -1,4 +1,6 @@
-import os, logging, sys
+import os
+import logging
+import sys
 from autotest.client import test
 from autotest.client import utils
 from autotest.client.shared import git, error, software_manager
@@ -31,7 +33,6 @@ class kernelinstall(test.test):
             kernel.boot()
         else:
             kernel.add_to_bootloader()
-
 
     def _kernel_install_koji(self, kernel_koji_spec, kernel_deps_koji_spec,
                              need_reboot=True):
@@ -72,7 +73,6 @@ class kernelinstall(test.test):
         # Then install kernel rpm packages.
         self._kernel_install_rpm(kernel_rpm_path, deps_rpms, need_reboot)
 
-
     def _kernel_install_src(self, base_tree, config=None, config_list=None,
                             patch_list=None, need_reboot=True):
         if not utils.is_url(base_tree):
@@ -104,7 +104,6 @@ class kernelinstall(test.test):
         else:
             kernel.add_to_bootloader()
 
-
     def _kernel_install_git(self, repo, config, repo_base=None,
                             branch="master", commit=None, config_list=None,
                             patch_list=None, need_reboot=True):
@@ -113,8 +112,7 @@ class kernelinstall(test.test):
                                destination_dir=repodir,
                                commit=commit, base_uri=repo_base)
         self._kernel_install_src(repodir, config, config_list, patch_list,
-                                need_reboot)
-
+                                 need_reboot)
 
     def execute(self, install_type="koji", params=None):
         need_reboot = params.get("need_reboot") == "yes"

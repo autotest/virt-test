@@ -1,7 +1,10 @@
 """
 Group of cpuid tests for X86 CPU
 """
-import re, sys, os, string
+import re
+import sys
+import os
+import string
 from autotest.client.shared import error, utils
 from autotest.client.shared import test as test_module
 from virttest import utils_misc, env_process, virt_vm
@@ -10,6 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 dbg = logger.debug
 info = logger.info
+
 
 def run_cpuid(test, params, env):
     """
@@ -66,7 +70,8 @@ def run_cpuid(test, params, env):
         qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
         missing = set(cpu_models) - set(qemu_models)
         if missing:
-            raise error.TestFail("Some CPU models not in QEMU CPU model list: %r" % (missing))
+            raise error.TestFail(
+                "Some CPU models not in QEMU CPU model list: %r" % (missing))
         added = set(qemu_models) - set(cpu_models)
         if added:
             logging.info("Extra CPU models in QEMU CPU listing: %s", added)
@@ -80,17 +85,18 @@ def run_cpuid(test, params, env):
             for bit in range(32):
                 ba = (a[reg] & (1 << bit)) >> bit
                 bb = (b[reg] & (1 << bit)) >> bit
-                if ba <> bb:
+                if ba != bb:
                     yield (reg, bit, ba, bb)
 
     def parse_cpuid_dump(output):
         dbg("parsing cpuid dump: %r", output)
-        cpuid_re = re.compile("^ *(0x[0-9a-f]+) +0x([0-9a-f]+): +eax=0x([0-9a-f]+) ebx=0x([0-9a-f]+) ecx=0x([0-9a-f]+) edx=0x([0-9a-f]+)$")
+        cpuid_re = re.compile(
+            "^ *(0x[0-9a-f]+) +0x([0-9a-f]+): +eax=0x([0-9a-f]+) ebx=0x([0-9a-f]+) ecx=0x([0-9a-f]+) edx=0x([0-9a-f]+)$")
         out_lines = output.splitlines()
-        if out_lines[0] <> '==START TEST==' or out_lines[-1] <> '==END TEST==':
+        if out_lines[0] != '==START TEST==' or out_lines[-1] != '==END TEST==':
             dbg("cpuid dump doesn't have expected delimiters")
             return None
-        if out_lines[1] <> 'CPU:':
+        if out_lines[1] != 'CPU:':
             dbg("cpuid dump doesn't start with 'CPU:' line")
             return None
         result = {}
@@ -102,14 +108,13 @@ def run_cpuid(test, params, env):
             in_eax = int(m.group(1), 16)
             in_ecx = int(m.group(2), 16)
             out = {
-                'eax':int(m.group(3), 16),
-                'ebx':int(m.group(4), 16),
-                'ecx':int(m.group(5), 16),
-                'edx':int(m.group(6), 16),
+                'eax': int(m.group(3), 16),
+                'ebx': int(m.group(4), 16),
+                'ecx': int(m.group(5), 16),
+                'edx': int(m.group(6), 16),
             }
             result[(in_eax, in_ecx)] = out
         return result
-
 
     def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None):
         test_kernel_dir = os.path.join(test.virtdir, "deps",
@@ -119,7 +124,8 @@ def run_cpuid(test, params, env):
 
         vm_name = params['main_vm']
         params_b = params.copy()
-        params_b["kernel"] = os.path.join(test_kernel_dir, "cpuid_dump_kernel.bin")
+        params_b["kernel"] = os.path.join(
+            test_kernel_dir, "cpuid_dump_kernel.bin")
         params_b["cpu_model"] = cpu_model
         params_b["cpu_model_flags"] = feature
         del params_b["images"]
@@ -147,7 +153,7 @@ def run_cpuid(test, params, env):
 
     def cpuid_to_vendor(cpuid_dump, idx):
         r = cpuid_dump[idx, 0]
-        dst =  []
+        dst = []
         map(lambda i:
             dst.append((chr(r['ebx'] >> (8 * i) & 0xff))), range(0, 4))
         map(lambda i:
@@ -169,7 +175,7 @@ def run_cpuid(test, params, env):
             cmd_result = utils.run(cmd, ignore_status=True)
             vendor = cmd_result.stdout.strip()
 
-        ignore_cpus = set(params.get("ignore_cpu_models","").split(' '))
+        ignore_cpus = set(params.get("ignore_cpu_models", "").split(' '))
         cpu_models = cpu_models - ignore_cpus
 
         for cpu_model in cpu_models:
@@ -242,7 +248,7 @@ def run_cpuid(test, params, env):
         # 5.1.2 Feature Information (Function 01h)
         eax = cpuid_dump[1, 0]['eax']
         family = (eax >> 8) & 0xf
-        if family  == 0xf:
+        if family == 0xf:
             # extract extendend family
             return family + ((eax >> 20) & 0xff)
         return family
@@ -366,7 +372,7 @@ def run_cpuid(test, params, env):
             for name in ('eax', 'ebx', 'ecx', 'edx'):
                 for shift in range(4):
                     c = ((regs[name] >> (shift * 8)) & 0xff)
-                    if c == 0: # drop trailing \0-s
+                    if c == 0:  # drop trailing \0-s
                         break
                     m_id += chr(c)
         return m_id
@@ -412,10 +418,10 @@ def run_cpuid(test, params, env):
         test signature in specified leaf:index:regs
         """
         has_error = False
-        flags = params.get("flags","")
-        leaf = int(params.get("leaf","0x40000000"), 0)
-        idx = int(params.get("index","0x00"), 0)
-        regs = params.get("regs","ebx ecx edx").split()
+        flags = params.get("flags", "")
+        leaf = int(params.get("leaf", "0x40000000"), 0)
+        idx = int(params.get("index", "0x00"), 0)
+        regs = params.get("regs", "ebx ecx edx").split()
         signature = params["signature"]
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
@@ -436,10 +442,10 @@ def run_cpuid(test, params, env):
         test bits in specified leaf:func:reg
         """
         has_error = False
-        flags = params.get("flags","")
-        leaf = int(params.get("leaf","0x40000000"), 0)
-        idx = int(params.get("index","0x00"), 0)
-        reg = params.get("reg","eax")
+        flags = params.get("flags", "")
+        leaf = int(params.get("leaf", "0x40000000"), 0)
+        idx = int(params.get("index", "0x00"), 0)
+        reg = params.get("reg", "eax")
         bits = params["bits"].split()
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
@@ -461,10 +467,10 @@ def run_cpuid(test, params, env):
         test register value in specified leaf:index:reg
         """
         has_error = False
-        flags = params.get("flags","")
+        flags = params.get("flags", "")
         leaf = int(params.get("leaf", "0x00"), 0)
-        idx = int(params.get("index","0x00"), 0)
-        reg = params.get("reg","eax")
+        idx = int(params.get("index", "0x00"), 0)
+        reg = params.get("reg", "eax")
         val = int(params["value"], 0)
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
@@ -484,7 +490,7 @@ def run_cpuid(test, params, env):
         """
         Compare full CPUID dump data
         """
-        machine_type = params.get("machine_type_to_check","")
+        machine_type = params.get("machine_type_to_check", "")
         kvm_enabled = params.get("enable_kvm", "yes") == "yes"
 
         ignore_cpuid_leaves = params.get("ignore_cpuid_leaves", "")
@@ -494,7 +500,7 @@ def run_cpuid(test, params, env):
             l = l.split(',')
             # syntax of ignore_cpuid_leaves:
             # <in_eax>[,<in_ecx>[,<register>[ ,<bit>]]] ...
-            for i in 0,1,3: # integer fields:
+            for i in 0, 1, 3:  # integer fields:
                 if len(l) > i:
                     l[i] = int(l[i], 0)
             whitelist.append(tuple(l))
@@ -514,19 +520,23 @@ def run_cpuid(test, params, env):
             raise error.TestNAError("no cpuid dump file: %s" % (ref_file))
         reference = open(ref_file, 'r').read()
         if not reference:
-            raise error.TestNAError("no cpuid dump data on file: %s" % (ref_file))
+            raise error.TestNAError(
+                "no cpuid dump data on file: %s" % (ref_file))
         reference = parse_cpuid_dump(reference)
         if reference is None:
-            raise error.TestNAError("couldn't parse reference cpuid dump from file; %s" % (ref_file))
+            raise error.TestNAError(
+                "couldn't parse reference cpuid dump from file; %s" % (ref_file))
         try:
-            out = get_guest_cpuid(self, cpu_model, cpu_model_flags + ',enforce',
-                                  extra_params=dict(machine_type=machine_type, smp=1))
-        except virt_vm.VMCreateError,e:
+            out = get_guest_cpuid(
+                self, cpu_model, cpu_model_flags + ',enforce',
+                extra_params=dict(machine_type=machine_type, smp=1))
+        except virt_vm.VMCreateError, e:
             if "host doesn't support requested feature:" in e.output \
-                or ("host cpuid" in e.output and \
+                or ("host cpuid" in e.output and
                     ("lacks requested flag" in e.output or
                      "flag restricted to guest" in e.output)):
-                raise error.TestNAError("Can't run CPU model %s on this host" % (full_cpu_model_name))
+                raise error.TestNAError(
+                    "Can't run CPU model %s on this host" % (full_cpu_model_name))
             else:
                 raise
         dbg('ref_file: %r', ref_file)
@@ -534,21 +544,23 @@ def run_cpuid(test, params, env):
         dbg('out: %r', out)
         ok = True
         for k in reference.keys():
-            in_eax,in_ecx = k
+            in_eax, in_ecx = k
             if k not in out:
-                info("Missing CPUID data from output: CPUID[0x%x,0x%x]", in_eax, in_ecx)
+                info(
+                    "Missing CPUID data from output: CPUID[0x%x,0x%x]", in_eax, in_ecx)
                 ok = False
                 continue
             diffs = compare_cpuid_output(reference[k], out[k])
             for d in diffs:
-                reg, bit, vreference, vout =d
+                reg, bit, vreference, vout = d
                 whitelisted = (in_eax,) in whitelist \
                     or (in_eax, in_ecx) in whitelist \
                     or (in_eax, in_ecx, reg) in whitelist \
                     or (in_eax, in_ecx, reg, bit) in whitelist
-                info("Non-matching bit: CPUID[0x%x,0x%x].%s[%d]: found %s instead of %s%s",
-                     in_eax, in_ecx, reg, bit, vout, vreference,
-                     whitelisted and " (whitelisted)" or "")
+                info(
+                    "Non-matching bit: CPUID[0x%x,0x%x].%s[%d]: found %s instead of %s%s",
+                    in_eax, in_ecx, reg, bit, vout, vreference,
+                    whitelisted and " (whitelisted)" or "")
                 if not whitelisted:
                     ok = False
         if not ok:

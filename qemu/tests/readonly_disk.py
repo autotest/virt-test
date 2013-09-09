@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import utils_test, aexpect, env_process
 
@@ -29,7 +30,7 @@ def run_readonly_disk(test, params, env):
     src_file = params.get("src_file")
     disk_letter = params.get("disk_letter")
 
-    #update the cdrom letter for winutils
+    # update the cdrom letter for winutils
     cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"
     cdrom_chk_cmd += " cmd && diskpart /s cmd"
 

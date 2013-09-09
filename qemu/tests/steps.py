@@ -4,7 +4,10 @@ Utilities to perform automatic guest installation using step files.
 @copyright: Red Hat 2008-2009
 """
 
-import os, time, shutil, logging
+import os
+import time
+import shutil
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc, ppm_utils, qemu_monitor
 
@@ -40,7 +43,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
     cropped_scrdump_filename = os.path.join(debug_dir, "cropped_scrdump.ppm")
     expected_scrdump_filename = os.path.join(debug_dir, "scrdump_expected.ppm")
     expected_cropped_scrdump_filename = os.path.join(debug_dir,
-                                                 "cropped_scrdump_expected.ppm")
+                                                     "cropped_scrdump_expected.ppm")
     comparison_filename = os.path.join(debug_dir, "comparison.ppm")
     history_dir = os.path.join(debug_dir, "barrier_history")
 
@@ -59,8 +62,10 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
     # current machine is stronger then the "stepmaker machine".
     # Limit to 1 (min) and 10 (max) seconds between polls.
     sleep_duration = float(timeout) / 50.0
-    if sleep_duration < 1.0: sleep_duration = 1.0
-    if sleep_duration > 10.0: sleep_duration = 10.0
+    if sleep_duration < 1.0:
+        sleep_duration = 1.0
+    if sleep_duration > 10.0:
+        sleep_duration = 10.0
 
     end_time = time.time() + timeout
     end_time_stuck = time.time() + fail_if_stuck_for
@@ -111,18 +116,18 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         # Write screendump to history_dir (as JPG) if requested
         # and if the screendump differs from the previous one
         if (keep_screendump_history and
-            whole_image_md5sum not in prev_whole_image_md5sums[:1]):
+                whole_image_md5sum not in prev_whole_image_md5sums[:1]):
             try:
                 os.makedirs(history_dir)
             except Exception:
                 pass
             history_scrdump_filename = os.path.join(history_dir,
-                    "scrdump-step_%s-%s.jpg" % (current_step_num,
-                                                time.strftime("%Y%m%d-%H%M%S")))
+                                                    "scrdump-step_%s-%s.jpg" % (current_step_num,
+                                                                                time.strftime("%Y%m%d-%H%M%S")))
             try:
                 image = PIL.Image.open(scrdump_filename)
-                image.save(history_scrdump_filename, format = 'JPEG',
-                           quality = 30)
+                image.save(history_scrdump_filename, format='JPEG',
+                           quality=30)
             except NameError:
                 pass
 
@@ -148,7 +153,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         prev_whole_image_md5sums.insert(0, whole_image_md5sum)
         # Limit queue length to stuck_detection_history
         prev_whole_image_md5sums = \
-                prev_whole_image_md5sums[:stuck_detection_history]
+            prev_whole_image_md5sums[:stuck_detection_history]
 
         # Sleep for a while
         time.sleep(sleep_duration)
@@ -166,7 +171,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         if data_scrdump_filename and os.path.exists(data_scrdump_filename):
             # Read expected screendump image
             (ew, eh, edata) = \
-                    ppm_utils.image_read_from_ppm_file(data_scrdump_filename)
+                ppm_utils.image_read_from_ppm_file(data_scrdump_filename)
             # Write it in debug_dir
             ppm_utils.image_write_to_ppm_file(expected_scrdump_filename,
                                               ew, eh, edata)
@@ -182,7 +187,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         # Print error messages and fail the test
         long_message = message + "\n(see analysis at %s)" % debug_dir
         logging.error(long_message)
-        raise error.TestFail, message
+        raise error.TestFail(message)
 
 
 def run_steps(test, params, env):

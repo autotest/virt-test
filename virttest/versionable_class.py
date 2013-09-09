@@ -1,4 +1,5 @@
-import sys, types
+import sys
+import types
 
 
 """
@@ -179,11 +180,13 @@ def isclass(obj):
 
 
 class ModuleWrapper(object):
+
     """
     Wrapper around module.
 
     Necessary for pickling of dynamic class.
     """
+
     def __init__(self, wrapped):
         """
         :param wrapped: module for wrapping.
@@ -191,10 +194,8 @@ class ModuleWrapper(object):
         """
         self.wrapped = wrapped
 
-
     def __dir__(self):
         return dir(self.wrapped)
-
 
     def __getattr__(self, name):
         """
@@ -210,7 +211,7 @@ class ModuleWrapper(object):
                 cls_name = name.split("_")
                 cls = self.wrapped.__dict__[cls_name[1]]
                 m_cls, _ = Manager(self.wrapped.__name__, self).factory(cls,
-                                                        _class_names=cls_name)
+                                                                        _class_names=cls_name)
                 return m_cls
         else:
             cls = getattr(self.wrapped, name)
@@ -218,6 +219,7 @@ class ModuleWrapper(object):
 
 
 class VersionableClass(object):
+
     """
     Class used for marking of mutable class.
     """
@@ -232,6 +234,7 @@ class VersionableClass(object):
 
 
 class Manager(object):
+
     def __init__(self, name, wrapper=None):
         """
         Manager for module.
@@ -249,7 +252,6 @@ class Manager(object):
                 self.wrapper = sys.modules[name]
         else:
             self.wrapper = wrapper
-
 
     def factory(self, _class, *args, **kargs):
         """
@@ -271,12 +273,11 @@ class Manager(object):
                 new_bases.append(cl)
                 return ""
 
-
         _class_names = None
         if "_class_names" in kargs:
             _class_names = kargs["_class_names"]
         if (_class.__name__.startswith("managed") and
-                                 hasattr(_class, "__original_class__")):
+           hasattr(_class, "__original_class__")):
             _class = _class.__original_class__
         new_bases = []
         cls_ver_name = ""
@@ -301,7 +302,7 @@ class Manager(object):
         else:
             for m_cls in _class.__bases__:
                 if (VersionableClass in m_cls.__mro__ or
-                                        hasattr(m_cls, "__original_class__")):
+                   hasattr(m_cls, "__original_class__")):
                     cls, cls_vn = self.factory(m_cls, *args, **kargs)
                     new_bases.append(cls)
                     cls_ver_name += cls_vn
@@ -320,10 +321,8 @@ class Manager(object):
 
         return cls, cls_ver_name
 
-
     def __getitem__(self, o_cls):
         return self.getcls(*o_cls)
-
 
     def getcls(self, cls, orig_class):
         """

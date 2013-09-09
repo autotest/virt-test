@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from virttest import data_dir
 
@@ -18,7 +19,6 @@ def run_kexec(test, params, env):
     @param env: Dictionary with test environment.
     """
 
-
     def check_x2apic_flag():
         x2apic_enabled = False
         error.context("Check x2apic enabled in guest", logging.info)
@@ -30,7 +30,6 @@ def run_kexec(test, params, env):
         if not x2apic_enabled:
             raise error.TestFail("x2apic is not enabled in guest.")
 
-
     def install_new_kernel():
         error.context("Install a new kernel in guest", logging.info)
         try:
@@ -40,7 +39,6 @@ def run_kexec(test, params, env):
         except Exception, detail:
             raise error.TestError("Failed to install a new kernel in "
                                   "guest: %s" % detail)
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -67,7 +65,7 @@ def run_kexec(test, params, env):
     cur_kernel_version = session.cmd_output(check_cur_kernel_cmd).strip()
     logging.info("Current kernel is: %s" % cur_kernel_version)
     cmd = params.get("check_installed_kernel")
-    output = session.cmd_output(cmd,timeout=cmd_timeout)
+    output = session.cmd_output(cmd, timeout=cmd_timeout)
     kernels = output.split()
     new_kernel = None
     for kernel in kernels:
@@ -84,7 +82,7 @@ def run_kexec(test, params, env):
     cmd = params.get("get_kernel_ramdisk") % new_kernel
     init_file = session.cmd_output(cmd).strip().splitlines()[0]
     cmd = params.get("load_kernel_cmd") % (kernel_file, init_file)
-    session.cmd_output(cmd,timeout=cmd_timeout)
+    session.cmd_output(cmd, timeout=cmd_timeout)
     cmd = params.get("kexec_reboot_cmd")
     session.sendline(cmd)
     session = vm.wait_for_login(timeout=login_timeout)
@@ -92,7 +90,7 @@ def run_kexec(test, params, env):
     logging.info("Current kernel is: %s" % kernel)
     if kernel.strip() != new_kernel.strip():
         raise error.TestFail("Fail to boot to kernel %s, current kernel is %s"
-                             %(new_kernel, kernel))
+                             % (new_kernel, kernel))
     if "yes" in check_x2apic:
         check_x2apic_flag()
     session.close()

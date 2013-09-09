@@ -1,4 +1,7 @@
-import os, re, logging, time
+import os
+import re
+import logging
+import time
 from virttest import utils_misc
 from autotest.client.shared import error, utils
 
@@ -84,8 +87,8 @@ def run_migration_with_speed_measurement(test, params, env):
         vm.monitor.migrate_set_speed(mig_speed)
 
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-                (os.path.join(install_path, "test_cpu_flags"),
-                 vm_mem * 4, vm_mem / 2))
+              (os.path.join(install_path, "test_cpu_flags"),
+               vm_mem * 4, vm_mem / 2))
         logging.debug("Sending command: %s" % (cmd))
         session.sendline(cmd)
 
@@ -103,7 +106,8 @@ def run_migration_with_speed_measurement(test, params, env):
         ack_speed = mig_speed * mig_speed_accuracy
 
         logging.info("Target migration speed: %d MB/s.", mig_speed)
-        logging.info("Average migration speed: %d MB/s", mig_stat.get_average())
+        logging.info(
+            "Average migration speed: %d MB/s", mig_stat.get_average())
         logging.info("Minimum migration speed: %d MB/s", mig_stat.get_min())
         logging.info("Maximum migration speed: %d MB/s", mig_stat.get_max())
 
@@ -111,13 +115,13 @@ def run_migration_with_speed_measurement(test, params, env):
                      mig_speed_accuracy * 100)
 
         if real_speed < mig_speed - ack_speed:
-            divergence = (1 - float(real_speed)/float(mig_speed)) * 100
+            divergence = (1 - float(real_speed) / float(mig_speed)) * 100
             raise error.TestWarn("Average migration speed (%s MB/s) "
                                  "is %3.1f%% lower than target (%s MB/s)" %
                                  (real_speed, divergence, mig_speed))
 
         if real_speed > mig_speed + ack_speed:
-            divergence = (1 - float(mig_speed)/float(real_speed)) * 100
+            divergence = (1 - float(mig_speed) / float(real_speed)) * 100
             raise error.TestWarn("Average migration speed (%s MB/s) "
                                  "is %3.1f %% higher than target (%s MB/s)" %
                                  (real_speed, divergence, mig_speed))

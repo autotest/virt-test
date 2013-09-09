@@ -155,7 +155,8 @@ def sys_v_init_result_parser(command):
                     for target in range(7):
                         status = sublines[target + 1].split(":")[-1]
                         _status_on_target[target] = status
-                    _service2statusOnTarget_dict[service_name] = _status_on_target.copy()
+                    _service2statusOnTarget_dict[
+                        service_name] = _status_on_target.copy()
 
                 elif len(sublines) == 2:
                     # Service based on xinetd.
@@ -167,7 +168,8 @@ def sys_v_init_result_parser(command):
                     # Header or some lines useless.
                     continue
             # Add xinetd based service in the main dict.
-            _service2statusOnTarget_dict["xinetd"] = _service2statusOnXinet_dict
+            _service2statusOnTarget_dict[
+                "xinetd"] = _service2statusOnXinet_dict
             return _service2statusOnTarget_dict
         return method
     else:
@@ -325,6 +327,7 @@ COMMANDS = (
 
 
 class _ServiceResultParser(object):
+
     """
     A class that contains staticmethods to parse the result of service command.
     """
@@ -358,6 +361,7 @@ class _ServiceResultParser(object):
 
 
 class _ServiceCommandGenerator(object):
+
     """
     A class that contains staticmethods that generate partial functions that
     generate command lists for starting/stopping services.
@@ -434,8 +438,10 @@ class _SpecificServiceManager(object):
         for cmd in service_command_generator.commands:
             setattr(self, cmd,
                     self.generate_run_function(run,
-                                               getattr(service_result_parser, cmd),
-                                               getattr(service_command_generator, cmd),
+                                               getattr(
+                                                   service_result_parser, cmd),
+                                               getattr(
+                                                   service_command_generator, cmd),
                                                service_name))
 
     @staticmethod
@@ -474,6 +480,7 @@ class _SpecificServiceManager(object):
 
 
 class _GenericServiceManager(object):
+
     """
     Base class for SysVInitServiceManager and SystemdServiceManager.
     """
@@ -492,15 +499,16 @@ class _GenericServiceManager(object):
         :param run: function to call the run the commands, default utils.run
         :type run: function
         """
-        #### create staticmethods in class attributes (not used)
+        # create staticmethods in class attributes (not used)
         # for cmd in service_command_generator.commands:
         #     setattr(self.__class__, cmd,
         #             staticmethod(self.generate_run_function(run, getattr(service_command_generator, cmd))))
-        #### create functions in instance attributes
+        # create functions in instance attributes
         for cmd in service_command_generator.commands:
             setattr(self, cmd,
                     self.generate_run_function(run,
-                                               getattr(service_result_parser, cmd),
+                                               getattr(
+                                                   service_result_parser, cmd),
                                                getattr(service_command_generator, cmd)))
 
     @staticmethod
@@ -536,6 +544,7 @@ class _GenericServiceManager(object):
 
 
 class _SysVInitServiceManager(_GenericServiceManager):
+
     """
     Concrete class that implements the SysVInitServiceManager
     """
@@ -549,8 +558,9 @@ class _SysVInitServiceManager(_GenericServiceManager):
         :param run: function to call to run the commands, default utils.run
         :type run: function
         """
-        super(_SysVInitServiceManager, self).__init__(service_command_generator,
-                                                      service_result_parser, run)
+        super(
+            _SysVInitServiceManager, self).__init__(service_command_generator,
+                                                    service_result_parser, run)
 
     # @staticmethod
     # def change_default_runlevel(runlevel='3'):
@@ -615,6 +625,7 @@ def convert_systemd_target_to_runlevel(target):
 
 
 class _SystemdServiceManager(_GenericServiceManager):
+
     """
     Concrete class that implements the SystemdServiceManager
     """
@@ -782,5 +793,6 @@ def SpecificServiceManager(service_name, run=utils.run):
     :rtype: _SpecificServiceManager
     """
     return _SpecificServiceManager(service_name,
-                                   _auto_create_specific_service_command_generator(run),
+                                   _auto_create_specific_service_command_generator(
+                                       run),
                                    _get_service_result_parser(run), run)

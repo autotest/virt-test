@@ -1,4 +1,8 @@
-import logging, os, time, re, sys
+import logging
+import os
+import time
+import re
+import sys
 from autotest.client.shared import utils, error
 from autotest.client import utils as client_utils
 from virttest import aexpect, env_process, utils_misc, qemu_storage
@@ -28,7 +32,7 @@ def run_migration_with_dst_problem(test, params, env):
     while mount_path is None or os.path.exists(mount_path):
         test_rand = utils.generate_random_string(3)
         mount_path = ("%s/ni_mount_%s" %
-                        (test.tmpdir, test_rand))
+                     (test.tmpdir, test_rand))
 
     mig_dst = os.path.join(mount_path, "mig_dst")
 
@@ -36,8 +40,8 @@ def run_migration_with_dst_problem(test, params, env):
                                         "gzip -c > %s")
     migration_exec_cmd_src = (migration_exec_cmd_src % (mig_dst))
 
-
     class MiniSubtest(object):
+
         def __new__(cls, *args, **kargs):
             self = super(MiniSubtest, cls).__new__(cls)
             ret = None
@@ -60,7 +64,6 @@ def run_migration_with_dst_problem(test, params, env):
                         raise exc_info[0], exc_info[1], exc_info[2]
             return ret
 
-
     def control_service(session, service, init_service, action, timeout=60):
         """
         Start service on guest.
@@ -78,7 +81,6 @@ def run_migration_with_dst_problem(test, params, env):
             session.cmd("service %s %s" % (init_service, action),
                         timeout=timeout)
 
-
     def set_nfs_server(vm, share_cfg):
         """
         Start nfs server on guest.
@@ -93,7 +95,6 @@ def run_migration_with_dst_problem(test, params, env):
         session.cmd("iptables -F")
         session.close()
 
-
     def umount(mount_path):
         """
         Umount nfs server mount_path
@@ -101,7 +102,6 @@ def run_migration_with_dst_problem(test, params, env):
         @param mount_path: path where nfs dir will be placed.
         """
         utils.run("umount -f %s" % (mount_path))
-
 
     def create_file_disk(dst_path, size):
         """
@@ -112,7 +112,6 @@ def run_migration_with_dst_problem(test, params, env):
         """
         utils.run("dd if=/dev/zero of=%s bs=1M count=%s" % (dst_path, size))
         utils.run("mkfs.ext3 -F %s" % (dst_path))
-
 
     def mount(disk_path, mount_path, options=None):
         """
@@ -128,7 +127,6 @@ def run_migration_with_dst_problem(test, params, env):
             options = "%s" % options
 
         utils.run("mount %s %s %s" % (options, disk_path, mount_path))
-
 
     def find_disk_vm(vm, disk_serial):
         """
@@ -149,7 +147,6 @@ def run_migration_with_dst_problem(test, params, env):
             return None
         return os.path.join(disk_path, disk[0])
 
-
     def prepare_disk(vm, disk_path, mount_path):
         """
         Create Ext3 on disk a send there data from main disk.
@@ -161,7 +158,6 @@ def run_migration_with_dst_problem(test, params, env):
         session.cmd("mkfs.ext3 -F %s" % (disk_path))
         session.cmd("mount %s %s" % (disk_path, mount_path))
         session.close()
-
 
     def disk_load(vm, src_path, dst_path, copy_timeout=None, dsize=None):
         """
@@ -182,11 +178,12 @@ def run_migration_with_dst_problem(test, params, env):
                         session.cmd_output(cmd, timeout=copy_timeout))
         return pid.group(1)
 
-
     class IscsiServer_tgt(object):
+
         """
         Class for set and start Iscsi server.
         """
+
         def __init__(self):
             self.server_name = "autotest_guest_" + test_rand
             self.user = "user1"
@@ -197,7 +194,6 @@ def run_migration_with_dst_problem(test, params, env):
     incominguser %s %s
 </target>
 """
-
 
         def set_iscsi_server(self, vm_ds, disk_path, disk_size):
             """
@@ -224,7 +220,6 @@ def run_migration_with_dst_problem(test, params, env):
             session.cmd("iptables -F")
             session.close()
 
-
         def find_disk(self):
             disk_path = os.path.join("/", "dev", "disk", "by-path")
             disks = utils.run("ls %s" % disk_path).stdout.split("\n")
@@ -232,7 +227,6 @@ def run_migration_with_dst_problem(test, params, env):
             if disk is []:
                 return None
             return os.path.join(disk_path, disk[0].strip())
-
 
         def connect(self, vm_ds):
             """
@@ -257,32 +251,30 @@ def run_migration_with_dst_problem(test, params, env):
             time.sleep(1.0)
             return self.find_disk()
 
-
         def disconnect(self):
             server_ident = ('iscsiadm -m node --targetname "%s:dev01"' %
                             (self.server_name))
             utils.run("%s --logout" % (server_ident))
 
-
     class IscsiServer(object):
+
         """
         Iscsi server implementation interface.
         """
+
         def __init__(self, iscsi_type, *args, **kargs):
             if iscsi_type == "tgt":
                 self.ic = IscsiServer_tgt(*args, **kargs)
             else:
                 raise NotImplementedError()
 
-
         def __getattr__(self, name):
             if self.ic:
                 return self.ic.__getattribute__(name)
             raise AttributeError("Cannot find attribute %s in class" % name)
 
-
-
     class test_read_only_dest(MiniSubtest):
+
         """
         Migration to read-only destination by using a migration to file.
 
@@ -293,6 +285,7 @@ def run_migration_with_dst_problem(test, params, env):
 
         result) Migration should fail with error message about read-only dst.
         """
+
         def test(self):
             if params.get("nettype") != "bridge":
                 raise error.TestNAError("Unable start test without params"
@@ -303,7 +296,6 @@ def run_migration_with_dst_problem(test, params, env):
             ro_timeout = int(params.get("read_only_timeout", "480"))
             exp_str = r".*Read-only file system.*"
             utils.run("mkdir -p %s" % (mount_path))
-
 
             vm_ds.verify_alive()
             vm_guest.create()
@@ -319,11 +311,10 @@ def run_migration_with_dst_problem(test, params, env):
                              migration_exec_cmd_src=migration_exec_cmd_src)
             try:
                 vm_guest.process.read_until_last_line_matches(exp_str,
-                                                        timeout=ro_timeout)
+                                                              timeout=ro_timeout)
             except aexpect.ExpectTimeoutError:
                 raise error.TestFail("The Read-only file system warning not"
                                      " come in time limit.")
-
 
         def clean(self):
             if os.path.exists(mig_dst):
@@ -332,8 +323,8 @@ def run_migration_with_dst_problem(test, params, env):
                 umount(mount_path)
                 os.rmdir(mount_path)
 
-
     class test_low_space_dest(MiniSubtest):
+
         """
         Migrate to destination with low space.
 
@@ -343,11 +334,12 @@ def run_migration_with_dst_problem(test, params, env):
 
         result) Migration should fail with warning about No left space on dev.
         """
+
         def test(self):
             self.disk_path = None
             while self.disk_path is None or os.path.exists(self.disk_path):
                 self.disk_path = ("%s/disk_%s" %
-                                (test.tmpdir, utils.generate_random_string(3)))
+                                 (test.tmpdir, utils.generate_random_string(3)))
 
             disk_size = utils.convert_data_size(params.get("disk_size", "10M"),
                                                 default_sufix='M')
@@ -372,7 +364,6 @@ def run_migration_with_dst_problem(test, params, env):
                 raise error.TestFail("The migration to destination with low "
                                      "storage space didn't fail as it should.")
 
-
         def clean(self):
             if os.path.exists(mount_path):
                 umount(mount_path)
@@ -380,8 +371,8 @@ def run_migration_with_dst_problem(test, params, env):
             if os.path.exists(self.disk_path):
                 os.remove(self.disk_path)
 
-
     class test_extensive_io(MiniSubtest):
+
         """
         Migrate after extensive_io abstract class. This class only define
         basic funtionaly and define interface. For other tests.
@@ -399,6 +390,7 @@ def run_migration_with_dst_problem(test, params, env):
 
         result) Migration should be successful.
         """
+
         def test(self):
             self.copier_pid = None
             if params.get("nettype") != "bridge":
@@ -406,21 +398,21 @@ def run_migration_with_dst_problem(test, params, env):
                                         " nettype=bridge.")
 
             self.disk_serial = params.get("drive_serial_image2_vm1",
-                                     "nfs-disk-image2-vm1")
+                                          "nfs-disk-image2-vm1")
             self.disk_serial_src = params.get("drive_serial_image1_vm1",
-                                         "root-image1-vm1")
+                                              "root-image1-vm1")
             self.guest_mount_path = params.get("guest_disk_mount_path", "/mnt")
             self.copy_timeout = int(params.get("copy_timeout", "1024"))
 
             self.copy_block_size = params.get("copy_block_size", "100M")
             self.copy_block_size = utils.convert_data_size(
-                                                          self.copy_block_size,
-                                                          "M")
+                self.copy_block_size,
+                "M")
             self.disk_size = "%s" % (self.copy_block_size * 1.4)
             self.copy_block_size /= 1024 * 1024
 
             self.server_recover_timeout = (
-                              int(params.get("server_recover_timeout", "240")))
+                int(params.get("server_recover_timeout", "240")))
 
             utils.run("mkdir -p %s" % (mount_path))
 
@@ -432,7 +424,7 @@ def run_migration_with_dst_problem(test, params, env):
             self.vm_guest_params["image_size_image2_vm1"] = self.disk_size
             self.vm_guest_params = self.vm_guest_params.object_params("vm1")
             self.image2_vm_guest_params = (self.vm_guest_params.
-                                                       object_params("image2"))
+                                           object_params("image2"))
 
             env_process.preprocess_image(test,
                                          self.image2_vm_guest_params,
@@ -453,20 +445,17 @@ def run_migration_with_dst_problem(test, params, env):
             except aexpect.ExpectTimeoutError:
                 raise error.TestFail("Migration should be successful.")
 
-
         def test_params(self):
             """
             Test specific params. Could be implemented in inherited class.
             """
             pass
 
-
         def config(self):
             """
             Test specific config.
             """
             raise NotImplementedError()
-
 
         def workload(self):
             disk_path = find_disk_vm(self.vm_guest, self.disk_serial)
@@ -478,12 +467,10 @@ def run_migration_with_dst_problem(test, params, env):
             disk_path_src = find_disk_vm(self.vm_guest, self.disk_serial_src)
             dst_path = os.path.join(self.guest_mount_path, "test.data")
             self.copier_pid = disk_load(self.vm_guest, disk_path_src, dst_path,
-                                   self.copy_timeout, self.copy_block_size)
-
+                                        self.copy_timeout, self.copy_block_size)
 
         def restart_server(self):
             raise NotImplementedError()
-
 
         def clean_test(self):
             """
@@ -491,13 +478,12 @@ def run_migration_with_dst_problem(test, params, env):
             """
             pass
 
-
         def clean(self):
             if self.copier_pid:
                 try:
                     if self.vm_guest.is_alive():
                         session = self.vm_guest.wait_for_login(timeout=
-                                                                 login_timeout)
+                                                               login_timeout)
                         session.cmd("kill -9 %s" % (self.copier_pid))
                 except:
                     logging.warn("It was impossible to stop copier. Something "
@@ -517,9 +503,8 @@ def run_migration_with_dst_problem(test, params, env):
 
             self.clean_test()
 
-
-
     class test_extensive_io_nfs(test_extensive_io):
+
         """
         Migrate after extensive io.
 
@@ -536,6 +521,7 @@ def run_migration_with_dst_problem(test, params, env):
 
         result) Migration should be successful.
         """
+
         def config(self):
             vm_ds = env.get_vm("virt_test_vm2_data_server")
             self.vm_guest = env.get_vm("vm1")
@@ -545,14 +531,13 @@ def run_migration_with_dst_problem(test, params, env):
 
             vm_ds.verify_alive()
             self.control_session_ds = vm_ds.wait_for_login(timeout=
-                                                                 login_timeout)
+                                                           login_timeout)
 
             set_nfs_server(vm_ds, "/mnt *(rw,async,no_root_squash)")
 
             mount_src = "%s:/mnt" % (vm_ds.get_address())
             mount(mount_src, mount_path,
                   "-o hard,timeo=14,rsize=8192,wsize=8192")
-
 
         def restart_server(self):
             time.sleep(10)  # Wait for wail until copy start working.
@@ -562,26 +547,24 @@ def run_migration_with_dst_problem(test, params, env):
             control_service(self.control_session_ds, "nfs-server",
                             "nfs", "start")  # Start NFS server
 
-
             """
             Touch waits until all previous requests are invalidated
             (NFS grace period). Without grace period qemu start takes
             to long and timers for machine creation dies.
             """
             qemu_img = qemu_storage.QemuImg(self.image2_vm_guest_params,
-                                                mount_path,
-                                                None)
+                                            mount_path,
+                                            None)
             utils.run("touch %s" % (qemu_img.image_filename),
                       self.server_recover_timeout)
-
 
         def clean_test(self):
             if os.path.exists(mount_path):
                 umount(mount_path)
                 os.rmdir(mount_path)
 
-
     class test_extensive_io_iscsi(test_extensive_io):
+
         """
         Migrate after extensive io.
 
@@ -600,10 +583,10 @@ def run_migration_with_dst_problem(test, params, env):
 
         result) Migration should be successful.
         """
+
         def test_params(self):
             self.iscsi_variant = params.get("iscsi_variant", "tgt")
             self.ds_disk_path = os.path.join(self.guest_mount_path, "test.img")
-
 
         def config(self):
             vm_ds = env.get_vm("virt_test_vm2_data_server")
@@ -614,17 +597,16 @@ def run_migration_with_dst_problem(test, params, env):
 
             vm_ds.verify_alive()
             self.control_session_ds = vm_ds.wait_for_login(timeout=
-                                                                 login_timeout)
+                                                           login_timeout)
 
             self.isci_server = IscsiServer("tgt")
             disk_path = os.path.join(self.guest_mount_path, "disk1")
             self.isci_server.set_iscsi_server(vm_ds, disk_path,
-                            (int(float(self.disk_size) * 1.1) / (1024 * 1024)))
+                                             (int(float(self.disk_size) * 1.1) / (1024 * 1024)))
             self.host_disk_path = self.isci_server.connect(vm_ds)
 
             utils.run("mkfs.ext3 -F %s" % (self.host_disk_path))
             mount(self.host_disk_path, mount_path)
-
 
         def restart_server(self):
             time.sleep(10)  # Wait for wail until copy start working.
@@ -639,11 +621,10 @@ def run_migration_with_dst_problem(test, params, env):
             accessible.
             """
             qemu_img = qemu_storage.QemuImg(self.image2_vm_guest_params,
-                                                mount_path,
-                                                None)
+                                            mount_path,
+                                            None)
             utils.run("touch %s" % (qemu_img.image_filename),
                       self.server_recover_timeout)
-
 
         def clean_test(self):
             if os.path.exists(mount_path):
@@ -651,7 +632,6 @@ def run_migration_with_dst_problem(test, params, env):
                 os.rmdir(mount_path)
             if os.path.exists(self.host_disk_path):
                 self.isci_server.disconnect()
-
 
     test_type = params.get("test_type")
     if (test_type in locals()):

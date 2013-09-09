@@ -1,4 +1,6 @@
-import logging, re, commands
+import logging
+import re
+import commands
 from autotest.client.shared import error
 from virttest import utils_libguestfs as lgf
 from virttest import aexpect
@@ -162,9 +164,9 @@ def run_guestfs_add(test, params, env):
             session.cmd("mount %s /mnt" % root)
             try:
                 login_wrote_text = session.cmd_output("cat /mnt/guestfs_temp",
-                                                       timeout=5)
+                                                      timeout=5)
             except aexpect.ShellTimeoutError, detail:
-                # writen content with guestfs.write won't contain line break
+                # written content with guestfs.write won't contain line break
                 # Is is a bug of guestfish.write?
                 login_wrote_text = str(detail)
             if not re.search(content, login_wrote_text):

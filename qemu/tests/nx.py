@@ -1,4 +1,5 @@
-import os, logging
+import os
+import logging
 from autotest.client.shared import error
 
 
@@ -15,7 +16,6 @@ def run_nx(test, params, env):
     @param params: Dictionary with the test parameters
     @param env: Dictionary with test environment.
     """
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

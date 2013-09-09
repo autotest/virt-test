@@ -1,4 +1,7 @@
-import time, os, re, logging
+import time
+import os
+import re
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc
 from virttest import utils_test
@@ -53,7 +56,8 @@ def run_whql_env_setup(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     error_log = utils_misc.get_path(log_path, "whql_setup_error_log")
-    run_guest_log = params.get("run_guest_log", "%s/whql_qemu_comman" % test.tmpdir)
+    run_guest_log = params.get(
+        "run_guest_log", "%s/whql_qemu_comman" % test.tmpdir)
 
     # Record qmmu command line in a log file
     error.context("Record qemu command line", logging.info)
@@ -64,7 +68,6 @@ def run_whql_env_setup(test, params, env):
         fd = open(run_guest_log, "w")
     fd.write("%s\n" % vm.qemu_command)
     fd.close()
-
 
     # Get set up commands
     update_cmd = params.get("update_cmd", "")
@@ -116,11 +119,12 @@ def run_whql_env_setup(test, params, env):
         for index, images in enumerate(re.split("\s+", params.get("images"))):
             if index > 0:
                 cmd_list.append(disk_init_cmd % (str(index),
-                                                 labels[index-1]))
-                format_cmd_image = format_cmd % (labels[index-1],
-                                         params.get("win_format_%s" % images))
+                                                 labels[index - 1]))
+                format_cmd_image = format_cmd % (labels[index - 1],
+                                                 params.get("win_format_%s" % images))
                 if params.get("win_extra_%s" % images):
-                    format_cmd_image += " %s" % params.get("win_extra_%s" % images)
+                    format_cmd_image += " %s" % params.get(
+                        "win_extra_%s" % images)
                 cmd_list.append(format_cmd_image)
 
     cmd_list += [update_cmd, disable_update]
@@ -145,8 +149,8 @@ def run_whql_env_setup(test, params, env):
         symbol_check_pattern = params.get("symbol_check_pattern")
         symbol_pid_pattern = params.get("symbol_pid_pattern")
         download = utils_test.BackgroundTest(session.cmd,
-                                                 (symbol_file_download,
-                                                  setup_timeout))
+                                            (symbol_file_download,
+                                             setup_timeout))
 
         sessioncheck = vm.wait_for_login(timeout=timeout)
         download.start()
@@ -175,11 +179,12 @@ def run_whql_env_setup(test, params, env):
                 s, o = session.cmd_status_output(cmd, timeout=setup_timeout)
             except Exception, err:
                 failed_flag += 1
-                utils_misc.log_line(error_log, "Unexpected exception: %s" % err)
+                utils_misc.log_line(
+                    error_log, "Unexpected exception: %s" % err)
             if s != 0:
                 failed_flag += 1
                 utils_misc.log_line(error_log, o)
 
     if failed_flag != 0:
         raise error.TestFail("Have %s setup fialed. Please check the log."
-                              % failed_flag)
+                             % failed_flag)

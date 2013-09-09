@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -50,7 +51,7 @@ def run_timedrift_with_cpu_offline(test, params, env):
         # (ht stands for host time, gt stands for guest time)
         error.context("get time before set cpu offline")
         (ht0, gt0) = utils_test.get_time(session, time_command,
-                                              time_filter_re, time_format)
+                                         time_filter_re, time_format)
         # Check cpu number
         error.context("check guest cpu number")
         smp = int(params.get("smp"))
@@ -69,7 +70,7 @@ def run_timedrift_with_cpu_offline(test, params, env):
         # Get time after set cpu offline
         error.context("get time after set cpu offline")
         (ht1, gt1) = utils_test.get_time(session, time_command,
-                                              time_filter_re, time_format)
+                                         time_filter_re, time_format)
         # Report results
         host_delta = ht1 - ht0
         guest_delta = gt1 - gt0
@@ -93,7 +94,7 @@ def run_timedrift_with_cpu_offline(test, params, env):
         while (time.time() - start_time) < test_duration:
             # Get time delta after set cpu online
             (ht1, gt1) = utils_test.get_time(session, time_command,
-                                                 time_filter_re, time_format)
+                                             time_filter_re, time_format)
 
             # Report results
             host_delta = ht1 - ht0

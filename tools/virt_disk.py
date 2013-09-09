@@ -8,15 +8,18 @@ The main use case for this tool is debugging guest installations with an
 disks just like they're created by the virt unattended test installation.
 '''
 
-import sys, optparse
+import sys
+import optparse
 import common
 from virttest import utils_disk
 
 
 class OptionParser(optparse.OptionParser):
+
     '''
     App option parser
     '''
+
     def __init__(self):
         optparse.OptionParser.__init__(self,
                                        usage=('Usage: %prog [options] '
@@ -48,17 +51,17 @@ class OptionParser(optparse.OptionParser):
 
 
 class App:
+
     '''
     Virt Disk Creation App
     '''
+
     def __init__(self):
         self.opt_parser = OptionParser()
-
 
     def usage(self):
         self.opt_parser.print_help()
         sys.exit(1)
-
 
     def parse_cmdline(self):
         self.options, self.args = self.opt_parser.parse_args()
@@ -72,7 +75,6 @@ class App:
         else:
             self.image = self.args[0]
             self.files = self.args[1:]
-
 
     def main(self):
         self.parse_cmdline()

@@ -1,4 +1,5 @@
-import os, logging
+import os
+import logging
 from autotest.client.shared import error
 from virttest import utils_test, utils_net
 
@@ -31,8 +32,7 @@ def run_multi_nics_verify(test, params, env):
         if not expect_c == actual_c:
             msg += "Nics count mismatch!\n"
             return (False, msg)
-        return (True, msg+'Nics count match')
-
+        return (True, msg + 'Nics count match')
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

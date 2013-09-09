@@ -19,7 +19,7 @@ def run_virsh_domname(test, params, env):
     domuuid = vm.get_uuid()
     connect_uri = vm.connect_uri
 
-    #run test case
+    # run test case
     options_ref = params.get("domname_options_ref", "id")
     addition_status_error = params.get("addition_status_error", "no")
     status_error = params.get("status_error", "no")
@@ -44,7 +44,7 @@ def run_virsh_domname(test, params, env):
     if options_suffix:
         options = options + " " + options_suffix
 
-    #Prepare libvirtd status
+    # Prepare libvirtd status
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
         utils_libvirtd.libvirtd_stop()
@@ -52,12 +52,12 @@ def run_virsh_domname(test, params, env):
     result = virsh.domname(options, ignore_status=True, debug=True,
                            uri=connect_uri)
 
-    #Recover libvirtd service to start
+    # Recover libvirtd service to start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
         addition_status_error = "yes"
 
-    #check status_error
+    # check status_error
     status_error = (status_error == "no") and (addition_status_error == "no")
     if status_error:
         if result.exit_status != 0 or result.stdout.strip() != vm_name:

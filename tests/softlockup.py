@@ -1,6 +1,10 @@
-import logging, os, socket, time
+import logging
+import os
+import socket
+import time
 from autotest.client import utils
 from autotest.client.shared import error
+
 
 def run_softlockup(test, params, env):
     """
@@ -34,7 +38,6 @@ def run_softlockup(test, params, env):
     stress_dir = os.path.join(os.environ['AUTODIR'], "tests/stress")
     monitor_dir = os.path.join(test.virtdir, 'deps')
 
-
     def _kill_guest_programs(session, kill_stress_cmd, kill_monitor_cmd):
         logging.info("Kill stress and monitor on guest")
         try:
@@ -46,12 +49,10 @@ def run_softlockup(test, params, env):
         except Exception:
             pass
 
-
     def _kill_host_programs(kill_stress_cmd, kill_monitor_cmd):
         logging.info("Kill stress and monitor on host")
         utils.run(kill_stress_cmd, ignore_status=True)
         utils.run(kill_monitor_cmd, ignore_status=True)
-
 
     def host():
         logging.info("Setup monitor server on host")
@@ -76,7 +77,6 @@ def run_softlockup(test, params, env):
         threads_host = 2 * utils.count_cpus()
         # Run stress test on host
         utils.run(stress_cmd % (stress_dir, threads_host))
-
 
     def guest():
         try:
@@ -139,9 +139,8 @@ def run_softlockup(test, params, env):
         _kill_host_programs(kill_stress_cmd, kill_monitor_cmd)
 
         # Collect drift
-        drift = utils.system_output(drift_cmd %  monitor_log_file_server)
+        drift = utils.system_output(drift_cmd % monitor_log_file_server)
         logging.info("Drift noticed: %s", drift)
-
 
     host()
     guest()

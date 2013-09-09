@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test
@@ -40,7 +41,7 @@ def run_trans_hugepage_memory_stress(test, params, env):
         # Allocated free memory to hugetlbfs
         mem_free = int(utils_memory.read_from_meminfo('MemFree')) / 1024
         mem_swap = int(utils_memory.read_from_meminfo('SwapFree')) / 1024
-        hugepage_size = (int (utils_memory.read_from_meminfo('Hugepagesize'))
+        hugepage_size = (int(utils_memory.read_from_meminfo('Hugepagesize'))
                          / 1024)
         nr_hugetlbfs = (mem_free + mem_swap - mem - qemu_mem) / hugepage_size
         fd = open(hugetlbfs_path, "w")
@@ -62,7 +63,8 @@ def run_trans_hugepage_memory_stress(test, params, env):
         logging.debug("The huge page using for guest is: %s" % nr_ah)
 
         if nr_ah[1] <= nr_ah[0]:
-            logging.warn("VM don't use transparent hugepage while memory stress")
+            logging.warn(
+                "VM don't use transparent hugepage while memory stress")
 
         if debugfs_flag == 1:
             if int(open(hugetlbfs_path, 'r').read()) <= 0:

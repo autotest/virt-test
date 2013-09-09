@@ -1,14 +1,19 @@
 #!/usr/bin/python -u
 
-import os, sys, unittest, optparse, fcntl
+import os
+import sys
+import unittest
+import optparse
+import fcntl
 import common
 from autotest.client.shared.test_utils import unittest as custom_unittest
 import parallel
 
 
 class StreamProxy(object):
+
     """
-    Mechanism to supress stdout output, while keeping the original stdout.
+    Mechanism to suppress stdout output, while keeping the original stdout.
     """
 
     def __init__(self, filename='/dev/null', stream=sys.stdout):
@@ -55,7 +60,9 @@ def print_stdout(sr, end=True):
     except AttributeError:
         pass
 
+
 class Bcolors(object):
+
     """
     Very simple class with color support.
     """
@@ -127,7 +134,7 @@ parser.add_option("--full", action="store_true", dest="full", default=False,
                   help="whether to run the shortened version of the test")
 parser.add_option("--debug", action="store_true", dest="debug", default=False,
                   help="run in debug mode")
-parser.add_option("--skip-tests", dest="skip_tests",  default=[],
+parser.add_option("--skip-tests", dest="skip_tests", default=[],
                   help="A space separated list of tests to skip")
 
 parser.set_defaults(module_list=None)
@@ -151,10 +158,11 @@ def run_test(mod_names, options):
     else:
         sys.stdout = StreamProxy(stream=sys.stdout)
 
-    test_name =  '.'.join(mod_names)
+    test_name = '.'.join(mod_names)
     fail = False
 
-    from_module = __import__(mod_names[0], globals(), locals(), [mod_names[-1]])
+    from_module = __import__(
+        mod_names[0], globals(), locals(), [mod_names[-1]])
     mod = getattr(from_module, mod_names[-1])
 
     try:
@@ -210,11 +218,12 @@ def scan_for_modules(start, options):
                     continue
                 path_no_py = os.path.join(dirpath, fname).rstrip('.py')
                 assert path_no_py.startswith(ROOT)
-                names = path_no_py[len(ROOT)+1:].split('/')
+                names = path_no_py[len(ROOT) + 1:].split('/')
                 modules.append(names)
                 if options.debug:
                     print 'testing', path_no_py
     return modules
+
 
 def find_and_run_tests(start, options):
     """

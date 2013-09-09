@@ -1,6 +1,9 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client import utils
 from autotest.client.shared import error
+
 
 @error.context_aware
 def run_multicast_iperf(test, params, env):
@@ -23,15 +26,14 @@ def run_multicast_iperf(test, params, env):
         try:
             utils.run(cmd)
         except error.CmdError, e:
-            if not re.findall(catch_data , str(e)):
-                raise error.TestFail("Client not connected '%s'"  % str(e))
+            if not re.findall(catch_data, str(e)):
+                raise error.TestFail("Client not connected '%s'" % str(e))
             logging.info("Client multicast test pass "
-                          % re.findall(catch_data , str(e)) )
-
+                         % re.findall(catch_data, str(e)))
 
     os_type = params.get("os_type")
     win_iperf_url = params.get("win_iperf_url")
-    linux_iperf_url =  params.get("linux_iperf_url")
+    linux_iperf_url = params.get("linux_iperf_url")
     iperf_version = params.get("iperf_version", "2.0.5")
     transfer_timeout = int(params.get("transfer_timeout", 360))
     login_timeout = int(params.get("login_timeout", 360))
@@ -79,7 +81,7 @@ def run_multicast_iperf(test, params, env):
                             (muliticast_addr, multicast_port))
 
         default_flag = "%s port %s connected with %s"
-        connected_flag = params.get("connected_flag" , default_flag)
+        connected_flag = params.get("connected_flag", default_flag)
         catch_data = connected_flag % (muliticast_addr, multicast_port,
                                        client_ip)
         t = utils.InterruptedThread(server_start, (server_start_cmd,
@@ -92,7 +94,7 @@ def run_multicast_iperf(test, params, env):
 
         step_msg = "In client try to connect server and transfer file "
         step_msg += " through multicast address %s"
-        error.context(step_msg % muliticast_addr , logging.info)
+        error.context(step_msg % muliticast_addr, logging.info)
         if os_type == "linux":
             client_cmd = "iperf"
         else:

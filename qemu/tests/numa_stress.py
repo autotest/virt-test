@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_misc, funcatexit, utils_test, data_dir

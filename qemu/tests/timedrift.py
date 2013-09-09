@@ -1,4 +1,6 @@
-import logging, time, commands
+import logging
+import time
+import commands
 from autotest.client.shared import error
 from virttest import utils_test, aexpect
 
@@ -187,7 +189,8 @@ def run_timedrift(test, params, env):
     guest_delta_total = gt2 - gt0
     drift_total = 100.0 * (host_delta_total - guest_delta_total) / host_delta
     logging.info("Total host duration including rest: %.2f", host_delta_total)
-    logging.info("Total guest duration including rest: %.2f", guest_delta_total)
+    logging.info(
+        "Total guest duration including rest: %.2f", guest_delta_total)
     logging.info("Total drift after rest: %.2f%%", drift_total)
 
     # Fail the test if necessary

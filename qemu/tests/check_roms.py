@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 
 
