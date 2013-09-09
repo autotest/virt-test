@@ -8,12 +8,22 @@ Options:
 '''
 
 import os
-import sys
 
 import common
-from autotest.client.shared import utils, logging_manager
+from autotest.client.shared import utils, logging_manager, logging_config
 from autotest.client import os_dep
-from virttest import utils_misc
+
+
+class Pep8LoggingConfig(logging_config.LoggingConfig):
+
+    """
+    Used with the sole purpose of providing convenient logging setup
+    for the KVM test auxiliary programs.
+    """
+
+    def configure_logging(self, results_dir=None, verbose=False):
+        super(Pep8LoggingConfig, self).configure_logging(use_console=True,
+                                                         verbose=verbose)
 
 
 class SetupError(Exception):
@@ -73,7 +83,7 @@ def fix(path):
 
 
 if __name__ == "__main__":
-    logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),
+    logging_manager.configure_logging(Pep8LoggingConfig(),
                                       verbose=True)
     import optparse
     usage = "usage: %prog [options] [list of files]"
