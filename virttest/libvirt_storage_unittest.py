@@ -11,19 +11,6 @@ from virttest import libvirt_storage, virsh
 
 VIRSH_EXEC = virsh.VIRSH_EXEC
 
-# Ensure the following tests ONLY run if a valid virsh command exists #####
-
-
-class ModuleLoadCheckVirsh(unittest.TestCase):
-    import virsh
-
-    def run(self, *args, **dargs):
-        test_virsh = self.virsh.Virsh()
-        if test_virsh['virsh_exec'] == '/bin/true':
-            return  # Don't run any tests, no virsh executable was found
-        else:
-            super(ModuleLoadCheckVirsh, self).run(*args, **dargs)
-
 # The output of virsh.pool_list with only default pool
 _DEFAULT_POOL = ("Name                 State      Autostart\n"
                  "-----------------------------------------\n"
@@ -34,7 +21,7 @@ global _pools_output
 _pools_output = _DEFAULT_POOL
 
 
-class PoolTestBase(ModuleLoadCheckVirsh):
+class PoolTestBase(unittest.TestCase):
 
     @staticmethod
     def _pool_list(option="--all", **dargs):
