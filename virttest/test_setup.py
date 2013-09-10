@@ -884,19 +884,6 @@ class PciAssignable(object):
         raise ValueError("Could not find vf id '%s' in '%s'" % (vf_id,
                                                               self.pf_vf_info))
 
-    def get_vf_devs(self):
-        """
-        Catch all VFs PCI IDs.
-
-        :return: List with all PCI IDs for the Virtual Functions available
-        """
-        if self.setup:
-            if not self.sr_iov_setup():
-                return []
-        self.setup = None
-        cmd = "lspci | awk '/%s/ {print $1}'" % self.vf_filter_re
-        return utils.system_output(cmd, verbose=False).split()
-
     def get_pf_vf_info(self):
         """
         Get pf and vf related information in this host that mattch
@@ -944,6 +931,21 @@ class PciAssignable(object):
                     pf["ethname"] = eth
         return pf_vf_dict
 
+    def get_vf_devs(self):
+        """
+        Catch all VFs PCI IDs.
+
+        @return: List with all PCI IDs for the Virtual Functions avaliable
+        """
+        vf_ids = []
+        for pf in self.pf_vf_info:
+            if pf["occupied"]:
+                continue
+            for vf_id in pf["vf_ids"]:
+                if not self.is_binded_to_stub(vf_id):
+                    vf_ids.append(vf_id)
+        return vf_ids
+
     def get_pf_devs(self):
         """
         Catch all PFs PCI IDs.
@@ -951,11 +953,13 @@ class PciAssignable(object):
         :return: List with all PCI IDs for the physical hardware requested
         """
         pf_ids = []
-        for name in self.name_list:
-            pf_id = self._get_pf_pci_id(name, "%s" % self.pf_filter_re)
-            if not pf_id:
-                continue
-            pf_ids.append(pf_id)
+        for device in self.devices:
+            if device['type'] == 'pf':
+                name = device.get('name', None)
+                pf_id = self._get_pf_pci_id(name)
+                if not pf_id:
+                    continue
+                pf_ids.append(pf_id)
         return pf_ids
 
     def get_devs(self, count, type_list=None):
