@@ -770,6 +770,7 @@ class PciAssignable(object):
         self.driver_option = driver_option
         self.name_list = []
         self.devices_requested = 0
+        self.pf_vf_info = []
         self.dev_unbind_drivers = {}
         self.dev_drivers = {}
         self.vf_filter_re = vf_filter_re
@@ -879,6 +880,53 @@ class PciAssignable(object):
         self.setup = None
         cmd = "lspci | awk '/%s/ {print $1}'" % self.vf_filter_re
         return utils.system_output(cmd, verbose=False).split()
+
+    def get_pf_vf_info(self):
+        """
+        Get pf and vf related information in this host that mattch
+        self.pf_filter_re
+        for every pf it will create following information:
+            pf_id: The id of the pf device.
+            occupied: Whether the pf device assigned or not
+            vf_ids: Id list of related vf in this pf.
+            ethname: eth device name in host for this pf.
+
+        :return: return a list contains pf vf information.
+        :rtype: list of dict
+        """
+
+        base_dir = "/sys/bus/pci/devices"
+        cmd = "lspci | awk '/%s/ {print $1}'" % self.pf_filter_re
+        pf_ids = [i for i in utils.system_output(cmd).splitlines()]
+        pf_vf_dict = []
+        for pf_id in pf_ids:
+            pf_info = {}
+            vf_ids = []
+            full_id = utils_misc.get_full_pci_id(pf_id)
+            pf_info["pf_id"] = full_id
+            pf_info["occupied"] = False
+            d_link = os.path.join("/sys/bus/pci/devices", full_id)
+            txt = utils.system_output("ls %s" % d_link)
+            re_vfn = "(virtfn[0-9])"
+            paths = re.findall(re_vfn, txt)
+            for path in paths:
+                f_path = os.path.join(d_link, path)
+                vf_id = os.path.basename(os.path.realpath(f_path))
+                vf_ids.append(vf_id)
+            pf_info["vf_ids"] = vf_ids
+            pf_vf_dict.append(pf_info)
+        if_out = utils.system_output("ifconfig -a")
+        re_ethname = "(\w+): "
+        ethnames = re.findall(re_ethname, if_out)
+        for eth in ethnames:
+            cmd = "ethtool -i %s | awk '/bus-info/ {print $2}'" % eth
+            pci_id = utils.system_output(cmd)
+            if not pci_id:
+                continue
+            for pf in pf_vf_dict:
+                if pci_id in pf["pf_id"]:
+                    pf["ethname"] = eth
+        return pf_vf_dict
 
     def get_pf_devs(self):
         """
