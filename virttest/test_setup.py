@@ -737,7 +737,8 @@ class PciAssignable(object):
     """
 
     def __init__(self, driver=None, driver_option=None, host_set_flag=None,
-                 kvm_params=None, vf_filter_re=None, pf_filter_re=None):
+                 kvm_params=None, vf_filter_re=None, pf_filter_re=None,
+                 device_driver=None):
         """
         Initialize parameter 'type' which could be:
         vf: Virtual Functions
@@ -780,6 +781,13 @@ class PciAssignable(object):
         self.dev_drivers = {}
         self.vf_filter_re = vf_filter_re
         self.pf_filter_re = pf_filter_re
+        if device_driver:
+            if device_driver == "pci-assign":
+                self.device_driver = "pci-stub"
+            else:
+                self.device_driver = device_driver
+        else:
+            self.device_driver = "pci-stub"
         if host_set_flag is not None:
             self.setup = int(host_set_flag) & 1 == 1
             self.cleanup = int(host_set_flag) & 2 == 2
@@ -829,7 +837,7 @@ class PciAssignable(object):
         pf_id = None
         if self.pf_vf_info:
             for pf in self.pf_vf_info:
-                if name == pf["ethname"]:
+                if "ethname" in pf and name == pf["ethname"]:
                     pf["occupied"] = True
                     pf_id = pf["pf_id"]
                     break
@@ -855,7 +863,7 @@ class PciAssignable(object):
         short_id = pci_id[5:]
         vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
         drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
-        if 'pci-stub' in os.readlink(drv_path):
+        if self.device_driver in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
             driver = self.dev_unbind_drivers[pci_id]
             cmd = "echo '%s' > %s/new_id" % (vendor_id, driver)
@@ -863,7 +871,8 @@ class PciAssignable(object):
             if os.system(cmd):
                 return False
 
-            stub_path = os.path.join(base_dir, "drivers/pci-stub")
+            stub_path = os.path.join(base_dir,
+                                     "drivers/%s" %  self.device_driver)
             cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
@@ -874,6 +883,8 @@ class PciAssignable(object):
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
                 return False
+        if self.is_binded_to_stub(pci_id):
+            return False
         return True
 
     def get_vf_status(self, vf_id):
@@ -1016,21 +1027,19 @@ class PciAssignable(object):
         for device in devices:
             d_type = device.get("type", "vf")
             if d_type == "vf":
-                vf_id = vf_ids.pop(0)
-                dev_ids.append(vf_id)
-                self.dev_unbind_drivers[vf_id] = os.path.join(base_dir,
-                                                              "drivers/%svf" % self.driver)
-                (ethname, vf_num) = self.get_vf_num_by_id(vf_id)
+                dev_id = vf_ids.pop(0)
+                (ethname, vf_num) = self.get_vf_num_by_id(dev_id)
                 set_mac_cmd = "ip link set dev %s vf %s mac %s " % (ethname,
                                                                 vf_num,
                                                                 device["mac"])
                 utils.run(set_mac_cmd)
 
             elif d_type == "pf":
-                pf_id = pf_ids.pop(0)
-                dev_ids.append(pf_id)
-                self.dev_unbind_drivers[pf_id] = os.path.join(base_dir,
-                                                              "drivers/%s" % self.driver)
+                dev_id = pf_ids.pop(0)
+            dev_ids.append(dev_id)
+            unbind_driver = os.path.realpath(os.path.join(base_dir,
+                                             "devices/%s/driver" % dev_id))
+            self.dev_unbind_drivers[dev_id] = unbind_driver
         if len(dev_ids) != len(devices):
             logging.error("Did not get enough PCI Device")
         return dev_ids
@@ -1045,6 +1054,25 @@ class PciAssignable(object):
         cmd = "lspci | grep '%s' | wc -l" % self.vf_filter_re
         return int(utils.system_output(cmd, verbose=False))
 
+    def get_same_group_devs(self, pci_id):
+        """
+        Get the device that in same iommu group.
+
+        :param pci_id: Device's pci_id
+        :type pci_id: string
+        :return: Return the device's pci id that in same group with pci_id.
+        :rtype: List of string.
+        """
+        pci_ids = []
+        base_dir = "/sys/bus/pci/devices"
+        devices_link = os.path.join(base_dir,
+                                    "%s/iommu_group/devices/" % pci_id)
+        out = utils.system_output("ls %s" % devices_link)
+
+        if out:
+            pci_ids = out.split()
+        return pci_ids
+
     def check_vfs_count(self):
         """
         Check VFs count number according to the parameter driver_options.
@@ -1057,13 +1085,13 @@ class PciAssignable(object):
 
     def is_binded_to_stub(self, full_id):
         """
-        Verify whether the device with full_id is already binded to pci-stub.
+        Verify whether the device with full_id is already binded to driver.
 
         :param full_id: Full ID for the given PCI device
         :type full_id: String
         """
         base_dir = "/sys/bus/pci"
-        stub_path = os.path.join(base_dir, "drivers/pci-stub")
+        stub_path = os.path.join(base_dir, "drivers/%s" % self.device_driver)
         if os.path.exists(os.path.join(stub_path, full_id)):
             return True
         return False
@@ -1097,12 +1125,25 @@ class PciAssignable(object):
         # Try to re probe kvm module with interrupt remapping support
         if kvm_re_probe:
             cmd = "echo Y > %s" % self.auai_path
-            error.context("enable PCI passthrough with '%s'" % cmd, logging.info)
+            error.context("enable PCI passthrough with '%s'" % cmd,
+                          logging.info)
             try:
                 utils.system(cmd)
             except Exception:
                 logging.debug("Can not enable the interrupt remapping support")
-
+        lnk = "/sys/module/vfio_iommu_type1/parameters/allow_unsafe_interrupts"
+        if self.device_driver == "vfio-pci":
+            s, o = commands.getstatusoutput('lsmod | grep vfio')
+            if s:
+                logging.info("Load vfio-pci module.")
+                cmd = "modprobe vfio-pci"
+                utils.run(cmd)
+                time.sleep(3)
+            if not ecap or (int(ecap[0], 16) & 8 != 8):
+                cmd = "echo Y > %s" % lnk
+                error.context("enable PCI passthrough with '%s'" % cmd,
+                               logging.info)
+                utils.run(cmd)
         re_probe = False
         s, o = commands.getstatusoutput('lsmod | grep %s' % self.driver)
         if s:
@@ -1174,7 +1215,7 @@ class PciAssignable(object):
     def request_devs(self, devices=None):
         """
         Implement setup process: unbind the PCI device and then bind it
-        to the pci-stub driver.
+        to the device driver.
 
         :param devices: List of device dict
         :type devices: List of dict
@@ -1184,46 +1225,51 @@ class PciAssignable(object):
         if not self.pf_vf_info:
             self.pf_vf_info = self.get_pf_vf_info()
         base_dir = "/sys/bus/pci"
-        stub_path = os.path.join(base_dir, "drivers/pci-stub")
+        stub_path = os.path.join(base_dir, "drivers/%s" % self.device_driver)
         self.pci_ids = self.get_devs(devices)
         logging.info("The following pci_ids were found: %s", self.pci_ids)
         requested_pci_ids = []
 
         # Setup all devices specified for assignment to guest
-        for pci_id in self.pci_ids:
-            short_id = pci_id[5:]
-            drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
-            dev_prev_driver = os.path.realpath(os.path.join(drv_path,
-                                               os.readlink(drv_path)))
-            self.dev_drivers[pci_id] = dev_prev_driver
+        for p_id in self.pci_ids:
+            pci_ids = self.get_same_group_devs(p_id)
+            logging.info("Following devices are in same group: %s", pci_ids)
+            for pci_id in pci_ids:
+                short_id = pci_id[5:]
+                drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
+                dev_prev_driver = os.path.realpath(os.path.join(drv_path,
+                                                   os.readlink(drv_path)))
+                self.dev_drivers[pci_id] = dev_prev_driver
 
-            # Judge whether the device driver has been binded to stub
-            if not self.is_binded_to_stub(pci_id):
-                error.context("Bind device %s to stub" % pci_id, logging.info)
-                vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
-                stub_new_id = os.path.join(stub_path, 'new_id')
-                unbind_dev = os.path.join(drv_path, 'unbind')
-                stub_bind = os.path.join(stub_path, 'bind')
-
-                info_write_to_files = [(vendor_id, stub_new_id),
-                                       (pci_id, unbind_dev),
-                                       (pci_id, stub_bind)]
-
-                for content, f_name in info_write_to_files:
-                    try:
-                        logging.info("Write '%s' to file '%s'", content, f_name)
-                        utils.open_write_close(f_name, content)
-                    except IOError:
-                        logging.debug("Failed to write %s to file %s", content,
-                                      f_name)
-                        continue
-
+                # Judge whether the device driver has been binded to stub
                 if not self.is_binded_to_stub(pci_id):
-                    logging.error("Binding device %s to stub failed", pci_id)
+                    error.context("Bind device %s to stub" % pci_id,
+                                   logging.info)
+                    vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
+                    stub_new_id = os.path.join(stub_path, 'new_id')
+                    unbind_dev = os.path.join(drv_path, 'unbind')
+                    stub_bind = os.path.join(stub_path, 'bind')
+
+                    info_write_to_files = [(vendor_id, stub_new_id),
+                                           (pci_id, unbind_dev),
+                                           (pci_id, stub_bind)]
+
+                    for content, f_name in info_write_to_files:
+                        try:
+                            logging.info("Write '%s' to file '%s'", content,
+                                                                    f_name)
+                            utils.open_write_close(f_name, content)
+                        except IOError:
+                            logging.debug("Failed to write %s to file %s",
+                                           content, f_name)
+                            continue
+
+                    if not self.is_binded_to_stub(pci_id):
+                        logging.error("Binding device %s to stub failed", pci_id)
                     continue
-            else:
-                logging.debug("Device %s already binded to stub", pci_id)
-            requested_pci_ids.append(pci_id)
+                else:
+                    logging.debug("Device %s already binded to stub", pci_id)
+            requested_pci_ids.append(p_id)
         return requested_pci_ids
 
     @error.context_aware
