@@ -868,6 +868,17 @@ class PciAssignable(object):
         else:
             return False
 
+    def get_vf_num_by_id(self, vf_id):
+        """
+        Return corresponding pf eth name and vf num according to vf id.
+
+        """
+        for pf in self.pf_vf_info:
+            if vf_id in pf.get('vf_ids'):
+                return pf['ethname'], pf["vf_ids"].index(vf_id)
+        raise ValueError("Could not find vf id '%s' in '%s'" % (vf_id,
+                                                              self.pf_vf_info))
+
     def get_vf_devs(self):
         """
         Catch all VFs PCI IDs.
