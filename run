@@ -2,7 +2,7 @@
 """
 Run virt tests outside the autotest client harness.
 
-@copyright: Red Hat 2012
+:copyright: Red Hat 2012
 """
 import os
 import sys
