@@ -176,7 +176,7 @@ class VirtioGuest:
         """
         raise NotImplementedError
 
-    def send(self, port, length=1, mode=True, is_static=False):
+    def send(self, port, length=1, mode=True, is_static=False, writefile=""):
         """
         Send a data of arbitrary length
 
@@ -185,16 +185,18 @@ class VirtioGuest:
         :param mode: True = loop mode, False = one shoot mode
         :param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
+        :param writefile: File to save the data send to virtio port
         """
         raise NotImplementedError
 
-    def recv(self, port, length=1, bfr=1024, mode=True):
+    def recv(self, port, length=1, bfr=1024, mode=True, writefile=""):
         """
         Receive a data of arbitrary length.
 
         :param port: Port to write data
         :param length: Length of data
         :param mode: True = loop mode, False = one shoot mode
+        :param writefile: File to save the data get from virtio port
         """
         raise NotImplementedError
 
@@ -860,7 +862,7 @@ class VirtioGuestPosix(VirtioGuest):
         self.threads[0].start()
         print "PASS: Sender start"
 
-    def send(self, port, length=1, mode=True, is_static=False):
+    def send(self, port, length=1, mode=True, is_static=False, writefile=""):
         """
         Send a data of some length
 
@@ -869,6 +871,7 @@ class VirtioGuestPosix(VirtioGuest):
         :param mode: True = loop mode, False = one shoot mode
         :param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
+        :param writefile: File to save the data send to virtio port
         """
         in_f = self._open([port])
 
@@ -891,19 +894,24 @@ class VirtioGuestPosix(VirtioGuest):
                     writes += os.write(in_f[0], data)
                 except Exception, inst:
                     print inst
+        if writefile:
+            write_file = open(writefile, 'wb')
+            write_file.write(data)
+            write_file.close()
         if writes >= length:
             print "PASS: Send data length %d" % writes
         else:
             print ("FAIL: Partial send: desired %d, transferred %d" %
                    (length, writes))
 
-    def recv(self, port, length=1, bfr=1024, mode=True):
+    def recv(self, port, length=1, bfr=1024, mode=True, writefile=""):
         """
         Receive a data of arbitrary length.
 
         :param port: Port to write data
         :param length: Length of data
         :param mode: True = loop mode, False = one shoot mode
+        :param writefile: File to save the data get from virtio port
         """
         in_f = self._open([port])
 
@@ -918,6 +926,10 @@ class VirtioGuestPosix(VirtioGuest):
                     recvs += os.read(in_f[0], bfr)
                 except Exception, inst:
                     print inst
+        if writefile:
+            write_file = open(writefile, 'wb')
+            write_file.write(recvs)
+            write_file.close()
         if len(recvs) >= length:
             print "PASS: Recv data length %d" % len(recvs)
         else:
@@ -1173,7 +1185,7 @@ class VirtioGuestNt(VirtioGuest):
         self.threads[0].start()
         print "PASS: Sender start"
 
-    def send(self, port, length=1, mode=True, is_static=False):
+    def send(self, port, length=1, mode=True, is_static=False, writefile=""):
         """
         Send a data of arbitrary length
 
@@ -1182,6 +1194,7 @@ class VirtioGuestNt(VirtioGuest):
         :param mode: True = loop mode, False = one shoot mode
         :param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
+        :param writefile: File to save the data send to virtio port
         """
         port = self._open([port])[0]
 
@@ -1215,19 +1228,25 @@ class VirtioGuestNt(VirtioGuest):
                     writes += _len
             except Exception, inst:
                 print inst
+        if writefile:
+            write_file = open(writefile, 'wb')
+            write_file.write(data)
+            write_file.close()
         if writes >= length:
             print "PASS: Send data length %d" % writes
         else:
             print ("FAIL: Partial send: desired %d, transferred %d" %
                    (length, writes))
 
-    def recv(self, port, length=1, buflen=1024, mode=True):
+
+    def recv(self, port, length=1, buflen=1024, mode=True, writefile=""):
         """
         Receive a data of arbitrary length.
 
         :param port: Port to write data
         :param length: Length of data
         :param mode: True = loop mode, False = one shoot mode
+        :param writefile: File to save the data get from virtio port
         """
         port = self._open([port])[0]
 
@@ -1252,6 +1271,10 @@ class VirtioGuestNt(VirtioGuest):
                         raise IOError(msg)
                 except Exception, inst:
                     print inst
+        if writefile:
+            write_file = open(writefile, 'wb')
+            write_file.write(recvs)
+            write_file.close()
         if len(recvs) >= length:
             print "PASS: Recv data length %d" % len(recvs)
         else:
