@@ -431,17 +431,18 @@ def run_tests(parser, job):
     setup_flag = 1
     cleanup_flag = 2
     for param_dict in parser.get_dicts():
-        if index == 0:
-            if param_dict.get("host_setup_flag", None) is not None:
-                flag = int(param_dict["host_setup_flag"])
+        if param_dict.get("host_setup_flag", None) is not None:
+            flag = int(param_dict["host_setup_flag"])
+            if index == 0:
                 param_dict["host_setup_flag"] = flag | setup_flag
-            else:
-                param_dict["host_setup_flag"] = setup_flag
-        if index == last_index:
-            if param_dict.get("host_setup_flag", None) is not None:
-                flag = int(param_dict["host_setup_flag"])
+            elif index == last_index:
                 param_dict["host_setup_flag"] = flag | cleanup_flag
             else:
+                param_dict["host_setup_flag"] = flag
+        else:
+            if index == 0:
+                param_dict["host_setup_flag"] = setup_flag
+            elif index == last_index:
                 param_dict["host_setup_flag"] = cleanup_flag
         index += 1
 
