@@ -102,7 +102,8 @@ class VirshSession(aexpect.ShellSession):
 
     def __init__(self, virsh_exec=None, uri=None, a_id=None,
                  prompt=r"virsh\s*[\#\>]\s*", remote_ip=None,
-                 remote_user=None, remote_pwd=None, auto_close=False):
+                 remote_user=None, remote_pwd=None,
+                 ssh_remote_auth=False, auto_close=False):
         """
         Initialize virsh session server, or client if id set.
 
@@ -115,6 +116,8 @@ class VirshSession(aexpect.ShellSession):
         :param remote_user: Username to ssh in as (if any)
         :param remote_pwd: Password to use, or None for host/pubkey
         :param auto_close: Param to init ShellSession.
+        :param ssh_remote_auth: ssh to remote first.(VirshConnectBack).
+                                Then execute virsh commands.
 
         Because the VirshSession is designed for class VirshPersistent, so
         the default value of auto_close is False, and we manage the reference
@@ -132,7 +135,7 @@ class VirshSession(aexpect.ShellSession):
         self.remote_pwd = remote_pwd
 
         # Special handling if setting up a remote session
-        if a_id is None and remote_ip is not None and uri is not None:
+        if ssh_remote_auth: # remote to remote
             if remote_pwd:
                 pref_auth = "-o PreferredAuthentications=password"
             else:
@@ -152,7 +155,10 @@ class VirshSession(aexpect.ShellSession):
         aexpect.ShellSession.__init__(self, self.virsh_exec, a_id,
                                       prompt=prompt, auto_close=auto_close)
 
-        if ssh_cmd is not None:  # this is a remote session
+        # Handle remote session prompts:
+        # 1.remote to remote with ssh
+        # 2.local to remote with "virsh -c uri"
+        if ssh_remote_auth or self.uri:
             # Handle ssh / password prompts
             remote.handle_prompts(self, self.remote_user, self.remote_pwd,
                                   prompt, debug=True)
@@ -263,7 +269,7 @@ class VirshPersistent(Virsh):
     Execute libvirt operations using persistent virsh session.
     """
 
-    __slots__ = Virsh.__slots__ + ('session_id', )
+    __slots__ = Virsh.__slots__ + ('session_id', 'remote_user', 'remote_pwd')
 
     # B/c the auto_close of VirshSession is False, we
     # need to manager the ref-count of it manully.
@@ -347,9 +353,20 @@ class VirshPersistent(Virsh):
         # Accessors may call this method, avoid recursion
         virsh_exec = self.dict_get('virsh_exec')  # Must exist, can't be None
         uri = self.dict_get('uri')  # Must exist, can be None
+        try:
+            remote_user = self.dict_get('remote_user')
+        except KeyError:
+            remote_user = "root"
+        try:
+            remote_pwd = self.dict_get('remote_pwd')
+        except KeyError:
+            remote_pwd = None
+
         self.close_session()
         # Always create new session
-        new_session = VirshSession(virsh_exec, uri, a_id=None)
+        new_session = VirshSession(virsh_exec, uri, a_id=None,
+                                   remote_user=remote_user,
+                                   remote_pwd=remote_pwd)
         session_id = new_session.get_id()
         self.dict_set('session_id', session_id)
 
@@ -374,7 +391,7 @@ class VirshConnectBack(VirshPersistent):
     Persistent virsh session connected back from a remote host
     """
 
-    __slots__ = Virsh.__slots__ + ('remote_ip', 'remote_pwd', 'remote_user')
+    __slots__ = VirshPersistent.__slots__ + ('remote_ip', )
 
     def new_session(self):
         """
@@ -397,7 +414,8 @@ class VirshConnectBack(VirshPersistent):
         new_session = VirshSession(virsh_exec, uri, a_id=None,
                                    remote_ip=remote_ip,
                                    remote_user=remote_user,
-                                   remote_pwd=remote_pwd)
+                                   remote_pwd=remote_pwd,
+                                   ssh_remote_auth=True)
         session_id = new_session.get_id()
         self.dict_set('session_id', session_id)
 
