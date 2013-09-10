@@ -62,7 +62,7 @@ def run_trans_hugepage_defrag(test, params, env):
         :param relative_path: Path of the feature relative to THP config base.
         :param test_config: Object that keeps track of THP config state.
 
-        @raise: error.TestFail, if can't change feature status
+        :raise: error.TestFail, if can't change feature status
         """
         feature_path = os.path.join(test_config.thp_path, feature_path)
         feature_file = open(feature_path, 'r')

@@ -1,7 +1,7 @@
 """
 cgroup autotest test (on KVM guest)
-@author: Lukas Doktor <ldoktor@redhat.com>
-@copyright: 2011 Red Hat, Inc.
+:author: Lukas Doktor <ldoktor@redhat.com>
+:copyright: 2011 Red Hat, Inc.
 """
 import logging
 import os
@@ -120,7 +120,7 @@ def run_cgroup(test, params, env):
         """
         Removes no_disks scsi_debug disks from the last one.
         :param no_disks: How many disks to remove
-        @note: params['cgroup_rmmod_scsi_debug'] == "yes" => rmmod scsi_debug
+        :note: params['cgroup_rmmod_scsi_debug'] == "yes" => rmmod scsi_debug
         """
         utils.system("echo -%d > /sys/bus/pseudo/drivers/scsi_debug/add_host"
                      % no_disks)
@@ -175,7 +175,7 @@ def run_cgroup(test, params, env):
         """
         Defines $no_vms in params
         :param no_vms: Desired number of VMs
-        @note: All defined VMs are overwritten.
+        :note: All defined VMs are overwritten.
         """
         params['vms'] = ""
         for i in range(no_vms):
@@ -188,7 +188,7 @@ def run_cgroup(test, params, env):
         """
         Sets blkio.weight for each VM and measure the actual distribution
         of read/write speeds.
-        @note: VMs are created in test
+        :note: VMs are created in test
         :param cfg: cgroup_test_time - test duration '60'
         :param cfg: cgroup_weights - list of R/W weights '[100, 1000]'
         :param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
@@ -345,8 +345,8 @@ def run_cgroup(test, params, env):
         Tests the blkio.throttle.{read,write}_bps_device cgroup capability.
         It sets speeds accordingly to current scenario and let it run for
         $test_time seconds. Afterwards it verifies whether the speeds matches.
-        @note: VMs are created in test
-        @note: Uses scsi_debug disks
+        :note: VMs are created in test
+        :note: Uses scsi_debug disks
         :param cfg: cgroup_test_time - test duration '60'
         :param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
         :param cfg: cgroup_speeds list of simultaneous speeds
@@ -372,8 +372,8 @@ def run_cgroup(test, params, env):
         It sets speeds accordingly to current scenario and let it run for
         $test_time seconds. Afterwards it verifies whether the speeds matches.
         All scenarios have to have the same number of speeds (= no_vms).
-        @note: VMs are created in test
-        @note: Uses scsi_debug disks
+        :note: VMs are created in test
+        :note: Uses scsi_debug disks
         :param cfg: cgroup_test_time - test duration '60'
         :param cfg: cgroup_limit{ ,_read,_write} - allowed R/W threshold '0.1'
         :param cfg: cgroup_speeds list of lists defining [[vm1],[vm2],..]]
@@ -591,7 +591,7 @@ def run_cgroup(test, params, env):
         Each VM have double the previous created one (1, 2, 4, 8..) up to
         twice physical CPUs overcommit. cfs quotas are set to 1/2 thus VMs
         should consume exactly 100%. It measures the difference.
-        @note: VMs are created in test
+        :note: VMs are created in test
         :param cfg: cgroup_test_time - test duration '60'
         :param cfg: cgroup_limit - allowed threshold '0.05' (5%)
         """
@@ -1416,9 +1416,9 @@ def run_cgroup(test, params, env):
         Tests devices.list capability. It tries hot-adding disk with different
         devices.list permittions and verifies whether it pass or fails.
         It tests booth RO and RW mode.
-        @note: VM is destroyed after this test (in order to remove the attached
+        :note: VM is destroyed after this test (in order to remove the attached
                disks)
-        @note: supported monitor CMDs are pci_add, drive_add and RH-drive_add
+        :note: supported monitor CMDs are pci_add, drive_add and RH-drive_add
                 RH-QMP-drive_add
         """
         def _set_permissions(cgroup, permissions):

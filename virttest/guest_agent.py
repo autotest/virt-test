@@ -1,7 +1,7 @@
 """
 Interfaces to the virt agent.
 
-@copyright: 2008-2012 Red Hat Inc.
+:copyright: 2008-2012 Red Hat Inc.
 """
 
 import socket
@@ -139,11 +139,11 @@ class QemuAgent(Monitor):
         :param get_supported_cmds: Try to get supported cmd list when initiation.
         :param suppress_exceptions: If True, ignore VAgentError exception.
 
-        @raise VAgentConnectError: Raised if the connection fails and
+        :raise VAgentConnectError: Raised if the connection fails and
                 suppress_exceptions is False
-        @raise VAgentNotSupportedError: Raised if the serial type is
+        :raise VAgentNotSupportedError: Raised if the serial type is
                 neither 'virtio' nor 'isa' and suppress_exceptions is False
-        @raise VAgentNotSupportedError: Raised if json isn't available and
+        :raise VAgentNotSupportedError: Raised if json isn't available and
                 suppress_exceptions is False
         """
         try:
@@ -220,7 +220,7 @@ class QemuAgent(Monitor):
         Send raw data without waiting for response.
 
         :param data: Data to send
-        @raise VAgentSocketError: Raised if a socket error occurs
+        :raise VAgentSocketError: Raised if a socket error occurs
         """
         try:
             self._socket.sendall(data)
@@ -394,10 +394,10 @@ class QemuAgent(Monitor):
 
         :return: The response received
 
-        @raise VAgentLockError: Raised if the lock cannot be acquired
-        @raise VAgentSocketError: Raised if a socket error occurs
-        @raise VAgentProtocolError: Raised if no response is received
-        @raise VAgentCmdError: Raised if the response is an error message
+        :raise VAgentLockError: Raised if the lock cannot be acquired
+        :raise VAgentSocketError: Raised if a socket error occurs
+        :raise VAgentProtocolError: Raised if no response is received
+        :raise VAgentCmdError: Raised if the response is an error message
                                (the exception's args are (cmd, args, data)
                                 where data is the error data)
         """
@@ -427,9 +427,9 @@ class QemuAgent(Monitor):
         :param data: The data to send
         :param timeout: Time duration to wait for response
         :return: The response received
-        @raise VAgentLockError: Raised if the lock cannot be acquired
-        @raise VAgentSocketError: Raised if a socket error occurs
-        @raise VAgentProtocolError: Raised if no response is received
+        :raise VAgentLockError: Raised if the lock cannot be acquired
+        :raise VAgentSocketError: Raised if a socket error occurs
+        :raise VAgentProtocolError: Raised if no response is received
         """
         if not self._acquire_lock():
             raise VAgentLockError("Could not acquire exclusive lock to send "
@@ -463,9 +463,9 @@ class QemuAgent(Monitor):
         :param obj: The object to send
         :param timeout: Time duration to wait for response
         :return: The response received
-        @raise VAgentLockError: Raised if the lock cannot be acquired
-        @raise VAgentSocketError: Raised if a socket error occurs
-        @raise VAgentProtocolError: Raised if no response is received
+        :raise VAgentLockError: Raised if the lock cannot be acquired
+        :raise VAgentSocketError: Raised if a socket error occurs
+        :raise VAgentProtocolError: Raised if no response is received
         """
         return self.cmd_raw(json.dumps(obj) + "\n", timeout)
 
@@ -529,7 +529,7 @@ class QemuAgent(Monitor):
                      'hybrid'.
         :return: True if shutdown cmd is sent successfully, False if
                  'suspend' is unsupported.
-        @raise VAgentSuspendUnknownModeError: Raise if mode is not supported.
+        :raise VAgentSuspendUnknownModeError: Raise if mode is not supported.
         """
         error.context("Suspend guest '%s' to '%s'" % (self.vm.name, mode))
 
@@ -564,7 +564,7 @@ class QemuAgent(Monitor):
         raise a VAgentFreezeStatusError.
 
         :param expected: The expected status.
-        @raise VAgentFreezeStatusError: Raise if the guest fsfreeze status is
+        :raise VAgentFreezeStatusError: Raise if the guest fsfreeze status is
                 unexpected.
         """
         status = self.get_fsfreeze_status()

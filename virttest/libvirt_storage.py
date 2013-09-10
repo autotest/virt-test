@@ -38,7 +38,7 @@ class QemuImg(storage.QemuImg):
 
         :param params: Dictionary containing the test parameters.
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
 
@@ -49,7 +49,7 @@ class QemuImg(storage.QemuImg):
         :param params: A dict
         :param root_dir: dir for save the convert image
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
 
@@ -59,7 +59,7 @@ class QemuImg(storage.QemuImg):
 
         :param params: A dict
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
 
@@ -73,7 +73,7 @@ class QemuImg(storage.QemuImg):
         """
         Create a snapshot image.
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
 
@@ -83,7 +83,7 @@ class QemuImg(storage.QemuImg):
 
         :param blkdebug_cfg: The configure file of blkdebug
 
-        @note: params should contain:
+        :note: params should contain:
                snapshot_image_name -- the name of snapshot image file
         """
         raise NotImplementedError
@@ -92,7 +92,7 @@ class QemuImg(storage.QemuImg):
         """
         Remove an image file.
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
 
@@ -103,9 +103,9 @@ class QemuImg(storage.QemuImg):
         :param params: Dictionary containing the test parameters.
         :param root_dir: Base directory for relative filenames.
 
-        @note: params should contain:
+        :note: params should contain:
 
-        @raise VMImageCheckError: In case qemu-img check fails on the image.
+        :raise VMImageCheckError: In case qemu-img check fails on the image.
         """
         raise NotImplementedError
 

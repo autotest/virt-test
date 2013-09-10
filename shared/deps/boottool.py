@@ -329,7 +329,7 @@ class EliloConf(object):
         :param key: option name
         @type val: string or None
         :param key: option value or None for options with no values
-        :return:s: None
+        :return: None
         '''
         self.global_options_to_add[key] = val
 
@@ -341,7 +341,7 @@ class EliloConf(object):
         :param key: option name
         @type val: string or None
         :param key: option value or None for options with no values
-        :return:s: None
+        :return: None
         '''
         self.global_options_to_remove[key] = val
 
@@ -351,7 +351,7 @@ class EliloConf(object):
 
         @type line: string
         :param line: line of text from the configuration file
-        :return:s: a tuple with key and value
+        :return: a tuple with key and value
         '''
         parts = line.split('=', 1)
         key = parts[0].rstrip()
@@ -367,7 +367,7 @@ class EliloConf(object):
 
         @type keyval: tuple
         :param keyval: a tuple containing key and value
-        :return:s: a text line suitable for the config file
+        :return: a text line suitable for the config file
         '''
         key, val = keyval
         if val is None:
@@ -381,7 +381,7 @@ class EliloConf(object):
 
         @type line: string
         :param line: line of text from the configuration file
-        :return:s: True or False
+        :return: True or False
         '''
         key, val = self.line_to_keyval(line)
         if key in self.global_options_to_remove:
@@ -395,7 +395,7 @@ class EliloConf(object):
 
         @type line: string
         :param line: line of text from the configuration file
-        :return:s: True or False
+        :return: True or False
         '''
         key, val = self.line_to_keyval(line)
         if key in self.global_options_to_add:
@@ -933,7 +933,7 @@ class Grubby(object):
 
         @type info: list of lines
         :param info: result of utility method get_info()
-        :return:s: maximum index number
+        :return: maximum index number
         '''
         indexes = []
         for line in self.get_info_lines():
@@ -951,7 +951,7 @@ class Grubby(object):
 
         @type title: string
         :param title: the title of the entry
-        :return:s: the index of the given entry or None
+        :return: the index of the given entry or None
         '''
         if self._is_number(title):
             return title
@@ -980,7 +980,7 @@ class Grubby(object):
         :param key: filter based on this key
         @type value: string
         :param value: filter based on this value
-        :return:s: value or None
+        :return: value or None
         '''
         for line in info:
             if value is not None:
@@ -998,7 +998,7 @@ class Grubby(object):
 
         @type title: string
         :param title: the title of the entry
-        :return:s: the kernel path of None
+        :return: the kernel path of None
         '''
         index = self._index_for_title(title)
         if index is not None:
@@ -1067,7 +1067,7 @@ class Grubby(object):
         This module performs the same action as client side boottool.py
         get_type() method, but with a better name IMHO.
 
-        :return:s: name of detected bootloader
+        :return: name of detected bootloader
         '''
         args = [self.path, '--bootloader-probe']
         output = self._run_get_output_err(args)
@@ -1093,7 +1093,7 @@ class Grubby(object):
         does not attempt to filter the result of the command / system call
         that returns the archicture.
 
-        :return:s: string with system archicteture, such as x86_64, ppc64, etc
+        :return: string with system archicteture, such as x86_64, ppc64, etc
         '''
         return os.uname()[4]
 
@@ -1104,7 +1104,7 @@ class Grubby(object):
         '''
         Get the title of all boot entries.
 
-        :return:s: list with titles of boot entries
+        :return: list with titles of boot entries
         '''
         titles = []
         for line in self.get_info_lines():
@@ -1123,7 +1123,7 @@ class Grubby(object):
         This module performs the same action as client side boottool.py
         get_default() method, but with a better name IMHO.
 
-        :return:s: an integer with the the default entry.
+        :return: an integer with the the default entry.
         '''
         default_index = self._run_grubby_get_output(['--default-index'])
         if default_index is not None and default_index:
@@ -1164,7 +1164,7 @@ class Grubby(object):
         Conforms to the client side boottool.py API, but rely directly on
         grubby functionality.
 
-        :return:s: a string of the default entry title.
+        :return: a string of the default entry title.
         '''
         return self._run_grubby_get_output(['--default-title'])
 
@@ -1218,7 +1218,7 @@ class Grubby(object):
 
         @type entry: string
         :param entry: entry description, usually an index starting from 0
-        :return:s: set of lines
+        :return: set of lines
         '''
         command = '--info=%s' % entry
         info = self._run_grubby_get_output([command])
@@ -1346,7 +1346,7 @@ class Grubby(object):
 
         @type entry: string
         :param entry: entry description, usually an index starting from 0
-        :return:s: set of lines
+        :return: set of lines
         '''
         info = self.get_info(entry)
         if info:
@@ -1356,7 +1356,7 @@ class Grubby(object):
         '''
         Get the version of grubby that is installed on this machine as is
 
-        :return:s: string with raw output from grubby --version
+        :return: string with raw output from grubby --version
         '''
         return self._run_grubby_get_output(['--version'], False)
 
@@ -1364,7 +1364,7 @@ class Grubby(object):
         '''
         Get the version of grubby that is installed on this machine
 
-        :return:s: tuple with (major, minor) grubby version
+        :return: tuple with (major, minor) grubby version
         '''
         output = self.get_grubby_version_raw()
         if output is None:
@@ -2112,7 +2112,7 @@ class BoottoolApp(object):
 
         @type opts: object
         :param opts: parsed command line options
-        :return:s:
+        :return:
         '''
         if not self.opts.add_kernel:
             self.log.error("Kernel to add is required")

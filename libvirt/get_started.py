@@ -2,7 +2,7 @@
 """
 Program to help setup libvirt test environment
 
-@copyright: Red Hat 2011
+:copyright: Red Hat 2011
 """
 import os
 import sys

@@ -1,7 +1,7 @@
 """
 Utility classes and functions to handle Virtual Machine creation using libvirt.
 
-@copyright: 2011 Red Hat Inc.
+:copyright: 2011 Red Hat Inc.
 """
 
 import time
@@ -142,7 +142,7 @@ class VM(virt_vm.BaseVM):
         """
         Make sure the VM is alive.
 
-        @raise VMDeadError: If the VM is dead
+        :raise VMDeadError: If the VM is dead
         """
         if not self.is_alive():
             raise virt_vm.VMDeadError("Domain %s is inactive" % self.name,
@@ -285,7 +285,7 @@ class VM(virt_vm.BaseVM):
         :param params: A dict containing VM params
         :param root_dir: Base directory for relative filenames
 
-        @note: The params dict should contain:
+        :note: The params dict should contain:
                mem -- memory size in MBs
                cdrom -- ISO filename to use with the qemu -cdrom parameter
                extra_params -- a string to append to the qemu command
@@ -919,15 +919,15 @@ class VM(virt_vm.BaseVM):
         :param mac_source: A VM object from which to copy MAC addresses. If not
                 specified, new addresses will be generated.
 
-        @raise VMCreateError: If qemu terminates unexpectedly
-        @raise VMKVMInitError: If KVM initialization fails
-        @raise VMHugePageError: If hugepage initialization fails
-        @raise VMImageMissingError: If a CD image is missing
-        @raise VMHashMismatchError: If a CD image hash has doesn't match the
+        :raise VMCreateError: If qemu terminates unexpectedly
+        :raise VMKVMInitError: If KVM initialization fails
+        :raise VMHugePageError: If hugepage initialization fails
+        :raise VMImageMissingError: If a CD image is missing
+        :raise VMHashMismatchError: If a CD image hash has doesn't match the
                 expected hash
-        @raise VMBadPATypeError: If an unsupported PCI assignment type is
+        :raise VMBadPATypeError: If an unsupported PCI assignment type is
                 requested
-        @raise VMPAError: If no PCI assignable devices could be assigned
+        :raise VMPAError: If no PCI assignable devices could be assigned
         """
         error.context("creating '%s'" % self.name)
         self.destroy(free_mac_addresses=False)
@@ -1229,7 +1229,7 @@ class VM(virt_vm.BaseVM):
         Get the MAC of this VM domain.
 
         :param nic_index: Index of the NIC
-        @raise VMMACAddressMissingError: If no MAC address is defined for the
+        :raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
         """
         thexml = virsh.dumpxml(self.name, uri=self.connect_uri)
@@ -1282,7 +1282,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the PID of the parent shell process.
 
-        @note: This works under the assumption that self.process.get_pid()
+        :note: This works under the assumption that self.process.get_pid()
         returns the PID of the parent shell process.
         """
         return self.process.get_pid()

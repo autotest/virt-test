@@ -1,7 +1,7 @@
 """
 Utilities to perform automatic guest installation using step files.
 
-@copyright: Red Hat 2008-2009
+:copyright: Red Hat 2008-2009
 """
 
 import os

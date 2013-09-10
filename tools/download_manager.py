@@ -16,7 +16,7 @@ Downloads blobs defined in assets. Assets are .ini files that contain the
     uncompress_cmd (optionl) = Command that needs to be executed with the
         compressed file as a parameter
 
-@copyright: Red Hat 2012
+:copyright: Red Hat 2012
 """
 import glob
 import os

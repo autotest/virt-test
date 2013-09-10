@@ -5,7 +5,7 @@ complete representation of VM. There are three parts:
 2) Bus representation - bus representation
 3) Device container - qemu machine representation
 
-@copyright: 2012-2013 Red Hat Inc.
+:copyright: 2012-2013 Red Hat Inc.
 """
 # Python imports
 import itertools
@@ -610,7 +610,7 @@ class QDevice(QCustomDevice):
 
     """
     Representation of the '-device' qemu object. It supports all methods.
-    @note: Use driver format in full form - 'driver' = '...' (usb-ehci, ide-hd)
+    :note: Use driver format in full form - 'driver' = '...' (usb-ehci, ide-hd)
     """
 
     def __init__(self, driver=None, params=None, aobject=None,
@@ -747,7 +747,7 @@ class QSparseBus(object):
     device_addr = qemu address stored into separate device params (bus, port)
                   device{$param1:$first, $param2:$second, ..., $paramZZZ, $ZZZ}
 
-    @note: When you insert a device, it's properties might be updated (addr,..)
+    :note: When you insert a device, it's properties might be updated (addr,..)
     """
 
     def __init__(self, bus_item, addr_spec, busid, bus_type, aobject=None):
@@ -775,7 +775,7 @@ class QSparseBus(object):
         """
         :param item: autotest id or QObject-like object
         :return: First matching object from this bus
-        @raise KeyError: In case no match was found
+        :raise KeyError: In case no match was found
         """
         if isinstance(item, QBaseDevice):
             if item in self.bus.itervalues():
@@ -803,7 +803,7 @@ class QSparseBus(object):
         """
         Remove device from bus
         :param item: autotest id or QObject-like object
-        @raise KeyError: In case no match was found
+        :raise KeyError: In case no match was found
         """
         self.remove(self[item])
 
@@ -1633,7 +1633,7 @@ class DevContainer(object):
         """
         :param item: autotest id or QObject-like object
         :return: First matching object defined in this QDevContainer
-        @raise KeyError: In case no match was found
+        :raise KeyError: In case no match was found
         """
         if isinstance(item, QBaseDevice):
             if item in self.__devices:
@@ -1656,7 +1656,7 @@ class DevContainer(object):
         """
         Delete specified item from devices list
         :param item: autotest id or QObject-like object
-        @raise KeyError: In case no match was found
+        :raise KeyError: In case no match was found
         """
         # Remove child_buses including devices
         if self.remove(item):
@@ -1881,7 +1881,7 @@ class DevContainer(object):
         :type options: string
         :param timeout: execution timeout
         :type timeout: int
-        :return:: Output of the qemu
+        :return: Output of the qemu
         :rtype: string
         """
         if self.__execute_qemu_last != options:
@@ -1925,7 +1925,7 @@ class DevContainer(object):
         :param force: Force insert the device even when errs occurs
         :return: None on success,
                  error string when force added device with errors.
-        @raise DeviceInsertError: On failure in case force is not set
+        :raise DeviceInsertError: On failure in case force is not set
 
         1) get list of matching parent buses
         2) try to find matching bus+address gently
@@ -2377,8 +2377,8 @@ class DevContainer(object):
                                    blk_extra_params=None, scsi=None):
         """
         Creates related devices by variables
-        @note: To skip the argument use None, to disable it use False
-        @note: Strictly bool options accept "yes", "on" and True ("no"...)
+        :note: To skip the argument use None, to disable it use False
+        :note: Strictly bool options accept "yes", "on" and True ("no"...)
         :param name: Autotest name of this disk
         :param filename: Path to the disk file
         :param index: drive index (used for generating names)
@@ -2669,9 +2669,9 @@ class DevContainer(object):
                                 image_bootindex=None):
         """
         Wrapper for creating disks and related hbas from autotest image params.
-        @note: To skip the argument use None, to disable it use False
-        @note: Strictly bool options accept "yes", "on" and True ("no"...)
-        @note: Options starting with '_' are optional and used only when
+        :note: To skip the argument use None, to disable it use False
+        :note: Strictly bool options accept "yes", "on" and True ("no"...)
+        :note: Options starting with '_' are optional and used only when
                strict_mode is True
         :param name: Name of the new disk
         :param params: Disk params (params.object_params(name))
@@ -2733,9 +2733,9 @@ class DevContainer(object):
                                 image_bootindex=None):
         """
         Wrapper for creating cdrom and related hbas from autotest image params.
-        @note: To skip the argument use None, to disable it use False
-        @note: Strictly bool options accept "yes", "on" and True ("no"...)
-        @note: Options starting with '_' are optional and used only when
+        :note: To skip the argument use None, to disable it use False
+        :note: Strictly bool options accept "yes", "on" and True ("no"...)
+        :note: Options starting with '_' are optional and used only when
                strict_mode is True
         :param name: Name of the new disk
         :param params: Disk params (params.object_params(name))

@@ -520,7 +520,7 @@ class GnuSourceBuildHelper(object):
         either '<prefix>/share/pkgconfig' or '<prefix>/lib/pkgconfig' is
         exactly for the purpose of using them.
 
-        :return:s: None
+        :return: None
         '''
         env_var = 'PKG_CONFIG_PATH'
 
@@ -560,7 +560,7 @@ class GnuSourceBuildHelper(object):
 
         This will run the "configure" script at the source directory
 
-        :return:s: list of options accepted by configure script
+        :return: list of options accepted by configure script
         '''
         help_raw = utils.system_output('%s --help' % self.get_configure_path(),
                                        ignore_status=True)
@@ -591,7 +591,7 @@ class GnuSourceBuildHelper(object):
         '''
         Formats configure script with all options set
 
-        :return:s: string with all configure options, including prefix
+        :return: string with all configure options, including prefix
         '''
         prefix_option = "--prefix=%s" % self.prefix
         options = self.configure_options
@@ -638,7 +638,7 @@ class GnuSourceBuildHelper(object):
 
         :param failure_feedback: return information on build failure by raising
                                  the appropriate exceptions
-        @raise: SourceBuildParallelFailed if parallel build fails, or
+        :raise: SourceBuildParallelFailed if parallel build fails, or
                 SourceBuildFailed if single job build fails
         '''
         try:
@@ -747,7 +747,7 @@ class LinuxKernelBuildHelper(object):
 
         :param failure_feedback: return information on build failure by raising
                                  the appropriate exceptions
-        @raise: SourceBuildParallelFailed if parallel build fails, or
+        :raise: SourceBuildParallelFailed if parallel build fails, or
         '''
         try:
             self.make_clean()

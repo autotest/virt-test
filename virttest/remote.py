@@ -110,10 +110,10 @@ def handle_prompts(session, username, password, prompt, timeout=10, debug=False)
     :param timeout: The maximal time duration (in seconds) to wait for each
             step of the login procedure (i.e. the "Are you sure" prompt, the
             password prompt, the shell prompt, etc)
-    @raise LoginTimeoutError: If timeout expires
-    @raise LoginAuthenticationError: If authentication fails
-    @raise LoginProcessTerminatedError: If the client terminates during login
-    @raise LoginError: If some other error occurs
+    :raise LoginTimeoutError: If timeout expires
+    :raise LoginAuthenticationError: If authentication fails
+    :raise LoginProcessTerminatedError: If the client terminates during login
+    :raise LoginError: If some other error occurs
     """
     password_prompt_count = 0
     login_prompt_count = 0
@@ -195,8 +195,8 @@ def remote_login(client, host, port, username, password, prompt, linesep="\n",
     :param timeout: The maximal time duration (in seconds) to wait for
             each step of the login procedure (i.e. the "Are you sure" prompt
             or the password prompt)
-    @raise LoginBadClientError: If an unknown client is requested
-    @raise: Whatever handle_prompts() raises
+    :raise LoginBadClientError: If an unknown client is requested
+    :raise: Whatever handle_prompts() raises
     :return: A ShellSession object.
     """
     if client == "ssh":
@@ -236,7 +236,7 @@ def wait_for_login(
             each step of the login procedure (e.g. the "Are you sure" prompt
             or the password prompt)
     :see:: remote_login()
-    @raise: Whatever remote_login() raises
+    :raise: Whatever remote_login() raises
     :return: A ShellSession object.
     """
     logging.debug("Attempting to log into %s:%s using %s (timeout %ds)",
@@ -270,11 +270,11 @@ def _remote_scp(session, password_list, transfer_timeout=600, login_timeout=20):
     :param login_timeout: The maximal time duration (in seconds) to wait for
             each step of the login procedure (i.e. the "Are you sure" prompt or
             the password prompt)
-    @raise SCPAuthenticationError: If authentication fails
-    @raise SCPTransferTimeoutError: If the transfer fails to complete in time
-    @raise SCPTransferFailedError: If the process terminates with a nonzero
+    :raise SCPAuthenticationError: If authentication fails
+    :raise SCPTransferTimeoutError: If the transfer fails to complete in time
+    :raise SCPTransferFailedError: If the process terminates with a nonzero
             exit code
-    @raise SCPError: If some other error occurs
+    :raise SCPError: If some other error occurs
     """
     password_prompt_count = 0
     timeout = login_timeout
@@ -343,7 +343,7 @@ def remote_scp(command, password_list, log_filename=None, transfer_timeout=600,
     :param login_timeout: The maximal time duration (in seconds) to wait for
             each step of the login procedure (i.e. the "Are you sure" prompt
             or the password prompt)
-    @raise: Whatever _remote_scp() raises
+    :raise: Whatever _remote_scp() raises
     """
     logging.debug("Trying to SCP with command '%s', timeout %ss",
                   command, transfer_timeout)
@@ -376,7 +376,7 @@ def scp_to_remote(host, port, username, password, local_path, remote_path,
     :param log_filename: If specified, log all output to this file
     :param timeout: The time duration (in seconds) to wait for the transfer
             to complete.
-    @raise: Whatever remote_scp() raises
+    :raise: Whatever remote_scp() raises
     """
     if (limit):
         limit = "-l %s" % (limit)
@@ -404,7 +404,7 @@ def scp_from_remote(host, port, username, password, remote_path, local_path,
     :param log_filename: If specified, log all output to this file
     :param timeout: The time duration (in seconds) to wait for the transfer
             to complete.
-    @raise: Whatever remote_scp() raises
+    :raise: Whatever remote_scp() raises
     """
     if (limit):
         limit = "-l %s" % (limit)
@@ -640,7 +640,7 @@ def copy_files_to(address, client, username, password, port, local_path,
     :param verbose: If True, log some stats using logging.debug (RSS only)
     :param timeout: The time duration (in seconds) to wait for the transfer to
             complete.
-    @raise: Whatever remote_scp() raises
+    :raise: Whatever remote_scp() raises
     """
     if client == "scp":
         scp_to_remote(address, port, username, password, local_path,
@@ -671,7 +671,7 @@ def copy_files_from(address, client, username, password, port, remote_path,
     :param verbose: If True, log some stats using logging.debug (RSS only)
     :param timeout: The time duration (in seconds) to wait for the transfer to
     complete.
-    @raise: Whatever remote_scp() raises
+    :raise: Whatever remote_scp() raises
     """
     if client == "scp":
         scp_from_remote(address, port, username, password, remote_path,

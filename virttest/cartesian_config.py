@@ -125,7 +125,7 @@ Formal definition:
   FILTER_NAME -> VAR-NAME-F | (VAR-NAME-F=VAR-NAME-F)
 
 
-@copyright: Red Hat 2008-2013
+:copyright: Red Hat 2008-2013
 """
 
 import os

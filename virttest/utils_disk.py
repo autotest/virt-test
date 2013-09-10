@@ -1,7 +1,7 @@
 """
 Virtualization test - Virtual disk related utility functions
 
-@copyright: Red Hat Inc.
+:copyright: Red Hat Inc.
 """
 import os
 import glob

@@ -6,7 +6,7 @@ a given file size or record size, and then generate a series of 2D and 3D
 graphs. The graph generation functionality depends on gnuplot, and if it
 is not present, functionality degrates gracefully.
 
-@copyright: Red Hat 2010
+:copyright: Red Hat 2010
 """
 import os
 import sys

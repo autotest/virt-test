@@ -526,7 +526,7 @@ class KojiInstaller(BaseInstaller):
         '''
         Include debuginfo RPMs on koji_pkgs
 
-        :return:s: None
+        :return: None
         '''
         logging.debug("Koji package list to be updated with debuginfo pkgs")
 

@@ -1,7 +1,7 @@
 """
 Utility functions to deal with ppm (qemu screendump format) files.
 
-@copyright: Red Hat 2008-2009
+:copyright: Red Hat 2008-2009
 """
 
 import os
@@ -210,7 +210,7 @@ def image_comparison(width, height, data1, data2):
     :return: A 3-element tuple containing the width, height and data of the
             generated comparison image.
 
-    @note: Input images must be the same size.
+    :note: Input images must be the same size.
     """
     newdata = ""
     i = 0
@@ -249,7 +249,7 @@ def image_fuzzy_compare(width, height, data1, data2):
     :param data2: Data of second image
     :return: Ratio equal_pixel_count / total_pixel_count.
 
-    @note: Input images must be the same size.
+    :note: Input images must be the same size.
     """
     equal = 0.0
     different = 0.0

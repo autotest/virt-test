@@ -2,7 +2,7 @@
 """
 Program to help setup lvsb test environment
 
-@copyright: Red Hat 2013
+:copyright: Red Hat 2013
 """
 import os
 import sys

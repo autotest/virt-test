@@ -1,7 +1,7 @@
 """
 Base classes supporting Libvirt Sandbox (lxc) container testing
 
-@copyright: 2013 Red Hat Inc.
+:copyright: 2013 Red Hat Inc.
 """
 
 import logging

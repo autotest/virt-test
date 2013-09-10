@@ -39,8 +39,8 @@ def get_status():
     Get the status of selinux.
 
     :return: string of status in STATUS_LIST.
-    @raise SeCmdError: if execute 'getenforce' failed.
-    @raise SelinuxError: if 'getenforce' command exit 0,
+    :raise SeCmdError: if execute 'getenforce' failed.
+    :raise SelinuxError: if 'getenforce' command exit 0,
                     but the output is not expected.
     """
     cmd = 'getenforce'
@@ -63,10 +63,10 @@ def set_status(status):
     Set status of selinux.
 
     :param status: status want to set selinux.
-    @raise SelinuxError: status is not supported.
-    @raise SelinuxError: need to reboot host.
-    @raise SeCmdError: execute setenforce failed.
-    @raise SelinuxError: cmd setenforce exit normally,
+    :raise SelinuxError: status is not supported.
+    :raise SelinuxError: need to reboot host.
+    :raise SeCmdError: execute setenforce failed.
+    :raise SelinuxError: cmd setenforce exit normally,
                 but status of selinux is not set to expected.
     """
     if not status in STATUS_LIST:
@@ -118,7 +118,7 @@ def get_context_from_str(string):
     """
     Get the context in a string.
 
-    @raise SelinuxError: if there is no context in string.
+    :raise SelinuxError: if there is no context in string.
     """
     context_pattern = r"[a-z,_]*_u:[a-z,_]*_r:[a-z,_]*_t:[s,\-,0-9,:[c,\,,0-9]*]*"
     if re.search(context_pattern, string):
@@ -132,7 +132,7 @@ def get_context_of_file(filename):
     """
     Get the context of file.
 
-    @raise SeCmdError: if execute 'getfattr' failed.
+    :raise SeCmdError: if execute 'getfattr' failed.
     """
     cmd = "getfattr --name security.selinux %s" % filename
     result = utils.run(cmd, ignore_status=True)
@@ -147,8 +147,8 @@ def set_context_of_file(filename, context):
     """
     Set context of file.
 
-    @raise SeCmdError: if failed to execute chcon.
-    @raise SelinuxError: if command chcon execute
+    :raise SeCmdError: if failed to execute chcon.
+    :raise SelinuxError: if command chcon execute
                         normally, but the context of
                         file is not setted to context.
     """

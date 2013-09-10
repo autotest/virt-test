@@ -63,7 +63,7 @@ class YumRepo(object):
         Returns the default path for the a repo of a given name
 
         :param name: the repository name
-        :return:: the default repo file path for the given name
+        :return: the default repo file path for the given name
         '''
         return os.path.join(REPO_DIR, "%s.repo" % name)
 

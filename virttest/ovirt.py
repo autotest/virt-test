@@ -1,7 +1,7 @@
 """
 oVirt SDK wrapper module.
 
-@copyright: 2008-2012 Red Hat Inc.
+:copyright: 2008-2012 Red Hat Inc.
 """
 
 
@@ -464,7 +464,7 @@ class VMManager(virt_vm.BaseVM):
 
         :param index: Name or index of the NIC whose address is requested.
         :return: IP address of NIC.
-        @raise VMIPAddressMissingError: If no IP address is found for the the
+        :raise VMIPAddressMissingError: If no IP address is found for the the
                 NIC's MAC address
         """
         nic = self.virtnet[index]

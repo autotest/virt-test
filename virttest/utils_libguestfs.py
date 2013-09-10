@@ -59,7 +59,7 @@ def lgf_command(cmd, ignore_status=True, debug=False, timeout=60):
 
     :param cmd: Command line to execute.
     :return: CmdResult object.
-    @raise: LibguestfsCmdError if non-zero exit status
+    :raise: LibguestfsCmdError if non-zero exit status
             and ignore_status=False
     """
     if debug:
@@ -248,11 +248,11 @@ class GuestfishSession(aexpect.ShellSession):
                 (should take a string parameter)
         :return: A tuple (status, output) where status is the exit status and
                 output is the output of cmd
-        @raise ShellTimeoutError: Raised if timeout expires
-        @raise ShellProcessTerminatedError: Raised if the shell process
+        :raise ShellTimeoutError: Raised if timeout expires
+        :raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
-        @raise ShellStatusError: Raised if the exit status cannot be obtained
-        @raise ShellError: Raised if an unknown error occurs
+        :raise ShellStatusError: Raised if the exit status cannot be obtained
+        :raise ShellError: Raised if an unknown error occurs
         """
         out = self.cmd_output(cmd, timeout, internal_timeout, print_func)
         for line in out.splitlines():
@@ -585,7 +585,7 @@ def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
     :param qemudirarg: the qemudir option
     :param timeoutarg: the timeout option
     :return: a CmdResult object
-    @raise: raise LibguestfsCmdError
+    :raise: raise LibguestfsCmdError
     """
     cmd = "libguestfs-test-tool"
     if qemuarg is not None:

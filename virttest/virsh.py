@@ -20,7 +20,7 @@ be present, the remainder may or may not be provided.  Therefor, virsh
 functions/methods should use the dict.get() method to retrieve with a default
 for non-existant keys.
 
-@copyright: 2012 Red Hat Inc.
+:copyright: 2012 Red Hat Inc.
 """
 
 import signal
@@ -176,11 +176,11 @@ class VirshSession(aexpect.ShellSession):
                 (should take a string parameter)
         :return: A tuple (status, output) where status is the exit status and
                 output is the output of cmd
-        @raise ShellTimeoutError: Raised if timeout expires
-        @raise ShellProcessTerminatedError: Raised if the shell process
+        :raise ShellTimeoutError: Raised if timeout expires
+        :raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
-        @raise ShellStatusError: Raised if the exit status cannot be obtained
-        @raise ShellError: Raised if an unknown error occurs
+        :raise ShellStatusError: Raised if the exit status cannot be obtained
+        :raise ShellError: Raised if an unknown error occurs
         """
         out = self.cmd_output(cmd, timeout, internal_timeout, print_func)
         for line in out.splitlines():
@@ -407,7 +407,7 @@ class VirshConnectBack(VirshPersistent):
 
         :param remote_ip: ip/hostname of remote libvirt helper-system
         :param uri: fully qualified libvirt uri of local system, from remote.
-        :return:s: True/False if checks pass or not
+        :return: True/False if checks pass or not
         """
         if remote_ip is None or uri is None:
             return False
@@ -437,7 +437,7 @@ def command(cmd, **dargs):
     :param cmd: Command line to append to virsh command
     :param dargs: standardized virsh function API keywords
     :return: CmdResult object
-    @raises: CmdError if non-zero exit status and ignore_status=False
+    :raise:: CmdError if non-zero exit status and ignore_status=False
     """
 
     virsh_exec = dargs.get('virsh_exec', VIRSH_EXEC)
@@ -1873,7 +1873,7 @@ def help(virsh_cmd='', **dargs):
 
     :param virsh_cmd: Name of virsh command or group
     :param dargs: standardized virsh function API keywords
-    :return:s: CmdResult instance
+    :return: CmdResult instance
     """
     return command("help %s" % virsh_cmd, **dargs)
 
@@ -1902,8 +1902,8 @@ def setmem(domainarg=None, sizearg=None, domain=None,
     :param use_kilobytes: True for --kilobytes, False for --size
     :param dargs: standardized virsh function API keywords
     :param flagstr: string of "--config, --live, --current, etc."
-    :return:s: CmdResult instance
-    @raises: error.CmdError: if libvirtd is not running!!!!!!
+    :return: CmdResult instance
+    :raise:: error.CmdError: if libvirtd is not running!!!!!!
     """
 
     cmd = "setmem"
@@ -1934,8 +1934,8 @@ def setmaxmem(domainarg=None, sizearg=None, domain=None,
     :param size: Option to --size or --kilobytes parameter
     :param use_kilobytes: True for --kilobytes, False for --size
     :param flagstr: string of "--config, --live, --current, etc."
-    :return:s: CmdResult instance
-    @raises: error.CmdError: if libvirtd is not running.
+    :return: CmdResult instance
+    :raise:: error.CmdError: if libvirtd is not running.
     """
     cmd = "setmaxmem"
     if domainarg is not None:  # Allow testing of ""

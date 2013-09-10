@@ -1,7 +1,7 @@
 """
 Virt-v2v test utility functions.
 
-@copyright: 2008-2012 Red Hat Inc.
+:copyright: 2008-2012 Red Hat Inc.
 """
 
 import os

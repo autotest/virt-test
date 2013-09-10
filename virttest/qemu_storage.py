@@ -44,7 +44,7 @@ class QemuImg(storage.QemuImg):
         :param ignore_errors: Whether to ignore errors on the image creation
                 cmd.
 
-        @note: params should contain:
+        :note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
                image_cluster_size (optional) -- the cluster size for the image
@@ -146,7 +146,7 @@ class QemuImg(storage.QemuImg):
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
 
-        @note: params should contain:
+        :note: params should contain:
             convert_image_tag -- the image name of the convert image
             convert_filename -- the name of the image after convert
             convert_fmt -- the format after convert
@@ -194,7 +194,7 @@ class QemuImg(storage.QemuImg):
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
 
-        @note: params should contain:
+        :note: params should contain:
             cmd -- qemu-img cmd
             snapshot_img -- the snapshot name
             base_img -- base image name
@@ -250,7 +250,7 @@ class QemuImg(storage.QemuImg):
         """
         Create a snapshot image.
 
-        @note: params should contain:
+        :note: params should contain:
                snapshot_image_name -- the name of snapshot image file
         """
 
@@ -272,7 +272,7 @@ class QemuImg(storage.QemuImg):
 
         :param blkdebug_cfg: The configure file of blkdebug
 
-        @note: params should contain:
+        :note: params should contain:
                snapshot_image_name -- the name of snapshot image file
         """
 
@@ -344,11 +344,11 @@ class QemuImg(storage.QemuImg):
         :param params: Dictionary containing the test parameters.
         :param root_dir: Base directory for relative filenames.
 
-        @note: params should contain:
+        :note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
 
-        @raise VMImageCheckError: In case qemu-img check fails on the image.
+        :raise VMImageCheckError: In case qemu-img check fails on the image.
         """
         compare_images = self.support_cmd("compare")
         if not compare_images:
@@ -373,11 +373,11 @@ class QemuImg(storage.QemuImg):
         :param params: Dictionary containing the test parameters.
         :param root_dir: Base directory for relative filenames.
 
-        @note: params should contain:
+        :note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
 
-        @raise VMImageCheckError: In case qemu-img check fails on the image.
+        :raise VMImageCheckError: In case qemu-img check fails on the image.
         """
         image_filename = self.image_filename
         logging.debug("Checking image file %s", image_filename)

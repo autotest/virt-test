@@ -1,7 +1,7 @@
 """
 Interfaces and helpers for the virtio_serial ports.
 
-@copyright: 2012 Red Hat Inc.
+:copyright: 2012 Red Hat Inc.
 """
 from threading import Thread
 from collections import deque

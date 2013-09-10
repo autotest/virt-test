@@ -2,8 +2,8 @@
 """
 This is a unittest for qemu_devices library.
 
-@author: Lukas Doktor <ldoktor@redhat.com>
-@copyright: 2012 Red Hat, Inc.
+:author: Lukas Doktor <ldoktor@redhat.com>
+:copyright: 2012 Red Hat, Inc.
 """
 __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 

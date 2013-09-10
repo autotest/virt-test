@@ -1,7 +1,7 @@
 """
 Virtualization test utility functions.
 
-@copyright: 2008-2009 Red Hat Inc.
+:copyright: 2008-2009 Red Hat Inc.
 """
 
 import time
@@ -99,7 +99,7 @@ def find_command(cmd):
     Try to find a command in the PATH, paranoid version.
 
     :param cmd: Command to be found.
-    @raise: ValueError in case the command was not found.
+    :raise: ValueError in case the command was not found.
     """
     common_bin_paths = ["/usr/libexec", "/usr/local/sbin", "/usr/local/bin",
                         "/usr/sbin", "/usr/bin", "/sbin", "/bin"]
@@ -872,7 +872,7 @@ def is_mounted(src, mount_point, fstype, perm=""):
     :type fstype: string
     :param perm: mount permission
     :type perm: string
-    :return:: if the src is mounted as expect
+    :return: if the src is mounted as expect
     :rtype: Boolean
     """
     mount_point = os.path.realpath(mount_point)
@@ -1104,8 +1104,8 @@ def create_x509_dir(path, cacert_subj, server_subj, passphrase,
     :param bits = 1024: bit length of keys
     :param days = 1095: cert expiration
 
-    @raise ValueError: openssl not found or rc != 0
-    @raise OSError: if os.makedirs() fails
+    :raise ValueError: openssl not found or rc != 0
+    :raise OSError: if os.makedirs() fails
     """
 
     ssl_cmd = os_dep.command("openssl")
@@ -1181,7 +1181,7 @@ def get_thread_cpu(thread):
 
     :param thread: thread checked
     :type thread: string
-    :return:: A list include all cpus the thread used
+    :return: A list include all cpus the thread used
     :rtype: list
     """
     cmd = "ps -o cpuid,lwp -eL | grep -w %s$" % thread
@@ -1197,7 +1197,7 @@ def get_pid_cpu(pid):
 
     :param pid: process id
     :type thread: string
-    :return:: A list include all cpus the process used
+    :return: A list include all cpus the process used
     :rtype: list
     """
     cmd = "ps -o cpuid -L -p %s" % pid
@@ -1211,7 +1211,7 @@ def get_node_count():
     """
     Get the number of nodes of current host.
 
-    :return:: the number of nodes
+    :return: the number of nodes
     :rtype: string
     """
     cmd = utils.run("numactl --hardware")
@@ -1225,7 +1225,7 @@ def cpu_str_to_list(origin_str):
 
     :param origin_str: the cpu info string read from system
     :type origin_str: string
-    :return:: A list of the cpu ids
+    :return: A list of the cpu ids
     :rtype: list
     """
     if isinstance(origin_str, str):
@@ -1269,7 +1269,7 @@ class NumaInfo(object):
         """
         Get all node ids in host.
 
-        :return:: All node ids in host
+        :return: All node ids in host
         :rtype: list
         """
         all_nodes = get_path(self.numa_sys_path, "possible")
@@ -1283,7 +1283,7 @@ class NumaInfo(object):
         """
         Get node ids online in host
 
-        :return:: The ids of node which is online
+        :return: The ids of node which is online
         :rtype: list
         """
         online_nodes = get_path(self.numa_sys_path, "online")
@@ -1299,7 +1299,7 @@ class NumaInfo(object):
 
         :param node_id: Node that you want to check
         :type node_id: string
-        :return:: A list in of distance for the node in positive-sequence
+        :return: A list in of distance for the node in positive-sequence
         :rtype: list
         """
         cmd = utils.run("numactl --hardware")
@@ -1330,7 +1330,7 @@ class NumaInfo(object):
         :type node_id: string
         :param key: The value you want to check such as MemTotal etc.
         :type key: string
-        :return:: The value in KB
+        :return: The value in KB
         :rtype: string
         """
         memory_path = os.path.join(self.numa_sys_path,
@@ -1839,7 +1839,7 @@ def verify_running_as_root():
     """
     Verifies whether we're running under UID 0 (root).
 
-    @raise: error.TestNAError
+    :raise: error.TestNAError
     """
     if os.getuid() != 0:
         raise error.TestNAError("This test requires root privileges "

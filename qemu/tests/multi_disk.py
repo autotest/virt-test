@@ -1,7 +1,7 @@
 """
 multi_disk test for Autotest framework.
 
-@copyright: 2011-2012 Red Hat Inc.
+:copyright: 2011-2012 Red Hat Inc.
 """
 import logging
 import re
@@ -23,7 +23,7 @@ def _range(buf, n=None):
     range1-3 ... ordinary python range()
     range4   ... multiplies the occurrence of each value
                 (range(0,4,1,2) => [0,0,1,1,2,2,3,3])
-    @raise ValueError: In case incorrect values are given.
+    :raise ValueError: In case incorrect values are given.
     :return: List of int values. In case it can't substitute 'n'
              it returns the original string.
     """

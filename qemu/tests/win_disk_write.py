@@ -14,7 +14,7 @@ def run_win_disk_write(test, params, env):
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
-    @note: Crystal Disk mark is BSD licensed software
+    :note: Crystal Disk mark is BSD licensed software
     http://crystalmark.info/software/CrystalDiskMark/manual-en/License.html
     :see:: http://crystalmark.info/software/CrystalDiskMark/index-e.html
     """

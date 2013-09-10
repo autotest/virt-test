@@ -43,7 +43,7 @@ def preprocess_image(test, params, image_name):
 
     :param test: Autotest test object.
     :param params: A dict containing image preprocessing parameters.
-    @note: Currently this function just creates an image if requested.
+    :note: Currently this function just creates an image if requested.
     """
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
 

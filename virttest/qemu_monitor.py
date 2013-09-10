@@ -1,7 +1,7 @@
 """
 Interfaces to the QEMU monitor.
 
-@copyright: 2008-2010 Red Hat Inc.
+:copyright: 2008-2010 Red Hat Inc.
 """
 
 import socket
@@ -168,7 +168,7 @@ class Monitor:
         :param name: Monitor identifier (a string)
         :param filename: Monitor socket filename
 
-        @raise MonitorConnectError: Raised if the connection fails
+        :raise MonitorConnectError: Raised if the connection fails
         """
         self.vm = vm
         self.name = name
@@ -518,11 +518,11 @@ class HumanMonitor(Monitor):
         :param name: Monitor identifier (a string)
         :param filename: Monitor socket filename
 
-        @raise MonitorConnectError: Raised if the connection fails and
+        :raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
-        @raise MonitorProtocolError: Raised if the initial (qemu) prompt isn't
+        :raise MonitorProtocolError: Raised if the initial (qemu) prompt isn't
                 found and suppress_exceptions is False
-        @note: Other exceptions may be raised.  See cmd()'s
+        :note: Other exceptions may be raised.  See cmd()'s
                 docstring.
         """
         try:
@@ -574,8 +574,8 @@ class HumanMonitor(Monitor):
         Send a command without waiting for output.
 
         :param cmd: Command to send
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSocketError: Raised if a socket error occurs
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSocketError: Raised if a socket error occurs
         """
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
@@ -626,9 +626,9 @@ class HumanMonitor(Monitor):
         :param timeout: Time duration to wait for the (qemu) prompt to return
         :param debug: Whether to print the commands being sent and responses
         :return: Output received from the monitor
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSocketError: Raised if a socket error occurs
-        @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSocketError: Raised if a socket error occurs
+        :raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
                 found after sending the command
         """
         self._log_command(cmd, debug)
@@ -721,9 +721,9 @@ class HumanMonitor(Monitor):
         :param convert: If command need to convert. For commands such as:
                         $command $arg_value
         :return: The output of the command
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSendError: Raised if the command cannot be sent
-        @raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSendError: Raised if the command cannot be sent
+        :raise MonitorProtocolError: Raised if the (qemu) prompt cannot be
                 found after sending the command
         """
         cmd_output = []
@@ -1083,13 +1083,13 @@ class QMPMonitor(Monitor):
         :param name: Monitor identifier (a string)
         :param filename: Monitor socket filename
 
-        @raise MonitorConnectError: Raised if the connection fails and
+        :raise MonitorConnectError: Raised if the connection fails and
                 suppress_exceptions is False
-        @raise MonitorProtocolError: Raised if the no QMP greeting message is
+        :raise MonitorProtocolError: Raised if the no QMP greeting message is
                 received and suppress_exceptions is False
-        @raise MonitorNotSupportedError: Raised if json isn't available and
+        :raise MonitorNotSupportedError: Raised if json isn't available and
                 suppress_exceptions is False
-        @note: Other exceptions may be raised if the qmp_capabilities command
+        :note: Other exceptions may be raised if the qmp_capabilities command
                 fails.  See cmd()'s docstring.
         """
         try:
@@ -1186,7 +1186,7 @@ class QMPMonitor(Monitor):
         Send raw data without waiting for response.
 
         :param data: Data to send
-        @raise MonitorSocketError: Raised if a socket error occurs
+        :raise MonitorSocketError: Raised if a socket error occurs
         """
         try:
             self._socket.sendall(data)
@@ -1317,10 +1317,10 @@ class QMPMonitor(Monitor):
 
         :return: The response received
 
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSocketError: Raised if a socket error occurs
-        @raise MonitorProtocolError: Raised if no response is received
-        @raise QMPCmdError: Raised if the response is an error message
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSocketError: Raised if a socket error occurs
+        :raise MonitorProtocolError: Raised if no response is received
+        :raise QMPCmdError: Raised if the response is an error message
                             (the exception's args are (cmd, args, data)
                              where data is the error data)
         """
@@ -1372,9 +1372,9 @@ class QMPMonitor(Monitor):
         :param data: The data to send
         :param timeout: Time duration to wait for response
         :return: The response received
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSocketError: Raised if a socket error occurs
-        @raise MonitorProtocolError: Raised if no response is received
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSocketError: Raised if a socket error occurs
+        :raise MonitorProtocolError: Raised if no response is received
         """
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to send "
@@ -1402,9 +1402,9 @@ class QMPMonitor(Monitor):
         :param obj: The object to send
         :param timeout: Time duration to wait for response
         :return: The response received
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSocketError: Raised if a socket error occurs
-        @raise MonitorProtocolError: Raised if no response is received
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSocketError: Raised if a socket error occurs
+        :raise MonitorProtocolError: Raised if no response is received
         """
         return self.cmd_raw(json.dumps(obj) + "\n", timeout)
 
@@ -1420,9 +1420,9 @@ class QMPMonitor(Monitor):
         :param id:  An id for the command, or None
         :param timeout: Time duration to wait for response
         :return: The response received
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSocketError: Raised if a socket error occurs
-        @raise MonitorProtocolError: Raised if no response is received
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSocketError: Raised if a socket error occurs
+        :raise MonitorProtocolError: Raised if no response is received
         """
         return self.cmd_obj(self._build_cmd(cmd, args, q_id), timeout)
 
@@ -1462,7 +1462,7 @@ class QMPMonitor(Monitor):
         clear_events() call.
 
         :return: A list of events (the objects returned have an "event" key)
-        @raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorLockError: Raised if the lock cannot be acquired
         """
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to read "
@@ -1509,7 +1509,7 @@ class QMPMonitor(Monitor):
         """
         Clear the list of asynchronous events.
 
-        @raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorLockError: Raised if the lock cannot be acquired
         """
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to clear "
@@ -1521,7 +1521,7 @@ class QMPMonitor(Monitor):
         """
         Clear a kinds of events in events list only.
 
-        @raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorLockError: Raised if the lock cannot be acquired
         """
         if not self._acquire_lock():
             raise MonitorLockError("Could not acquire exclusive lock to clear "
@@ -1560,9 +1560,9 @@ class QMPMonitor(Monitor):
         :param convert: If command need to convert. For commands not in standard
                         format such as: $command $arg_value
         :return: The response to the command
-        @raise MonitorLockError: Raised if the lock cannot be acquired
-        @raise MonitorSendError: Raised if the command cannot be sent
-        @raise MonitorProtocolError: Raised if no response is received
+        :raise MonitorLockError: Raised if the lock cannot be acquired
+        :raise MonitorSendError: Raised if the command cannot be sent
+        :raise MonitorProtocolError: Raised if no response is received
         """
         cmd_output = []
         for cmdline in cmdlines.split(";"):

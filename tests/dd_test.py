@@ -1,7 +1,7 @@
 """
 Configurable on-guest dd test.
-@author: Lukas Doktor <ldoktor@redhat.com>
-@copyright: 2012 Red Hat, Inc.
+:author: Lukas Doktor <ldoktor@redhat.com>
+:copyright: 2012 Red Hat, Inc.
 """
 import logging
 from autotest.client.shared import error

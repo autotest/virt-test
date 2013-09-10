@@ -1,10 +1,10 @@
 """
 KVM cdrom test
-@author: Amos Kong <akong@redhat.com>
-@author: Lucas Meneghel Rodrigues <lmr@redhat.com>
-@author: Lukas Doktor <ldoktor@redhat.com>
-@author: Jiri Zupka <jzupka@redhat.com>
-@copyright: 2011 Red Hat, Inc.
+:author: Amos Kong <akong@redhat.com>
+:author: Lucas Meneghel Rodrigues <lmr@redhat.com>
+:author: Lukas Doktor <ldoktor@redhat.com>
+:author: Jiri Zupka <jzupka@redhat.com>
+:copyright: 2011 Red Hat, Inc.
 """
 import logging
 import re

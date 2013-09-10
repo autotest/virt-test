@@ -3,9 +3,9 @@
 """
 Auxiliary script used to send data between ports on guests.
 
-@copyright: 2010 Red Hat, Inc.
-@author: Jiri Zupka (jzupka@redhat.com)
-@author: Lukas Doktor (ldoktor@redhat.com)
+:copyright: 2010 Red Hat, Inc.
+:author: Jiri Zupka (jzupka@redhat.com)
+:author: Lukas Doktor (ldoktor@redhat.com)
 """
 import threading
 from threading import Thread

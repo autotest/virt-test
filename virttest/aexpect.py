@@ -2,7 +2,7 @@
 """
 A class and functions used for running and controlling child processes.
 
-@copyright: 2008-2009 Red Hat Inc.
+:copyright: 2008-2009 Red Hat Inc.
 """
 
 import os
@@ -1028,10 +1028,10 @@ class Expect(Tail):
                 (should take a string parameter)
         :param match_func: Function to compare the output and patterns.
         :return: Tuple containing the match index and the data read so far
-        @raise ExpectTimeoutError: Raised if timeout expires
-        @raise ExpectProcessTerminatedError: Raised if the child process
+        :raise ExpectTimeoutError: Raised if timeout expires
+        :raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
-        @raise ExpectError: Raised if an unknown error occurs
+        :raise ExpectError: Raised if an unknown error occurs
         """
         if not match_func:
             match_func = self.match_patterns
@@ -1081,10 +1081,10 @@ class Expect(Tail):
         :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
         :return: A tuple containing the match index and the data read so far
-        @raise ExpectTimeoutError: Raised if timeout expires
-        @raise ExpectProcessTerminatedError: Raised if the child process
+        :raise ExpectTimeoutError: Raised if timeout expires
+        :raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
-        @raise ExpectError: Raised if an unknown error occurs
+        :raise ExpectError: Raised if an unknown error occurs
         """
         def get_last_word(cont):
             if cont:
@@ -1114,10 +1114,10 @@ class Expect(Tail):
         :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
         :return: A tuple containing the match index and the data read so far
-        @raise ExpectTimeoutError: Raised if timeout expires
-        @raise ExpectProcessTerminatedError: Raised if the child process
+        :raise ExpectTimeoutError: Raised if timeout expires
+        :raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
-        @raise ExpectError: Raised if an unknown error occurs
+        :raise ExpectError: Raised if an unknown error occurs
         """
         def get_last_nonempty_line(cont):
             nonempty_lines = [l for l in cont.splitlines() if l.strip()]
@@ -1148,10 +1148,10 @@ class Expect(Tail):
         :param print_func: A function to be used to print the data being read
                 (should take a string parameter)
         :return: A tuple containing the match index and the data read so far
-        @raise ExpectTimeoutError: Raised if timeout expires
-        @raise ExpectProcessTerminatedError: Raised if the child process
+        :raise ExpectTimeoutError: Raised if timeout expires
+        :raise ExpectProcessTerminatedError: Raised if the child process
                 terminates while waiting for output
-        @raise ExpectError: Raised if an unknown error occurs
+        :raise ExpectError: Raised if an unknown error occurs
         """
         return self.read_until_output_matches(patterns,
                                               lambda x: x.splitlines(
@@ -1281,10 +1281,10 @@ class ShellSession(Expect):
                 read (should take a string parameter)
 
         :return: The data read so far
-        @raise ExpectTimeoutError: Raised if timeout expires
-        @raise ExpectProcessTerminatedError: Raised if the shell process
+        :raise ExpectTimeoutError: Raised if timeout expires
+        :raise ExpectProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
-        @raise ExpectError: Raised if an unknown error occurs
+        :raise ExpectError: Raised if an unknown error occurs
         """
         return self.read_until_last_line_matches([self.prompt], timeout,
                                                  internal_timeout,
@@ -1303,10 +1303,10 @@ class ShellSession(Expect):
                 (should take a string parameter)
 
         :return: The output of cmd
-        @raise ShellTimeoutError: Raised if timeout expires
-        @raise ShellProcessTerminatedError: Raised if the shell process
+        :raise ShellTimeoutError: Raised if timeout expires
+        :raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
-        @raise ShellError: Raised if an unknown error occurs
+        :raise ShellError: Raised if an unknown error occurs
         """
         def remove_command_echo(cont, cmd):
             if cont and cont.splitlines()[0] == cmd:
@@ -1347,11 +1347,11 @@ class ShellSession(Expect):
 
         :return: A tuple (status, output) where status is the exit status and
                 output is the output of cmd
-        @raise ShellTimeoutError: Raised if timeout expires
-        @raise ShellProcessTerminatedError: Raised if the shell process
+        :raise ShellTimeoutError: Raised if timeout expires
+        :raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
-        @raise ShellStatusError: Raised if the exit status cannot be obtained
-        @raise ShellError: Raised if an unknown error occurs
+        :raise ShellStatusError: Raised if the exit status cannot be obtained
+        :raise ShellError: Raised if an unknown error occurs
         """
         o = self.cmd_output(cmd, timeout, internal_timeout, print_func)
         try:
@@ -1380,11 +1380,11 @@ class ShellSession(Expect):
                 (should take a string parameter)
 
         :return: The exit status of cmd
-        @raise ShellTimeoutError: Raised if timeout expires
-        @raise ShellProcessTerminatedError: Raised if the shell process
+        :raise ShellTimeoutError: Raised if timeout expires
+        :raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
-        @raise ShellStatusError: Raised if the exit status cannot be obtained
-        @raise ShellError: Raised if an unknown error occurs
+        :raise ShellStatusError: Raised if the exit status cannot be obtained
+        :raise ShellError: Raised if an unknown error occurs
         """
         return self.cmd_status_output(cmd, timeout, internal_timeout,
                                       print_func)[0]
@@ -1407,14 +1407,14 @@ class ShellSession(Expect):
                 raised  on any error.
 
         :return: The output of cmd
-        @raise ShellTimeoutError: Raised if timeout expires
-        @raise ShellProcessTerminatedError: Raised if the shell process
+        :raise ShellTimeoutError: Raised if timeout expires
+        :raise ShellProcessTerminatedError: Raised if the shell process
                 terminates while waiting for output
-        @raise ShellError: Raised if the exit status cannot be obtained or if
+        :raise ShellError: Raised if the exit status cannot be obtained or if
                 an unknown error occurs
-        @raise ShellStatusError: Raised if the exit status cannot be obtained
-        @raise ShellError: Raised if an unknown error occurs
-        @raise ShellCmdError: Raised if the exit status is nonzero
+        :raise ShellStatusError: Raised if the exit status cannot be obtained
+        :raise ShellError: Raised if an unknown error occurs
+        :raise ShellCmdError: Raised if the exit status is nonzero
         """
         try:
             s, o = self.cmd_status_output(cmd, timeout, internal_timeout,

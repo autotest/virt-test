@@ -2,7 +2,7 @@
 """
 Populate/update config files for virt-test
 
-@copyright: Red Hat 2013
+:copyright: Red Hat 2013
 """
 import os
 import sys

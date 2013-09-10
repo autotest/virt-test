@@ -576,8 +576,8 @@ class BaseVM(object):
         Can be subclassed to provide better information on why the VM is
         not alive (reason, detail)
 
-        @raise VMDeadError: If the VM is dead
-        @raise: Various monitor exceptions if the monitor is unresponsive
+        :raise VMDeadError: If the VM is dead
+        :raise: Various monitor exceptions if the monitor is unresponsive
         """
         if self.is_dead():
             raise VMDeadError
@@ -587,7 +587,7 @@ class BaseVM(object):
         Return the MAC address of a NIC.
 
         :param nic_index: Index of the NIC
-        @raise VMMACAddressMissingError: If no MAC address is defined for the
+        :raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
         """
         try:
@@ -603,11 +603,11 @@ class BaseVM(object):
         :param index: Name or index of the NIC whose address is requested.
         :return: 'localhost': Port redirection is in use
         :return: IP address of NIC if valid in arp cache.
-        @raise VMMACAddressMissingError: If no MAC address is defined for the
+        :raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
-        @raise VMIPAddressMissingError: If no IP address is found for the the
+        :raise VMIPAddressMissingError: If no IP address is found for the the
                 NIC's MAC address
-        @raise VMAddressVerificationError: If the MAC-IP address mapping cannot
+        :raise VMAddressVerificationError: If the MAC-IP address mapping cannot
                 be verified (using arping)
         """
         nic = self.virtnet[index]
@@ -672,7 +672,7 @@ class BaseVM(object):
         :param nic_index: Index of the NIC.
         :return: If port redirection is used, return the host port redirected
                 to guest port port. Otherwise return port.
-        @raise VMPortNotRedirectedError: If an unredirected port is requested
+        :raise VMPortNotRedirectedError: If an unredirected port is requested
                 in user mode
         """
         nic_nettype = self.virtnet[nic_index].nettype
@@ -763,7 +763,7 @@ class BaseVM(object):
         """
         Find kernel crash message on the VM serial console.
 
-        @raise: VMDeadKernelCrashError, in case a kernel crash message was
+        :raise: VMDeadKernelCrashError, in case a kernel crash message was
                 found.
         """
         panic_re = [r"BUG:.*---\[ end trace .* \]---"]
@@ -780,7 +780,7 @@ class BaseVM(object):
         """
         Find illegal instruction code on VM serial console output.
 
-        @raise: VMInvalidInstructionCode, in case a wrong instruction code.
+        :raise: VMInvalidInstructionCode, in case a wrong instruction code.
         """
         if self.serial_console is not None:
             data = self.serial_console.get_output()

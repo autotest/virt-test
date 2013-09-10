@@ -1,8 +1,8 @@
 """
 Utility classes and functions to handle KVM Qtree parsing and verification.
 
-@author: Lukas Doktor <ldoktor@redhat.com>
-@copyright: 2012 Red Hat Inc.
+:author: Lukas Doktor <ldoktor@redhat.com>
+:copyright: 2012 Red Hat Inc.
 """
 import logging
 import os
@@ -407,7 +407,7 @@ class QtreeDisksContainer(object):
     def generate_params(self):
         """
         Generate params from current self.qtree and self.block info.
-        @note: disk name is not yet the one from autotest params
+        :note: disk name is not yet the one from autotest params
         :return: number of fails
         """
         err = 0
@@ -422,7 +422,7 @@ class QtreeDisksContainer(object):
     def check_guests_proc_scsi(self, info):
         """
         Check info from guest's /proc/scsi/scsi file with qtree/block info
-        @note: Not tested disks are of different type (virtio_blk, ...)
+        :note: Not tested disks are of different type (virtio_blk, ...)
         :param info: contents of guest's /proc/scsi/scsi file
         :return: (#disks missing in guest os, #disks missing in qtree,
                   #not tested disks from qtree, #not tested disks from guest)

@@ -1,7 +1,7 @@
 """
 Utility classes and functions to handle Virtual Machine creation using qemu.
 
-@copyright: 2008-2009 Red Hat Inc.
+:copyright: 2008-2009 Red Hat Inc.
 """
 
 import time
@@ -145,8 +145,8 @@ class VM(virt_vm.BaseVM):
         """
         Make sure the VM is alive and that the main monitor is responsive.
 
-        @raise VMDeadError: If the VM is dead
-        @raise: Various monitor exceptions if the monitor is unresponsive
+        :raise VMDeadError: If the VM is dead
+        :raise: Various monitor exceptions if the monitor is unresponsive
         """
         self.verify_disk_image_bootable()
         self.verify_userspace_crash()
@@ -191,7 +191,7 @@ class VM(virt_vm.BaseVM):
         Check VM status
 
         :param status: Optional VM status, 'running' or 'paused'
-        @raise VMStatusError: If the VM status is not same as parameter
+        :raise VMStatusError: If the VM status is not same as parameter
         """
         if not self.monitor.verify_status(status):
             raise virt_vm.VMStatusError('Unexpected VM status: "%s"' %
@@ -289,7 +289,7 @@ class VM(virt_vm.BaseVM):
         :param params: A dict containing VM params
         :param root_dir: Base directory for relative filenames
 
-        @note: The params dict should contain:
+        :note: The params dict should contain:
                mem -- memory size in MBs
                cdrom -- ISO filename to use with the qemu -cdrom parameter
                extra_params -- a string to append to the qemu command
@@ -1700,19 +1700,19 @@ class VM(virt_vm.BaseVM):
         :param mac_source: A VM object from which to copy MAC addresses. If not
                 specified, new addresses will be generated.
 
-        @raise VMCreateError: If qemu terminates unexpectedly
-        @raise VMKVMInitError: If KVM initialization fails
-        @raise VMHugePageError: If hugepage initialization fails
-        @raise VMImageMissingError: If a CD image is missing
-        @raise VMHashMismatchError: If a CD image hash has doesn't match the
+        :raise VMCreateError: If qemu terminates unexpectedly
+        :raise VMKVMInitError: If KVM initialization fails
+        :raise VMHugePageError: If hugepage initialization fails
+        :raise VMImageMissingError: If a CD image is missing
+        :raise VMHashMismatchError: If a CD image hash has doesn't match the
                 expected hash
-        @raise VMBadPATypeError: If an unsupported PCI assignment type is
+        :raise VMBadPATypeError: If an unsupported PCI assignment type is
                 requested
-        @raise VMPAError: If no PCI assignable devices could be assigned
-        @raise TAPCreationError: If fail to create tap fd
-        @raise BRAddIfError: If fail to add a tap to a bridge
-        @raise TAPBringUpError: If fail to bring up a tap
-        @raise PrivateBridgeError: If fail to bring the private bridge
+        :raise VMPAError: If no PCI assignable devices could be assigned
+        :raise TAPCreationError: If fail to create tap fd
+        :raise BRAddIfError: If fail to add a tap to a bridge
+        :raise TAPBringUpError: If fail to bring up a tap
+        :raise PrivateBridgeError: If fail to bring the private bridge
         """
         error.context("creating '%s'" % self.name)
         self.destroy(free_mac_addresses=False)
@@ -2340,7 +2340,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the VM's PID.  If the VM is dead return None.
 
-        @note: This works under the assumption that self.process.get_pid()
+        :note: This works under the assumption that self.process.get_pid()
         returns the PID of the parent shell process.
         """
         try:
@@ -2354,7 +2354,7 @@ class VM(virt_vm.BaseVM):
         """
         Return the PID of the parent shell process.
 
-        @note: This works under the assumption that self.process.get_pid()
+        :note: This works under the assumption that self.process.get_pid()
         returns the PID of the parent shell process.
         """
         return self.process.get_pid()
@@ -2381,7 +2381,7 @@ class VM(virt_vm.BaseVM):
 
         :param vhost_thread_pattern: a regex to match the vhost threads
         :type vhost_thread_pattern: string
-        :return:: a list of vhost threads PIDs
+        :return: a list of vhost threads PIDs
         :rtype: list of integer
         """
         return [int(_) for _ in re.findall(vhost_thread_pattern %
@@ -2546,10 +2546,10 @@ class VM(virt_vm.BaseVM):
         """
         Activate an inactive host-side networking device
 
-        @raises: IndexError if nic doesn't exist
-        @raises: VMUnknownNetTypeError: if nettype is unset/unsupported
-        @raises: IOError if TAP device node cannot be opened
-        @raises: VMAddNetDevError: if operation failed
+        :raise:: IndexError if nic doesn't exist
+        :raise:: VMUnknownNetTypeError: if nettype is unset/unsupported
+        :raise:: IOError if TAP device node cannot be opened
+        :raise:: VMAddNetDevError: if operation failed
         """
         nic = self.virtnet[nic_index_or_name]
         error.context("Activating netdev for %s based on %s" %

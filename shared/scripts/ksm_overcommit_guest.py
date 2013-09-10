@@ -3,8 +3,8 @@
 """
 Auxiliary script used to allocate memory on guests.
 
-@copyright: 2008-2009 Red Hat Inc.
-@author: Jiri Zupka (jzupka@redhat.com)
+:copyright: 2008-2009 Red Hat Inc.
+:author: Jiri Zupka (jzupka@redhat.com)
 """
 
 

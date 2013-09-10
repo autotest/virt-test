@@ -90,7 +90,7 @@ def read_from_vmstat(key):
 
     :param key: The item you want to check from vmstat
     :type key: String
-    :return:: The value of the item
+    :return: The value of the item
     :rtype: int
     """
     vmstat = open("/proc/vmstat")
@@ -107,7 +107,7 @@ def read_from_smaps(pid, key):
     :type pid: String
     :param key: The item you want to check from smaps
     :type key: String
-    :return:: The value of the item in kb
+    :return: The value of the item in kb
     :rtype: int
     """
     smaps = open("/proc/%s/smaps" % pid)
@@ -130,7 +130,7 @@ def read_from_numa_maps(pid, key):
     :type pid: String
     :param key: The item you want to check from numa_maps
     :type key: String
-    :return:: A dict using the address as the keys
+    :return: A dict using the address as the keys
     :rtype: dict
     """
     numa_maps = open("/proc/%s/numa_maps" % pid)
@@ -165,7 +165,7 @@ def get_buddy_info(chunk_sizes, nodes="all", zones="all"):
     :type nodes: string
     :param zones: The memory zone that you want to check. Default value is all
     :type zones: string
-    :return:: A dict using the chunk_size as the keys
+    :return: A dict using the chunk_size as the keys
     :rtype: dict
     """
     buddy_info = open("/proc/buddyinfo")

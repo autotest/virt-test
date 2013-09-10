@@ -2,7 +2,7 @@
 """
 Collection of virtio_console and virtio_serialport tests.
 
-@copyright: 2010-2012 Red Hat Inc.
+:copyright: 2010-2012 Red Hat Inc.
 """
 from collections import deque
 import array
@@ -37,7 +37,7 @@ def run_virtio_console(test, params, env):
     :param test: kvm test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
-    @raise error.TestNAError: if function with test_$testname is not present
+    :raise error.TestNAError: if function with test_$testname is not present
     """
     #
     # General helpers
@@ -220,7 +220,7 @@ def run_virtio_console(test, params, env):
     def test_multi_open():
         """
         Try to open the same port twice.
-        @note: On linux it should pass with virtconsole and fail with
+        :note: On linux it should pass with virtconsole and fail with
                virtserialport. On Windows booth should fail
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
@@ -355,7 +355,7 @@ def run_virtio_console(test, params, env):
     def test_lseek():
         """
         Tests the correct handling of lseek
-        @note: lseek should fail
+        :note: lseek should fail
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
@@ -802,7 +802,7 @@ def run_virtio_console(test, params, env):
         def _s4():
             """
             Hibernate (S4) and resume the VM.
-            @note: data loss is handled differently in this case. First we
+            :note: data loss is handled differently in this case. First we
                    set data loss to (almost) infinity. After the resume we
                    periodically check the number of transferred and lost data.
                    When there is no loss and number of transferred data is
@@ -1755,7 +1755,7 @@ def run_virtio_console(test, params, env):
         """
         Try to gently shutdown the machine while sending data through virtio
         port.
-        @note: VM should shutdown safely.
+        :note: VM should shutdown safely.
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         :param cfg: virtio_console_method - reboot method (shell, system_reset)
@@ -1811,7 +1811,7 @@ def run_virtio_console(test, params, env):
     def test_unplugged_restart():
         """
         Try to unplug all virtio ports and gently restart machine
-        @note: VM should shutdown safely.
+        :note: VM should shutdown safely.
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         :param cfg: virtio_console_method - reboot method (shell, system_reset)
@@ -1872,7 +1872,7 @@ def run_virtio_console(test, params, env):
         """
         This dummy test only removes the guest_worker_script. Use this it
         when you use the old image with a new guest_worker version.
-        @note: The script name might differ!
+        :note: The script name might differ!
         """
         vm = env.get_vm(params["main_vm"])
         session = vm.wait_for_login()

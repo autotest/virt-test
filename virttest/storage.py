@@ -49,7 +49,7 @@ def get_image_blkdebug_filename(params, root_dir):
     :param params: Dictionary containing the test parameters.
     :param root_dir: Base directory for relative filenames.
 
-    @note: params should contain:
+    :note: params should contain:
            blkdebug -- the name of the debug file.
     """
     blkdebug_name = params.get("drive_blkdebug", None)
@@ -67,10 +67,10 @@ def get_image_filename(params, root_dir):
     :param params: Dictionary containing the test parameters.
     :param root_dir: Base directory for relative filenames.
 
-    @note: params should contain:
+    :note: params should contain:
            image_name -- the name of the image file, without extension
            image_format -- the format of the image (qcow2, raw etc)
-    @raise VMDeviceError: When no matching disk found (in indirect method).
+    :raise VMDeviceError: When no matching disk found (in indirect method).
     """
     def sort_cmp(first, second):
         """
@@ -212,7 +212,7 @@ class QemuImg(object):
         :param good: If we are backing up a good image(we want to restore it)
             or a bad image (we are saving a bad image for posterior analysis).
 
-        @note: params should contain:
+        :note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
         """

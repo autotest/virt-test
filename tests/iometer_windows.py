@@ -1,6 +1,6 @@
 """
-@author: Golita Yue <gyue@redhat.com>
-@author: Amos Kong <akong@redhat.com>
+:author: Golita Yue <gyue@redhat.com>
+:author: Amos Kong <akong@redhat.com>
 """
 import logging
 import time

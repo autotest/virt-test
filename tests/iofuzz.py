@@ -63,7 +63,7 @@ def run_iofuzz(test, params, env):
         process abnormally ends, the test fails.
 
         :param inst_list: List of instructions that will be executed.
-        @raise error.TestFail: If the VM process dies in the middle of the
+        :raise error.TestFail: If the VM process dies in the middle of the
                 fuzzing procedure.
         """
         for (op, operand) in inst_list:

@@ -2,8 +2,8 @@
 """
 Client for file transfer services offered by RSS (Remote Shell Server).
 
-@author: Michael Goldish (mgoldish@redhat.com)
-@copyright: 2008-2010 Red Hat Inc.
+:author: Michael Goldish (mgoldish@redhat.com)
+:copyright: 2008-2010 Red Hat Inc.
 """
 
 import socket
@@ -97,7 +97,7 @@ class FileTransferClient(object):
         :param log_func: If provided, transfer stats will be passed to this
                 function during the transfer
         :param timeout: Time duration to wait for connection to succeed
-        @raise FileTransferConnectError: Raised if the connection fails
+        :raise FileTransferConnectError: Raised if the connection fails
         """
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.settimeout(timeout)
@@ -262,10 +262,10 @@ class FileUploadClient(FileTransferClient):
         :param log_func: If provided, transfer stats will be passed to this
                 function during the transfer
         :param timeout: Time duration to wait for connection to succeed
-        @raise FileTransferConnectError: Raised if the connection fails
-        @raise FileTransferProtocolError: Raised if an incorrect magic number
+        :raise FileTransferConnectError: Raised if the connection fails
+        :raise FileTransferProtocolError: Raised if an incorrect magic number
                 is received
-        @raise FileTransferSocketError: Raised if the RSS_UPLOAD message cannot
+        :raise FileTransferSocketError: Raised if the RSS_UPLOAD message cannot
                 be sent to the server
         """
         super(FileUploadClient, self).__init__(
@@ -305,10 +305,10 @@ class FileUploadClient(FileTransferClient):
                 be saved
         :param timeout: Time duration in seconds to wait for the transfer to
                 complete
-        @raise FileTransferTimeoutError: Raised if timeout expires
-        @raise FileTransferServerError: Raised if something goes wrong and the
+        :raise FileTransferTimeoutError: Raised if timeout expires
+        :raise FileTransferServerError: Raised if something goes wrong and the
                 server sends an informative error message to the client
-        @note: Other exceptions can be raised.
+        :note: Other exceptions can be raised.
         """
         end_time = time.time() + timeout
         try:
@@ -361,10 +361,10 @@ class FileDownloadClient(FileTransferClient):
         :param log_func: If provided, transfer stats will be passed to this
                 function during the transfer
         :param timeout: Time duration to wait for connection to succeed
-        @raise FileTransferConnectError: Raised if the connection fails
-        @raise FileTransferProtocolError: Raised if an incorrect magic number
+        :raise FileTransferConnectError: Raised if the connection fails
+        :raise FileTransferProtocolError: Raised if an incorrect magic number
                 is received
-        @raise FileTransferSendError: Raised if the RSS_UPLOAD message cannot
+        :raise FileTransferSendError: Raised if the RSS_UPLOAD message cannot
                 be sent to the server
         """
         super(FileDownloadClient, self).__init__(
@@ -393,10 +393,10 @@ class FileDownloadClient(FileTransferClient):
                 be saved
         :param timeout: Time duration in seconds to wait for the transfer to
                 complete
-        @raise FileTransferTimeoutError: Raised if timeout expires
-        @raise FileTransferServerError: Raised if something goes wrong and the
+        :raise FileTransferTimeoutError: Raised if timeout expires
+        :raise FileTransferServerError: Raised if something goes wrong and the
                 server sends an informative error message to the client
-        @note: Other exceptions can be raised.
+        :note: Other exceptions can be raised.
         """
         dst_path = os.path.abspath(dst_path)
         end_time = time.time() + timeout

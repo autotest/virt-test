@@ -402,8 +402,8 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     :param restore_image: Whether to restore the image from the pristine.
     :param interactive: Whether to ask for confirmation.
 
-    @raise error.CmdError: If JeOS image failed to uncompress
-    @raise ValueError: If 7za was not found
+    :raise error.CmdError: If JeOS image failed to uncompress
+    :raise ValueError: If 7za was not found
     """
     if interactive:
         logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),

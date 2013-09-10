@@ -13,7 +13,7 @@ def run_negative_create(test, params, env):
     :param test: kvm test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
-    @raise VMCreateSuccess: in case that vm.create() passed
+    :raise VMCreateSuccess: in case that vm.create() passed
 
     This test is designed to check if qemu exits on passed invalid
     argument values.

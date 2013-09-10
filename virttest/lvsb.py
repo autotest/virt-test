@@ -1,7 +1,7 @@
 """
 Higher order classes and functions for Libvirt Sandbox (lxc) container testing
 
-@copyright: 2013 Red Hat Inc.
+:copyright: 2013 Red Hat Inc.
 """
 
 import datetime

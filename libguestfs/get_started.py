@@ -2,7 +2,7 @@
 """
 Program to help setup kvm test environment
 
-@copyright: Red Hat 2010
+:copyright: Red Hat 2010
 """
 import os
 import sys

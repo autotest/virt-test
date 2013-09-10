@@ -18,7 +18,7 @@ More specifically:
       For example, a function should not be used where it may display
       misleading or inaccurate info or debug messages.
 
-@copyright: 2008-2009 Red Hat Inc.
+:copyright: 2008-2009 Red Hat Inc.
 """
 
 import time
@@ -210,7 +210,7 @@ def update_boot_option(vm, args_removed=None, args_added=None,
     :param args_removed: Kernel options want to remove.
     :param args_added: Kernel options want to add.
     :param need_reboot: Whether need reboot VM or not.
-    @raise error.TestError: Raised if fail to update guest kernel cmdlie.
+    :raise error.TestError: Raised if fail to update guest kernel cmdlie.
 
     """
     if vm.params.get("os_type") == 'windows':
@@ -1257,7 +1257,7 @@ def stop_windows_service(session, service, timeout=120):
 
     :param service: The name of the service
     :param timeout: Time duration to wait for service to stop
-    @raise error.TestError: Raised if the service can't be stopped
+    :raise error.TestError: Raised if the service can't be stopped
     """
     end_time = time.time() + timeout
     while time.time() < end_time:
@@ -1279,7 +1279,7 @@ def start_windows_service(session, service, timeout=120):
 
     :param service: The name of the service
     :param timeout: Time duration to wait for service to start
-    @raise error.TestError: Raised if the service can't be started
+    :raise error.TestError: Raised if the service can't be started
     """
     end_time = time.time() + timeout
     while time.time() < end_time:
@@ -2154,7 +2154,7 @@ def get_qemu_numa_status(numa_node_info, qemu_pid, debug=True):
     :type numa_node_info: string
     :param debug: Print the debug info or not
     :type debug: bool
-    :return:: memory and cpu list in each node
+    :return: memory and cpu list in each node
     :rtype: tuple
     """
     node_list = numa_node_info.online_nodes
@@ -2182,7 +2182,7 @@ def max_mem_map_node(host_numa_node, qemu_pid):
     :type numa_node_info: NumaInfo object
     :param qemu_pid: process id of qemu
     :type numa_node_info: string
-    :return:: The node id and how many pages are mapped to it
+    :return: The node id and how many pages are mapped to it
     :rtype: tuple
     """
     node_list = host_numa_node.online_nodes

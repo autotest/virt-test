@@ -117,7 +117,7 @@ class Test(object):
         """
         Verify if there are any errors that happened on background threads.
 
-        @raise Exception: Any exception stored on the background_errors queue.
+        :raise Exception: Any exception stored on the background_errors queue.
         """
         try:
             exc = self.background_errors.get(block=False)

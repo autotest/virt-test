@@ -90,8 +90,8 @@ def recvfd(sock, msg_buf=4096):
     :param buffersize: maximum message size to receive
     :return: On success, recvfd returns a tuple containing the received
     file descriptor and message
-    @raise OSError is raised if recvmsg fails
-    @raise RuntimeError is raised if the received data does not carry
+    :raise OSError is raised if recvmsg fails
+    :raise RuntimeError is raised if the received data does not carry
     exactly one file descriptor, or if the received file descriptor
     is not valid.
     """

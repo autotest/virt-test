@@ -13,7 +13,7 @@ def do_nodedev_dumpxml(dev_name, dev_opt=""):
     (2).compare info in xml with info in sysfs.
 
     :param dev_name: name of device.
-    @raise TestFail: if execute command failed
+    :raise TestFail: if execute command failed
                      or check result failed.
     """
     result = virsh.nodedev_dumpxml(dev_name, options=dev_opt)

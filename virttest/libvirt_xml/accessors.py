@@ -133,8 +133,8 @@ class AccessorBase(PropCanBase):
         :param parent_xpath: xpath of parent element
         :param tag_name: name of element under parent to retrieve/create
         :param create: True to create new element if not exist
-        :return:s: ElementTree.Element instance
-        @raises: LibvirtXMLError: If element not exist & create=False
+        :return: ElementTree.Element instance
+        :raise:: LibvirtXMLError: If element not exist & create=False
         """
         type_check('parent_xpath', parent_xpath, str)
         type_check('tag_name', tag_name, str)
