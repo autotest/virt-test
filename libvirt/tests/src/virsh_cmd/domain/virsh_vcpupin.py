@@ -26,9 +26,9 @@ def run_virsh_vcpupin(test, params, env):
         :param vcpu: vcpu number for which the affinity is required
         """
 
-        output = virsh.vcpuinfo(domname)
-        cmd = re.findall('[^Affinity:][-y]+', str(output))
-        total_affinity = cmd[vcpu].lstrip()
+        output = virsh.vcpuinfo(domname).stdout.rstrip()
+        affinity = re.findall('CPU Affinity: +[-y]+', output)
+        total_affinity = affinity[vcpu].split()[-1].strip()
         actual_affinity = list(total_affinity)
         return actual_affinity
 
