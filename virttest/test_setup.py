@@ -765,7 +765,7 @@ class PciAssignable(object):
         :param vf_filter_re: Regex used to filter vf from lspci.
         :param pf_filter_re: Regex used to filter pf from lspci.
         """
-        self.type_list = []
+        self.devices = []
         self.driver = driver
         self.driver_option = driver_option
         self.name_list = []
@@ -787,17 +787,28 @@ class PciAssignable(object):
             for i in self.kvm_params:
                 if "allow_unsafe_assigned_interrupts" in i:
                     self.auai_path = i
+        if self.setup:
+            self.sr_iov_setup()
 
-    def add_device(self, device_type="vf", name=None):
+
+    def add_device(self, device_type="vf", name=None, mac=None):
         """
         Add device type and name to class.
 
         :param device_type: vf/pf device is added.
-        :param name:  Device name is need.
+        :type device_type: string
+        :param name: Physical device interface name. eth1 or others
+        :type name: string
+        :param mac: set mac address for vf.
+        :type mac: string
         """
-        self.type_list.append(device_type)
+        device = {}
+        device['type'] = device_type
         if name is not None:
-            self.name_list.append(name)
+            device['name'] = name
+        if mac:
+            device['mac'] = mac
+        self.devices.append(device)
         self.devices_requested += 1
 
     def _get_pf_pci_id(self, name=None):
@@ -831,9 +842,9 @@ class PciAssignable(object):
         :param pci_id: PCI ID of a given PCI device.
         """
         base_dir = "/sys/bus/pci"
-        full_id = utils_misc.get_full_pci_id(pci_id)
-        vendor_id = utils_misc.get_vendor_from_pci_id(pci_id)
-        drv_path = os.path.join(base_dir, "devices/%s/driver" % full_id)
+        short_id = pci_id[5:]
+        vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
+        drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
         if 'pci-stub' in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
             driver = self.dev_unbind_drivers[pci_id]
@@ -843,13 +854,13 @@ class PciAssignable(object):
                 return False
 
             stub_path = os.path.join(base_dir, "drivers/pci-stub")
-            cmd = "echo '%s' > %s/unbind" % (full_id, stub_path)
+            cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
                 return False
 
             driver = self.dev_unbind_drivers[pci_id]
-            cmd = "echo '%s' > %s/bind" % (full_id, driver)
+            cmd = "echo '%s' > %s/bind" % (pci_id, driver)
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
                 return False
@@ -865,7 +876,7 @@ class PciAssignable(object):
         """
         base_dir = "/sys/bus/pci"
         tub_path = os.path.join(base_dir, "drivers/pci-stub")
-        vf_res_path = os.path.join(tub_path, "0000\:%s/resource*" % vf_id)
+        vf_res_path = os.path.join(tub_path, "%s/resource*" % vf_id)
         cmd = "lsof %s" % vf_res_path
         output = utils.system_output(cmd, timeout=60, ignore_status=True)
         if 'qemu' in output:
@@ -962,7 +973,7 @@ class PciAssignable(object):
                 pf_ids.append(pf_id)
         return pf_ids
 
-    def get_devs(self, count, type_list=None):
+    def get_devs(self, devices=None):
         """
         Check out all devices' PCI IDs according to their name.
 
@@ -970,39 +981,33 @@ class PciAssignable(object):
         :return: a list of all devices' PCI IDs
         """
         base_dir = "/sys/bus/pci"
-        if type_list is None:
-            type_list = self.type_list
-        vf_ids = self.get_vf_devs()
+        if not devices:
+            devices = self.devices
         pf_ids = self.get_pf_devs()
-        vf_d = []
-        for pf_id in pf_ids:
-            for vf_id in vf_ids:
-                if vf_id[:2] == pf_id[:2] and\
-                        (int(vf_id[-1]) & 1 == int(pf_id[-1])):
-                    vf_d.append(vf_id)
-        for vf_id in vf_ids:
-            if self.get_vf_status(vf_id):
-                vf_d.append(vf_id)
-        for vf in vf_d:
-            vf_ids.remove(vf)
+        vf_ids = self.get_vf_devs()
+        vf_ids.sort()
         dev_ids = []
-        for i in range(count):
-            if type_list:
-                try:
-                    d_type = type_list[i]
-                except IndexError:
-                    d_type = "vf"
+        if isinstance(devices, dict):
+            devices = [devices]
+        for device in devices:
+            d_type = device.get("type", "vf")
             if d_type == "vf":
                 vf_id = vf_ids.pop(0)
                 dev_ids.append(vf_id)
                 self.dev_unbind_drivers[vf_id] = os.path.join(base_dir,
                                                               "drivers/%svf" % self.driver)
+                (ethname, vf_num) = self.get_vf_num_by_id(vf_id)
+                set_mac_cmd = "ip link set dev %s vf %s mac %s " % (ethname,
+                                                                vf_num,
+                                                                device["mac"])
+                utils.run(set_mac_cmd)
+
             elif d_type == "pf":
                 pf_id = pf_ids.pop(0)
                 dev_ids.append(pf_id)
                 self.dev_unbind_drivers[pf_id] = os.path.join(base_dir,
                                                               "drivers/%s" % self.driver)
-        if len(dev_ids) != count:
+        if len(dev_ids) != len(devices):
             logging.error("Did not get enough PCI Device")
         return dev_ids
 
@@ -1050,35 +1055,27 @@ class PciAssignable(object):
         """
         # Check if the host support interrupt remapping
         error.context("Set up host env for PCI assign test", logging.info)
-        kvm_re_probe = False
-        o = utils.system_output("cat /var/log/dmesg")
+        kvm_re_probe = True
+        o = utils.system_output("dmesg")
         ecap = re.findall("ecap\s+(.\w+)", o)
-
-        if ecap and int(ecap[0], 16) & 8 == 0:
+        if not ecap:
+            logging.error("Fail to check host interrupt remapping support.")
+        else:
+            if int(ecap[0], 16) & 8 == 8:
+                # host support interrupt remapping.
+                # No need enable allow_unsafe_assigned_interrupts.
+                kvm_re_probe = False
             if self.kvm_params is not None:
-                if self.auai_path and self.kvm_params[self.auai_path] == "N":
-                    kvm_re_probe = True
-            else:
-                kvm_re_probe = True
+                if self.auai_path and self.kvm_params[self.auai_path] == "Y":
+                    kvm_re_probe = False
         # Try to re probe kvm module with interrupt remapping support
         if kvm_re_probe:
-            kvm_arch = kvm_control.get_kvm_arch()
-            utils.system("modprobe -r %s" % kvm_arch)
-            utils.system("modprobe -r kvm")
-            cmd = "modprobe kvm allow_unsafe_assigned_interrupts=1"
-            if self.kvm_params is not None:
-                for i in self.kvm_params:
-                    if "allow_unsafe_assigned_interrupts" not in i:
-                        if self.kvm_params[i] == "Y":
-                            params_name = os.path.split(i)[1]
-                            cmd += " %s=1" % params_name
-            error.context("Loading kvm with: %s" % cmd, logging.info)
-
+            cmd = "echo Y > %s" % self.auai_path
+            error.context("enable PCI passthrough with '%s'" % cmd, logging.info)
             try:
                 utils.system(cmd)
             except Exception:
                 logging.debug("Can not enable the interrupt remapping support")
-            utils.system("modprobe %s" % kvm_arch)
 
         re_probe = False
         s, o = commands.getstatusoutput('lsmod | grep %s' % self.driver)
@@ -1088,6 +1085,7 @@ class PciAssignable(object):
             os.system("modprobe -r %s" % self.driver)
             re_probe = True
         else:
+            self.setup = None
             return True
 
         # Re-probe driver with proper number of VFs
@@ -1099,6 +1097,7 @@ class PciAssignable(object):
             utils.system("/etc/init.d/network restart", ignore_status=True)
             if s:
                 return False
+            self.setup = None
             return True
 
     def sr_iov_cleanup(self):
@@ -1114,32 +1113,15 @@ class PciAssignable(object):
         error.context("Clean up host env after PCI assign test", logging.info)
         kvm_re_probe = False
         if self.kvm_params is not None:
-            if (self.auai_path and
-               open(self.auai_path, "r").read().strip() == "Y"):
-                if self.kvm_params and self.kvm_params[self.auai_path] == "N":
-                    kvm_re_probe = True
-        else:
-            kvm_re_probe = True
-        # Try to re probe kvm module with interrupt remapping support
-        if kvm_re_probe:
-            kvm_arch = kvm_control.get_kvm_arch()
-            utils.system("modprobe -r %s" % kvm_arch)
-            utils.system("modprobe -r kvm")
-            cmd = "modprobe kvm"
-            if self.kvm_params:
-                for i in self.kvm_params:
-                    if self.kvm_params[i] == "Y":
-                        params_name = os.path.split(i)[1]
-                        cmd += " %s=1" % params_name
-            logging.info("Loading kvm with command: %s" % cmd)
-
-            try:
-                utils.system(cmd)
-            except Exception:
-                logging.debug("Failed to reload kvm")
-            cmd = "modprobe %s" % kvm_arch
-            logging.info("Loading %s with command: %s" % (kvm_arch, cmd))
-            utils.system(cmd)
+            for kvm_param, value in self.kvm_params.items():
+                if open(kvm_param, "r").read().strip() != value:
+                    cmd = "echo %s > %s" % (value, kvm_param)
+                    logging.info("Write '%s' to '%s'", value, kvm_param)
+                    try:
+                        utils.system(cmd)
+                    except Exception:
+                        logging.error("Failed to write  '%s' to '%s'", value,
+                                       kvm_param)
 
         re_probe = False
         s = commands.getstatusoutput('lsmod | grep %s' % self.driver)[0]
@@ -1162,7 +1144,7 @@ class PciAssignable(object):
                 return False
             return True
 
-    def request_devs(self, count=None):
+    def request_devs(self, devices=None):
         """
         Implement setup process: unbind the PCI device and then bind it
         to the pci-stub driver.
@@ -1171,46 +1153,44 @@ class PciAssignable(object):
 
         :return: a list of successfully requested devices' PCI IDs.
         """
-        if count is None:
-            count = self.devices_requested
+        if not self.pf_vf_info:
+            self.pf_vf_info = self.get_pf_vf_info()
         base_dir = "/sys/bus/pci"
         stub_path = os.path.join(base_dir, "drivers/pci-stub")
-
-        self.pci_ids = self.get_devs(count)
+        self.pci_ids = self.get_devs(devices)
         logging.info("The following pci_ids were found: %s", self.pci_ids)
         requested_pci_ids = []
 
         # Setup all devices specified for assignment to guest
         for pci_id in self.pci_ids:
-            full_id = utils_misc.get_full_pci_id(pci_id)
-            if not full_id:
-                continue
-            drv_path = os.path.join(base_dir, "devices/%s/driver" % full_id)
+            short_id = pci_id[5:]
+            drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
             dev_prev_driver = os.path.realpath(os.path.join(drv_path,
                                                os.readlink(drv_path)))
             self.dev_drivers[pci_id] = dev_prev_driver
 
             # Judge whether the device driver has been binded to stub
-            if not self.is_binded_to_stub(full_id):
-                error.context("Bind device %s to stub" % full_id, logging.info)
-                vendor_id = utils_misc.get_vendor_from_pci_id(pci_id)
+            if not self.is_binded_to_stub(pci_id):
+                error.context("Bind device %s to stub" % pci_id, logging.info)
+                vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
                 stub_new_id = os.path.join(stub_path, 'new_id')
                 unbind_dev = os.path.join(drv_path, 'unbind')
                 stub_bind = os.path.join(stub_path, 'bind')
 
                 info_write_to_files = [(vendor_id, stub_new_id),
-                                       (full_id, unbind_dev),
-                                       (full_id, stub_bind)]
+                                       (pci_id, unbind_dev),
+                                       (pci_id, stub_bind)]
 
-                for content, file in info_write_to_files:
+                for content, f_name in info_write_to_files:
                     try:
-                        utils.open_write_close(file, content)
+                        logging.info("Write '%s' to file '%s'", content, f_name)
+                        utils.open_write_close(f_name, content)
                     except IOError:
                         logging.debug("Failed to write %s to file %s", content,
-                                      file)
+                                      f_name)
                         continue
 
-                if not self.is_binded_to_stub(full_id):
+                if not self.is_binded_to_stub(pci_id):
                     logging.error("Binding device %s to stub failed", pci_id)
                     continue
             else:
@@ -1233,7 +1213,7 @@ class PciAssignable(object):
                     logging.info("Released device %s successfully", pci_id)
             if self.cleanup:
                 self.sr_iov_cleanup()
-                self.type_list = []
+                self.devices = []
                 self.devices_requested = 0
                 self.dev_unbind_drivers = {}
         except Exception:
