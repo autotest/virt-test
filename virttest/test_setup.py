@@ -800,23 +800,28 @@ class PciAssignable(object):
             self.name_list.append(name)
         self.devices_requested += 1
 
-    def _get_pf_pci_id(self, name, search_str):
+    def _get_pf_pci_id(self, name=None):
         """
         Get the PF PCI ID according to name.
+        It returns the first free pf, if no name matched.
 
         :param name: Name of the PCI device.
         :param search_str: Search string to be used on lspci.
         """
-        cmd = "ethtool -i %s | awk '/bus-info/ {print $2}'" % name
-        s, pci_id = commands.getstatusoutput(cmd)
-        if not (s or "Cannot get driver information" in pci_id):
-            return pci_id[5:]
-        cmd = "lspci | awk '/%s/ {print $1}'" % search_str
-        pci_ids = [i for i in commands.getoutput(cmd).splitlines()]
-        nic_id = int(re.search('[0-9]+', name).group(0))
-        if (len(pci_ids) - 1) < nic_id:
-            return None
-        return pci_ids[nic_id]
+        pf_id = None
+        if self.pf_vf_info:
+            for pf in self.pf_vf_info:
+                if name == pf["ethname"]:
+                    pf["occupied"] = True
+                    pf_id = pf["pf_id"]
+                    break
+            if pf_id is None:
+                for pf in self.pf_vf_info:
+                    if not pf["occupied"]:
+                        pf["occupied"] = True
+                        pf_id = pf["pf_id"]
+                        break
+        return pf_id
 
     @error.context_aware
     def _release_dev(self, pci_id):
