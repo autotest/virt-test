@@ -1785,6 +1785,9 @@ class VM(virt_vm.BaseVM):
                 nic_params = params.object_params(nic.nic_name)
                 pa_type = nic_params.get("pci_assignable")
                 if pa_type and pa_type != "no":
+                    if mac not in nic:
+                        self.virtnet.generate_mac_address(nic["nic_name"])
+                    mac = nic["mac"]
                     if self.pci_assignable is None:
                         self.pci_assignable = test_setup.PciAssignable(
                             driver=params.get("driver"),
@@ -1795,7 +1798,8 @@ class VM(virt_vm.BaseVM):
                             pf_filter_re=params.get("pf_filter_re"))
                     # Virtual Functions (VF) assignable devices
                     if pa_type == "vf":
-                        self.pci_assignable.add_device(device_type=pa_type)
+                        self.pci_assignable.add_device(device_type=pa_type,
+                                                       mac=mac)
                     # Physical NIC (PF) assignable devices
                     elif pa_type == "pf":
                         self.pci_assignable.add_device(device_type=pa_type,
