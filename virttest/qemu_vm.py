@@ -642,7 +642,7 @@ class VM(virt_vm.BaseVM):
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
-            dev.set_param('id', 'id_%s' % host)
+            dev.set_param('id', 'id_%s' % host.replace(":", "."))
             fail_param = []
             for param in params.get("pci-assign_params", "").split():
                 value = params.get(param)
@@ -1284,7 +1284,7 @@ class VM(virt_vm.BaseVM):
                 devices.insert(StrDev("NET-%s" % nettype, cmdline=cmd))
             else:
                 pci_id = vm.pa_pci_ids[iov]
-                add_pcidevice(help, pci_id, params=nic_params)
+                add_pcidevice(devices, pci_id, params=nic_params)
                 iov += 1
 
         mem = params.get("mem")
