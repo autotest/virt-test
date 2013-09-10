@@ -751,19 +751,24 @@ class PciAssignable(object):
         e.g. max_vfs = 7 in config file.
 
         :param type: PCI device type.
+        :type type: string
         :param driver: Kernel module for the PCI assignable device.
+        :type driver: string
         :param driver_option: Module option to specify the maximum number of
                 VFs (eg 'max_vfs=7')
-        :param names: Physical NIC cards correspondent network interfaces,
-                e.g.'eth1 eth2 ...'
+        :type driver_option: string
         :param host_set_flag: Flag for if the test should setup host env:
                0: do nothing
                1: do setup env
                2: do cleanup env
                3: setup and cleanup env
+        :type host_set_flag: string
         :param kvm_params: a dict for kvm module parameters default value
+        :type kvm_params: dict
         :param vf_filter_re: Regex used to filter vf from lspci.
+        :type vf_filter_re: string
         :param pf_filter_re: Regex used to filter pf from lspci.
+        :type pf_filter_re: string
         """
         self.devices = []
         self.driver = driver
@@ -817,7 +822,9 @@ class PciAssignable(object):
         It returns the first free pf, if no name matched.
 
         :param name: Name of the PCI device.
-        :param search_str: Search string to be used on lspci.
+        :type name: string
+        :return: pci id of the PF device.
+        :rtype: string
         """
         pf_id = None
         if self.pf_vf_info:
@@ -840,6 +847,9 @@ class PciAssignable(object):
         Release a single PCI device.
 
         :param pci_id: PCI ID of a given PCI device.
+        :type pci_id: string
+        :return: True if successfully release the device. else false.
+        :rtype: bool
         """
         base_dir = "/sys/bus/pci"
         short_id = pci_id[5:]
@@ -870,9 +880,11 @@ class PciAssignable(object):
         """
         Check whether one vf is assigned to VM.
 
-        vf_id: vf id to check.
+        :param vf_id: vf id to check.
+        :type vf_id: string
         :return: Return True if vf has already assinged to VM. Else
-        return false.
+                 return false.
+        :rtype: bool
         """
         base_dir = "/sys/bus/pci"
         tub_path = os.path.join(base_dir, "drivers/pci-stub")
@@ -888,6 +900,10 @@ class PciAssignable(object):
         """
         Return corresponding pf eth name and vf num according to vf id.
 
+        :param vf_id: vf id to check.
+        :type vf_id: string
+        :return: PF device name and vf num.
+        :rtype: string
         """
         for pf in self.pf_vf_info:
             if vf_id in pf.get('vf_ids'):
@@ -944,9 +960,10 @@ class PciAssignable(object):
 
     def get_vf_devs(self):
         """
-        Catch all VFs PCI IDs.
+        Get all unused VFs PCI IDs.
 
-        @return: List with all PCI IDs for the Virtual Functions avaliable
+        :return: List of all available PCI IDs for Virtual Functions.
+        :rtype: List of string
         """
         vf_ids = []
         for pf in self.pf_vf_info:
@@ -959,9 +976,14 @@ class PciAssignable(object):
 
     def get_pf_devs(self):
         """
-        Catch all PFs PCI IDs.
+        Get PFs PCI IDs requested by self.devices.
+        It will try to get PF by device name.
+        It will still return it, if device name you set already occupied.
+        Please set unoccupied device name. If not sure, please just do not
+        set device name. It will return unused PF list.
 
         :return: List with all PCI IDs for the physical hardware requested
+        :rtype: List of string
         """
         pf_ids = []
         for device in self.devices:
@@ -975,10 +997,12 @@ class PciAssignable(object):
 
     def get_devs(self, devices=None):
         """
-        Check out all devices' PCI IDs according to their name.
+        Get devices' PCI IDs according to parameters set in self.devices.
 
-        :param count: count number of PCI devices needed for pass through
-        :return: a list of all devices' PCI IDs
+        :param devices: List of device dict that contain PF VF information.
+        :type devices: List of dict
+        :return: List of all available devices' PCI IDs
+        :rtype: List of string
         """
         base_dir = "/sys/bus/pci"
         if not devices:
@@ -1036,6 +1060,7 @@ class PciAssignable(object):
         Verify whether the device with full_id is already binded to pci-stub.
 
         :param full_id: Full ID for the given PCI device
+        :type full_id: String
         """
         base_dir = "/sys/bus/pci"
         stub_path = os.path.join(base_dir, "drivers/pci-stub")
@@ -1052,6 +1077,7 @@ class PciAssignable(object):
         parameters (number of VFs), and if it's not, perform setup.
 
         :return: True, if the setup was completed successfully, False otherwise.
+        :rtype: bool
         """
         # Check if the host support interrupt remapping
         error.context("Set up host env for PCI assign test", logging.info)
@@ -1108,6 +1134,7 @@ class PciAssignable(object):
         parameters (none of VFs), and if it's not, perform cleanup.
 
         :return: True, if the setup was completed successfully, False otherwise.
+        :rtype: bool
         """
         # Check if the host support interrupt remapping
         error.context("Clean up host env after PCI assign test", logging.info)
@@ -1149,9 +1176,10 @@ class PciAssignable(object):
         Implement setup process: unbind the PCI device and then bind it
         to the pci-stub driver.
 
-        :param count: count number of PCI devices needed for pass through
-
-        :return: a list of successfully requested devices' PCI IDs.
+        :param devices: List of device dict
+        :type devices: List of dict
+        :return: List of successfully requested devices' PCI IDs.
+        :rtype: List of string
         """
         if not self.pf_vf_info:
             self.pf_vf_info = self.get_pf_vf_info()
