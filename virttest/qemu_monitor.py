@@ -1574,7 +1574,11 @@ class QMPMonitor(Monitor):
 
                     cmdargs = " ".join(cmdline.split()[1:]).split(",")
                     for arg in cmdargs:
-                        command += " " + arg.split("=")[-1]
+                        value = "=".join(arg.split("=")[1:])
+                        if arg.split("=")[0] == "cert-subject":
+                            value = value.replace('/',',')
+
+                        command += " " + value
                 else:
                     command = cmdline
                 cmd_output.append(self.human_monitor_cmd(command))
@@ -1583,17 +1587,20 @@ class QMPMonitor(Monitor):
                 args = {}
                 for arg in cmdargs:
                     opt = arg.split('=')
+                    value = "=".join(opt[1:])
                     try:
-                        if re.match("^[0-9]+$", opt[1]):
-                            value = int(opt[1])
-                        elif re.match("^[0-9]+\.[0-9]*$", opt[1]):
-                            value = float(opt[1])
-                        elif "True" in opt[1] or "true" in opt[1]:
+                        if re.match("^[0-9]+$", value):
+                            value = int(value)
+                        elif re.match("^[0-9]+\.[0-9]*$", value):
+                            value = float(value)
+                        elif re.findall("true", value, re.I):
                             value = True
-                        elif "false" in opt[1] or "False" in opt[1]:
+                        elif re.findall("false", value, re.I):
                             value = False
                         else:
-                            value = opt[1].strip()
+                            value = value.strip()
+                        if opt[0] == "cert-subject":
+                            value = value.replace('/',',')
                         args[opt[0].strip()] = value
                     except:
                         logging.debug("Fail to create args, please check cmd")
