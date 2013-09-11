@@ -891,7 +891,7 @@ class VirtioGuestPosix(VirtioGuest):
         if mode:
             while (writes < length):
                 try:
-                    writes += os.write(in_f[0], data)
+                    writes += os.write(in_f[0], data[writes:])
                 except Exception, inst:
                     print inst
         if writefile:
@@ -1219,7 +1219,7 @@ class VirtioGuestNt(VirtioGuest):
         if mode:
             try:
                 while (writes < length):
-                    _ret, _len = win32file.WriteFile(port, data)
+                    _ret, _len = win32file.WriteFile(port, data[writes:])
                     if _ret:
                         msg = ("Error occurred while sending data, err=%s"
                                ", sentlen=%s, allsentlen=%s" % (_ret, _len,
