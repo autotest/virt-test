@@ -313,3 +313,8 @@ def run_pci_hotplug(test, params, env):
                 error.context(context_msg % (sub_type, "after hotunplug"),
                               logging.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
+
+    if params.get("reboot_vm", "no") == "yes":
+        vm = env.get_vm(params["main_vm"])
+        vm.verify_alive()
+        vm.reboot()
