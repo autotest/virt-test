@@ -411,7 +411,7 @@ class QemuImg(storage.QemuImg):
                         self.backup_image(params, root_dir, "backup", False)
                     raise error.TestWarn("qemu-img check error. Some bad "
                                          "data in the image may have gone"
-                                         " unnoticed")
+                                         " unnoticed (%s)" % image_filename)
                 # Exit status 2 is data corruption for sure,
                 # so fail the test
                 elif cmd_result.exit_status == 2:
@@ -429,7 +429,7 @@ class QemuImg(storage.QemuImg):
                     raise error.TestWarn("Leaked clusters were noticed"
                                          " during image check. No data "
                                          "integrity problem was found "
-                                         "though.")
+                                         "though. (%s)" % image_filename)
 
                 # Just handle normal operation
                 if params.get("backup_image", "no") == "yes":
