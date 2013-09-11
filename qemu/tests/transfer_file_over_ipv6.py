@@ -138,8 +138,9 @@ def run_transfer_file_over_ipv6(test, params, env):
             utils.system_output("rm -rf %s" % host_path, timeout=timeout)
 
     finally:
-        utils.system_output("rm -rf %s" % host_path, timeout=timeout)
+        utils.system("rm -rf %s" % host_path, timeout=timeout,
+                     ignore_status=True)
         for vm in vms:
-            sessions[vm].cmd("rm -rf %s %s" % (guest_path, dest_path),
-                             timeout=timeout)
+            sessions[vm].cmd("rm -rf %s %s || true" % (guest_path, dest_path),
+                             timeout=timeout, ignore_all_errors=True)
             sessions[vm].close()
