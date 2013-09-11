@@ -17,6 +17,7 @@ def run_pci_hotplug(test, params, env):
     4) Verify whether pci_model is shown in [pci_find_cmd].
     5) Check whether the newly added PCI device works fine.
     6) PCI delete the device, verify whether could remove the PCI device.
+    7) reboot VM after guest wakeup form S3/S4 status (Optional Step).
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -313,3 +314,6 @@ def run_pci_hotplug(test, params, env):
                 error.context(context_msg % (sub_type, "after hotunplug"),
                               logging.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
+
+    if params.get("reboot_vm", "no") == "yes":
+        vm.reboot()
