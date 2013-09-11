@@ -6,14 +6,14 @@ from virttest import env_process
 @error.context_aware
 def run_sr_iov_boot_negative(test, params, env):
     """
-    KVM boot with negative paramter test:
+    KVM boot with negative parameter test:
     1) Try to boot VM with negative parameters.
-    2) Verify that qemu could handle the negative paramters.
+    2) Verify that qemu could handle the negative parameters.
        Check the negative message (optional)
 
-    @param test: qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     neg_msg = params.get("negative_msg")
@@ -29,7 +29,8 @@ def run_sr_iov_boot_negative(test, params, env):
         if neg_msg:
             error.context("Check qemu-qemu error message", logging.info)
             if neg_msg not in str(e):
-                msg = "Could not find '%s' in error message '%s'" % (neg_msg, e)
+                msg = "Could not find '%s' in error message '%s'" % (
+                    neg_msg, e)
                 raise error.TestFail(msg)
         logging.debug("Could not boot up vm, %s" % e)
     if case_fail:

@@ -1,4 +1,6 @@
-import logging, time, random
+import logging
+import time
+import random
 from autotest.client.shared import error
 
 
@@ -12,9 +14,9 @@ def run_ioquit(test, params, env):
     3) Sleep for a random time
     4) Kill the VM
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

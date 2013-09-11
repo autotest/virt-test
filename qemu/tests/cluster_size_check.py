@@ -1,7 +1,9 @@
-import re, logging
+import re
+import logging
 
 from autotest.client.shared import error
 from virttest import qemu_storage, data_dir
+
 
 @error.context_aware
 def run_cluster_size_check(test, params, env):
@@ -13,9 +15,9 @@ def run_cluster_size_check(test, params, env):
     3) Create image with cluster_size option
     4) Verify if the cluster_size is the set value
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def memory_size(size):
@@ -60,7 +62,7 @@ def run_cluster_size_check(test, params, env):
                 fail_log += "%s.\n" % csize_set
         else:
             logging.error("Can not get the cluster size from command: %s"
-                           % output)
+                          % output)
             cfail += 1
             fail_log += "Can not get the cluster size from command:"
             fail_log += " %s\n" % output

@@ -1,11 +1,14 @@
 """
 multi_disk test for Autotest framework.
 
-@copyright: 2011-2012 Red Hat Inc.
+:copyright: 2011-2012 Red Hat Inc.
 """
-import logging, re, random, string
+import logging
+import re
+import random
+import string
 from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process
+from virttest import qemu_qtree, env_process, utils_misc
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -20,8 +23,8 @@ def _range(buf, n=None):
     range1-3 ... ordinary python range()
     range4   ... multiplies the occurrence of each value
                 (range(0,4,1,2) => [0,0,1,1,2,2,3,3])
-    @raise ValueError: In case incorrect values are given.
-    @return: List of int values. In case it can't substitute 'n'
+    :raise ValueError: In case incorrect values are given.
+    :return: List of int values. In case it can't substitute 'n'
              it returns the original string.
     """
     out = _RE_RANGE1.match(buf)
@@ -80,9 +83,9 @@ def run_multi_disk(test, params, env):
     8) Compare the original file and the copied file using md5 or fc comand.
     9) Repeat steps 3-5 if needed.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def _add_param(name, value):
         """ Converts name+value to stg_params string """
@@ -91,7 +94,6 @@ def run_multi_disk(test, params, env):
             return " %s:%s " % (name, value)
         else:
             return ''
-
 
     def _do_post_cmd(session):
         cmd = params.get("post_cmd")
@@ -121,7 +123,7 @@ def run_multi_disk(test, params, env):
             continue
         if stg_params[i][-1] == '\\':
             stg_params[i] = '%s %s' % (stg_params[i][:-1],
-                                          stg_params.pop(i + 1))
+                                       stg_params.pop(i + 1))
         i += 1
 
     rerange = []
@@ -134,7 +136,7 @@ def run_multi_disk(test, params, env):
             has_name = True
         if _RE_RANGE1.match(parm):
             parm = _range(parm)
-            if parm == False:
+            if parm is False:
                 raise error.TestError("Incorrect cfg: stg_params %s looks "
                                       "like range(..) but doesn't contain "
                                       "numbers." % cmd)
@@ -219,7 +221,7 @@ def run_multi_disk(test, params, env):
         err += disks.generate_params()
         err += disks.check_disk_params(params)
         (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(
-                                    session.cmd_output('cat /proc/scsi/scsi'))
+            session.cmd_output('cat /proc/scsi/scsi'))
         err += tmp1 + tmp2
 
         if err:
@@ -255,20 +257,22 @@ def run_multi_disk(test, params, env):
         logging.debug("Volume list that meet regular expressions: %s",
                       " ".join(disks))
 
-        if len(disks) < len(params.get("images").split()):
+        images = params.get("images").split()
+        if len(disks) < len(images):
+            logging.debug("disks: %s , images: %s", len(disks), len(images))
             raise error.TestFail("Fail to list all the volumes!")
 
         if params.get("os_type") == "linux":
-            df_output = session.cmd_output("df")
-            li = re.findall(r"^/dev/(.*?)[ \d]", df_output, re.M)
+            output = session.cmd_output("mount")
+            li = re.findall(r"^/dev/(%s)\d*" % re_str, output, re.M)
             if li:
                 black_list.extend(li)
-
-        exclude_list = [d for d in disks if d in black_list]
-        func = lambda d: logging.info("No need to check volume '%s'", d)
-        map(func, exclude_list)
-
-        disks = [d for d in disks if d not in exclude_list]
+        else:
+            black_list.extend(utils_misc.get_winutils_vol(session))
+        disks = set(disks)
+        black_list = set(black_list)
+        logging.info("No need to check volume '%s'", (disks & black_list))
+        disks = disks - black_list
     except Exception:
         _do_post_cmd(session)
         raise

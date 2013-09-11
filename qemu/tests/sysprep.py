@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from virttest import utils_misc, env_process
 from autotest.client.shared import error
 
@@ -12,9 +14,9 @@ def run_sysprep(test, params, env):
     3) Boot guest up again.
     4) Check that SID in guest has changed.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     vm = env.get_vm(params["main_vm"])
@@ -78,8 +80,8 @@ def run_sysprep(test, params, env):
         logging.info("VM:%s System ID is: %s", vm_i.name, sid)
         if sid in sids.keys():
             logging.error("VM: %s have duplicate System ID: %s",
-                           vm_i.name,
-                           sid)
+                          vm_i.name,
+                          sid)
             sid_same.append(sid)
             sids[sid].append(vm_i.name)
         else:
@@ -89,5 +91,5 @@ def run_sysprep(test, params, env):
         msg = ""
         for sid in sid_same:
             msg += "VM(s): %s have duplicate System ID: %s\n" % \
-                    (" ".join(sids[sid]), sid)
+                (" ".join(sids[sid]), sid)
         raise error.TestFail(msg)

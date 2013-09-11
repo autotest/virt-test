@@ -1,4 +1,5 @@
-import os, logging
+import os
+import logging
 from autotest.client.shared import error
 from virttest import utils_test, utils_net
 
@@ -16,9 +17,9 @@ def run_multi_nics_verify(test, params, env):
     4. Reboot guest.
     5. Check whether guest NICs info match with params setting.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def check_nics_num(expect_c, session):
         txt = "Check whether guest NICs info match with params setting."
@@ -31,8 +32,7 @@ def run_multi_nics_verify(test, params, env):
         if not expect_c == actual_c:
             msg += "Nics count mismatch!\n"
             return (False, msg)
-        return (True, msg+'Nics count match')
-
+        return (True, msg + 'Nics count match')
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

@@ -1,4 +1,6 @@
-import os, logging, re
+import os
+import logging
+import re
 from autotest.client import lv_utils
 from autotest.client.shared import ssh_key, error, utils
 from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh
@@ -66,7 +68,7 @@ def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
         return False
 
     if not spool.define_lvm_pool(pool_name, block_device, vg_name=vg_name,
-                                target_path=target_path):
+                                 target_path=target_path):
         return False
 
     vgroups = lv_utils.vg_list()
@@ -85,8 +87,8 @@ def prepare_remote_sp(rsp, rvm, pool_name="v2v_test"):
     """
     v2v need remote vm's disk stored in a pool.
 
-    @param rsp: remote storage pool's instance
-    @param rvm: remote vm instance
+    :param rsp: remote storage pool's instance
+    :param rvm: remote vm instance
     """
     # Get remote vms' disk path
     disks = rvm.get_disk_devices()

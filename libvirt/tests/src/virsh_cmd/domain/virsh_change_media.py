@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error, utils
 from virttest import virsh, utils_libvirtd
 from virttest.libvirt_xml import vm_xml
@@ -21,8 +22,8 @@ def run_virsh_change_media(test, params, env):
         """
         Prepare ISO image for test
 
-        @param: old_iso: sourse file for insert
-        @param: new_iso: sourse file for update
+        :param old_iso: sourse file for insert
+        :param new_iso: sourse file for update
         """
         error.context("Preparing ISO images")
         utils.run("dd if=/dev/urandom of=%s/old bs=10M count=1" % cdrom_dir)
@@ -35,8 +36,8 @@ def run_virsh_change_media(test, params, env):
         """
         Check guest cdrom files
 
-        @param: session: guest session
-        @param: target_file: the expected files
+        :param session: guest session
+        :param target_file: the expected files
         @action: action: test case action
         """
         if action != "--eject ":
@@ -54,8 +55,8 @@ def run_virsh_change_media(test, params, env):
         """
         Add cdrom device for test vm
 
-        @param: vm_name: guest name
-        @param: init_cdrom: source file
+        :param vm_name: guest name
+        :param init_cdrom: source file
         """
         if vm.is_alive():
             virsh.destroy(vm_name)
@@ -68,10 +69,10 @@ def run_virsh_change_media(test, params, env):
         """
         Update cdrom iso file for test case
 
-        @param: vm_name: guest name
-        @param: init_iso: source file
-        @param: options: update-device option
-        @param: start_vm: guest start flag
+        :param vm_name: guest name
+        :param init_iso: source file
+        :param options: update-device option
+        :param start_vm: guest start flag
         """
         snippet = """
 <disk type='file' device='cdrom'>
@@ -103,7 +104,7 @@ def run_virsh_change_media(test, params, env):
     disk_device = params.get("change_media_disk_device")
     libvirtd = params.get("libvirtd", "on")
     source_name = params.get("change_media_source")
-    status_error =  params.get("status_error", "no")
+    status_error = params.get("status_error", "no")
     check_file = params.get("change_media_check_file")
     init_cdrom = params.get("change_media_init_cdrom")
     update_iso_xml_name = params.get("change_media_update_iso_xml")
@@ -118,7 +119,7 @@ def run_virsh_change_media(test, params, env):
     update_iso_xml = os.path.join(cdrom_dir, update_iso_xml_name)
     if not os.path.exists(cdrom_dir):
         os.mkdir(cdrom_dir)
-    if not init_iso_name :
+    if not init_iso_name:
         init_iso = ""
     else:
         init_iso = os.path.join(cdrom_dir, init_iso_name)
@@ -128,9 +129,9 @@ def run_virsh_change_media(test, params, env):
 
     env_pre(old_iso, new_iso)
     # Check domain's disk device
-    disk_blk =  vm_xml.VMXML.get_disk_blk(vm_name)
+    disk_blk = vm_xml.VMXML.get_disk_blk(vm_name)
     logging.info("disk_blk %s" % disk_blk)
-    if disk_device not in  disk_blk:
+    if disk_device not in disk_blk:
         logging.info("Adding cdrom device")
         add_cdrom_device(vm_name, init_cdrom)
 

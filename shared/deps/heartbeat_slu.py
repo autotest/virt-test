@@ -4,13 +4,18 @@
 Heartbeat server/client to detect soft lockups
 """
 
-import socket, os, sys, time, getopt
+import socket
+import os
+import sys
+import time
+import getopt
+
 
 def daemonize(output_file):
     try:
         pid = os.fork()
     except OSError, e:
-        raise Exception, "error %d: %s" % (e.strerror, e.errno)
+        raise Exception("error %d: %s" % (e.strerror, e.errno))
 
     if pid:
         os._exit(0)
@@ -33,6 +38,7 @@ def daemonize(output_file):
     os.dup2(output_handle.fileno(), sys.stderr.fileno())
     os.dup2(stdin_handle.fileno(), sys.stdin.fileno())
 
+
 def recv_all(sock):
     total_data = []
     while True:
@@ -41,6 +47,7 @@ def recv_all(sock):
             break
         total_data.append(data)
     return ''.join(total_data)
+
 
 def run_server(host, port, daemon, path, queue_size, threshold, drift):
     if daemon:
@@ -67,6 +74,7 @@ def run_server(host, port, daemon, path, queue_size, threshold, drift):
             else:
                 print "%.2f: %s" % (local_timestamp, heartbeat)
 
+
 def run_client(host, port, daemon, path, interval):
     if daemon:
         daemonize(output_file=path)
@@ -86,8 +94,10 @@ def run_client(host, port, daemon, path, interval):
         seq += 1
         time.sleep(interval)
 
+
 def get_heartbeat(seq=1):
     return "%s %06d %.2f" % (hostname, seq, float(time.time()))
+
 
 def check_heartbeat(heartbeat, local_timestamp, threshold, check_drift):
     hostname, _, timestamp = heartbeat.rsplit()
@@ -109,6 +119,7 @@ def check_heartbeat(heartbeat, local_timestamp, threshold, check_drift):
         client_prev_drift[hostname] = drift
         return "drift %+4.2f (%+4.2f)" % (drift, drift_delta)
 
+
 def check_for_timeouts(threshold, check_drift):
     local_timestamp = float(time.time())
     hostname_list = list(client_prev_timestamp)
@@ -122,6 +133,7 @@ def check_for_timeouts(threshold, check_drift):
             if check_drift:
                 del client_clock_offset[hostname]
                 del client_prev_drift[hostname]
+
 
 def usage():
     print """
@@ -145,8 +157,8 @@ client_prev_drift = {}
 # default param values
 host_port = 9001
 host_address = ''
-interval = 1 # seconds between heartbeats
-threshold = 10 # seconds late till alert
+interval = 1  # seconds between heartbeats
+threshold = 10  # seconds late till alert
 is_server = False
 is_daemon = True
 file_server = "/tmp/heartbeat_server.out"
@@ -159,9 +171,9 @@ check_drift = False
 # process cmdline opts
 try:
     opts, args = getopt.getopt(sys.argv[1:], "vhsfd:p:a:i:t:", [
-                    "server", "client", "no-daemon", "address=", "port=",
-                    "file=", "server", "interval=", "threshold=", "verbose",
-                    "check-drift", "help"])
+        "server", "client", "no-daemon", "address=", "port=",
+        "file=", "server", "interval=", "threshold=", "verbose",
+        "check-drift", "help"])
 except getopt.GetoptError, e:
     print "error: %s" % str(e)
     usage()

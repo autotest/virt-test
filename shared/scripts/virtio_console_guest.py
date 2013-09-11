@@ -3,14 +3,22 @@
 """
 Auxiliary script used to send data between ports on guests.
 
-@copyright: 2010 Red Hat, Inc.
-@author: Jiri Zupka (jzupka@redhat.com)
-@author: Lukas Doktor (ldoktor@redhat.com)
+:copyright: 2010 Red Hat, Inc.
+:author: Jiri Zupka (jzupka@redhat.com)
+:author: Lukas Doktor (ldoktor@redhat.com)
 """
 import threading
 from threading import Thread
-import os, select, re, random, sys, array, stat
-import traceback, signal, time
+import os
+import select
+import re
+import random
+import sys
+import array
+import stat
+import traceback
+import signal
+import time
 
 if os.name == "posix":  # Linux
     os_linux = True
@@ -32,6 +40,7 @@ virt = None
 
 
 class VirtioGuest:
+
     """
     Test tools of virtio_ports.
     """
@@ -59,8 +68,8 @@ class VirtioGuest:
         """
         Open devices and return array of descriptors
 
-        @param in_files: Files array
-        @return: Array of descriptor
+        :param in_files: Files array
+        :return: Array of descriptor
         """
         raise NotImplementedError
 
@@ -74,8 +83,8 @@ class VirtioGuest:
         """
         Checks the port POLL status and verify with expected results.
 
-        @param port: Port name.
-        @param expected: Expected POLL status (mask)
+        :param port: Port name.
+        :param expected: Expected POLL status (mask)
         """
         raise NotImplementedError
 
@@ -84,9 +93,9 @@ class VirtioGuest:
         Use lseek on the device. The device is unseekable so PASS is returned
         when lseek command fails and vice versa.
 
-        @param port: Name of the port
-        @param pos: Offset
-        @param how: Relativ offset os.SEEK_{SET,CUR,END}
+        :param port: Name of the port
+        :param pos: Offset
+        :param how: Relative offset os.SEEK_{SET,CUR,END}
         """
         raise NotImplementedError
 
@@ -94,8 +103,8 @@ class VirtioGuest:
         """
         Set port function mode blocking/nonblocking
 
-        @param port: port to set mode
-        @param mode: False to set nonblock mode, True for block mode
+        :param port: port to set mode
+        :param mode: False to set nonblock mode, True for block mode
         """
         raise NotImplementedError
 
@@ -103,9 +112,9 @@ class VirtioGuest:
         """
         Set port function mode async/sync.
 
-        @param port: port which should be pooled.
-        @param mode: False to set sync mode, True for sync mode.
-        @param exp_val: Value which should be pooled.
+        :param port: port which should be pooled.
+        :param mode: False to set sync mode, True for sync mode.
+        :param exp_val: Value which should be pooled.
         """
         raise NotImplementedError
 
@@ -113,7 +122,7 @@ class VirtioGuest:
         """
         Close open port.
 
-        @param port_file: File to close.
+        :param port_file: File to close.
         """
         raise NotImplementedError
 
@@ -121,8 +130,8 @@ class VirtioGuest:
         """
         Direct open devices.
 
-        @param in_file: Array of files.
-        @return: Array of descriptors.
+        :param in_file: Array of files.
+        :return: Array of descriptors.
         """
         raise NotImplementedError
 
@@ -133,10 +142,10 @@ class VirtioGuest:
 
         (There is a problem with multiple opens of a single file).
 
-        @param in_files: Array of input files.
-        @param out_files: Array of output files.
-        @param cachesize: Cachesize.
-        @param mode: Mode of switch.
+        :param in_files: Array of input files.
+        :param out_files: Array of output files.
+        :param cachesize: Cachesize.
+        :param mode: Mode of switch.
         """
         in_f = self._open(in_files)
         out_f = self._open(out_files)
@@ -156,8 +165,8 @@ class VirtioGuest:
         """
         Prepares the sender thread. Requires clean thread structure.
 
-        @param port: On which port to sent data
-        @param length: length of data
+        :param port: On which port to sent data
+        :param length: length of data
         """
         raise NotImplementedError
 
@@ -171,10 +180,10 @@ class VirtioGuest:
         """
         Send a data of arbitrary length
 
-        @param port: Port to write data
-        @param length: Length of data
-        @param mode: True = loop mode, False = one shoot mode
-        @param is_static: False = generates $lenght long block (mode=0)
+        :param port: Port to write data
+        :param length: Length of data
+        :param mode: True = loop mode, False = one shoot mode
+        :param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
         """
         raise NotImplementedError
@@ -183,9 +192,9 @@ class VirtioGuest:
         """
         Receive a data of arbitrary length.
 
-        @param port: Port to write data
-        @param length: Length of data
-        @param mode: True = loop mode, False = one shoot mode
+        :param port: Port to write data
+        :param length: Length of data
+        :param mode: True = loop mode, False = one shoot mode
         """
         raise NotImplementedError
 
@@ -194,15 +203,17 @@ class VirtioGuest:
 
 
 class VirtioGuestPosix(VirtioGuest):
+
     """
     Test tools of virtio_ports.
     """
+
     def _readfile(self, name):
         """
         Read file and return content as string
 
-        @param name: Name of file
-        @return: Content of file as string
+        :param name: Name of file
+        :return: Content of file as string
         """
         out = ""
         try:
@@ -218,8 +229,8 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Get info about ports from kernel debugfs.
 
-        @param in_files: Array of input files.
-        @return: Ports dictionary of port properties
+        :param in_files: Array of input files.
+        :return: Ports dictionary of port properties
         """
         ports = {}
         not_present_msg = "FAIL: There's no virtio-ports dir in debugfs"
@@ -235,7 +246,8 @@ class VirtioGuestPosix(VirtioGuest):
             if in_files is not None:
                 dev_names = os.listdir('/dev')
                 rep = re.compile(r"vport[0-9]p[0-9]+")
-                dev_names = filter(lambda x: rep.match(x) is not None, dev_names)
+                dev_names = filter(
+                    lambda x: rep.match(x) is not None, dev_names)
                 if len(dev_names) != len(in_files):
                     print ("FAIL: Not all ports were successfully initialized "
                            "in /dev, only %d from %d." % (len(dev_names),
@@ -243,7 +255,7 @@ class VirtioGuestPosix(VirtioGuest):
                     return
 
                 if len(viop_names) != len(in_files):
-                    print ("FAIL: Not all ports were successfuly initialized "
+                    print ("FAIL: Not all ports were successfully initialized "
                            "in debugfs, only %d from %d." % (len(viop_names),
                                                              len(in_files)))
                     return
@@ -278,7 +290,7 @@ class VirtioGuestPosix(VirtioGuest):
                     if port_name != port["name"]:
                         print ("FAIL: Port info does not match "
                                "\n%s - %s\n%s - %s" %
-                               (info_name , port_name,
+                               (info_name, port_name,
                                 "%s/virtio-ports/%s" % (DEBUGPATH, name),
                                 port["name"]))
                     dev_ppath = DEVPATH + port_name
@@ -324,16 +336,18 @@ class VirtioGuestPosix(VirtioGuest):
         print "PASS: Init and check virtioconsole files in system."
 
     class Switch(Thread):
+
         """
         Thread that sends data between ports.
         """
+
         def __init__(self, in_files, out_files, event,
-                      cachesize=1024, method=0):
+                     cachesize=1024, method=0):
             """
-            @param in_files: Array of input files.
-            @param out_files: Array of output files.
-            @param method: Method of read/write access.
-            @param cachesize: Block to receive and send.
+            :param in_files: Array of input files.
+            :param out_files: Array of output files.
+            :param method: Method of read/write access.
+            :param cachesize: Block to receive and send.
             """
             Thread.__init__(self, name="Switch")
             self.in_files = in_files[0]
@@ -426,7 +440,7 @@ class VirtioGuestPosix(VirtioGuest):
                         if inst.errno == 9:
                             # Wait 0.1 before spoiling output with additional
                             # log information.
-                            #time.sleep(0.5)
+                            # time.sleep(0.5)
                             sys.stdout.write("FD closed, readerr %s\n" % inst)
                             while self.in_names[i] not in virt.files:
                                 time.sleep(0.1)
@@ -469,13 +483,13 @@ class VirtioGuestPosix(VirtioGuest):
                                 if inst.errno == 9:
                                     # Wait 0.1 before spoiling output with
                                     # additional log information.
-                                    #time.sleep(0.5)
+                                    # time.sleep(0.5)
                                     sys.stdout.write("FD closed, writeerr %s\n"
                                                      % inst)
                                     while self.out_names[i] not in virt.files:
                                         time.sleep(0.1)
                                     self.out_files[i] = virt.files[
-                                                            self.out_names[i]]
+                                        self.out_names[i]]
                                 else:
                                     sys.stdout.write("Missing device, writeerr"
                                                      " %s\n" % inst)
@@ -514,13 +528,15 @@ class VirtioGuestPosix(VirtioGuest):
                 self._reconnect_none_mode()
 
     class Sender(Thread):
+
         """
         Creates a thread which sends random blocks of data to dst port.
         """
+
         def __init__(self, port, event, length):
             """
-            @param port: Destination port
-            @param length: Length of the random data block
+            :param port: Destination port
+            :param length: Length of the random data block
             """
             Thread.__init__(self, name="Sender")
             self.port = port
@@ -537,8 +553,8 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Open devices and return array of descriptors
 
-        @param in_files: Files array
-        @return: Array of descriptor
+        :param in_files: Files array
+        :return: Array of descriptor
         """
         f = []
 
@@ -563,7 +579,7 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Conver pool mast to string
 
-        @param mask: poll return mask
+        :param mask: poll return mask
         """
         out = ""
         if (mask & select.POLLIN):
@@ -584,7 +600,7 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Pool event from device and print event like text.
 
-        @param file: Device.
+        :param file: Device.
         """
         in_f = self._open([port])
 
@@ -605,9 +621,9 @@ class VirtioGuestPosix(VirtioGuest):
         Use lseek on the device. The device is unseekable so PASS is returned
         when lseek command fails and vice versa.
 
-        @param port: Name of the port
-        @param pos: Offset
-        @param how: Relativ offset os.SEEK_{SET,CUR,END}
+        :param port: Name of the port
+        :param pos: Offset
+        :param how: Relative offset os.SEEK_{SET,CUR,END}
         """
         fd = self._open([port])[0]
 
@@ -626,8 +642,8 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Set port function mode blocking/nonblocking
 
-        @param port: port to set mode
-        @param mode: False to set nonblock mode, True for block mode
+        :param port: port to set mode
+        :param mode: False to set nonblock mode, True for block mode
         """
         fd = self._open([port])[0]
 
@@ -658,8 +674,8 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Handler for sigio operation.
 
-        @param sig: signal which call handler.
-        @param frame: frame of caller
+        :param sig: signal which call handler.
+        :param frame: frame of caller
         """
         if self.poll_fds:
             p = select.poll()
@@ -674,7 +690,7 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Return PASS, FAIL and poll walue in string format.
 
-        @param port: Port to check poll information.
+        :param port: Port to check poll information.
         """
         fd = self._open([port])[0]
 
@@ -690,8 +706,8 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Set value to static variable.
 
-        @param port: Port which should be set excepted mask
-        @param poll_value: Value to check sigio signal.
+        :param port: Port which should be set excepted mask
+        :param poll_value: Value to check sigio signal.
         """
         fd = self._open([port])[0]
         self.poll_fds[fd] = [poll_value, 0]
@@ -710,9 +726,9 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Set port function mode async/sync.
 
-        @param port: port which should be pooled.
-        @param mode: False to set sync mode, True for sync mode.
-        @param exp_val: Value which should be pooled.
+        :param port: port which should be pooled.
+        :param mode: False to set sync mode, True for sync mode.
+        :param exp_val: Value which should be pooled.
         """
         fd = self._open([port])[0]
 
@@ -747,7 +763,7 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Close open port.
 
-        @param filepath: File to close.
+        :param filepath: File to close.
         """
         descriptor = None
         path = self.ports[filepath]["path"]
@@ -767,8 +783,8 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Direct open devices.
 
-        @param in_file: Array of files.
-        @return: Array of descriptors.
+        :param in_file: Array of files.
+        :return: Array of descriptors.
         """
         name = self.ports[in_file]["path"]
         try:
@@ -786,10 +802,10 @@ class VirtioGuestPosix(VirtioGuest):
 
         (There is a problem with multiple opens of a single file).
 
-        @param in_files: Array of input files.
-        @param out_files: Array of output files.
-        @param cachesize: Cachesize.
-        @param mode: Mode of switch.
+        :param in_files: Array of input files.
+        :param out_files: Array of output files.
+        :param cachesize: Cachesize.
+        :param mode: Mode of switch.
         """
         self.ports = self._get_port_status()
 
@@ -848,10 +864,10 @@ class VirtioGuestPosix(VirtioGuest):
         """
         Send a data of some length
 
-        @param port: Port to write data
-        @param length: Length of data
-        @param mode: True = loop mode, False = one shoot mode
-        @param is_static: False = generates $lenght long block (mode=0)
+        :param port: Port to write data
+        :param length: Length of data
+        :param mode: True = loop mode, False = one shoot mode
+        :param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
         """
         in_f = self._open([port])
@@ -878,16 +894,16 @@ class VirtioGuestPosix(VirtioGuest):
         if writes >= length:
             print "PASS: Send data length %d" % writes
         else:
-            print ("FAIL: Partial send: desired %d, transfered %d" %
+            print ("FAIL: Partial send: desired %d, transferred %d" %
                    (length, writes))
 
     def recv(self, port, length=1, bfr=1024, mode=True):
         """
         Receive a data of arbitrary length.
 
-        @param port: Port to write data
-        @param length: Length of data
-        @param mode: True = loop mode, False = one shoot mode
+        :param port: Port to write data
+        :param length: Length of data
+        :param mode: True = loop mode, False = one shoot mode
         """
         in_f = self._open([port])
 
@@ -905,7 +921,7 @@ class VirtioGuestPosix(VirtioGuest):
         if len(recvs) >= length:
             print "PASS: Recv data length %d" % len(recvs)
         else:
-            print ("FAIL: Partial recv: desired %d, transfered %d" %
+            print ("FAIL: Partial recv: desired %d, transferred %d" %
                    (length, len(recvs)))
 
     def clean_port(self, port, bfr=1024):
@@ -918,6 +934,7 @@ class VirtioGuestPosix(VirtioGuest):
 
 
 class VirtioGuestNt(VirtioGuest):
+
     """
     Test tools of virtio_ports.
     """
@@ -929,8 +946,8 @@ class VirtioGuestNt(VirtioGuest):
         """
         Get info about ports.
 
-        @param in_files: Array of input files.
-        @return: Ports dictionary of port properties
+        :param in_files: Array of input files.
+        :return: Ports dictionary of port properties
         """
         ports = {}
         for in_file in in_files:
@@ -956,9 +973,9 @@ class VirtioGuestNt(VirtioGuest):
             port = item[1]
             try:
                 hFile = win32file.CreateFile(port['path'], 0, 0, None,
-                                              win32file.OPEN_EXISTING,
-                                              win32file.FILE_ATTRIBUTE_NORMAL,
-                                              None)
+                                             win32file.OPEN_EXISTING,
+                                             win32file.FILE_ATTRIBUTE_NORMAL,
+                                             None)
                 win32file.CloseHandle(hFile)
             except win32file.error:
                 remove.append(port['name'])
@@ -992,7 +1009,7 @@ class VirtioGuestNt(VirtioGuest):
         """
         Close open port.
 
-        @param filepath: File to close.
+        :param filepath: File to close.
         """
         hFile = None
         path = self.ports[filepath]["path"]
@@ -1012,8 +1029,8 @@ class VirtioGuestNt(VirtioGuest):
         """
         Open devices and return array of descriptors
 
-        @param in_files: List of port names
-        @return: Array of descriptor
+        :param in_files: List of port names
+        :return: Array of descriptor
         """
         f = []
 
@@ -1032,19 +1049,19 @@ class VirtioGuestNt(VirtioGuest):
         """
         Direct open devices.
 
-        @param name: Port name.
-        @return: 0 on success
+        :param name: Port name.
+        :return: 0 on success
         """
         path = self.ports[name]['path']
         try:
             self.files[path] = win32file.CreateFile(path,
-                                            win32file.GENERIC_WRITE |
-                                            win32file.GENERIC_READ,
-                                            0,
-                                            None,
-                                            win32file.OPEN_EXISTING,
-                                            win32file.FILE_ATTRIBUTE_NORMAL,
-                                            None)
+                                                    win32file.GENERIC_WRITE |
+                                                    win32file.GENERIC_READ,
+                                                    0,
+                                                    None,
+                                                    win32file.OPEN_EXISTING,
+                                                    win32file.FILE_ATTRIBUTE_NORMAL,
+                                                    None)
         except win32file.error, exc_detail:
             print "%s\nFAIL: Failed open file %s" % (str(exc_detail), name)
             return exc_detail
@@ -1067,16 +1084,18 @@ class VirtioGuestNt(VirtioGuest):
         print "PASS: All threads finished"
 
     class Switch(Thread):
+
         """
         Thread that sends data between ports.
         """
+
         def __init__(self, in_files, out_files, event,
-                      cachesize=1024, method=0):
+                     cachesize=1024, method=0):
             """
-            @param in_files: Array of input files.
-            @param out_files: Array of output files.
-            @param method: Method of read/write access.
-            @param cachesize: Block to receive and send.
+            :param in_files: Array of input files.
+            :param out_files: Array of output files.
+            :param method: Method of read/write access.
+            :param cachesize: Block to receive and send.
             """
             Thread.__init__(self, name="Switch")
 
@@ -1096,7 +1115,7 @@ class VirtioGuestNt(VirtioGuest):
                 for desc in self.in_files:
                     ret, _data = win32file.ReadFile(desc, self.cachesize)
                     if ret:
-                        msg = ("Error occured while receiving data, "
+                        msg = ("Error occurred while receiving data, "
                                "err=%s, read=%s" % (ret, _data))
                         print "FAIL: " + msg
                         raise IOError(msg)
@@ -1105,7 +1124,7 @@ class VirtioGuestNt(VirtioGuest):
                     for desc in self.out_files:
                         ret, _data = win32file.WriteFile(desc, data)
                         if ret:
-                            msg = ("Error occured while sending data, "
+                            msg = ("Error occurred while sending data, "
                                    "err=%s, sentlen=%s" % (ret, _data))
                             print "FAIL: " + msg
                             raise IOError(msg)
@@ -1114,13 +1133,15 @@ class VirtioGuestNt(VirtioGuest):
             self._none_mode()
 
     class Sender(Thread):
+
         """
         Creates a thread which sends random blocks of data to dst port.
         """
+
         def __init__(self, port, event, length):
             """
-            @param port: Destination port
-            @param length: Length of the random data block
+            :param port: Destination port
+            :param length: Length of the random data block
             """
             Thread.__init__(self, name="Sender")
             self.port = port
@@ -1132,7 +1153,7 @@ class VirtioGuestNt(VirtioGuest):
         def run(self):
             while not self.exit_thread.isSet():
                 if win32file.WriteFile(self.port, self.data)[0]:
-                    msg = "Error occured while sending data."
+                    msg = "Error occurred while sending data."
                     print "FAIL: " + msg
                     raise IOError(msg)
 
@@ -1156,10 +1177,10 @@ class VirtioGuestNt(VirtioGuest):
         """
         Send a data of arbitrary length
 
-        @param port: Port to write data
-        @param length: Length of data
-        @param mode: True = loop mode, False = one shoot mode
-        @param is_static: False = generates $lenght long block (mode=0)
+        :param port: Port to write data
+        :param length: Length of data
+        :param mode: True = loop mode, False = one shoot mode
+        :param is_static: False = generates $length long block (mode=0)
                           True = generates 4096 long block (faster, mode=1)
         """
         port = self._open([port])[0]
@@ -1173,7 +1194,7 @@ class VirtioGuestNt(VirtioGuest):
                     data += "%c" % random.randrange(255)
                 _ret, _len = win32file.WriteFile(port, data)
                 if _ret:
-                    msg = ("Error occured while sending data, "
+                    msg = ("Error occurred while sending data, "
                            "err=%s, sentlen=%s" % (_ret, _len))
                     raise IOError(msg)
                 writes = _len
@@ -1187,7 +1208,7 @@ class VirtioGuestNt(VirtioGuest):
                 while (writes < length):
                     _ret, _len = win32file.WriteFile(port, data)
                     if _ret:
-                        msg = ("Error occured while sending data, err=%s"
+                        msg = ("Error occurred while sending data, err=%s"
                                ", sentlen=%s, allsentlen=%s" % (_ret, _len,
                                                                 writes))
                         raise IOError(msg)
@@ -1197,16 +1218,16 @@ class VirtioGuestNt(VirtioGuest):
         if writes >= length:
             print "PASS: Send data length %d" % writes
         else:
-            print ("FAIL: Partial send: desired %d, transfered %d" %
+            print ("FAIL: Partial send: desired %d, transferred %d" %
                    (length, writes))
 
     def recv(self, port, length=1, buflen=1024, mode=True):
         """
         Receive a data of arbitrary length.
 
-        @param port: Port to write data
-        @param length: Length of data
-        @param mode: True = loop mode, False = one shoot mode
+        :param port: Port to write data
+        :param length: Length of data
+        :param mode: True = loop mode, False = one shoot mode
         """
         port = self._open([port])[0]
 
@@ -1214,7 +1235,7 @@ class VirtioGuestNt(VirtioGuest):
         try:
             _ret, _data = win32file.ReadFile(port, buflen)
             if _ret:
-                msg = ("Error occured while receiving data, "
+                msg = ("Error occurred while receiving data, "
                        "err=%s, read=%s" % (_ret, _data))
                 raise IOError(msg)
             recvs = _data
@@ -1225,7 +1246,7 @@ class VirtioGuestNt(VirtioGuest):
                 try:
                     _ret, _data = win32file.ReadFile(port, buflen)
                     if _ret:
-                        msg = ("Error occured while receiving data, "
+                        msg = ("Error occurred while receiving data, "
                                "err=%s, read=%s, allread=%s" % (_ret, _data,
                                                                 len(recvs)))
                         raise IOError(msg)
@@ -1234,7 +1255,7 @@ class VirtioGuestNt(VirtioGuest):
         if len(recvs) >= length:
             print "PASS: Recv data length %d" % len(recvs)
         else:
-            print ("FAIL: Partial recv: desired %d, transfered %d" %
+            print ("FAIL: Partial recv: desired %d, transferred %d" %
                    (length, len(recvs)))
 
 
@@ -1287,9 +1308,9 @@ def worker(virt):
             except Exception:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 print "On Guest exception from: \n" + "".join(
-                                traceback.format_exception(exc_type,
-                                                           exc_value,
-                                                           exc_traceback))
+                    traceback.format_exception(exc_type,
+                                               exc_value,
+                                               exc_traceback))
                 print "FAIL: Guest command exception."
         elif (d[0][1] & select.POLLHUP):
             time.sleep(0.5)
@@ -1300,16 +1321,18 @@ def sigusr_handler(sig, frame):
 
 
 class Daemon:
+
     """
     Daemonize guest
     """
+
     def __init__(self, stdin, stdout, stderr):
         """
         Init daemon.
 
-        @param stdin: path to stdin file.
-        @param stdout: path to stdout file.
-        @param stderr: path to stderr file.
+        :param stdin: path to stdin file.
+        :param stdout: path to stdout file.
+        :param stderr: path to stderr file.
         """
         self.stdin = stdin
         self.stdout = stdout
@@ -1320,8 +1343,8 @@ class Daemon:
         """
         Determine process which open file.
 
-        @param path: Path to file.
-        @return [[pid,mode], ... ].
+        :param path: Path to file.
+        :return: [[pid,mode], ... ].
         """
         opens = []
         pids = os.listdir('/proc')
@@ -1389,7 +1412,7 @@ class Daemon:
         """
         Start the daemon
 
-        @return: PID of daemon.
+        :return: PID of daemon.
         """
         # Check for a pidfile to see if the daemon already runs
         openers = self.is_file_open(self.stdout)
@@ -1501,9 +1524,9 @@ def main_nt():
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             print "On Guest exception from: \n" + "".join(
-                            traceback.format_exception(exc_type,
-                                                       exc_value,
-                                                       exc_traceback))
+                traceback.format_exception(exc_type,
+                                           exc_value,
+                                           exc_traceback))
             print "FAIL: Guest command exception."
         sys.stdout.flush()
     print "PASS: guest_exit"

@@ -2,13 +2,14 @@
 
 import unittest
 import common
-import installer, cartesian_config
+import installer
+import cartesian_config
+
 
 class installer_test(unittest.TestCase):
 
     def setUp(self):
         self.registry = installer.InstallerRegistry()
-
 
     def test_register_get_installer(self):
         install_mode = 'custom_install_mode'
@@ -20,7 +21,6 @@ class installer_test(unittest.TestCase):
         self.registry.register(install_mode, CustomVirtInstaller, virt_type)
         klass = self.registry.get_installer(install_mode, virt_type)
         self.assertTrue(klass is CustomVirtInstaller)
-
 
     def test_register_get_installer_default(self):
         install_mode = 'base_install_mode'
@@ -38,12 +38,12 @@ class installer_test(unittest.TestCase):
                                             get_default_virt=True)
         self.assertTrue(klass is BaseVirtInstaller)
 
-
     def test_make_installer(self):
         config = """install_mode = test_install_mode
 vm_type = test"""
 
         class Installer:
+
             def __init__(self, mode, name, test, params):
                 pass
 

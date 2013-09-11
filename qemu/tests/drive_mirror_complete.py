@@ -1,7 +1,9 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import qemu_storage, data_dir
 from qemu.tests import drive_mirror
+
 
 @error.context_aware
 def run_drive_mirror_complete(test, params, env):

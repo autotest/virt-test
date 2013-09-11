@@ -1,4 +1,7 @@
-import logging, re, os, signal
+import logging
+import re
+import os
+import signal
 try:
     import autotest.common as common
 except ImportError:
@@ -13,6 +16,7 @@ man = Manager(__name__)
 
 
 class ServiceManagerInterface(object):
+
     def __new__(cls, *args, **kargs):
         ServiceManagerInterface.master_class = ServiceManagerInterface
         return super(ServiceManagerInterface, cls).__new__(cls, *args, **kargs)
@@ -21,7 +25,7 @@ class ServiceManagerInterface(object):
     def get_version(cls):
         """
         Get version of ServiceManager.
-        @return: Version of ServiceManager.
+        :return: Version of ServiceManager.
         """
         return open("/proc/1/comm", "r").read().strip()
 
@@ -29,16 +33,13 @@ class ServiceManagerInterface(object):
         raise NotImplementedError("Method 'stop' must be"
                                   " implemented in child class")
 
-
     def start(self, service_name):
         raise NotImplementedError("Method 'start' must be"
                                   " implemented in child class")
 
-
     def restart(self, service_name):
         raise NotImplementedError("Method 'restart' must be"
                                   " implemented in child class")
-
 
     def status(self, service_name):
         raise NotImplementedError("Method 'status' must be"
@@ -46,6 +47,7 @@ class ServiceManagerInterface(object):
 
 
 class ServiceManagerSysvinit(ServiceManagerInterface):
+
     @classmethod
     def _is_right_ver(cls):
         version = cls.get_version()
@@ -53,20 +55,18 @@ class ServiceManagerSysvinit(ServiceManagerInterface):
             return True
         return False
 
-
     def stop(self, service_name):
         utils.run("/etc/init.d/%s stop" % (service_name))
 
-
     def start(self, service_name):
         utils.run("/etc/init.d/%s start" % (service_name))
-
 
     def restart(self, service_name):
         utils.run("/etc/init.d/%s restart" % (service_name))
 
 
 class ServiceManagerSystemD(ServiceManagerSysvinit):
+
     @classmethod
     def _is_right_ver(cls):
         version = cls.get_version()
@@ -77,14 +77,11 @@ class ServiceManagerSystemD(ServiceManagerSysvinit):
     def stop(self, service_name):
         utils.run("systemctl stop %s.service" % (service_name))
 
-
     def start(self, service_name):
         utils.run("systemctl start %s.service" % (service_name))
 
-
     def restart(self, service_name):
         utils.run("systemctl restart %s.service" % (service_name))
-
 
     def status(self, service_name):
         utils.run("systemctl show %s.service" % (service_name))
@@ -95,6 +92,7 @@ class ServiceManager(VersionableClass):
 
 
 class OpenVSwitchControl(object):
+
     """
     Class select the best matches control class for installed version
     of OpenVSwitch.
@@ -102,16 +100,16 @@ class OpenVSwitchControl(object):
     OpenVSwtich parameters are described in man ovs-vswitchd.conf.db
     """
     def __new__(cls, db_path=None, db_socket=None, db_pidfile=None,
-                 ovs_pidfile=None, dbschema=None, install_prefix=None):
+                ovs_pidfile=None, dbschema=None, install_prefix=None):
         """
         Makes initialization of OpenVSwitch.
 
-        @param tmpdir: Tmp directory for save openvswitch test files.
-        @param db_path: Path of OVS databimpoty ase.
-        @param db_socket: Path of OVS db socket.
-        @param db_pidfile: Path of OVS db ovsdb-server pid.
-        @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
-        @param install_prefix: Path where is openvswitch installed.
+        :param tmpdir: Tmp directory for save openvswitch test files.
+        :param db_path: Path of OVS databimpoty ase.
+        :param db_socket: Path of OVS db socket.
+        :param db_pidfile: Path of OVS db ovsdb-server pid.
+        :param ovs_pidfile: Path of OVS ovs-vswitchd pid.
+        :param install_prefix: Path where is openvswitch installed.
         """
         # if path is None set default path.
         if not install_prefix:
@@ -147,11 +145,10 @@ class OpenVSwitchControl(object):
 
         return super(OpenVSwitchControl, cls).__new__(cls)
 
-
     @staticmethod
     def convert_version_to_int(version):
         """
-        @param version: (int) Converted from version string 1.4.0 => int 140
+        :param version: (int) Converted from version string 1.4.0 => int 140
         """
         if (isinstance(version, int)):
             return version
@@ -161,13 +158,12 @@ class OpenVSwitchControl(object):
             raise error.AutotestError("Wrong version format '%s'" % (version))
         return int_ver
 
-
     @classmethod
     def get_version(cls):
         """
         Get version of installed OpenVSwtich.
 
-        @return: Version of OpenVSwtich.
+        :return: Version of OpenVSwtich.
         """
         version = None
         try:
@@ -179,52 +175,42 @@ class OpenVSwitchControl(object):
             logging.debug("OpenVSwitch is not available in system.")
         return version
 
-
     def status(self):
         raise NotImplementedError()
-
 
     def add_br(self, br_name):
         raise NotImplementedError()
 
-
     def del_br(self, br_name):
         raise NotImplementedError()
-
 
     def br_exist(self, br_name):
         raise NotImplementedError()
 
-
     def list_br(self):
         raise NotImplementedError()
-
 
     def add_port(self, br_name, port_name):
         raise NotImplementedError()
 
-
     def del_port(self, br_name, port_name):
         raise NotImplementedError()
-
 
     def add_port_tag(self, port_name, tag):
         raise NotImplementedError()
 
-
     def add_port_trunk(self, port_name, trunk):
         raise NotImplementedError()
 
-
     def set_vlanmode(self, port_name, vlan_mode):
         raise NotImplementedError()
-
 
     def check_port_in_br(self, br_name, port_name):
         raise NotImplementedError()
 
 
 class OpenVSwitchControlDB_140(OpenVSwitchControl):
+
     """
     Don't use this class directly. This class is automatically selected by
     OpenVSwitchControl.
@@ -234,7 +220,7 @@ class OpenVSwitchControlDB_140(OpenVSwitchControl):
         """
         Check condition for select control class.
 
-        @param version: version of OpenVSwtich
+        :param version: version of OpenVSwtich
         """
         version = cls.get_version()
         if version is not None:
@@ -243,7 +229,7 @@ class OpenVSwitchControlDB_140(OpenVSwitchControl):
                 return True
         return False
 
-    #TODO: implement database manipulation methods.
+    # TODO: implement database manipulation methods.
 
 
 class OpenVSwitchControlDB_CNT(VersionableClass):
@@ -251,6 +237,7 @@ class OpenVSwitchControlDB_CNT(VersionableClass):
 
 
 class OpenVSwitchControlCli_140(OpenVSwitchControl):
+
     """
     Don't use this class directly. This class is automatically selected by
     OpenVSwitchControl.
@@ -260,7 +247,7 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
         """
         Check condition for select control class.
 
-        @param version: version of OpenVSwtich
+        :param version: version of OpenVSwtich
         """
         version = cls.get_version()
         if version is not None:
@@ -269,24 +256,19 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
                 return True
         return False
 
-
     def ovs_vsctl(self, parmas, ignore_status=False):
         return utils.run(os_dep.command("ovs-vsctl"), timeout=10,
                          ignore_status=ignore_status, verbose=False,
                          args=["--db=unix:%s" % (self.db_socket)] + parmas)
 
-
     def status(self):
         return self.ovs_vsctl(["show"]).stdout
-
 
     def add_br(self, br_name):
         self.ovs_vsctl(["add-br", br_name])
 
-
     def add_fake_br(self, br_name, parent, vlan):
         self.ovs_vsctl(["add-br", br_name, parent, vlan])
-
 
     def del_br(self, br_name):
         try:
@@ -294,7 +276,6 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
         except error.CmdError, e:
             logging.debug(e.result_obj)
             raise
-
 
     def br_exist(self, br_name):
         try:
@@ -306,46 +287,38 @@ class OpenVSwitchControlCli_140(OpenVSwitchControl):
                 raise
         return True
 
-
     def list_br(self):
         return self.ovs_vsctl(["list-br"]).stdout.splitlines()
-
 
     def add_port(self, br_name, port_name):
         self.ovs_vsctl(["add-port", br_name, port_name])
 
-
     def del_port(self, br_name, port_name):
         self.ovs_vsctl(["del-port", br_name, port_name])
-
 
     def add_port_tag(self, port_name, tag):
         self.ovs_vsctl(["set", "Port", port_name, "tag=%s" % tag])
 
-
     def add_port_trunk(self, port_name, trunk):
         """
-        @param trunk: list of vlans id.
+        :param trunk: list of vlans id.
         """
         trunk = map(lambda x: str(x), trunk)
         trunk = "[" + ",".join(trunk) + "]"
         self.ovs_vsctl(["set", "Port", port_name, "trunk=%s" % trunk])
 
-
     def set_vlanmode(self, port_name, vlan_mode):
         self.ovs_vsctl(["set", "Port", port_name, "vlan-mode=%s" % vlan_mode])
 
-
     def list_ports(self, br_name):
         return self.ovs_vsctl(["list-ports", br_name]).stdout.splitlines()
-
 
     def port_to_br(self, port_name):
         """
         Return bridge which contain port.
 
-        @param port_name: Name of port.
-        @return: Bridge name or None if there is no bridge which contain port.
+        :param port_name: Name of port.
+        :return: Bridge name or None if there is no bridge which contain port.
         """
         bridge = None
         try:
@@ -361,61 +334,61 @@ class OpenVSwitchControlCli_CNT(VersionableClass):
 
 
 class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
+
     """
     OpenVSwtich class.
     """
+
     def __init__(self, db_path=None, db_socket=None, db_pidfile=None,
                  ovs_pidfile=None, dbschema=None, install_prefix=None):
         """
         Makes initialization of OpenVSwitch.
 
-        @param db_path: Path of OVS database.
-        @param db_socket: Path of OVS db socket.
-        @param db_pidfile: Path of OVS db ovsdb-server pid.
-        @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
-        @param install_prefix: Path where is openvswitch installed.
+        :param db_path: Path of OVS database.
+        :param db_socket: Path of OVS db socket.
+        :param db_pidfile: Path of OVS db ovsdb-server pid.
+        :param ovs_pidfile: Path of OVS ovs-vswitchd pid.
+        :param install_prefix: Path where is openvswitch installed.
         """
         sup = super(man[self.__class__, OpenVSwitchSystem], self)
         sup.__init__(self, db_path, db_socket, db_pidfile, ovs_pidfile,
-                           dbschema, install_prefix)
+                     dbschema, install_prefix)
 
         self.cleanup = False
         self.pid_files_path = None
-
 
     def is_installed(self):
         """
         Check if OpenVSwitch is already installed in system on default places.
 
-        @return: Version of OpenVSwtich.
+        :return: Version of OpenVSwtich.
         """
         if self.get_version():
             return True
         else:
             return False
 
-
     def check_db_daemon(self):
         """
         Check if OVS daemon is started correctly.
         """
-        working = utils_misc.program_is_alive("ovsdb-server", self.pid_files_path)
+        working = utils_misc.program_is_alive(
+            "ovsdb-server", self.pid_files_path)
         if not working:
             logging.error("OpenVSwitch database daemon with PID in file %s"
                           " not working.", self.db_pidfile)
         return working
 
-
     def check_switch_daemon(self):
         """
         Check if OVS daemon is started correctly.
         """
-        working = utils_misc.program_is_alive("ovs-vswitchd", self.pid_files_path)
+        working = utils_misc.program_is_alive(
+            "ovs-vswitchd", self.pid_files_path)
         if not working:
             logging.error("OpenVSwitch switch daemon with PID in file %s"
                           " not working.", self.ovs_pidfile)
         return working
-
 
     def check_db_file(self):
         """
@@ -424,9 +397,8 @@ class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
         exists = os.path.exists(self.db_path)
         if not exists:
             logging.error("OpenVSwitch database file %s not exists.",
-                           self.db_path)
+                          self.db_path)
         return exists
-
 
     def check_db_socket(self):
         """
@@ -438,11 +410,9 @@ class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
                           self.db_socket)
         return exists
 
-
     def check(self):
         return (self.check_db_daemon() and self.check_switch_daemon() and
                 self.check_db_file() and self.check_db_socket())
-
 
     def init_system(self):
         """
@@ -458,7 +428,6 @@ class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
             raise
         self.pid_files_path = "/var/run/openvswitch/"
 
-
     def clean(self):
         """
         Empty cleanup function
@@ -467,31 +436,32 @@ class OpenVSwitchSystem(OpenVSwitchControlCli_CNT, OpenVSwitchControlDB_CNT):
 
 
 class OpenVSwitch(OpenVSwitchSystem):
+
     """
     OpenVSwtich class.
     """
+
     def __init__(self, tmpdir, db_path=None, db_socket=None, db_pidfile=None,
                  ovs_pidfile=None, dbschema=None, install_prefix=None):
         """
         Makes initialization of OpenVSwitch.
 
-        @param tmpdir: Tmp directory for save openvswitch test files.
-        @param db_path: Path of OVS database.
-        @param db_socket: Path of OVS db socket.
-        @param db_pidfile: Path of OVS db ovsdb-server pid.
-        @param ovs_pidfile: Path of OVS ovs-vswitchd pid.
-        @param install_prefix: Path where is openvswitch installed.
+        :param tmpdir: Tmp directory for save openvswitch test files.
+        :param db_path: Path of OVS database.
+        :param db_socket: Path of OVS db socket.
+        :param db_pidfile: Path of OVS db ovsdb-server pid.
+        :param ovs_pidfile: Path of OVS ovs-vswitchd pid.
+        :param install_prefix: Path where is openvswitch installed.
         """
         super(man[self, OpenVSwitch], self).__init__(db_path, db_socket,
-                                                      db_pidfile, ovs_pidfile,
-                                                      dbschema, install_prefix)
+                                                     db_pidfile, ovs_pidfile,
+                                                     dbschema, install_prefix)
         self.tmpdir = "/%s/openvswitch" % (tmpdir)
         try:
             os.mkdir(self.tmpdir)
         except OSError, e:
             if e.errno != 17:
                 raise
-
 
     def init_db(self):
         utils.run(os_dep.command("ovsdb-tool"), timeout=10,
@@ -503,13 +473,11 @@ class OpenVSwitch(OpenVSwitchSystem):
                         "--detach"])
         self.ovs_vsctl(["--no-wait", "init"])
 
-
     def start_ovs_vswitchd(self):
         utils.run(os_dep.command("ovs-vswitchd"), timeout=10,
                   args=["--detach",
                         "--pidfile=%s" % (self.ovs_pidfile),
                         "unix:%s" % (self.db_socket)])
-
 
     def init_new(self):
         """
@@ -523,7 +491,7 @@ class OpenVSwitch(OpenVSwitchSystem):
 
         self.cleanup = True
         sm = ServiceManager()
-        #Stop system openvswitch
+        # Stop system openvswitch
         try:
             sm.stop("openvswitch")
         except error.CmdError:
@@ -535,7 +503,6 @@ class OpenVSwitch(OpenVSwitchSystem):
 
         self.init_db()
         self.start_ovs_vswitchd()
-
 
     def clean(self):
         logging.debug("Killall ovsdb-server")

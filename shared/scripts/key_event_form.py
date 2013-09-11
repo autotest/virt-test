@@ -1,5 +1,6 @@
 import wx
 
+
 class TestForm(wx.Frame):
 
     def __init__(self):

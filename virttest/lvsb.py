@@ -1,32 +1,35 @@
 """
 Higher order classes and functions for Libvirt Sandbox (lxc) container testing
 
-@copyright: 2013 Red Hat Inc.
+:copyright: 2013 Red Hat Inc.
 """
 
-import datetime, time, logging
+import datetime
+import time
+import logging
 import lvsb_base
 
 # This utility function lets test-modules quickly create a list of all
 # sandbox aggregate types, themselves containing a list of individual
 # sandboxes.
 
+
 def make_sandboxes(params, env, extra_ns=None):
     """
     Return list of instantiated lvsb_testsandboxes classes from params
 
-    @param: params: an undiluted Params instance
-    @param: env: the current env instance
-    @param: extra_ns: An extra, optional namespace to search for classes
+    :param params: an undiluted Params instance
+    :param env: the current env instance
+    :param extra_ns: An extra, optional namespace to search for classes
     """
-    namespace = globals() # stuff in this module
+    namespace = globals()  # stuff in this module
     # For specialized sandbox types, allow their class to be defined
     # inside test module or elsewhere.
     if extra_ns is not None:
-        namespace.update(extra_ns) # copy in additional symbols
+        namespace.update(extra_ns)  # copy in additional symbols
     names = namespace.keys()
     # Test may require more than one sandbox agregator class
-    pobs = params.objects('lvsb_testsandboxes') # manditory parameter
+    pobs = params.objects('lvsb_testsandboxes')  # manditory parameter
     # filter out non-TestSandboxes subclasses
     for name in names:
         try:
@@ -45,6 +48,7 @@ def make_sandboxes(params, env, extra_ns=None):
 # aggregate manager classes and the sandboxes they contain.
 
 class TestSimpleSandboxes(lvsb_base.TestSandboxes):
+
     """
     Simplistic sandbox aggregate manager that just executes a command
     """
@@ -54,7 +58,7 @@ class TestSimpleSandboxes(lvsb_base.TestSandboxes):
         Initialize to run, all SandboxCommandBase's
         """
         super(TestSimpleSandboxes, self).__init__(params, env)
-        self.init_sandboxes() # create instances of SandboxCommandBase
+        self.init_sandboxes()  # create instances of SandboxCommandBase
         # Point all of them at the same local uri
         self.for_each(lambda sb: sb.add_optarg('-c', self.uri))
         # Use each instances name() method to produce name argument
@@ -63,7 +67,6 @@ class TestSimpleSandboxes(lvsb_base.TestSandboxes):
         self.for_each(lambda sb: sb.add_mm())
         # Each one gets the same command (that's why it's simple)
         self.for_each(lambda sb: sb.add_pos(self.command))
-
 
     def results(self, each_timeout=5):
         """
@@ -78,9 +81,9 @@ class TestSimpleSandboxes(lvsb_base.TestSandboxes):
         while datetime.datetime.now() < timeout_at:
             # Wait until number of running sandboxes is zero
             if bool(self.are_running()):
-                time.sleep(0.1) # Don't busy-wait
+                time.sleep(0.1)  # Don't busy-wait
                 continue
-            else: # none are running
+            else:  # none are running
                 break
         # Needed for accurate time in logging message below
         end = datetime.datetime.now()
@@ -91,14 +94,14 @@ class TestSimpleSandboxes(lvsb_base.TestSandboxes):
         # If raise, auto_clean will make sure cleanup happens
         if bool(still_running):
             raise lvsb_base.SandboxException("%d of %d sandboxes are still "
-                                                "running after "
-                                                "the timeout of %d seconds."
-                                                % (still_running,
-                                                   self.count,
-                                                   total_timeout_seconds))
+                                             "running after "
+                                             "the timeout of %d seconds."
+                                             % (still_running,
+                                                self.count,
+                                                total_timeout_seconds))
         # Kill off all sandboxes, just to be safe
         self.for_each(lambda sb: sb.stop())
         logging.info("%d sandboxe(s) finished in %s", self.count,
-                                                      end - start)
+                     end - start)
         # Return a list of stdout contents from each
         return self.for_each(lambda sb: sb.recv())

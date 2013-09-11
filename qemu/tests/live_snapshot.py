@@ -1,7 +1,9 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error
 from virttest import utils_test
 from tests import file_transfer
+
 
 def run_live_snapshot(test, params, env):
     """
@@ -11,9 +13,9 @@ def run_live_snapshot(test, params, env):
     3). Check if live snapshot is created
     4). Shutdown guest
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     @error.context_aware

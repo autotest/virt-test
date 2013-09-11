@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
 from virttest import utils_misc
@@ -6,9 +8,11 @@ from virttest import env_process
 
 
 class NFSCorruptConfig(object):
+
     """
     This class sets up nfs_corrupt test environment.
     """
+
     def __init__(self, test, params):
         self.nfs_dir = os.path.join(test.tmpdir, "nfs_dir")
         self.mnt_dir = os.path.join(test.tmpdir, "mnt_dir")
@@ -60,7 +64,7 @@ class NFSCorruptConfig(object):
         """
         Setup test NFS share.
 
-        @param force_start: Whether to make NFS service start anyway.
+        :param force_start: Whether to make NFS service start anyway.
         """
         error.context("Setting up test NFS share")
 
@@ -110,7 +114,7 @@ class NFSCorruptConfig(object):
         """
         Verifies whether the NFS server is running or not.
 
-        @param chk_re: Regular expression that tells whether NFS is running
+        :param chk_re: Regular expression that tells whether NFS is running
                 or not.
         """
         status = utils.system_output(self.status_cmd, ignore_status=True)
@@ -134,16 +138,16 @@ def run_nfs_corrupt(test, params, env):
     6) Accept NFS connection on host and continue VM by monitor command
     7) Check if VM status is 'running'
 
-    @param test: kvm test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def get_nfs_devname(params, session):
         """
         Get the possbile name of nfs storage dev name in guest.
 
-        @param params: Test params dictionary.
-        @param session: An SSH session object.
+        :param params: Test params dictionary.
+        :param session: An SSH session object.
         """
         image1_type = params.object_params("image1").get("drive_format")
         stg_type = params.object_params("stg").get("drive_format")
@@ -161,15 +165,14 @@ def run_nfs_corrupt(test, params, env):
         cmd += " | tail -n 1"
         return session.cmd_output(cmd)
 
-
     def check_vm_status(vm, status):
         """
         Check if VM has the given status or not.
 
-        @param vm: VM object.
-        @param status: String with desired status.
-        @return: True if VM status matches our desired status.
-        @return: False if VM status does not match our desired status.
+        :param vm: VM object.
+        :param status: String with desired status.
+        :return: True if VM status matches our desired status.
+        :return: False if VM status does not match our desired status.
         """
         try:
             vm.verify_status(status)
@@ -177,7 +180,6 @@ def run_nfs_corrupt(test, params, env):
             return False
         else:
             return True
-
 
     config = NFSCorruptConfig(test, params)
     config.setup()
@@ -225,8 +227,8 @@ def run_nfs_corrupt(test, params, env):
 
             error.context("Check if VM status is 'paused'")
             if not utils_misc.wait_for(
-                                lambda: check_vm_status(vm, "paused"),
-                                int(params.get('wait_paused_timeout', 120))):
+                lambda: check_vm_status(vm, "paused"),
+                    int(params.get('wait_paused_timeout', 120))):
                 raise error.TestError("Guest is not paused after stop NFS")
         finally:
             error.context("Accept NFS connection on host")

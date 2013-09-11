@@ -80,7 +80,7 @@ device = set(disks) - set(boot_disk)
 try:
     device = device.pop()
 except KeyError:
-    raise error.TestError("No realy partation found")
+    raise error.TestError("No really partation found")
 
 device = os.path.join("/dev", device)
 cmd = "parted -s %s mklabel gpt && " % device

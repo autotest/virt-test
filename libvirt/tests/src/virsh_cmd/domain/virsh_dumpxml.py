@@ -1,4 +1,5 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import virsh
 
@@ -21,14 +22,13 @@ def run_virsh_dumpxml(test, params, env):
         To check whether the dumpxml is got during vm is running.
         (Verify the domid in dumpxml)
 
-        @param dumpxml: the output of virsh dumpxml.
-        @param domid: the id of vm
+        :param dumpxml: the output of virsh dumpxml.
+        :param domid: the id of vm
         """
         match_string = "<domain.*id='%s'/>" % domid
         if re.search(dumpxml, match_string):
             return True
         return False
-
 
     # Prepare parameters
     vm_name = params.get("main_vm")
@@ -44,7 +44,7 @@ def run_virsh_dumpxml(test, params, env):
 
     # Prepare vm state for test
     if vm_state == "shutoff" and vm.is_alive():
-        vm.destroy() # Confirm vm is shutoff
+        vm.destroy()  # Confirm vm is shutoff
 
     if vm_ref == "domname":
         vm_ref = vm_name
@@ -92,6 +92,6 @@ def run_virsh_dumpxml(test, params, env):
                                          "with --inactive option!")
             else:
                 if (vm_state == "shutoff"
-                    and is_dumpxml_of_running_vm(output, domid)):
+                        and is_dumpxml_of_running_vm(output, domid)):
                     raise error.TestFail("Got dumpxml for active vm "
                                          "when vm is shutoff.")

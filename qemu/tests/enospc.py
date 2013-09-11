@@ -1,16 +1,21 @@
-import logging, time, re, os
+import logging
+import time
+import re
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import virt_vm, utils_misc, qemu_storage, data_dir
 
 
 class EnospcConfig(object):
+
     """
     Performs setup for the test enospc. This is a borg class, similar to a
     singleton. The idea is to keep state in memory for when we call cleanup()
     on postprocessing.
     """
     __shared_state = {}
+
     def __init__(self, test, params):
         self.__dict__ = self.__shared_state
         root_dir = test.bindir
@@ -23,7 +28,8 @@ class EnospcConfig(object):
         # likely that we run in conflict with other devices in the system
         self.vgtest_name = params["vgtest_name"]
         self.lvtest_name = params["lvtest_name"]
-        self.lvtest_device = "/dev/%s/%s" % (self.vgtest_name, self.lvtest_name)
+        self.lvtest_device = "/dev/%s/%s" % (
+            self.vgtest_name, self.lvtest_name)
         image_dir = os.path.join(data_dir.get_data_dir(),
                                  os.path.dirname(params["image_name"]))
         self.qcow_file_path = os.path.join(image_dir, 'enospc.qcow2')
@@ -98,6 +104,7 @@ class EnospcConfig(object):
         if os.path.isfile(self.raw_file_path):
             os.remove(self.raw_file_path)
 
+
 @error.context_aware
 def run_enospc(test, params, env):
     """
@@ -110,9 +117,9 @@ def run_enospc(test, params, env):
     5) Continue paused guest
     6) Repeat step 3~5 several times
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     error.context("Create a virtual disk on lvm")
     enospc_config = EnospcConfig(test, params)
@@ -155,7 +162,7 @@ def run_enospc(test, params, env):
                 image_params = vm.params.object_params(image_name)
                 try:
                     image = qemu_storage.QemuImg(image_params,
-                                  data_dir.get_data_dir(), image_name)
+                                                 data_dir.get_data_dir(), image_name)
                     image.check_image(image_params, data_dir.get_data_dir())
                 except (virt_vm.VMError, error.TestWarn), e:
                     logging.error(e)

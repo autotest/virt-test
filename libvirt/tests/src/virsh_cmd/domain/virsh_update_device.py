@@ -1,7 +1,10 @@
-import re, os, difflib
+import re
+import os
+import difflib
 from autotest.client.shared import error
 from virttest import virsh, libvirt_xml
 from xml.dom.minidom import parseString
+
 
 def run_virsh_update_device(test, params, env):
     """
@@ -23,8 +26,8 @@ def run_virsh_update_device(test, params, env):
         """
         Create a xml file to update a device.
 
-        @param: update_xmlfile : Temp xml saves device infomation.
-        @param: source_iso : disk's source file.
+        :param update_xmlfile : Temp xml saves device information.
+        :param source_iso : disk's source file.
         """
         try:
             f = open(source_iso, 'wb')
@@ -32,7 +35,7 @@ def run_virsh_update_device(test, params, env):
             f.write(str(0))
             f.close()
         except IOError:
-            raise  error.TestFail("Create source_iso failed!")
+            raise error.TestFail("Create source_iso failed!")
 
         content = """
 <disk device='cdrom' type='file'>
@@ -50,8 +53,8 @@ def run_virsh_update_device(test, params, env):
         """
         Check attached device and disk exist or not.
 
-        @param: source_file : disk's source file.
-        @param: output :VM's xml infomation .
+        :param source_file : disk's source file.
+        :param output :VM's xml information .
         """
         dom = parseString(output)
         source = dom.getElementsByTagName("source")
@@ -64,12 +67,11 @@ def run_virsh_update_device(test, params, env):
             output3 += n.getAttribute("dev")
         dom.unlink
 
-        source_iso = "%s"  % source_file
+        source_iso = "%s" % source_file
         if not re.search(source_iso, output2):
-            raise  error.TestFail("didn't see 'attached disk")
+            raise error.TestFail("didn't see 'attached disk")
         if not re.search('hdc', output3):
-            raise  error.TestFail("didn't see 'attached device")
-
+            raise error.TestFail("didn't see 'attached device")
 
     domid = vm.get_id()
     domuuid = vm.get_uuid()
@@ -110,7 +112,7 @@ def run_virsh_update_device(test, params, env):
         vm_ref = "%s %s" % (vm_name, extra)
 
     status = virsh.update_device(domainarg=vm_ref, filearg=update_xmlfile,
-                    flagstr=flag, ignore_status=True, debug=True).exit_status
+                                 flagstr=flag, ignore_status=True, debug=True).exit_status
 
     output = "%s" % libvirt_xml.VMXML.new_from_dumpxml(vm_name)
     if params.has_key("updatedevice_diff_file"):
@@ -133,7 +135,7 @@ def run_virsh_update_device(test, params, env):
         option = item.strip()
         if option == "":
             continue
-        if virsh.has_command_help_match("update-device", option) == None:
+        if virsh.has_command_help_match("update-device", option) is None:
             status_error = "yes"
             break
     if status_error == "yes":
@@ -154,14 +156,14 @@ def run_virsh_update_device(test, params, env):
                     output_diff = difflib.Differ().compare(context_before,
                                                            context_after)
                     if not re.search(tmp_iso, "\n".join(list(output_diff))):
-                        raise  error.TestFail("virsh update-device function "
-                        "invalid; can't see 'attached device'in before/after")
+                        raise error.TestFail("virsh update-device function "
+                                             "invalid; can't see 'attached device'in before/after")
                 else:
                     if re.search(tmp_iso, output_shut):
-                        raise  error.TestFail("virsh attach-device without "
-                        "--persistent/--config function invalid;can see "
-                        "'attached device'in XML")
+                        raise error.TestFail("virsh attach-device without "
+                                             "--persistent/--config function invalid;can see "
+                                             "'attached device'in XML")
             if diff_iso == "yes":
                 check_attach(tmp2_iso, output)
-            if  vm_ref == "name":
+            if vm_ref == "name":
                 check_attach(tmp_iso, output)

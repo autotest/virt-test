@@ -1,4 +1,6 @@
-import logging, time, commands
+import logging
+import time
+import commands
 from autotest.client.shared import error
 from virttest import utils_test, aexpect
 
@@ -18,9 +20,9 @@ def run_timedrift(test, params, env):
     If the drift after the rest period is higher than a user-specified value,
     fail.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     # Helper functions
     def set_cpu_affinity(pid, mask):
@@ -28,9 +30,9 @@ def run_timedrift(test, params, env):
         Set the CPU affinity of all threads of the process with PID pid.
         Do this recursively for all child processes as well.
 
-        @param pid: The process ID.
-        @param mask: The CPU affinity mask.
-        @return: A dict containing the previous mask for each thread.
+        :param pid: The process ID.
+        :param mask: The CPU affinity mask.
+        :return: A dict containing the previous mask for each thread.
         """
         tids = commands.getoutput("ps -L --pid=%s -o lwp=" % pid).split()
         prev_masks = {}
@@ -47,7 +49,7 @@ def run_timedrift(test, params, env):
         """
         Restore the CPU affinity of several threads.
 
-        @param prev_masks: A dict containing TIDs as keys and masks as values.
+        :param prev_masks: A dict containing TIDs as keys and masks as values.
         """
         for tid, mask in prev_masks.items():
             commands.getoutput("taskset -p %s %s" % (mask, tid))
@@ -187,7 +189,8 @@ def run_timedrift(test, params, env):
     guest_delta_total = gt2 - gt0
     drift_total = 100.0 * (host_delta_total - guest_delta_total) / host_delta
     logging.info("Total host duration including rest: %.2f", host_delta_total)
-    logging.info("Total guest duration including rest: %.2f", guest_delta_total)
+    logging.info(
+        "Total guest duration including rest: %.2f", guest_delta_total)
     logging.info("Total drift after rest: %.2f%%", drift_total)
 
     # Fail the test if necessary

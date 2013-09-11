@@ -1,4 +1,6 @@
-import logging, time, types
+import logging
+import time
+import types
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test
 
@@ -15,15 +17,15 @@ def run_migration(test, params, env):
     4) Compare the output of a reference command executed on the source with
             the output of the same command on the destination machine.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def guest_stress_start(guest_stress_test):
         """
         Start a stress test in guest, Could be 'iozone', 'dd', 'stress'
 
-        @param type: type of stress test.
+        :param type: type of stress test.
         """
         from tests import autotest_control
 
@@ -55,7 +57,6 @@ def run_migration(test, params, env):
             time.sleep(timeout)
         if not bg.is_alive():
             raise error.TestFail("Failed to start guest test!")
-
 
     def guest_stress_deamon():
         """
@@ -93,7 +94,6 @@ def run_migration(test, params, env):
                 break
             time.sleep(10)
 
-
     def get_functions(func_names, locals_dict):
         """
         Find sub function(s) in this function with the given name(s).
@@ -106,7 +106,6 @@ def run_migration(test, params, env):
             if isinstance(f, types.FunctionType):
                 funcs.append(f)
         return funcs
-
 
     def mig_set_speed():
         mig_speed = params.get("mig_speed", "1G")
@@ -163,7 +162,8 @@ def run_migration(test, params, env):
             if guest_stress_test:
                 guest_stress_start(guest_stress_test)
                 params["action"] = "run"
-                deamon_thread = utils_test.BackgroundTest(guest_stress_deamon, ())
+                deamon_thread = utils_test.BackgroundTest(
+                    guest_stress_deamon, ())
                 deamon_thread.start()
 
             # Migrate the VM
@@ -203,16 +203,17 @@ def run_migration(test, params, env):
                              "command output after migration")
                 logging.info("Command: %s", test_command)
                 logging.info("Output before:" +
-                            utils_misc.format_str_for_message(reference_output))
+                             utils_misc.format_str_for_message(reference_output))
                 logging.info("Output after:" +
                              utils_misc.format_str_for_message(output))
                 raise error.TestFail("Command '%s' produced different output "
-                                    "before and after migration" % test_command)
+                                     "before and after migration" % test_command)
 
         finally:
             # Kill the background process
             if session2 and session2.is_alive():
-                session2.cmd_output(params.get("migration_bg_kill_command", ""))
+                session2.cmd_output(
+                    params.get("migration_bg_kill_command", ""))
             if deamon_thread is not None:
                 # Set deamon thread action to stop after migrate
                 params["action"] = "stop"

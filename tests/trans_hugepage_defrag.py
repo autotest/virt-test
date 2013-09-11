@@ -1,4 +1,7 @@
-import logging, time, os, re
+import logging
+import time
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, test_setup
@@ -17,27 +20,26 @@ def run_trans_hugepage_defrag(test, params, env):
     6) Set the khugepaged do defrag
     7) Use libhugetlbfs to allocated huge page compare the value
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def get_mem_stat(param):
         """
         Get the memory size for a given memory param.
 
-        @param param: Memory parameter.
+        :param param: Memory parameter.
         """
         for line in file('/proc/meminfo', 'r').readlines():
             if line.startswith("%s" % param):
                 output = re.split('\s+', line)[1]
         return int(output)
 
-
     def set_libhugetlbfs(number):
         """
         Set the number of hugepages on the system.
 
-        @param number: Number of pages (either string or numeric).
+        :param number: Number of pages (either string or numeric).
         """
         logging.info("Trying to setup %d hugepages on host", number)
         f = file("/proc/sys/vm/nr_hugepages", "w+")
@@ -47,20 +49,20 @@ def run_trans_hugepage_defrag(test, params, env):
         f.write(str(number))
         f.seek(0)
         ret = f.read()
-        logging.debug("Number of huge pages on libhugetlbfs: (post-write): %s" %
-                      ret.strip())
+        logging.debug(
+            "Number of huge pages on libhugetlbfs: (post-write): %s" %
+            ret.strip())
         return int(ret)
-
 
     def change_feature_status(status, feature_path, test_config):
         """
         Turn on/off feature functionality.
 
-        @param status: String representing status, may be 'on' or 'off'.
-        @param relative_path: Path of the feature relative to THP config base.
-        @param test_config: Object that keeps track of THP config state.
+        :param status: String representing status, may be 'on' or 'off'.
+        :param relative_path: Path of the feature relative to THP config base.
+        :param test_config: Object that keeps track of THP config state.
 
-        @raise: error.TestFail, if can't change feature status
+        :raise: error.TestFail, if can't change feature status
         """
         feature_path = os.path.join(test_config.thp_path, feature_path)
         feature_file = open(feature_path, 'r')
@@ -95,7 +97,6 @@ def run_trans_hugepage_defrag(test, params, env):
                                  (action, feature_path, e))
         time.sleep(1)
 
-
     def fragment_host_memory(mem_path):
         """
         Attempt to fragment host memory.
@@ -103,7 +104,7 @@ def run_trans_hugepage_defrag(test, params, env):
         It accomplishes that goal by spawning a large number of dd processes
         on a tmpfs mount.
 
-        @param mem_path: tmpfs mount point.
+        :param mem_path: tmpfs mount point.
         """
         error.context("Fragmenting host memory")
         try:
@@ -117,7 +118,6 @@ def run_trans_hugepage_defrag(test, params, env):
             utils.run(cmd)
         finally:
             utils.run("umount %s" % mem_path)
-
 
     test_config = test_setup.TransparentHugePageConfig(test, params)
     logging.info("Defrag test start")

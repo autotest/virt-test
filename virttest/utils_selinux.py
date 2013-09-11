@@ -2,11 +2,13 @@
 selinux test utility functions.
 """
 
-import logging, re
+import logging
+import re
 from autotest.client import utils
 
 
 class SelinuxError(Exception):
+
     """
     Error selinux utility functions.
     """
@@ -14,9 +16,11 @@ class SelinuxError(Exception):
 
 
 class SeCmdError(SelinuxError):
+
     """
     Error in executing cmd.
     """
+
     def __init__(self, cmd, detail):
         SelinuxError.__init__(self)
         self.cmd = cmd
@@ -29,17 +33,18 @@ class SeCmdError(SelinuxError):
 
 STATUS_LIST = ['enforcing', 'permissive', 'disabled']
 
+
 def get_status():
     """
     Get the status of selinux.
 
-    @return: string of status in STATUS_LIST.
-    @raise SeCmdError: if execute 'getenforce' failed.
-    @raise SelinuxError: if 'getenforce' command exit 0,
+    :return: string of status in STATUS_LIST.
+    :raise SeCmdError: if execute 'getenforce' failed.
+    :raise SelinuxError: if 'getenforce' command exit 0,
                     but the output is not expected.
     """
     cmd = 'getenforce'
-    result = utils.run(cmd, ignore_status = True)
+    result = utils.run(cmd, ignore_status=True)
     if result.exit_status:
         raise SeCmdError(cmd, result.stderr)
 
@@ -57,11 +62,11 @@ def set_status(status):
     """
     Set status of selinux.
 
-    @param status: status want to set selinux.
-    @raise SelinuxError: status is not supported.
-    @raise SelinuxError: need to reboot host.
-    @raise SeCmdError: execute setenforce failed.
-    @raise SelinuxError: cmd setenforce exit normally,
+    :param status: status want to set selinux.
+    :raise SelinuxError: status is not supported.
+    :raise SelinuxError: need to reboot host.
+    :raise SeCmdError: execute setenforce failed.
+    :raise SelinuxError: cmd setenforce exit normally,
                 but status of selinux is not set to expected.
     """
     if not status in STATUS_LIST:
@@ -113,7 +118,7 @@ def get_context_from_str(string):
     """
     Get the context in a string.
 
-    @raise SelinuxError: if there is no context in string.
+    :raise SelinuxError: if there is no context in string.
     """
     context_pattern = r"[a-z,_]*_u:[a-z,_]*_r:[a-z,_]*_t:[s,\-,0-9,:[c,\,,0-9]*]*"
     if re.search(context_pattern, string):
@@ -127,7 +132,7 @@ def get_context_of_file(filename):
     """
     Get the context of file.
 
-    @raise SeCmdError: if execute 'getfattr' failed.
+    :raise SeCmdError: if execute 'getfattr' failed.
     """
     cmd = "getfattr --name security.selinux %s" % filename
     result = utils.run(cmd, ignore_status=True)
@@ -142,15 +147,15 @@ def set_context_of_file(filename, context):
     """
     Set context of file.
 
-    @raise SeCmdError: if failed to execute chcon.
-    @raise SelinuxError: if command chcon execute
+    :raise SeCmdError: if failed to execute chcon.
+    :raise SelinuxError: if command chcon execute
                         normally, but the context of
                         file is not setted to context.
     """
     context = context.strip()
     cmd = ("setfattr --name security.selinux --value \"%s\" %s"
-                                            % (context, filename))
-    result = utils.run(cmd, ignore_status = True)
+           % (context, filename))
+    result = utils.run(cmd, ignore_status=True)
     if result.exit_status:
         raise SeCmdError(cmd, result.stderr)
 

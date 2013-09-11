@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error, utils
 from virttest import env_process, utils_misc, utils_test
 
+
 @error.context_aware
 def run_boot_cpu_model(test, params, env):
     """
@@ -10,8 +11,8 @@ def run_boot_cpu_model(test, params, env):
     1). boot guest with cpu model
     2). check flags if enable_check == "yes", otherwise shutdown guest
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
 
     """
     host_flags = utils_misc.get_cpu_flags()
@@ -24,7 +25,7 @@ def run_boot_cpu_model(test, params, env):
             raise error.TestError("unknow cpu vendor")
         else:
             model_list = params.get("cpu_model_%s" % cpu_vendor,
-                                       host_model.split(",")[-1])
+                                    host_model.split(",")[-1])
 
     if model_list:
         model_list = model_list.split(" ")
@@ -40,9 +41,9 @@ def run_boot_cpu_model(test, params, env):
                 else:
                     # log in and shutdown guest
                     utils_test.run_virt_sub_test(test, params,
-                                                   env, sub_type="shutdown")
+                                                 env, sub_type="shutdown")
                     logging.info("shutdown guest successfully")
             else:
                 if params.get("enable_check", "no") == "yes":
                     raise error.TestWarn("Can not test %s model on %s host, pls"
-                    " use %s host" % (model, host_model.split(",")[0], model))
+                                         " use %s host" % (model, host_model.split(",")[0], model))

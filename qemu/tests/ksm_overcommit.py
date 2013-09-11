@@ -1,4 +1,8 @@
-import logging, time, random, math, os
+import logging
+import time
+import random
+import math
+import os
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
 
@@ -30,7 +34,7 @@ def run_ksm_overcommit(test, params, env):
                      memory) (S2, shouldn't finish)
                   4) Destroy all VMs but the last one
                   5) Checks the last VMs memory for corruption
-    Paralel mode - uses one VM with multiple allocator workers. Executes
+    Parallel mode - uses one VM with multiple allocator workers. Executes
                    scenarios in parallel to put more stress on the KVM.
                    0) Prints out the setup and initialize guest(s)
                    1) Fills memory with the same number (S1)
@@ -47,26 +51,26 @@ def run_ksm_overcommit(test, params, env):
     Every worker has unique random key so we are able to verify the filled
     values.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
 
-    @param cfg: ksm_swap - use swap?
-    @param cfg: ksm_overcommit_ratio - memory overcommit (serial mode only)
-    @param cfg: ksm_parallel_ratio - number of workers (parallel mode only)
-    @param cfg: ksm_host_reserve - override memory reserve on host in MB
-    @param cfg: ksm_guest_reserve - override memory reserve on guests in MB
-    @param cfg: ksm_mode - test mode {serial, parallel}
-    @param cfg: ksm_perf_ratio - performance ratio, increase it when your
+    :param cfg: ksm_swap - use swap?
+    :param cfg: ksm_overcommit_ratio - memory overcommit (serial mode only)
+    :param cfg: ksm_parallel_ratio - number of workers (parallel mode only)
+    :param cfg: ksm_host_reserve - override memory reserve on host in MB
+    :param cfg: ksm_guest_reserve - override memory reserve on guests in MB
+    :param cfg: ksm_mode - test mode {serial, parallel}
+    :param cfg: ksm_perf_ratio - performance ratio, increase it when your
                                  machine is too slow
     """
     def _start_allocator(vm, session, timeout):
         """
         Execute ksm_overcommit_guest.py on guest, wait until it's initialized.
 
-        @param vm: VM object.
-        @param session: Remote session to a VM object.
-        @param timeout: Timeout that will be used to verify if
+        :param vm: VM object.
+        :param session: Remote session to a VM object.
+        :param timeout: Timeout that will be used to verify if
                 ksm_overcommit_guest.py started properly.
         """
         logging.debug("Starting ksm_overcommit_guest.py on guest %s", vm.name)
@@ -83,20 +87,20 @@ def run_ksm_overcommit(test, params, env):
         Execute a given command on ksm_overcommit_guest.py main loop,
         indicating the vm the command was executed on.
 
-        @param command: Command that will be executed.
-        @param vm: VM object.
-        @param session: Remote session to VM object.
-        @param timeout: Timeout used to verify expected output.
+        :param command: Command that will be executed.
+        :param vm: VM object.
+        :param session: Remote session to VM object.
+        :param timeout: Timeout used to verify expected output.
 
-        @return: Tuple (match index, data)
+        :return: Tuple (match index, data)
         """
         logging.debug("Executing '%s' on ksm_overcommit_guest.py loop, "
                       "vm: %s, timeout: %s", command, vm.name, timeout)
         session.sendline(command)
         try:
             (match, data) = session.read_until_last_line_matches(
-                                                            ["PASS:", "FAIL:"],
-                                                            timeout)
+                ["PASS:", "FAIL:"],
+                timeout)
         except aexpect.ExpectProcessTerminatedError, details:
             e_msg = ("Failed to execute command '%s' on "
                      "ksm_overcommit_guest.py, vm '%s': %s" %
@@ -108,7 +112,7 @@ def run_ksm_overcommit(test, params, env):
         """
         Return sharing memory by ksm in MB
 
-        @return: memory in MB
+        :return: memory in MB
         """
         fpages = open('/sys/kernel/mm/ksm/pages_sharing')
         ksm_pages = int(fpages.read())
@@ -229,7 +233,7 @@ def run_ksm_overcommit(test, params, env):
 
                     # We need to keep some memory for python to run.
                     if (free_mem < 64000) or (ksm_swap and
-                                            free_mem < (450000 * perf_ratio)):
+                       free_mem < (450000 * perf_ratio)):
                         vm.pause()
                         for j in range(0, i):
                             lvms[j].destroy(gracefully=False)
@@ -303,7 +307,7 @@ def run_ksm_overcommit(test, params, env):
 
         for i in range(0, max_alloc):
             cmd = "mem = MemFill(%d, %s, %s)" % ((ksm_size / max_alloc),
-                                                   skeys[i], dkeys[i])
+                                                 skeys[i], dkeys[i])
             _execute_allocator(cmd, vm, lsessions[i], 60 * perf_ratio)
 
             cmd = "mem.value_fill(%d)" % (skeys[0])
@@ -378,7 +382,7 @@ def run_ksm_overcommit(test, params, env):
             data = data.splitlines()[-1]
             out = int(data.split()[4])
             logging.debug("Performance: %dMB * 1000 / %dms = %dMB/s",
-                         ksm_size / max_alloc, out,
+                          ksm_size / max_alloc, out,
                          (ksm_size * 1000 / out / max_alloc))
 
         logging.debug(utils_test.get_memory_info([vm]))
@@ -570,7 +574,7 @@ def run_ksm_overcommit(test, params, env):
     params['vms'] = vm_name
     # Associate pidfile name
     params['pid_' + vm_name] = utils_misc.generate_tmp_file_name(vm_name,
-                                                                'pid')
+                                                                 'pid')
     if not params.get('extra_params'):
         params['extra_params'] = ' '
     params['extra_params_' + vm_name] = params.get('extra_params')
@@ -605,7 +609,7 @@ def run_ksm_overcommit(test, params, env):
     for i in range(1, vmsc):
         vm_name = "vm" + str(i + 1)
         params['pid_' + vm_name] = utils_misc.generate_tmp_file_name(vm_name,
-                                                                    'pid')
+                                                                     'pid')
         params['extra_params_' + vm_name] = params.get('extra_params')
         params['extra_params_' + vm_name] += (" -pidfile %s" %
                                              (params.get('pid_' + vm_name)))

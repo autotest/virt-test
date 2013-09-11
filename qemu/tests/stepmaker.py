@@ -2,24 +2,32 @@
 """
 Step file creator/editor.
 
-@copyright: Red Hat Inc 2009
-@author: mgoldish@redhat.com (Michael Goldish)
+:copyright: Red Hat Inc 2009
+:author: mgoldish@redhat.com (Michael Goldish)
 @version: "20090401"
 """
 
-import pygtk, gtk, gobject, time, os, commands, logging
+import pygtk
+import gtk
+import gobject
+import time
+import os
+import commands
+import logging
 from virttest import utils_misc, ppm_utils, step_editor
 from virttest import qemu_monitor
 pygtk.require('2.0')
 
 
 class StepMaker(step_editor.StepMakerWindow):
+
     """
     Application used to create a step file. It will grab your input to the
     virtual machine and record it on a 'step file', that can be played
     making it possible to do unattended installs.
     """
     # Constructor
+
     def __init__(self, vm, steps_filename, tempdir, params):
         step_editor.StepMakerWindow.__init__(self)
 
@@ -81,23 +89,20 @@ class StepMaker(step_editor.StepMakerWindow):
         # Switch to run mode
         self.switch_to_run_mode()
 
-
     def destroy(self, widget):
         self.vm.resume()
         self.steps_file.close()
         self.vars_file.close()
         step_editor.StepMakerWindow.destroy(self, widget)
 
-
     # Utilities
     def redirect_timer(self, delay=0, func=None):
-        if self.timer_id != None:
+        if self.timer_id is not None:
             gobject.source_remove(self.timer_id)
         self.timer_id = None
-        if func != None:
+        if func is not None:
             self.timer_id = gobject.timeout_add(delay, func,
                                                 priority=gobject.PRIORITY_LOW)
-
 
     def switch_to_run_mode(self):
         # Set all widgets to their default states
@@ -113,7 +118,6 @@ class StepMaker(step_editor.StepMakerWindow):
         # Resume the VM
         self.vm.resume()
 
-
     def switch_to_step_mode(self):
         # Set all widgets to their default states
         self.clear_state(clear_screendump=False)
@@ -127,7 +131,6 @@ class StepMaker(step_editor.StepMakerWindow):
         self.redirect_timer()
         # Stop the VM
         self.vm.pause()
-
 
     # Events in step mode
     def update(self):
@@ -146,7 +149,6 @@ class StepMaker(step_editor.StepMakerWindow):
         self.redirect_timer(self.update_delay, self.update)
         return True
 
-
     def event_break_clicked(self, widget):
         if not self.vm.is_alive():
             self.message("The VM doesn't seem to be alive.", "Error")
@@ -164,18 +166,18 @@ class StepMaker(step_editor.StepMakerWindow):
         self.check_barrier.set_active(True)
         # Set default sleep and barrier timeout durations
         time_delta = time.time() - self.time_when_actions_completed
-        if time_delta < 1.0: time_delta = 1.0
+        if time_delta < 1.0:
+            time_delta = 1.0
         self.spin_sleep.set_value(round(time_delta))
         self.spin_barrier_timeout.set_value(round(time_delta * 5))
         # Set window title
         self.window.set_title("Step Maker -- step %d at time %.2f" %
                               (self.step_num, self.run_time))
 
-
     def event_done_clicked(self, widget):
         # Get step lines and screendump
         lines = self.get_step_lines(self.steps_data_dir)
-        if lines == None:
+        if lines is None:
             return
 
         # Get var values from user and write them to vars file
@@ -193,7 +195,7 @@ class StepMaker(step_editor.StepMakerWindow):
                     var_dict[varname] = val
                 else:
                     val = self.inputdialog("$%s =" % varname, "Variable")
-                    if val == None:
+                    if val is None:
                         return
                     var_dict[varname] = val
         for varname in var_dict.keys():
@@ -258,12 +260,13 @@ class StepMaker(step_editor.StepMakerWindow):
         color = gtk.gdk.Color()
         cursor = gtk.gdk.Cursor(pix, pix, color, color, 0, 0)
         self.event_box.window.set_cursor(cursor)
-        gtk.gdk.display_get_default().warp_pointer(gtk.gdk.screen_get_default(),
-                                                   self.prev_x, self.prev_y)
+        gtk.gdk.display_get_default(
+        ).warp_pointer(gtk.gdk.screen_get_default(),
+                       self.prev_x, self.prev_y)
         self.redirect_event_box_input(
-                self.event_capture_button_press,
-                self.event_capture_button_release,
-                self.event_capture_scroll)
+            self.event_capture_button_press,
+            self.event_capture_button_release,
+            self.event_capture_scroll)
         self.redirect_timer(10, self.update_capture)
         self.vm.resume()
 
@@ -301,18 +304,18 @@ class StepMaker(step_editor.StepMakerWindow):
                             self.update_capture)
         return True
 
-    def event_capture_button_press(self, widget,event):
+    def event_capture_button_press(self, widget, event):
         pass
 
-    def event_capture_button_release(self, widget,event):
+    def event_capture_button_release(self, widget, event):
         gtk.gdk.pointer_ungrab()
         self.event_box.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.CROSSHAIR))
         self.redirect_event_box_input(
-                self.event_button_press,
-                self.event_button_release,
-                None,
-                None,
-                self.event_expose)
+            self.event_button_press,
+            self.event_button_release,
+            None,
+            None,
+            self.event_expose)
         self.redirect_timer()
         self.vm.pause()
         self.mouse_click_captured = True

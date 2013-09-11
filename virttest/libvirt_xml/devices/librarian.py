@@ -4,7 +4,8 @@ Module to hide underlying device xml handler class implementation
 Always raises ValueError for bad/unknown/unsupported type names
 """
 
-import os, imp
+import os
+import imp
 from virttest.libvirt_xml import xcepts
 
 # Avoid accidental names like __init__, librarian, and/or other support modules

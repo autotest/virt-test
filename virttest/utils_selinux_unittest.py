@@ -7,17 +7,20 @@ import common
 from virttest import utils_selinux
 from autotest.client import os_dep
 
+
 class TestSelinux(unittest.TestCase):
+
     """
     Class for unittests of utils_selinux.
     """
+
     def test_sestatus(self):
         """
         Test the method related with sestatus.
         """
         status = utils_selinux.get_status()
-        #b/c there is no assertIn method in re.py in python2.6.
-        #use assertTrue.
+        # b/c there is no assertIn method in re.py in python2.6.
+        # use assertTrue.
         self.assertTrue(status in ['enforcing', 'permissive', 'disabled'])
 
         if utils_selinux.is_disabled():
@@ -53,8 +56,8 @@ if __name__ == '__main__':
     try:
         os_dep.command("getsebool")
     except ValueError:
-        #There is no selinux on host,
-        #so this unittest will be skipped.
+        # There is no selinux on host,
+        # so this unittest will be skipped.
         pass
     else:
         unittest.main()

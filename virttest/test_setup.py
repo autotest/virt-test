@@ -1,7 +1,13 @@
 """
 Library to perform pre/post test setup for KVM autotest.
 """
-import os, logging, time, re, random, commands, math
+import os
+import logging
+import time
+import re
+import random
+import commands
+import math
 from autotest.client.shared import error, utils
 from autotest.client import kvm_control, os_dep
 import utils_misc
@@ -13,6 +19,7 @@ except ImportError:
 
 
 class THPError(Exception):
+
     """
     Base exception for Transparent Hugepage setup.
     """
@@ -20,6 +27,7 @@ class THPError(Exception):
 
 
 class THPNotSupportedError(THPError):
+
     """
     Thrown when host does not support tansparent hugepages.
     """
@@ -27,6 +35,7 @@ class THPNotSupportedError(THPError):
 
 
 class THPWriteConfigError(THPError):
+
     """
     Thrown when host does not support tansparent hugepages.
     """
@@ -34,6 +43,7 @@ class THPWriteConfigError(THPError):
 
 
 class THPKhugepagedError(THPError):
+
     """
     Thrown when khugepaged is not behaving as expected.
     """
@@ -41,6 +51,7 @@ class THPKhugepagedError(THPError):
 
 
 class TransparentHugePageConfig(object):
+
     def __init__(self, test, params):
         """
         Find paths for transparent hugepages and kugepaged configuration. Also,
@@ -89,7 +100,7 @@ class TransparentHugePageConfig(object):
                         f.close()
                         if re.findall("\[(.*)\]", parameter):
                             original_config[f_dir] = re.findall("\[(.*)\]",
-                                                           parameter)[0]
+                                                                parameter)[0]
                             self.file_list_str.append(f_dir)
                         else:
                             original_config[f_dir] = int(parameter)
@@ -99,7 +110,6 @@ class TransparentHugePageConfig(object):
 
         self.test_config = test_cfg
         self.original_config = original_config
-
 
     def set_env(self):
         """
@@ -112,7 +122,6 @@ class TransparentHugePageConfig(object):
                              self.test_config[path])
                 file(path, 'w').write(self.test_config[path])
 
-
     def value_listed(self, value):
         """
         Get a parameters list from a string
@@ -122,7 +131,6 @@ class TransparentHugePageConfig(object):
             if i:
                 value_list.append(i)
         return value_list
-
 
     def khugepaged_test(self):
         """
@@ -159,7 +167,7 @@ class TransparentHugePageConfig(object):
             action_list = []
             if re.findall("enabled", file_path):
                 # Start and stop test for khugepaged
-                value_list = self.value_listed(open(file_path,"r").read())
+                value_list = self.value_listed(open(file_path, "r").read())
                 for i in value_list:
                     if re.match("n", i, re.I):
                         action_stop = (i, 256)
@@ -171,7 +179,7 @@ class TransparentHugePageConfig(object):
 
                 check_status_with_value(action_list, file_path)
             else:
-                value_list = self.value_listed(open(file_path,"r").read())
+                value_list = self.value_listed(open(file_path, "r").read())
                 for i in value_list:
                     action = (i, 0)
                     action_list.append(action)
@@ -185,14 +193,13 @@ class TransparentHugePageConfig(object):
             file_object.close()
             if value != 0 and value != 1:
                 new_value = random.random()
-                action_list.append((str(int(value * new_value)),0))
-                action_list.append((str(int(value * ( new_value + 1))),0))
+                action_list.append((str(int(value * new_value)), 0))
+                action_list.append((str(int(value * (new_value + 1))), 0))
             else:
                 action_list.append(("0", 0))
                 action_list.append(("1", 0))
 
             check_status_with_value(action_list, file_path)
-
 
     def setup(self):
         """
@@ -201,7 +208,6 @@ class TransparentHugePageConfig(object):
         """
         self.set_env()
         self.khugepaged_test()
-
 
     def cleanup(self):
         """:
@@ -221,12 +227,13 @@ class TransparentHugePageConfig(object):
 
 
 class HugePageConfig(object):
+
     def __init__(self, params):
         """
         Gets environment variable values and calculates the target number
         of huge memory pages.
 
-        @param params: Dict like object containing parameters for the test.
+        :param params: Dict like object containing parameters for the test.
         """
         self.vms = len(params.objects("vms"))
         self.mem = int(params.get("mem"))
@@ -249,7 +256,6 @@ class HugePageConfig(object):
 
         self.target_hugepages = target_hugepages
 
-
     def get_hugepage_size(self):
         """
         Get the current system setting for huge memory page size.
@@ -261,7 +267,6 @@ class HugePageConfig(object):
         except ValueError, e:
             raise ValueError("Could not get huge page size setting from "
                              "/proc/meminfo: %s" % e)
-
 
     def get_target_hugepages(self):
         """
@@ -290,7 +295,7 @@ class HugePageConfig(object):
             hugepage_allocated.close()
             chunk_bottom = int(math.log(self.hugepage_size / 4, 2))
             chunk_info = utils_memory.get_buddy_info(">=%s" % chunk_bottom,
-                                                      zones="DMA32 Normal")
+                                                     zones="DMA32 Normal")
             for size in chunk_info:
                 available_hugepages += int(chunk_info[size] * math.pow(2,
                                            int(int(size) - chunk_bottom)))
@@ -312,7 +317,6 @@ class HugePageConfig(object):
 
         return target_hugepages
 
-
     @error.context_aware
     def set_hugepages(self):
         """
@@ -332,9 +336,8 @@ class HugePageConfig(object):
                                  "to the target value of %d hugepages." %
                                  self.target_hugepages)
         hugepage_cfg.close()
-        logging.debug("Successfuly set %s large memory pages on host ",
+        logging.debug("Successfully set %s large memory pages on host ",
                       self.target_hugepages)
-
 
     @error.context_aware
     def mount_hugepage_fs(self):
@@ -350,7 +353,6 @@ class HugePageConfig(object):
             cmd = "mount -t hugetlbfs none %s" % self.hugepage_path
             utils.system(cmd)
 
-
     def setup(self):
         logging.debug("Number of VMs this test will use: %d", self.vms)
         logging.debug("Amount of memory used by each vm: %s", self.mem)
@@ -363,7 +365,6 @@ class HugePageConfig(object):
 
         return self.suggest_mem
 
-
     @error.context_aware
     def cleanup(self):
         if self.deallocate:
@@ -373,10 +374,11 @@ class HugePageConfig(object):
             except error.CmdError:
                 return
             utils.system("echo 0 > %s" % self.kernel_hp_file)
-            logging.debug("Hugepage memory successfuly dealocated")
+            logging.debug("Hugepage memory successfully dealocated")
 
 
 class KSMError(Exception):
+
     """
     Base exception for KSM setup
     """
@@ -384,6 +386,7 @@ class KSMError(Exception):
 
 
 class KSMNotSupportedError(KSMError):
+
     """
     Thrown when host does not support KSM.
     """
@@ -391,6 +394,7 @@ class KSMNotSupportedError(KSMError):
 
 
 class KSMConfigError(KSMError):
+
     """
     Thrown when host does not config KSM as expect.
     """
@@ -398,10 +402,11 @@ class KSMConfigError(KSMError):
 
 
 class KSMConfig(object):
+
     def __init__(self, params, env):
         """
 
-        @param params: Dict like object containing parameters for the test.
+        :param params: Dict like object containing parameters for the test.
         """
         KSM_PATH = "/sys/kernel/mm/ksm"
 
@@ -467,7 +472,6 @@ class KSMConfig(object):
         self.default_status.append(int(self.ksmtuned_process))
         self.default_status.append(self.ksm_module_loaded)
 
-
     def setup(self, env):
         if self.ksmtuned_process != 0 and self.disable_ksmtuned:
             kill_cmd = "kill -1 %s" % self.ksmtuned_process
@@ -479,11 +483,11 @@ class KSMConfig(object):
             if self.run != self.default_status[0]:
                 ksm_cmd += " echo %s > KSM_PATH/run;" % self.run
             if (self.pages_to_scan
-                and self.pages_to_scan != self.default_status[1]):
+                    and self.pages_to_scan != self.default_status[1]):
                 ksm_cmd += " echo %s > KSM_PATH" % self.pages_to_scan
                 ksm_cmd += "/pages_to_scan;"
             if (self.sleep_ms
-                and self.sleep_ms != self.default_status[2]):
+                    and self.sleep_ms != self.default_status[2]):
                 ksm_cmd += " echo %s > KSM_PATH" % self.sleep_ms
                 ksm_cmd += "/sleep_millisecs"
             ksm_cmd = re.sub("KSM_PATH", self.ksm_path, ksm_cmd)
@@ -495,7 +499,6 @@ class KSMConfig(object):
                 ksm_cmd += "ksmctl stop"
 
         utils.system(ksm_cmd)
-
 
     def cleanup(self, env):
         default_status = env.data.get("KSM_default_config")
@@ -535,6 +538,7 @@ class KSMConfig(object):
 
 
 class PrivateBridgeError(Exception):
+
     def __init__(self, brname):
         self.brname = brname
 
@@ -544,6 +548,7 @@ class PrivateBridgeError(Exception):
 
 class PrivateBridgeConfig(object):
     __shared_state = {}
+
     def __init__(self, params=None):
         self.__dict__ = self.__shared_state
         if params is not None:
@@ -567,7 +572,6 @@ class PrivateBridgeConfig(object):
             if params.get("bridge_force_create", "no") == "yes":
                 self.force_create = True
 
-
     def _assemble_iptables_rules(self, port_list):
         rules = []
         index = 0
@@ -588,35 +592,29 @@ class PrivateBridgeConfig(object):
                      (self.brname, self.brname))
         return rules
 
-
     def _add_bridge(self):
         utils.system("brctl addbr %s" % self.brname)
         ip_fwd_path = "/proc/sys/net/%s/ip_forward" % self.ip_version
         ip_fwd = open(ip_fwd_path, "w")
         ip_fwd.write("1\n")
         utils.system("brctl stp %s on" % self.brname)
-        utils.system("brctl setfd %s 0" % self.brname)
+        utils.system("brctl setfd %s 4" % self.brname)
         if self.physical_nic:
             utils.system("brctl addif %s %s" % (self.brname,
                                                 self.physical_nic))
 
-
     def _bring_bridge_up(self):
         utils.system("ifconfig %s %s.1 up" % (self.brname, self.subnet))
-
 
     def _iptables_add(self, cmd):
         return utils.system("iptables -I %s" % cmd)
 
-
     def _iptables_del(self, cmd):
         return utils.system("iptables -D %s" % cmd)
-
 
     def _enable_nat(self):
         for rule in self.iptables_rules:
             self._iptables_add(rule)
-
 
     def _start_dhcp_server(self):
         utils.system("service dnsmasq stop")
@@ -635,12 +633,10 @@ class PrivateBridgeConfig(object):
         logging.debug("Started internal DHCP server with PID %s",
                       self.dhcp_server_pid)
 
-
     def _verify_bridge(self):
         brctl_output = utils.system_output("brctl show")
         if self.brname not in brctl_output:
             raise PrivateBridgeError(self.brname)
-
 
     def setup(self):
         brctl_output = utils.system_output("brctl show")
@@ -684,7 +680,6 @@ class PrivateBridgeConfig(object):
 
             self._verify_bridge()
 
-
     def _stop_dhcp_server(self):
         if self.dhcp_server_pid is not None:
             try:
@@ -701,10 +696,8 @@ class PrivateBridgeConfig(object):
             except OSError:
                 pass
 
-
     def _bring_bridge_down(self):
         utils.system("ifconfig %s down" % self.brname, ignore_status=True)
-
 
     def _disable_nat(self):
         for rule in self.iptables_rules:
@@ -714,10 +707,8 @@ class PrivateBridgeConfig(object):
             rule = " ".join(split_list)
             self._iptables_del(rule)
 
-
     def _remove_bridge(self):
         utils.system("brctl delbr %s" % self.brname, ignore_status=True)
-
 
     def cleanup(self):
         brctl_output = utils.system_output("brctl show")
@@ -730,7 +721,8 @@ class PrivateBridgeConfig(object):
                     cleanup = True
                     break
         if cleanup:
-            logging.debug("Cleaning up KVM test private bridge %s", self.brname)
+            logging.debug(
+                "Cleaning up KVM test private bridge %s", self.brname)
             self._stop_dhcp_server()
             self._disable_nat()
             self._bring_bridge_down()
@@ -738,12 +730,15 @@ class PrivateBridgeConfig(object):
 
 
 class PciAssignable(object):
+
     """
     Request PCI assignable devices on host. It will check whether to request
     PF (physical Functions) or VF (Virtual Functions).
     """
-    def __init__(self,  driver=None, driver_option=None, host_set_flag=None,
-                 kvm_params=None, vf_filter_re=None, pf_filter_re=None):
+
+    def __init__(self, driver=None, driver_option=None, host_set_flag=None,
+                 kvm_params=None, vf_filter_re=None, pf_filter_re=None,
+                 device_driver=None):
         """
         Initialize parameter 'type' which could be:
         vf: Virtual Functions
@@ -756,30 +751,43 @@ class PciAssignable(object):
         If pass through Virtual Functions, we need to specify max vfs in driver
         e.g. max_vfs = 7 in config file.
 
-        @param type: PCI device type.
-        @param driver: Kernel module for the PCI assignable device.
-        @param driver_option: Module option to specify the maximum number of
+        :param type: PCI device type.
+        :type type: string
+        :param driver: Kernel module for the PCI assignable device.
+        :type driver: string
+        :param driver_option: Module option to specify the maximum number of
                 VFs (eg 'max_vfs=7')
-        @param names: Physical NIC cards correspondent network interfaces,
-                e.g.'eth1 eth2 ...'
-        @param host_set_flag: Flag for if the test should setup host env:
+        :type driver_option: string
+        :param host_set_flag: Flag for if the test should setup host env:
                0: do nothing
                1: do setup env
                2: do cleanup env
                3: setup and cleanup env
-        @param kvm_params: a dict for kvm module parameters default value
-        @param vf_filter_re: Regex used to filter vf from lspci.
-        @param pf_filter_re: Regex used to filter pf from lspci.
+        :type host_set_flag: string
+        :param kvm_params: a dict for kvm module parameters default value
+        :type kvm_params: dict
+        :param vf_filter_re: Regex used to filter vf from lspci.
+        :type vf_filter_re: string
+        :param pf_filter_re: Regex used to filter pf from lspci.
+        :type pf_filter_re: string
         """
-        self.type_list = []
+        self.devices = []
         self.driver = driver
         self.driver_option = driver_option
         self.name_list = []
         self.devices_requested = 0
+        self.pf_vf_info = []
         self.dev_unbind_drivers = {}
         self.dev_drivers = {}
         self.vf_filter_re = vf_filter_re
         self.pf_filter_re = pf_filter_re
+        if device_driver:
+            if device_driver == "pci-assign":
+                self.device_driver = "pci-stub"
+            else:
+                self.device_driver = device_driver
+        else:
+            self.device_driver = "pci-stub"
         if host_set_flag is not None:
             self.setup = int(host_set_flag) & 1 == 1
             self.cleanup = int(host_set_flag) & 2 == 2
@@ -792,52 +800,70 @@ class PciAssignable(object):
             for i in self.kvm_params:
                 if "allow_unsafe_assigned_interrupts" in i:
                     self.auai_path = i
+        if self.setup:
+            self.sr_iov_setup()
 
 
-    def add_device(self, device_type="vf", name=None):
+    def add_device(self, device_type="vf", name=None, mac=None):
         """
         Add device type and name to class.
 
-        @param device_type: vf/pf device is added.
-        @param name:  Device name is need.
+        :param device_type: vf/pf device is added.
+        :type device_type: string
+        :param name: Physical device interface name. eth1 or others
+        :type name: string
+        :param mac: set mac address for vf.
+        :type mac: string
         """
-        self.type_list.append(device_type)
+        device = {}
+        device['type'] = device_type
         if name is not None:
-            self.name_list.append(name)
+            device['name'] = name
+        if mac:
+            device['mac'] = mac
+        self.devices.append(device)
         self.devices_requested += 1
 
-
-    def _get_pf_pci_id(self, name, search_str):
+    def _get_pf_pci_id(self, name=None):
         """
         Get the PF PCI ID according to name.
+        It returns the first free pf, if no name matched.
 
-        @param name: Name of the PCI device.
-        @param search_str: Search string to be used on lspci.
+        :param name: Name of the PCI device.
+        :type name: string
+        :return: pci id of the PF device.
+        :rtype: string
         """
-        cmd = "ethtool -i %s | awk '/bus-info/ {print $2}'" % name
-        s, pci_id = commands.getstatusoutput(cmd)
-        if not (s or "Cannot get driver information" in pci_id):
-            return pci_id[5:]
-        cmd = "lspci | awk '/%s/ {print $1}'" % search_str
-        pci_ids = [i for i in commands.getoutput(cmd).splitlines()]
-        nic_id = int(re.search('[0-9]+', name).group(0))
-        if (len(pci_ids) - 1) < nic_id:
-            return None
-        return pci_ids[nic_id]
-
+        pf_id = None
+        if self.pf_vf_info:
+            for pf in self.pf_vf_info:
+                if "ethname" in pf and name == pf["ethname"]:
+                    pf["occupied"] = True
+                    pf_id = pf["pf_id"]
+                    break
+            if pf_id is None:
+                for pf in self.pf_vf_info:
+                    if not pf["occupied"]:
+                        pf["occupied"] = True
+                        pf_id = pf["pf_id"]
+                        break
+        return pf_id
 
     @error.context_aware
     def _release_dev(self, pci_id):
         """
         Release a single PCI device.
 
-        @param pci_id: PCI ID of a given PCI device.
+        :param pci_id: PCI ID of a given PCI device.
+        :type pci_id: string
+        :return: True if successfully release the device. else false.
+        :rtype: bool
         """
         base_dir = "/sys/bus/pci"
-        full_id = utils_misc.get_full_pci_id(pci_id)
-        vendor_id = utils_misc.get_vendor_from_pci_id(pci_id)
-        drv_path = os.path.join(base_dir, "devices/%s/driver" % full_id)
-        if 'pci-stub' in os.readlink(drv_path):
+        short_id = pci_id[5:]
+        vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
+        drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
+        if self.device_driver in os.readlink(drv_path):
             error.context("Release device %s to host" % pci_id, logging.info)
             driver = self.dev_unbind_drivers[pci_id]
             cmd = "echo '%s' > %s/new_id" % (vendor_id, driver)
@@ -845,31 +871,35 @@ class PciAssignable(object):
             if os.system(cmd):
                 return False
 
-            stub_path = os.path.join(base_dir, "drivers/pci-stub")
-            cmd = "echo '%s' > %s/unbind" % (full_id, stub_path)
+            stub_path = os.path.join(base_dir,
+                                     "drivers/%s" %  self.device_driver)
+            cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
                 return False
 
             driver = self.dev_unbind_drivers[pci_id]
-            cmd = "echo '%s' > %s/bind" % (full_id, driver)
+            cmd = "echo '%s' > %s/bind" % (pci_id, driver)
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
                 return False
+        if self.is_binded_to_stub(pci_id):
+            return False
         return True
-
 
     def get_vf_status(self, vf_id):
         """
         Check whether one vf is assigned to VM.
 
-        vf_id: vf id to check.
-        @return: Return True if vf has already assinged to VM. Else
-        return false.
+        :param vf_id: vf id to check.
+        :type vf_id: string
+        :return: Return True if vf has already assinged to VM. Else
+                 return false.
+        :rtype: bool
         """
         base_dir = "/sys/bus/pci"
         tub_path = os.path.join(base_dir, "drivers/pci-stub")
-        vf_res_path = os.path.join(tub_path, "0000\:%s/resource*" % vf_id)
+        vf_res_path = os.path.join(tub_path, "%s/resource*" % vf_id)
         cmd = "lsof %s" % vf_res_path
         output = utils.system_output(cmd, timeout=60, ignore_status=True)
         if 'qemu' in output:
@@ -877,80 +907,142 @@ class PciAssignable(object):
         else:
             return False
 
+    def get_vf_num_by_id(self, vf_id):
+        """
+        Return corresponding pf eth name and vf num according to vf id.
+
+        :param vf_id: vf id to check.
+        :type vf_id: string
+        :return: PF device name and vf num.
+        :rtype: string
+        """
+        for pf in self.pf_vf_info:
+            if vf_id in pf.get('vf_ids'):
+                return pf['ethname'], pf["vf_ids"].index(vf_id)
+        raise ValueError("Could not find vf id '%s' in '%s'" % (vf_id,
+                                                              self.pf_vf_info))
+
+    def get_pf_vf_info(self):
+        """
+        Get pf and vf related information in this host that mattch
+        self.pf_filter_re
+        for every pf it will create following information:
+            pf_id: The id of the pf device.
+            occupied: Whether the pf device assigned or not
+            vf_ids: Id list of related vf in this pf.
+            ethname: eth device name in host for this pf.
+
+        :return: return a list contains pf vf information.
+        :rtype: list of dict
+        """
+
+        base_dir = "/sys/bus/pci/devices"
+        cmd = "lspci | awk '/%s/ {print $1}'" % self.pf_filter_re
+        pf_ids = [i for i in utils.system_output(cmd).splitlines()]
+        pf_vf_dict = []
+        for pf_id in pf_ids:
+            pf_info = {}
+            vf_ids = []
+            full_id = utils_misc.get_full_pci_id(pf_id)
+            pf_info["pf_id"] = full_id
+            pf_info["occupied"] = False
+            d_link = os.path.join("/sys/bus/pci/devices", full_id)
+            txt = utils.system_output("ls %s" % d_link)
+            re_vfn = "(virtfn[0-9])"
+            paths = re.findall(re_vfn, txt)
+            for path in paths:
+                f_path = os.path.join(d_link, path)
+                vf_id = os.path.basename(os.path.realpath(f_path))
+                vf_ids.append(vf_id)
+            pf_info["vf_ids"] = vf_ids
+            pf_vf_dict.append(pf_info)
+        if_out = utils.system_output("ifconfig -a")
+        re_ethname = "(\w+): "
+        ethnames = re.findall(re_ethname, if_out)
+        for eth in ethnames:
+            cmd = "ethtool -i %s | awk '/bus-info/ {print $2}'" % eth
+            pci_id = utils.system_output(cmd)
+            if not pci_id:
+                continue
+            for pf in pf_vf_dict:
+                if pci_id in pf["pf_id"]:
+                    pf["ethname"] = eth
+        return pf_vf_dict
 
     def get_vf_devs(self):
         """
-        Catch all VFs PCI IDs.
+        Get all unused VFs PCI IDs.
 
-        @return: List with all PCI IDs for the Virtual Functions avaliable
+        :return: List of all available PCI IDs for Virtual Functions.
+        :rtype: List of string
         """
-        if self.setup:
-            if not self.sr_iov_setup():
-                return []
-        self.setup = None
-        cmd = "lspci | awk '/%s/ {print $1}'" % self.vf_filter_re
-        return utils.system_output(cmd, verbose=False).split()
-
+        vf_ids = []
+        for pf in self.pf_vf_info:
+            if pf["occupied"]:
+                continue
+            for vf_id in pf["vf_ids"]:
+                if not self.is_binded_to_stub(vf_id):
+                    vf_ids.append(vf_id)
+        return vf_ids
 
     def get_pf_devs(self):
         """
-        Catch all PFs PCI IDs.
+        Get PFs PCI IDs requested by self.devices.
+        It will try to get PF by device name.
+        It will still return it, if device name you set already occupied.
+        Please set unoccupied device name. If not sure, please just do not
+        set device name. It will return unused PF list.
 
-        @return: List with all PCI IDs for the physical hardware requested
+        :return: List with all PCI IDs for the physical hardware requested
+        :rtype: List of string
         """
         pf_ids = []
-        for name in self.name_list:
-            pf_id = self._get_pf_pci_id(name, "%s" % self.pf_filter_re)
-            if not pf_id:
-                continue
-            pf_ids.append(pf_id)
+        for device in self.devices:
+            if device['type'] == 'pf':
+                name = device.get('name', None)
+                pf_id = self._get_pf_pci_id(name)
+                if not pf_id:
+                    continue
+                pf_ids.append(pf_id)
         return pf_ids
 
-
-    def get_devs(self, count, type_list=None):
+    def get_devs(self, devices=None):
         """
-        Check out all devices' PCI IDs according to their name.
+        Get devices' PCI IDs according to parameters set in self.devices.
 
-        @param count: count number of PCI devices needed for pass through
-        @return: a list of all devices' PCI IDs
+        :param devices: List of device dict that contain PF VF information.
+        :type devices: List of dict
+        :return: List of all available devices' PCI IDs
+        :rtype: List of string
         """
         base_dir = "/sys/bus/pci"
-        if type_list is None:
-            type_list = self.type_list
-        vf_ids = self.get_vf_devs()
+        if not devices:
+            devices = self.devices
         pf_ids = self.get_pf_devs()
-        vf_d = []
-        for pf_id in pf_ids:
-            for vf_id in vf_ids:
-                if vf_id[:2] == pf_id[:2] and\
-                    (int(vf_id[-1]) & 1 == int(pf_id[-1])):
-                    vf_d.append(vf_id)
-        for vf_id in vf_ids:
-            if self.get_vf_status(vf_id):
-                vf_d.append(vf_id)
-        for vf in vf_d:
-            vf_ids.remove(vf)
+        vf_ids = self.get_vf_devs()
+        vf_ids.sort()
         dev_ids = []
-        for i in range(count):
-            if type_list:
-                try:
-                    d_type = type_list[i]
-                except IndexError:
-                    d_type = "vf"
+        if isinstance(devices, dict):
+            devices = [devices]
+        for device in devices:
+            d_type = device.get("type", "vf")
             if d_type == "vf":
-                vf_id = vf_ids.pop(0)
-                dev_ids.append(vf_id)
-                self.dev_unbind_drivers[vf_id] = os.path.join(base_dir,
-                                                 "drivers/%svf" % self.driver)
+                dev_id = vf_ids.pop(0)
+                (ethname, vf_num) = self.get_vf_num_by_id(dev_id)
+                set_mac_cmd = "ip link set dev %s vf %s mac %s " % (ethname,
+                                                                vf_num,
+                                                                device["mac"])
+                utils.run(set_mac_cmd)
+
             elif d_type == "pf":
-                pf_id = pf_ids.pop(0)
-                dev_ids.append(pf_id)
-                self.dev_unbind_drivers[pf_id] = os.path.join(base_dir,
-                                                 "drivers/%s" % self.driver)
-        if len(dev_ids) != count:
+                dev_id = pf_ids.pop(0)
+            dev_ids.append(dev_id)
+            unbind_driver = os.path.realpath(os.path.join(base_dir,
+                                             "devices/%s/driver" % dev_id))
+            self.dev_unbind_drivers[dev_id] = unbind_driver
+        if len(dev_ids) != len(devices):
             logging.error("Did not get enough PCI Device")
         return dev_ids
-
 
     def get_vfs_count(self):
         """
@@ -962,6 +1054,24 @@ class PciAssignable(object):
         cmd = "lspci | grep '%s' | wc -l" % self.vf_filter_re
         return int(utils.system_output(cmd, verbose=False))
 
+    def get_same_group_devs(self, pci_id):
+        """
+        Get the device that in same iommu group.
+
+        :param pci_id: Device's pci_id
+        :type pci_id: string
+        :return: Return the device's pci id that in same group with pci_id.
+        :rtype: List of string.
+        """
+        pci_ids = []
+        base_dir = "/sys/bus/pci/devices"
+        devices_link = os.path.join(base_dir,
+                                    "%s/iommu_group/devices/" % pci_id)
+        out = utils.system_output("ls %s" % devices_link)
+
+        if out:
+            pci_ids = out.split()
+        return pci_ids
 
     def check_vfs_count(self):
         """
@@ -973,19 +1083,18 @@ class PciAssignable(object):
         expected_count = int((re.findall("(\d)", self.driver_option)[0])) * 2
         return (self.get_vfs_count() == expected_count)
 
-
     def is_binded_to_stub(self, full_id):
         """
-        Verify whether the device with full_id is already binded to pci-stub.
+        Verify whether the device with full_id is already binded to driver.
 
-        @param full_id: Full ID for the given PCI device
+        :param full_id: Full ID for the given PCI device
+        :type full_id: String
         """
         base_dir = "/sys/bus/pci"
-        stub_path = os.path.join(base_dir, "drivers/pci-stub")
+        stub_path = os.path.join(base_dir, "drivers/%s" % self.device_driver)
         if os.path.exists(os.path.join(stub_path, full_id)):
             return True
         return False
-
 
     @error.context_aware
     def sr_iov_setup(self):
@@ -995,40 +1104,46 @@ class PciAssignable(object):
         Check if the PCI hardware device drive is loaded with the appropriate,
         parameters (number of VFs), and if it's not, perform setup.
 
-        @return: True, if the setup was completed successfuly, False otherwise.
+        :return: True, if the setup was completed successfully, False otherwise.
+        :rtype: bool
         """
         # Check if the host support interrupt remapping
         error.context("Set up host env for PCI assign test", logging.info)
-        kvm_re_probe = False
-        o = utils.system_output("cat /var/log/dmesg")
+        kvm_re_probe = True
+        o = utils.system_output("dmesg")
         ecap = re.findall("ecap\s+(.\w+)", o)
-
-        if ecap and int(ecap[0], 16) & 8 == 0:
+        if not ecap:
+            logging.error("Fail to check host interrupt remapping support.")
+        else:
+            if int(ecap[0], 16) & 8 == 8:
+                # host support interrupt remapping.
+                # No need enable allow_unsafe_assigned_interrupts.
+                kvm_re_probe = False
             if self.kvm_params is not None:
-                if self.auai_path and self.kvm_params[self.auai_path] == "N":
-                    kvm_re_probe = True
-            else:
-                kvm_re_probe = True
+                if self.auai_path and self.kvm_params[self.auai_path] == "Y":
+                    kvm_re_probe = False
         # Try to re probe kvm module with interrupt remapping support
         if kvm_re_probe:
-            kvm_arch = kvm_control.get_kvm_arch()
-            utils.system("modprobe -r %s" % kvm_arch)
-            utils.system("modprobe -r kvm")
-            cmd = "modprobe kvm allow_unsafe_assigned_interrupts=1"
-            if self.kvm_params is not None:
-                for i in self.kvm_params:
-                    if "allow_unsafe_assigned_interrupts" not in i:
-                        if self.kvm_params[i] == "Y":
-                            params_name = os.path.split(i)[1]
-                            cmd += " %s=1" % params_name
-            error.context("Loading kvm with: %s" % cmd, logging.info)
-
+            cmd = "echo Y > %s" % self.auai_path
+            error.context("enable PCI passthrough with '%s'" % cmd,
+                          logging.info)
             try:
                 utils.system(cmd)
             except Exception:
                 logging.debug("Can not enable the interrupt remapping support")
-            utils.system("modprobe %s" % kvm_arch)
-
+        lnk = "/sys/module/vfio_iommu_type1/parameters/allow_unsafe_interrupts"
+        if self.device_driver == "vfio-pci":
+            s, o = commands.getstatusoutput('lsmod | grep vfio')
+            if s:
+                logging.info("Load vfio-pci module.")
+                cmd = "modprobe vfio-pci"
+                utils.run(cmd)
+                time.sleep(3)
+            if not ecap or (int(ecap[0], 16) & 8 != 8):
+                cmd = "echo Y > %s" % lnk
+                error.context("enable PCI passthrough with '%s'" % cmd,
+                               logging.info)
+                utils.run(cmd)
         re_probe = False
         s, o = commands.getstatusoutput('lsmod | grep %s' % self.driver)
         if s:
@@ -1037,19 +1152,20 @@ class PciAssignable(object):
             os.system("modprobe -r %s" % self.driver)
             re_probe = True
         else:
+            self.setup = None
             return True
 
         # Re-probe driver with proper number of VFs
         if re_probe:
             cmd = "modprobe %s %s" % (self.driver, self.driver_option)
-            error.context("Loading the driver '%s' with command '%s'" %\
+            error.context("Loading the driver '%s' with command '%s'" %
                           (self.driver, cmd), logging.info)
             s, o = commands.getstatusoutput(cmd)
             utils.system("/etc/init.d/network restart", ignore_status=True)
             if s:
                 return False
+            self.setup = None
             return True
-
 
     def sr_iov_cleanup(self):
         """
@@ -1058,38 +1174,22 @@ class PciAssignable(object):
         Check if the PCI hardware device drive is loaded with the appropriate,
         parameters (none of VFs), and if it's not, perform cleanup.
 
-        @return: True, if the setup was completed successfuly, False otherwise.
+        :return: True, if the setup was completed successfully, False otherwise.
+        :rtype: bool
         """
         # Check if the host support interrupt remapping
         error.context("Clean up host env after PCI assign test", logging.info)
         kvm_re_probe = False
         if self.kvm_params is not None:
-            if (self.auai_path and
-               open(self.auai_path, "r").read().strip() == "Y"):
-                if self.kvm_params and self.kvm_params[self.auai_path] == "N":
-                    kvm_re_probe = True
-        else:
-            kvm_re_probe = True
-        # Try to re probe kvm module with interrupt remapping support
-        if kvm_re_probe:
-            kvm_arch = kvm_control.get_kvm_arch()
-            utils.system("modprobe -r %s" % kvm_arch)
-            utils.system("modprobe -r kvm")
-            cmd = "modprobe kvm"
-            if self.kvm_params:
-                for i in self.kvm_params:
-                    if self.kvm_params[i] == "Y":
-                        params_name = os.path.split(i)[1]
-                        cmd += " %s=1" % params_name
-            logging.info("Loading kvm with command: %s" % cmd)
-
-            try:
-                utils.system(cmd)
-            except Exception:
-                logging.debug("Failed to reload kvm")
-            cmd = "modprobe %s" % kvm_arch
-            logging.info("Loading %s with command: %s" % (kvm_arch, cmd))
-            utils.system(cmd)
+            for kvm_param, value in self.kvm_params.items():
+                if open(kvm_param, "r").read().strip() != value:
+                    cmd = "echo %s > %s" % (value, kvm_param)
+                    logging.info("Write '%s' to '%s'", value, kvm_param)
+                    try:
+                        utils.system(cmd)
+                    except Exception:
+                        logging.error("Failed to write  '%s' to '%s'", value,
+                                       kvm_param)
 
         re_probe = False
         s = commands.getstatusoutput('lsmod | grep %s' % self.driver)[0]
@@ -1112,63 +1212,68 @@ class PciAssignable(object):
                 return False
             return True
 
-
-    def request_devs(self, count=None):
+    def request_devs(self, devices=None):
         """
         Implement setup process: unbind the PCI device and then bind it
-        to the pci-stub driver.
+        to the device driver.
 
-        @param count: count number of PCI devices needed for pass through
-
-        @return: a list of successfully requested devices' PCI IDs.
+        :param devices: List of device dict
+        :type devices: List of dict
+        :return: List of successfully requested devices' PCI IDs.
+        :rtype: List of string
         """
-        if count is None:
-            count = self.devices_requested
+        if not self.pf_vf_info:
+            self.pf_vf_info = self.get_pf_vf_info()
         base_dir = "/sys/bus/pci"
-        stub_path = os.path.join(base_dir, "drivers/pci-stub")
-
-        self.pci_ids = self.get_devs(count)
+        stub_path = os.path.join(base_dir, "drivers/%s" % self.device_driver)
+        self.pci_ids = self.get_devs(devices)
         logging.info("The following pci_ids were found: %s", self.pci_ids)
         requested_pci_ids = []
 
         # Setup all devices specified for assignment to guest
-        for pci_id in self.pci_ids:
-            full_id = utils_misc.get_full_pci_id(pci_id)
-            if not full_id:
-                continue
-            drv_path = os.path.join(base_dir, "devices/%s/driver" % full_id)
-            dev_prev_driver = os.path.realpath(os.path.join(drv_path,
-                                               os.readlink(drv_path)))
-            self.dev_drivers[pci_id] = dev_prev_driver
-
-            # Judge whether the device driver has been binded to stub
-            if not self.is_binded_to_stub(full_id):
-                error.context("Bind device %s to stub" % full_id, logging.info)
-                vendor_id = utils_misc.get_vendor_from_pci_id(pci_id)
-                stub_new_id = os.path.join(stub_path, 'new_id')
-                unbind_dev = os.path.join(drv_path, 'unbind')
-                stub_bind = os.path.join(stub_path, 'bind')
-
-                info_write_to_files = [(vendor_id, stub_new_id),
-                                       (full_id, unbind_dev),
-                                       (full_id, stub_bind)]
-
-                for content, file in info_write_to_files:
-                    try:
-                        utils.open_write_close(file, content)
-                    except IOError:
-                        logging.debug("Failed to write %s to file %s", content,
-                                      file)
-                        continue
-
-                if not self.is_binded_to_stub(full_id):
-                    logging.error("Binding device %s to stub failed", pci_id)
-                    continue
+        for p_id in self.pci_ids:
+            if self.device_driver =="vfio-pci":
+                pci_ids = self.get_same_group_devs(p_id)
+                logging.info("Following devices are in same group: %s", pci_ids)
             else:
-                logging.debug("Device %s already binded to stub", pci_id)
-            requested_pci_ids.append(pci_id)
-        return requested_pci_ids
+                pci_ids = [p_id]
+            for pci_id in pci_ids:
+                short_id = pci_id[5:]
+                drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
+                dev_prev_driver = os.path.realpath(os.path.join(drv_path,
+                                                   os.readlink(drv_path)))
+                self.dev_drivers[pci_id] = dev_prev_driver
 
+                # Judge whether the device driver has been binded to stub
+                if not self.is_binded_to_stub(pci_id):
+                    error.context("Bind device %s to stub" % pci_id,
+                                   logging.info)
+                    vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
+                    stub_new_id = os.path.join(stub_path, 'new_id')
+                    unbind_dev = os.path.join(drv_path, 'unbind')
+                    stub_bind = os.path.join(stub_path, 'bind')
+
+                    info_write_to_files = [(vendor_id, stub_new_id),
+                                           (pci_id, unbind_dev),
+                                           (pci_id, stub_bind)]
+
+                    for content, f_name in info_write_to_files:
+                        try:
+                            logging.info("Write '%s' to file '%s'", content,
+                                                                    f_name)
+                            utils.open_write_close(f_name, content)
+                        except IOError:
+                            logging.debug("Failed to write %s to file %s",
+                                           content, f_name)
+                            continue
+
+                    if not self.is_binded_to_stub(pci_id):
+                        logging.error("Binding device %s to stub failed", pci_id)
+                    continue
+                else:
+                    logging.debug("Device %s already binded to stub", pci_id)
+            requested_pci_ids.append(p_id)
+        return requested_pci_ids
 
     @error.context_aware
     def release_devs(self):
@@ -1179,12 +1284,13 @@ class PciAssignable(object):
         try:
             for pci_id in self.dev_drivers:
                 if not self._release_dev(pci_id):
-                    logging.error("Failed to release device %s to host", pci_id)
+                    logging.error(
+                        "Failed to release device %s to host", pci_id)
                 else:
                     logging.info("Released device %s successfully", pci_id)
             if self.cleanup:
                 self.sr_iov_cleanup()
-                self.type_list = []
+                self.devices = []
                 self.devices_requested = 0
                 self.dev_unbind_drivers = {}
         except Exception:

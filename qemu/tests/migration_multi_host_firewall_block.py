@@ -1,4 +1,6 @@
-import logging, os, time
+import logging
+import os
+import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, remote, virt_vm, utils_misc, qemu_monitor
@@ -11,9 +13,9 @@ def run_migration_multi_host_firewall_block(test, params, env):
 
     Tests multi-host migration with network problem on destination side.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
     base_class = utils_test.MultihostMigration
@@ -24,12 +26,11 @@ def run_migration_multi_host_firewall_block(test, params, env):
 
     sub_type = params["sub_type"]
 
-
     def wait_for_migration(vm, timeout):
         def mig_finished():
             ret = True
             if (vm.params["display"] == "spice" and
-                vm.get_spice_var("spice_seamless_migration") == "on"):
+                    vm.get_spice_var("spice_seamless_migration") == "on"):
                 s = vm.monitor.info("spice")
                 if isinstance(s, str):
                     ret = "migrated: true" in s
@@ -42,15 +43,15 @@ def run_migration_multi_host_firewall_block(test, params, env):
                 return ret and (o.get("status") != "active")
 
         if not utils_misc.wait_for(mig_finished, timeout, 2, 2,
-                                  "Waiting for migration to complete"):
+                                   "Waiting for migration to complete"):
             raise virt_vm.VMMigrateTimeoutError("Timeout expired while waiting "
-                                        "for migration to finish")
-
-
+                                                "for migration to finish")
 
     class TestMultihostMigrationLongWait(base_class):
+
         def __init__(self, test, params, env):
-            super(TestMultihostMigrationLongWait, self).__init__(test, params, env)
+            super(TestMultihostMigrationLongWait, self).__init__(
+                test, params, env)
             self.install_path = params.get("cpuflags_install_path", "/tmp")
             self.vm_mem = int(params.get("mem", "512"))
 
@@ -61,18 +62,16 @@ def run_migration_multi_host_firewall_block(test, params, env):
             self.dsthost = self.params.get("hosts")[1]
             self.vms = params.get("vms").split()
 
-
         def firewall_block_port(self, port):
             utils.run("iptables -A INPUT -p tcp --dport %s"
                       " -j REJECT" % (port), ignore_status=True)
 
-
         def clean_firewall(self):
             utils.run("iptables -F", ignore_status=True)
 
-
         def migrate_vms_src(self, mig_data):
-            super(TestMultihostMigrationLongWait, self).migrate_vms_src(mig_data)
+            super(TestMultihostMigrationLongWait,
+                  self).migrate_vms_src(mig_data)
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
                                 self.mig_timeout)
             vm = mig_data.vms[0]
@@ -104,13 +103,12 @@ def run_migration_multi_host_firewall_block(test, params, env):
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_interfynish',
                                 self.mig_timeout)
 
-
         def migrate_vms_dest(self, mig_data):
             """
             Migrate vms destination. This function is started on dest host during
             migration.
 
-            @param mig_Data: Data for migration.
+            :param mig_Data: Data for migration.
             """
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
                                 self.mig_timeout)
@@ -129,12 +127,11 @@ def run_migration_multi_host_firewall_block(test, params, env):
             except qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError:
                 logging.debug("Guest %s not working" % (vm))
 
-
         def check_vms_src(self, mig_data):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             for vm in mig_data.vms:
                 vm.resume()
@@ -151,12 +148,11 @@ def run_migration_multi_host_firewall_block(test, params, env):
                 # there must be added "sleep" in IP renew command.
                 vm.wait_for_login(timeout=self.login_timeout)
 
-
         def check_vms_dst(self, mig_data):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             for vm in mig_data.vms:
                 try:
@@ -169,7 +165,6 @@ def run_migration_multi_host_firewall_block(test, params, env):
                         qemu_monitor.QMPCmdError):
                     pass
 
-
         def migration_scenario(self, worker=None):
             error.context("Migration from %s to %s over protocol %s." %
                           (self.srchost, self.dsthost, mig_protocol),
@@ -181,11 +176,11 @@ def run_migration_multi_host_firewall_block(test, params, env):
 
                 utils_misc.install_cpuflags_util_on_vm(test, vm,
                                                        self.install_path,
-                                                   extra_flags="-msse3 -msse2")
+                                                       extra_flags="-msse3 -msse2")
 
                 cmd = ("nohup %s/cpuflags-test --stressmem %d,%d &" %
-                           (os.path.join(self.install_path, "test_cpu_flags"),
-                            self.vm_mem * 100, self.vm_mem / 2))
+                      (os.path.join(self.install_path, "test_cpu_flags"),
+                       self.vm_mem * 100, self.vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
                 time.sleep(3)
@@ -199,14 +194,15 @@ def run_migration_multi_host_firewall_block(test, params, env):
             finally:
                 self.clean_firewall()
 
-
     class TestMultihostMigrationShortInterrupt(TestMultihostMigrationLongWait):
-        def __init__(self, test, params, env):
-            super(TestMultihostMigrationShortInterrupt, self).__init__(test, params, env)
 
+        def __init__(self, test, params, env):
+            super(TestMultihostMigrationShortInterrupt, self).__init__(
+                test, params, env)
 
         def migrate_vms_src(self, mig_data):
-            super(TestMultihostMigrationLongWait, self).migrate_vms_src(mig_data)
+            super(TestMultihostMigrationLongWait,
+                  self).migrate_vms_src(mig_data)
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
                                 self.mig_timeout)
             vm = mig_data.vms[0]
@@ -221,13 +217,12 @@ def run_migration_multi_host_firewall_block(test, params, env):
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_done',
                                 self.mig_timeout)
 
-
         def migrate_vms_dest(self, mig_data):
             """
             Migrate vms destination. This function is started on dest host during
             migration.
 
-            @param mig_Data: Data for migration.
+            :param mig_Data: Data for migration.
             """
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
                                 self.mig_timeout)
@@ -246,24 +241,21 @@ def run_migration_multi_host_firewall_block(test, params, env):
             except qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError:
                 logging.debug("Guest %s not working" % (vm))
 
-
         def check_vms_dst(self, mig_data):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             super(TestMultihostMigrationLongWait, self).check_vms_dst(mig_data)
-
 
         def check_vms_src(self, mig_data):
             """
             Check vms after migrate.
 
-            @param mig_data: object with migration data.
+            :param mig_data: object with migration data.
             """
             super(TestMultihostMigrationLongWait, self).check_vms_src(mig_data)
-
 
     mig = None
     if sub_type == "long_wait":

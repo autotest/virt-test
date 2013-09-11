@@ -1,6 +1,8 @@
-import re, logging
+import re
+import logging
 from virttest import utils_misc, data_dir
 from autotest.client.shared import utils, error
+
 
 @error.context_aware
 def run_flag_check(test, params, env):
@@ -39,29 +41,28 @@ def run_flag_check(test, params, env):
        miss_flag = expected_flags - guest_flags
        unexpect_flag = guest_flags - expected_flags - option_flags
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def qemu_model_info(models_list, cpumodel):
         """
         Get cpumodel info from models_list
-        @param models_list: all models info
-        @param cpumodel: model name
-        @return model info of cpumodel
+        :param models_list: all models info
+        :param cpumodel: model name
+        :return: model info of cpumodel
         """
         for model in models_list:
             if cpumodel in model:
                 return model
         return None
 
-
     def qemu_support_flag(model_info, reg):
         """
         Get register's supported flags from model_info
-        @param model_info: model_info get from dump file
-        @param reg: reg name, e.g feature_edx
+        :param model_info: model_info get from dump file
+        :param reg: reg name, e.g feature_edx
         """
         reg_re = re.compile(r".*%s.*\((.*)\)\n" % reg)
         flag = reg_re.search(model_info)
@@ -71,7 +72,6 @@ def run_flag_check(test, params, env):
         except Exception, e:
             logging.error("Failed to get support flag %s" % e)
 
-
     def get_all_support_flags():
         """
         Get all supported flags with qemu query cmd.
@@ -79,7 +79,7 @@ def run_flag_check(test, params, env):
         qemu_binary = utils_misc.get_qemu_binary(params)
         cmd = qemu_binary + params.get("query_cmd", " -cpu ?")
         output = utils.system_output(cmd)
-        flags_re = re.compile(params.get("pattern","flags:(.*)"))
+        flags_re = re.compile(params.get("pattern", "flags:(.*)"))
         flag_list = flags_re.search(output)
         flags = []
         if flag_list:
@@ -87,13 +87,12 @@ def run_flag_check(test, params, env):
                 flags += flag
         return set(map(utils_misc.Flag, flags))
 
-
     def get_extra_flag(extra_flags, symbol, lack_check=False):
         """
         Get added/removed flags
-        @param extra_flags: exposed/removed flags. e.g "+sse4.1,+sse4.2"
-        @param symbol: "+","-"
-        @return: return all extra_flags if lack_check is true
+        :param extra_flags: exposed/removed flags. e.g "+sse4.1,+sse4.2"
+        :param symbol: "+","-"
+        :return: return all extra_flags if lack_check is true
                  return host supported flags if lack_check is false
         """
         flags = []
@@ -105,13 +104,12 @@ def run_flag_check(test, params, env):
                 flags.append(flag)
         return set(map(utils_misc.Flag, flags))
 
-
     def get_guest_cpuflags(vm_session):
         """
         Get guest system cpuflags.
 
-        @param vm_session: session to checked vm.
-        @return: [corespond flags]
+        :param vm_session: session to checked vm.
+        :return: [corespond flags]
         """
         flags_re = re.compile(r'^flags\s*:(.*)$', re.MULTILINE)
         out = vm_session.cmd_output("cat /proc/cpuinfo")
@@ -138,7 +136,6 @@ def run_flag_check(test, params, env):
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
-
 
     # Get qemu model
     host_cpumodel = utils_misc.get_cpu_model()
@@ -179,12 +176,12 @@ def run_flag_check(test, params, env):
     add_flags = get_extra_flag(extra_flags, "\+(\w+)")
     # del_flags are disabled by -flag
     del_flags = get_extra_flag(extra_flags, "\-(\w+)")
-    expected_flags = ((model_support_flags|add_flags)
-                          - del_flags - out_flags)
+    expected_flags = ((model_support_flags | add_flags)
+                      - del_flags - out_flags)
     # get all flags for host lack flag checking
     check_flags = get_extra_flag(extra_flags, "\+(\w+)", lack_check=True)
     host_flags = set(map(utils_misc.Flag, host_flags))
-    lack_flags = set(expected_flags|check_flags) - host_flags
+    lack_flags = set(expected_flags | check_flags) - host_flags
 
     if "check" in extra_flags:
         error.context("Check lack flag in host", logging.info)
@@ -207,4 +204,4 @@ def run_flag_check(test, params, env):
                              "more flags than expected:\n %s\n"
                              "expected flags:\n %s\n"
                              "guest flags:\n %s\n"
-            % (missing_flags, unexpect_flags, expected_flags, guest_flags))
+                             % (missing_flags, unexpect_flags, expected_flags, guest_flags))

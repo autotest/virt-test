@@ -1,4 +1,6 @@
-import sys, traceback, logging
+import sys
+import traceback
+import logging
 from autotest.client.shared import openvswitch, error, utils
 
 

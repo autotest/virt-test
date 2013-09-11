@@ -7,61 +7,61 @@ This exports:
   - class for storage pool operations
 """
 
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
-import storage, virsh
+import storage
+import virsh
 
 
 class QemuImg(storage.QemuImg):
+
     """
     libvirt class for handling operations of disk/block images.
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images.
         """
         storage.QemuImg(params, root_dir, tag)
         # Please init image_cmd for libvirt in this class
         # self.image_cmd =
 
-
     def create(self, params):
         """
         Create an image.
 
-        @param params: Dictionary containing the test parameters.
+        :param params: Dictionary containing the test parameters.
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
-
 
     def convert(self, params, root_dir):
         """
         Convert image
 
-        @param params: A dict
-        @param root_dir: dir for save the convert image
+        :param params: A dict
+        :param root_dir: dir for save the convert image
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
-
 
     def rebase(self, params):
         """
         Rebase image
 
-        @param params: A dict
+        :param params: A dict
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
-
 
     def commit(self):
         """
@@ -69,52 +69,49 @@ class QemuImg(storage.QemuImg):
         """
         raise NotImplementedError
 
-
     def snapshot_create(self):
         """
         Create a snapshot image.
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
-
 
     def snapshot_del(self, blkdebug_cfg=""):
         """
         Delete a snapshot image.
 
-        @param blkdebug_cfg: The configure file of blkdebug
+        :param blkdebug_cfg: The configure file of blkdebug
 
-        @note: params should contain:
+        :note: params should contain:
                snapshot_image_name -- the name of snapshot image file
         """
         raise NotImplementedError
-
 
     def remove(self):
         """
         Remove an image file.
 
-        @note: params should contain:
+        :note: params should contain:
         """
         raise NotImplementedError
-
 
     def check_image(self, params, root_dir):
         """
         Check an image using the appropriate tools for each virt backend.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
 
-        @note: params should contain:
+        :note: params should contain:
 
-        @raise VMImageCheckError: In case qemu-img check fails on the image.
+        :raise VMImageCheckError: In case qemu-img check fails on the image.
         """
         raise NotImplementedError
 
 
 class StoragePool(object):
+
     """
     Pool Manager for libvirt storage with virsh commands
     """
@@ -123,7 +120,6 @@ class StoragePool(object):
         # An instance of Virsh class
         # Help to setup connection to virsh instance
         self.virsh_instance = virsh_instance
-
 
     def list_pools(self):
         """
@@ -156,7 +152,6 @@ class StoragePool(object):
             pools[pool_name] = details_dict
         return pools
 
-
     def pool_exists(self, name):
         """
         Check whether pool exists on given libvirt
@@ -168,12 +163,11 @@ class StoragePool(object):
 
         return name in pools
 
-
     def pool_state(self, name):
         """
         Get pool's state.
 
-        @return: active/inactive, and None when something wrong.
+        :return: active/inactive, and None when something wrong.
         """
         try:
             pools = self.list_pools()
@@ -188,12 +182,11 @@ class StoragePool(object):
                 pass
         return None
 
-
     def pool_info(self, name):
         """
-        Get pool's infomation.
+        Get pool's information.
 
-        @return: A dict include pool's information:
+        :return: A dict include pool's information:
                 Name ==> value
                 UUID ==> value
                 ...
@@ -212,7 +205,6 @@ class StoragePool(object):
                 info[name] = value
         return info
 
-
     def is_pool_active(self, name):
         """
         Check whether pool exists on given libvirt
@@ -220,7 +212,6 @@ class StoragePool(object):
         if self.pool_state(name) == "active":
             return True
         return False
-
 
     def delete_pool(self, name):
         """
@@ -243,7 +234,6 @@ class StoragePool(object):
         logging.info("Deleted pool '%s'", name)
         return True
 
-
     def set_pool_autostart(self, name):
         """
         Set given pool as autostart
@@ -256,7 +246,6 @@ class StoragePool(object):
         logging.info("Set pool '%s' autostart.", name)
         return True
 
-
     def build_pool(self, name):
         """
         Build pool.
@@ -268,7 +257,6 @@ class StoragePool(object):
             return False
         logging.info("Built pool '%s'", name)
         return True
-
 
     def start_pool(self, name):
         """
@@ -285,7 +273,6 @@ class StoragePool(object):
         logging.info("Started pool '%s'", name)
         return True
 
-
     def define_dir_pool(self, name, target_path):
         """
         Define a directory type pool.
@@ -299,21 +286,19 @@ class StoragePool(object):
         logging.info("Defined pool '%s'", name)
         return True
 
-
     def define_fs_pool(self, name, block_device, target_path):
         """
         Define a filesystem type pool.
         """
         try:
             self.virsh_instance.pool_define_as(name, "fs", target_path,
-                                 extra="--source-dev %s" % block_device,
-                                 ignore_status=False)
+                                               extra="--source-dev %s" % block_device,
+                                               ignore_status=False)
         except error.CmdError:
             logging.error("Define fs pool '%s' failed.", name)
             return False
         logging.info("Defined pool '%s'", name)
         return True
-
 
     def define_lvm_pool(self, name, block_device, vg_name, target_path):
         """

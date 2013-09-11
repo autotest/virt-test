@@ -29,13 +29,14 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         self.trash.append(converted)
         return params
 
+
 def run_qemu_disk_img_convert(test, params, env):
     """
     'qemu-img' convert functions test:
 
-    @param test: Qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     base_image = params.get("images", "image1").split()[0]

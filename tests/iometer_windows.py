@@ -1,8 +1,10 @@
 """
-@author: Golita Yue <gyue@redhat.com>
-@author: Amos Kong <akong@redhat.com>
+:author: Golita Yue <gyue@redhat.com>
+:author: Amos Kong <akong@redhat.com>
 """
-import logging, time, re
+import logging
+import time
+import re
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc
 
@@ -19,9 +21,9 @@ def run_iometer_windows(test, params, env):
     5) Run Iometer.exe with icf
     6) Copy result to host
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -51,7 +53,7 @@ def run_iometer_windows(test, params, env):
     ins_path = params["install_path"]
     res_file = params["result_file"]
     icf_file = utils_misc.get_path(test.virtdir, "deps/%s" % icf_name)
-    vm.copy_files_to(icf_file, "%s\\%s" %(ins_path, icf_name))
+    vm.copy_files_to(icf_file, "%s\\%s" % (ins_path, icf_name))
 
     # Run Iometer
     error.context("Start Iometer", logging.info)

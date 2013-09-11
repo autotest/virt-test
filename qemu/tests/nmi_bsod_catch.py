@@ -1,4 +1,5 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error
 
 
@@ -13,9 +14,9 @@ def run_nmi_bsod_catch(test, params, env):
     5) Send a reboot command or a system_reset monitor command (optional)
     6) Verify whether the dump files are generated.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -32,10 +33,9 @@ def run_nmi_bsod_catch(test, params, env):
     if del_dump_cmd:
         session.sendline(del_dump_cmd)
 
-
     if params.get("config_cmds"):
         error.context("Configure guest for dump", logging.info)
-        #Wait guest fully boot up, or configure command may fail in windows
+        # Wait guest fully boot up, or configure command may fail in windows
         time.sleep(30)
         reg_cmds = params.get("config_cmds").split(",")
         msg = "Configure the guest"

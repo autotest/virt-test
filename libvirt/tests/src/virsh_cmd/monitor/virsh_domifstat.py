@@ -22,8 +22,8 @@ def run_virsh_domifstat(test, params, env):
         """
         Get interface device of VM.
 
-        @param guest_name: VM's name.
-        @return: interface device of VM.
+        :param guest_name: VM's name.
+        :return: interface device of VM.
         """
         interface = ""
         domxml = utils.system_output("virsh dumpxml %s" % guest_name)
@@ -72,11 +72,11 @@ def run_virsh_domifstat(test, params, env):
 
     status = virsh.domifstat(vm_ref, interface, ignore_status=True).exit_status
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command!")

@@ -11,12 +11,12 @@ def run_win_disk_write(test, params, env):
     2) Install Crystal Disk Mark [1]
     3) Start Crystal Disk Mark with heavy write load
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
-    @note: Crystal Disk mark is BSD licensed software
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
+    :note: Crystal Disk mark is BSD licensed software
     http://crystalmark.info/software/CrystalDiskMark/manual-en/License.html
-    @see: http://crystalmark.info/software/CrystalDiskMark/index-e.html
+    :see:: http://crystalmark.info/software/CrystalDiskMark/index-e.html
     """
     error.context("Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])

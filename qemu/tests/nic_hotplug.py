@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_test, utils_net, virt_vm
 
+
 @error.context_aware
 def run_nic_hotplug(test, params, env):
     """
@@ -24,9 +25,9 @@ def run_nic_hotplug(test, params, env):
     topology changes (that is, devices get added and removed) may cause random
     failures.
 
-    @param test:   QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env:    Dictionary with test environment.
     """
     vm = utils_test.get_living_vm(env, params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))

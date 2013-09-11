@@ -7,7 +7,9 @@ from StringIO import StringIO
 from virttest import xml_utils
 from virttest.libvirt_xml import base, xcepts, accessors
 
+
 class UntypedDeviceBase(base.LibvirtXMLBase):
+
     """
     Base class implementing common functions for all device XML w/o a type attr.
     """
@@ -25,7 +27,6 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
         self['device_tag'] = device_tag
         # setup bare-bones XML
         self.xml = u"<%s/>" % device_tag
-
 
     def from_element(self, element):
         """
@@ -45,7 +46,6 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
         # Create a new XMLTreeFile object based on string input
         self.xml = xmlstr.getvalue()
 
-
     @classmethod
     def new_from_element(cls, element, virsh_instance=base.virsh):
         """
@@ -55,7 +55,6 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
         instance = cls(virsh_instance=virsh_instance)
         instance.from_element(element)
         return instance
-
 
     @classmethod
     def new_from_dict(cls, properties, virsh_instance=base.virsh):
@@ -69,6 +68,7 @@ class UntypedDeviceBase(base.LibvirtXMLBase):
 
 
 class TypedDeviceBase(UntypedDeviceBase):
+
     """
     Base class implementing common functions for all device XML w/o a type attr.
     """
@@ -91,7 +91,6 @@ class TypedDeviceBase(UntypedDeviceBase):
                                               virsh_instance=virsh_instance)
         # Calls accessor to modify xml
         self.type_name = type_name
-
 
     @classmethod
     def new_from_element(cls, element, virsh_instance=base.virsh):
@@ -128,6 +127,7 @@ class TypedDeviceBase(UntypedDeviceBase):
 #
 
 class StubDeviceMeta(type):
+
     """
     Metaclass for generating stub Device classes where not fully implemented yet
     """
@@ -151,7 +151,8 @@ class StubDeviceMeta(type):
         # Needed for UntypedDeviceBase __init__'s default argument value
         # i.e. device_tag='disk' as specified by specific device class
         if not hasattr(mcs, '_device_tag'):
-            raise ValueError("Class %s requires a _device_tag attribute" % name)
+            raise ValueError(
+                "Class %s requires a _device_tag attribute" % name)
 
         # Same message for both TypedDeviceBase & UntypedDeviceBase subclasses
         message = ("Detected use of a stub device XML for a %s class. These "
@@ -169,7 +170,7 @@ class StubDeviceMeta(type):
                 StubDeviceMeta.warning_issued = True
                 logging.warning(message)
             else:
-                pass # do nothing
+                pass  # do nothing
 
         # Create the proper init function for subclass type
         if TypedDeviceBase in bases:
@@ -179,6 +180,7 @@ class StubDeviceMeta(type):
                 raise ValueError("TypedDevice sub-Class %s must define a "
                                  "_def_type_name attribute" % name)
             # form __init__() and it's arguments for generated class
+
             def stub_init(self, type_name=getattr(mcs, '_def_type_name'),
                           virsh_instance=base.virsh):
                 """
@@ -190,9 +192,9 @@ class StubDeviceMeta(type):
                 # Created class __init__ still needs to call superclass
                 # __init__ (i.e. UntypedDeviceBase or TypedDeviceBase)
                 TypedDeviceBase.__init__(self, device_tag=getattr(mcs,
-                                                             '_device_tag'),
-                                          type_name=type_name,
-                                          virsh_instance=virsh_instance)
+                                                                  '_device_tag'),
+                                         type_name=type_name,
+                                         virsh_instance=virsh_instance)
         elif UntypedDeviceBase in bases:
             # generate __init__() for untyped devices (similar to above)
             def stub_init(self, virsh_instance=base.virsh):
@@ -201,8 +203,8 @@ class StubDeviceMeta(type):
                 """
                 issue_warning()
                 UntypedDeviceBase.__init__(self, device_tag=getattr(mcs,
-                                                             '_device_tag'),
-                                          virsh_instance=virsh_instance)
+                                                                    '_device_tag'),
+                                           virsh_instance=virsh_instance)
         else:
             # unexpected usage
             raise TypeError("Class %s is not a subclass of TypedDeviceBase or "

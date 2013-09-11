@@ -1,7 +1,10 @@
 from virttest import utils_misc, utils_test, storage
 from virttest import qemu_storage, data_dir
 from autotest.client.shared import error
-import re,logging, time
+import re
+import logging
+import time
+
 
 @error.context_aware
 def run_live_snapshot_chain(test, params, env):
@@ -15,9 +18,9 @@ def run_live_snapshot_chain(test, params, env):
     4. Do post snapshot operates(option)
     5. Check the base and snapshot images(option)
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     def get_base_image(snapshot_chain, snapshot_file):
         try:
@@ -62,7 +65,7 @@ def run_live_snapshot_chain(test, params, env):
     md5_value = {}
     files_in_guest = {}
     for index, image in enumerate(snapshot_chain):
-        image_params =  params.object_params(image)
+        image_params = params.object_params(image)
         if image_params.get("file_create"):
             session.cmd(dir_create_cmd % file_dir)
         if index > 0:
@@ -121,18 +124,19 @@ def run_live_snapshot_chain(test, params, env):
                         error_message = "File %s in image %s changed " %\
                                         (file, image)
                         error_message += "from '%s' to '%s'(md5)" %\
-                                         ( md5_value[image][file], md5)
+                                         (md5_value[image][file], md5)
                         raise error.TestFail(error_message)
                 files_check = session.cmd(file_check_cmd % file_dir)
                 if files_check != files_in_guest[image]:
                     error_message = "Files in image %s is not as expect:" %\
                                     image
                     error_message += "Before shut down: %s" %\
-                                    files_in_guest[image]
+                        files_in_guest[image]
                     error_message += "Now: %s" % files_check
                     raise error.TestFail(error_message)
             if image_params.get("image_check"):
-                image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(), image)
+                image = qemu_storage.QemuImg(
+                    image_params, data_dir.get_data_dir(), image)
                 image.check_image(image_params, data_dir.get_data_dir())
             session.close()
 
@@ -143,5 +147,6 @@ def run_live_snapshot_chain(test, params, env):
         for index, image in enumerate(snapshot_chain):
             image_params = params.object_params(image)
             if index != 0:
-                image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(), image)
+                image = qemu_storage.QemuImg(
+                    image_params, data_dir.get_data_dir(), image)
                 image.remove()

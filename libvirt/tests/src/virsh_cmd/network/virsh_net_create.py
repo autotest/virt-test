@@ -2,13 +2,14 @@ import logging
 from autotest.client.shared import error
 from virttest import libvirt_vm, libvirt_xml, virsh, xml_utils
 
+
 def do_low_level_test(virsh_dargs, test_xml, options_ref, extra):
 
     # Process command-line argument/option parameters
     if options_ref == "file_arg":
-        alt_file = "--file %s" % test_xml.name # returns filename
+        alt_file = "--file %s" % test_xml.name  # returns filename
     elif options_ref == "no_file":
-        alt_file = "''" # empty string will be passed
+        alt_file = "''"  # empty string will be passed
     elif options_ref == "extra_file":
         alt_file = "%s %s" % (test_xml.name, test_xml.name)
     elif options_ref == "no_exist_file":
@@ -20,7 +21,8 @@ def do_low_level_test(virsh_dargs, test_xml, options_ref, extra):
                   "extra '%s'", alt_file, extra)
 
     try:
-        virsh.net_create(alt_file, extra, **virsh_dargs) # ignore_status==False
+        # ignore_status==False
+        virsh.net_create(alt_file, extra, **virsh_dargs)
         return True
     except (error.CmdError), cmd_excpt:
         # CmdError catches failing virsh commands
@@ -41,7 +43,7 @@ def do_high_level_test(virsh_dargs, test_xml, net_name, net_uuid, bridge):
     if net_uuid is not "":
         test_netxml.uuid = net_uuid
     else:
-        del test_netxml.uuid # let libvirt auto-generate
+        del test_netxml.uuid  # let libvirt auto-generate
     if bridge is not None:
         test_netxml.bridge = bridge
 
@@ -73,20 +75,21 @@ def run_virsh_net_create(test, params, env):
     """
 
     # Gather test parameters
-    uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
-                                                       "default"))
+    uri = libvirt_vm.normalize_connect_uri(params.get("connect_uri",
+                                                      "default"))
     status_error = "yes" == params.get("status_error", "no")
-    net_name = params.get("net_create_net_name", "") # default is tested
-    net_uuid = params.get("net_create_net_uuid", "") # default is tested
-    options_ref = params.get("net_create_options_ref", "") # default is tested
-    extra = params.get("net_create_options_extra", "") # extra cmd-line params.
+    net_name = params.get("net_create_net_name", "")  # default is tested
+    net_uuid = params.get("net_create_net_uuid", "")  # default is tested
+    options_ref = params.get("net_create_options_ref", "")  # default is tested
+    # extra cmd-line params.
+    extra = params.get("net_create_options_extra", "")
     corrupt = "yes" == params.get("net_create_corrupt_xml", "no")
     remove_existing = "yes" == params.get("net_create_remove_existing", "yes")
     # Dictionary or None value
     bridge = eval(params.get("net_create_bridge", "None"),
-                  {'__builtins__':None}, {})
+                  {'__builtins__': None}, {})
     # make easy to maintain
-    virsh_dargs = {'uri':uri, 'debug':False, 'ignore_status':False}
+    virsh_dargs = {'uri': uri, 'debug': False, 'ignore_status': False}
     vrsh = virsh.VirshPersistent(**virsh_dargs)
 
     # Prepare environment and record current net_state_dict
@@ -95,7 +98,7 @@ def run_virsh_net_create(test, params, env):
     logging.debug("Backed up network(s): %s", backup_state)
 
     # Make some XML to use for testing, for now we just copy 'default'
-    test_xml = xml_utils.TempXMLFile() # temporary file
+    test_xml = xml_utils.TempXMLFile()  # temporary file
     try:
         # LibvirtXMLBase.__str__ returns XML content
         test_xml.write(str(backup['default']))
@@ -104,7 +107,7 @@ def run_virsh_net_create(test, params, env):
         raise error.TestNAError("Test requires default network to exist")
     if corrupt:
         # find file size
-        test_xml.seek(0, 2) # end
+        test_xml.seek(0, 2)  # end
         # write garbage at middle of file
         test_xml.seek(test_xml.tell() / 2)
         test_xml.write('"<network><<<BAD>>><\'XML</network\>'
@@ -117,7 +120,7 @@ def run_virsh_net_create(test, params, env):
         for netxml in backup.values():
             netxml.orbital_nuclear_strike()
 
-    #Run test case
+    # Run test case
 
     # Be nice to user
     if status_error:
@@ -129,11 +132,11 @@ def run_virsh_net_create(test, params, env):
             logging.debug("Performing low-level net-create test")
             # vrsh will act like it's own virsh-dargs, i.e. it is dict-like
             test_passed = do_low_level_test(vrsh, test_xml, options_ref, extra)
-        else: # high-level test
+        else:  # high-level test
             logging.debug("Performing high-level net-create test")
             # vrsh will act like it's own virsh-dargs, i.e. it is dict-like
             test_passed = do_high_level_test(vrsh, test_xml, net_name,
-                          net_uuid, bridge)
+                                             net_uuid, bridge)
     finally:
         # Be nice to user
         if status_error:
@@ -159,9 +162,9 @@ def run_virsh_net_create(test, params, env):
         vrsh.close_session()
 
     # Check Result
-    if status_error: # An error was expected
-        if test_passed: # Error was not produced
+    if status_error:  # An error was expected
+        if test_passed:  # Error was not produced
             raise error.TestFail("Error test did not fail!")
-    else: # no error expected
+    else:  # no error expected
         if not test_passed:
             raise error.TestFail("Normal test returned failure")

@@ -1,8 +1,10 @@
-import logging, re
+import logging
+import re
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import remote, utils_misc, utils_net
 from virttest.aexpect import ShellCmdError
+
 
 @error.context_aware
 def run_virtual_nic_private(test, params, env):
@@ -12,9 +14,9 @@ def run_virtual_nic_private(test, params, env):
         2. transfer file from guest1 to guest2, check md5
         3. in guest 3 try to capture the packets(guest1 <-> guest2)
     Params:
-        @param test: QEMU test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environment.
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
     """
     def data_mon(session, cmd, timeout):
         try:
@@ -23,8 +25,7 @@ def run_virtual_nic_private(test, params, env):
             if re.findall(catch_date % (addresses[1], addresses[0]), str(e)):
                 raise error.TestFail("God! Capture the transfet data:'%s'"
                                      % str(e))
-            logging.info("Guest3 catch data is '%s'" %  str(e))
-
+            logging.info("Guest3 catch data is '%s'" % str(e))
 
     timeout = int(params.get("login_timeout", '360'))
     password = params.get("password")
@@ -46,21 +47,21 @@ def run_virtual_nic_private(test, params, env):
     error.context("Init boot the vms")
     for vm_name in params.get("vms", "vm1 vm2 vm3").split():
         vms.append(env.get_vm(vm_name))
-    for vm in vms :
+    for vm in vms:
         vm.verify_alive()
         sessions.append(vm.wait_for_login(timeout=timeout))
         addresses.append(vm.get_address())
-    mon_session =vms[2].wait_for_login(timeout=timeout)
+    mon_session = vms[2].wait_for_login(timeout=timeout)
 
     src_file = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
-    dst_file = (tmp_dir + "dst-%s" %  utils_misc.generate_random_string(8))
+    dst_file = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))
 
     try:
-        #Before transfer, run tcpdump to try to catche data
+        # Before transfer, run tcpdump to try to catche data
         error_msg = "In guest3, try to capture the packets(guest1 <-> guest2)"
         error.context(error_msg, logging.info)
         interface_name = utils_net.get_linux_ifname(sessions[2],
-                                                     vm.get_mac_address())
+                                                    vm.get_mac_address())
 
         tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
                                      interface_name)
@@ -69,10 +70,10 @@ def run_virtual_nic_private(test, params, env):
 
         logging.info("Tcpdump mon start ...")
         logging.info("Creating %dMB file on guest1", filesize)
-        sessions[0].cmd(dd_cmd  % (src_file, filesize), timeout=timeout)
+        sessions[0].cmd(dd_cmd % (src_file, filesize), timeout=timeout)
         t.start()
 
-        error.context("Transfering file guest1 -> guest2", logging.info)
+        error.context("Transferring file guest1 -> guest2", logging.info)
         remote.scp_between_remotes(addresses[0], addresses[1],
                                    shell_port, password, password,
                                    username, username, src_file, dst_file)

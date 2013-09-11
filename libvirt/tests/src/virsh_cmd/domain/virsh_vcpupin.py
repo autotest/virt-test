@@ -1,4 +1,6 @@
-import logging, re, math
+import logging
+import re
+import math
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import virsh
@@ -20,8 +22,8 @@ def run_virsh_vcpupin(test, params, env):
         This function returns list of the vcpu's affinity from
         virsh vcpuinfo output
 
-        @param: domname: VM Name to operate on
-        @param: vcpu: vcpu number for which the affinity is required
+        :param domname: VM Name to operate on
+        :param vcpu: vcpu number for which the affinity is required
         """
 
         output = virsh.vcpuinfo(domname)
@@ -30,13 +32,11 @@ def run_virsh_vcpupin(test, params, env):
         actual_affinity = list(total_affinity)
         return actual_affinity
 
-
-    def build_expected_info(vcpu, cpu):
+    def build_expected_info(cpu):
         """
         This function returns the list of vcpu's expected affinity build
 
-        @param: vcpu: vcpu number for which the affinity is required
-        @param: cpu: cpu details for the affinity
+        :param cpu: cpu details for the affinity
         """
 
         expected_affinity = []
@@ -51,18 +51,17 @@ def run_virsh_vcpupin(test, params, env):
         expected_affinity_proc = int(math.pow(2, cpu))
         return expected_affinity, expected_affinity_proc
 
-
     def virsh_check_vcpupin(domname, vcpu, cpu, pid):
         """
         This function checks the actual and the expected affinity of given vcpu
         and raises error if not matchs
 
-        @param: domname:  VM Name to operate on
-        @param: vcpu: vcpu number for which the affinity is required
-        @param: cpu: cpu details for the affinity
+        :param domname:  VM Name to operate on
+        :param vcpu: vcpu number for which the affinity is required
+        :param cpu: cpu details for the affinity
         """
 
-        expected_output, expected_output_proc = build_expected_info(vcpu, cpu)
+        expected_output, expected_output_proc = build_expected_info(cpu)
         actual_output = build_actual_info(domname, vcpu)
 
         # Get the vcpus pid
@@ -79,21 +78,20 @@ def run_virsh_vcpupin(test, params, env):
             raise error.TestFail("Command 'virsh vcpupin %s %s %s'not succeeded"
                                  ", cpu pinning details not updated properly in"
                                  " virsh vcpuinfo command output"
-                                                         % (vm_name, vcpu, cpu))
+                                 % (vm_name, vcpu, cpu))
 
         if expected_output_proc == actual_output_proc:
             logging.info("successfully pinned cpu: %s --> vcpu: %s"
-                         " in respective proc entry"
-                                                  ,cpu, vcpu)
+                         " in respective proc entry", cpu, vcpu)
         else:
             raise error.TestFail("Command 'virsh vcpupin %s %s %s'not succeeded"
                                  " cpu pinning details not updated properly in"
                                  " /proc/%s/task/%s/status"
-                                          %(vm_name, vcpu, cpu, pid, vcpu_pid))
-
+                                 % (vm_name, vcpu, cpu, pid, vcpu_pid))
 
     if not virsh.has_help_command('vcpucount'):
-        raise error.TestNAError("This version of libvirt doesn't support this test")
+        raise error.TestNAError("This version of libvirt doesn't"
+                                " support this test")
     # Get the vm name, pid of vm and check for alive
     vm_name = params.get("main_vm")
     vm = env.get_vm(params["main_vm"])
@@ -104,7 +102,8 @@ def run_virsh_vcpupin(test, params, env):
     host_cpu_count = utils.count_cpus()
 
     # Get the guest vcpu count
-    guest_vcpu_count = virsh.vcpucount_live(vm_name)
+    guest_vcpu_count = virsh.vcpucount(vm_name,
+                                       "--live --active").stdout.strip()
 
     # Run test case
     for vcpu in range(int(guest_vcpu_count)):

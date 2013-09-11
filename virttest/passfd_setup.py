@@ -17,8 +17,8 @@ def passfd_setup(output_dir=OUTPUT_DIR):
     '''
     Compiles the passfd python extension.
 
-    @param output_dir: where the _passfd.so module will be saved
-    @return: None
+    :param output_dir: where the _passfd.so module will be saved
+    :return: None
     '''
     if output_dir is None:
         output_dir = OUTPUT_DIR
@@ -36,7 +36,7 @@ def import_passfd():
     '''
     Imports and lazily sets up the passfd module
 
-    @return: passfd module
+    :return: passfd module
     '''
     try:
         import passfd

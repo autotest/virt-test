@@ -5,23 +5,29 @@ This exports:
   - two functions for get image/blkdebug filename
   - class for image operates and basic parameters
 """
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, virt_vm, storage, data_dir
+import utils_misc
+import virt_vm
+import storage
+import data_dir
 
 
 class QemuImg(storage.QemuImg):
+
     """
     KVM class for handling operations of disk/block images.
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         storage.QemuImg.__init__(self, params, root_dir, tag)
         self.image_cmd = utils_misc.get_qemu_img_binary(params)
@@ -29,17 +35,16 @@ class QemuImg(storage.QemuImg):
                              verbose=False)
         self.help_text = q_result.stdout
 
-
     @error.context_aware
     def create(self, params, ignore_errors=False):
         """
         Create an image using qemu_img or dd.
 
-        @param params: Dictionary containing the test parameters.
-        @param ignore_errors: Whether to ignore errors on the image creation
+        :param params: Dictionary containing the test parameters.
+        :param ignore_errors: Whether to ignore errors on the image creation
                 cmd.
 
-        @note: params should contain:
+        :note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
                image_cluster_size (optional) -- the cluster size for the image
@@ -54,7 +59,7 @@ class QemuImg(storage.QemuImg):
                preallocated(optional) -- if preallocation when create image,
                allowed values: off, metadata. Default is "off"
 
-        @return: tuple (path to the image created, utils.CmdResult object
+        :return: tuple (path to the image created, utils.CmdResult object
                 containing the result of the creation command).
         """
         if params.get("create_with_dd") == "yes" and self.image_format == "raw":
@@ -63,7 +68,7 @@ class QemuImg(storage.QemuImg):
                      'M': (1, 1024),
                      'G': (1024, 1024),
                      'T': (1024, 1048576),
-                    }
+                     }
             if human.has_key(self.size[-1]):
                 block_size = human[self.size[-1]][1]
                 size = int(self.size[:-1]) * human[self.size[-1]][0]
@@ -131,18 +136,17 @@ class QemuImg(storage.QemuImg):
 
         return self.image_filename, cmd_result
 
-
     def convert(self, params, root_dir, cache_mode=None):
         """
         Convert image
 
-        @param params: dictionary containing the test parameters
-        @param root_dir: dir for save the convert image
-        @param cache_mode: the cache mode used to write the output disk image,
+        :param params: dictionary containing the test parameters
+        :param root_dir: dir for save the convert image
+        :param cache_mode: the cache mode used to write the output disk image,
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
 
-        @note: params should contain:
+        :note: params should contain:
             convert_image_tag -- the image name of the convert image
             convert_filename -- the name of the image after convert
             convert_fmt -- the format after convert
@@ -175,23 +179,22 @@ class QemuImg(storage.QemuImg):
         cmd += " %s %s" % (self.image_filename, convert_image_filename)
 
         logging.info("Convert image %s from %s to %s", self.image_filename,
-                      self.image_format,convert_format)
+                     self.image_format, convert_format)
 
         utils.system(cmd)
 
         return convert_image_tag
 
-
     def rebase(self, params, cache_mode=None):
         """
         Rebase image
 
-        @param params: dictionary containing the test parameters
-        @param cache_mode: the cache mode used to write the output disk image,
+        :param params: dictionary containing the test parameters
+        :param cache_mode: the cache mode used to write the output disk image,
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
 
-        @note: params should contain:
+        :note: params should contain:
             cmd -- qemu-img cmd
             snapshot_img -- the snapshot name
             base_img -- base image name
@@ -220,18 +223,16 @@ class QemuImg(storage.QemuImg):
                                   " for rebase.")
 
         logging.info("Rebase snapshot %s to %s..." % (self.image_filename,
-                                                    self.base_image_filename))
+                                                      self.base_image_filename))
         utils.system(cmd)
 
         return self.base_tag
-
-
 
     def commit(self, params={}, cache_mode=None):
         """
         Commit image to it's base file
 
-        @param cache_mode: the cache mode used to write the output disk image,
+        :param cache_mode: the cache mode used to write the output disk image,
             the valid options are: 'none', 'writeback' (default),
             'writethrough', 'directsync' and 'unsafe'.
         """
@@ -245,12 +246,11 @@ class QemuImg(storage.QemuImg):
 
         return self.image_filename
 
-
     def snapshot_create(self):
         """
         Create a snapshot image.
 
-        @note: params should contain:
+        :note: params should contain:
                snapshot_image_name -- the name of snapshot image file
         """
 
@@ -266,14 +266,13 @@ class QemuImg(storage.QemuImg):
 
         return self.snapshot_tag
 
-
     def snapshot_del(self, blkdebug_cfg=""):
         """
         Delete a snapshot image.
 
-        @param blkdebug_cfg: The configure file of blkdebug
+        :param blkdebug_cfg: The configure file of blkdebug
 
-        @note: params should contain:
+        :note: params should contain:
                snapshot_image_name -- the name of snapshot image file
         """
 
@@ -290,7 +289,6 @@ class QemuImg(storage.QemuImg):
 
         utils.system_output(cmd)
 
-
     def snapshot_list(self):
         """
         List all snapshots in the given image
@@ -299,7 +297,6 @@ class QemuImg(storage.QemuImg):
         cmd += " snapshot -l %s" % self.image_filename
 
         return utils.system_output(cmd)
-
 
     def remove(self):
         """
@@ -310,7 +307,6 @@ class QemuImg(storage.QemuImg):
             os.unlink(self.image_filename)
         else:
             logging.debug("Image file %s not found", self.image_filename)
-
 
     def info(self):
         """
@@ -326,12 +322,11 @@ class QemuImg(storage.QemuImg):
             output = None
         return output
 
-
     def support_cmd(self, cmd):
         """
         Verifies whether qemu-img supports command cmd.
 
-        @param cmd: Command string.
+        :param cmd: Command string.
         """
         supports_cmd = True
 
@@ -342,19 +337,18 @@ class QemuImg(storage.QemuImg):
 
         return supports_cmd
 
-
     def compare_images(self, image1, image2):
         """
         Compare 2 images using the appropriate tools for each virt backend.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
 
-        @note: params should contain:
+        :note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
 
-        @raise VMImageCheckError: In case qemu-img check fails on the image.
+        :raise VMImageCheckError: In case qemu-img check fails on the image.
         """
         compare_images = self.support_cmd("compare")
         if not compare_images:
@@ -372,19 +366,18 @@ class QemuImg(storage.QemuImg):
             else:
                 raise error.TestError("Error in image comparison")
 
-
     def check_image(self, params, root_dir):
         """
         Check an image using the appropriate tools for each virt backend.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
 
-        @note: params should contain:
+        :note: params should contain:
                image_name -- the name of the image file, without extension
                image_format -- the format of the image (qcow2, raw etc)
 
-        @raise VMImageCheckError: In case qemu-img check fails on the image.
+        :raise VMImageCheckError: In case qemu-img check fails on the image.
         """
         image_filename = self.image_filename
         logging.debug("Checking image file %s", image_filename)
@@ -446,24 +439,26 @@ class QemuImg(storage.QemuImg):
                 logging.debug("Image file %s not found, skipping check",
                               image_filename)
             elif not image_is_checkable:
-                logging.debug("Image format %s is not checkable, skipping check",
-                              self.image_format)
+                logging.debug(
+                    "Image format %s is not checkable, skipping check",
+                    self.image_format)
 
 
 class Iscsidev(storage.Iscsidev):
+
     """
     Class for handle iscsi devices for VM
     """
+
     def __init__(self, params, root_dir, tag):
         """
         Init the default value for image object.
 
-        @param params: Dictionary containing the test parameters.
-        @param root_dir: Base directory for relative filenames.
-        @param tag: Image tag defined in parameter images
+        :param params: Dictionary containing the test parameters.
+        :param root_dir: Base directory for relative filenames.
+        :param tag: Image tag defined in parameter images
         """
         super(Iscsidev, self).__init__(params, root_dir, tag)
-
 
     def setup(self):
         """
@@ -474,7 +469,6 @@ class Iscsidev(storage.Iscsidev):
         if self.device_id:
             device_name += self.device_id
         return device_name
-
 
     def cleanup(self):
         """

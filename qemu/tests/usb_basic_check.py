@@ -1,4 +1,6 @@
-import time, re, logging
+import time
+import re
+import logging
 from autotest.client.shared import error
 from virttest import aexpect
 
@@ -16,6 +18,7 @@ def check_usb_device_monitor(test, params, env):
     if info_usb_name and (info_usb_name not in o):
         raise error.TestFail("Could not find '%s' device, monitor "
                              "returns: \n%s" % (params.get("product"), o))
+
 
 @error.context_aware
 def check_usb_device(test, params, env):
@@ -82,9 +85,9 @@ def run_usb_basic_check(test, params, env):
     5) Log into the guest to verify it's up again (optional)
     6) Verify device(s) again after guest reboot (optional)
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def _check_dev():

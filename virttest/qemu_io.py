@@ -1,10 +1,13 @@
 import re
 from autotest.client.shared import error
 from autotest.client import utils
-import utils_misc, aexpect, data_dir
+import utils_misc
+import aexpect
+import data_dir
 
 
 class QemuIOParamError(Exception):
+
     """
     Parameter Error for qemu-io command
     """
@@ -12,9 +15,11 @@ class QemuIOParamError(Exception):
 
 
 class QemuIO(object):
+
     """
     A class for execute qemu-io command
     """
+
     def __init__(self, test, params, image_name, blkdebug_cfg="",
                  prompt=r"qemu-io>\s*$", log_filename=None, io_options="",
                  log_func=None):
@@ -27,8 +32,8 @@ class QemuIO(object):
             self.output_func = None
             self.output_params = ()
         self.output_prefix = ""
-        self.prompt=prompt
-        self.blkdebug_cfg=blkdebug_cfg
+        self.prompt = prompt
+        self.blkdebug_cfg = blkdebug_cfg
 
         base_dir = utils_misc.get_path(data_dir.get_root_dir(),
                                        params.get("vm_type"))
@@ -41,15 +46,14 @@ class QemuIO(object):
         self.blkdebug_cfg = blkdebug_cfg
         self.log_func = log_func
 
-
     def get_cmd_line(self, ignore_option=[], essential_option=[],
                      forbid_option=[]):
         """
         Generate the command line for qemu-io from the parameters
-        @params ignore_option: list for the options should not in command
-        @params essential_option: list for the essential options
-        @params forbid_option: list for the option should not in command
-        @return: qemu-io command line
+        :params ignore_option: list for the options should not in command
+        :params essential_option: list for the essential options
+        :params forbid_option: list for the option should not in command
+        :return: qemu-io command line
         """
         essential_flag = False
 
@@ -73,11 +77,10 @@ class QemuIO(object):
         if self.image_name:
             qemu_io_cmd += " "
             if self.blkdebug_cfg:
-                qemu_io_cmd += "blkdebug:%s:" %  self.blkdebug_cfg
+                qemu_io_cmd += "blkdebug:%s:" % self.blkdebug_cfg
             qemu_io_cmd += self.image_name
 
         return qemu_io_cmd
-
 
     def cmd_output(self, command):
         """
@@ -91,10 +94,13 @@ class QemuIO(object):
         """
         pass
 
+
 class QemuIOShellSession(QemuIO):
+
     """
     Use a shell session to execute qemu-io command
     """
+
     def __init__(self, test, params, image_name, blkdebug_cfg="",
                  prompt=r"qemu+-io>\s*$", log_filename=None, io_options="",
                  log_func=None):
@@ -108,14 +114,13 @@ class QemuIOShellSession(QemuIO):
         self.create_session = True
         self.session = None
 
-
     @error.context_aware
     def cmd_output(self, command, timeout=60):
         """
         Get output from shell session. If the create flag is True, init the
         shell session and set the create flag to False.
-        @param command: command to execute in qemu-io
-        @param timeout: timeout for execute the command
+        :param command: command to execute in qemu-io
+        :param timeout: timeout for execute the command
         """
         qemu_io_cmd = self.qemu_io_cmd
         prompt = self.prompt
@@ -141,7 +146,6 @@ class QemuIOShellSession(QemuIO):
         error.context("Executing command: %s" % command, self.log_func)
         return self.session.cmd_output(command, timeout=timeout)
 
-
     def close(self):
         """
         Close the shell session for qemu-io
@@ -151,9 +155,11 @@ class QemuIOShellSession(QemuIO):
 
 
 class QemuIOSystem(QemuIO):
+
     """
     Run qemu-io with a command line which will return immediately
     """
+
     def __init__(self, test, params, image_name, blkdebug_cfg="",
                  prompt=r"qemu-io>\s*$", log_filename=None, io_options="",
                  log_func=None):
@@ -170,8 +176,8 @@ class QemuIOSystem(QemuIO):
         """
         Get output from system_output. Add the command to the qemu-io command
         line with -c and record the output in the log file.
-        @param command: command to execute in qemu-io
-        @param timeout: timeout for execute the command
+        :param command: command to execute in qemu-io
+        :param timeout: timeout for execute the command
         """
         qemu_io_cmd = self.qemu_io_cmd
         if command:

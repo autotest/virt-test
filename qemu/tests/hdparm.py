@@ -1,4 +1,5 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import aexpect
 
@@ -12,9 +13,9 @@ def run_hdparm(test, params, env):
     3) Set/record parameters value of hard disk to high performance status.
     4) Perform device/cache read timings then compare two results.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def check_setting_result(set_cmd, timeout):
         params = re.findall("(-[a-zA-Z])([0-9]*)", set_cmd)
@@ -38,7 +39,6 @@ def run_hdparm(test, params, env):
                 raise error.TestFail("Fail to set %s parameter to value: %s"
                                      % (param, value))
 
-
     def perform_read_timing(disk, timeout, num=5):
         results = 0
         for i in range(num):
@@ -52,12 +52,11 @@ def run_hdparm(test, params, env):
             for line in output.strip().splitlines():
                 logging.info(line)
             (result, unit) = re.findall("= *([0-9]*.+[0-9]*) ([a-zA-Z]*)",
-                             output)[1]
+                                        output)[1]
             if unit == "kB":
-                result = float(result)/1024.0
+                result = float(result) / 1024.0
             results += float(result)
-        return results/num
-
+        return results / num
 
     ignore_string = params.get("ignore_string")
     vm = env.get_vm(params["main_vm"])

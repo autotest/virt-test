@@ -10,16 +10,16 @@ def run_getfd(test, params, env):
     2) Pass file descriptors via getfd
     3) Check if qemu process has a copy of the file descriptor
 
-    @param test:   QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env:    Dictionary with test environment.
     """
     def has_fd(pid, filepath):
         """
         Returns true if process has a file descriptor pointing to filepath
 
-        @param pid: the process id
-        @param filepath: the full path for the file
+        :param pid: the process id
+        :param filepath: the full path for the file
         """
         pathlist = []
         dirname = "/proc/%s/fd" % pid
@@ -59,7 +59,7 @@ def run_getfd(test, params, env):
         # check if qemu process has a copy of the fd
         if not has_fd(pid, path):
             raise error.TestError("QEMU process does not seem to have a file "
-                                   "descriptor pointing to file %s" % path)
+                                  "descriptor pointing to file %s" % path)
 
     # clean up files
     for n in range(nofiles):

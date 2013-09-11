@@ -1,6 +1,7 @@
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, remote, utils_libvirtd
 
+
 def run_virsh_dommemstat(test, params, env):
     """
     Test command: virsh dommemstat.
@@ -25,7 +26,7 @@ def run_virsh_dommemstat(test, params, env):
     if libvirtd == "off":
         utils_libvirtd.libvirtd_stop()
 
-     #run test case
+     # run test case
     if vm_ref == "id":
         vm_ref = domid
     elif vm_ref == "hex_id":
@@ -63,11 +64,11 @@ def run_virsh_dommemstat(test, params, env):
         except error.CmdError:
             status = 1
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command!")

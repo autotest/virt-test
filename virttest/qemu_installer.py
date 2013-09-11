@@ -4,7 +4,8 @@ Installer code that implement KVM specific bits.
 See BaseInstaller class in base_installer.py for interface details.
 """
 
-import os, logging
+import os
+import logging
 from autotest.client import utils
 from autotest.client.shared import error
 import base_installer
@@ -15,6 +16,7 @@ __all__ = ['GitRepoInstaller', 'LocalSourceDirInstaller',
 
 
 class QEMUBaseInstaller(base_installer.BaseInstaller):
+
     '''
     Base class for KVM installations
     '''
@@ -35,12 +37,11 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
     QEMU_IO_BIN = 'qemu-io'
     QEMU_FS_PROXY_BIN = 'virtfs-proxy-helper'
 
-
     def _kill_qemu_processes(self):
         """
         Kills all qemu processes and all processes holding /dev/kvm down
 
-        @return: None
+        :return: None
         """
         logging.debug("Killing any qemu processes that might be left behind")
         utils.system("pkill qemu", ignore_status=True)
@@ -48,12 +49,11 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         if os.path.isfile("/dev/kvm"):
             utils.system("fuser -k /dev/kvm", ignore_status=True)
 
-
     def _cleanup_links_qemu(self):
         '''
         Removes previously created links, if they exist
 
-        @return: None
+        :return: None
         '''
         qemu_path = os.path.join(self.test_builddir, self.QEMU_BIN)
         qemu_img_path = os.path.join(self.test_builddir, self.QEMU_IMG_BIN)
@@ -67,24 +67,22 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
             if os.path.lexists(path):
                 os.unlink(path)
 
-
     def _cleanup_link_unittest(self):
         '''
         Removes previously created links, if they exist
 
-        @return: None
+        :return: None
         '''
         qemu_unittest_path = os.path.join(self.test_builddir, "unittests")
 
         if os.path.lexists(qemu_unittest_path):
             os.unlink(qemu_unittest_path)
 
-
     def _create_symlink_unittest(self):
         '''
         Create symbolic links for qemu and qemu-img commands on test bindir
 
-        @return: None
+        :return: None
         '''
         unittest_src = os.path.join(self.install_prefix,
                                     'share', 'qemu', 'tests')
@@ -97,12 +95,11 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         logging.debug("Linking unittest dir")
         os.symlink(unittest_src, unittest_dst)
 
-
     def _qemu_bin_exists_at_prefix(self):
         '''
         Attempts to find the QEMU binary at the installation prefix
 
-        @return: full path of QEMU binary or None if not found
+        :return: full path of QEMU binary or None if not found
         '''
         result = None
 
@@ -120,12 +117,11 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
 
         return result
 
-
     def _qemu_img_bin_exists_at_prefix(self):
         '''
         Attempts to find the qemu-img binary at the installation prefix
 
-        @return: full path of qemu-img binary or None if not found
+        :return: full path of qemu-img binary or None if not found
         '''
         qemu_img_bin_name = os.path.join(self.install_prefix,
                                          'bin', self.QEMU_IMG_BIN)
@@ -137,15 +133,14 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
                           self.install_prefix)
             return None
 
-
     def _qemu_io_bin_exists_at_prefix(self):
         '''
         Attempts to find the qemu-io binary at the installation prefix
 
-        @return: full path of qemu-io binary or None if not found
+        :return: full path of qemu-io binary or None if not found
         '''
         qemu_io_bin_name = os.path.join(self.install_prefix,
-                                         'bin', self.QEMU_IO_BIN)
+                                        'bin', self.QEMU_IO_BIN)
         if os.path.isfile(qemu_io_bin_name):
             logging.debug('Found qemu-io binary at %s', qemu_io_bin_name)
             return qemu_io_bin_name
@@ -154,12 +149,11 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
                           self.install_prefix)
             return None
 
-
     def _qemu_fs_proxy_bin_exists_at_prefix(self):
         '''
         Attempts to find the qemu fs proxy binary at the installation prefix
 
-        @return: full path of qemu fs proxy binary or None if not found
+        :return: full path of qemu fs proxy binary or None if not found
         '''
         qemu_fs_proxy_bin_name = os.path.join(self.install_prefix,
                                               'bin', self.QEMU_FS_PROXY_BIN)
@@ -172,12 +166,11 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
                           self.install_prefix)
             return None
 
-
     def _create_symlink_qemu(self):
         """
         Create symbolic links for qemu and qemu-img commands on test bindir
 
-        @return: None
+        :return: None
         """
         logging.debug("Linking QEMU binaries")
 
@@ -211,7 +204,6 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         else:
             logging.warning('Qemu fs proxy path %s not found on source dir')
 
-
     def _install_phase_init(self):
         '''
         Initializes the built and installed software
@@ -219,7 +211,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
         This uses a simple mechanism of looking up the installer name
         for deciding what action to do.
 
-        @return: None
+        :return: None
         '''
         if 'unit' in self.name:
             self._cleanup_link_unittest()
@@ -229,12 +221,11 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
             self._cleanup_links_qemu()
             self._create_symlink_qemu()
 
-
     def uninstall(self):
         '''
         Performs the uninstallation of KVM userspace component
 
-        @return: None
+        :return: None
         '''
         self._kill_qemu_processes()
         self._cleanup_links()
@@ -243,6 +234,7 @@ class QEMUBaseInstaller(base_installer.BaseInstaller):
 
 class GitRepoInstaller(QEMUBaseInstaller,
                        base_installer.GitRepoInstaller):
+
     '''
     Installer that deals with source code on Git repositories
     '''
@@ -251,6 +243,7 @@ class GitRepoInstaller(QEMUBaseInstaller,
 
 class LocalSourceDirInstaller(QEMUBaseInstaller,
                               base_installer.LocalSourceDirInstaller):
+
     '''
     Installer that deals with source code on local directories
     '''
@@ -259,6 +252,7 @@ class LocalSourceDirInstaller(QEMUBaseInstaller,
 
 class LocalSourceTarInstaller(QEMUBaseInstaller,
                               base_installer.LocalSourceTarInstaller):
+
     '''
     Installer that deals with source code on local tarballs
     '''
@@ -267,6 +261,7 @@ class LocalSourceTarInstaller(QEMUBaseInstaller,
 
 class RemoteSourceTarInstaller(QEMUBaseInstaller,
                                base_installer.RemoteSourceTarInstaller):
+
     '''
     Installer that deals with source code on remote tarballs
     '''

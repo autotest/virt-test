@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_misc
 
+
 @error.context_aware
 def run_nonexist_vcpu_hotplug(test, params, env):
     """
@@ -13,11 +14,10 @@ def run_nonexist_vcpu_hotplug(test, params, env):
         3) hotplug non-existed(no in 1..160) vcpus to guest.
         4) check guest vcpu quantity, should didn't changed
     params:
-        @param test: QEMU test object
-        @param params: Dictionary with the test parameters
-        @param env: Dictionary with test environment.
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
     """
-
 
     hotplug_cmd = "cpu_set %s online"
 
@@ -44,6 +44,6 @@ def run_nonexist_vcpu_hotplug(test, params, env):
     error.context("hotplugging finished, let's wait a few sec and"
                   " check cpus quantity in guest.", logging.info)
     if not utils_misc.wait_for(lambda: utils_misc.check_if_vm_vcpu_match(
-                                                              smp_by_cmd, vm),
+                               smp_by_cmd, vm),
                                60, first=10, step=5.0, text="retry later"):
         raise error.TestFail("CPU quantity mismatch cmd after hotplug !")

@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
-import unittest, os, shutil, logging
+import unittest
+import os
+import shutil
+import logging
 import common
 from virttest import xml_utils, virsh, utils_misc, data_dir
 from autotest.client import utils
@@ -35,49 +38,49 @@ class LibvirtXMLTestBase(unittest.TestCase):
 
     # Override instance methods needed for testing
 
-    #domain_xml
-    #usage:
+    # domain_xml
+    # usage:
     #    xml = __domain_xml__ % (name, uuid)
     __domain_xml__ = ('<domain type="kvm">'
-                    '    <name>%s</name>'
-                    '    <uuid>%s</uuid>'
-                    '    <devices>' # Tests below depend on device order
-                    '       <serial type="pty">'
-                    '           <target port="0"/>'
-                    '       </serial>'
-                    '       <serial type="pty">'
-                    '           <target port="1"/>'
-                    '           <source path="/dev/null"/>'
-                    '       </serial>'
-                    '       <serial type="tcp">'
-                    '         <source mode="connect" host="1.2.3.4"\
+                      '    <name>%s</name>'
+                      '    <uuid>%s</uuid>'
+                      '    <devices>'  # Tests below depend on device order
+                      '       <serial type="pty">'
+                      '           <target port="0"/>'
+                      '       </serial>'
+                      '       <serial type="pty">'
+                      '           <target port="1"/>'
+                      '           <source path="/dev/null"/>'
+                      '       </serial>'
+                      '       <serial type="tcp">'
+                      '         <source mode="connect" host="1.2.3.4"\
                                                         service="2445"/>'
-                    '         <protocol type="raw"/>'
-                    '         <target port="2"/>'
-                    '       </serial>'
-                    '       <serial type="udp">'
-                    '         <source mode="bind" host="1.2.3.4"\
+                      '         <protocol type="raw"/>'
+                      '         <target port="2"/>'
+                      '       </serial>'
+                      '       <serial type="udp">'
+                      '         <source mode="bind" host="1.2.3.4"\
                                                         service="2445"/>'
-                    '         <source mode="connect" host="4.3.2.1"\
+                      '         <source mode="connect" host="4.3.2.1"\
                                                         service="5442"/>'
-                    '         <target port="3"/>'
-                    '       </serial>'
-                    '       <channel type="foo1">'
-                    '         <source mode="foo2" path="foo3" />'
-                    '         <target name="foo4" type="foo5" />'
-                    '       </channel>'
-                    '       <channel type="bar1">'
-                    '         <source mode="bar2" path="bar3" />'
-                    '         <target name="bar4" type="bar5" />'
-                    '       </channel>'
-                    '    </devices>'
-                    '    <seclabel type="sec_type" model="sec_model"\
+                      '         <target port="3"/>'
+                      '       </serial>'
+                      '       <channel type="foo1">'
+                      '         <source mode="foo2" path="foo3" />'
+                      '         <target name="foo4" type="foo5" />'
+                      '       </channel>'
+                      '       <channel type="bar1">'
+                      '         <source mode="bar2" path="bar3" />'
+                      '         <target name="bar4" type="bar5" />'
+                      '       </channel>'
+                      '    </devices>'
+                      '    <seclabel type="sec_type" model="sec_model"\
                                                     relabel="sec_relabel">'
-                    '       <label>sec_label</label>'
-                    '       <baselabel>sec_baselabel</baselabel>'
-                    '       <imagelabel>sec_imagelabel</imagelabel>'
-                    '    </seclabel>'
-                    '</domain>')
+                      '       <label>sec_label</label>'
+                      '       <baselabel>sec_baselabel</baselabel>'
+                      '       <imagelabel>sec_imagelabel</imagelabel>'
+                      '    </seclabel>'
+                      '</domain>')
 
     __doms_dir__ = None
 
@@ -95,7 +98,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
         vmxml = xml_utils.XMLTreeFile(file_path)
         dom_name = vmxml.find('name').text
         xml_path = os.path.join(LibvirtXMLTestBase.__doms_dir__,
-                                                '%s.xml' % dom_name)
+                                '%s.xml' % dom_name)
         shutil.copy(file_path, xml_path)
 
     @staticmethod
@@ -110,17 +113,17 @@ class LibvirtXMLTestBase(unittest.TestCase):
             exit_status = 1
             result = utils.CmdResult(cmd, stdout, stderr, exit_status)
             raise error.CmdError(cmd, result,
-                            "Virsh Command returned non-zero exit status")
+                                 "Virsh Command returned non-zero exit status")
 
         file_path = os.path.join(LibvirtXMLTestBase.__doms_dir__,
-                                                        '%s.xml' % name)
+                                 '%s.xml' % name)
         if os.path.exists(file_path):
             xml_file = open(file_path, 'r')
             domain_xml = xml_file.read()
         else:
             xml_file = open(file_path, 'w')
             domain_xml = LibvirtXMLTestBase.__domain_xml__ % (name,
-                                            LibvirtXMLTestBase._domuuid(None))
+                                                              LibvirtXMLTestBase._domuuid(None))
             xml_file.write(domain_xml)
         xml_file.close()
         return domain_xml
@@ -137,7 +140,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
 
         # make a tmp_dir to store informations.
         LibvirtXMLTestBase.__doms_dir__ = os.path.join(data_dir.get_tmp_dir(),
-                                                                    'domains')
+                                                       'domains')
         if not os.path.isdir(LibvirtXMLTestBase.__doms_dir__):
             os.makedirs(LibvirtXMLTestBase.__doms_dir__)
 
@@ -158,6 +161,7 @@ class AccessorsTest(LibvirtXMLTestBase):
     def test_type_check(self):
         class bar(object):
             pass
+
         class foo(bar):
             pass
         # Save some typing
@@ -170,9 +174,9 @@ class AccessorsTest(LibvirtXMLTestBase):
         self.assertRaises(TypeError, type_check, "foobar", None, foobar)
         self.assertRaises(TypeError, type_check, None, "foobar", foobar)
 
-
     def test_required_slots(self):
         class Foo(accessors.AccessorGeneratorBase):
+
             class Getter(accessors.AccessorBase):
                 __slots__ = accessors.add_to_slots('foo', 'bar')
                 pass
@@ -182,19 +186,17 @@ class AccessorsTest(LibvirtXMLTestBase):
         self.assertRaises(ValueError, Foo, 'foobar', lvx, forbidden, foo='')
         self.assertRaises(ValueError, Foo, 'foobar', lvx, forbidden, bar='')
 
-
     def test_accessor_base(self):
         class ABSubclass(accessors.AccessorBase):
             pass
         lvx = base.LibvirtXMLBase(self.dummy_virsh)
         # operation attribute check should fail
         self.assertRaises(ValueError, accessors.AccessorBase,
-                         'foobar', lvx, lvx)
+                          'foobar', lvx, lvx)
         abinst = ABSubclass('Getter', 'foobar', lvx)
         self.assertEqual(abinst.property_name, 'foobar')
         # test call to get_libvirtxml() accessor
         self.assertEqual(abinst.libvirtxml, lvx)
-
 
     def test_XMLElementInt(self):
         class FooBar(base.LibvirtXMLBase):
@@ -212,17 +214,16 @@ class AccessorsTest(LibvirtXMLTestBase):
                    ' <hex>10</hex>'
                    '</integer>')
 
-        name_radix = {'auto':0, 'bin':2, 'oct':8, 'dec':10, 'hex':16}
+        name_radix = {'auto': 0, 'bin': 2, 'oct': 8, 'dec': 10, 'hex': 16}
         for name, radix in name_radix.items():
             accessors.XMLElementInt(name + '_test', lvx,
-                                parent_xpath='/',
-                                tag_name=name,
-                                radix=radix)
-            self.assertEqual(lvx[name+'_test'], radix)
+                                    parent_xpath='/',
+                                    tag_name=name,
+                                    radix=radix)
+            self.assertEqual(lvx[name + '_test'], radix)
 
         self.assertRaises(ValueError,
                           lvx.__setitem__, 'bin_test', 'text')
-
 
     def test_AllForbidden(self):
         class FooBar(base.LibvirtXMLBase):
@@ -236,7 +237,6 @@ class AccessorsTest(LibvirtXMLTestBase):
         self.assertRaises(xcepts.LibvirtXMLForbiddenError,
                           lvx.__delitem__, 'test')
 
-
     def test_not_enuf_dargs(self):
         class FooBar(base.LibvirtXMLBase):
             __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
@@ -249,7 +249,6 @@ class AccessorsTest(LibvirtXMLTestBase):
         self.assertRaises(TypeError,
                           accessors.XMLElementText, 'test')
 
-
     def test_too_many_dargs(self):
         class FooBar(base.LibvirtXMLBase):
             __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
@@ -261,16 +260,16 @@ class AccessorsTest(LibvirtXMLTestBase):
                           accessors.XMLElementText, 'test',
                           None, None, None, None)
 
-
     def test_create_by_xpath(self):
         class FooBar(base.LibvirtXMLBase):
             __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+
             def __init__(self, virsh_instance):
                 super(FooBar, self).__init__(virsh_instance)
                 accessors.XMLElementDict('test', self, None, 'foo/bar', 'baz')
         foobar = FooBar(self.dummy_virsh)
         foobar.xml = '<test></test>'
-        test_dict = {'test1':'1', 'test2':'2'}
+        test_dict = {'test1': '1', 'test2': '2'}
         foobar.test = test_dict
         self.assertEqual(foobar.test, test_dict)
         element = foobar.xmltreefile.find('foo/bar/baz')
@@ -284,7 +283,6 @@ class TestLibvirtXML(LibvirtXMLTestBase):
     def _from_scratch(self):
         return capability_xml.CapabilityXML(self.dummy_virsh)
 
-
     def test_uuid(self):
         lvxml = self._from_scratch()
         test_uuid = lvxml.uuid
@@ -297,7 +295,6 @@ class TestLibvirtXML(LibvirtXMLTestBase):
         self.assertRaises(xcepts.LibvirtXMLForbiddenError,
                           lvxml.__delitem__,
                           'uuid')
-
 
     def test_os_arch_machine_map(self):
         lvxml = self._from_scratch()
@@ -316,14 +313,12 @@ class TestLibvirtXML(LibvirtXMLTestBase):
 
 class TestVMXML(LibvirtXMLTestBase):
 
-
     def _from_scratch(self):
         vmxml = vm_xml.VMXML('test1', self.dummy_virsh)
         vmxml.vm_name = 'test2'
         vmxml.uuid = 'test3'
         vmxml.vcpu = 4
         return vmxml
-
 
     def test_getters(self):
         vmxml = self._from_scratch()
@@ -332,22 +327,20 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertEqual(vmxml.uuid, 'test3')
         self.assertEqual(vmxml.vcpu, 4)
 
-
     def test_valid_xml(self):
         vmxml = self._from_scratch()
-        test_xtf = xml_utils.XMLTreeFile(vmxml.xml) # re-parse from filename
+        test_xtf = xml_utils.XMLTreeFile(vmxml.xml)  # re-parse from filename
         self.assertEqual(test_xtf.getroot().get('type'), 'test1')
         self.assertEqual(test_xtf.find('name').text, 'test2')
         self.assertEqual(test_xtf.find('uuid').text, 'test3')
         self.assertEqual(test_xtf.find('vcpu').text, '4')
 
-
     def test_new_from_dumpxml(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         self.assertEqual(vmxml.vm_name, 'foobar')
         self.assertEqual(vmxml.uuid, self._domuuid(None))
         self.assertEqual(vmxml.hypervisor_type, 'kvm')
-
 
     def test_seclabel(self):
         vmxml = self._from_scratch()
@@ -358,14 +351,14 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertRaises(xcepts.LibvirtXMLError,
                           getattr, vmxml, 'seclabel')
 
-        vmxml.set_seclabel({'type':"dynamic"})
+        vmxml.set_seclabel({'type': "dynamic"})
         self.assertEqual(vmxml.seclabel['type'], 'dynamic')
         self.assertEqual(len(vmxml.seclabel), 1)
 
-        seclabel_dict = {'type':'test_type', 'model':'test_model',
-                         'relabel':'test_relabel', 'label':'test_label',
-                         'baselabel':'test_baselabel',
-                         'imagelabel':'test_imagelabel'}
+        seclabel_dict = {'type': 'test_type', 'model': 'test_model',
+                         'relabel': 'test_relabel', 'label': 'test_label',
+                         'baselabel': 'test_baselabel',
+                         'imagelabel': 'test_imagelabel'}
         vmxml.set_seclabel(seclabel_dict)
 
         seclabel = vmxml.get_seclabel()
@@ -378,16 +371,15 @@ class TestVMXML(LibvirtXMLTestBase):
             self.assertEqual(seclabel_dict[key], value)
 
 
-
 class testNetworkXML(LibvirtXMLTestBase):
 
     def _from_scratch(self):
-        netxml = network_xml.NetworkXML(network_name = 'test0',
-                                        virsh_instance = self.dummy_virsh)
+        netxml = network_xml.NetworkXML(network_name='test0',
+                                        virsh_instance=self.dummy_virsh)
         self.assertEqual(netxml.name, 'test0')
         netxml.name = 'test1'
         netxml.uuid = 'test2'
-        netxml.bridge = {'test3':'test4'}
+        netxml.bridge = {'test3': 'test4'}
 
         ipxml = network_xml.IPXML()
         ipxml.address = ('address_test')
@@ -395,21 +387,18 @@ class testNetworkXML(LibvirtXMLTestBase):
         netxml.ip = ipxml
         return netxml
 
-
     def test_getters(self):
         netxml = self._from_scratch()
         self.assertEqual(netxml.name, 'test1')
         self.assertEqual(netxml.uuid, 'test2')
-        self.assertEqual(netxml.bridge, {'test3':'test4'})
-
+        self.assertEqual(netxml.bridge, {'test3': 'test4'})
 
     def test_valid_xml(self):
         netxml = self._from_scratch()
-        test_xtf = xml_utils.XMLTreeFile(netxml.xml) # re-parse from filename
+        test_xtf = xml_utils.XMLTreeFile(netxml.xml)  # re-parse from filename
         self.assertEqual(test_xtf.find('name').text, 'test1')
         self.assertEqual(test_xtf.find('uuid').text, 'test2')
         self.assertEqual(test_xtf.find('bridge').get('test3'), 'test4')
-
 
     def test_ip_getter(self):
         netxml = self._from_scratch()
@@ -420,12 +409,10 @@ class testNetworkXML(LibvirtXMLTestBase):
 
 class testLibrarian(LibvirtXMLTestBase):
 
-
     def test_bad_names(self):
         for badname in ('__init__', 'librarian', '__doc__', '/dev/null', '',
-                                                                        None):
+                        None):
             self.assertRaises(xcepts.LibvirtXMLError, librarian.get, badname)
-
 
     def test_no_module(self):
         # Bypass type-check to induse module load failure
@@ -435,7 +422,6 @@ class testLibrarian(LibvirtXMLTestBase):
             self.assertRaises(xcepts.LibvirtXMLError, librarian.get,
                               badname)
 
-
     def test_serial_class(self):
         Serial = librarian.get('serial')
         self.assertTrue(issubclass(Serial, devices_base.UntypedDeviceBase))
@@ -444,56 +430,51 @@ class testLibrarian(LibvirtXMLTestBase):
 
 class testStubXML(LibvirtXMLTestBase):
 
-
     class UntypedFoobar(devices_base.UntypedDeviceBase):
         __metaclass__ = devices_base.StubDeviceMeta
         _device_tag = 'foobar'
-
 
     class TypedFoobar(devices_base.TypedDeviceBase):
         __metaclass__ = devices_base.StubDeviceMeta
         _device_tag = 'foo'
         _def_type_name = 'bar'
 
-
     def setUp(self):
         logging.disable(logging.WARNING)
         super(testStubXML, self).setUp()
 
-
     def test_untyped_device_stub(self):
-        foobar = self.UntypedFoobar(virsh_instance = self.dummy_virsh)
+        foobar = self.UntypedFoobar(virsh_instance=self.dummy_virsh)
         self.assertEqual(foobar.virsh.domuuid(None),
                          "ddb0cf86-5ba8-4f83-480a-d96f54339219")
         self.assertEqual(foobar.device_tag, 'foobar')
         self.assertEqual(unicode(foobar),
                          u"<?xml version='1.0' encoding='UTF-8'?>\n<foobar />")
 
-
     def test_typed_device_stub(self):
-        foobar = self.TypedFoobar(virsh_instance = self.dummy_virsh)
+        foobar = self.TypedFoobar(virsh_instance=self.dummy_virsh)
         self.assertEqual(foobar.virsh.domuuid(None),
                          "ddb0cf86-5ba8-4f83-480a-d96f54339219")
         self.assertEqual(foobar.device_tag, 'foo')
         self.assertEqual(foobar.type_name, 'bar')
         self.assertEqual(unicode(foobar),
-              u'<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<foo type="bar" />')
+                         u'<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<foo type="bar" />')
 
 
 class testCharacterXML(LibvirtXMLTestBase):
 
     def test_arbitrart_attributes(self):
-        parallel = librarian.get('parallel')(virsh_instance = self.dummy_virsh)
-        serial = librarian.get('serial')(virsh_instance = self.dummy_virsh)
-        channel = librarian.get('channel')(virsh_instance = self.dummy_virsh)
-        console = librarian.get('console')(virsh_instance = self.dummy_virsh)
+        parallel = librarian.get('parallel')(virsh_instance=self.dummy_virsh)
+        serial = librarian.get('serial')(virsh_instance=self.dummy_virsh)
+        channel = librarian.get('channel')(virsh_instance=self.dummy_virsh)
+        console = librarian.get('console')(virsh_instance=self.dummy_virsh)
         for chardev in (parallel, serial, channel, console):
             attribute1 = utils_misc.generate_random_string(10)
             value1 = utils_misc.generate_random_string(10)
             attribute2 = utils_misc.generate_random_string(10)
             value2 = utils_misc.generate_random_string(10)
-            chardev.add_source(**{attribute1:value1, attribute2:value2})
-            chardev.add_target(**{attribute1:value1, attribute2:value2})
+            chardev.add_source(**{attribute1: value1, attribute2: value2})
+            chardev.add_target(**{attribute1: value1, attribute2: value2})
             self.assertEqual(chardev.sources, chardev.targets)
 
 
@@ -503,7 +484,7 @@ class testSerialXML(LibvirtXMLTestBase):
                                         <target port='-1'/></serial>"
 
     def _from_scratch(self):
-        serial = librarian.get('Serial')(virsh_instance = self.dummy_virsh)
+        serial = librarian.get('Serial')(virsh_instance=self.dummy_virsh)
         self.assertEqual(serial.device_tag, 'serial')
         self.assertEqual(serial.type_name, 'pty')
         self.assertEqual(serial.virsh, self.dummy_virsh)
@@ -511,12 +492,10 @@ class testSerialXML(LibvirtXMLTestBase):
         serial.add_target(port="-1")
         return serial
 
-
     def test_getters(self):
         serial = self._from_scratch()
         self.assertEqual(serial.sources[0]['path'], '/dev/null')
         self.assertEqual(serial.targets[0]['port'], '-1')
-
 
     def test_from_element(self):
         element = xml_utils.ElementTree.fromstring(self.XML)
@@ -526,18 +505,18 @@ class testSerialXML(LibvirtXMLTestBase):
         # Can't in-place modify the dictionary since it's virtual
         serial2.update_target(0, port="0")
         self.assertTrue(serial1 != serial2)
-        serial1.targets = [{'port':'0'}]
+        serial1.targets = [{'port': '0'}]
         self.assertEqual(serial1, serial2)
 
-
     def test_vm_get_by_class(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         serial_devices = vmxml.get_devices(device_type='serial')
         self.assertEqual(len(serial_devices), 4)
 
-
     def test_vm_get_modify(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         devices = vmxml['devices']
         serial1 = devices[0]
         serial2 = devices[1]
@@ -557,8 +536,8 @@ class testSerialXML(LibvirtXMLTestBase):
         # Exercize bind mode
         self.assertEqual(serial3.type_name, 'tcp')
         source_connect = serial3.sources[0]
-        self.assertEqual(source_connect, {'mode':"connect", 'host':'1.2.3.4',
-                                          'service':'2445'})
+        self.assertEqual(source_connect, {'mode': "connect", 'host': '1.2.3.4',
+                                          'service': '2445'})
         self.assertEqual(serial3.protocol_type, 'raw')
         self.assertEqual(serial3.targets[0]['port'], '2')
         # Exercize udp type
@@ -579,13 +558,13 @@ class testAddressXML(LibvirtXMLTestBase):
                           address.new_from_dict,
                           {}, self.dummy_virsh)
         # no type_name attribute
-        element = xml_utils.ElementTree.Element('address', {'foo':'bar'})
+        element = xml_utils.ElementTree.Element('address', {'foo': 'bar'})
         self.assertRaises(xcepts.LibvirtXMLError,
                           address.new_from_element,
                           element, self.dummy_virsh)
         element.set('type', 'foobar')
         new_address = address.new_from_element(element, self.dummy_virsh)
-        the_dict = {'type_name':'foobar', 'foo':'bar'}
+        the_dict = {'type_name': 'foobar', 'foo': 'bar'}
         another_address = address.new_from_dict(the_dict, self.dummy_virsh)
         self.assertEqual(str(new_address), str(another_address))
 
@@ -594,7 +573,8 @@ class testVMXMLDevices(LibvirtXMLTestBase):
 
     def test_channels(self):
         logging.disable(logging.WARNING)
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         channels = vmxml.devices.by_device_tag('channel')
         self.assertEqual(len(channels), 2)
         self.assertTrue(isinstance(channels, vm_xml.VMXMLDevices))
@@ -616,6 +596,7 @@ class testCAPXML(LibvirtXMLTestBase):
                           capxmlbase.get_key2filename_dict)
         self.assertRaises(NotImplementedError,
                           capxmlbase.get_key2value_dict)
+
 
 class testNodedevXMLBase(LibvirtXMLTestBase):
 
@@ -646,14 +627,12 @@ class testNodedevXML(LibvirtXMLTestBase):
         nodedevxml = NodedevXML.new_from_dumpxml('pci_0000_00_00_0')
         self.assertTrue(isinstance(nodedevxml, NodedevXML))
 
-
     def test_get_key2value_dict(self):
         NodedevXML = nodedev_xml.NodedevXML
         xml = NodedevXML.new_from_dumpxml('pci_0000_00_00_0')
         result = xml.get_key2value_dict()
 
         self.assertTrue(isinstance(result, dict))
-
 
     def test_get_key2syspath_dict(self):
         NodedevXML = nodedev_xml.NodedevXML
@@ -675,23 +654,19 @@ class testPCIXML(LibvirtXMLTestBase):
 
         return pcixml
 
-
     def test_static(self):
         PCIXML = nodedev_xml.PCIXML
         result = PCIXML.make_sysfs_sub_path(0x10, 0x20, 0x30, 0x1)
         self.assertEqual(result, 'pci_bus/0010:20/device/0010:20:30.1')
-
 
     def test_get_path(self):
         pcixml = self._from_scratch()
         result = pcixml.get_sysfs_sub_path()
         self.assertEqual(result, 'pci_bus/0010:20/device/0010:20:30.1')
 
-
     def test_get_key2filename_dict(self):
         PCIXML = nodedev_xml.PCIXML
         self.assertTrue(isinstance(PCIXML.get_key2filename_dict(), dict))
-
 
     def test_get_key2value_dict(self):
         pcixml = self._from_scratch()

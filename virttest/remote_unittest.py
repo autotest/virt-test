@@ -1,7 +1,11 @@
 #!/usr/bin/python
 
-import unittest, os
-import common, remote, data_dir
+import unittest
+import os
+import common
+import remote
+import data_dir
+
 
 class RemoteFileTest(unittest.TestCase):
     tmp_dir = data_dir.get_tmp_dir()
@@ -19,7 +23,7 @@ class RemoteFileTest(unittest.TestCase):
         test_file.writelines(self.default_data)
         test_file.close()
         remote_file = remote.RemoteFile(None, "test", None, None, None,
-                                       self.test_file_path)
+                                        self.test_file_path)
         return remote_file
 
     def _read_test_file(self):
@@ -46,7 +50,7 @@ class RemoteFileTest(unittest.TestCase):
 
     def testSub(self):
         remote_file = self._new_remote_file()
-        _pattern2repl = {r"Remote":"Local", r"^Pat.*$":"Replace Line"}
+        _pattern2repl = {r"Remote": "Local", r"^Pat.*$": "Replace Line"}
         remote_file.sub(_pattern2repl)
         test_data = self._read_test_file()
         except_data = ["LocalFile Test.\n",
@@ -63,6 +67,20 @@ class RemoteFileTest(unittest.TestCase):
         remote_file.remove(_pattern_list)
         test_data = self._read_test_file()
         except_data = ["RemoteFile Test."]
+        for index in range(len(except_data)):
+            self.assertEqual(except_data[index], test_data[index])
+        del remote_file
+        test_data = self._read_test_file()
+        self.assertEqual(test_data, self.default_data)
+
+    def testSEEA(self):
+        remote_file = self._new_remote_file()
+        _pattern2repl = {r"Remote": "Local", r"NoMatch": "ADD line."}
+        remote_file.sub_else_add(_pattern2repl)
+        test_data = self._read_test_file()
+        except_data = ["LocalFile Test.\n",
+                       "Pattern Line.\n",
+                       "ADD line."]
         for index in range(len(except_data)):
             self.assertEqual(except_data[index], test_data[index])
         del remote_file

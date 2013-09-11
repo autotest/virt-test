@@ -1,6 +1,8 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import utils, error
 from virttest import utils_misc
+
 
 @error.context_aware
 def run_migration_with_netperf(test, params, env):
@@ -12,19 +14,17 @@ def run_migration_with_netperf(test, params, env):
     4) Migrate the guest in local during netperf clients working.
     5) Repeatedly migrate VM and wait until netperf clients stopped.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
-
 
     def start_netperf_server():
         netserver_cmd = params.get("netserver_cmd")
         (status, output) = session.cmd_status_output(netserver_cmd,
-                                           timeout=netperf_timeout)
+                                                     timeout=netperf_timeout)
         if status:
             raise error.TestFail("Fail to start netserver:\n %s" % output)
-
 
     def start_netperf_client(i=0):
         logging.info("Netperf_%s" % i)
@@ -33,7 +33,6 @@ def run_migration_with_netperf(test, params, env):
             open("Netperf_%s" % i, "w").write(netperf_output)
         except OSError:
             pass
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -54,7 +53,7 @@ def run_migration_with_netperf(test, params, env):
         netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
         for i in params.get("netperf_files").split():
             vm.copy_files_to("%s/%s" % (netperf_dir, i), "/tmp")
-            utils.get_file("%s/%s" % (netperf_dir, i), "/tmp/%s" %i)
+            utils.get_file("%s/%s" % (netperf_dir, i), "/tmp/%s" % i)
         setup_cmd = params.get("setup_cmd")
         session.cmd(setup_cmd, timeout=cmd_timeout)
         error.context("Setup netperf client in host.", logging.info)

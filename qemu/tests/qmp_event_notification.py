@@ -1,4 +1,6 @@
-import logging, time, commands
+import logging
+import time
+import commands
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -10,9 +12,9 @@ def run_qmp_event_notification(test, params, env):
     2) Trigger qmp event in guest.
     3) Try to catch qmp event notification in qmp monitor.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
 
     if not utils_misc.qemu_has_option("qmp"):
@@ -69,7 +71,7 @@ def run_qmp_event_notification(test, params, env):
 
     if qmp_num > 0:
         raise error.TestFail("Did not receive qmp %s event notification"
-                       % event_check)
+                             % event_check)
 
     if params.get("post_event_cmd"):
         send_cmd(params.get("post_event_cmd"))

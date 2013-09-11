@@ -7,6 +7,7 @@ http://libvirt.org/formatdomain.html#elementCharSerial
 from virttest.libvirt_xml import base
 from virttest.libvirt_xml.devices.character import CharacterBase
 
+
 class Parallel(CharacterBase):
 
     __slots__ = CharacterBase.__slots__

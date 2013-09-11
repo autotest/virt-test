@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, utils_net
 from virttest.libvirt_xml import vm_xml
@@ -26,7 +27,7 @@ def check_dumpxml_iface(vm_name, checked_mac, checked_type=None,
     """
     Check interfaces in vm's XML file to get matched one.
 
-    @return: a tuple with a status and an output
+    :return: a tuple with a status and an output
     """
     iface_features = vm_xml.VMXML.get_iface_by_mac(vm_name, checked_mac)
     if iface_features is not None:
@@ -51,7 +52,7 @@ def login_to_check(vm, checked_mac):
     """
     try:
         session = vm.wait_for_login()
-    except Exception, detail: # Do not care Exception's type
+    except Exception, detail:  # Do not care Exception's type
         return (1, "Can not login to vm:%s" % detail)
     status, output = session.cmd_status_output("ip -4 -o link list")
     if status != 0:
@@ -106,7 +107,7 @@ def run_virsh_attach_detach_interface(test, params, env):
         try:
             bridge_list.remove("virbr0")
         except AttributeError:
-            pass # If no virbr0, just pass is ok
+            pass  # If no virbr0, just pass is ok
         logging.debug("Useful bridges:%s", bridge_list)
         # just choosing one bridge on host.
         if len(bridge_list):
@@ -176,9 +177,9 @@ def run_virsh_attach_detach_interface(test, params, env):
             # Exit because it is error_test for attach-interface.
             return
 
-
     # Check dumpxml file whether the interface is added successfully.
-    status, ret = check_dumpxml_iface(vm_name, iface_mac, iface_type, iface_source)
+    status, ret = check_dumpxml_iface(
+        vm_name, iface_mac, iface_type, iface_source)
     if status:
         fail_flag = 1
         result_info.append(ret)

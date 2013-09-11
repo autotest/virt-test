@@ -1,7 +1,10 @@
-import logging, os, time
+import logging
+import os
+import time
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_net, aexpect
+
 
 @error.context_aware
 def run_nic_promisc(test, params, env):
@@ -12,9 +15,9 @@ def run_nic_promisc(test, params, env):
     2) Repeatedly enable/disable promiscuous mode in guest.
     3) Transfer file between host and guest during nic promisc on/off
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def send_cmd_safe(session, cmd, timeout=60):
         logging.debug("Sending command: %s", cmd)

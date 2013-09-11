@@ -8,7 +8,7 @@ def check_domiftune(params):
     """
     Compare inbound and outbound value with guest XML configuration
     and virsh command output.
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     vm = params.get("vm")
@@ -35,7 +35,8 @@ def check_domiftune(params):
     virt_xml_obj = vm_xml.VMXML(virsh_instance=virsh)
 
     if options == "config" and vm and vm.is_alive():
-        domiftune_params = virt_xml_obj.get_iftune_params(vm_name, "--inactive")
+        domiftune_params = virt_xml_obj.get_iftune_params(
+            vm_name, "--inactive")
     elif vm and not vm.is_alive():
         logging.debug("The guest %s isn't running!", vm_name)
         return True
@@ -65,10 +66,11 @@ def check_domiftune(params):
 
     return True
 
+
 def get_domiftune_parameter(params):
     """
     Get the domiftune parameters
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     options = params.get("options")
@@ -92,10 +94,11 @@ def get_domiftune_parameter(params):
         else:
             logging.info(result.stdout)
 
+
 def set_domiftune_parameter(params):
     """
     Set the domiftune parameters
-    @params: the parameter dictionary
+    :params: the parameter dictionary
     """
     vm_name = params.get("vms")
     inbound = params.get("inbound")
@@ -125,6 +128,7 @@ def set_domiftune_parameter(params):
                 error.TestFail("The 'inbound' or/and 'outbound' are"
                                " inconsistent with domiftune XML"
                                " and/or virsh command output")
+
 
 def run_virsh_domiftune(test, params, env):
     """
@@ -158,7 +162,7 @@ def run_virsh_domiftune(test, params, env):
     if start_vm == "no" and vm and vm.is_alive():
         vm.destroy()
 
-    ########## positive and negative testing #########
+    # positive and negative testing #########
 
     if status_error == "no":
         if change_parameters == "no":

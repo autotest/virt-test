@@ -1,4 +1,7 @@
-import logging, re, os, shutil
+import logging
+import re
+import os
+import shutil
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
 
@@ -48,15 +51,13 @@ def run_virsh_pool(test, params, env):
                 found = True
                 if not state == item[1]:
                     logging.debug("State: %s of a given pool: %s"
-                                 " is not shown in the list", state, pool_name)
+                                  " is not shown in the list", state, pool_name)
                     return False
         if found:
             return True
         else:
             logging.debug("Pool: %s is not found in the list", pool_name)
             return False
-
-
 
     def check_list_autostart(pool_name, autostart="no"):
         """
@@ -82,7 +83,6 @@ def run_virsh_pool(test, params, env):
             logging.debug("Pool: %s is not found in the list", pool_name)
             return False
 
-
     def check_vol_list(vol_name, pool_name, pool_target):
         """
         Check volume from the list
@@ -95,7 +95,7 @@ def run_virsh_pool(test, params, env):
             return False
 
         result = re.findall(r"(\w+)\s+(%s/%s)" % (pool_target, vol_name),
-                                str(output.stdout))
+                            str(output.stdout))
         for item in result:
             if vol_name in item[0]:
                 found = True
@@ -126,7 +126,6 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("pool type %s has not yet been"
                                  "supported in the test" % pool_type)
 
-
     # Initialize the variables
     pool_name = params.get("pool_name")
     pool_type = params.get("pool_type")
@@ -136,8 +135,8 @@ def run_virsh_pool(test, params, env):
     vol_name = params.get("vol_name")
 
     logging.info("\n\tPool Name: %s\n\tPool Type: %s\n\tPool Target: %s\n\t"
-                     "Volume Name:%s", pool_name, pool_type,
-                     pool_target, vol_name)
+                 "Volume Name:%s", pool_name, pool_type,
+                 pool_target, vol_name)
     # Run Testcase
     try:
         # Step (1)
@@ -171,7 +170,6 @@ def run_virsh_pool(test, params, env):
         if not check_list_autostart(pool_name, "no"):
             raise error.TestFail("Autostart of the pool: %s marked as yes"
                                  "instead of no" % pool_name)
-
 
         # Step (6)
         result = virsh.pool_autostart(pool_name, ignore_status=True)
@@ -239,7 +237,6 @@ def run_virsh_pool(test, params, env):
             raise error.TestFail("Autostart of pool: %s marked as no"
                                  "instead of yes" % pool_name)
 
-
         # Step (11)
         if check_vol_list(vol_name, pool_name, pool_target):
             raise error.TestFail("Command virsh vol-list succeeded"
@@ -290,18 +287,20 @@ def run_virsh_pool(test, params, env):
                 raise error.TestFail("Command virsh pool-destroy failed")
             result = virsh.pool_undefine(pool_name)
             if result.exit_status != 0:
-                raise error.TestFail("Command virsh pool-undefine failed:\n%s" %
-                                     result.stdout)
+                raise error.TestFail(
+                    "Command virsh pool-undefine failed:\n%s" %
+                    result.stdout)
         elif check_list_state(pool_name, "inactive"):
             result = virsh.pool_undefine(pool_name, ignore_status=True)
             if result.exit_status != 0:
-                raise error.TestFail("Command virsh pool-undefine failed:\n%s" %
-                                     result.stdout)
-
+                raise error.TestFail(
+                    "Command virsh pool-undefine failed:\n%s" %
+                    result.stdout)
 
         try:
-            logging.debug("Deleting the pool target: %s directory", pool_target)
+            logging.debug(
+                "Deleting the pool target: %s directory", pool_target)
             shutil.rmtree(pool_target)
         except OSError, detail:
             raise error.TestFail("Failed to delete the pool target directory"
-                                 "%s:\n %s" % (pool_target, detail) )
+                                 "%s:\n %s" % (pool_target, detail))

@@ -19,10 +19,10 @@ def run_virsh_define(test, params, env):
         # Change name in XML
         logging.info("Rename %s to %s.", vm.name, new_name)
         try:
-            vm = VMXML.vm_rename(vm, new_name, uuid) # give it a new uuid
+            vm = VMXML.vm_rename(vm, new_name, uuid)  # give it a new uuid
         except LibvirtXMLError, detail:
             raise error.TestFail("Rename %s to %s failed:\n%s"
-                                    % (vm.name, new_name, detail))
+                                 % (vm.name, new_name, detail))
 
         # Exercize the defined XML
         try:
@@ -32,7 +32,6 @@ def run_virsh_define(test, params, env):
             fail_info.append("Start guest %s failed:%s" % (vm.name, detail))
         vm.destroy()
         return fail_info
-
 
     # Run test
     vm_name = params.get("main_vm")

@@ -10,10 +10,11 @@ rather than in a git working copy), then we fall back on reading the
 contents of the RELEASE-VERSION file.
 """
 __all__ = ("get_git_version", "get_version", "get_top_commit",
-           "get_current_branch" "get_pretty_version_info")
+           "get_current_branch", "get_pretty_version_info")
 
 
-import os, sys
+import os
+import sys
 import common
 from autotest.client import utils
 from autotest.client.shared import error
@@ -66,7 +67,8 @@ def get_top_commit():
     if _TOP_COMMIT_CACHE is not None:
         return _TOP_COMMIT_CACHE
 
-    _TOP_COMMIT_CACHE = _execute_git_command("git show --summary --pretty='%H' | head -1")
+    _TOP_COMMIT_CACHE = _execute_git_command(
+        "git show --summary --pretty='%H' | head -1")
 
     return _TOP_COMMIT_CACHE
 

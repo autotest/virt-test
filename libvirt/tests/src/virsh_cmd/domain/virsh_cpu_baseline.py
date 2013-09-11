@@ -1,7 +1,9 @@
-import re, os
+import re
+import os
 from autotest.client.shared import error
 from virttest import virsh
 from xml.dom.minidom import parseString
+
 
 def run_virsh_cpu_baseline(test, params, env):
     """
@@ -18,8 +20,8 @@ def run_virsh_cpu_baseline(test, params, env):
         """
         Prepare a xml containing XML CPU descriptions.
 
-        @param: cpu_xmlfile: XML file contains XML CPU descriptions.
-        @param: test_feature: test feature element.
+        :param cpu_xmlfile: XML file contains XML CPU descriptions.
+        :param test_feature: test feature element.
         """
         content = """
 <host>
@@ -47,8 +49,8 @@ def run_virsh_cpu_baseline(test, params, env):
         """
         Check if result output contains tested feature.
 
-        @param: xml_output: virsh cpu-baseline command's result.
-        @param: test_feature: Test feature element.
+        :param xml_output: virsh cpu-baseline command's result.
+        :param test_feature: Test feature element.
         """
         feature_name = ""
         dom = parseString(xml_output)

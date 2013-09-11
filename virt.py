@@ -1,4 +1,8 @@
-import os, sys, logging, imp, Queue
+import os
+import sys
+import logging
+import imp
+import Queue
 from autotest.client import test
 from autotest.client.shared import error
 from virttest import utils_misc, utils_params, utils_env, env_process
@@ -6,6 +10,7 @@ from virttest import data_dir, bootstrap, funcatexit, version
 
 
 class virt(test.test):
+
     """
     Shared test class infrastructure for tests such as the KVM test.
 
@@ -14,7 +19,6 @@ class virt(test.test):
     """
     version = 1
     env_version = utils_env.get_env_version()
-
 
     def initialize(self, params):
         # Change the value of the preserve_srcdir attribute according to
@@ -27,12 +31,11 @@ class virt(test.test):
         self.builddir = os.path.join(virtdir, params.get("vm_type"))
         self.background_errors = Queue.Queue()
 
-
     def verify_background_errors(self):
         """
         Verify if there are any errors that happened on background threads.
 
-        @raise Exception: Any exception stored on the background_errors queue.
+        :raise Exception: Any exception stored on the background_errors queue.
         """
         try:
             exc = self.background_errors.get(block=False)
@@ -40,7 +43,6 @@ class virt(test.test):
             pass
         else:
             raise exc[1], None, exc[2]
-
 
     def run_once(self, params):
         # Convert params to a Params object
@@ -88,7 +90,7 @@ class virt(test.test):
                             raise error.TestError("Directory %s not"
                                                   " exist." % (subtestdir))
                         subtest_dirs += data_dir.SubdirList(subtestdir,
-                                                          bootstrap.test_filter)
+                                                            bootstrap.test_filter)
                     # Verify if we have the correspondent source file for it
                     shared_test_dir = os.path.dirname(self.virtdir)
                     shared_test_dir = os.path.join(shared_test_dir, "tests")
@@ -126,7 +128,8 @@ class virt(test.test):
                         env.save()
                     # Run the test function
                     for t_type, test_module in test_modules:
-                        msg = "Running function: %s.run_%s()" % (t_type, t_type)
+                        msg = "Running function: %s.run_%s()" % (
+                            t_type, t_type)
                         logging.info(msg)
                         run_func = getattr(test_module, "run_%s" % t_type)
                         try:
@@ -178,8 +181,10 @@ class virt(test.test):
                         continue
                     logging.info("VM '%s' is alive.", vm.name)
                     for m in vm.monitors:
-                        logging.info("'%s' has a %s monitor unix socket at: %s",
-                                     vm.name, m.protocol, m.filename)
-                    logging.info("The command line used to start '%s' was:\n%s",
-                                 vm.name, vm.make_qemu_command())
+                        logging.info(
+                            "'%s' has a %s monitor unix socket at: %s",
+                            vm.name, m.protocol, m.filename)
+                    logging.info(
+                        "The command line used to start '%s' was:\n%s",
+                        vm.name, vm.make_qemu_command())
                 raise error.JobError("Abort requested (%s)" % e)

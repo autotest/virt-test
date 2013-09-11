@@ -1,7 +1,10 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir
+
 
 @error.context_aware
 def run_timerdevice_tscsync_change_host_clksource(test, params, env):
@@ -17,9 +20,9 @@ def run_timerdevice_tscsync_change_host_clksource(test, params, env):
     6) Run time-warp-test.
     7) Check the guest is using vsyscall.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     error.context("Check for an appropriate clocksource on host", logging.info)
     host_cmd = "cat /sys/devices/system/clocksource/"

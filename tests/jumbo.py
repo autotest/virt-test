@@ -1,7 +1,10 @@
-import logging, commands, random
+import logging
+import commands
+import random
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_misc, utils_test, utils_net
+
 
 @error.context_aware
 def run_jumbo(test, params, env):
@@ -19,9 +22,9 @@ def run_jumbo(test, params, env):
     9) Verify the path MTU.
     10) Recover the MTU.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     timeout = int(params.get("login_timeout", 360))
     mtu = params.get("mtu", "1500")
@@ -46,12 +49,12 @@ def run_jumbo(test, params, env):
         mac = vm.get_mac_address(0)
         if os_type == "linux":
             ethname = utils_net.get_linux_ifname(session, mac)
-            guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname , mtu)
+            guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname, mtu)
         else:
             connection_id = utils_net.get_windows_nic_attribute(session,
-                                                            "macaddress",
-                                                            mac,
-                                                            "netconnectionid")
+                                                                "macaddress",
+                                                                mac,
+                                                                "netconnectionid")
 
             index = utils_net.get_windows_nic_attribute(session,
                                                         "netconnectionid",
@@ -59,13 +62,12 @@ def run_jumbo(test, params, env):
                                                         "index")
             if os_variant == "winxp":
                 pnpdevice_id = utils_net.get_windows_nic_attribute(session,
-                                                            "netconnectionid",
-                                                             connection_id,
-                                                             "pnpdeviceid")
+                                                                   "netconnectionid",
+                                                                   connection_id,
+                                                                   "pnpdeviceid")
                 cd_num = utils_misc.get_winutils_vol(session)
                 copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_num
                 session.cmd(copy_cmd)
-
 
             reg_set_mtu_pattern = params.get("reg_mtu_cmd")
             mtu_key_word = params.get("mtu_key", "MTU")
@@ -83,7 +85,6 @@ def run_jumbo(test, params, env):
                                                     connection_id,
                                                     mode=mode)
 
-
         error.context("Chaning the MTU of host tap ...", logging.info)
         host_mtu_cmd = "ifconfig %s mtu %s" % (ifname, mtu)
         utils.run(host_mtu_cmd)
@@ -94,16 +95,16 @@ def run_jumbo(test, params, env):
 
         def is_mtu_ok():
             s, _ = utils_test.ping(ip, 1, interface=ifname,
-                                       packetsize=max_icmp_pkt_size,
-                                       hint="do", timeout=2)
+                                   packetsize=max_icmp_pkt_size,
+                                   hint="do", timeout=2)
             return s == 0
 
         def verify_mtu():
             logging.info("Verify the path MTU")
             s, o = utils_test.ping(ip, 10, interface=ifname,
-                                       packetsize=max_icmp_pkt_size,
-                                       hint="do", timeout=15)
-            if s != 0 :
+                                   packetsize=max_icmp_pkt_size,
+                                   hint="do", timeout=15)
+            if s != 0:
                 logging.error(o)
                 raise error.TestFail("Path MTU is not as expected")
             if utils_test.get_loss_ratio(o) != 0:
@@ -114,14 +115,14 @@ def run_jumbo(test, params, env):
         def flood_ping():
             logging.info("Flood with large frames")
             utils_test.ping(ip, interface=ifname,
-                                packetsize=max_icmp_pkt_size,
-                                flood=True, timeout=float(flood_time))
+                            packetsize=max_icmp_pkt_size,
+                            flood=True, timeout=float(flood_time))
 
         def large_frame_ping(count=100):
             logging.info("Large frame ping")
             _, o = utils_test.ping(ip, count, interface=ifname,
-                                       packetsize=max_icmp_pkt_size,
-                                       timeout=float(count) * 2)
+                                   packetsize=max_icmp_pkt_size,
+                                   timeout=float(count) * 2)
             ratio = utils_test.get_loss_ratio(o)
             if ratio != 0:
                 raise error.TestFail("Loss ratio of large frame ping is %s" %
@@ -132,16 +133,16 @@ def run_jumbo(test, params, env):
             for size in range(0, max_icmp_pkt_size + 1, step):
                 logging.info("Ping %s with size %s", ip, size)
                 s, o = utils_test.ping(ip, 1, interface=ifname,
-                                           packetsize=size,
-                                           hint="do", timeout=1)
+                                       packetsize=size,
+                                       hint="do", timeout=1)
                 if s != 0:
                     s, o = utils_test.ping(ip, 10, interface=ifname,
-                                               packetsize=size,
-                                               adaptive=True, hint="do",
-                                               timeout=20)
+                                           packetsize=size,
+                                           adaptive=True, hint="do",
+                                           timeout=20)
 
                     if utils_test.get_loss_ratio(o) > int(params.get(
-                                                      "fail_ratio", 50)):
+                                                          "fail_ratio", 50)):
                         raise error.TestFail("Ping loss ratio is greater "
                                              "than 50% for size %s" % size)
 

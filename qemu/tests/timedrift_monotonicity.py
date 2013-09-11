@@ -1,6 +1,11 @@
-import logging, os, time, re, shutil
+import logging
+import os
+import time
+import re
+import shutil
 from autotest.client.shared import error, utils
 from virttest import utils_test
+
 
 def run_timedrift_monotonicity(test, params, env):
     """
@@ -13,21 +18,22 @@ def run_timedrift_monotonicity(test, params, env):
        and record the time log.
     5) Analyse log if it is exist.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def get_time(cmd, test_time, session):
         if os.path.isfile(host_path):
             os.remove(host_path)
         lasttv = "0"
-        cmd_timeout=int(params.get("cmd_timeout"))
+        cmd_timeout = int(params.get("cmd_timeout"))
         start_time = time.time()
-        while (time.time() - start_time) < test_time :
+        while (time.time() - start_time) < test_time:
             tv = session.cmd_output(cmd, timeout=cmd_timeout)
             if params.get("os_type") == 'windows':
-                list = re.split('[:]',tv)
-                tv = str(int(list[0])*3600 + int(list[1])*60 + float(list[2]))
+                list = re.split('[:]', tv)
+                tv = str(int(list[0]) * 3600 + int(
+                    list[1]) * 60 + float(list[2]))
             if float(tv) < float(lasttv):
                 p_tv = "time value = " + tv + "\n"
                 p_lasttv = "last time value = " + lasttv + "\n"
@@ -52,12 +58,12 @@ def run_timedrift_monotonicity(test, params, env):
 
     host_path = params.get("host_path")
     cmd = params.get("cmd_get_time")
-    test_time = int(params.get("time_linger","60"))
+    test_time = int(params.get("time_linger", "60"))
 
     try:
         # take time
         logging.info("Start take guest time")
-        bg = utils.InterruptedThread(get_time,(cmd,test_time,session1))
+        bg = utils.InterruptedThread(get_time, (cmd, test_time, session1))
         bg.start()
 
         # migration

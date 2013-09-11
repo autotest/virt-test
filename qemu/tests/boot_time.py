@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 
 try:
@@ -17,9 +18,9 @@ def run_boot_time(test, params, env):
     3) Boot up the guest and measure the boot time
     4) set init run level back to the old one
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
 
     vm = env.get_vm(params["main_vm"])
@@ -57,10 +58,11 @@ def run_boot_time(test, params, env):
             vm.wait_for_login(timeout=timeout)
         except Exception:
             logging.warning("Can not restore guest run level, "
-                         "need restore the image")
+                            "need restore the image")
             params["restore_image_after_testing"] = "yes"
 
     if boot_time > expect_time:
-        raise error.TestFail("Guest boot up is taking too long: %ss" % boot_time)
+        raise error.TestFail(
+            "Guest boot up is taking too long: %ss" % boot_time)
 
     session.close()

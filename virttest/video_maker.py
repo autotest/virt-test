@@ -8,7 +8,10 @@ and tools.
 """
 
 
-import os, time, glob, logging
+import os
+import time
+import glob
+import logging
 
 
 __all__ = ['GstPythonVideoMaker', 'video_maker']
@@ -43,20 +46,19 @@ ENCODER_PREFERENCE = ['theora', 'vp8']
 
 
 class GstPythonVideoMaker(object):
+
     '''
     Makes a movie out of screendump images using gstreamer-python
     '''
 
+    CONTAINER_MAPPING = {'ogg': 'oggmux',
+                         'webm': 'webmmux'}
 
-    CONTAINER_MAPPING = {'ogg' : 'oggmux',
-                         'webm' : 'webmmux'}
+    ENCODER_MAPPING = {'theora': 'theoraenc',
+                       'vp8': 'vp8enc'}
 
-    ENCODER_MAPPING = {'theora' : 'theoraenc',
-                       'vp8' : 'vp8enc'}
-
-    CONTAINER_ENCODER_MAPPING = {'ogg' : 'theora',
-                                 'webm' : 'vp8'}
-
+    CONTAINER_ENCODER_MAPPING = {'ogg': 'theora',
+                                 'webm': 'vp8'}
 
     def __init__(self, verbose=False):
         if not GST_PYTHON_INSTALLED:
@@ -65,7 +67,6 @@ class GstPythonVideoMaker(object):
             raise ValueError('python-imaging library was not found')
 
         self.verbose = verbose
-
 
     def get_most_common_image_size(self, input_dir):
         '''
@@ -88,7 +89,6 @@ class GstPythonVideoMaker(object):
                 most_common_size = image_size
         return most_common_size
 
-
     def normalize_images(self, input_dir):
         '''
         GStreamer requires all images to be the same size, so we do it here
@@ -105,13 +105,11 @@ class GstPythonVideoMaker(object):
             if i.size != image_size:
                 i.resize(image_size).save(f)
 
-
     def has_element(self, kind):
         '''
         Returns True if a gstreamer element is available
         '''
         return gst.element_factory_find(kind) is not None
-
 
     def get_container_name(self):
         '''
@@ -124,7 +122,6 @@ class GstPythonVideoMaker(object):
 
         raise ValueError('No suitable container format was found')
 
-
     def get_encoder_name(self):
         '''
         Gets the video encoder available that is the best based on preference
@@ -136,7 +133,6 @@ class GstPythonVideoMaker(object):
 
         raise ValueError('No suitable encoder format was found')
 
-
     def get_element(self, name):
         '''
         Makes and returns and element from the gst factory interface
@@ -144,7 +140,6 @@ class GstPythonVideoMaker(object):
         if self.verbose:
             logging.debug('GStreamer element requested: %s', name)
         return gst.element_factory_make(name, name)
-
 
     def start(self, input_dir, output_file):
         '''

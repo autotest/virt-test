@@ -1,4 +1,8 @@
-import logging, os, glob, re, commands
+import logging
+import os
+import glob
+import re
+import commands
 from autotest.client.shared import error
 from autotest.client.shared import utils
 from virttest import utils_misc, utils_test, remote
@@ -15,9 +19,9 @@ def run_ntttcp(test, params, env):
     2) Start NTttcp in server/client side
     3) Get test results
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
     timeout = int(params.get("timeout"))
@@ -87,8 +91,8 @@ def run_ntttcp(test, params, env):
             log_filename = ("session-%s-%s.log" % (receiver_addr,
                             utils_misc.generate_random_string(4)))
             session = remote.remote_login(client, receiver_addr, port,
-                                               username, password, prompt,
-                                               linesep, log_filename, timeout)
+                                          username, password, prompt,
+                                          linesep, log_filename, timeout)
             session.set_status_test_command("echo %errorlevel%")
         install_ntttcp(session)
         ntttcp_receiver_cmd = params.get("ntttcp_receiver_cmd")
@@ -98,7 +102,8 @@ def run_ntttcp(test, params, env):
             utils_misc.wait_for(lambda: not _wait(), timeout)
             _receiver_ready = True
             rbuf = params.get("fixed_rbuf", b)
-            cmd = ntttcp_receiver_cmd % (session_num, receiver_addr, rbuf, buf_num)
+            cmd = ntttcp_receiver_cmd % (
+                session_num, receiver_addr, rbuf, buf_num)
             r = session.cmd_output(cmd, timeout=timeout,
                                    print_func=logging.debug)
             f.write("Send buffer size: %s\n%s\n%s" % (b, cmd, r))
@@ -122,7 +127,8 @@ def run_ntttcp(test, params, env):
         try:
             global _receiver_ready
             for b in buffers:
-                cmd = ntttcp_sender_cmd % (session_num, receiver_addr, b, buf_num)
+                cmd = ntttcp_sender_cmd % (
+                    session_num, receiver_addr, b, buf_num)
                 # Wait until receiver ready
                 utils_misc.wait_for(_wait, timeout)
                 r = session.cmd_output(cmd, timeout=timeout,

@@ -1,6 +1,8 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import utils_net
+
 
 @error.context_aware
 def run_enable_mq(test, params, env):
@@ -11,9 +13,9 @@ def run_enable_mq(test, params, env):
     2) Login guests one by one
     3) Enable MQ for all virtio nics by ethtool -L
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     login_timeout = int(params.get("login_timeout", 360))
@@ -29,13 +31,14 @@ def run_enable_mq(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
         for i, nic in enumerate(vm.virtnet):
             if "virtio" in nic['nic_model']:
-                ifname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
+                ifname = utils_net.get_linux_ifname(
+                    session, vm.get_mac_address(0))
                 session.cmd_output("ethtool -L %s combined %d"
-                                    % (ifname, queues))
+                                   % (ifname, queues))
                 o = session.cmd_output("ethtool -l %s" % ifname)
                 if len(re.findall("Combined:\s+%d\s" % queues, o)) != 2:
                     raise error.TestError("Fail to enable MQ feature of (%s)"
-                                           % nic.nic_name)
+                                          % nic.nic_name)
 
                 logging.info("MQ feature of (%s) is enabled" % nic.nic_name)
 

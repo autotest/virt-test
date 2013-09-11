@@ -7,9 +7,11 @@ class ParamNotFound(error.TestNAError):
 
 
 class Params(UserDict.IterableUserDict):
+
     """
     A dict-like object passed to every test.
     """
+
     def __getitem__(self, key):
         """ overrides the error messages of missing params[$key] """
         try:
@@ -19,16 +21,14 @@ class Params(UserDict.IterableUserDict):
                                 "Check your cfg files for typos/mistakes" %
                                 key)
 
-
     def objects(self, key):
         """
         Return the names of objects defined using a given key.
 
-        @param key: The name of the key whose value lists the objects
+        :param key: The name of the key whose value lists the objects
                 (e.g. 'nics').
         """
         return self.get(key, "").split()
-
 
     def object_params(self, obj_name):
         """
@@ -40,7 +40,7 @@ class Params(UserDict.IterableUserDict):
         The values of keys with the suffix overwrite the values of their
         suffixless versions.
 
-        @param obj_name: The name of the object (objects are listed by the
+        :param obj_name: The name of the object (objects are listed by the
                 objects() method).
         """
         suffix = "_" + obj_name

@@ -3,6 +3,7 @@ from virttest import utils_test
 
 
 class GuestSuspendBaseTest(utils_test.GuestSuspend):
+
     def do_guest_suspend(self, **args):
         suspend_type = args.get("suspend_type", self.SUSPEND_TYPE_MEM)
 
@@ -35,7 +36,6 @@ class GuestSuspendBaseTest(utils_test.GuestSuspend):
 
         self._cleanup_open_session()
 
-
     def guest_suspend_mem(self, params):
         """
         Suspend a guest os to memory. Support both Linux and Windows guest.
@@ -54,19 +54,18 @@ class GuestSuspendBaseTest(utils_test.GuestSuspend):
           Because WinXP/2003 doesn't record ACPI event into log, this test
           always passes if the guest's driver supports S3
 
-        @param params: Dictionary with test parameters.
-        @param env: Dictionary with the test environment.
+        :param params: Dictionary with test parameters.
+        :param env: Dictionary with the test environment.
 
         """
         self.do_guest_suspend(
-            suspend_type = self.SUSPEND_TYPE_MEM,
+            suspend_type=self.SUSPEND_TYPE_MEM,
             suspend_support_chk_cmd=params.get("s3_support_chk_cmd"),
             suspend_bg_program_setup_cmd=params.get("s3_bg_program_setup_cmd"),
             suspend_bg_program_chk_cmd=params.get("s3_bg_program_chk_cmd"),
             suspend_bg_program_kill_cmd=params.get("s3_bg_program_kill_cmd"),
             suspend_start_cmd=params.get("s3_start_cmd"),
             suspend_log_chk_cmd=params.get("s3_log_chk_cmd"))
-
 
     def guest_suspend_disk(self, params):
         """
@@ -82,11 +81,11 @@ class GuestSuspendBaseTest(utils_test.GuestSuspend):
         6) Verify background program is still running.
         7) Verify guest system log.
 
-        @param params: Dictionary with test parameters.
-        @param env: Dictionary with the test environment.
+        :param params: Dictionary with test parameters.
+        :param env: Dictionary with the test environment.
         """
         self.do_guest_suspend(
-            suspend_type = self.SUSPEND_TYPE_DISK,
+            suspend_type=self.SUSPEND_TYPE_DISK,
             suspend_support_chk_cmd=params.get("s4_support_chk_cmd"),
             suspend_bg_program_setup_cmd=params.get("s4_bg_program_setup_cmd"),
             suspend_bg_program_chk_cmd=params.get("s4_bg_program_chk_cmd"),
@@ -96,10 +95,12 @@ class GuestSuspendBaseTest(utils_test.GuestSuspend):
 
 
 class GuestSuspendNegativeTest(GuestSuspendBaseTest):
+
     """
     This class is used to test the situation which sets 'disable_s3/s4' to '1'
     in qemu cli. Guest should disable suspend function in this case.
     """
+
     def do_guest_suspend(self, **args):
         s, o = self._check_guest_suspend_log(**args)
         if not s:
@@ -112,9 +113,9 @@ def run_guest_suspend(test, params, env):
     """
     Suspend guest to memory/disk, supports both Linux and Windows.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     vms = params.get("vms").split(" ")
     vm = env.get_vm(vms[0])

@@ -12,9 +12,9 @@ def run_migration_with_reboot(test, params, env):
     5) Kill off the source VM.
     6) Log into the destination VM after the migration is finished.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -27,8 +27,8 @@ def run_migration_with_reboot(test, params, env):
 
     try:
         # Reboot the VM in the background
-        bg = utils.InterruptedThread(vm.reboot, kwargs={'session' : session,
-                                     'timeout' : login_timeout})
+        bg = utils.InterruptedThread(vm.reboot, kwargs={'session': session,
+                                     'timeout': login_timeout})
         bg.start()
         try:
             while bg.isAlive():

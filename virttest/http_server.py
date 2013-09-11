@@ -1,5 +1,10 @@
-import os, posixpath, urlparse, urllib, logging
-import BaseHTTPServer, SimpleHTTPServer
+import os
+import posixpath
+import urlparse
+import urllib
+import logging
+import BaseHTTPServer
+import SimpleHTTPServer
 
 
 class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
@@ -20,7 +25,6 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 self.copyfile(f, self.wfile)
                 f.close()
 
-
     def parse_header_byte_range(self):
         range_param = 'Range'
         range_discard = 'bytes='
@@ -32,7 +36,6 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 return (int(begin), int(end))
         return None
 
-
     def copyfile_range(self, source_file, output_file, range_begin, range_end):
         """
         Copies a range of a file to destination.
@@ -41,7 +44,6 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         source_file.seek(range_begin)
         buf = source_file.read(range_size)
         output_file.write(buf)
-
 
     def send_head_range(self, range_begin, range_end):
         path = self.translate_path(self.path)
@@ -75,7 +77,6 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.end_headers()
         return f
 
-
     def translate_path(self, path):
         """
         Translate a /-separated PATH to the local filename syntax.
@@ -94,10 +95,10 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         for word in words:
             _, word = os.path.splitdrive(word)
             _, word = os.path.split(word)
-            if word in (os.curdir, os.pardir): continue
+            if word in (os.curdir, os.pardir):
+                continue
             path = os.path.join(path, word)
         return path
-
 
     def address_string(self):
         '''
@@ -110,10 +111,9 @@ class HTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         '''
         return self.client_address[0]
 
-
     def log_message(self, fmt, *args):
         logging.debug("builtin http server handling request from %s: %s" %
-                      (self.address_string(), fmt%args))
+                      (self.address_string(), fmt % args))
 
 
 def http_server(port=8000, cwd=None, terminate_callable=None):

@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import utils_test, aexpect, env_process
 
@@ -13,9 +14,9 @@ def run_readonly_disk(test, params, env):
     4) Try to copy file to the data disk
     5) Try to copy file from the data disk
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     error.context("Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -29,7 +30,7 @@ def run_readonly_disk(test, params, env):
     src_file = params.get("src_file")
     disk_letter = params.get("disk_letter")
 
-    #update the cdrom letter for winutils
+    # update the cdrom letter for winutils
     cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"
     cdrom_chk_cmd += " cmd && diskpart /s cmd"
 

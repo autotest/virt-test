@@ -6,8 +6,11 @@ This file has the functions that helps
 * To create gluster uri which can be used as disk image file path.
 """
 
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import utils, error
+
 
 @error.context_aware
 def glusterd_start():
@@ -82,7 +85,7 @@ def gluster_vol_create(vol_name, hostname, brick_path):
     gluster_brick_create(brick_path)
 
     cmd = "gluster volume create %s %s:/%s" % (vol_name, hostname,
-                                                       brick_path)
+                                               brick_path)
     error.context("Volume creation failed")
     utils.system(cmd)
 

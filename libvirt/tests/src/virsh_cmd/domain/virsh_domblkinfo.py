@@ -3,6 +3,7 @@ from autotest.client.shared import error
 from virttest import virsh
 from virttest.libvirt_xml import vm_xml
 
+
 def run_virsh_domblkinfo(test, params, env):
     """
     Test command: virsh domblkinfo.
@@ -20,7 +21,7 @@ def run_virsh_domblkinfo(test, params, env):
         2.Perform domblkinfo operation.
         3.Detach the disk.
 
-        @return: Command status and output.
+        :return: Command status and output.
         """
         try:
             source_file = open(test_disk_source, 'wb')
@@ -35,7 +36,7 @@ def run_virsh_domblkinfo(test, params, env):
             output_source = result_source.stdout.strip()
             if driver == "qemu":
                 result_target = virsh.domblkinfo(vm_ref, front_dev,
-                                            ignore_status=True, debug=True)
+                                                 ignore_status=True, debug=True)
                 status_target = result_target.exit_status
                 output_target = result_target.stdout.strip()
             else:
@@ -52,7 +53,7 @@ def run_virsh_domblkinfo(test, params, env):
         """
         if driver == "qemu" and output_source.strip() != output_target.strip():
             raise error.TestFail("Command domblkinfo target/source"
-                                    " got different information!")
+                                 " got different information!")
         if output_source != "":
             lines = output_source.splitlines()
             capacity_cols = lines[0].split(":")
@@ -69,7 +70,7 @@ def run_virsh_domblkinfo(test, params, env):
     # Get all parameters from configuration.
     vm_ref = params.get("domblkinfo_vm_ref")
     device = params.get("domblkinfo_device", "yes")
-    front_dev = params.get ("domblkinfo_front_dev", "vdd")
+    front_dev = params.get("domblkinfo_front_dev", "vdd")
     extra = params.get("domblkinfo_extra", "")
     status_error = params.get("status_error", "no")
     test_attach_disk = os.path.join(test.virtdir, "tmp.img")
@@ -99,14 +100,14 @@ def run_virsh_domblkinfo(test, params, env):
         vm_ref = params.get(vm_ref)
     elif vm_ref == "name":
         vm_ref = "%s %s" % (vm_name, extra)
-    elif  vm_ref == "uuid":
+    elif vm_ref == "uuid":
         vm_ref = domuuid
 
     if vm_ref == "test_attach_disk":
         test_disk_source = test_attach_disk
         disk_size_check = True
         (status_target, output_target,
-        status_source, output_source) = attach_disk_test()
+         status_source, output_source) = attach_disk_test()
     else:
         result_source = virsh.domblkinfo(vm_ref, test_disk_source,
                                          ignore_status=True, debug=True)

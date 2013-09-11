@@ -2,6 +2,7 @@ import re
 from autotest.client.shared import error
 from virttest import virsh
 
+
 def run_virsh_net_destroy(test, params, env):
     """
     Test command: virsh net-destroy.
@@ -28,7 +29,7 @@ def run_virsh_net_destroy(test, params, env):
 
     # Run test case
     if net_ref == "uuid":
-        net_ref  = virsh.net_uuid(network_name).stdout.strip()
+        net_ref = virsh.net_uuid(network_name).stdout.strip()
     elif net_ref == "name":
         net_ref = network_name
 
@@ -46,7 +47,7 @@ def run_virsh_net_destroy(test, params, env):
         raise error.TestError("Prepare network status failed!")
 
     status = virsh.net_destroy(net_ref, extra,
-                                ignore_status=True).exit_status
+                               ignore_status=True).exit_status
 
     # Confirm the network has been destroied.
     if virsh.net_state_dict()[network_name]['active']:
@@ -55,10 +56,10 @@ def run_virsh_net_destroy(test, params, env):
     # Recover network status
     try:
         if (network_current_status == "active" and
-            not virsh.net_state_dict()[network_name]['active']):
+                not virsh.net_state_dict()[network_name]['active']):
             virsh.net_start(network_name)
         if (network_current_status == "inactive" and
-            virsh.net_state_dict()[network_name]['active']):
+                virsh.net_state_dict()[network_name]['active']):
             virsh.net_destroy(network_name)
     except error.CmdError:
         raise error.TestError("Recover network status failed!")

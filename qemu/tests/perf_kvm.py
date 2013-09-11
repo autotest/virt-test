@@ -5,9 +5,9 @@ def run_perf_kvm(test, params, env):
     """
     run perf tool to get kvm events info
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -28,7 +28,8 @@ def run_perf_kvm(test, params, env):
     vm.copy_files_from("/tmp/guest_modules", "/tmp", timeout=transfer_timeout)
 
     perf_record_cmd = "perf kvm --host --guest --guestkallsyms=%s" % vm_kallsyms_path
-    perf_record_cmd += " --guestmodules=%s record -a -o /tmp/perf.data sleep %s " % (vm_modules_path, perf_record_timeout)
+    perf_record_cmd += " --guestmodules=%s record -a -o /tmp/perf.data sleep %s " % (
+        vm_modules_path, perf_record_timeout)
     perf_report_cmd = "perf kvm --host --guest --guestkallsyms=%s" % vm_kallsyms_path
     perf_report_cmd += " --guestmodules=%s report -i /tmp/perf.data --force " % vm_modules_path
 

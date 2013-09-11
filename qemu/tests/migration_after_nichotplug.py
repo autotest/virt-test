@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import utils_test, virt_vm, utils_net
 
@@ -20,11 +21,10 @@ def run_migration_after_nichotplug(test, params, env):
     10) Ping guest's new ip from host.
     11) Re-enabling the primary link.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
-
 
     def set_link(nic_name, up=False):
         for nic in vm.virtnet:

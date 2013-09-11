@@ -1,5 +1,7 @@
+import logging
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
+
 
 def run_virsh_vcpuinfo(test, params, env):
     """
@@ -20,7 +22,7 @@ def run_virsh_vcpuinfo(test, params, env):
     if libvirtd == "off":
         utils_libvirtd.libvirtd_stop()
 
-    #run test case
+    # run test case
     vm_ref = params.get("vcpuinfo_vm_ref")
     domid = vm.get_id()
     domuuid = vm.get_uuid()
@@ -62,14 +64,13 @@ def run_virsh_vcpuinfo(test, params, env):
         # Maintain result format conformance with local test
         return status, output, err
 
-
     if vm_ref == "id":
         vm_ref = domid
     elif vm_ref == "hex_id":
         vm_ref = hex(int(domid))
     elif vm_ref.find("invalid") != -1:
         vm_ref = params.get(vm_ref)
-    elif  vm_ref == "uuid":
+    elif vm_ref == "uuid":
         vm_ref = domuuid
     elif vm_ref == "name":
         vm_ref = "%s %s" % (vm_name, params.get("vcpuinfo_extra"))
@@ -83,14 +84,22 @@ def run_virsh_vcpuinfo(test, params, env):
         output = result.stdout.strip()
         err = result.stderr.strip()
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
-        if status == 0 or err == "":
+        if not status:
+            logging.debug(result)
             raise error.TestFail("Run successfully with wrong command!")
+        # Check the error message in negative case.
+        if not err:
+            logging.debug(result)
+            logging.debug("Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=889276 "
+                          "is helpful for tracing this bug.")
+            raise error.TestFail("No error message for a command error!")
     elif status_error == "no":
-        if status != 0 or output == "":
+        if status:
+            logging.debug(result)
             raise error.TestFail("Run failed with right command")
