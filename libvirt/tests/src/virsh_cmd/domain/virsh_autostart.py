@@ -41,10 +41,10 @@ def run_virsh_autostart(test, params, env):
         Check if the VM autostart
         """
         res = False
-        if autostart_vm == "yes" and vm.is_autostart() and vm.is_alive():
+        if autostart_vm and vm.is_autostart() and vm.is_alive():
             logging.debug("VM autostart as expected")
             res = True
-        if autostart_vm == "no" and not vm.is_autostart() and vm.is_dead():
+        if not autostart_vm and not vm.is_autostart() and vm.is_dead():
             logging.debug("VM not autostart as expected")
             res = True
         return res
