@@ -11,6 +11,7 @@ import fcntl
 import re
 import shutil
 import tempfile
+
 from autotest.client.shared import error
 from autotest.client import utils
 import utils_misc
@@ -1516,11 +1517,15 @@ class VM(virt_vm.BaseVM):
             raise virt_vm.VMStatusError(
                 "VM not paused after restore, it is %s." % state)
 
-    def vcpupin(self, vcpu, cpu):
+    def vcpupin(self, vcpu, cpu_list, options=""):
         """
-        To pin vcpu to cpu
+        To pin vcpu to cpu_list
         """
-        virsh.vcpupin(self.name, vcpu, cpu, uri=self.connect_uri)
+        result = virsh.vcpupin(self.name, vcpu, cpu_list,
+                               options, uri=self.connect_uri)
+        if result.exit_status:
+            raise error.TestFail("Virsh vcpupin command failed.\n"
+                                 "Detail: %s.\n" % result)
 
     def dominfo(self):
         """
