@@ -1232,8 +1232,11 @@ class PciAssignable(object):
 
         # Setup all devices specified for assignment to guest
         for p_id in self.pci_ids:
-            pci_ids = self.get_same_group_devs(p_id)
-            logging.info("Following devices are in same group: %s", pci_ids)
+            if self.device_driver =="vfio-pci":
+                pci_ids = self.get_same_group_devs(p_id)
+                logging.info("Following devices are in same group: %s", pci_ids)
+            else:
+                pci_ids = [p_id]
             for pci_id in pci_ids:
                 short_id = pci_id[5:]
                 drv_path = os.path.join(base_dir, "devices/%s/driver" % pci_id)
