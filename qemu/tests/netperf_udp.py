@@ -1,7 +1,8 @@
 import logging
 import os
+from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_misc, remote, utils_net
+from virttest import utils_misc, remote, utils_net, data_dir
 
 
 @error.context_aware
@@ -65,31 +66,35 @@ def run_netperf_udp(test, params, env):
     m_size = start_size
 
     error.context("Copy netperf to dsthost and guest vm.")
-    netperf_dir = os.path.join(os.environ['AUTODIR'], "tests/netperf2")
-    for i in params.get("netperf_files").split():
-        scp_to_remote("%s/%s" % (netperf_dir, i), "/tmp/")
+    download_link = params.get("netperf_download_link")
+    download_dir = data_dir.get_download_dir()
+    md5sum = params.get("pkg_md5sum")
+    host_netperf_dir = utils.unmap_url_cache(download_dir,
+                                             download_link, md5sum)
+    remote_dir = params.get("tmp_dir", "/tmp")
+    scp_to_remote(host_netperf_dir, remote_dir)
 
     # Setup netpref.
     error.context("Set up netperf on reference machine.", logging.info)
     cmd = params.get("setup_cmd")
-    (s, output) = dsthostssh.get_command_status_output(cmd,
-                                                       timeout=test_timeout)
-    if s != 0:
+    (status, output) = dsthostssh.cmd_status_output(cmd % remote_dir,
+                                                    timeout=test_timeout)
+    if status != 0:
         raise error.TestError("Fail to setup netperf on reference machine.")
     error.context("Setup netperf on guest os.", logging.info)
-    (s, output) = session.get_command_status_output(cmd,
-                                                    timeout=test_timeout)
-    if s != 0:
+    (status, output) = session.cmd_status_output(cmd % remote_dir,
+                                                 timeout=test_timeout)
+    if status != 0:
         raise error.TestError("Fail to setup netperf on guest os.")
 
     # Start netperf server in dsthost.
     cmd = "killall netserver"
-    dsthostssh.get_command_status_output(cmd)
+    dsthostssh.cmd_status_output(cmd)
     cmd = params.get("netserver_cmd")
     txt = "Run netserver on server (dsthost) using control.server."
     error.context(txt, logging.info)
-    (s, output) = dsthostssh.get_command_status_output(cmd)
-    if s != 0:
+    (status, output) = dsthostssh.cmd_status_output(cmd)
+    if status != 0:
         txt = "Fail to start netperf server on remote machine."
         txt += " Command output: %s" % output
         raise error.TestError(txt)
@@ -99,16 +104,27 @@ def run_netperf_udp(test, params, env):
     # Run netperf with message size defined in range.
     msg = "Detail result for netperf udp test with different message size.\n"
     while(m_size <= end_size):
-        cmd = params.get("netperf_cmd") % (dsthost, m_size)
+        test_protocol = params.get("test_protocol", "UDP_STREAM")
+        cmd = params.get("netperf_cmd") % (dsthost, test_protocol, m_size)
         txt = "Run netperf client command in guest: %s" % cmd
         error.context(txt, logging.info)
-        (s, output) = session.get_command_status_output(cmd)
-        if s != 0:
+        (status, output) = session.cmd_status_output(cmd)
+        if status != 0:
             txt = "Fail to execute netperf client side command in guest."
             txt += " Command output: %s" % output
             raise error.TestError(txt)
-        line_tokens = output.splitlines()[6].split()
+        if test_protocol == "UDP_STREAM":
+            speed_index = 6
+        elif test_protocol == "UDP_RR":
+            speed_index = 7
+        else:
+            error.TestNAError("Protocol %s is not support" % test_protocol)
+
+        line_tokens = output.splitlines()[speed_index].split()
+        if not line_tokens:
+            raise error.TestError("Output format is not expected")
         throughput.append(float(line_tokens[5]))
+
         msg += output
         m_size += step
     file(os.path.join(test.debugdir, "udp_results"), "w").write(msg)
@@ -126,8 +142,13 @@ def run_netperf_udp(test, params, env):
     logging.debug("Output of netperf command:\n %s" % msg)
     error.context("Kill netperf server on server (dsthost).")
 
-    cmd = "killall -9 netserver"
     try:
-        dsthostssh.get_command_status_output(cmd)
+        remote_files = "%s/netperf*" % remote_dir
+        dsthostssh.cmd("killall -9 netserver", ignore_all_errors=True)
+        dsthostssh.cmd("rm -rf %s" % remote_files, ignore_all_errors=True)
+        session.cmd("rm -rf %s" % remote_files, ignore_all_errors=True)
+        utils.system("rm -rf %s" % host_netperf_dir, ignore_status=True)
+        session.close()
+        dsthostssh.close()
     except Exception:
         pass
