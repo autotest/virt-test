@@ -2380,7 +2380,13 @@ class DevContainer(object):
                 new_usbs[-1].set_param('id', '%s.%d' % (usb_id, i))
                 new_usbs[-1].set_param('multifunction', 'on')
                 new_usbs[-1].set_param('masterbus', '%s.0' % usb_id)
-                new_usbs[-1].set_param('addr', '1d.%d' % i)
+                # current qemu_devices doesn't support x.y addr. Plug only
+                # the 0th one into this representation.
+                if i == 0:
+                    new_usbs[-1].parent_bus = {'type': 'pci'}
+                    new_usbs[-1].set_param('addr', '0x1d')
+                else:
+                    new_usbs[-1].set_param('addr', '1d.%d' % i)
                 new_usbs[-1].set_param('firstport', 2 * i)
         return new_usbs
 
