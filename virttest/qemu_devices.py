@@ -1161,6 +1161,25 @@ class QSparseBus(object):
         """ Get device in which this bus is present """
         return self.__device
 
+    def match_bus(self, bus_spec, atest=True):
+        """
+        Check if the bus matches the bus_specification.
+        :param bus_spec: Bus specification
+        :type bus_spec: dict
+        :param atest: Match qemu and atest params
+        :type atest: bool
+        :return: True when the bus matches the specification
+        :rtype: bool
+        """
+        for key, value in bus_spec.iteritems():
+            if self.__dict__.get(key, None) != value:
+                if key == 'atype' and atest is not True:
+                    # we want the qemu matching buses, ignore atest spec
+                    continue
+                else:
+                    return False
+        return True
+
 
 class QUSBBus(QSparseBus):
 
@@ -1891,17 +1910,18 @@ class DevContainer(object):
                                                     verbose=False).stdout)
         return self.__execute_qemu_out
 
-    def get_buses(self, bus_spec):
+    def get_buses(self, bus_spec, atype=True):
         """
         :param bus_spec: Bus specification (dictionary)
+        :type bus_spec: dict
+        :param atype: Match qemu and atype params
+        :type atype: bool
         :return: All matching buses
+        :rtype: List of QSparseBus
         """
         buses = []
         for bus in self.__buses:
-            for key, value in bus_spec.iteritems():
-                if not bus.__getattribute__(key) == value:
-                    break
-            else:
+            if bus.match_bus(bus_spec, atype):
                 buses.append(bus)
         return buses
 
