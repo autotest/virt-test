@@ -2,7 +2,7 @@ import logging
 import os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, utils_misc
+from virttest import utils_test, utils_misc, utils_net
 
 
 @error.context_aware
@@ -58,8 +58,15 @@ def run_sr_iov_hotplug_negative(test, params, env):
         msg = "Try to remove sr-iov module in host."
         error.context(msg, logging.info)
         utils.system(modprobe_cmd)
+
+    device = {}
+    device["type"] = params.get("hotplug_device_type", "vf")
+    device['mac'] = utils_net.generate_mac_address_simple()
+    if params.get("device_name"):
+        device["name"] = params.get("device_name")
+
     if vm.pci_assignable is not None:
-        pa_pci_ids = vm.pci_assignable.request_devs(1)
+        pa_pci_ids = vm.pci_assignable.request_devs(device)
     # Probe qemu to verify what is the supported syntax for PCI hotplug
     if vm.monitor.protocol == 'qmp':
         cmd_output = vm.monitor.info("commands")

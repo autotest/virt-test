@@ -1,7 +1,7 @@
 import re
 import logging
 from autotest.client.shared import error
-from virttest import utils_misc, aexpect, utils_test
+from virttest import utils_misc, aexpect, utils_test, utils_net
 
 
 @error.context_aware
@@ -180,8 +180,18 @@ def run_sr_iov_hotplug(test, params, env):
     pci_model = params.get("pci_model", "pci-assign")
     # Need udpate match_string if you use a card other than 82576
     match_string = params.get("match_string", "82576")
+    devices = []
+    device_type = params.get("hotplug_device_type", "vf")
+    for i in xrange(pci_num_range):
+        device = {}
+        device["type"] = device_type
+        device['mac'] = utils_net.generate_mac_address_simple()
+        if params.get("device_name"):
+            device["name"] = params.get("device_name")
+        devices.append(device)
+
     if vm.pci_assignable is not None:
-        pa_pci_ids = vm.pci_assignable.request_devs(pci_num_range)
+        pa_pci_ids = vm.pci_assignable.request_devs(devices)
 
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
