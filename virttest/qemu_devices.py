@@ -2624,9 +2624,9 @@ class DevContainer(object):
                 scsi_hba = "virtio-scsi-pci"
             addr_spec = None
             if scsi_hba == 'lsi53c895a':
-                addr_spec = [['scsi-id', 'lun'], [8, 16384]]
+                addr_spec = [8, 16384]
             elif scsi_hba == 'virtio-scsi-pci':
-                addr_spec = [['scsi-id', 'lun'], [256, 16384]]
+                addr_spec = [256, 16384]
             _, bus, dev_parent = define_hbas('SCSI', scsi_hba, bus, unit, port,
                                               QSCSIBus, addr_spec)
             devices.extend(_)
