@@ -2888,7 +2888,7 @@ class VM(virt_vm.BaseVM):
                                                             "")
                     cert_s = clone.spice_options.get("spice_x509_server_subj",
                                                      "")
-                    cert_subj = "%s" % cert_s.replace('/', ',')[1:]
+                    cert_subj = "%s" % cert_s[1:]
                     cert_subj += host_ip
                     cert_subj = "\"%s\"" % cert_subj
                 else:
@@ -2906,17 +2906,17 @@ class VM(virt_vm.BaseVM):
                         continue
                     # spice_migrate_info requires host_ip, dest_port
                     # client_migrate_info also requires protocol
-                    cmdline = "%s %s" % (command, host_ip)
+                    cmdline = "%s hostname=%s" % (command, host_ip)
                     if command == "client_migrate_info":
-                        cmdline += " %s" % self.params['display']
+                        cmdline += " ,protocol=%s" % self.params['display']
                     if dest_port:
-                        cmdline += " %s" % dest_port
+                        cmdline += ",port=%s" % dest_port
                     if dest_tls_port:
-                        cmdline += " %s" % dest_tls_port
+                        cmdline += ",tls-port=%s" % dest_tls_port
                     if cert_subj:
-                        cmdline += " %s" % cert_subj
+                        cmdline += ",cert-subject=%s" % cert_subj
                     break
-                self.monitor.send_args_cmd(cmdline, convert=False)
+                self.monitor.send_args_cmd(cmdline)
 
             if protocol in ["tcp", "rdma", "x-rdma"]:
                 if local:
