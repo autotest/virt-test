@@ -803,7 +803,6 @@ class PciAssignable(object):
         if self.setup:
             self.sr_iov_setup()
 
-
     def add_device(self, device_type="vf", name=None, mac=None):
         """
         Add device type and name to class.
@@ -872,7 +871,7 @@ class PciAssignable(object):
                 return False
 
             stub_path = os.path.join(base_dir,
-                                     "drivers/%s" %  self.device_driver)
+                                     "drivers/%s" % self.device_driver)
             cmd = "echo '%s' > %s/unbind" % (pci_id, stub_path)
             logging.info("Run command in host: %s" % cmd)
             if os.system(cmd):
@@ -920,7 +919,7 @@ class PciAssignable(object):
             if vf_id in pf.get('vf_ids'):
                 return pf['ethname'], pf["vf_ids"].index(vf_id)
         raise ValueError("Could not find vf id '%s' in '%s'" % (vf_id,
-                                                              self.pf_vf_info))
+                                                                self.pf_vf_info))
 
     def get_pf_vf_info(self):
         """
@@ -1030,8 +1029,8 @@ class PciAssignable(object):
                 dev_id = vf_ids.pop(0)
                 (ethname, vf_num) = self.get_vf_num_by_id(dev_id)
                 set_mac_cmd = "ip link set dev %s vf %s mac %s " % (ethname,
-                                                                vf_num,
-                                                                device["mac"])
+                                                                    vf_num,
+                                                                    device["mac"])
                 utils.run(set_mac_cmd)
 
             elif d_type == "pf":
@@ -1142,7 +1141,7 @@ class PciAssignable(object):
             if not ecap or (int(ecap[0], 16) & 8 != 8):
                 cmd = "echo Y > %s" % lnk
                 error.context("enable PCI passthrough with '%s'" % cmd,
-                               logging.info)
+                              logging.info)
                 utils.run(cmd)
         re_probe = False
         s, o = commands.getstatusoutput('lsmod | grep %s' % self.driver)
@@ -1189,7 +1188,7 @@ class PciAssignable(object):
                         utils.system(cmd)
                     except Exception:
                         logging.error("Failed to write  '%s' to '%s'", value,
-                                       kvm_param)
+                                      kvm_param)
 
         re_probe = False
         s = commands.getstatusoutput('lsmod | grep %s' % self.driver)[0]
@@ -1232,7 +1231,7 @@ class PciAssignable(object):
 
         # Setup all devices specified for assignment to guest
         for p_id in self.pci_ids:
-            if self.device_driver =="vfio-pci":
+            if self.device_driver == "vfio-pci":
                 pci_ids = self.get_same_group_devs(p_id)
                 logging.info("Following devices are in same group: %s", pci_ids)
             else:
@@ -1247,7 +1246,7 @@ class PciAssignable(object):
                 # Judge whether the device driver has been binded to stub
                 if not self.is_binded_to_stub(pci_id):
                     error.context("Bind device %s to stub" % pci_id,
-                                   logging.info)
+                                  logging.info)
                     vendor_id = utils_misc.get_vendor_from_pci_id(short_id)
                     stub_new_id = os.path.join(stub_path, 'new_id')
                     unbind_dev = os.path.join(drv_path, 'unbind')
@@ -1260,11 +1259,11 @@ class PciAssignable(object):
                     for content, f_name in info_write_to_files:
                         try:
                             logging.info("Write '%s' to file '%s'", content,
-                                                                    f_name)
+                                         f_name)
                             utils.open_write_close(f_name, content)
                         except IOError:
                             logging.debug("Failed to write %s to file %s",
-                                           content, f_name)
+                                          content, f_name)
                             continue
 
                     if not self.is_binded_to_stub(pci_id):
