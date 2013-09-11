@@ -633,16 +633,24 @@ class VM(virt_vm.BaseVM):
         def add_uuid(devices, uuid):
             return " -uuid '%s'" % uuid
 
-        def add_pcidevice(devices, host, params):
-            if devices.has_device('pci-assign'):
-                dev = QDevice('pci-assign', parent_bus={'type': 'pci'})
+        def add_pcidevice(devices, host, params, device_driver="pci-assign"):
+            if device_driver == "pci-assign":
+                if (devices.has_device("pci-assign") or
+                                       devices.has_device("kvm-pci-assign")):
+                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                else:
+                    dev = qemu_devices.QCustomDevice('pcidevice',
+                                                    parent_bus={'type': 'pci'})
             else:
-                dev = qemu_devices.QCustomDevice('pcidevice',
-                                                 parent_bus={'type': 'pci'})
+                if devices.has_device(device_driver):
+                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                else:
+                    dev = qemu_devices.QCustomDevice('pcidevice',
+                                                    parent_bus={'type': 'pci'})
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
-            dev.set_param('id', 'id_%s' % host)
+            dev.set_param('id', 'id_%s' % host.replace(":", "."))
             fail_param = []
             for param in params.get("pci-assign_params", "").split():
                 value = params.get(param)
@@ -1283,8 +1291,10 @@ class VM(virt_vm.BaseVM):
                 # TODO: Is every NIC a PCI device?
                 devices.insert(StrDev("NET-%s" % nettype, cmdline=cmd))
             else:
+                device_driver = nic_params.get("device_driver", "pci-assign")
                 pci_id = vm.pa_pci_ids[iov]
-                add_pcidevice(help, pci_id, params=nic_params)
+                add_pcidevice(devices, pci_id, params=nic_params,
+                              device_driver=device_driver)
                 iov += 1
 
         mem = params.get("mem")
@@ -1785,6 +1795,11 @@ class VM(virt_vm.BaseVM):
                 nic_params = params.object_params(nic.nic_name)
                 pa_type = nic_params.get("pci_assignable")
                 if pa_type and pa_type != "no":
+                    device_driver = nic_params.get("device_driver",
+                                                    "pci-assign")
+                    if "mac" not in nic:
+                        self.virtnet.generate_mac_address(nic["nic_name"])
+                    mac = nic["mac"]
                     if self.pci_assignable is None:
                         self.pci_assignable = test_setup.PciAssignable(
                             driver=params.get("driver"),
@@ -1792,10 +1807,12 @@ class VM(virt_vm.BaseVM):
                             host_set_flag=params.get("host_setup_flag"),
                             kvm_params=params.get("kvm_default"),
                             vf_filter_re=params.get("vf_filter_re"),
-                            pf_filter_re=params.get("pf_filter_re"))
+                            pf_filter_re=params.get("pf_filter_re"),
+                            device_driver=device_driver)
                     # Virtual Functions (VF) assignable devices
                     if pa_type == "vf":
-                        self.pci_assignable.add_device(device_type=pa_type)
+                        self.pci_assignable.add_device(device_type=pa_type,
+                                                       mac=mac)
                     # Physical NIC (PF) assignable devices
                     elif pa_type == "pf":
                         self.pci_assignable.add_device(device_type=pa_type,
