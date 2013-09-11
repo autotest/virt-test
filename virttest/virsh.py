@@ -2367,3 +2367,15 @@ def domiftune(name, interface, options=None, inbound=None,
         cmd += " --%s" % options
 
     return command(cmd, **dargs)
+
+
+def autostart(name, options, **dargs):
+    """
+    Autostart a domain
+
+    @return: cmdresult object.
+    """
+    cmd = ("autostart %s %s" % (name, options))
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult

@@ -178,6 +178,18 @@ class VM(virt_vm.BaseVM):
         except error.CmdError:
             return False
 
+    def is_autostart(self):
+        """
+        Return True if VM is autostart.
+        """
+        try:
+            dominfo = (virsh.dominfo(self.name,
+                                     uri=self.connect_uri).stdout.strip())
+            return bool(re.search(r"^Autostart:\s+enable", dominfo,
+                                  re.MULTILINE))
+        except error.CmdError:
+            return False
+
     def exists(self):
         """
         Return True if VM exists.
