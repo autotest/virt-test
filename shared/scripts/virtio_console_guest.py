@@ -1271,6 +1271,7 @@ class VirtioGuestNt(VirtioGuest):
                         raise IOError(msg)
                 except Exception, inst:
                     print inst
+                recvs += _data
         if writefile:
             write_file = open(writefile, 'wb')
             write_file.write(recvs)
