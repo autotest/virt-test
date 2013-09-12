@@ -24,8 +24,8 @@ Internally, accessor methods (get_*(), set_*(), & del_*()) should always
 use __dict_get__(), __dict_set__(), and/or __dict_del__() to manipulate
 properties (otherwise infinite recursion can occur).  In some cases, where
 class or instance attributes are needed (ousdie of __slots__) they must
-be accessed via the super_set(), super_get(), and/or super_del() methods.
-None of the super_*() or the dict_*() methods are intended for use
+be accessed via the __super_set__(), __super_get__(), and/or __super_del__()
+methods. None of the __super_*() or the __dict_*() methods are intended for use
 by test-modules.
 
 Errors originating beneath this module (e.g. w/in virsh or libvirt_vm)
