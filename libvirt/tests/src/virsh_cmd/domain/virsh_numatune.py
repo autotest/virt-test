@@ -3,10 +3,10 @@ import logging
 from autotest.client.shared import error, utils
 from virttest import libvirt_xml, virsh, utils_libvirtd
 try:
-    from autotest.client.shared import utils_cgroup
+    from virttest.staging import utils_cgroup
 except ImportError:
     # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from virttest.staging import utils_cgroup
+    from autotest.client.shared import utils_cgroup
 
 
 def num_numa_nodes():

@@ -5,9 +5,9 @@ from autotest.client.shared import utils, error
 from virttest import virsh
 
 try:
-    from autotest.client.shared import utils_cgroup
-except ImportError:
     from virttest.staging import utils_cgroup
+except ImportError:
+    from autotest.client.shared import utils_cgroup
 
 
 def run_virsh_schedinfo_qemu_posix(test, params, env):

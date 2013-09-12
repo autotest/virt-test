@@ -5,9 +5,9 @@ from virttest import virsh, utils_libvirtd
 
 
 try:
-    from autotest.client.shared import utils_memory
-except ImportError:
     from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client.shared import utils_memory
 
 
 def run_virsh_nodememstats(test, params, env):
