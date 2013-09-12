@@ -88,6 +88,14 @@ if __name__ == "__main__":
     if shell_pid == 0:
         # Child process: run the command in a subshell
         if len(command) > 255:
+            new_stack = None
+            if len(command) > 2000000:
+                # Stack size would probably not suffice (and no open files)
+                # (1 + len(command) * 4 / 8290304) * 8196
+                # 2MB => 8196kb, 4MB => 16392, ...
+                new_stack = (1 + len(command) / 2072576) * 8196
+                command = "ulimit -s %s\nulimit -n 819200\n%s" % (new_stack,
+                                                                  command)
             tmp_file = tempfile.mktemp(suffix='.sh',
                                        prefix='autotest', dir="/tmp")
             fd_cmd = open(tmp_file, "w")
