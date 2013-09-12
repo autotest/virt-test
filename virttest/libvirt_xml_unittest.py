@@ -73,6 +73,7 @@ class LibvirtXMLTestBase(unittest.TestCase):
                       '         <source mode="bar2" path="bar3" />'
                       '         <target name="bar4" type="bar5" />'
                       '       </channel>'
+                      '       <graphics type="vnc" port="-1" autoport="yes"/>'
                       '    </devices>'
                       '    <seclabel type="sec_type" model="sec_model"\
                                                     relabel="sec_relabel">'
@@ -585,6 +586,29 @@ class testVMXMLDevices(LibvirtXMLTestBase):
         self.assertEqual(len(channels), 0)
         self.assertFalse(one == two)
 
+    def test_graphics(self):
+        logging.disable(logging.WARNING)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
+        devices = vmxml.devices
+        # Assume only one graphics device, take first in list
+        graphics_index = devices.index(devices.by_device_tag('graphics')[0])
+        # Make copy of existing graphics device
+        graphics = devices[graphics_index]
+        # Modify copy
+        graphics.passwd = 'foobar'
+        # Remove existing graphics device
+        del devices[graphics_index]
+        # Add modified copy (another copy)
+        devices.append(graphics)
+        # clean up graphics temp files
+        del graphics
+        # Copy modified devices to vm
+        vmxml.devices = devices
+        # clean up devices temp files
+        del devices
+        # Check result
+        self.assertEqual(vmxml.devices[-1].passwd, 'foobar')
 
 class testCAPXML(LibvirtXMLTestBase):
 
