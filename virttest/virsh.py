@@ -65,7 +65,7 @@ class VirshBase(propcan.PropCanBase):
     Base Class storing libvirt Connection & state to a host
     """
 
-    __slots__ = ('uri', 'ignore_status', 'debug', 'virsh_exec')
+    __slots__ = ('uri', 'ignore_status', 'debug', 'virsh_exec', 'readonly')
 
     def __init__(self, *args, **dargs):
         """
@@ -76,6 +76,7 @@ class VirshBase(propcan.PropCanBase):
         init_dict['uri'] = init_dict.get('uri', None)
         init_dict['debug'] = init_dict.get('debug', False)
         init_dict['ignore_status'] = init_dict.get('ignore_status', False)
+        init_dict['readonly'] = init_dict.get('readonly', False)
         super(VirshBase, self).__init__(init_dict)
 
     def get_uri(self):
@@ -446,6 +447,7 @@ def command(cmd, **dargs):
     # Caller deals with errors
     ignore_status = dargs.get('ignore_status', True)
     session_id = dargs.get('session_id', None)
+    readonly = dargs.get('readonly', False)
 
     # Check if this is a VirshPersistent method call
     if session_id:
@@ -459,12 +461,18 @@ def command(cmd, **dargs):
         logging.debug("Running virsh command: %s", cmd)
 
     if session:
-        # Utilize persistent virsh session
+        # Utilize persistant virsh session, not suit for readonly mode
+        if readonly:
+            logging.debug("Ignore readonly flag for this virsh session")
         ret = session.cmd_result(cmd, ignore_status)
         # Mark return value with session it came from
         ret.from_session_id = session_id
     else:
         # Normal call to run virsh command
+        # Readonly mode
+        if readonly:
+            cmd = " -r " + cmd
+
         if uri:
             # uri argument IS being used
             uri_arg = " -c '%s' " % uri
