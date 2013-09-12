@@ -15,19 +15,19 @@ from virttest.aexpect import ExpectTimeoutError
 from virttest.aexpect import ExpectProcessTerminatedError
 from virttest.aexpect import ShellTimeoutError
 try:
-    from autotest.client.shared.utils_cgroup import Cgroup
-    from autotest.client.shared.utils_cgroup import CgroupModules
-    from autotest.client.shared.utils_cgroup import get_load_per_cpu
-except ImportError:
-    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
     from virttest.staging.utils_cgroup import Cgroup
     from virttest.staging.utils_cgroup import CgroupModules
     from virttest.staging.utils_cgroup import get_load_per_cpu
+except ImportError:
+    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
+    from autotest.client.shared.utils_cgroup import Cgroup
+    from autotest.client.shared.utils_cgroup import CgroupModules
+    from autotest.client.shared.utils_cgroup import get_load_per_cpu
 
 try:
-    from autotest.client.shared import utils_memory
-except ImportError:
     from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client.shared import utils_memory
 
 
 @error.context_aware

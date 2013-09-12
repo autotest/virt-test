@@ -8,11 +8,11 @@ from autotest.client.shared import error
 from virttest import virsh, libvirt_vm
 
 try:
-    from autotest.client.shared import utils_memory
-    from autotest.client.shared import utils_cgroup
-except ImportError:
     from virttest.staging import utils_memory
     from virttest.staging import utils_cgroup
+except ImportError:
+    from autotest.client.shared import utils_memory
+    from autotest.client.shared import utils_cgroup
 
 
 def run_virsh_memtune(test, params, env):

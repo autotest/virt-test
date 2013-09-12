@@ -5,9 +5,9 @@ from autotest.client import utils
 from virttest import utils_test
 
 try:
-    from autotest.client.shared import utils_memory
-except ImportError:
     from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client.shared import utils_memory
 
 
 @error.context_aware

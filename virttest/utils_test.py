@@ -50,15 +50,15 @@ import env_process
 import virttest
 
 try:
-    from autotest.client.shared import utils_cgroup
+    from virttest.staging import utils_cgroup
 except ImportError:
     # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from virttest.staging import utils_cgroup
+    from autotest.client.shared import utils_cgroup
 
 try:
-    from autotest.client.shared import utils_memory
-except ImportError:
     from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client.shared import utils_memory
 
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
