@@ -275,8 +275,8 @@ class AccessorGeneratorBase(object):
         """
         Set reference on objectified libvirtxml instance to callable_inst
         """
-        self.libvirtxml.super_set(self.accessor_name(operation),
-                                  callable_inst)
+        self.libvirtxml.__super_set__(self.accessor_name(operation),
+                                      callable_inst)
 
 
 # Implementation of specific accessor generator subclasses follows

@@ -93,14 +93,14 @@ class PoolTestBase(unittest.TestCase):
                                        ignore_status=True)
 
         # Use defined virsh methods above
-        self.bogus_virsh.super_set('pool_list', self._pool_list)
-        self.bogus_virsh.super_set('pool_info', self._pool_info)
-        self.bogus_virsh.super_set('pool_define_as', self._pool_define_as)
-        self.bogus_virsh.super_set('pool_build', self._pool_build)
-        self.bogus_virsh.super_set('pool_start', self._pool_start)
-        self.bogus_virsh.super_set('pool_destroy', self._pool_destroy)
-        self.bogus_virsh.super_set('pool_undefine', self._pool_undefine)
-        self.bogus_virsh.super_set('pool_autostart', self._pool_autostart)
+        self.bogus_virsh.__super_set__('pool_list', self._pool_list)
+        self.bogus_virsh.__super_set__('pool_info', self._pool_info)
+        self.bogus_virsh.__super_set__('pool_define_as', self._pool_define_as)
+        self.bogus_virsh.__super_set__('pool_build', self._pool_build)
+        self.bogus_virsh.__super_set__('pool_start', self._pool_start)
+        self.bogus_virsh.__super_set__('pool_destroy', self._pool_destroy)
+        self.bogus_virsh.__super_set__('pool_undefine', self._pool_undefine)
+        self.bogus_virsh.__super_set__('pool_autostart', self._pool_autostart)
         self.sp = libvirt_storage.StoragePool(virsh_instance=self.bogus_virsh)
 
 
