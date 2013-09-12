@@ -1205,11 +1205,25 @@ class VirtioGuestNt(VirtioGuest):
             try:
                 while len(data) < length:
                     data += "%c" % random.randrange(255)
-                _ret, _len = win32file.WriteFile(port, data)
-                if _ret:
-                    msg = ("Error occurred while sending data, "
-                           "err=%s, sentlen=%s" % (_ret, _len))
-                    raise IOError(msg)
+                # In Windows guest should not wirte big data to port directly.
+                # When transfer big data should cut them to small pieces.
+                if len(data) > 4096:
+                    _len = 0
+                    while _len <= len(data) - 4096:
+                        send_data = data[_len: _len + 4096]
+                        _ret, _len_once = win32file.WriteFile(port, send_data)
+                        _len += _len_once
+                        if _ret:
+                            msg = ("Error occured while sending data, "
+                                   "err=%s, sentlen=%s" % (_ret, _len))
+                            raise IOError(msg)
+                else:
+                    _ret, _len = win32file.WriteFile(port, data)
+                    if _ret:
+                        msg = ("Error occured while sending data, "
+                               "err=%s, sentlen=%s" % (_ret, _len))
+                        raise IOError(msg)
+
                 writes = _len
             except Exception, inst:
                 print inst
