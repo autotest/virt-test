@@ -190,9 +190,8 @@ def run_multi_disk(test, params, env):
     error.context("Start the guest with new disks", logging.info)
     for vm_name in params.objects("vms"):
         vm_params = params.object_params(vm_name)
-        for image_name in vm_params.objects("images"):
-            image_params = vm_params.object_params(image_name)
-            env_process.preprocess_image(test, image_params, image_name)
+        env_process.process_images(env_process.preprocess_image, test,
+                                   vm_params)
 
     error.context("Start the guest with those disks", logging.info)
     vm = env.get_vm(params["main_vm"])
