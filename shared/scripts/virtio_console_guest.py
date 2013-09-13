@@ -1297,6 +1297,21 @@ class VirtioGuestNt(VirtioGuest):
                    (length, len(recvs)))
 
 
+    def clean_port(self, port, bfr=1024):
+        port = self._open([port])[0]
+        _data = "init"
+        while len(_data) > 0:
+            try:
+                _ret, _data = win32file.ReadFile(port, bfr)
+                if _ret:
+                    msg = ("Error occured while receiving data, "
+                           "err=%s, read=%s" % (_ret, _data))
+                    raise IOError(msg)
+            except Exception, inst:
+                print inst
+        print "PASS: Reset socket"
+
+
 def is_alive():
     """
     Check is only main thread is alive and if guest react.
