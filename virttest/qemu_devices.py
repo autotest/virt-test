@@ -1550,6 +1550,24 @@ class QFloppyBus(QDenseBus):
         device.set_param('property', self._addr2stor(addr))
 
 
+class QOldFloppyBus(QDenseBus):
+    """
+    Floppy bus (-drive index=n)
+    """
+    def __init__(self, busid, aobject=None):
+        """ property <= [driveA, driveB] """
+        super(QOldFloppyBus, self).__init__(None, [['index'], [2]], busid,
+                                         'floppy', aobject)
+
+    def _update_device_props(self, device, addr):
+        """ Always set props """
+        self._set_device_props(device, addr)
+
+    def _set_device_props(self, device, addr):
+        """ Change value to drive{A,B,...} """
+        device.set_param('index', self._addr2stor(addr))
+
+
 #
 # Device container (device representation of VM)
 # This class represents VM by storing all devices and their connections (buses)
@@ -2168,8 +2186,13 @@ class DevContainer(object):
             devices.append(QStringDevice('ICH9-ahci', {'addr': '0x1f'},
                                          parent_bus={'type': 'pci'},
                                          child_bus=QAHCIBus('ide')))
-            devices.append(QStringDevice('fdc',
-                                         child_bus=QFloppyBus('floppy')))
+            if self.has_option('device') and self.has_option("global"):
+                devices.append(QStringDevice('fdc',
+                                             child_bus=QFloppyBus('floppy')))
+            else:
+                devices.append(QStringDevice('fdc',
+                                             child_bus=QOldFloppyBus('floppy'))
+                               )
             return devices
 
         def machine_i440FX(cmd=False):
@@ -2190,8 +2213,13 @@ class DevContainer(object):
             devices.append(QStringDevice('PIIX3', {'addr': 1},
                                          parent_bus={'type': 'pci'}))
             devices.append(QStringDevice('ide', child_bus=QIDEBus('ide')))
-            devices.append(QStringDevice('fdc',
-                                         child_bus=QFloppyBus('floppy')))
+            if self.has_option('device') and self.has_option("global"):
+                devices.append(QStringDevice('fdc',
+                                             child_bus=QFloppyBus('floppy')))
+            else:
+                devices.append(QStringDevice('fdc',
+                                             child_bus=QOldFloppyBus('floppy'))
+                               )
             return devices
 
         def machine_other(cmd=False):
