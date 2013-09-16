@@ -257,10 +257,12 @@ def process_command(test, params, env, command, command_timeout,
 
 
 class _CreateImages(threading.Thread):
+
     """
     Thread which creates images. In case of failure it stores the exception
     in self.exc_info
     """
+
     def __init__(self, image_func, test, images, params, exit_event):
         threading.Thread.__init__(self)
         self.image_func = image_func

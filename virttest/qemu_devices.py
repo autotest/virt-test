@@ -1551,13 +1551,15 @@ class QFloppyBus(QDenseBus):
 
 
 class QOldFloppyBus(QDenseBus):
+
     """
     Floppy bus (-drive index=n)
     """
+
     def __init__(self, busid, aobject=None):
         """ property <= [driveA, driveB] """
         super(QOldFloppyBus, self).__init__(None, [['index'], [2]], busid,
-                                         'floppy', aobject)
+                                            'floppy', aobject)
 
     def _update_device_props(self, device, addr):
         """ Always set props """
