@@ -2508,7 +2508,7 @@ class DevContainer(object):
             if media != 'cdrom':    # ignore only 'disk'
                 media = None
 
-        if not self.has_option(r"boot=on\|off"):
+        if not ("[,boot=on|off]" in self.get_help_text()):
             if boot in ('yes', 'on', True):
                 bootindex = "1"
             boot = None
