@@ -1448,7 +1448,7 @@ class VM(virt_vm.BaseVM):
                 data_dir.get_data_dir(),
                 image_params["floppy_name"])
             devs = devices.images_define_by_params(floppy_name, image_params,
-                                                   'floppy')
+                                                   media='')
             for _ in devs:
                 devices.insert(_)
 
