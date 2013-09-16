@@ -1,4 +1,6 @@
-import logging, re, uuid
+import logging
+import re
+import uuid
 from autotest.client.shared import error
 from virttest import utils_test, aexpect, utils_misc
 
@@ -16,19 +18,19 @@ def run_usb_storage(test, params, env):
     6) Check usb removable option (optional)
     7) Check usb min_io_size/opt_io_size option (optional)
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     @error.context_aware
     def _verify_string(regex_str, string, expect_result, search_opt=0):
         """
         Verify USB storage device in monitor
 
-        @param regex_str: Regex for checking command output
-        @param string: The string which will be checked
-        @param expect_result: The expected string
-        @param search_opt: Search option for re module.
+        :param regex_str: Regex for checking command output
+        :param string: The string which will be checked
+        :param expect_result: The expected string
+        :param search_opt: Search option for re module.
         """
         def _compare_str(act, exp, ignore_case):
             str_func = lambda x: x
@@ -55,11 +57,11 @@ def run_usb_storage(test, params, env):
         fail_log = []
         if isinstance(actual_result, tuple):
             for i, v in enumerate(expect_result):
-                ret =  _compare_str(actual_result[i], v, ignore_case)
+                ret = _compare_str(actual_result[i], v, ignore_case)
                 if ret:
                     fail_log.append(ret)
         else:
-            ret =  _compare_str(actual_result, expect_result[0], ignore_case)
+            ret = _compare_str(actual_result, expect_result[0], ignore_case)
             if ret:
                 fail_log.append(ret)
 
@@ -68,10 +70,8 @@ def run_usb_storage(test, params, env):
             raise error.TestFail("Could not find expected string:\n %s" %
                                  ("\n".join(fail_log)))
 
-
     def _do_io_test_guest(session):
         utils_test.run_virt_sub_test(test, params, env, "format_disk")
-
 
     @error.context_aware
     def _restart_vm(options):
@@ -85,10 +85,8 @@ def run_usb_storage(test, params, env):
         vm.create(params=new_params)
         vm.verify_alive()
 
-
     def _login():
         return vm.wait_for_login(timeout=login_timeout)
-
 
     def _get_usb_disk_name_in_guest(session):
         def _get_output():
@@ -104,7 +102,6 @@ def run_usb_storage(test, params, env):
         if devname:
             return devname[0]
         return "sda"
-
 
     @error.context_aware
     def _check_serial_option(serial, regex_str, expect_str):
@@ -125,7 +122,6 @@ def run_usb_storage(test, params, env):
 
         session.close()
 
-
     @error.context_aware
     def _check_removable_option(removable, expect_str):
         error.context("Set removable option to '%s'" % removable, logging.info)
@@ -144,7 +140,6 @@ def run_usb_storage(test, params, env):
         _do_io_test_guest(session)
 
         session.close()
-
 
     @error.context_aware
     def _check_io_size_option(min_io_size="512", opt_io_size="0"):
@@ -173,11 +168,11 @@ def run_usb_storage(test, params, env):
             expected_min_size = min_io_size
         else:
             expected_min_size = "512"
-        _verify_string("(\d+)\n(\d+)", output, [expected_min_size, opt_io_size])
+        _verify_string(
+            "(\d+)\n(\d+)", output, [expected_min_size, opt_io_size])
         _do_io_test_guest(session)
 
         session.close()
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

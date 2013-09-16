@@ -1,4 +1,6 @@
-import os, logging, sys
+import os
+import logging
+import sys
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -12,9 +14,9 @@ def run_guest_test(test, params, env):
     3) Wait for script execution to complete.
     4) Pass/fail according to exit status of script.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
     reboot = params.get("reboot", "no")
@@ -56,7 +58,8 @@ def run_guest_test(test, params, env):
             logging.debug("Clean directory succeeded.")
 
             # then download the resource.
-            rsc_cmd = "cd %s && %s %s" % (dst_rsc_dir, download_cmd, rsc_server)
+            rsc_cmd = "cd %s && %s %s" % (
+                dst_rsc_dir, download_cmd, rsc_server)
             session.cmd(rsc_cmd, timeout=test_timeout)
             logging.info("Download resource finished.")
         else:
@@ -93,9 +96,9 @@ def run_guest_test_background(test, params, env):
        non-zero return code.
     5) If no exception caught, return 0
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def flush():
@@ -135,11 +138,11 @@ def wait_guest_test_background(pid):
     """
     Wait for background guest_test finish.
 
-    @param pid: Pid of the child process executing background guest_test
+    :param pid: Pid of the child process executing background guest_test
     """
     logging.info("Waiting for background guest_test to finish ...")
 
-    (pid, s) = os.waitpid(pid,0)
+    (pid, s) = os.waitpid(pid, 0)
     status = os.WEXITSTATUS(s)
     if status != 0:
         return False

@@ -1,4 +1,9 @@
-import logging, time, random, os, commands, re
+import logging
+import time
+import random
+import os
+import commands
+import re
 from autotest.client.shared import error
 from virttest import aexpect, utils_test, data_dir
 
@@ -11,17 +16,17 @@ def run_ksm_base(test, params, env):
     runs out of memory (it is expected to pause the guest system, wait until
     some process returns memory and bring the guest back to life)
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def _start_allocator(vm, session, timeout):
         """
         Execute guest script and wait until it is initialized.
 
-        @param vm: VM object.
-        @param session: Remote session to a VM object.
-        @param timeout: Timeout that will be used to verify if guest script
+        :param vm: VM object.
+        :param session: Remote session to a VM object.
+        :param timeout: Timeout that will be used to verify if guest script
                 started properly.
         """
         logging.debug("Starting guest script on guest %s", vm.name)
@@ -38,20 +43,20 @@ def run_ksm_base(test, params, env):
         Execute a given command on guest script main loop, indicating the vm
         the command was executed on.
 
-        @param command: Command that will be executed.
-        @param vm: VM object.
-        @param session: Remote session to VM object.
-        @param timeout: Timeout used to verify expected output.
+        :param command: Command that will be executed.
+        :param vm: VM object.
+        :param session: Remote session to VM object.
+        :param timeout: Timeout used to verify expected output.
 
-        @return: Tuple (match index, data)
+        :return: Tuple (match index, data)
         """
         logging.debug("Executing '%s' on guest script loop, vm: %s, timeout: "
                       "%s", command, vm.name, timeout)
         session.sendline(command)
         try:
             (match, data) = session.read_until_last_line_matches(
-                                                            ["PASS:", "FAIL:"],
-                                                            timeout)
+                ["PASS:", "FAIL:"],
+                timeout)
         except aexpect.ExpectProcessTerminatedError, exc:
             e_str = ("Failed to execute command '%s' on guest script, "
                      "vm '%s': %s" % (command, vm.name, str(exc)))

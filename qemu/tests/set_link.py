@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_test
 
+
 @error.context_aware
 def run_set_link(test, params, env):
     """
@@ -18,9 +19,9 @@ def run_set_link(test, params, env):
        6.3) Copy this file from guest to host.
        6.4) Check if file transfers ended good.
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = utils_test.get_living_vm(env, params["main_vm"])
     timeout = float(params.get("login_timeout", 360))
@@ -28,12 +29,11 @@ def run_set_link(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     session.close()
 
-
     def set_link_test(linkid):
         """
         Issue set_link commands and test its function
 
-        @param linkid: id of netdev or devices to be tested
+        :param linkid: id of netdev or devices to be tested
         """
         ip = vm.get_address(0)
         error.context("Disable guest link by set_link", logging.info)

@@ -1,6 +1,8 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import utils_v2v
+
 
 def run_linux_vm_check(test, params, env):
     """
@@ -60,7 +62,7 @@ def run_linux_vm_check(test, params, env):
     pci = check_obj.get_vm_pci_list()
     if os_version != '3':
         if (re.search('[Vv]irtio network', pci) and
-            re.search('[Vv]irtio block', pci)):
+                re.search('[Vv]irtio block', pci)):
             if target == "ovirt":
                 logging.info("SUCCESS")
             elif (target != "ovirt" and
@@ -79,7 +81,7 @@ def run_linux_vm_check(test, params, env):
         logging.info("SUCCESS")
 
     logging.info("Check vmware tools")
-    if check_obj.has_vmware_tools() == False:
+    if check_obj.has_vmware_tools() is False:
         logging.info("SUCCESS")
     else:
         raise error.TestFail("FAIL")

@@ -1,15 +1,16 @@
 from virttest import utils_v2v
 
+
 def get_args_dict(params):
     args_dict = {}
-    keys_list = [ 'target', 'vms', 'hypervisor',
-                  'hostname', 'storage', 'network',
-                  'netrc', 'username', 'password' ]
+    keys_list = ['target', 'vms', 'hypervisor',
+                 'hostname', 'storage', 'network',
+                 'netrc', 'username', 'password']
 
     for key in keys_list:
         val = params.get(key)
         if val is None:
-            raise KeyError("%s doesn't exist!!!" %key)
+            raise KeyError("%s doesn't exist!!!" % key)
         else:
             args_dict[key] = val
 

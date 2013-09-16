@@ -1,4 +1,5 @@
-import time, logging
+import time
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -12,9 +13,9 @@ def run_shutdown(test, params, env):
        monitor command (depending on the value of shutdown_method)
     3) Wait until the guest is down
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -27,7 +28,7 @@ def run_shutdown(test, params, env):
             # Send a shutdown command to the guest's shell
             session.sendline(vm.get_params().get("shutdown_command"))
             error.context("waiting VM to go down (shutdown shell cmd)",
-                                                          logging.info)
+                          logging.info)
         elif params.get("shutdown_method") == "system_powerdown":
             # Sleep for a while -- give the guest a chance to finish booting
             time.sleep(float(params.get("sleep_before_powerdown", 10)))

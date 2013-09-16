@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client.shared import utils
 from virttest import utils_test, funcatexit
@@ -22,9 +24,9 @@ def run_trans_hugepage(test, params, env):
     1) Smoke test
     2) Stress test
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def get_mem_status(params, role):
         if role == "host":
@@ -35,7 +37,6 @@ def run_trans_hugepage(test, params, env):
             if h.startswith("%s" % params):
                 output = re.split('\s+', h)[1]
         return output
-
 
     dd_timeout = float(params.get("dd_timeout", 900))
     mem = params['mem']
@@ -69,7 +70,7 @@ def run_trans_hugepage(test, params, env):
         failures.append(e_msg)
 
     # Protect system from oom killer
-    if int(get_mem_status('MemFree', 'guest')) / 1024 < mem :
+    if int(get_mem_status('MemFree', 'guest')) / 1024 < mem:
         mem = int(get_mem_status('MemFree', 'guest')) / 1024
 
     session.cmd("mkdir -p %s" % mem_path)

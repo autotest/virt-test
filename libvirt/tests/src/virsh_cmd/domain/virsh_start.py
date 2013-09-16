@@ -3,9 +3,11 @@ from virttest import remote, libvirt_vm, virsh, libvirt_xml, utils_libvirtd
 
 
 class StartError(Exception):
+
     """
     Error in starting vm.
     """
+
     def __init__(self, vm_name, output):
         Exception.__init__(self)
         self.vm_name = vm_name
@@ -13,8 +15,8 @@ class StartError(Exception):
 
     def __str__(self):
         return str("Start vm %s Failed.\n"
-                    "Output:%s"
-                    % (self.vm_name,self.output))
+                   "Output:%s"
+                   % (self.vm_name, self.output))
 
 
 def do_virsh_start(vm_name):
@@ -23,7 +25,7 @@ def do_virsh_start(vm_name):
 
     Throws a StartError if execute virsh start command failed.
 
-    @param vm_ref: option of virsh start command.
+    :param vm_ref: option of virsh start command.
     """
     cmd_result = virsh.command("start %s" % vm_name)
 
@@ -41,7 +43,7 @@ def run_virsh_start(test, params, env):
     4) Result check.
     5) clean up.
     """
-    #get the params from params
+    # get the params from params
     vm_name = params.get("vm_name", "vm1")
     backup_name = vm_name
     if vm_name is not "":
@@ -52,16 +54,17 @@ def run_virsh_start(test, params, env):
     pre_operation = params.get("vs_pre_operation", "")
     status_error = params.get("status_error", "no")
 
-    #get the params for remote test
+    # get the params for remote test
     remote_ip = params.get("remote_ip", "ENTER.YOUR.REMOTE.IP")
-    remote_password = params.get("remote_password", "ENTER.YOUR.REMOTE.PASSWORD")
+    remote_password = params.get(
+        "remote_password", "ENTER.YOUR.REMOTE.PASSWORD")
     local_ip = params.get("local_ip", "ENTER.YOUR.LOCAL.IP")
-    if pre_operation == "remote" and ( remote_ip.count("ENTER.YOUR.") or
-                                       local_ip.count("ENTER.YOUR.")):
+    if pre_operation == "remote" and (remote_ip.count("ENTER.YOUR.") or
+                                      local_ip.count("ENTER.YOUR.")):
         raise error.TestNAError("Remote test parameters not configured")
 
     try:
-        #prepare before start vm
+        # prepare before start vm
         if libvirtd_state == "on":
             utils_libvirtd.libvirtd_start()
         elif libvirtd_state == "off":
@@ -75,13 +78,13 @@ def run_virsh_start(test, params, env):
             vmxml = vmxml.new_from_dumpxml(vm_name)
             vmxml.undefine()
 
-        #do the start operation
+        # do the start operation
         try:
             if pre_operation == "remote":
-                #get remote session
+                # get remote session
                 session = remote.wait_for_login("ssh", remote_ip, "22", "root",
                                                 remote_password, "#")
-                #get uri of local
+                # get uri of local
                 uri = libvirt_vm.complete_uri(local_ip)
 
                 cmd = "virsh -c %s start %s" % (uri, vm_name)
@@ -91,21 +94,21 @@ def run_virsh_start(test, params, env):
             else:
                 do_virsh_start(vm_name)
 
-            #start vm successfully
+            # start vm successfully
             if status_error == "yes":
                 raise error.TestFail("Run successfully with wrong command!")
 
         except StartError, excpt:
-            #start vm failed
+            # start vm failed
             if status_error == "no":
                 raise error.TestFail("Run failed with right command: %s",
                                      str(excpt))
     finally:
-        #clean up
+        # clean up
         if libvirtd_state == "off":
             utils_libvirtd.libvirtd_start()
 
-        if (pre_operation == "undefine") and (not vmxml.xml == None):
+        if (pre_operation == "undefine") and (not vmxml.xml is None):
             if not vmxml.define():
                 raise error.TestError("Restore vm failed.")
         elif pre_operation == "rename":

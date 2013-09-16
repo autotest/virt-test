@@ -2,6 +2,7 @@ import re
 from autotest.client.shared import error
 from virttest import libvirt_vm, virsh, utils_libvirtd
 
+
 def run_virsh_freecell(test, params, env):
     """
     Test the command virsh freecell
@@ -13,8 +14,8 @@ def run_virsh_freecell(test, params, env):
     (5) Call virsh freecell with libvirtd service stop
     """
 
-    connect_uri = libvirt_vm.normalize_connect_uri( params.get("connect_uri",
-                                                               "default") )
+    connect_uri = libvirt_vm.normalize_connect_uri(params.get("connect_uri",
+                                                              "default"))
     option = params.get("virsh_freecell_options")
 
     # Prepare libvirtd service
@@ -45,7 +46,8 @@ def run_virsh_freecell(test, params, env):
 
     def output_check(freecell_output):
         if not re.search("ki?B", freecell_output, re.IGNORECASE):
-            raise error.TestFail("virsh freecell output invalid: " + freecell_output)
+            raise error.TestFail(
+                "virsh freecell output invalid: " + freecell_output)
 
     # Check status_error
     status_error = params.get("status_error")
@@ -59,7 +61,7 @@ def run_virsh_freecell(test, params, env):
                 if not OLD_LIBVIRT:
                     raise error.TestFail("Command 'virsh freecell %s' succeeded"
                                          "(incorrect command)" % option)
-                else: # older libvirt
+                else:  # older libvirt
                     raise error.TestNAError('Older libvirt virsh freecell '
                                             'incorrectly processes extranious'
                                             'command-line options')

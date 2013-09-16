@@ -21,16 +21,17 @@ def run_autotest_regression(test, params, env):
     10) Schedule a simple job sleeptest in the client. Wait for client reboot.
     11) If any of these steps have failed, fail the test and report the error
 
-    @param test: virt test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: virt test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     step_failures = []
     autotest_repo = params['autotest_repo']
     autotest_branch = params['autotest_branch']
     autotest_commit = params['autotest_commit']
     password = params['password']
-    autotest_install_timeout = int(params.get('autotest_install_timeout', 1800))
+    autotest_install_timeout = int(
+        params.get('autotest_install_timeout', 1800))
     unittests_run_timeout = int(params.get('unittests_run_timeout', 1800))
     pylint_run_timeout = int(params.get('pylint_run_timeout', 1800))
     vm_names = params["vms"].split()
@@ -78,7 +79,8 @@ def run_autotest_regression(test, params, env):
     try:
         session_server.cmd("test -d /usr/local/autotest/.git")
         session_server.cmd("cd /usr/local/autotest")
-        top_commit = session_server.cmd("echo `git log -n 1 --pretty=format:%H`")
+        top_commit = session_server.cmd(
+            "echo `git log -n 1 --pretty=format:%H`")
         top_commit = top_commit.strip()
         logging.info("Autotest top commit for repo %s, branch %s: %s",
                      autotest_repo, autotest_branch, top_commit)
@@ -161,7 +163,7 @@ def run_autotest_regression(test, params, env):
             session_server.cmd(create_host_cmd)
 
             list_hosts_cmd = ("/usr/local/autotest/cli/autotest-rpc-client "
-                               "host list -w %s" % server_ip)
+                              "host list -w %s" % server_ip)
             list_hosts_output = session_server.cmd(list_hosts_cmd)
             for line in list_hosts_output.splitlines():
                 logging.debug(line)
@@ -219,8 +221,9 @@ def run_autotest_regression(test, params, env):
                 raise ValueError("Job did not start running")
 
             # Wait for the session to become unresponsive
-            if not utils_misc.wait_for(lambda: not session_client.is_responsive(),
-                                       timeout=300):
+            if not utils_misc.wait_for(
+                lambda: not session_client.is_responsive(),
+                    timeout=300):
                 raise ValueError("Client machine did not reboot")
 
             # Establish a new client session
@@ -232,8 +235,9 @@ def run_autotest_regression(test, params, env):
                 raise ValueError("Job did not complete")
 
             # Copy logs back so we can analyze them
-            vm_server.copy_files_from(guest_path="/usr/local/autotest/results/*",
-                                      host_path=test.resultsdir)
+            vm_server.copy_files_from(
+                guest_path="/usr/local/autotest/results/*",
+                host_path=test.resultsdir)
 
         except (aexpect.ShellCmdError, ValueError), e:
             if isinstance(e, aexpect.ShellCmdError):

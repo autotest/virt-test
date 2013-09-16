@@ -2,13 +2,14 @@ import logging
 from autotest.client.shared import error
 from virttest import virsh
 
+
 def run_virsh_help(test, params, env):
     """
     Test command: virsh help.
 
     1.Get all parameters from configuration.
     2.Perform virsh help operation.
-    3.Check help infomation valid or not.
+    3.Check help information valid or not.
     4.Check result.
     """
     extra = params.get("help_extra", "")
@@ -18,10 +19,10 @@ def run_virsh_help(test, params, env):
 
     def help_check(test_target):
         """
-        Check all virsh commands or groups's help infomation
+        Check all virsh commands or groups's help information
 
-        @param: test_target: Test target,all virsh or all virsh groups
-        @return: True if check successfully
+        :param test_target: Test target,all virsh or all virsh groups
+        :return: True if check successfully
         """
         help_list = []
         if test_target == "all_command":
@@ -36,7 +37,7 @@ def run_virsh_help(test, params, env):
         # If any command or group's check failed, the test failed
         check_result = True
         for virsh_cmd_group in help_list:
-            logging.info("Test command or gropu: '%s'", virsh_cmd_group)
+            logging.info("Test command or group: '%s'", virsh_cmd_group)
             result = virsh.help(virsh_cmd_group, ignore_status=True)
             status = result.exit_status
             output = result.stdout.strip()
@@ -77,4 +78,5 @@ def run_virsh_help(test, params, env):
                 raise error.TestFail("Cannot see help information")
         else:
             if not check_result:
-                raise error.TestFail("virsh help command or groups test failed")
+                raise error.TestFail(
+                    "virsh help command or groups test failed")

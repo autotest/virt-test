@@ -1,6 +1,8 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error, utils
 from virttest import env_process, utils_misc, utils_test
+
 
 @error.context_aware
 def run_enforce_quit(test, params, env):
@@ -10,15 +12,15 @@ def run_enforce_quit(test, params, env):
     1). boot guest with enforce params
     2). guest will quit if flags is not supported in host
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment
     """
 
-    guest_cpumodel = params.get("cpu_model","Conroe").split(",")[0]
+    guest_cpumodel = params.get("cpu_model", "Conroe").split(",")[0]
     host_cpumodel = utils_misc.get_host_cpu_models()
     host_flags = utils_misc.get_cpu_flags()
-    extra_flags = params.get("cpu_model_flags"," ")
+    extra_flags = params.get("cpu_model_flags", " ")
 
     lack_flags = []
     flags = re.findall("\+(\w+)", extra_flags)
@@ -44,7 +46,7 @@ def run_enforce_quit(test, params, env):
     msg_unknow = params.get("msg_unknow", "not found")
     try:
         error.context("boot guest with -cpu %s,%s" % (guest_cpumodel,
-                                          extra_flags), logging.info)
+                                                      extra_flags), logging.info)
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     except Exception, e:

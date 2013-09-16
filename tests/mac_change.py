@@ -1,6 +1,8 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import error
 from virttest import utils_misc, utils_net
+
 
 @error.context_aware
 def run_mac_change(test, params, env):
@@ -11,9 +13,9 @@ def run_mac_change(test, params, env):
     2) Set new mac in guest and regain new IP.
     3) Re-log into guest with new MAC.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -51,9 +53,9 @@ def run_mac_change(test, params, env):
                                                         "index")
         if os_variant == "winxp":
             pnpdevice_id = utils_net.get_windows_nic_attribute(session,
-                                                            "netconnectionid",
-                                                             connection_id,
-                                                             "pnpdeviceid")
+                                                               "netconnectionid",
+                                                               connection_id,
+                                                               "pnpdeviceid")
             cd_drive = utils_misc.get_winutils_vol(session)
             copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_drive
             session.cmd(copy_cmd)

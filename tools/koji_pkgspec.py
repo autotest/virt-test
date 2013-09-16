@@ -8,15 +8,18 @@ The main use case is making sure the packages specified in a KojiInstaller
 will match the packages you intended to install.
 '''
 
-import sys, optparse
+import sys
+import optparse
 import common
 from virttest import utils_koji, cartesian_config
 
 
 class OptionParser(optparse.OptionParser):
+
     '''
     KojiPkgSpec App option parser
     '''
+
     def __init__(self):
         optparse.OptionParser.__init__(self,
                                        usage=('Usage: %prog [options] '
@@ -38,17 +41,17 @@ class OptionParser(optparse.OptionParser):
 
 
 class App:
+
     '''
     KojiPkgSpec app
     '''
+
     def __init__(self):
         self.opt_parser = OptionParser()
-
 
     def usage(self):
         self.opt_parser.print_help()
         sys.exit(1)
-
 
     def parse_cmdline(self):
         self.options, self.args = self.opt_parser.parse_args()
@@ -57,7 +60,6 @@ class App:
         if (len(self.args) < 1) and not self.options.config:
             print "Missing Package Specification!"
             self.usage()
-
 
     def get_koji_qemu_kvm_tag_pkgs(self, config_file):
         tag = None
@@ -75,12 +77,10 @@ class App:
                     pkgs = d.get('koji_qemu_kvm_pkgs')
         return (tag, pkgs)
 
-
     def check_koji_pkg_spec(self, koji_pkg_spec):
         if not koji_pkg_spec.is_valid():
             print 'ERROR:', koji_pkg_spec.describe_invalid()
             sys.exit(-1)
-
 
     def print_koji_pkg_spec_info(self, koji_pkg_spec):
         info = self.koji_client.get_pkg_info(koji_pkg_spec)
@@ -96,7 +96,6 @@ class App:
         for p in pkgs:
             print '\t* %s' % p
         print
-
 
     def main(self):
         self.parse_cmdline()

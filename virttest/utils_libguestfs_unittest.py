@@ -1,5 +1,6 @@
 #!/usr/bin/python
-import unittest, logging
+import unittest
+import logging
 
 try:
     import autotest.common as common
@@ -11,6 +12,7 @@ import utils_libguestfs as lgf
 
 
 class LibguestfsTest(unittest.TestCase):
+
     def test_lgf_cmd_check(self):
         cmds = ['virt-ls', 'virt-cat']
         for cmd in cmds:
@@ -38,6 +40,7 @@ class LibguestfsTest(unittest.TestCase):
 
 
 class SlotsCheckTest(unittest.TestCase):
+
     def test_LibguestfsBase_default_slots(self):
         """Default slots' value check"""
         lfb = lgf.LibguestfsBase()
@@ -62,7 +65,8 @@ class SlotsCheckTest(unittest.TestCase):
         try:
             gf = lgf.Guestfish()
             self.assertEqual(gf.lgf_exec, "guestfish")
-            gf = lgf.Guestfish(disk_img="test.img", ro_mode=True, inspector=True)
+            gf = lgf.Guestfish(
+                disk_img="test.img", ro_mode=True, inspector=True)
             self.assertEqual(gf.lgf_exec, "guestfish -a 'test.img' --ro -i")
             gf = lgf.Guestfish(libvirt_domain="test", inspector=True,
                                uri="qemu+ssh://root@EXAMPLE/system")

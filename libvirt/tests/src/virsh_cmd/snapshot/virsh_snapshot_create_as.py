@@ -6,11 +6,12 @@ from autotest.client.shared import error
 from virttest import virsh, utils_misc, xml_utils, libvirt_xml
 from virttest.libvirt_xml import vm_xml, xcepts
 
+
 def xml_recover(vmxml):
     """
     Recover older xml config with backup vmxml.
 
-    @params: vmxml: VMXML object
+    :params: vmxml: VMXML object
     """
     try:
         options = "--snapshots-metadata"
@@ -27,8 +28,8 @@ def check_snap_in_image(vm_name, snap_name):
     """
     check the snapshot info in image
 
-    @params: vm_name: VM name
-    @params: snap_name: Snapshot name
+    :params: vm_name: VM name
+    :params: snap_name: Snapshot name
     """
 
     domxml = virsh.dumpxml(vm_name)
@@ -52,8 +53,8 @@ def compose_disk_options(test, params, opt_names):
     individually, The 'value' after 'file=' is a parameter which also need to
     get from cfg
 
-    @params: test & params: system parameters
-    @params: opt_names: params get from cfg of {disk,mem}spec options
+    :params: test & params: system parameters
+    :params: opt_names: params get from cfg of {disk,mem}spec options
     """
     if opt_names.find("file=") >= 0:
         opt_disk = opt_names.split("file=")
@@ -108,7 +109,7 @@ def run_virsh_snapshot_create_as(test, params, env):
     diskspec_num = params.get("diskspec_num", "1")
     bad_disk = params.get("bad_disk")
     external_disk = params.get("external_disk")
-    start_ga =  params.get("start_ga", "yes")
+    start_ga = params.get("start_ga", "yes")
     domain_state = params.get("domain_state")
     memspec_opts = params.get("memspec_opts")
     diskspec_opts = params.get("diskspec_opts")
@@ -211,7 +212,7 @@ def run_virsh_snapshot_create_as(test, params, env):
             else:
                 # Check memspec file should be removed if failed
                 if (options.find("memspec") >= 0
-                    and options.find("atomic") >= 0):
+                        and options.find("atomic") >= 0):
                     if os.path.isfile(option_dict['memspec']):
                         os.remove(option_dict['memspec'])
                         xml_recover(vmxml_backup)
@@ -251,7 +252,8 @@ def run_virsh_snapshot_create_as(test, params, env):
 
                     # check domain/snapshot xml depends on if have metadata
                     if no_metadata < 0:
-                        output_dump = virsh.snapshot_dumpxml(vm_name, get_sname)
+                        output_dump = virsh.snapshot_dumpxml(
+                            vm_name, get_sname)
                     else:
                         output_dump = virsh.dumpxml(vm_name)
                         fdisks = "devices"
@@ -280,10 +282,10 @@ def run_virsh_snapshot_create_as(test, params, env):
 
                         # Check snapshot only in qemu-img
                         if (options.find("--disk-only") < 0
-                            and options.find("--memspec") < 0):
+                                and options.find("--memspec") < 0):
                             ret = check_snap_in_image(vm_name, get_sname)
 
-                            if ret == False:
+                            if ret is False:
                                 xml_recover(vmxml_backup)
                                 raise error.TestFail("No snap info in image")
 
@@ -313,8 +315,6 @@ def run_virsh_snapshot_create_as(test, params, env):
                             xml_recover(vmxml_backup)
                             raise error.TestFail("Domain is not halted after "
                                                  "snapshot created")
-
-
 
                 # Check the snapshot xml regardless of having print-xml or not
                 if (options.find("name") >= 0 and no_metadata < 0):
@@ -363,7 +363,7 @@ def run_virsh_snapshot_create_as(test, params, env):
                             else:
                                 xml_recover(vmxml_backup)
                                 raise error.TestFail("Get wrong disk%d name %s"
-                                                      % num, dname)
+                                                     % num, dname)
 
                             if option_disk.find('snapshot=') >= 0:
                                 dsnap = disks[num].get('snapshot')
@@ -375,7 +375,7 @@ def run_virsh_snapshot_create_as(test, params, env):
                                     xml_recover(vmxml_backup)
                                     raise error.TestFail("Get wrong disk%d "
                                                          "snapshot type %s" %
-                                                          num, dsnap)
+                                                         num, dsnap)
 
                         if option_disk.find('driver=') >= 0:
                             dtype = disks[num].find('driver').get('type')
@@ -387,7 +387,7 @@ def run_virsh_snapshot_create_as(test, params, env):
                                 raise error.TestFail("Get wrong disk%d driver "
                                                      "type %s" % num, dtype)
 
-                        if option_disk.find('file=') >=0:
+                        if option_disk.find('file=') >= 0:
                             sfile = disks[num].find('source').get('file')
                             if sfile == disk_dict['file']:
                                 logging.info("get disk%d source file same as "
@@ -396,7 +396,6 @@ def run_virsh_snapshot_create_as(test, params, env):
                                 xml_recover(vmxml_backup)
                                 raise error.TestFail("Get wrong disk%d source "
                                                      "file %s" % num, sfile)
-
 
                 # For memspec check if the xml is same as setting
                 # Also check if the mem file exists

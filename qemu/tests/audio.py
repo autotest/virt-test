@@ -1,5 +1,6 @@
 from autotest.client.shared import error
 
+
 @error.context_aware
 def run_audio(test, params, env):
     """

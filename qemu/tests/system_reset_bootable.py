@@ -1,4 +1,6 @@
-import logging, time, random
+import logging
+import time
+import random
 from autotest.client.shared import error
 
 
@@ -13,9 +15,9 @@ def run_system_reset_bootable(test, params, env):
        from step 2.
     4) Log into the guest to verify it could normally boot.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     timeout = float(params.get("login_timeout", 240))
@@ -48,7 +50,7 @@ def run_system_reset_bootable(test, params, env):
             interval_tmp = random.randint(0, interval)
 
         logging.debug("Reset the system by monitor cmd"
-                     " after %ssecs" % interval_tmp)
+                      " after %ssecs" % interval_tmp)
         time.sleep(interval_tmp)
 
     error.context("Try to login guest after reset", logging.info)

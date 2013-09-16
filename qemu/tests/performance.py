@@ -1,4 +1,8 @@
-import os, re, commands, glob, shutil
+import os
+import re
+import commands
+import glob
+import shutil
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, utils_misc, data_dir
@@ -12,9 +16,9 @@ def run_performance(test, params, env):
     but we can implement some special requests for performance
     testing.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -53,7 +57,7 @@ def run_performance(test, params, env):
     session.cmd("tar -xf /tmp/%s -C %s" % (test_src, "/tmp/src_tmp"))
 
     # Find the newest file in src tmp directory
-    cmd =  "ls -rt /tmp/src_tmp"
+    cmd = "ls -rt /tmp/src_tmp"
     s, o = session.cmd_status_output(cmd)
     if len(o) > 0:
         new_file = re.findall("(.*)\n", o)[-1]
@@ -85,7 +89,7 @@ def run_performance(test, params, env):
     test_cmd = cmd
     # Run guest test with monitor
     tag = utils_test.cmd_runner_monitor(vm, monitor_cmd, test_cmd,
-                                     guest_path, timeout = test_timeout)
+                                        guest_path, timeout=test_timeout)
 
     # Result collecting
     result_list = ["/tmp/guest_result_%s" % tag,
@@ -100,7 +104,7 @@ def run_performance(test, params, env):
     for i in result_list:
         if re.findall("monitor_result", i):
             result = utils_test.summary_up_result(i, ignore_pattern,
-                                head_pattern, row_pattern)
+                                                  head_pattern, row_pattern)
             fd = open("%s.sum" % i, "w")
             sum_info = {}
             head_line = ""
@@ -129,7 +133,7 @@ def mpstat_ana(filename):
     """
     Get the cpu usage from the mpstat summary file
 
-    @param filename: filename of the mpstat summary file
+    :param filename: filename of the mpstat summary file
     """
     mpstat_result = open(filename, 'r')
     key_value = "%idle"
@@ -153,7 +157,7 @@ def time_ana(results_tuple):
     """
     Get the time from the results when run test with time
 
-    @param results_tuple: the tuple get from results file
+    :param results_tuple: the tuple get from results file
     """
     time_unit = 1.0
     time_data = 0.0
@@ -166,14 +170,13 @@ def time_ana(results_tuple):
     return str(time_data)
 
 
-
 def format_result(result, base="20", fbase="2"):
     """
     Format the result to a fixed length string.
 
-    @param result: result need to convert
-    @param base: the length of converted string
-    @param fbase: the decimal digit for float
+    :param result: result need to convert
+    :param base: the length of converted string
+    :param fbase: the decimal digit for float
     """
     if isinstance(result, str):
         value = "%" + base + "s"
@@ -188,9 +191,9 @@ def get_sum_result(sum_matrix, value, tag):
     """
     Calculate the summary result
 
-    @param sum_matrix: matrix to store the summary results
-    @param value: value to add to matrix
-    @param tag: the keyword for the value in matrix
+    :param sum_matrix: matrix to store the summary results
+    :param value: value to add to matrix
+    :param tag: the keyword for the value in matrix
     """
     if tag in sum_matrix.keys():
         sum_matrix[tag] += value
@@ -213,10 +216,10 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
 
     kvm_ver = utils.system_output(params.get('ver_cmd', "rpm -q qemu-kvm"))
     host_ver = os.uname()[2]
-    test.write_test_keyval({ 'kvm-userspace-ver': kvm_ver })
-    test.write_test_keyval({ 'host-kernel-ver': host_ver })
-    test.write_test_keyval({ 'guest-kernel-ver': guest_ver })
-    #Find the results files
+    test.write_test_keyval({'kvm-userspace-ver': kvm_ver})
+    test.write_test_keyval({'host-kernel-ver': host_ver})
+    test.write_test_keyval({'guest-kernel-ver': guest_ver})
+    # Find the results files
 
     results_files = {}
     file_list = ['guest_result', 'guest_monitor_result.*sum',
@@ -236,7 +239,7 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                 file_dir_norpt = re.sub("\.repeat\d+", "", files[0])
                 if (repeatn in files[0]
                     and category_key in file_dir_norpt
-                    and case_type in files[0]):
+                        and case_type in files[0]):
                     for i, pattern in enumerate(file_list):
                         if re.findall(pattern, file):
                             prefix = re.findall("%s\.[\d\w_\.]+" % case_type,
@@ -251,7 +254,7 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                             tmp_file = utils_misc.get_path(files[0], file)
                             results_files[prefix][i] = tmp_file
 
-    #Start to read results from results file and monitor file
+    # Start to read results from results file and monitor file
     results_matrix = {}
     no_table_results = {}
     thread_tag = params.get("thread_tag", "thread")
@@ -282,7 +285,7 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
         if refresh_order_list:
             order_list = []
         if (category not in results_matrix.keys()
-            and category not in no_table_list):
+                and category not in no_table_list):
             results_matrix[category] = {}
         if threads:
             if threads not in results_matrix[category].keys():
@@ -319,8 +322,8 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                                       "Please check the debug file.")
             if mark_tag not in no_table_list and mark_tag not in order_list:
                 order_list.append(mark_tag)
-            test.write_perf_keyval({ '%s-%s' % (prefix_perf, mark_tag) : \
-                                     perf_value })
+            test.write_perf_keyval({'%s-%s' % (prefix_perf, mark_tag):
+                                    perf_value})
         # start analyze the mpstat results
         if params.get('mpstat') == "yes":
             guest_cpu_infos = mpstat_ana(results_files[prefix][1])
@@ -368,7 +371,7 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
         result_file.write("### kvm-version : %s\n" % host_ver)
         result_file.write("### guest-kernel-version :%s\n" % guest_ver)
 
-    test.write_test_keyval({ 'category': headline })
+    test.write_test_keyval({'category': headline})
     result_file.write("Category:ALL\n")
     matrix_order = params.get("matrix_order", "").split()
     if not matrix_order:
@@ -395,7 +398,8 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                 #line += "%s|" % format_result(results_matrix[category][item])
                 re_data = "DATA%s" % order_list.index(item)
                 out_loop_line = re.sub(re_data,
-                                format_result(results_matrix[category][item]),
+                                       format_result(
+                                           results_matrix[category][item]),
                                        out_loop_line)
                 if tag in sum_marks:
                     sum_matrix = get_sum_result(sum_matrix, tmp_dic[tag],

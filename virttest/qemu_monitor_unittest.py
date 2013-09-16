@@ -4,7 +4,9 @@ import qemu_monitor
 
 
 class MockMonitor(qemu_monitor.Monitor):
+
     """ Dummy class inherited from qemu_monitor.HumanMonitor """
+
     def __init__(self):     # pylint: disable=W0231
         pass
 
@@ -13,6 +15,7 @@ class MockMonitor(qemu_monitor.Monitor):
 
 
 class InfoNumaTests(unittest.TestCase):
+
     def testZeroNodes(self):
         d = "0 nodes\n"
         r = Monitor.parse_info_numa(d)
@@ -30,6 +33,7 @@ class InfoNumaTests(unittest.TestCase):
 
 
 class InfoBlocks(unittest.TestCase):
+
     def testParseBlocks(self):
         info_1_4 = """ide0-hd0: removable=0 io-status=ok file=c.qcow2 backing_file=b.qcow2 backing_file_depth=2 ro=0 drv=qcow2 encrypted=0 bps=0 bps_rd=0 bps_wr=0 iops=0 iops_rd=0 iops_wr=0
 scsi0-hd0: removable=0 io-status=ok file=a.qcow ro=1 drv=raw encrypted=0 bps=0 bps_rd=0 bps_wr=0 iops=0 iops_rd=0 iops_wr=0
@@ -54,22 +58,22 @@ sd0: [not inserted]
     Removable device: not locked, tray closed"""
         info_qmp = [{"io-status": "ok", "device": "ide0-hd0", "locked":
                     False, "removable": False, "inserted": {"iops_rd": 0,
-                    "iops_wr": 0, "ro": False, "backing_file_depth": 2,
-                    "drv": "qcow2", "iops": 0, "bps_wr": 0, "backing_file":
-                    "b.qcow2", "encrypted": False, "bps": 0, "bps_rd": 0,
-                    "file": "c.qcow2", "encryption_key_missing": False},
+                                                            "iops_wr": 0, "ro": False, "backing_file_depth": 2,
+                                                            "drv": "qcow2", "iops": 0, "bps_wr": 0, "backing_file":
+                                                            "b.qcow2", "encrypted": False, "bps": 0, "bps_rd": 0,
+                                                            "file": "c.qcow2", "encryption_key_missing": False},
                     "type": "unknown"}, {"io-status": "ok", "device":
                     "scsi0-hd0", "locked": False, "removable": False,
                     "inserted": {"iops_rd": 0, "iops_wr": 0, "ro": True,
-                    "backing_file_depth": 0, "drv": "raw", "iops": 0,
-                    "bps_wr": 0, "encrypted": False, "bps": 0, "bps_rd": 0,
-                    "file": "a.qcow", "encryption_key_missing": False},
+                                 "backing_file_depth": 0, "drv": "raw", "iops": 0,
+                                 "bps_wr": 0, "encrypted": False, "bps": 0, "bps_rd": 0,
+                                 "file": "a.qcow", "encryption_key_missing": False},
                     "type": "unknown"}, {"io-status": "ok", "device":
                     "scsi0-hd1", "locked": False, "removable": False,
                     "inserted": {"iops_rd": 0, "iops_wr": 0, "ro": False,
-                    "backing_file_depth": 0, "drv": "qcow2", "iops": 0,
-                    "bps_wr": 0, "encrypted": True, "bps": 0, "bps_rd": 0,
-                    "file": "enc.qcow2", "encryption_key_missing": True},
+                                 "backing_file_depth": 0, "drv": "qcow2", "iops": 0,
+                                 "bps_wr": 0, "encrypted": True, "bps": 0, "bps_rd": 0,
+                                 "file": "enc.qcow2", "encryption_key_missing": True},
                     "type": "unknown"}, {"io-status": "ok", "device":
                     "ide1-cd0", "locked": False, "removable": True,
                     "tray_open": False, "type": "unknown"}, {"device":
@@ -125,9 +129,10 @@ sd0: [not inserted]
                                   % (name, out2, out1))
             for key, value in params.iteritems():
                 assert out1[name].get(key, 0) == value, ("value of disk %s "
-                            "mismatch in info-1.5 %s=%s (%s)\n%s\n%s"
-                            % (name, key, value, out1[name].get(key, 0),
-                               out2, out1))
+                                                         "mismatch in info-1.5 %s=%s (%s)\n%s\n%s"
+                                                         % (name, key, value, out1[
+                                                             name].get(key, 0),
+                                                            out2, out1))
 
         # Test "query-block" qmp version
         monitor.info = lambda _what, _debug: info_qmp
@@ -173,9 +178,10 @@ sd0: [not inserted]
                                   % (name, out1, out3))
             for key, value in params.iteritems():
                 assert out3[name].get(key, 0) == value, ("value of disk %s "
-                            "mismatch in QMP version %s=%s (%s)\n%s\n%s"
-                            % (name, key, value, out3[name].get(key, 0),
-                               out1, out3))
+                                                         "mismatch in QMP version %s=%s (%s)\n%s\n%s"
+                                                         % (name, key, value, out3[
+                                                             name].get(key, 0),
+                                                            out1, out3))
 
 
 if __name__ == "__main__":

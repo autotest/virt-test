@@ -1,6 +1,7 @@
 from autotest.client.shared import error
 from virttest import virsh
 
+
 def run_virsh_net_name(test, params, env):
     """
     Test command: virsh net-name.
@@ -26,7 +27,7 @@ def run_virsh_net_name(test, params, env):
     output = result.stdout.strip()
     err = result.stderr.strip()
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0 or err == "":
             raise error.TestFail("Run successfully with wrong command!")

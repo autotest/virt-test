@@ -11,11 +11,13 @@ from virttest.libvirt_xml.devices import librarian
 
 
 class VMXMLDevices(list):
+
     """
     List of device instances from classes handed out by librarian.get()
     """
 
-    def __type_check__(self, other):
+    @staticmethod
+    def __type_check__(other):
         try:
             # Raise error if object isn't dict-like or doesn't have key
             device_tag = other['device_tag']
@@ -25,25 +27,21 @@ class VMXMLDevices(list):
             # Required to always raise TypeError for list API in VMXML class
             raise TypeError("Unsupported item type: %s" % str(type(other)))
 
-
     def __setitem__(self, key, value):
         self.__type_check__(value)
         super(VMXMLDevices, self).__setitem__(key, value)
         return self
-
 
     def append(self, value):
         self.__type_check__(value)
         super(VMXMLDevices, self).append(value)
         return self
 
-
     def extend(self, iterable):
         # Make sure __type_check__ happens
         for item in iterable:
             self.append(item)
         return self
-
 
     def by_device_tag(self, tag):
         result = VMXMLDevices()
@@ -54,6 +52,7 @@ class VMXMLDevices(list):
 
 
 class VMXMLBase(base.LibvirtXMLBase):
+
     """
     Accessor methods for VMXML class properties (items in __slots__)
 
@@ -112,27 +111,26 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  parent_xpath='/',
                                  tag_name='uuid')
         accessors.XMLElementInt(property_name="vcpu",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/',
-                                 tag_name='vcpu')
+                                libvirtxml=self,
+                                forbidden=None,
+                                parent_xpath='/',
+                                tag_name='vcpu')
         accessors.XMLElementInt(property_name="max_mem",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/',
-                                 tag_name='memory')
+                                libvirtxml=self,
+                                forbidden=None,
+                                parent_xpath='/',
+                                tag_name='memory')
         accessors.XMLElementInt(property_name="current_mem",
-                                 libvirtxml=self,
-                                 forbidden=None,
-                                 parent_xpath='/',
-                                 tag_name='currentMemory')
+                                libvirtxml=self,
+                                forbidden=None,
+                                parent_xpath='/',
+                                tag_name='currentMemory')
         accessors.XMLElementDict(property_name="numa",
                                  libvirtxml=self,
                                  forbidden=None,
                                  parent_xpath='numatune',
                                  tag_name='memory')
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
-
 
     def get_devices(self, device_type=None):
         """
@@ -151,7 +149,6 @@ class VMXMLBase(base.LibvirtXMLBase):
             devices.append(new_one)
         return devices
 
-
     def set_devices(self, value):
         """
         Define devices based on contents of VMXMLDevices instance
@@ -165,13 +162,12 @@ class VMXMLBase(base.LibvirtXMLBase):
         self.del_devices()
         if len(value) > 0:
             devices_element = xml_utils.ElementTree.SubElement(
-                                    self.xmltreefile.getroot(), 'devices')
+                self.xmltreefile.getroot(), 'devices')
             for device in value:
                 # Separate the element from the tree
                 device_element = device.xmltreefile.getroot()
                 devices_element.append(device_element)
         self.xmltreefile.write()
-
 
     def del_devices(self):
         """
@@ -180,18 +176,17 @@ class VMXMLBase(base.LibvirtXMLBase):
         self.xmltreefile.remove_by_xpath('/devices')
         self.xmltreefile.write()
 
-
     def get_seclabel(self):
         """
         Return seclabel + child attribute dict or raise LibvirtXML error
 
-        @return: None if no seclabel in xml,
+        :return: None if no seclabel in xml,
                  dict of seclabel's attributs and children.
         """
         __children_list__ = ['label', 'baselabel', 'imagelabel']
 
         seclabel_node = self.xmltreefile.find("seclabel")
-        #no seclabel tag found in xml.
+        # no seclabel tag found in xml.
         if seclabel_node is None:
             raise xcepts.LibvirtXMLError("Seclabel for this domain does not "
                                          "exist")
@@ -203,7 +198,6 @@ class VMXMLBase(base.LibvirtXMLBase):
 
         return seclabel
 
-
     def set_seclabel(self, seclabel_dict):
         """
         Set seclabel of vm. Modify the attributs and children if seclabel
@@ -213,24 +207,24 @@ class VMXMLBase(base.LibvirtXMLBase):
         __attributs_list__ = ['type', 'model', 'relabel']
         __children_list__ = ['label', 'baselabel', 'imagelabel']
 
-        #check the type of seclabel_dict.
+        # check the type of seclabel_dict.
         if not isinstance(seclabel_dict, dict):
             raise xcepts.LibvirtXMLError("seclabel_dict should be a instance of"
                                          "dict, but not a %s.\n"
                                          % type(seclabel_dict))
         seclabel_node = self.xmltreefile.find("seclabel")
         if seclabel_node is None:
-            seclabel_attr = {}
             seclabel_node = xml_utils.ElementTree.SubElement(
-                                                    self.xmltreefile.getroot(),
-                                                    "seclabel")
+                self.xmltreefile.getroot(),
+                "seclabel")
 
         for key, value in seclabel_dict.items():
             if key in __children_list__:
                 child_node = seclabel_node.find(key)
                 if child_node is None:
-                    child_node = xml_utils.ElementTree.SubElement(seclabel_node,
-                                                                  key)
+                    child_node = xml_utils.ElementTree.SubElement(
+                        seclabel_node,
+                        key)
                 child_node.text = value
 
             elif key in __attributs_list__:
@@ -241,7 +235,6 @@ class VMXMLBase(base.LibvirtXMLBase):
 
         self.xmltreefile.write()
 
-
     def del_seclabel(self):
         """
         Remove the seclabel tag from a domain
@@ -249,18 +242,18 @@ class VMXMLBase(base.LibvirtXMLBase):
         try:
             self.xmltreefile.remove_by_xpath("/seclabel")
         except (AttributeError, TypeError):
-            pass # Element already doesn't exist
+            pass  # Element already doesn't exist
         self.xmltreefile.write()
 
 
 class VMXML(VMXMLBase):
+
     """
     Higher-level manipulations related to VM's XML or guest/host state
     """
 
     # Must copy these here or there will be descriptor problems
     __slots__ = VMXMLBase.__slots__
-
 
     def __init__(self, hypervisor_type='kvm', virsh_instance=base.virsh):
         """
@@ -270,21 +263,19 @@ class VMXML(VMXMLBase):
         # Setup some bare-bones XML to build upon
         self.xml = u"<domain type='%s'></domain>" % hypervisor_type
 
-
-    @staticmethod # static method (no self) needed b/c calls VMXML.__new__
+    @staticmethod  # static method (no self) needed b/c calls VMXML.__new__
     def new_from_dumpxml(vm_name, options="", virsh_instance=virsh):
         """
         Return new VMXML instance from virsh dumpxml command
 
-        @param: vm_name: Name of VM to dumpxml
-        @param: virsh_instance: virsh module or instance to use
-        @return: New initialized VMXML instance
+        :param vm_name: Name of VM to dumpxml
+        :param virsh_instance: virsh module or instance to use
+        :return: New initialized VMXML instance
         """
         # TODO: Look up hypervisor_type on incoming XML
         vmxml = VMXML(virsh_instance=virsh_instance)
         vmxml['xml'] = virsh_instance.dumpxml(vm_name, options=options)
         return vmxml
-
 
     @staticmethod
     def get_device_class(type_name):
@@ -293,32 +284,28 @@ class VMXML(VMXMLBase):
         """
         return librarian.get(type_name)
 
-
     def undefine(self, options=None):
         """Undefine this VM with libvirt retaining XML in instance"""
         return self.virsh.remove_domain(self.vm_name, options)
-
 
     def define(self):
         """Define VM with virsh from this instance"""
         result = self.virsh.define(self.xml)
         if result.exit_status:
             logging.debug("Define %s failed.\n"
-                          "Detail: %s."
-                          % (self.vm_name, result.stderr))
+                          "Detail: %s.", self.vm_name, result.stderr)
             return False
         return True
-
 
     @staticmethod
     def vm_rename(vm, new_name, uuid=None, virsh_instance=base.virsh):
         """
         Rename a vm from its XML.
 
-        @param vm: VM class type instance
-        @param new_name: new name of vm
-        @param uuid: new_vm's uuid, if None libvirt will generate.
-        @return: a new VM instance
+        :param vm: VM class type instance
+        :param new_name: new name of vm
+        :param uuid: new_vm's uuid, if None libvirt will generate.
+        :return: a new VM instance
         """
         if vm.is_alive():
             vm.destroy(gracefully=True)
@@ -327,7 +314,7 @@ class VMXML(VMXMLBase):
         backup = vmxml.copy()
         # can't do in-place rename, must operate on XML
         if not vmxml.undefine():
-            del vmxml # clean up temporary files
+            del vmxml  # clean up temporary files
             raise xcepts.LibvirtXMLError("Error reported while undefining VM")
         # Alter the XML
         vmxml.vm_name = new_name
@@ -347,7 +334,7 @@ class VMXML(VMXMLBase):
                 raise xcepts.LibvirtXMLError(error_msg + "%s"
                                              % vmxml.get('xml'))
         except error.CmdError, detail:
-            del vmxml # clean up temporary files
+            del vmxml  # clean up temporary files
             # Allow exceptions thrown here since state will be undefined
             backup.define()
             raise xcepts.LibvirtXMLError(error_msg + "%s" % detail)
@@ -355,38 +342,37 @@ class VMXML(VMXMLBase):
         vm.name = new_name
         return vm
 
-
     @staticmethod
     def set_vm_vcpus(vm_name, value, virsh_instance=base.virsh):
         """
         Convenience method for updating 'vcpu' property of a defined VM
 
-        @param: vm_name: Name of defined vm to change vcpu elemnet data
-        @param: value: New data value, None to delete.
+        :param vm_name: Name of defined vm to change vcpu elemnet data
+        :param value: New data value, None to delete.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
         if value is not None:
-            vmxml['vcpu'] = value # call accessor method to change XML
-        else: # value == None
+            vmxml['vcpu'] = value  # call accessor method to change XML
+        else:  # value is None
             del vmxml.vcpu
         vmxml.undefine()
         vmxml.define()
         # Temporary files for vmxml cleaned up automatically
         # when it goes out of scope here.
 
-
-    def check_cpu_mode(self, mode):
+    @staticmethod
+    def check_cpu_mode(mode):
         """
         Check input cpu mode invalid or not.
 
-        @param mode: the mode of cpu:'host-model'...
+        :param mode: the mode of cpu:'host-model'...
         """
         # Possible values for the mode attribute are:
         # "custom", "host-model", "host-passthrough"
         cpu_mode = ["custom", "host-model", "host-passthrough"]
         if mode.strip() not in cpu_mode:
-            raise xcepts.LibvirtXMLError("The cpu mode '%s' is invalid!" % mode)
-
+            raise xcepts.LibvirtXMLError(
+                "The cpu mode '%s' is invalid!" % mode)
 
     def get_disk_all(self):
         """
@@ -399,44 +385,40 @@ class VMXML(VMXMLBase):
             disks[dev] = node
         return disks
 
-
     @staticmethod
     def get_disk_source(vm_name, virsh_instance=base.virsh):
         """
         Get block device  of a defined VM's disks.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         return disks.values()
-
 
     @staticmethod
     def get_disk_blk(vm_name, virsh_instance=base.virsh):
         """
         Get block device  of a defined VM's disks.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
         return disks.keys()
-
 
     @staticmethod
     def get_disk_count(vm_name, virsh_instance=base.virsh):
         """
         Get count of VM's disks.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         disks = vmxml.get_disk_all()
-        if disks != None:
+        if disks is not None:
             return len(disks)
         return 0
-
 
     @staticmethod
     def get_numa_params(vm_name, virsh_instance=base.virsh):
@@ -445,7 +427,6 @@ class VMXML(VMXMLBase):
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
         return vmxml.numa
-
 
     def get_primary_serial(self):
         """
@@ -463,17 +444,16 @@ class VMXML(VMXMLBase):
         serial_features['port'] = serial_port
         return serial_features
 
-
     @staticmethod
     def set_primary_serial(vm_name, dev_type, port, path=None,
                            virsh_instance=base.virsh):
         """
         Set primary serial's features of vm_name.
 
-        @param vm_name: Name of defined vm to set primary serial.
-        @param dev_type: the type of serial:pty,file...
-        @param port: the port of serial
-        @param path: the path of serial, it is not necessary for pty
+        :param vm_name: Name of defined vm to set primary serial.
+        :param dev_type: the type of serial:pty,file...
+        :param port: the port of serial
+        :param path: the path of serial, it is not necessary for pty
         # TODO: More features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
@@ -484,8 +464,8 @@ class VMXML(VMXMLBase):
             logging.debug("Can not find any serial, now create one.")
             # Create serial tree, default is pty
             serial = xml_utils.ElementTree.SubElement(
-                                xmltreefile.find('devices'),
-                                'serial', {'type': 'pty'})
+                xmltreefile.find('devices'),
+                'serial', {'type': 'pty'})
             # Create elements of serial target, default port is 0
             xml_utils.ElementTree.SubElement(serial, 'target', {'port': '0'})
 
@@ -499,18 +479,18 @@ class VMXML(VMXMLBase):
                 source = serial.find('source')
                 serial.remove(source)
             except AssertionError:
-                pass # Element not found, already removed.
+                pass  # Element not found, already removed.
         xmltreefile.write()
         vmxml.set_xml(xmltreefile.name)
         vmxml.undefine()
         vmxml.define()
 
-
-    def set_agent_channel(self, vm_name):
+    @staticmethod
+    def set_agent_channel(vm_name):
         """
         Add channel for guest agent running
 
-        @param vm_name: Name of defined vm to set agent channel
+        :param vm_name: Name of defined vm to set agent channel
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
 
@@ -525,14 +505,12 @@ class VMXML(VMXMLBase):
                 raise AttributeError("Cannot find guest agent channel")
         except AttributeError:
             channel = vmxml.get_device_class('channel')(type_name='unix')
-            channel.add_source(**{'mode': 'bind',
-                                  'path': '/var/lib/libvirt/qemu/guest.agent'})
-            channel.add_target(**{'type': 'virtio',
-                                  'name': 'org.qemu.guest_agent.0'})
-
+            channel.add_source(mode='bind',
+                               path='/var/lib/libvirt/qemu/guest.agent')
+            channel.add_target(type='virtio',
+                               name='org.qemu.guest_agent.0')
             vmxml.devices = vmxml.devices.append(channel)
             vmxml.define()
-
 
     def get_iface_all(self):
         """
@@ -545,15 +523,14 @@ class VMXML(VMXMLBase):
             interfaces[mac_addr] = node
         return interfaces
 
-
     @staticmethod
     def get_iface_by_mac(vm_name, mac, virsh_instance=base.virsh):
         """
         Get the interface if mac is matched.
 
-        @param vm_name: Name of defined vm.
-        @param mac: a mac address.
-        @return: return a dict include main interface's features
+        :param vm_name: Name of defined vm.
+        :param mac: a mac address.
+        :return: return a dict include main interface's features
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         interfaces = vmxml.get_iface_all()
@@ -561,7 +538,7 @@ class VMXML(VMXMLBase):
             interface = interfaces[mac]
         except KeyError:
             interface = None
-        if interface is not None: # matched mac exists.
+        if interface is not None:  # matched mac exists.
             iface_type = interface.get('type')
             source = interface.find('source').get(iface_type)
             features = {}
@@ -572,9 +549,8 @@ class VMXML(VMXMLBase):
         else:
             return None
 
-
     @staticmethod
-    def get_iface_dev(vm_name, options="", virsh_instance=base.virsh):
+    def get_iface_dev(vm_name, virsh_instance=base.virsh):
         """
         Return VM's interface device from XML definition, None if not set
         """
@@ -583,7 +559,6 @@ class VMXML(VMXMLBase):
         if ifaces:
             return ifaces.keys()
         return None
-
 
     @staticmethod
     def get_iftune_params(vm_name, options="", virsh_instance=base.virsh):
@@ -596,17 +571,18 @@ class VMXML(VMXMLBase):
         iftune_params = {}
         bandwidth = None
         try:
-            bandwidth = xmltreefile.find('devices').find('interface').find('bandwidth')
+            bandwidth = xmltreefile.find('devices/interface/bandwidth')
             try:
-                iftune_params['inbound'] = bandwidth.find('inbound').get('average')
-                iftune_params['outbound'] = bandwidth.find('outbound').get('average')
+                iftune_params['inbound'] = bandwidth.find(
+                    'inbound').get('average')
+                iftune_params['outbound'] = bandwidth.find(
+                    'outbound').get('average')
             except AttributeError:
                 logging.error("Can't find <inbound> or <outbound> element")
         except AttributeError:
             logging.error("Can't find <bandwidth> element")
 
         return iftune_params
-
 
     def get_net_all(self):
         """
@@ -620,29 +596,28 @@ class VMXML(VMXMLBase):
             nets[dev] = node
         return nets
 
-
-    #TODO re-visit this method after the libvirt_xml.devices.interface module is implemented
+    # TODO re-visit this method after the libvirt_xml.devices.interface module
+    #     is implemented
     @staticmethod
     def get_net_dev(vm_name):
         """
         Get net device of a defined VM's nets.
 
-        @param: vm_name: Name of defined vm.
+        :param vm_name: Name of defined vm.
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         nets = vmxml.get_net_all()
-        if nets != None:
+        if nets is not None:
             return nets.keys()
         return None
-
 
     @staticmethod
     def set_cpu_mode(vm_name, mode='host-model'):
         """
         Set cpu's mode of VM.
 
-        @param vm_name: Name of defined vm to set primary serial.
-        @param mode: the mode of cpu:'host-model'...
+        :param vm_name: Name of defined vm to set primary serial.
+        :param mode: the mode of cpu:'host-model'...
         """
         vmxml = VMXML.new_from_dumpxml(vm_name)
         vmxml.check_cpu_mode(mode)
@@ -661,13 +636,13 @@ class VMXML(VMXMLBase):
 
 
 class VMCPUXML(VMXML):
+
     """
     Higher-level manipulations related to VM's XML(CPU)
     """
 
     # Must copy these here or there will be descriptor problems
     __slots__ = VMXML.__slots__ + ('model', 'vendor', 'feature_list',)
-
 
     def __init__(self, virsh_instance=virsh, vm_name='', mode='host-model'):
         """
@@ -686,13 +661,12 @@ class VMCPUXML(VMXML):
                                  tag_name='vendor')
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
-                                 libvirtxml=self)
+                               libvirtxml=self)
         super(VMCPUXML, self).__init__(virsh_instance=virsh_instance)
         # Setup some bare-bones XML to build upon
         self.set_cpu_mode(vm_name, mode)
         self['xml'] = self.dict_get('virsh').dumpxml(vm_name,
                                                      extra="--update-cpu")
-
 
     def get_feature_list(self):
         """
@@ -704,13 +678,12 @@ class VMCPUXML(VMXML):
             feature_list.append(feature_node)
         return feature_list
 
-
     def get_feature_name(self, num):
         """
         Get assigned feature name
 
-        @param: num: Assigned feature number
-        @return: Assigned feature name
+        :param num: Assigned feature number
+        :return: Assigned feature name
         """
         count = len(self.feature_list)
         if num >= count:
@@ -719,29 +692,28 @@ class VMCPUXML(VMXML):
         feature_name = self.feature_list[num].get('name')
         return feature_name
 
-
     def remove_feature(self, num):
         """
         Remove a assigned feature from xml
 
-        @param: num: Assigned feature number
+        :param num: Assigned feature number
         """
         xmltreefile = self.dict_get('xml')
         count = len(self.feature_list)
         if num >= count:
             raise xcepts.LibvirtXMLError("Remove %d from %d features"
-                                          % (num, count))
+                                         % (num, count))
         feature_remove_node = self.feature_list[num]
         cpu_node = xmltreefile.find('/cpu')
         cpu_node.remove(feature_remove_node)
 
-
-    def check_feature_name(self, value):
+    @staticmethod
+    def check_feature_name(value):
         """
         Check feature name valid or not.
 
-        @param: value: The feature name
-        @return: True if check pass
+        :param value: The feature name
+        :return: True if check pass
         """
         sys_feature = []
         cpu_xml_file = open('/proc/cpuinfo', 'r')
@@ -752,13 +724,12 @@ class VMCPUXML(VMXML):
                 sys_feature = list(set(sys_feature + sys_sub_feature))
         return (value in sys_feature)
 
-
     def set_feature(self, num, value):
         """
         Set a assigned feature value to xml
 
-        @param: num: Assigned feature number
-        @param: value: The feature name modified to
+        :param num: Assigned feature number
+        :param value: The feature name modified to
         """
         count = len(self.feature_list)
         if num >= count:
@@ -767,12 +738,11 @@ class VMCPUXML(VMXML):
         feature_set_node = self.feature_list[num]
         feature_set_node.set('name', value)
 
-
     def add_feature(self, value):
         """
         Add a feature Element to xml
 
-        @param: num: Assigned feature number
+        :param num: Assigned feature number
         """
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/cpu')

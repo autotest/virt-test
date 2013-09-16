@@ -2,9 +2,10 @@
 """
 Populate/update config files for virt-test
 
-@copyright: Red Hat 2013
+:copyright: Red Hat 2013
 """
-import os, sys
+import os
+import sys
 import common
 from autotest.client.shared import logging_manager
 from virttest import data_dir, bootstrap, utils_misc
@@ -19,8 +20,8 @@ if __name__ == "__main__":
     import optparse
     option_parser = optparse.OptionParser()
     option_parser.add_option("-v", "--verbose",
-                      action="store_true", dest="verbose",
-                      help="Exhibit debug messages")
+                             action="store_true", dest="verbose",
+                             help="Exhibit debug messages")
     options, args = option_parser.parse_args()
     if options.verbose:
         logging_manager.configure_logging(utils_misc.VirtLoggingConfig(),

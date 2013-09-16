@@ -1,4 +1,6 @@
-import re, logging, time
+import re
+import logging
+import time
 from autotest.client.shared import error
 from virttest import virsh, libvirt_vm, remote, utils_libvirtd
 
@@ -18,17 +20,19 @@ def run_virsh_list(test, params, env):
         Create a virsh list command and execute it on remote host.
         It will list local domains on remote host.
 
-        @param options_ref:options in virsh list command.
-        @param remote_ip:remote host's ip.
-        @param remote_passwd:remote host's password.
-        @param local_ip:local ip, to create uri in virsh list.
-        @return:return status and output of the virsh list command.
+        :param options_ref:options in virsh list command.
+        :param remote_ip:remote host's ip.
+        :param remote_passwd:remote host's password.
+        :param local_ip:local ip, to create uri in virsh list.
+        :return:return status and output of the virsh list command.
         """
         complete_uri = libvirt_vm.complete_uri(local_ip)
         command_on_remote = "virsh -c %s list %s" % (complete_uri, options_ref)
-        session = remote.remote_login("ssh", remote_ip, "22", "root", remote_passwd, "#")
+        session = remote.remote_login(
+            "ssh", remote_ip, "22", "root", remote_passwd, "#")
         time.sleep(5)
-        status, output = session.cmd_status_output(command_on_remote, internal_timeout=5)
+        status, output = session.cmd_status_output(
+            command_on_remote, internal_timeout=5)
         time.sleep(5)
         session.close()
         return int(status), output
@@ -40,14 +44,14 @@ def run_virsh_list(test, params, env):
     list_ref = params.get("list_type_ref", "")
     vm_ref = params.get("vm_ref", "")
 
-    #Some parameters are not supported on old libvirt, skip them.
+    # Some parameters are not supported on old libvirt, skip them.
     help_info = virsh.command("help list").stdout.strip()
     if vm_ref and not re.search(vm_ref, help_info):
         raise error.TestNAError("This version do not support vm type:%s"
-                                 % vm_ref)
+                                % vm_ref)
     if list_ref and not re.search(list_ref, help_info):
         raise error.TestNAError("This version do not support list type:%s"
-                                 % list_ref)
+                                % list_ref)
 
     status_error = params.get("status_error", "no")
     addition_status_error = params.get("addition_status_error", "no")
@@ -55,7 +59,8 @@ def run_virsh_list(test, params, env):
     # If a transient domain is destroyed, it will disappear.
     if vm_ref == "transient" and options_ref == "inactive":
         logging.info("Set addition_status_error to yes")
-        logging.info("because transient domain will disappear after destroyed.")
+        logging.info(
+            "because transient domain will disappear after destroyed.")
         addition_status_error = "yes"
 
     if vm_ref == "transient":
@@ -64,12 +69,12 @@ def run_virsh_list(test, params, env):
     elif vm_ref == "managed-save":
         virsh.managedsave(vm_name, ignore_status=True, print_info=True)
 
-    #Prepare libvirtd status
+    # Prepare libvirtd status
     libvirtd = params.get("libvirtd", "on")
     if libvirtd == "off":
         utils_libvirtd.libvirtd_stop()
 
-    #run test case
+    # run test case
     if list_ref == "--uuid":
         result_expected = domuuid
         logging.info("%s's uuid is: %s", vm_name, domuuid)
@@ -100,31 +105,33 @@ def run_virsh_list(test, params, env):
         remote_passwd = params.get("remote_passwd", "none")
         local_ip = params.get("local_ip", "none")
         logging.info("Execute virsh command on remote host %s.", remote_ip)
-        status, output = list_local_domains_on_remote(options_ref, remote_ip, remote_passwd, local_ip)
+        status, output = list_local_domains_on_remote(
+            options_ref, remote_ip, remote_passwd, local_ip)
         logging.info("Status:%s", status)
         logging.info("Output:\n%s", output)
     else:
         if vm_ref:
             options_ref = "%s --%s" % (options_ref, vm_ref)
-        result = virsh.dom_list(options_ref, ignore_status=True, print_info=True)
+        result = virsh.dom_list(
+            options_ref, ignore_status=True, print_info=True)
         status = result.exit_status
         output = result.stdout.strip()
 
-    #Recover libvirtd service status
+    # Recover libvirtd service status
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #Recover of domain
+    # Recover of domain
     if vm_ref == "transient":
         vm.define(tmp_xml)
     elif vm_ref == "managed-save":
-        #Recover saved guest.
+        # Recover saved guest.
         virsh.managedsave_remove(vm_name, ignore_status=True, print_info=True)
 
-    #Check result
+    # Check result
     status_error = (status_error == "no") and (addition_status_error == "no")
     if vm_ref == "managed-save":
-        saved_output = re.search(vm_name+"\s+saved", output)
+        saved_output = re.search(vm_name + "\s+saved", output)
         if saved_output:
             output = saved_output.group(0)
         else:

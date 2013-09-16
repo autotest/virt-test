@@ -1,4 +1,6 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import env_process
@@ -10,9 +12,9 @@ def run_trans_hugepage_swapping(test, params, env):
     KVM khugepage user side test:
     1) Verify that the hugepages can be swapped in/out.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def get_args(args_list):
         """
@@ -35,15 +37,15 @@ def run_trans_hugepage_swapping(test, params, env):
         # @swap_free: Free swap size
         # @hugepage_size: Page size of one hugepage
         # @page_size: The biggest page size that app can ask for
-        args_dict_check = {"free" : "MemFree", "swap_size" : "SwapTotal",
-                           "swap_free" : "SwapFree", "total" : "MemTotal",
-                           "hugepage_size" : "Hugepagesize",}
+        args_dict_check = {"free": "MemFree", "swap_size": "SwapTotal",
+                           "swap_free": "SwapFree", "total": "MemTotal",
+                           "hugepage_size": "Hugepagesize", }
         args_dict = get_args(args_dict_check)
         swap_free = []
         total = int(args_dict['total']) / 1024
         free = int(args_dict['free']) / 1024
         swap_size = int(args_dict['swap_size']) / 1024
-        swap_free.append(int(args_dict['swap_free'])/1024)
+        swap_free.append(int(args_dict['swap_free']) / 1024)
         hugepage_size = int(args_dict['hugepage_size']) / 1024
         login_timeout = float(params.get("login_timeout", 360))
         check_cmd_timeout = float(params.get("check_cmd_timeout", 900))
@@ -73,7 +75,7 @@ def run_trans_hugepage_swapping(test, params, env):
             if int(params['mem']) > swap_free[0]:
                 vm.destroy()
                 vm_name = 'vmsw'
-                vm0 =  params.get("main_vm")
+                vm0 = params.get("main_vm")
                 vm0_key = env.get_vm(vm0)
                 params['vms'] = params['vms'] + " " + vm_name
                 params['mem'] = str(swap_free[0])
@@ -91,7 +93,7 @@ def run_trans_hugepage_swapping(test, params, env):
             utils.run(cmd)
 
             args_dict = get_args(args_dict_check)
-            swap_free.append(int(args_dict['swap_free'])/1024)
+            swap_free.append(int(args_dict['swap_free']) / 1024)
 
             if swap_free[1] - swap_free[0] >= 0:
                 raise error.TestFail("No data was swapped to memory")

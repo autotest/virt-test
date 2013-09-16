@@ -2,8 +2,8 @@
 """
 This is a unittest for qemu_qtree library.
 
-@author: Lukas Doktor <ldoktor@redhat.com>
-@copyright: 2012 Red Hat, Inc.
+:author: Lukas Doktor <ldoktor@redhat.com>
+:copyright: 2012 Red Hat, Inc.
 """
 __author__ = """Lukas Doktor (ldoktor@redhat.com)"""
 
@@ -17,7 +17,9 @@ OFFSET_PER_LEVEL = qemu_qtree.OFFSET_PER_LEVEL
 
 # Dummy classes and functions
 class ParamsDict(dict):
+
     """ params like dictionary """
+
     def objects(self, item):
         if self.get(item):
             return self.get(item).split(' ')
@@ -153,7 +155,9 @@ params = ParamsDict({'images': 'image1 stg4',
 
 
 class QtreeContainerTest(unittest.TestCase):
+
     """ QtreeContainer tests """
+
     def test_qtree(self):
         """ Correct workflow """
         reference_nodes = [qemu_qtree.QtreeDisk, qemu_qtree.QtreeBus,
@@ -174,8 +178,8 @@ class QtreeContainerTest(unittest.TestCase):
         nodes = qtree.get_nodes()
 
         self.assertEqual(len(nodes), len(reference_nodes), ("Number of parsed "
-                            "nodes is not equal to the number of qtree nodes. "
-                            "%s != %s" % (len(nodes), len(reference_nodes))))
+                                                            "nodes is not equal to the number of qtree nodes. "
+                                                            "%s != %s" % (len(nodes), len(reference_nodes))))
 
         for i in xrange(len(nodes)):
             self.assertTrue(isinstance(nodes[i], reference_nodes[i]),
@@ -197,7 +201,9 @@ class QtreeContainerTest(unittest.TestCase):
 
 
 class QtreeDiskContainerTest(unittest.TestCase):
+
     """ QtreeDiskContainer tests """
+
     def setUp(self):
         # Get rid of logging errors
         def dumm(*args, **kvargs):
@@ -266,7 +272,9 @@ Host: scsi1 Channel: 00 Id: 00 Lun: 00
 
 
 class KvmQtreeClassTest(unittest.TestCase):
+
     """ Additional tests for qemu_qtree classes """
+
     def test_qtree_bus_bus(self):
         """ Bus' child can't be Bus() """
         test = qemu_qtree.QtreeBus()

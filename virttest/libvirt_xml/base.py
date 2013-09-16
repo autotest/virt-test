@@ -5,6 +5,7 @@ from virttest.libvirt_xml import xcepts
 
 
 class LibvirtXMLBase(propcan.PropCanBase):
+
     """
     Base class for common attributes/methods applying to all sub-classes
 
@@ -29,14 +30,13 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         Initialize instance with connection to virsh
 
-        @param: virsh_instance: virsh module or instance to use
+        :param virsh_instance: virsh module or instance to use
         """
         self.dict_set('xmltreefile', None)
         self.dict_set('validates', None)
-        super(LibvirtXMLBase, self).__init__({'virsh':virsh_instance,
-                                              'xml':None})
+        super(LibvirtXMLBase, self).__init__({'virsh': virsh_instance,
+                                              'xml': None})
         # Can't use accessors module here, would make circular dep.
-
 
     def __str__(self):
         """
@@ -44,9 +44,9 @@ class LibvirtXMLBase(propcan.PropCanBase):
         """
         return str(self.dict_get('xml'))
 
-
     def __eq__(self, other):
-        # Dynamic accessor methods mean we cannot compare class objects directly
+        # Dynamic accessor methods mean we cannot compare class objects
+        # directly
         if self.__class__.__name__ != other.__class__.__name__:
             return False
         # Don't assume both instances have same comparables
@@ -59,13 +59,12 @@ class LibvirtXMLBase(propcan.PropCanBase):
             try:
                 dict_1[slot] = getattr(self, slot)
             except xcepts.LibvirtXMLNotFoundError:
-                pass # Unset virtual values won't have keys
+                pass  # Unset virtual values won't have keys
             try:
                 dict_2[slot] = getattr(other, slot)
             except xcepts.LibvirtXMLNotFoundError:
-                pass # Unset virtual values won't have keys
+                pass  # Unset virtual values won't have keys
         return dict_1 == dict_2
-
 
     def set_virsh(self, value):
         """Accessor method for virsh property, make sure it's right type"""
@@ -75,9 +74,8 @@ class LibvirtXMLBase(propcan.PropCanBase):
             self.dict_set('virsh', value)
         else:
             raise xcepts.LibvirtXMLError("virsh parameter must be a module "
-                                  "named virsh or subclass of virsh.VirshBase "
-                                  "not a %s" % str(value_type))
-
+                                         "named virsh or subclass of virsh.VirshBase "
+                                         "not a %s" % str(value_type))
 
     def set_xml(self, value):
         """
@@ -89,19 +87,17 @@ class LibvirtXMLBase(propcan.PropCanBase):
         else:
             try:
                 if self.dict_get('xml') is not None:
-                    del self['xml'] # clean up old temporary files
+                    del self['xml']  # clean up old temporary files
             except KeyError:
-                pass # Allow other exceptions through
+                pass  # Allow other exceptions through
             # value could be filename or a string full of XML
             self.dict_set('xml', xml_utils.XMLTreeFile(value))
-
 
     def get_xml(self):
         """
         Accessor method for 'xml' property returns xmlTreeFile backup filename
         """
-        return self.xmltreefile.name # The filename
-
+        return self.xmltreefile.name  # The filename
 
     def get_xmltreefile(self):
         """
@@ -110,12 +106,11 @@ class LibvirtXMLBase(propcan.PropCanBase):
         try:
             # don't call get_xml() recursivly
             xml = self.dict_get('xml')
-            if xml == None:
+            if xml is None:
                 raise KeyError
         except (KeyError, AttributeError):
             raise xcepts.LibvirtXMLError("No xml data has been loaded")
-        return xml # XMLTreeFile loaded by set_xml() method
-
+        return xml  # XMLTreeFile loaded by set_xml() method
 
     def set_xmltreefile(self, value):
         """
@@ -127,13 +122,11 @@ class LibvirtXMLBase(propcan.PropCanBase):
                                          % type(value))
         self.dict_set('xml', value)
 
-
     def del_xmltreefile(self):
         """
         Remove all backing XML
         """
         self.dict_del('xml')
-
 
     def copy(self):
         """
@@ -142,14 +135,14 @@ class LibvirtXMLBase(propcan.PropCanBase):
         # help keep line length short, virsh is not a property
         the_copy = self.__class__(virsh_instance=self.virsh)
         try:
-            # file may not be accessable, obtain XML string value
+            # file may not be accessible, obtain XML string value
             xmlstr = str(self.dict_get('xml'))
-            # Create fresh/new XMLTreeFile along with tmp files from XML content
+            # Create fresh/new XMLTreeFile along with tmp files from XML
+            # content
             the_copy.dict_set('xml', xml_utils.XMLTreeFile(xmlstr))
-        except xcepts.LibvirtXMLError: # Allow other exceptions through
-            pass # no XML was loaded yet
+        except xcepts.LibvirtXMLError:  # Allow other exceptions through
+            pass  # no XML was loaded yet
         return the_copy
-
 
     def get_validates(self):
         """
@@ -163,21 +156,18 @@ class LibvirtXMLBase(propcan.PropCanBase):
         else:
             return False
 
-
     def set_validates(self, value):
         """
         Raises LibvirtXMLError
         """
-        del value # not needed
+        del value  # not needed
         raise xcepts.LibvirtXMLError("Read only property")
-
 
     def del_validates(self):
         """
         Raises LibvirtXMLError
         """
         raise xcepts.LibvirtXMLError("Read only property")
-
 
     @staticmethod
     def virt_xml_validate(filename, schema_name=None):

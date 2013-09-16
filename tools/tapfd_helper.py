@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
-import sys, os, re, logging
+import sys
+import os
+import re
+import logging
 import common
 from autotest.client.shared import logging_manager
 from virttest import utils_net, utils_misc

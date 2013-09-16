@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import sys, os, getpass, datetime
+import sys
+import os
+import getpass
+import datetime
 from github import Github
 from github_issues import GithubIssues
 
@@ -39,7 +42,7 @@ while True:
     if label:
         try:
             # http://jacquev6.github.io
-            #       /PyGithub/github_objects/Label.html#github.Label.Label
+            # /PyGithub/github_objects/Label.html#github.Label.Label
             labels.append(issues.get_gh_label(label).name)
         except ValueError, detail:
             print str(detail)
@@ -55,8 +58,8 @@ print
 #            sort - str - 'created', 'updated', 'comments'
 #            direction - str - 'asc', 'desc'
 #            since - datetime.datetime
-criteria = {'state':'closed', 'labels':labels,
-            'sort':'updated', 'since':since}
+criteria = {'state': 'closed', 'labels': labels,
+            'sort': 'updated', 'since': since}
 
 heading = ("Applied %s pull-requests from %s since %s  by author"
            % (",".join(labels), repo_full_name, since.isoformat()))

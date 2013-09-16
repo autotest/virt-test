@@ -1,4 +1,8 @@
-import logging, os, re, time, codecs
+import logging
+import os
+import re
+import time
+import codecs
 from autotest.client.shared import error
 from virttest import utils_test, virsh, utils_libvirtd
 
@@ -46,7 +50,8 @@ def run_virsh_migrate(test, params, env):
         logging.info("Sleeping %d seconds before migration" % delay)
         time.sleep(delay)
         # Migrate the guest.
-        successful = vm.migrate(dest_uri, options, extra, True, True).exit_status
+        successful = vm.migrate(
+            dest_uri, options, extra, True, True).exit_status
         logging.info("successful: %d", successful)
         if int(successful) != 0:
             logging.error("Migration failed for %s." % vm_name)
@@ -55,7 +60,7 @@ def run_virsh_migrate(test, params, env):
         if options.count("dname") or extra.count("dname"):
             vm.name = extra.split()[1].strip()
 
-        if vm.is_alive(): # vm.connect_uri was updated
+        if vm.is_alive():  # vm.connect_uri was updated
             logging.info("Alive guest found on destination %s." % dest_uri)
         else:
             logging.error("VM not alive on destination %s" % dest_uri)
@@ -64,7 +69,6 @@ def run_virsh_migrate(test, params, env):
         # Throws exception if console shows panic message
         vm.verify_kernel_crash()
         return True
-
 
     vm_name = params.get("main_vm")
     vm = env.get_vm(params["main_vm"])
@@ -116,10 +120,11 @@ def run_virsh_migrate(test, params, env):
             dest_xmlfile = params.get("virsh_migrate_xml", "")
             if dest_xmlfile:
                 ret_attach = vm.attach_interface("--type bridge --source "
-                                "virbr0 --mac %s" % new_nic_mac, True, True)
+                                                 "virbr0 --mac %s" % new_nic_mac, True, True)
                 if not ret_attach:
                     exception = True
-                    raise error.TestError("Attaching nic to %s failed." % vm.name)
+                    raise error.TestError(
+                        "Attaching nic to %s failed." % vm.name)
                 vm_xml_new = vm.get_xml()
                 logging.debug("Xml file on source: %s" % vm_xml_new)
                 f = codecs.open(dest_xmlfile, 'wb', encoding='utf-8')
@@ -219,12 +224,12 @@ def run_virsh_migrate(test, params, env):
                 back_options = options
             if back_extra == 'default':
                 back_extra = extra
-            ret_migrate = do_migration(delay, vm, back_dest_uri, back_options, back_extra)
+            ret_migrate = do_migration(
+                delay, vm, back_dest_uri, back_options, back_extra)
 
     except Exception, detail:
         exception = True
         logging.error("%s: %s" % (detail.__class__, detail))
-
 
     # Whatever error occurs, we have to clean up all environment.
     # Make sure vm.connect_uri is the destination uri.
@@ -242,7 +247,7 @@ def run_virsh_migrate(test, params, env):
     if not virsh.domain_exists(vm_name, uri=src_uri):
         vm.define(vm_xmlfile_bak)
     else:
-        #if not vm.shutdown():
+        # if not vm.shutdown():
         vm.destroy()
 
     # Cleanup source.
@@ -253,7 +258,8 @@ def run_virsh_migrate(test, params, env):
         os.remove(dest_xmlfile)
 
     if exception:
-        raise error.TestError("Error occurred. \n%s: %s" % (detail.__class__, detail))
+        raise error.TestError(
+            "Error occurred. \n%s: %s" % (detail.__class__, detail))
 
     # Check test result.
     if status_error == 'yes':

@@ -1,15 +1,18 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_net, utils_misc, remote, data_dir
+
 
 def ssh_cmd(session, cmd, timeout=60):
     """
     Execute remote command and return the output
 
-    @param session: a remote shell session or tag for localhost
-    @param cmd: executed command
-    @param timeout: timeout for the command
+    :param session: a remote shell session or tag for localhost
+    :param cmd: executed command
+    :param timeout: timeout for the command
     """
     if session == "localhost":
         return utils.system_output(cmd, timeout=timeout)
@@ -28,9 +31,9 @@ def run_multi_nic_stress(test, params, env):
     3) Execute netperf  stress on multi nics
     4) After the stress do ping, check the nics works
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def env_setup(session, ip_addr, username, shell_port, password):
         """
@@ -56,7 +59,7 @@ def run_multi_nic_stress(test, params, env):
     server_ctl_ip = server_ip
     server_ctl_mac = vm.get_mac_address()
 
-    #the first nic used for server control.
+    # the first nic used for server control.
     params_server_nic = params.object_params(vm.name)
     nics_count = len(params_server_nic.get("nics", "").split())
     if nics_count > 1:
@@ -121,7 +124,6 @@ def run_multi_nic_stress(test, params, env):
             env_setup(session, clients_ips[client_ctl_session.index(session)],
                       username, shell_port, password)
 
-
     error.context("Start netperf testing", logging.info)
     try:
         start_test(server_ips, server_ctl, clients,
@@ -151,17 +153,17 @@ def start_test(servers, server_ctl, clients, l=60,
     """
     Start to test with different kind of configurations
 
-    @param servers: netperf server ips for data connection
-    @param server_ctl: ip to control netperf server
-    @param clients: netperf clients' ip
-    @param l: test duration
-    @param sessions_rr: sessions number list for RR test
-    @param sessions: sessions number list
-    @param sizes_rr: request/response sizes (TCP_RR, UDP_RR)
-    @param sizes: send size (TCP_STREAM, UDP_STREAM)
-    @param protocols: test type
-    @param netserver_port: netserver listen port
-    @param params: Dictionary with the test parameters.
+    :param servers: netperf server ips for data connection
+    :param server_ctl: ip to control netperf server
+    :param clients: netperf clients' ip
+    :param l: test duration
+    :param sessions_rr: sessions number list for RR test
+    :param sessions: sessions number list
+    :param sizes_rr: request/response sizes (TCP_RR, UDP_RR)
+    :param sizes: send size (TCP_STREAM, UDP_STREAM)
+    :param protocols: test type
+    :param netserver_port: netserver listen port
+    :param params: Dictionary with the test parameters.
     """
     for protocol in protocols.split():
         error.context("Testing %s protocol" % protocol, logging.info)
@@ -212,7 +214,7 @@ def launch_client(sessions, servers, server_ctl, clients,
         ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
     logging.info("Netserver start successfully")
 
-    #start netperf
+    # start netperf
     error.context("Start netperf client threads", logging.info)
     client_threads = []
 

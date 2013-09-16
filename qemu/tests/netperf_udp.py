@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from virttest import utils_misc, remote, utils_net
 
@@ -17,11 +18,10 @@ def run_netperf_udp(test, params, env):
        message size.
     6) Compare UDP performance to make sure it is acceptable.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
-
 
     def get_remote_host_session():
         dsthostssh = remote.remote_login("ssh", dsthost, 22, "root",
@@ -31,7 +31,6 @@ def run_netperf_udp(test, params, env):
             return dsthostssh
         else:
             return None
-
 
     def scp_to_remote(local_path="", remote_path=""):
         remote.scp_to_remote(dsthost, 22, "root", passwd, local_path,
@@ -79,7 +78,7 @@ def run_netperf_udp(test, params, env):
         raise error.TestError("Fail to setup netperf on reference machine.")
     error.context("Setup netperf on guest os.", logging.info)
     (s, output) = session.get_command_status_output(cmd,
-                                                   timeout=test_timeout)
+                                                    timeout=test_timeout)
     if s != 0:
         raise error.TestError("Fail to setup netperf on guest os.")
 
@@ -100,7 +99,7 @@ def run_netperf_udp(test, params, env):
     # Run netperf with message size defined in range.
     msg = "Detail result for netperf udp test with different message size.\n"
     while(m_size <= end_size):
-        cmd = params.get("netperf_cmd")% (dsthost, m_size)
+        cmd = params.get("netperf_cmd") % (dsthost, m_size)
         txt = "Run netperf client command in guest: %s" % cmd
         error.context(txt, logging.info)
         (s, output) = session.get_command_status_output(cmd)

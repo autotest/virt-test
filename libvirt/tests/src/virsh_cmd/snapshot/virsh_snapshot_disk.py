@@ -32,7 +32,8 @@ def run_virsh_snapshot_disk(test, params, env):
     image = qemu_storage.QemuImg(params, tmp_dir, "snapshot_test")
     img_path, _ = image.create(params)
     # Do the attach action.
-    virsh.attach_disk(vm_name, source=img_path, target="vdf", extra="--persistent --subdriver %s" % image_format)
+    virsh.attach_disk(vm_name, source=img_path, target="vdf",
+                      extra="--persistent --subdriver %s" % image_format)
 
     # Init snapshot_name
     snapshot_name = None
@@ -49,7 +50,8 @@ def run_virsh_snapshot_disk(test, params, env):
             snapshot_xml_file = open(snapshot_xml_path, "w")
             snapshot_xml_file.writelines(lines)
             snapshot_xml_file.close()
-            snapshot_result = virsh.snapshot_create(vm_name, ("--xmlfile %s" % snapshot_xml_path))
+            snapshot_result = virsh.snapshot_create(
+                vm_name, ("--xmlfile %s" % snapshot_xml_path))
             if snapshot_result.exit_status:
                 if status_error:
                     return
@@ -64,8 +66,8 @@ def run_virsh_snapshot_disk(test, params, env):
                 else:
                     raise error.TestFail("Failed to create snapshot. Error:%s."
                                          % snapshot_result.stderr.strip())
-            snapshot_name = re.search("\d+", snapshot_result.stdout.strip()).group(0)
-
+            snapshot_name = re.search(
+                "\d+", snapshot_result.stdout.strip()).group(0)
 
         # Touch a file in VM.
         session = vm.wait_for_login()
@@ -87,7 +89,8 @@ def run_virsh_snapshot_disk(test, params, env):
         # Revert snapshot.
         revert_result = virsh.snapshot_revert(vm_name, snapshot_name)
         if revert_result.exit_status:
-            raise error.TestFail("Revert snapshot failed. %s" % revert_result.stderr.strip())
+            raise error.TestFail(
+                "Revert snapshot failed. %s" % revert_result.stderr.strip())
 
         if not vm.is_alive():
             raise error.TestFail("Revert snapshot failed.")

@@ -1,7 +1,9 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import utils_test, aexpect
 from virttest import env_process
+
 
 @error.context_aware
 def run_time_manage(test, params, env):
@@ -21,9 +23,9 @@ def run_time_manage(test, params, env):
     7) Print the drift values for all sessions
     8) TODO: Validate if the drift value has to be within defined value
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     # Checking the main vm is alive
     vm = env.get_vm(params["main_vm"])
@@ -48,7 +50,7 @@ def run_time_manage(test, params, env):
     curr_time = []
     timedrift = []
     totaldrift = []
-    vmnames =["virt-tests-vm1"]
+    vmnames = ["virt-tests-vm1"]
 
     # Run some load on the host
     logging.info("Starting load on host.")
@@ -78,24 +80,25 @@ def run_time_manage(test, params, env):
             num += 1
 
         while itr <= int(params["max_itrs"]):
-            for vmid,se in enumerate(sessions):
+            for vmid, se in enumerate(sessions):
                 # Get the respective vm object
-                vmname = "virt-tests-vm%d" % (vmid +1)
+                vmname = "virt-tests-vm%d" % (vmid + 1)
                 vm = env.get_vm(vmname)
                 # Run current iteration
-                logging.info("Rebooting:vm%d iteration %d " % ((vmid + 1), itr))
-                se = vm.reboot(se ,timeout=timeout)
+                logging.info(
+                    "Rebooting:vm%d iteration %d " % ((vmid + 1), itr))
+                se = vm.reboot(se, timeout=timeout)
                 # Remember the current changed session
                 sessions[vmid] = se
                 error.context("checking responsiveness of guest")
                 se.cmd(params["alive_test_cmd"])
                 if itr == 0:
                     (ht0, gt0) = utils_test.get_time(se, time_command,
-                                                   time_filter_re, time_format)
+                                                     time_filter_re, time_format)
                     prev_time.append((ht0, gt0))
                 else:
                     (ht1, gt1) = utils_test.get_time(se, time_command,
-                                                   time_filter_re, time_format)
+                                                     time_filter_re, time_format)
                     curr_time.append((ht1, gt1))
             if itr != 0:
                 for i in range(int(params["max_vms"])):
@@ -113,8 +116,8 @@ def run_time_manage(test, params, env):
 
         logging.info("The time drift values for all VM sessions/iterations")
         logging.info("VM-Name:%s" % vmnames)
-        for idx,value in enumerate(totaldrift):
-            logging.info("itr-%2d:%s" % (idx+1,value))
+        for idx, value in enumerate(totaldrift):
+            logging.info("itr-%2d:%s" % (idx + 1, value))
 
     finally:
         for se in sessions:

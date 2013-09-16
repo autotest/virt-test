@@ -2,7 +2,9 @@
 Specializations of base.AccessorBase for particular XML manipulation types
 """
 
-import logging, re, sys
+import logging
+import re
+import sys
 from virttest import xml_utils
 from virttest.propcan import PropCanBase
 from virttest.libvirt_xml import xcepts, base
@@ -45,7 +47,7 @@ def py24_bin(number):
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
     bin_wrapper = py24_bin
 else:
-    bin_wrapper = bin # pylint: disable=E0602
+    bin_wrapper = bin  # pylint: disable=E0602
 
 
 def type_check(name, thing, expected):
@@ -74,6 +76,7 @@ def add_to_slots(*args):
 
 
 class AccessorBase(PropCanBase):
+
     """
     Base class for a callable operating on a LibvirtXMLBase subclass instance
     """
@@ -85,10 +88,10 @@ class AccessorBase(PropCanBase):
         """
         Initialize accessor to operate on lvxml with accessor_data for property
 
-        @param: operation: Debug String for 'Getter', 'Setter', or 'Delter'
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: **dargs: Necessary for subclasses to extend required parameters
+        :param operation: Debug String for 'Getter', 'Setter', or 'Delter'
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param **dargs: Necessary for subclasses to extend required parameters
         """
         type_check('Parameter property_name', property_name, str)
         type_check('Operation attribute', operation, str)
@@ -102,22 +105,20 @@ class AccessorBase(PropCanBase):
         self.dict_set('libvirtxml', libvirtxml)
         for slot in self.__slots__:
             if slot in AccessorBase.__slots__:
-                continue # already checked these
+                continue  # already checked these
             # Don't care about value type
             if not dargs.has_key(slot):
                 raise ValueError('Required accessor generator parameter %s'
-                                                                      % slot)
+                                 % slot)
             self.dict_set(slot, dargs[slot])
 
     # Subclass expected to override this and specify parameters
     __call__ = NotImplementedError
 
-
     def __repr__(self):
         return ("%s's %s for %s with %s"
                 % (self.libvirtxml.__class__.__name__, self.operation,
-                   self.property_name, str(dict(self))) )
-
+                   self.property_name, str(dict(self))))
 
     def xmltreefile(self):
         """
@@ -125,28 +126,27 @@ class AccessorBase(PropCanBase):
         """
         return self.libvirtxml.xmltreefile
 
-
     def element_by_parent(self, parent_xpath, tag_name, create=True):
         """
         Retrieve/create an element instance at parent_xpath/tag_name
 
-        @param: parent_xpath: xpath of parent element
-        @param: tag_name: name of element under parent to retrieve/create
-        @param: create: True to create new element if not exist
-        @returns: ElementTree.Element instance
-        @raises: LibvirtXMLError: If element not exist & create=False
+        :param parent_xpath: xpath of parent element
+        :param tag_name: name of element under parent to retrieve/create
+        :param create: True to create new element if not exist
+        :return: ElementTree.Element instance
+        :raise:: LibvirtXMLError: If element not exist & create=False
         """
         type_check('parent_xpath', parent_xpath, str)
         type_check('tag_name', tag_name, str)
         parent_element = self.xmltreefile().find(parent_xpath)
         if (parent_element == self.xmltreefile().getroot() and
-                                    parent_element.tag == tag_name):
+           parent_element.tag == tag_name):
             return parent_element
         excpt_str = ('Exception thrown from %s for property "%s" while'
                      ' looking for element tag "%s", on parent at xpath'
-                     ' "%s", in XML\n%s\n' % ( self.operation,
-                     self.property_name, tag_name, parent_xpath,
-                     str(self.xmltreefile())))
+                     ' "%s", in XML\n%s\n' % (self.operation,
+                                              self.property_name, tag_name, parent_xpath,
+                                              str(self.xmltreefile())))
         if parent_element is None:
             if create:
                 # This will only work for simple XPath strings
@@ -161,22 +161,23 @@ class AccessorBase(PropCanBase):
             logging.error(excpt_str)
             raise
         if element is None:
-            if create: # Create the element
+            if create:  # Create the element
                 element = xml_utils.ElementTree.SubElement(parent_element,
                                                            tag_name)
-            else: # create == False
+            else:  # create is False
                 raise xcepts.LibvirtXMLNotFoundError('Error in %s for property '
-                                                 '"%s", element tag "%s" not '
-                                                 'found on parent at xpath "%s"'
-                                                 ' in XML\n%s\n'
-                                                 % (self.operation,
-                                                    self.property_name,
-                                                    tag_name, parent_xpath,
-                                                    str(self.xmltreefile())))
+                                                     '"%s", element tag "%s" not '
+                                                     'found on parent at xpath "%s"'
+                                                     ' in XML\n%s\n'
+                                                     % (self.operation,
+                                                        self.property_name,
+                                                        tag_name, parent_xpath,
+                                                        str(self.xmltreefile())))
         return element
 
 
 class ForbiddenBase(AccessorBase):
+
     """
     Raise LibvirtXMLAccessorError when called w/ or w/o a value arg.
     """
@@ -200,6 +201,7 @@ class ForbiddenBase(AccessorBase):
 
 
 class AccessorGeneratorBase(object):
+
     """
     Accessor method/class generator for specific property name
     """
@@ -208,12 +210,12 @@ class AccessorGeneratorBase(object):
         """
         Initialize accessor methods, marking operations in forbidden as such
 
-        @param: property_name: Name of the property
-        @param: libvirtxml: Instance reference to LibvirtXMLBase subclass
-        @param: forbidden: Optional string list of 'get', 'set', and/or 'del'
-        @param: **dargs: Specific AccessorGeneratorBase subclass info.
+        :param property_name: Name of the property
+        :param libvirtxml: Instance reference to LibvirtXMLBase subclass
+        :param forbidden: Optional string list of 'get', 'set', and/or 'del'
+        :param **dargs: Specific AccessorGeneratorBase subclass info.
         """
-        if forbidden == None:
+        if forbidden is None:
             forbidden = []
         type_check('forbidden', forbidden, list)
         self.forbidden = forbidden
@@ -230,7 +232,6 @@ class AccessorGeneratorBase(object):
         for operation in ('get', 'set', 'del'):
             self.set_if_not_defined(operation)
 
-
     def set_if_not_defined(self, operation):
         """
         Setup a callable instance for operation only if not already defined
@@ -239,17 +240,14 @@ class AccessorGeneratorBase(object):
         if not hasattr(self.libvirtxml, self.accessor_name(operation)):
             if operation not in self.forbidden:
                 self.assign_callable(operation, self.make_callable(operation))
-            else: # operation is forbidden
+            else:  # operation is forbidden
                 self.assign_callable(operation, self.make_forbidden(operation))
-
 
     def accessor_name(self, operation):
         """
         Return instance name for operation, defined by subclass (i.e. 'get_foo')
         """
         return "%s_%s" % (operation, self.property_name)
-
-
 
     @staticmethod
     def callable_name(operation):
@@ -258,22 +256,20 @@ class AccessorGeneratorBase(object):
         """
         return operation.capitalize() + 'ter'
 
-
     def make_callable(self, operation):
         """
         Return an callable instance for operation
         """
         callable_class = getattr(self, self.callable_name(operation))
-        return callable_class(self.callable_name(operation), self.property_name,
-                              self.libvirtxml, **self.dargs)
-
+        return callable_class(
+            self.callable_name(operation), self.property_name,
+            self.libvirtxml, **self.dargs)
 
     def make_forbidden(self, operation):
         """
         Return a forbidden callable instance for operation
         """
         return ForbiddenBase(operation, self.property_name, self.libvirtxml)
-
 
     def assign_callable(self, operation, callable_inst):
         """
@@ -287,6 +283,7 @@ class AccessorGeneratorBase(object):
 
 
 class AllForbidden(AccessorGeneratorBase):
+
     """
     Class of forbidden accessor classes for those undefined on libvirtxml
     """
@@ -295,8 +292,8 @@ class AllForbidden(AccessorGeneratorBase):
         """
         Create exception raising accessors for those undefined on libvirtxml
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
         """
         super(AllForbidden, self).__init__(property_name=property_name,
                                            libvirtxml=libvirtxml,
@@ -304,6 +301,7 @@ class AllForbidden(AccessorGeneratorBase):
 
 
 class XMLElementText(AccessorGeneratorBase):
+
     """
     Class of accessor classes operating on element.text
     """
@@ -315,19 +313,19 @@ class XMLElementText(AccessorGeneratorBase):
         """
         Create undefined accessors on libvirt instance
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'get', 'set', 'del'
-        @param: parent_xpath: XPath string of parent element
-        @param: tag_name: element tag name to manipulate text attribute on.
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param forbidden: Optional list of 'get', 'set', 'del'
+        :param parent_xpath: XPath string of parent element
+        :param tag_name: element tag name to manipulate text attribute on.
         """
         super(XMLElementText, self).__init__(property_name, libvirtxml,
                                              forbidden,
                                              parent_xpath=parent_xpath,
                                              tag_name=tag_name)
 
-
     class Getter(AccessorBase):
+
         """
         Retrieve text on element
         """
@@ -338,8 +336,8 @@ class XMLElementText(AccessorGeneratorBase):
             return self.element_by_parent(self.parent_xpath,
                                           self.tag_name, create=False).text
 
-
     class Setter(AccessorBase):
+
         """
         Set text to value on element
         """
@@ -352,8 +350,8 @@ class XMLElementText(AccessorGeneratorBase):
             element.text = str(value)
             self.xmltreefile().write()
 
-
     class Delter(AccessorBase):
+
         """
         Remove element & text
         """
@@ -372,14 +370,15 @@ class XMLElementText(AccessorGeneratorBase):
 
 
 class XMLElementInt(AccessorGeneratorBase):
+
     """
     Class of accessor classes operating on element.text as an integer
     """
-    __radix2func_dict__ = {0:int,
-                           2:bin_wrapper,
-                           8:oct,
-                           10:int,
-                           16:hex}
+    __radix2func_dict__ = {0: int,
+                           2: bin_wrapper,
+                           8: oct,
+                           10: int,
+                           16: hex}
 
     required_dargs = ('parent_xpath', 'tag_name', 'radix')
 
@@ -388,25 +387,25 @@ class XMLElementInt(AccessorGeneratorBase):
         """
         Create undefined accessors on libvirt instance
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
-        @param: parent_xpath: XPath string of parent element
-        @param: tag_name: element tag name to manipulate text attribute on.
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        :param parent_xpath: XPath string of parent element
+        :param tag_name: element tag name to manipulate text attribute on.
         """
         try:
             self.__radix2func_dict__[radix]
         except KeyError:
             raise xcepts.LibvirtXMLError("Param radix=%s for XMLElementInt "
-                                        "is not accepted." % radix)
+                                         "is not accepted." % radix)
         super(XMLElementInt, self).__init__(property_name, libvirtxml,
                                             forbidden,
                                             parent_xpath=parent_xpath,
                                             tag_name=tag_name,
                                             radix=radix)
 
-
     class Getter(AccessorBase):
+
         """
         Retrieve text on element and convert to int
         """
@@ -415,17 +414,17 @@ class XMLElementInt(AccessorGeneratorBase):
 
         def __call__(self):
             element = self.element_by_parent(self.parent_xpath,
-                                                 self.tag_name, create=False)
+                                             self.tag_name, create=False)
             try:
                 result = int(element.text, self.radix)
             except ValueError:
                 raise xcepts.LibvirtXMLError("Value of %s in %s is %s,"
                                              "not a Integer." % (self.tag_name,
-                                             self.parent_xpath, element.text))
+                                                                 self.parent_xpath, element.text))
             return result
 
-
     class Setter(AccessorBase):
+
         """
         Set text on element after converting to int then to str
         """
@@ -440,11 +439,11 @@ class XMLElementInt(AccessorGeneratorBase):
             element.text = str(convertFunc(value))
             self.xmltreefile().write()
 
-
     Delter = XMLElementText.Delter
 
 
 class XMLAttribute(AccessorGeneratorBase):
+
     """
     Class of accessor classes operating on an attribute of an element
     """
@@ -454,19 +453,19 @@ class XMLAttribute(AccessorGeneratorBase):
         """
         Create undefined accessors on libvirt instance
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
-        @param: parent_xpath: XPath string of parent element
-        @param: tag_name: element tag name to manipulate text attribute on.
-        @param: attribute: Attribute name to manupulate
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        :param parent_xpath: XPath string of parent element
+        :param tag_name: element tag name to manipulate text attribute on.
+        :param attribute: Attribute name to manupulate
         """
         super(XMLAttribute, self).__init__(property_name, libvirtxml,
-                                       forbidden, parent_xpath=parent_xpath,
-                                       tag_name=tag_name, attribute=attribute)
-
+                                           forbidden, parent_xpath=parent_xpath,
+                                           tag_name=tag_name, attribute=attribute)
 
     class Getter(AccessorBase):
+
         """
         Get attribute value
         """
@@ -475,11 +474,11 @@ class XMLAttribute(AccessorGeneratorBase):
 
         def __call__(self):
             element = self.element_by_parent(self.parent_xpath,
-                                                 self.tag_name, create=False)
+                                             self.tag_name, create=False)
             return element.get(self.attribute, None)
 
-
     class Setter(AccessorBase):
+
         """
         Set attribute value
         """
@@ -492,8 +491,8 @@ class XMLAttribute(AccessorGeneratorBase):
             element.set(self.attribute, str(value))
             self.xmltreefile().write()
 
-
     class Delter(AccessorBase):
+
         """
         Remove attribute
         """
@@ -502,15 +501,16 @@ class XMLAttribute(AccessorGeneratorBase):
 
         def __call__(self):
             element = self.element_by_parent(self.parent_xpath,
-                                                 self.tag_name, create=False)
+                                             self.tag_name, create=False)
             try:
                 del element.attrib[self.attribute]
             except KeyError:
-                pass # already doesn't exist
+                pass  # already doesn't exist
             self.xmltreefile().write()
 
 
 class XMLElementDict(AccessorGeneratorBase):
+
     """
     Class of accessor classes operating as a dictionary of attributes
     """
@@ -520,19 +520,19 @@ class XMLElementDict(AccessorGeneratorBase):
         """
         Create undefined accessors on libvirt instance
 
-        @param: property_name: String name of property (for exception detail)
-        @param: libvirtxml: An instance of a LibvirtXMLBase subclass
-        @param: forbidden: Optional list of 'Getter', 'Setter', 'Delter'
-        @param: parent_xpath: XPath string of parent element
-        @param: tag_name: element tag name to manipulate text attribute on.
+        :param property_name: String name of property (for exception detail)
+        :param libvirtxml: An instance of a LibvirtXMLBase subclass
+        :param forbidden: Optional list of 'Getter', 'Setter', 'Delter'
+        :param parent_xpath: XPath string of parent element
+        :param tag_name: element tag name to manipulate text attribute on.
         """
         super(XMLElementDict, self).__init__(property_name, libvirtxml,
-                                              forbidden,
-                                              parent_xpath=parent_xpath,
-                                              tag_name=tag_name)
-
+                                             forbidden,
+                                             parent_xpath=parent_xpath,
+                                             tag_name=tag_name)
 
     class Getter(AccessorBase):
+
         """
         Retrieve attributes on element
         """
@@ -541,11 +541,11 @@ class XMLElementDict(AccessorGeneratorBase):
 
         def __call__(self):
             element = self.element_by_parent(self.parent_xpath,
-                                                 self.tag_name, create=False)
+                                             self.tag_name, create=False)
             return dict(element.items())
 
-
     class Setter(AccessorBase):
+
         """
         Set attributes to value on element
         """

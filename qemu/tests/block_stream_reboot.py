@@ -1,13 +1,13 @@
 from autotest.client.shared import error, utils
 from qemu.tests import blk_stream
 
+
 class BlockStreamReboot(blk_stream.BlockStream):
 
     process = []
 
     def __init__(self, test, params, env, tag):
         super(BlockStreamReboot, self).__init__(test, params, env, tag)
-
 
     @error.context_aware
     def reboot(self):
@@ -17,7 +17,6 @@ class BlockStreamReboot(blk_stream.BlockStream):
         params = self.parser_test_args()
         method = params.get("reboot_method", "system_reset")
         return super(BlockStreamReboot, self).reboot(method=method)
-
 
     def action_before_start(self):
         """
@@ -31,7 +30,6 @@ class BlockStreamReboot(blk_stream.BlockStream):
                 bg.start()
                 if bg.isAlive():
                     self.process.append(bg)
-
 
     def clean(self):
         """
@@ -49,9 +47,9 @@ def run_block_stream_reboot(test, params, env):
     2). create snapshots and start stream job immediately;
     3). waiting stream done and check guest is alive;
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_images", "image1")
     reboot_test = BlockStreamReboot(test, params, env, tag)

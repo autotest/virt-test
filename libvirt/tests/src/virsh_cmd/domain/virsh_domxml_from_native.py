@@ -1,7 +1,8 @@
-import re, os
+import re
+import os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import  virsh, utils_libvirtd
+from virttest import virsh, utils_libvirtd
 
 
 def run_virsh_domxml_from_native(test, params, env):
@@ -24,13 +25,13 @@ def run_virsh_domxml_from_native(test, params, env):
         """
         Put dumpxml vm'infomation to a file
 
-        @param: guest_args : File which will save config infomation.
+        :param guest_args : File which will save config information.
         """
         pid = vm.get_pid()
-        cmdline =  utils.system_output("cat -v /proc/%d/cmdline" % pid)
+        cmdline = utils.system_output("cat -v /proc/%d/cmdline" % pid)
         cmdline = re.sub(r'\^@', ' ', cmdline)
         cmdline_tmp = re.sub(r'\s-drive\s[^\s]+', '\s', cmdline)
-        guest_file = file(guest_args,'w')
+        guest_file = file(guest_args, 'w')
         guest_file.write(cmdline_tmp)
         guest_file.close()
 
@@ -40,30 +41,30 @@ def run_virsh_domxml_from_native(test, params, env):
     invalid_guest_args = params.get("dfn_invalid_guest_args")
     status_error = params.get("status_error")
 
-    #put vm's infomation to a file
+    # put vm's information to a file
     if guest_args != "":
         if os.path.dirname(guest_args) is "":
             guest_args = os.path.join(test.tmpdir, guest_args)
         virsh_convxml(guest_args)
 
-    #libvirtd off
+    # libvirtd off
     if libvirtd == "off":
         utils_libvirtd.libvirtd_stop()
 
-    #Ignore exception with ignore_status=True.
+    # Ignore exception with ignore_status=True.
     ret = virsh.domxml_from_native(dfn_format, guest_args, invalid_guest_args,
                                    ignore_status=True)
     status = ret.exit_status
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #clean up
+    # clean up
     if os.path.exists(guest_args):
         os.remove(guest_args)
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command!")

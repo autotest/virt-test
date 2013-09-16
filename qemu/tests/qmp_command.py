@@ -1,4 +1,5 @@
-import logging, re
+import logging
+import re
 from autotest.client.shared import utils, error
 from virttest import utils_misc, qemu_monitor
 
@@ -12,9 +13,9 @@ def run_qmp_command(test, params, env):
     3) Initiate the qmp command defined in config (qmp_cmd)
     4) Verify that qmp command works as designed.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
     def check_result(qmp_o, output=None):
         """
@@ -31,8 +32,8 @@ def run_qmp_command(test, params, env):
         result_check = m_format_q, will try to match the output's format with
                        check pattern.
 
-        @param qmp_o: output from pre_cmd, qmp_cmd or post_cmd.
-        @param o: output from pre_cmd, qmp_cmd or post_cmd or an execpt
+        :param qmp_o: output from pre_cmd, qmp_cmd or post_cmd.
+        :param o: output from pre_cmd, qmp_cmd or post_cmd or an execpt
         result set in config file.
         """
         if result_check == "equal":
@@ -73,7 +74,7 @@ def run_qmp_command(test, params, env):
                 if qmp_cmd == "query-version":
                     version = qmp_o['qemu']
                     version = "%s.%s.%s" % (version['major'], version['minor'],
-                                                              version['micro'])
+                                            version['micro'])
                     package = qmp_o['package']
                     re_str = r"([0-9]+\.[0-9]+\.[0-9]+)\s*(\(\S*\))?"
                     hmp_version, hmp_package = re.findall(re_str, res[i])[0]
@@ -108,7 +109,7 @@ def run_qmp_command(test, params, env):
                                 raise error.TestFail(msg)
                         elif qmp_cmd == "query-balloon":
                             if (int(val) * 1024 * 1024 != qmp_o[key] and
-                              val not in str(qmp_o[key])):
+                               val not in str(qmp_o[key])):
                                 msg += ("\n'%s' is not in QMP command output"
                                         % val)
                                 raise error.TestFail(msg)
@@ -123,7 +124,7 @@ def run_qmp_command(test, params, env):
             msg = "Key value from human monitor command is not in"
             msg += "QMP command output.\nQMP command output: '%s'" % qmp_o
             msg += "\nHuman monitor command output '%s'" % output
-            for i in  range(len(res)):
+            for i in range(len(res)):
                 params = res[i].rstrip().split()
                 for param in params:
                     try:
@@ -158,14 +159,14 @@ def run_qmp_command(test, params, env):
                     raise error.TestFail("'current' key is missing in QMP "
                                          "output '%s'" % out)
                 elif cpu < last_cpu:
-                    if current == False:
+                    if current is False:
                         pass
                     else:
                         raise error.TestFail("Attribute 'current' should be "
                                              "'False', but is '%s' instead.\n"
                                              "'%s'" % (current, out))
                 elif cpu == last_cpu:
-                    if current == True:
+                    if current is True:
                         pass
                     else:
                         raise error.TestFail("Attribute 'current' should be "
@@ -177,7 +178,6 @@ def run_qmp_command(test, params, env):
                     raise error.TestFail("Incorrect CPU index '%s' (corrupted "
                                          "or higher than no_cpus).\n%s"
                                          % (cpu, out))
-
 
     if not utils_misc.qemu_has_option("qmp", params['qemu_binary']):
         raise error.TestNAError("Host qemu does not support qmp.")

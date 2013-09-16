@@ -1,4 +1,5 @@
-import re, os
+import re
+import os
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
 
@@ -23,11 +24,11 @@ def run_virsh_restore(test, params, env):
     status_error = params.get("restore_status_error")
     libvirtd = params.get("restore_libvirtd")
     extra_param = params.get("restore_extra_param")
-    pre_status =  params.get("restore_pre_status")
+    pre_status = params.get("restore_pre_status")
     vm_ref = params.get("restore_vm_ref")
 
-    #run test
-    if vm_ref =="" or vm_ref == "xyz":
+    # run test
+    if vm_ref == "" or vm_ref == "xyz":
         status = virsh.restore(vm_ref, ignore_status=True).exit_status
     else:
         if os_type == "linux":
@@ -59,7 +60,7 @@ def run_virsh_restore(test, params, env):
 
     session.close()
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
     if vm.is_alive():

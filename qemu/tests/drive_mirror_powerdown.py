@@ -3,6 +3,7 @@ from virttest import env_process
 from autotest.client.shared import error
 from qemu.tests import drive_mirror_stress
 
+
 class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
 
     def __init__(self, test, params, env, tag):
@@ -32,6 +33,7 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
         vm.verify_alive()
         self.vm = vm
 
+
 def run_drive_mirror_powerdown(test, params, env):
     """
     drive_mirror_powerdown test:
@@ -41,9 +43,9 @@ def run_drive_mirror_powerdown(test, params, env):
     5). bootup guest with target image
     6). check guest can response correctly
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     tag = params.get("source_images", "image1")
     powerdown_test = DriveMirrorPowerdown(test, params, env, tag)

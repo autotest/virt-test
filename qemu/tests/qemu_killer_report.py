@@ -1,6 +1,9 @@
-import logging, os, re
+import logging
+import os
+import re
 from autotest.client.shared import error
 from virttest import utils_misc
+
 
 @error.context_aware
 def run_qemu_killer_report(test, params, env):
@@ -11,9 +14,9 @@ def run_qemu_killer_report(test, params, env):
     2) Kill VM by signal 15 in another process.
     3) Check that QEMU report the process ID that sent it kill signals.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
 
     def kill_vm_by_signal_15():
@@ -24,7 +27,6 @@ def run_qemu_killer_report(test, params, env):
         utils_misc.kill_process_tree(vm_pid, 15)
         return thread_pid
 
-
     def killer_report(re_str):
         output = vm.process.get_output()
         results = re.findall(re_str, output)
@@ -32,7 +34,6 @@ def run_qemu_killer_report(test, params, env):
             return results
         else:
             return False
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

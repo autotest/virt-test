@@ -1,4 +1,7 @@
-import logging, os, re, time
+import logging
+import os
+import re
+import time
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -10,9 +13,9 @@ def run_virtio_driver_sign_check(test, params, env):
     2) Install windows SDK in guest.
     3) use SignTool.exe to verify whether block driver digital signed
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -49,7 +52,7 @@ def run_virtio_driver_sign_check(test, params, env):
         for drive in drive_list.split():
             for type in ['.cat', '.sys']:
                 driver = session.cmd_output(list_files_cmd % (drive, type)).\
-                         splitlines()[1:-1]
+                    splitlines()[1:-1]
                 drivers[type] = driver
             files = zip(drivers['.cat'], drivers['.sys'])
             for cat, sys in files:

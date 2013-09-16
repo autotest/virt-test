@@ -20,9 +20,9 @@ def run_stop_continue(test, params, env):
     10) Do check operation (Optional)
     11) Do clean operation (Optional)
 
-    @param test: Kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import libvirt_vm, data_dir, utils_misc, virt_vm, aexpect
@@ -38,7 +39,9 @@ class StressError(Exception):
 
 
 class VMStress(object):
+
     """class for stress tool in vm."""
+
     def __init__(self, vm):
         self.vm = vm
         self.params = vm.params
@@ -76,7 +79,7 @@ class VMStress(object):
         self.vm.copy_files_to(pkg, self.tmp_dir)
         s, o = session.cmd_status_output(self.install_cmd, timeout=120)
         if s != 0:
-            raise StressError("Fail to install stress app(%s)"  % o)
+            raise StressError("Fail to install stress app(%s)" % o)
 
     @error.context_aware
     def load_stress(self):
@@ -109,7 +112,7 @@ class VMStress(object):
 
         error.context("stop stress app in guest", logging.info)
         utils_misc.wait_for(_unload_stress, first=2.0,
-                text="wait stress app quit", step=1.0, timeout=120)
+                            text="wait stress app quit", step=1.0, timeout=120)
 
     def app_running(self):
         """
@@ -124,8 +127,8 @@ def do_migration(vms, dest_uri, load_vms, stress_type):
     """
     Migrate vms with stress.
 
-    @param vms: migrated vms.
-    @param load_vms: provided for stress.
+    :param vms: migrated vms.
+    :param load_vms: provided for stress.
     """
     fail_info = []
     for vm in vms:

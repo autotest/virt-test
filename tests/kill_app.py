@@ -8,8 +8,10 @@ could be closed during migration or for any unwanted reason. This test checks
 if application is running when it should .
 
 """
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
+
 
 def run_kill_app(test, params, env):
     """
@@ -18,9 +20,9 @@ def run_kill_app(test, params, env):
     It has to be defined if application is on guest or client with parameter
     kill_on_vms which should contain name(s) of vm(s) (separated with ',')
 
-    @param test: KVM test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: KVM test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     kill_on_vms = params.get("kill_on_vms", "")
     vms = kill_on_vms.split(',')
@@ -34,24 +36,25 @@ def run_kill_app(test, params, env):
             if params.has_key(vm):
                 kill_app(vm, app_name, params, env)
 
+
 def kill_app(vm_name, app_name, params, env):
     """
     Kill selected app on selected VM
 
-    @params vm_name - VM name in parameters
-    @params app_name - name of application
+    :params vm_name - VM name in parameters
+    :params app_name - name of application
     """
     vm = env.get_vm(params[vm_name])
 
     vm.verify_alive()
     vm_session = vm.wait_for_login(
-                timeout=int(params.get("login_timeout", 360)))
-    #get PID of remote-viewer and kill it
+        timeout=int(params.get("login_timeout", 360)))
+    # get PID of remote-viewer and kill it
     logging.info("Get PID of %s", app_name)
     vm_session.cmd("pgrep %s" % app_name)
 
     logging.info("Try to kill %s", app_name)
-    vm_session.cmd("pkill %s" % app_name \
-                            .split(os.path.sep)[-1])
+    vm_session.cmd("pkill %s" % app_name
+                   .split(os.path.sep)[-1])
     vm.verify_alive()
     vm_session.close()

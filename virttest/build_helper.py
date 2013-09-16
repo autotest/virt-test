@@ -1,10 +1,14 @@
-import logging, os, shutil, tarfile
+import logging
+import os
+import shutil
+import tarfile
 from autotest.client.shared import git, error
 from autotest.client import utils, os_dep
 import data_dir
 
 
 class GitRepoParamHelper(git.GitRepoHelper):
+
     '''
     Helps to deal with git repos specified in cartersian config files
 
@@ -22,6 +26,7 @@ class GitRepoParamHelper(git.GitRepoHelper):
     git_repo_foo_lbranch = master
     git_repo_foo_commit = bb5fb8e678aabe286e74c4f2993dc2a9e550b627
     '''
+
     def __init__(self, params, name, destination_dir):
         '''
         Instantiates a new GitRepoParamHelper
@@ -30,7 +35,6 @@ class GitRepoParamHelper(git.GitRepoHelper):
         self.name = name
         self.destination_dir = destination_dir
         self._parse_params()
-
 
     def _parse_params(self):
         '''
@@ -97,7 +101,6 @@ class GitRepoParamHelper(git.GitRepoHelper):
 
         self.recursive = self.params.get('%s_recursive', 'yes')
 
-
     def execute(self):
         super(GitRepoParamHelper, self).execute()
 
@@ -129,18 +132,19 @@ class GitRepoParamHelper(git.GitRepoHelper):
 
 
 class LocalSourceDirHelper(object):
+
     '''
     Helper class to deal with source code sitting somewhere in the filesystem
     '''
+
     def __init__(self, source_dir, destination_dir):
         '''
-        @param source_dir:
-        @param destination_dir:
-        @return: new LocalSourceDirHelper instance
+        :param source_dir:
+        :param destination_dir:
+        :return: new LocalSourceDirHelper instance
         '''
         self.source = source_dir
         self.destination = destination_dir
-
 
     def execute(self):
         '''
@@ -154,6 +158,7 @@ class LocalSourceDirHelper(object):
 
 
 class LocalSourceDirParamHelper(LocalSourceDirHelper):
+
     '''
     Helps to deal with source dirs specified in cartersian config files
 
@@ -167,6 +172,7 @@ class LocalSourceDirParamHelper(LocalSourceDirHelper):
 
     local_src_foo_path = /home/user/foo
     '''
+
     def __init__(self, params, name, destination_dir):
         '''
         Instantiate a new LocalSourceDirParamHelper
@@ -175,7 +181,6 @@ class LocalSourceDirParamHelper(LocalSourceDirHelper):
         self.name = name
         self.destination_dir = destination_dir
         self._parse_params()
-
 
     def _parse_params(self):
         '''
@@ -193,13 +198,14 @@ class LocalSourceDirParamHelper(LocalSourceDirHelper):
 
 
 class LocalTarHelper(object):
+
     '''
     Helper class to deal with source code in a local tarball
     '''
+
     def __init__(self, source, destination_dir):
         self.source = source
         self.destination = destination_dir
-
 
     def extract(self):
         '''
@@ -241,10 +247,9 @@ class LocalTarHelper(object):
         else:
             raise OSError("%s is not a file or tar file" % self.source)
 
-
     def execute(self):
         '''
-        Executes all action this helper is suposed to perform
+        Executes all action this helper is supposed to perform
 
         This is the main entry point method for this class, and all other
         helper classes.
@@ -253,6 +258,7 @@ class LocalTarHelper(object):
 
 
 class LocalTarParamHelper(LocalTarHelper):
+
     '''
     Helps to deal with source tarballs specified in cartersian config files
 
@@ -266,6 +272,7 @@ class LocalTarParamHelper(LocalTarHelper):
 
     local_tar_foo_path = /tmp/foo-1.0.tar.gz
     '''
+
     def __init__(self, params, name, destination_dir):
         '''
         Instantiates a new LocalTarParamHelper
@@ -274,7 +281,6 @@ class LocalTarParamHelper(LocalTarHelper):
         self.name = name
         self.destination_dir = destination_dir
         self._parse_params()
-
 
     def _parse_params(self):
         '''
@@ -292,17 +298,18 @@ class LocalTarParamHelper(LocalTarHelper):
 
 
 class RemoteTarHelper(LocalTarHelper):
+
     '''
     Helper that fetches a tarball and extracts it locally
     '''
+
     def __init__(self, source_uri, destination_dir):
         self.source = source_uri
         self.destination = destination_dir
 
-
     def execute(self):
         '''
-        Executes all action this helper class is suposed to perform
+        Executes all action this helper class is supposed to perform
 
         This is the main entry point method for this class, and all other
         helper classes.
@@ -319,6 +326,7 @@ class RemoteTarHelper(LocalTarHelper):
 
 
 class RemoteTarParamHelper(RemoteTarHelper):
+
     '''
     Helps to deal with remote source tarballs specified in cartersian config
 
@@ -332,6 +340,7 @@ class RemoteTarParamHelper(RemoteTarHelper):
 
     remote_tar_foo_uri = http://foo.org/foo-1.0.tar.gz
     '''
+
     def __init__(self, params, name, destination_dir):
         '''
         Instantiates a new RemoteTarParamHelper instance
@@ -340,7 +349,6 @@ class RemoteTarParamHelper(RemoteTarHelper):
         self.name = name
         self.destination_dir = destination_dir
         self._parse_params()
-
 
     def _parse_params(self):
         '''
@@ -358,16 +366,17 @@ class RemoteTarParamHelper(RemoteTarHelper):
 
 
 class PatchHelper(object):
+
     '''
     Helper that encapsulates the patching of source code with patch files
     '''
+
     def __init__(self, source_dir, patches):
         '''
         Initializes a new PatchHelper
         '''
         self.source_dir = source_dir
         self.patches = patches
-
 
     def download(self):
         '''
@@ -377,7 +386,6 @@ class PatchHelper(object):
             utils.get_file(patch, os.path.join(self.source_dir,
                                                os.path.basename(patch)))
 
-
     def patch(self):
         '''
         Patches the source dir with all patch files
@@ -385,7 +393,6 @@ class PatchHelper(object):
         os.chdir(self.source_dir)
         for patch in self.patches:
             utils.system('patch -p1 < %s' % os.path.basename(patch))
-
 
     def execute(self):
         '''
@@ -396,6 +403,7 @@ class PatchHelper(object):
 
 
 class PatchParamHelper(PatchHelper):
+
     '''
     Helps to deal with patches specified in cartersian config files
 
@@ -414,6 +422,7 @@ class PatchParamHelper(PatchHelper):
 
     local_src_foo_patches = ['http://foo/bar.patch', 'http://foo/baz.patch']
     '''
+
     def __init__(self, params, prefix, source_dir):
         '''
         Initializes a new PatchParamHelper instance
@@ -422,7 +431,6 @@ class PatchParamHelper(PatchHelper):
         self.prefix = prefix
         self.source_dir = source_dir
         self._parse_params()
-
 
     def _parse_params(self):
         '''
@@ -446,6 +454,7 @@ class PatchParamHelper(PatchHelper):
 
 
 class GnuSourceBuildInvalidSource(Exception):
+
     '''
     Exception raised when build source dir/file is not valid
     '''
@@ -453,6 +462,7 @@ class GnuSourceBuildInvalidSource(Exception):
 
 
 class SourceBuildFailed(Exception):
+
     '''
     Exception raised when building with parallel jobs fails
 
@@ -462,6 +472,7 @@ class SourceBuildFailed(Exception):
 
 
 class SourceBuildParallelFailed(Exception):
+
     '''
     Exception raised when building with parallel jobs fails
 
@@ -471,23 +482,25 @@ class SourceBuildParallelFailed(Exception):
 
 
 class GnuSourceBuildHelper(object):
+
     '''
     Handles software installation of GNU-like source code
 
     This basically means that the build will go though the classic GNU
     autotools steps: ./configure, make, make install
     '''
+
     def __init__(self, source, build_dir, prefix,
                  configure_options=[]):
         '''
         @type source: string
-        @param source: source directory or tarball
+        :param source: source directory or tarball
         @type prefix: string
-        @param prefix: installation prefix
+        :param prefix: installation prefix
         @type build_dir: string
-        @param build_dir: temporary directory used for building the source code
+        :param build_dir: temporary directory used for building the source code
         @type configure_options: list
-        @param configure_options: options to pass to configure
+        :param configure_options: options to pass to configure
         @throws: GnuSourceBuildInvalidSource
         '''
         self.source = source
@@ -496,7 +509,6 @@ class GnuSourceBuildHelper(object):
         self.configure_options = configure_options
         self.install_debug_info = True
         self.include_pkg_config_path()
-
 
     def include_pkg_config_path(self):
         '''
@@ -508,7 +520,7 @@ class GnuSourceBuildHelper(object):
         either '<prefix>/share/pkgconfig' or '<prefix>/lib/pkgconfig' is
         exactly for the purpose of using them.
 
-        @returns: None
+        :return: None
         '''
         env_var = 'PKG_CONFIG_PATH'
 
@@ -526,7 +538,6 @@ class GnuSourceBuildHelper(object):
 
         logging.debug('PKG_CONFIG_PATH is: %s' % os.environ['PKG_CONFIG_PATH'])
 
-
     def get_configure_path(self):
         '''
         Checks if 'configure' exists, if not, return 'autogen.sh' as a fallback
@@ -534,14 +545,14 @@ class GnuSourceBuildHelper(object):
         configure_path = os.path.abspath(os.path.join(self.source,
                                                       "configure"))
         autogen_path = os.path.abspath(os.path.join(self.source,
-                                                "autogen.sh"))
+                                                    "autogen.sh"))
         if os.path.exists(configure_path):
             return configure_path
         elif os.path.exists(autogen_path):
             return autogen_path
         else:
-            raise GnuSourceBuildInvalidSource('configure script does not exist')
-
+            raise GnuSourceBuildInvalidSource(
+                'configure script does not exist')
 
     def get_available_configure_options(self):
         '''
@@ -549,7 +560,7 @@ class GnuSourceBuildHelper(object):
 
         This will run the "configure" script at the source directory
 
-        @returns: list of options accepted by configure script
+        :return: list of options accepted by configure script
         '''
         help_raw = utils.system_output('%s --help' % self.get_configure_path(),
                                        ignore_status=True)
@@ -564,7 +575,6 @@ class GnuSourceBuildHelper(object):
 
         return option_list
 
-
     def enable_debug_symbols(self):
         '''
         Enables option that leaves debug symbols on compiled software
@@ -577,12 +587,11 @@ class GnuSourceBuildHelper(object):
             logging.debug('Enabling debug symbols with option: %s' %
                           enable_debug_option)
 
-
     def get_configure_command(self):
         '''
         Formats configure script with all options set
 
-        @returns: string with all configure options, including prefix
+        :return: string with all configure options, including prefix
         '''
         prefix_option = "--prefix=%s" % self.prefix
         options = self.configure_options
@@ -590,16 +599,14 @@ class GnuSourceBuildHelper(object):
         return "%s %s" % (self.get_configure_path(),
                           " ".join(options))
 
-
     def configure(self):
         '''
-        Runs the "configure" script passing apropriate command line options
+        Runs the "configure" script passing appropriate command line options
         '''
         configure_command = self.get_configure_command()
         logging.info('Running configure on build dir')
         os.chdir(self.build_dir)
         utils.system(configure_command)
-
 
     def make_parallel(self):
         '''
@@ -611,14 +618,12 @@ class GnuSourceBuildHelper(object):
         os.chdir(self.build_dir)
         utils.system(make_command)
 
-
     def make_non_parallel(self):
         '''
         Runs "make", using a single job
         '''
         os.chdir(self.build_dir)
         utils.system("make")
-
 
     def make_clean(self):
         '''
@@ -627,14 +632,13 @@ class GnuSourceBuildHelper(object):
         os.chdir(self.build_dir)
         utils.system("make clean")
 
-
     def make(self, failure_feedback=True):
         '''
         Runs a parallel make, falling back to a single job in failure
 
-        @param failure_feedback: return information on build failure by raising
+        :param failure_feedback: return information on build failure by raising
                                  the appropriate exceptions
-        @raise: SourceBuildParallelFailed if parallel build fails, or
+        :raise: SourceBuildParallelFailed if parallel build fails, or
                 SourceBuildFailed if single job build fails
         '''
         try:
@@ -649,7 +653,6 @@ class GnuSourceBuildHelper(object):
             if failure_feedback:
                 raise SourceBuildParallelFailed
 
-
     def make_install(self):
         '''
         Runs "make install"
@@ -657,9 +660,7 @@ class GnuSourceBuildHelper(object):
         os.chdir(self.build_dir)
         utils.system("make install")
 
-
     install = make_install
-
 
     def execute(self):
         '''
@@ -672,23 +673,24 @@ class GnuSourceBuildHelper(object):
 
 
 class LinuxKernelBuildHelper(object):
+
     '''
     Handles Building Linux Kernel.
     '''
+
     def __init__(self, params, prefix, source):
         '''
         @type params: dict
-        @param params: dictionary containing the test parameters
+        :param params: dictionary containing the test parameters
         @type source: string
-        @param source: source directory or tarball
+        :param source: source directory or tarball
         @type prefix: string
-        @param prefix: installation prefix
+        :param prefix: installation prefix
         '''
         self.params = params
         self.prefix = prefix
         self.source = source
         self._parse_params()
-
 
     def _parse_params(self):
         '''
@@ -714,7 +716,6 @@ class LinuxKernelBuildHelper(object):
         logging.info('Parsing Linux kernel build parameters for %s',
                      self.prefix)
 
-
     def make_guest_kernel(self):
         '''
         Runs "make", using a single job
@@ -728,10 +729,10 @@ class LinuxKernelBuildHelper(object):
         # run old config
         utils.system('yes "" | make oldconfig > /dev/null')
         parallel_make_jobs = utils.count_cpus()
-        make_command = "make -j %s %s" % (parallel_make_jobs, self.build_target)
+        make_command = "make -j %s %s" % (
+            parallel_make_jobs, self.build_target)
         logging.info("Running parallel make on src dir")
         utils.system(make_command)
-
 
     def make_clean(self):
         '''
@@ -740,14 +741,13 @@ class LinuxKernelBuildHelper(object):
         os.chdir(self.source)
         utils.system("make clean")
 
-
     def make(self, failure_feedback=True):
         '''
         Runs a parallel make
 
-        @param failure_feedback: return information on build failure by raising
+        :param failure_feedback: return information on build failure by raising
                                  the appropriate exceptions
-        @raise: SourceBuildParallelFailed if parallel build fails, or
+        :raise: SourceBuildParallelFailed if parallel build fails, or
         '''
         try:
             self.make_clean()
@@ -756,7 +756,6 @@ class LinuxKernelBuildHelper(object):
             if failure_feedback:
                 raise SourceBuildParallelFailed
 
-
     def cp_linux_kernel(self):
         '''
         Copying Linux kernel to target path
@@ -764,9 +763,7 @@ class LinuxKernelBuildHelper(object):
         os.chdir(self.source)
         utils.force_copy(self.build_image, self.kernel_path)
 
-
     install = cp_linux_kernel
-
 
     def execute(self):
         '''
@@ -776,6 +773,7 @@ class LinuxKernelBuildHelper(object):
 
 
 class GnuSourceBuildParamHelper(GnuSourceBuildHelper):
+
     '''
     Helps to deal with gnu_autotools build helper in cartersian config files
 
@@ -789,6 +787,7 @@ class GnuSourceBuildParamHelper(GnuSourceBuildHelper):
 
     git_repo_foo_configure_options = --enable-feature
     '''
+
     def __init__(self, params, name, destination_dir, install_prefix):
         '''
         Instantiates a new GnuSourceBuildParamHelper
@@ -798,7 +797,6 @@ class GnuSourceBuildParamHelper(GnuSourceBuildHelper):
         self.destination_dir = destination_dir
         self.install_prefix = install_prefix
         self._parse_params()
-
 
     def _parse_params(self):
         '''

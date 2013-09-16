@@ -16,12 +16,12 @@ def run_numa_basic(test, params, env):
     2) Start a guest and bind it on the cpus of one node
     3) Check the memory status of qemu process. It should mainly use the
        memory in the same node.
-    4) Destory the guest
+    4) Destroy the guest
     5) Repeat step 2 ~ 4 on every node in host
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     error.context("Get host numa topological structure", logging.info)
     timeout = float(params.get("login_timeout", 240))
@@ -53,8 +53,8 @@ def run_numa_basic(test, params, env):
                           " %s" % (memory_status[index], node_list[index]))
         if node_used_most != node_id:
             raise error.TestFail("Qemu still use memory from other node."
-                                  " Expect: %s, used: %s" % (node_id,
-                                                             node_used_most))
+                                 " Expect: %s, used: %s" % (node_id,
+                                                            node_used_most))
 
         error.context("Destroy guest.", logging.info)
         vm.destroy()

@@ -7,7 +7,7 @@ from virttest.libvirt_xml import network_xml, xcepts
 def get_network_xml_instance(virsh_dargs, test_xml, net_name,
                              net_uuid, bridge):
     test_netxml = network_xml.NetworkXML(
-                  virsh_instance=virsh.Virsh(**virsh_dargs))
+        virsh_instance=virsh.Virsh(**virsh_dargs))
     test_netxml.xml = test_xml.name
 
     # modify XML if called for
@@ -18,7 +18,7 @@ def get_network_xml_instance(virsh_dargs, test_xml, net_name,
     if net_uuid is not "":
         test_netxml.uuid = net_uuid
     else:
-        del test_netxml.uuid # let libvirt auto-generate
+        del test_netxml.uuid  # let libvirt auto-generate
     if bridge is not None:
         test_netxml.bridge = bridge
 
@@ -50,7 +50,7 @@ def run_virsh_net_define_undefine(test, params, env):
     remove_existing = params.get("net_define_undefine_remove_existing", "yes")
     status_error = "yes" == params.get("status_error", "no")
 
-    virsh_dargs = {'uri':uri, 'debug':False, 'ignore_status':True}
+    virsh_dargs = {'uri': uri, 'debug': False, 'ignore_status': True}
     virsh_instance = virsh.VirshPersistent(**virsh_dargs)
 
     # Prepare environment and record current net_state_dict
@@ -59,7 +59,7 @@ def run_virsh_net_define_undefine(test, params, env):
     logging.debug("Backed up network(s): %s", backup_state)
 
     # Make some XML to use for testing, for now we just copy 'default'
-    test_xml = xml_utils.TempXMLFile() # temporary file
+    test_xml = xml_utils.TempXMLFile()  # temporary file
     try:
         # LibvirtXMLBase.__str__ returns XML content
         test_xml.write(str(backup['default']))
@@ -95,7 +95,7 @@ def run_virsh_net_define_undefine(test, params, env):
         define_extra = ""
 
     try:
-        #Run test case
+        # Run test case
         define_result = virsh.net_define(define_options, define_extra,
                                          **virsh_dargs)
         logging.debug(define_result)
@@ -130,7 +130,8 @@ def run_virsh_net_define_undefine(test, params, env):
 
     finally:
         # Recover environment
-        leftovers = network_xml.NetworkXML.new_all_networks_dict(virsh_instance)
+        leftovers = network_xml.NetworkXML.new_all_networks_dict(
+            virsh_instance)
         for netxml in leftovers.values():
             netxml.orbital_nuclear_strike()
 

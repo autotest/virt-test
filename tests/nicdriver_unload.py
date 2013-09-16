@@ -1,7 +1,11 @@
-import logging, os, time, random
+import logging
+import os
+import time
+import random
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_misc, utils_net, aexpect, data_dir
+
 
 @error.context_aware
 def run_nicdriver_unload(test, params, env):
@@ -14,9 +18,9 @@ def run_nicdriver_unload(test, params, env):
     4) Repeatedly unload/load NIC driver during file transfer.
     5) Check whether the test interface should still work.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def send_cmd_safe(session, cmd, timeout=60):
         logging.debug("Sending command: %s", cmd)
@@ -33,7 +37,6 @@ def run_nicdriver_unload(test, params, env):
                 pass
         return output
 
-
     def all_threads_done(threads):
         for thread in threads:
             if thread.isAlive():
@@ -41,7 +44,6 @@ def run_nicdriver_unload(test, params, env):
             else:
                 continue
         return True
-
 
     def all_threads_alive(threads):
         for thread in threads:
@@ -76,7 +78,7 @@ def run_nicdriver_unload(test, params, env):
                   filesize, logging.info)
     tmp_dir = data_dir.get_tmp_dir()
     host_path = os.path.join(tmp_dir, "host_file_%s" %
-                              utils_misc.generate_random_string(8))
+                             utils_misc.generate_random_string(8))
     guest_path = os.path.join("/home", "guest_file_%s" %
                               utils_misc.generate_random_string(8))
     cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, filesize)
@@ -99,16 +101,16 @@ def run_nicdriver_unload(test, params, env):
         file_paths = []
         host_file_paths = []
         for sess_index in range(int(params.get("sessions_num", "10"))):
-            sess_path = os.path.join("/home","dst-%s" % sess_index)
-            host_sess_path = os.path.join(tmp_dir,"dst-%s" % sess_index)
+            sess_path = os.path.join("/home", "dst-%s" % sess_index)
+            host_sess_path = os.path.join(tmp_dir, "dst-%s" % sess_index)
 
             thread1 = utils.InterruptedThread(vm.copy_files_to,
                                              (host_path, sess_path),
-                                             {"timeout":transfer_timeout})
+                                              {"timeout": transfer_timeout})
 
             thread2 = utils.InterruptedThread(vm.copy_files_from,
                                              (guest_path, host_sess_path),
-                                             {"timeout":transfer_timeout})
+                                              {"timeout": transfer_timeout})
             thread1.start()
             threads.append(thread1)
             thread2.start()
@@ -133,7 +135,7 @@ def run_nicdriver_unload(test, params, env):
             send_cmd_safe(session_serial, "ifconfig %s up" % ethname)
             send_cmd_safe(session_serial, "sleep %s" %
                           random.randint(10, 60))
-        #files md5sums check
+        # files md5sums check
         error.context("File transfer finished, checking files md5sums",
                       logging.info)
         err_info = []

@@ -1,4 +1,5 @@
-import re, os
+import re
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import virsh, utils_libvirtd
@@ -21,18 +22,18 @@ def run_virsh_domxml_to_native(test, params, env):
 
     def compare(conv_arg):
         """
-        Compare converted infomation with vm's infomation.
+        Compare converted information with vm's information.
 
-        @param: conv_arg : Converted infomation.
-        @return: True if converted infomation has no diffrent from
-                 vm's infomation.
+        :param conv_arg : Converted information.
+        :return: True if converted information has no different from
+                 vm's information.
         """
         pid = vm.get_pid()
         cmdline_tmp = utils.system_output("cat -v /proc/%d/cmdline" % pid)
         cmdline = re.sub(r'\^@', ' ', cmdline_tmp)
         tmp = re.search('LC_ALL.[^\s]\s', conv_arg).group(0) +\
-              re.search('PATH.[^\s]+\s', conv_arg).group(0) +\
-              re.search('QEMU_AUDIO_DRV.[^\s]+\s', conv_arg).group(0)
+            re.search('PATH.[^\s]+\s', conv_arg).group(0) +\
+            re.search('QEMU_AUDIO_DRV.[^\s]+\s', conv_arg).group(0)
         qemu_arg = tmp + cmdline
         conv_arg_lines = conv_arg.split('\x20')
         qemu_arg_lines = qemu_arg.split('\x20')
@@ -60,7 +61,7 @@ def run_virsh_domxml_to_native(test, params, env):
             i += 1
         return result
 
-    #run test case
+    # run test case
     dtn_format = params.get("dtn_format")
     file_xml = params.get("dtn_file_xml")
     extra_param = params.get("dtn_extra_param")
@@ -70,24 +71,24 @@ def run_virsh_domxml_to_native(test, params, env):
     if libvirtd == "off":
         utils_libvirtd.libvirtd_stop()
     ret = virsh.domxml_to_native(dtn_format, file_xml, extra_param,
-                                 ignore_status = True)
+                                 ignore_status=True)
     status = ret.exit_status
     conv_arg = ret.stdout.strip()
 
-    #recover libvirtd service start
+    # recover libvirtd service start
     if libvirtd == "off":
         utils_libvirtd.libvirtd_start()
 
-    #clean up
+    # clean up
     if os.path.exists(file_xml):
         os.remove(file_xml)
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command!")
     elif status_error == "no":
         if status != 0:
             raise error.TestFail("Run failed with right command")
-        if compare(conv_arg) != True:
+        if compare(conv_arg) is not True:
             raise error.TestFail("Test failed!")

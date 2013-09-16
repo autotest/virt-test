@@ -1,16 +1,17 @@
 import logging
 from virttest import ovirt
 
+
 def get_args_dict(params):
     args_dict = {}
-    keys_list = [ 'ovirt_engine_url', 'ovirt_engine_user',
-                  'ovirt_engine_password', 'vm_name', 'export_name',
-                  'storage_name', 'cluster_name' ]
+    keys_list = ['ovirt_engine_url', 'ovirt_engine_user',
+                 'ovirt_engine_password', 'vm_name', 'export_name',
+                 'storage_name', 'cluster_name']
 
     for key in keys_list:
         val = params.get(key)
         if val is None:
-            raise KeyError("%s doesn't exist!!!" %key)
+            raise KeyError("%s doesn't exist!!!" % key)
         else:
             args_dict[key] = val
 
@@ -23,12 +24,12 @@ def run_ovirt(test, params, env):
     """
 
     args_dict = get_args_dict(params)
-    logging.debug("arguments dictionary: %s" %args_dict)
+    logging.debug("arguments dictionary: %s" % args_dict)
 
-    vm_name  = params.get('vm_name')
-    export_name  = params.get('export_name')
-    storage_name  = params.get('storage_name')
-    cluster_name  = params.get('cluster_name')
+    vm_name = params.get('vm_name')
+    export_name = params.get('export_name')
+    storage_name = params.get('storage_name')
+    cluster_name = params.get('cluster_name')
     address_cache = env.get('address_cache')
 
     # Run test case

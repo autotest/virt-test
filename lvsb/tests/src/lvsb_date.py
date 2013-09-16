@@ -12,15 +12,16 @@ def verify_datetime(start_time, stop_time, result_list):
     Return the number of sandboxes which reported incorrect date
     """
     bad_dt = 0
-    for results in result_list: # list of aggregate managers
-        for result in results: # list of sandbox stdouts
+    for results in result_list:  # list of aggregate managers
+        for result in results:  # list of sandbox stdouts
             try:
-                test_dt = datetime.datetime.fromtimestamp(float(result.strip()))
-            except (TypeError,ValueError):
+                test_dt = datetime.datetime.fromtimestamp(
+                    float(result.strip()))
+            except (TypeError, ValueError):
                 bad_dt += 1
             else:
                 if test_dt >= start_time and test_dt <= stop_time:
-                    continue # good result, check next
+                    continue  # good result, check next
                 else:
                     bad_dt += 1
     return bad_dt
@@ -30,7 +31,7 @@ def some_failed(failed_list):
     """
     Return True if any single sandbox reported a non-zero exit code
     """
-    for failed in failed_list: # list of sandboxes w/ non-zero exit codes
+    for failed in failed_list:  # list of sandboxes w/ non-zero exit codes
         if failed > 0:
             return True
     return False
@@ -62,13 +63,13 @@ def run_lvsb_date(test, params, env):
     failed_list = [agg.are_failed() for agg in sb_agg_list]
 
     # handle results
-    if status_error: # Negative test
+    if status_error:  # Negative test
         if not some_failed(failed_list) and verify_datetime(start_time,
                                                             stop_time,
                                                             result_list) < 1:
             raise error.TestFail("Error test failed on only %s of %s sandboxes"
                                  % (failed_list, agg_count))
-    else: # Positive test
+    else:  # Positive test
         if some_failed(failed_list):
             raise error.TestFail("Some sandboxes had non-zero exit codes")
         if verify_datetime(start_time, stop_time, result_list) > 0:

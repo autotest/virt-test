@@ -1,4 +1,6 @@
-import os, logging, re
+import os
+import logging
+import re
 from autotest.client import lv_utils
 from autotest.client.shared import ssh_key, error, utils
 from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh, remote
@@ -66,7 +68,7 @@ def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
         return False
 
     if not spool.define_lvm_pool(pool_name, block_device, vg_name=vg_name,
-                                target_path=target_path):
+                                 target_path=target_path):
         return False
 
     vgroups = lv_utils.vg_list()
@@ -85,7 +87,7 @@ def get_remote_vm_disk(rvm):
     """
     Local v2v need remote vm's disk to copy.
 
-    @param rvm: remote vm instance
+    :param rvm: remote vm instance
     """
     # Get remote vms' disk path
     disks = rvm.get_disk_devices()
@@ -103,8 +105,8 @@ def copy_remote_vm(rvm, local_path, remote_host, username, password, timeout=120
     """
     Copy remote vm's disk to local path.
 
-    @param local_path: Where should we put the disk
-    @return: fixed XML file path
+    :param local_path: Where should we put the disk
+    :return: fixed XML file path
     """
     remote_disk_path = get_remote_vm_disk(rvm)
     disk_name = os.path.basename(remote_disk_path)

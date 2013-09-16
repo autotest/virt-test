@@ -27,9 +27,9 @@ def run_virsh_hostname(test, params, env):
         hostname_test = virsh.hostname(option,
                                        ignore_status=False,
                                        debug=True)
-        status = 0 # good
+        status = 0  # good
     except error.CmdError:
-        status = 1 # bad
+        status = 1  # bad
         hostname_test = None
 
     # Recover libvirtd service start
@@ -44,7 +44,8 @@ def run_virsh_hostname(test, params, env):
                                  "(incorrect command)" % option)
     elif status_error == "no":
         if cmp(hostname, hostname_test) != 0:
-            raise error.TestFail("Virsh cmd gives hostname %s != %s." % (hostname_test, hostname))
+            raise error.TestFail(
+                "Virsh cmd gives hostname %s != %s." % (hostname_test, hostname))
         if status != 0:
             raise error.TestFail("Command 'virsh hostname %s' failed "
                                  "(correct command)" % option)

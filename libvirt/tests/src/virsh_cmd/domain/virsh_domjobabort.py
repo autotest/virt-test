@@ -1,6 +1,8 @@
-import os, subprocess
+import os
+import subprocess
 from autotest.client.shared import error
 from virttest import virsh
+
 
 def run_virsh_domjobabort(test, params, env):
     """
@@ -36,19 +38,18 @@ def run_virsh_domjobabort(test, params, env):
         """
         Execute background virsh command, return subprocess w/o waiting for exit()
 
-        @param: cmd : virsh command.
-        @param: guest_name : VM's name
-        @param: file_source : virsh command's file option.
+        :param cmd : virsh command.
+        :param guest_name : VM's name
+        :param file_source : virsh command's file option.
         """
         if action == "managedsave":
             file = ""
         command = "virsh %s %s %s" % (action, vm_name, file)
-        p = subprocess.Popen(command,shell=True, stdout=subprocess.PIPE,
+        p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         return p
 
-
-    action = params.get("jobabort_action","dump")
+    action = params.get("jobabort_action", "dump")
     status_error = params.get("status_error", "no")
     job = params.get("jobabort_job", "yes")
     tmp_file = os.path.join(test.tmpdir, "domjobabort.tmp")
@@ -57,12 +58,11 @@ def run_virsh_domjobabort(test, params, env):
     if action == "restore":
         virsh.save(vm_name, tmp_file, ignore_status=True)
 
-
     if vm_ref == "id":
         vm_ref = domid
     elif vm_ref == "hex_id":
         vm_ref = hex(int(domid))
-    elif  vm_ref == "uuid":
+    elif vm_ref == "uuid":
         vm_ref = domuuid
     elif vm_ref.find("invalid") != -1:
         vm_ref = params.get(vm_ref)
@@ -89,7 +89,7 @@ def run_virsh_domjobabort(test, params, env):
             except OSError:
                 pass
 
-    #check status_error
+    # check status_error
     if status_error == "yes":
         if status == 0:
             raise error.TestFail("Run successfully with wrong command!")

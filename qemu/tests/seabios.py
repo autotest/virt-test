@@ -1,4 +1,5 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error
 from virttest import utils_misc
 
@@ -14,9 +15,9 @@ def run_seabios(test, params, env):
     5) Start guest from the specified boot entry
     6) Log into the guest to verify it's up
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     error.context("Start guest with sga bios")
     vm = env.get_vm(params["main_vm"])

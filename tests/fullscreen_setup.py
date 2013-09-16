@@ -9,6 +9,7 @@ the same setup will result in them having the same resolution.
 import logging
 from virttest import utils_spice, aexpect
 
+
 def run_fullscreen_setup(test, params, env):
     """
     Simple test for Remote Desktop connection
@@ -17,9 +18,9 @@ def run_fullscreen_setup(test, params, env):
 
     The plan is to support remote-viewer at first place
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
@@ -27,7 +28,7 @@ def run_fullscreen_setup(test, params, env):
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360)))
 
     utils_spice.wait_timeout(10)
 
@@ -66,7 +67,7 @@ def run_fullscreen_setup(test, params, env):
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
     client_session = client_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360)))
 
     client_session.close()
     guest_session.close()

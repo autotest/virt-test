@@ -1,5 +1,9 @@
-import logging, time, tempfile, os.path
+import logging
+import time
+import tempfile
+import os.path
 from autotest.client.shared import error
+
 
 def run_save_restore(test, params, env):
     """
@@ -13,9 +17,9 @@ def run_save_restore(test, params, env):
     6) Repeat save_restore_repeat times or
        until save_restore_duration seconds pass.
 
-    @param test: test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
 
     def get_save_filename(path="", file_pfx=""):
@@ -23,15 +27,14 @@ def run_save_restore(test, params, env):
         Generate a guaranteed not to clash filename.
 
         @oaram: path: Optional base path to place file
-        @param: file_pfxx: Optional prefix to filename
-        @return: absolute path to new non-clashing filename
+        :param file_pfxx: Optional prefix to filename
+        :return: absolute path to new non-clashing filename
         """
         if not path:
             path = tempfile.gettempdir()
         fd, filename = tempfile.mkstemp(prefix=file_pfx, dir=path)
         os.close(fd)
         return filename
-
 
     def nuke_filename(filename):
         """
@@ -42,7 +45,6 @@ def run_save_restore(test, params, env):
         except OSError:
             pass
 
-
     def check_system(vm, timeout):
         """
         Raise TestFail if system is not in expected state
@@ -51,15 +53,16 @@ def run_save_restore(test, params, env):
         try:
             try:
                 session = vm.wait_for_login(timeout=timeout)
-                result = session.is_responsive(timeout=timeout/10.0)
+                result = session.is_responsive(timeout=timeout / 10.0)
                 if not result:
-                    logging.warning("Login session established, but non-responsive")
+                    logging.warning(
+                        "Login session established, but non-responsive")
                     # assume guest is just busy with stuff
             except:
-                raise error.TestFail("VM check timed out and/or VM non-responsive")
+                raise error.TestFail(
+                    "VM check timed out and/or VM non-responsive")
         finally:
             del session
-
 
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login(timeout=600)
@@ -67,10 +70,10 @@ def run_save_restore(test, params, env):
     start_delay = float(params.get("save_restore_start_delay", "10.0"))
     restore_delay = float(params.get("save_restore_delay", "0.0"))
     save_restore_duration = float(params.get("save_restore_duration", "60.0"))
-    repeat = int(params.get("save_restore_repeat","1"))
+    repeat = int(params.get("save_restore_repeat", "1"))
 
     path = os.path.abspath(params.get("save_restore_path", "/tmp"))
-    file_pfx = vm.name+'-'
+    file_pfx = vm.name + '-'
     save_file = get_save_filename(path, file_pfx)
 
     save_restore_bg_command = params.get("save_restore_bg_command")
@@ -80,9 +83,10 @@ def run_save_restore(test, params, env):
             # assume sh-like shell, try to get background process's pid
             bg_command_pid = int(session.cmd('jobs -rp'))
         except ValueError:
-            logging.warning("Background guest command 'job -rp' output not PID")
+            logging.warning(
+                "Background guest command 'job -rp' output not PID")
             bg_command_pid = None
-    del session # don't leave stray ssh session lying around over save/restore
+    del session  # don't leave stray ssh session lying around over save/restore
 
     start_time = time.time()
     # 'now' needs outside scope for error.TestFail() at end
@@ -91,7 +95,7 @@ def run_save_restore(test, params, env):
     while True:
         try:
             vm.verify_kernel_crash()
-            check_system(vm, 120) # networking needs time to recover
+            check_system(vm, 120)  # networking needs time to recover
             logging.info("Save/restores left: %d (or %0.4f more seconds)" %
                          (repeat, (time_to_stop - time.time())))
             if start_delay:
@@ -109,28 +113,29 @@ def run_save_restore(test, params, env):
                 time.sleep(restore_delay)
             vm.restore_from_file(save_file)
             vm.verify_kernel_crash()
-            vm.resume() # make sure some work gets done
+            vm.resume()  # make sure some work gets done
             vm.verify_kernel_crash()
             now = time.time()
         finally:
             if save_file:
-                nuke_filename(save_file) # make sure these are cleaned up
+                nuke_filename(save_file)  # make sure these are cleaned up
         # Prepare/check next loop itteration
         repeat -= 1
-        if (now >= time_to_stop) or (repeat <= 0):#TODO: or BG test status==foo
+        # TODO: or BG test status==foo
+        if (now >= time_to_stop) or (repeat <= 0):
             break
         save_file = get_save_filename(path, file_pfx)
     # Check the final save/restore cycle
-    check_system(vm,120) # networking needs time to recover
+    check_system(vm, 120)  # networking needs time to recover
     logging.info("Save/Restore itteration(s) complete.")
     if save_restore_bg_command and bg_command_pid:
         session = vm.wait_for_login(timeout=120)
         status = session.cmd_status('kill %d' % bg_command_pid)
         if status != 0:
-            logging.warning("Background guest command kill %d failed" %\
+            logging.warning("Background guest command kill %d failed" %
                             bg_command_pid)
         del session
-    if repeat > 0: # time_to_stop reached but itterations didn't complete
+    if repeat > 0:  # time_to_stop reached but itterations didn't complete
         raise error.TestFail("Save/Restore save_restore_duration"
                              " exceeded by %0.4f seconds with %d itterations"
-                             " remaining." % (now-time_to_stop, repeat+1))
+                             " remaining." % (now - time_to_stop, repeat + 1))

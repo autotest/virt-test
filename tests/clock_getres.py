@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from virttest import utils_test
 
@@ -9,9 +10,9 @@ def run_clock_getres(test, params, env):
     Verify if guests using kvm-clock as the time source have a sane clock
     resolution.
 
-    @param test: kvm test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: kvm test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     source_name = "test_clock_getres/test_clock_getres.c"
     source_name = os.path.join(test.virtdir, "deps", source_name)

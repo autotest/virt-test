@@ -20,7 +20,6 @@ def run_virsh_setmaxmem(test, params, env):
         vmxml = vm_xml.VMXML.new_from_dumpxml(vm_name)
         return int(vmxml.max_mem)
 
-
     def make_domref(domarg, vm_ref, domid, vm_name, domuuid):
         # Specify domain as argument or parameter
         if domarg == "yes":
@@ -39,11 +38,10 @@ def run_virsh_setmaxmem(test, params, env):
             dom_darg_value = None
         elif vm_ref == "emptystring":
             dom_darg_value = '""'
-        else: # stick in value directly
+        else:  # stick in value directly
             dom_darg_value = vm_ref
 
-        return {dom_darg_key:dom_darg_value}
-
+        return {dom_darg_key: dom_darg_value}
 
     def make_sizeref(sizearg, mem_ref, original_mem):
         if sizearg == "yes":
@@ -64,30 +62,26 @@ def run_virsh_setmaxmem(test, params, env):
         elif mem_ref == "toosmall":
             size_darg_value = "1024"
         elif mem_ref == "toobig":
-            size_darg_value = "1099511627776" # (KiB) One Petabyte
+            size_darg_value = "1099511627776"  # (KiB) One Petabyte
         elif mem_ref == "none":
             size_darg_value = None
-        else: # stick in value directly
+        else:  # stick in value directly
             size_darg_value = mem_ref
 
-        return {size_darg_key:size_darg_value}
-
+        return {size_darg_key: size_darg_value}
 
     def is_old_libvirt():
         regex = r'\s+\[--size\]\s+'
-        return bool( not virsh.has_command_help_match('setmaxmem', regex) )
-
+        return bool(not virsh.has_command_help_match('setmaxmem', regex))
 
     def is_xen_host():
         check_cmd = "ls /dev/kvm"
         return utils.run(check_cmd, ignore_status=True).exit_status
 
-
     def is_in_range(actual, expected, error_percent):
         deviation = 100 - (100 * (float(actual) / float(expected)))
         logging.debug("Deviation: %0.2f%%" % float(deviation))
         return float(deviation) <= float(error_percent)
-
 
     def print_debug_stats(original_vmxml_mem, original_dominfo_mem,
                           expected_mem, test_vmxml_mem, test_dominfo_mem):
@@ -96,18 +90,15 @@ def run_virsh_setmaxmem(test, params, env):
                   "Expected max mem : %d KiB\n"
                   "Actual vmxml mem   : %d KiB\n"
                   "Actual dominfo mem   : %d KiB\n" % (
-                  original_vmxml_mem,
-                  original_dominfo_mem,
-                  expected_mem,
-                  test_vmxml_mem,
-                  test_dominfo_mem))
+                      original_vmxml_mem,
+                      original_dominfo_mem,
+                      expected_mem,
+                      test_vmxml_mem,
+                      test_dominfo_mem))
         for dbgline in dbgmsg.splitlines():
             logging.debug(dbgline)
 
-
-    ### MAIN TEST CODE ###
-
-
+    # MAIN TEST CODE ###
     # Process cartesian parameters
     vm_ref = params.get("setmaxmem_vm_ref", "")
     mem_ref = params.get("setmaxmem_mem_ref", "")
@@ -140,11 +131,11 @@ def run_virsh_setmaxmem(test, params, env):
         logging.info("Running on xen host, %s offset is allowed.", delta_per)
 
     # Argument pattern is complex, build with dargs
-    dargs = {'flagstr':flags,
-             'use_kilobytes':use_kilobytes,
-             'uri':uri, 'ignore_status':True, "debug":True}
-    dargs.update( make_domref(domarg, vm_ref, domid, vm_name, domuuid) )
-    dargs.update( make_sizeref(sizearg, mem_ref, original_dominfo_mem) )
+    dargs = {'flagstr': flags,
+             'use_kilobytes': use_kilobytes,
+             'uri': uri, 'ignore_status': True, "debug": True}
+    dargs.update(make_domref(domarg, vm_ref, domid, vm_name, domuuid))
+    dargs.update(make_sizeref(sizearg, mem_ref, original_dominfo_mem))
 
     if status_error:
         logging.info("Error Test: Expecting an error to occur!")
@@ -184,7 +175,7 @@ def run_virsh_setmaxmem(test, params, env):
     if vm.state() != "shut off":
         vm.destroy()
 
-    if status is 0: # Restore original memory
+    if status is 0:  # Restore original memory
         restore_status = virsh.setmaxmem(domainarg=vm_name,
                                          sizearg=original_dominfo_mem,
                                          ignore_status=True).exit_status

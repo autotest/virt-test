@@ -23,7 +23,7 @@ def run_virsh_cpu_stats(test, params, env):
     vm_ref = params.get("cpu_stats_vm_ref")
     status_error = params.get("status_error", "no")
     options = params.get("cpu_stats_options")
-    logging.debug ("options are %s", options)
+    logging.debug("options are %s", options)
 
     if vm_ref == "name":
         vm_ref = vm_name
@@ -55,7 +55,6 @@ def run_virsh_cpu_stats(test, params, env):
         for match in option_list[1:]:
             if get_start or get_count:
                 option_dict[match.split(' ')[0]] = match.split(' ')[1]
-
 
     # Run virsh command
     cmd_result = virsh.cpu_stats(vm_ref, options,
@@ -90,7 +89,7 @@ def run_virsh_cpu_stats(test, params, env):
             # conditions that list total time info
             if get_noopt or get_total:
                 mt_end = re.search('Total', output).end()
-                total_list = output[mt_end+1:].split()
+                total_list = output[mt_end + 1:].split()
 
                 total_time = int(total_list[1])
                 user_time = int(total_list[4])
@@ -123,11 +122,11 @@ def run_virsh_cpu_stats(test, params, env):
             sum_cgtime = 0
             logging.debug("start_num %d, end_num %d", start_num, end_num)
             for i in range(start_num, end_num):
-                if not re.search('CPU' + "%i"%i, output):
-                    raise error.TestFail("Fail to find CPU" + "%i"%i + "in "
+                if not re.search('CPU' + "%i" % i, output):
+                    raise error.TestFail("Fail to find CPU" + "%i" % i + "in "
                                          "result")
-                logging.debug("Check CPU" + "%i"%i + " exist")
-                sum_cputime += int(cpus_list[i-start_num+1].split()[1])
+                logging.debug("Check CPU" + "%i" % i + " exist")
+                sum_cputime += int(cpus_list[i - start_num + 1].split()[1])
                 sum_cgtime += int(cgtime[i])
 
             # check cgroup cpu_time > sum of cpu_time
@@ -143,4 +142,4 @@ def run_virsh_cpu_stats(test, params, env):
                 if total_time < sum_cputime:
                     raise error.TestFail("total time < sum of output cpu_time")
                 logging.debug("Check total time %d >= sum of output cpu_time"
-                             " %d", total_time, sum_cputime)
+                              " %d", total_time, sum_cputime)

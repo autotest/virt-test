@@ -1,8 +1,12 @@
-import os, select
-import utils_env, virt_vm, aexpect
+import os
+import select
+import utils_env
+import virt_vm
+import aexpect
 
 
 class scheduler:
+
     """
     A scheduler that manages several parallel test execution pipelines on a
     single host.
@@ -12,11 +16,11 @@ class scheduler:
         """
         Initialize the class.
 
-        @param tests: A list of test dictionaries.
-        @param num_workers: The number of workers (pipelines).
-        @param total_cpus: The total number of CPUs to dedicate to tests.
-        @param total_mem: The total amount of memory to dedicate to tests.
-        @param bindir: The directory where environment files reside.
+        :param tests: A list of test dictionaries.
+        :param num_workers: The number of workers (pipelines).
+        :param total_cpus: The total number of CPUs to dedicate to tests.
+        :param total_mem: The total amount of memory to dedicate to tests.
+        :param bindir: The directory where environment files reside.
         """
         self.tests = tests
         self.num_workers = num_workers
@@ -35,15 +39,14 @@ class scheduler:
         # different environment file and a different MAC address pool.
         self.worker_dicts = [{"env": "env%d" % i} for i in range(num_workers)]
 
-
     def worker(self, index, run_test_func):
         """
         The worker function.
 
         Waits for commands from the scheduler and processes them.
 
-        @param index: The index of this worker (in the range 0..num_workers-1).
-        @param run_test_func: A function to be called to run a test
+        :param index: The index of this worker (in the range 0..num_workers-1).
+        :param run_test_func: A function to be called to run a test
                 (e.g. job.run_test).
         """
         r = self.s2w_r[index]
@@ -87,7 +90,6 @@ class scheduler:
             elif cmd[0] == "terminate":
                 break
 
-
     def scheduler(self):
         """
         The scheduler function.
@@ -125,7 +127,8 @@ class scheduler:
                     test = self.tests[test_index]
                     status = int(eval(msg[2]))
                     test_status[test_index] = ("fail", "pass")[status]
-                    # If the test failed, mark all dependent tests as "failed" too
+                    # If the test failed, mark all dependent tests as "failed"
+                    # too
                     if not status:
                         for i, other_test in enumerate(self.tests):
                             for dep in other_test.get("dep", []):

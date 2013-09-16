@@ -1,4 +1,6 @@
-import logging, time, random
+import logging
+import time
+import random
 from virttest import utils_test, aexpect, utils_net
 from autotest.client.shared import error, utils
 
@@ -13,9 +15,9 @@ def run_nic_bonding(test, params, env):
     4) Repeatedly put down/up interfaces by set_link
     5) Execute file transfer test between guest and host.
 
-    @param test: Kvm test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: Kvm test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
     """
     def send_cmd_safe(session, cmd, timeout=60):
         logging.debug("Sending command: %s", cmd)
@@ -31,7 +33,6 @@ def run_nic_bonding(test, params, env):
             except aexpect.ExpectTimeoutError:
                 pass
         return output
-
 
     timeout = int(params.get("login_timeout", 1200))
     vm = env.get_vm(params["main_vm"])
@@ -52,11 +53,11 @@ def run_nic_bonding(test, params, env):
     send_cmd_safe(session_serial, "ifconfig bond0 up")
     setup_cmd = "ifenslave bond0 " + " ".join(ifnames)
     send_cmd_safe(session_serial, setup_cmd)
-    #do a pgrep to check if dhclient has already been running
+    # do a pgrep to check if dhclient has already been running
     pgrep_cmd = "pgrep dhclient"
     try:
         send_cmd_safe(session_serial, pgrep_cmd)
-    #if dhclient is there, killl it
+    # if dhclient is there, killl it
     except aexpect.ShellCmdError:
         logging.info("it's safe to run dhclient now")
     else:

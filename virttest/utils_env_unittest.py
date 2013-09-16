@@ -1,29 +1,35 @@
 #!/usr/bin/python
-import unittest, time, logging, os
-import utils_env, utils_params, utils_misc
+import unittest
+import time
+import logging
+import os
+import utils_env
+import utils_params
+import utils_misc
 
 
 class FakeVm(object):
+
     def __init__(self, vm_name, params):
         self.name = vm_name
         self.params = params
         self.vm_type = self.params.get('vm_type')
         self.driver_type = self.params.get('driver_type')
-        self.instance = ( "%s-%s" % (
+        self.instance = ("%s-%s" % (
             time.strftime("%Y%m%d-%H%M%S"),
-            utils_misc.generate_random_string(16)) )
+            utils_misc.generate_random_string(16)))
 
     def get_params(self):
         return self.params
-
 
     def is_alive(self):
         logging.info("Fake VM %s (instance %s)", self.name, self.instance)
 
 
 class FakeSyncListenServer(object):
+
     def __init__(self, address='', port=123, tmpdir=None):
-        self.instance = ( "%s-%s" % (
+        self.instance = ("%s-%s" % (
             time.strftime("%Y%m%d-%H%M%S"),
             utils_misc.generate_random_string(16)))
         self.port = port
@@ -33,6 +39,7 @@ class FakeSyncListenServer(object):
 
 
 class TestEnv(unittest.TestCase):
+
     def test_save(self):
         """
         1) Verify that calling env.save() with no filename where env doesn't
@@ -46,7 +53,7 @@ class TestEnv(unittest.TestCase):
            the syncserver can be found there, and that the sync server
            instance attribute is equal to the initial sync server instance.
         """
-        fname="/dev/shm/EnvUnittest"
+        fname = "/dev/shm/EnvUnittest"
         env = utils_env.Env()
 
         self.assertRaises(utils_env.EnvSaveError, env.save, {})

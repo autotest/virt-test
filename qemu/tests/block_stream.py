@@ -1,7 +1,9 @@
-import re, logging
+import re
+import logging
 from autotest.client.shared import error, utils
 from virttest import env_process, utils_misc
 from qemu.tests import blk_stream
+
 
 class BlockStreamTest(blk_stream.BlockStream):
 
@@ -50,7 +52,7 @@ def run_block_stream(test, params, env):
         if image_size < target_size:
             raise error.TestFail("Compare %s image, size of %s increased"
                                  "(%s -> %s)" % (image_file, target_file,
-                                 image_size, target_size))
+                                                 image_size, target_size))
         stream_test.verify_alive()
         stream_test.vm.destroy()
         vm_name = params["main_vm"]

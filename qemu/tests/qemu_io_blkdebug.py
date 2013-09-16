@@ -1,9 +1,12 @@
-import re, logging, ConfigParser
+import re
+import logging
+import ConfigParser
 from autotest.client.shared import error
 from virttest import qemu_io, data_dir
 from virttest import utils_misc
 from virttest.qemu_storage import QemuImg
 from autotest.client import utils
+
 
 @error.context_aware
 def run_qemu_io_blkdebug(test, params, env):
@@ -15,13 +18,13 @@ def run_qemu_io_blkdebug(test, params, env):
     4. Get the error message from perror by error number set in config file
     5. Compare the error message
 
-    @param test:   QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env:    Dictionary with test environment.
+    :param test:   QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env:    Dictionary with test environment.
     """
     tmp_dir = params.get("tmp_dir", "/tmp")
     blkdebug_cfg = utils_misc.get_path(tmp_dir, params.get("blkdebug_cfg",
-                                                            "blkdebug.cfg"))
+                                                           "blkdebug.cfg"))
     err_command = params["err_command"]
     err_event = params["err_event"]
     errn_list = re.split("\s+", params["errn_list"].strip())
@@ -35,10 +38,11 @@ def run_qemu_io_blkdebug(test, params, env):
     del_snapshot = params.get("del_snapshot", "no") == "yes"
 
     error.context("Create image", logging.info)
-    image_io = QemuImg(params.object_params(image), data_dir.get_data_dir(), image)
+    image_io = QemuImg(
+        params.object_params(image), data_dir.get_data_dir(), image)
     image_name, _ = image_io.create(params.object_params(image))
 
-    template_name =  utils_misc.get_path(test.virtdir, blkdebug_default)
+    template_name = utils_misc.get_path(test.virtdir, blkdebug_default)
     template = ConfigParser.ConfigParser()
     template.read(template_name)
 
@@ -59,7 +63,8 @@ def run_qemu_io_blkdebug(test, params, env):
                 blkdebug.close()
 
         error.context("Create image", logging.info)
-        image_io = QemuImg(params.object_params(image), data_dir.get_data_dir(), image)
+        image_io = QemuImg(params.object_params(
+            image), data_dir.get_data_dir(), image)
         image_name = image_io.create(params.object_params(image))[0]
 
         error.context("Operate in qemu-io to trigger the error", logging.info)
@@ -75,8 +80,8 @@ def run_qemu_io_blkdebug(test, params, env):
                 image_io.snapshot_create()
                 image_sn = image_io.snapshot_tag
             session = qemu_io.QemuIOShellSession(test, params, image_name,
-                                                blkdebug_cfg=blkdebug_cfg,
-                                                log_filename=log_filename)
+                                                 blkdebug_cfg=blkdebug_cfg,
+                                                 log_filename=log_filename)
 
         if not del_snapshot:
             output = session.cmd_output(err_command, timeout=test_timeout)
@@ -93,7 +98,8 @@ def run_qemu_io_blkdebug(test, params, env):
         image_io.remove()
         if pre_snapshot and not del_snapshot:
             params_sn = params.object_params(image_sn)
-            image_snapshot = QemuImg(params_sn, data_dir.get_data_dir(), image_sn)
+            image_snapshot = QemuImg(
+                params_sn, data_dir.get_data_dir(), image_sn)
             image_snapshot.remove()
 
         error.context("Get error message from command perror", logging.info)

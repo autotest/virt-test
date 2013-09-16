@@ -1,6 +1,8 @@
 from virttest import utils_misc
 
+
 class Des(object):
+
     """
     Base Data Encryption Standard class.
     For details, please refer to:
@@ -8,14 +10,14 @@ class Des(object):
     """
     # Permutation and translation tables for DES
     PC1 = [
-         56, 48, 40, 32, 24, 16,  8,
-          0, 57, 49, 41, 33, 25, 17,
-          9,  1, 58, 50, 42, 34, 26,
-         18, 10,  2, 59, 51, 43, 35,
-         62, 54, 46, 38, 30, 22, 14,
-          6, 61, 53, 45, 37, 29, 21,
-         13,  5, 60, 52, 44, 36, 28,
-         20, 12,  4, 27, 19, 11,  3
+        56, 48, 40, 32, 24, 16, 8,
+        0, 57, 49, 41, 33, 25, 17,
+        9, 1, 58, 50, 42, 34, 26,
+        18, 10, 2, 59, 51, 43, 35,
+        62, 54, 46, 38, 30, 22, 14,
+        6, 61, 53, 45, 37, 29, 21,
+        13, 5, 60, 52, 44, 36, 28,
+        20, 12, 4, 27, 19, 11, 3
     ]
 
     # Number left rotations of pc1
@@ -25,10 +27,10 @@ class Des(object):
 
     # get_sub_listd choice key (table 2)
     PC2 = [
-        13, 16, 10, 23,  0,  4,
-         2, 27, 14,  5, 20,  9,
-        22, 18, 11,  3, 25,  7,
-        15,  6, 26, 19, 12,  1,
+        13, 16, 10, 23, 0, 4,
+        2, 27, 14, 5, 20, 9,
+        22, 18, 11, 3, 25, 7,
+        15, 6, 26, 19, 12, 1,
         40, 51, 30, 36, 46, 54,
         29, 39, 50, 44, 32, 47,
         43, 48, 38, 55, 33, 52,
@@ -37,11 +39,11 @@ class Des(object):
 
     # Initial permutation IP
     IP = [
-        57, 49, 41, 33, 25, 17, 9,  1,
+        57, 49, 41, 33, 25, 17, 9, 1,
         59, 51, 43, 35, 27, 19, 11, 3,
         61, 53, 45, 37, 29, 21, 13, 5,
         63, 55, 47, 39, 31, 23, 15, 7,
-        56, 48, 40, 32, 24, 16, 8,  0,
+        56, 48, 40, 32, 24, 16, 8, 0,
         58, 50, 42, 34, 26, 18, 10, 2,
         60, 52, 44, 36, 28, 20, 12, 4,
         62, 54, 46, 38, 30, 22, 14, 6
@@ -49,14 +51,14 @@ class Des(object):
 
     # Expansion table for turning 32 bit blocks into 48 bits
     E = [
-        31,  0,  1,  2,  3,  4,
-         3,  4,  5,  6,  7,  8,
-         7,  8,  9, 10, 11, 12,
+        31, 0, 1, 2, 3, 4,
+        3, 4, 5, 6, 7, 8,
+        7, 8, 9, 10, 11, 12,
         11, 12, 13, 14, 15, 16,
         15, 16, 17, 18, 19, 20,
         19, 20, 21, 22, 23, 24,
         23, 24, 25, 26, 27, 28,
-        27, 28, 29, 30, 31,  0
+        27, 28, 29, 30, 31, 0
     ]
 
     # The (in)famous S-boxes
@@ -115,47 +117,44 @@ class Des(object):
         15, 6, 19, 20, 28, 11,
         27, 16, 0, 14, 22, 25,
         4, 17, 30, 9, 1, 7,
-        23,13, 31, 26, 2, 8,
+        23, 13, 31, 26, 2, 8,
         18, 12, 29, 5, 21, 10,
         3, 24
     ]
 
     # Final permutation IP^-1
     FP = [
-        39,  7, 47, 15, 55, 23, 63, 31,
-        38,  6, 46, 14, 54, 22, 62, 30,
-        37,  5, 45, 13, 53, 21, 61, 29,
-        36,  4, 44, 12, 52, 20, 60, 28,
-        35,  3, 43, 11, 51, 19, 59, 27,
-        34,  2, 42, 10, 50, 18, 58, 26,
-        33,  1, 41,  9, 49, 17, 57, 25,
-        32,  0, 40,  8, 48, 16, 56, 24
+        39, 7, 47, 15, 55, 23, 63, 31,
+        38, 6, 46, 14, 54, 22, 62, 30,
+        37, 5, 45, 13, 53, 21, 61, 29,
+        36, 4, 44, 12, 52, 20, 60, 28,
+        35, 3, 43, 11, 51, 19, 59, 27,
+        34, 2, 42, 10, 50, 18, 58, 26,
+        33, 1, 41, 9, 49, 17, 57, 25,
+        32, 0, 40, 8, 48, 16, 56, 24
     ]
-
 
     # Initialisation
     def __init__(self, key):
         """
         Initialize the instance.
 
-        @param key: Original used in DES.
+        :param key: Original used in DES.
         """
         if len(key) != 8:
             key = (key + '\0' * 8)[:8]
 
         self.L = []
         self.R = []
-        self.Kn = [ [0] * 48 ] * 16    # 16 48-bit keys (K1 - K16)
+        self.Kn = [[0] * 48] * 16    # 16 48-bit keys (K1 - K16)
 
         self.setKey(key)
-
 
     def getKey(self):
         """
         Just get the crypting key.
         """
         return self.key
-
 
     def setKey(self, key):
         """
@@ -165,7 +164,7 @@ class Des(object):
         bits in each byte of the password are put in reverse order before
         using it as encryption key.
 
-        @param key: Original used in DES.
+        :param key: Original used in DES.
         """
         newkey = []
         for ki in range(len(key)):
@@ -173,19 +172,18 @@ class Des(object):
             btgt = 0
             for i in range(8):
                 if bsrc & (1 << i):
-                    btgt = btgt | (1 << 7-i)
+                    btgt = btgt | (1 << 7 - i)
 
             newkey.append(chr(btgt))
         self.key = newkey
         self.create_Kn()
 
-
     def get_sub_list(self, table, block):
         """
         Return sub list of block according to index in table.
 
-        @param table: Index list.
-        @param block: bit list used to get sub list.
+        :param table: Index list.
+        :param block: bit list used to get sub list.
         @
         """
         block_list = []
@@ -193,12 +191,12 @@ class Des(object):
             block_list.append(block[x])
         return block_list
 
-
     def create_Kn(self):
         """
         Create the 16 subkeys,from K[0] to K[15], from the given key
         """
-        key = self.get_sub_list(self.PC1, utils_misc.string_to_bitlist(self.getKey()))
+        key = self.get_sub_list(
+            self.PC1, utils_misc.string_to_bitlist(self.getKey()))
         self.L = key[:28]
         self.R = key[28:]
         for i in range(16):
@@ -211,7 +209,6 @@ class Des(object):
             # Create one of the 16 subkeys through pc2 permutation
             self.Kn[i] = self.get_sub_list(self.PC2, self.L + self.R)
 
-
     def f(self, K):
         """
         The Feistel function (F-function) of DES, operates on half a block
@@ -221,7 +218,7 @@ class Des(object):
         3. Substitution
         4. Permutation
 
-        @param K: One of sixteen 48-bit subkeys are derived from the main key.
+        :param K: One of sixteen 48-bit subkeys are derived from the main key.
         """
         # Expansion:
         # The 32-bit half-block is expanded to 48 bits using E.
@@ -258,13 +255,12 @@ class Des(object):
         # Bn are rearranged according to a fixed permutation, the P-box.
         self.R = self.get_sub_list(self.P, Bn)
 
-
     def des_crypt(self, data, crypt_type=0):
         """
         Crypt the block of data through DES bit-manipulation
 
-        @param data: data need to crypt.
-        @param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
+        :param data: data need to crypt.
+        :param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
         """
         # Get new block by using Ip.
         block = self.get_sub_list(self.IP, data)
@@ -295,22 +291,21 @@ class Des(object):
         final = self.get_sub_list(self.FP, self.R + self.L)
         return final
 
-
     def crypt(self, data, crypt_type=0):
         """
         Crypt the data in blocks, running it through des_crypt()
 
-        @param data: Data to be encrypted/decrypted.
-        @param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
+        :param data: Data to be encrypted/decrypted.
+        :param crypt_type: crypt type. 0 means encrypt, and 1 means decrypt.
         """
 
-        # Split the data into list, crypting each one seperately
+        # Split the data into list, crypting each one separately
         i = 0
         result = []
         while i < len(data):
             # Test code for caching encryption results
-            block = utils_misc.string_to_bitlist(data[i:i+8])
-            pro_block = self.des_crypt(block,crypt_type)
+            block = utils_misc.string_to_bitlist(data[i:i + 8])
+            pro_block = self.des_crypt(block, crypt_type)
 
             # Add the resulting block to our list
             result.append(utils_misc.bitlist_to_string(pro_block))

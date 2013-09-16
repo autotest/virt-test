@@ -1,6 +1,8 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from autotest.client import utils
+
 
 def run_check_unhalt_vcpu(test, params, env):
     """
@@ -27,7 +29,7 @@ def run_check_unhalt_vcpu(test, params, env):
         cpu_usage = float(cpu_usage)
     except ValueError, detail:
         raise error.TestError("Could not get correct cpu usage value with cmd"
-                          " '%s', detail: '%s'" % (cpu_get_usage_cmd, detail))
+                              " '%s', detail: '%s'" % (cpu_get_usage_cmd, detail))
 
     logging.info("Guest's reported CPU usage: %s", cpu_usage)
     if cpu_usage >= 90:

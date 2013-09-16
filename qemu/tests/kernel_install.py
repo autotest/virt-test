@@ -1,9 +1,11 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, data_dir
 
 CLIENT_TEST = "kernelinstall"
+
 
 @error.context_aware
 def run_kernel_install(test, params, env):
@@ -18,9 +20,9 @@ def run_kernel_install(test, params, env):
     7) Do sub tests in guest with new kernel (optional)
     8) Restore grub and reboot guest (optional)
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     sub_test_path = os.path.join(test.bindir, "../%s" % CLIENT_TEST)
     _tmp_file_list = []
@@ -33,7 +35,6 @@ def run_kernel_install(test, params, env):
         dest = os.path.join(sub_test_path, os.path.basename(file_abs_path))
         return os.path.basename(utils.get_file(file_path, dest))
 
-
     def _save_bootloader_config(session):
         """
         Save bootloader's config, in most case, it's grub
@@ -45,7 +46,6 @@ def run_kernel_install(test, params, env):
             logging.warn("Save grub config failed: '%s'" % e)
 
         return default_kernel
-
 
     def _restore_bootloader_config(session, default_kernel):
         error.context("Restore the grub to old version")
@@ -60,7 +60,6 @@ def run_kernel_install(test, params, env):
         except Exception, e:
             raise error.TestWarn("Restore grub failed: '%s'" % e)
 
-
     def _clean_up_tmp_files(file_list):
         for f in file_list:
             try:
@@ -68,7 +67,6 @@ def run_kernel_install(test, params, env):
             except Exception, e:
                 logging.warn("Could remove tmp file '%s', error message: '%s'",
                              f, e)
-
 
     def _build_params(param_str, default_value=""):
         param = _tmp_params_dict.get(param_str)
@@ -78,7 +76,6 @@ def run_kernel_install(test, params, env):
         if param:
             return {param_str: param}
         return {param_str: default_value}
-
 
     error.context("Log into a guest")
     vm = env.get_vm(params["main_vm"])
@@ -98,7 +95,6 @@ def run_kernel_install(test, params, env):
     for i in file_checklist.split():
         var_list = map(_copy_file_to_test_dir, params.get(i, "").split())
         _tmp_params_dict[i] = " ".join(var_list)
-
 
     # Env preparation for test.
     install_type = params.get("install_type", "brew")
@@ -130,7 +126,7 @@ def run_kernel_install(test, params, env):
     tag = params.get('kernel_tag')
 
     error.context("Generate control file for kernel install test")
-    #Generate control file from parameters
+    # Generate control file from parameters
     control_base = "params = %s\n"
     control_base += "job.run_test('kernelinstall'"
     control_base += ", install_type='%s'" % install_type

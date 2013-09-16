@@ -125,10 +125,16 @@ Formal definition:
   FILTER_NAME -> VAR-NAME-F | (VAR-NAME-F=VAR-NAME-F)
 
 
-@copyright: Red Hat 2008-2013
+:copyright: Red Hat 2008-2013
 """
 
-import os, collections, optparse, logging, re, string, sys
+import os
+import collections
+import optparse
+import logging
+import re
+import string
+import sys
 
 _reserved_keys = set(("name", "shortname", "dep"))
 
@@ -136,6 +142,7 @@ num_failed_cases = 5
 
 
 class ParserError(Exception):
+
     def __init__(self, msg, line=None, filename=None, linenum=None):
         Exception.__init__(self)
         self.msg = msg
@@ -156,6 +163,7 @@ class LexerError(ParserError):
 
 
 class MissingIncludeError(Exception):
+
     def __init__(self, line, filename, linenum):
         Exception.__init__(self)
         self.line = line
@@ -180,7 +188,7 @@ def _match_adjacent(block, ctx, ctx_set):
     """
     It try to match as many blocks as possible from context.
 
-    @return: Count of matched blocks.
+    :return: Count of matched blocks.
     """
     if block[0] not in ctx_set:
         return 0
@@ -208,7 +216,7 @@ def _might_match_adjacent(block, ctx, ctx_set, descendant_labels):
     matched = _match_adjacent(block, ctx, ctx_set)
     for elem in block[matched:]:        # Try to find rest of blocks in subtree
         if elem not in descendant_labels:
-            #print "Can't match %s, ctx %s" % (block, ctx)
+            # print "Can't match %s, ctx %s" % (block, ctx)
             return False
     return True
 
@@ -219,8 +227,7 @@ class Filter(object):
 
     def __init__(self, lfilter):
         self.filter = lfilter
-        #print self.filter
-
+        # print self.filter
 
     def match(self, ctx, ctx_set):
         for word in self.filter:  # Go through ,
@@ -228,10 +235,9 @@ class Filter(object):
                 if _match_adjacent(block, ctx, ctx_set) != len(block):
                     break
             else:
-                #print "Filter pass: %s ctx: %s" % (self.filter, ctx)
+                # print "Filter pass: %s ctx: %s" % (self.filter, ctx)
                 return True       # All match
         return False
-
 
     def might_match(self, ctx, ctx_set, descendant_labels):
         # There is some posibility to match in children blocks.
@@ -242,18 +248,16 @@ class Filter(object):
                     break
             else:
                 return True
-        #print "Filter not pass: %s ctx: %s" % (self.filter, ctx)
+        # print "Filter not pass: %s ctx: %s" % (self.filter, ctx)
         return False
 
 
 class NoOnlyFilter(Filter):
     __slots__ = ("line")
 
-
     def __init__(self, lfilter, line):
         super(NoOnlyFilter, self).__init__(lfilter)
         self.line = line
-
 
     def __eq__(self, o):
         if isinstance(o, self.__class__):
@@ -265,38 +269,35 @@ class NoOnlyFilter(Filter):
 
 class OnlyFilter(NoOnlyFilter):
     # pylint: disable=W0613
+
     def is_irrelevant(self, ctx, ctx_set, descendant_labels):
         # Matched in this tree.
         return self.match(ctx, ctx_set)
 
-
     def requires_action(self, ctx, ctx_set, descendant_labels):
         # Impossible to match in this tree.
         return not self.might_match(ctx, ctx_set, descendant_labels)
-
 
     def might_pass(self, failed_ctx, failed_ctx_set, ctx, ctx_set,
                    descendant_labels):
         for word in self.filter:
             for block in word:
                 if (_match_adjacent(block, ctx, ctx_set) >
-                    _match_adjacent(block, failed_ctx, failed_ctx_set)):
+                        _match_adjacent(block, failed_ctx, failed_ctx_set)):
                     return self.might_match(ctx, ctx_set, descendant_labels)
         return False
 
-
     def __str__(self):
         return "Only %s" % (self.filter)
-
 
     def __repr__(self):
         return "Only %s" % (self.filter)
 
 
 class NoFilter(NoOnlyFilter):
+
     def is_irrelevant(self, ctx, ctx_set, descendant_labels):
         return not self.might_match(ctx, ctx_set, descendant_labels)
-
 
     # pylint: disable=W0613
     def requires_action(self, ctx, ctx_set, descendant_labels):
@@ -308,14 +309,12 @@ class NoFilter(NoOnlyFilter):
         for word in self.filter:
             for block in word:
                 if (_match_adjacent(block, ctx, ctx_set) <
-                    _match_adjacent(block, failed_ctx, failed_ctx_set)):
+                        _match_adjacent(block, failed_ctx, failed_ctx_set)):
                     return not self.match(ctx, ctx_set)
         return False
 
-
     def __str__(self):
         return "No %s" % (self.filter)
-
 
     def __repr__(self):
         return "No %s" % (self.filter)
@@ -326,7 +325,6 @@ class BlockFilter(object):
 
     def __init__(self, blocked):
         self.blocked = blocked
-
 
     def apply_to_dict(self, d):
         pass
@@ -340,14 +338,11 @@ class Condition(NoFilter):
         super(Condition, self).__init__(lfilter, line)
         self.content = []
 
-
     def __str__(self):
         return "Condition %s:%s" % (self.filter, self.content)
 
-
     def __repr__(self):
         return "Condition %s:%s" % (self.filter, self.content)
-
 
 
 class NegativeCondition(OnlyFilter):
@@ -358,25 +353,24 @@ class NegativeCondition(OnlyFilter):
         super(NegativeCondition, self).__init__(lfilter, line)
         self.content = []
 
-
     def __str__(self):
         return "NotCond %s:%s" % (self.filter, self.content)
-
 
     def __repr__(self):
         return "NotCond %s:%s" % (self.filter, self.content)
 
 
-
 class StrReader(object):
+
     """
     Preprocess an input string for easy reading.
     """
+
     def __init__(self, s):
         """
         Initialize the reader.
 
-        @param s: The string to parse.
+        :param s: The string to parse.
         """
         self.filename = "<string>"
         self._lines = []
@@ -388,17 +382,16 @@ class StrReader(object):
             indent = len(line) - len(stripped_line)
             if (not stripped_line
                 or stripped_line.startswith("#")
-                or stripped_line.startswith("//")):
+                    or stripped_line.startswith("//")):
                 continue
             self._lines.append((stripped_line, indent, linenum + 1))
-
 
     def get_next_line(self, prev_indent):
         """
         Get the next line in the current block.
 
-        @param prev_indent: The indentation level of the previous block.
-        @return: (line, indent, linenum), where indent is the line's
+        :param prev_indent: The indentation level of the previous block.
+        :return: (line, indent, linenum), where indent is the line's
             indentation level.  If no line is available, (None, -1, -1) is
             returned.
         """
@@ -414,7 +407,6 @@ class StrReader(object):
         self._line_index += 1
         return line, indent, linenum
 
-
     def set_next_line(self, line, indent, linenum):
         """
         Make the next call to get_next_line() return the given line instead of
@@ -426,9 +418,11 @@ class StrReader(object):
 
 
 class FileReader(StrReader):
+
     """
     Preprocess an input file for easy reading.
     """
+
     def __init__(self, filename):
         """
         Initialize the reader.
@@ -460,14 +454,11 @@ class Label(object):
         if self.var_name:
             self.hash_var = self.hash_variant()
 
-
     def __str__(self):
         return self.long_name
 
-
     def __repr__(self):
         return self.long_name
-
 
     def __eq__(self, o):
         """
@@ -481,7 +472,6 @@ class Label(object):
                 return True
         return False
 
-
     def __ne__(self, o):
         """
         The comparison is asymmetric due to optimization.
@@ -494,14 +484,11 @@ class Label(object):
                 return True
         return False
 
-
     def __hash__(self):
         return self.hash_val
 
-
     def hash_name(self):
         return sum([i + 1 * ord(x) for i, x in enumerate(self.name)])
-
 
     def hash_variant(self):
         return sum([i + 1 * ord(x) for i, x in enumerate(str(self))])
@@ -522,7 +509,6 @@ class Node(object):
         self.failed_cases = collections.deque()
         self.default = False
 
-
     def dump(self, indent, recurse=False):
         print("%s%s" % (" " * indent, self.name))
         print("%s%s" % (" " * indent, self.var_name))
@@ -541,10 +527,10 @@ def _subtitution(value, d):
     """
     Only optimization string Template subtitute is quite expensive operation.
 
-    @param value: String where could be $string for subtitution.
-    @param d: Dictionary from which should be value subtituted to value.
+    :param value: String where could be $string for subtitution.
+    :param d: Dictionary from which should be value subtituted to value.
 
-    @return: Substituted string
+    :return: Substituted string
     """
     if "$" in value:
         start = 0
@@ -574,7 +560,6 @@ class Token(object):
     def __repr__(self):
         return "'%s'" % self.identifier
 
-
     def __ne__(self, o):
         """
         The comparison is asymmetric due to optimization.
@@ -588,13 +573,11 @@ class LIndent(Token):
     __slots__ = ["length"]
     identifier = "indent"
 
-    def __init__(self, lenght):
-        self.length = lenght
-
+    def __init__(self, length):
+        self.length = length
 
     def __str__(self):
         return "%s %s" % (self.identifier, self.length)
-
 
     def __repr__(self):
         return "%s %s" % (self.identifier, self.length)
@@ -614,21 +597,17 @@ class LIdentifier(str):
     __slots__ = []
     identifier = "Identifier re([A-Za-z0-9][A-Za-z0-9_-]*)"
 
-
     def __str__(self):
         return super(LIdentifier, self).__str__()
 
-
     def __repr__(self):
         return "'%s'" % self
-
 
     def checkChar(self, chars):
         for t in self:
             if not (t in chars):
                 raise ParserError("Wrong char %s in %s" % (t, self))
         return self
-
 
     def checkAlpha(self):
         """
@@ -638,7 +617,6 @@ class LIdentifier(str):
             raise ParserError("Some of chars is not alpha in %s" % (self))
         return self
 
-
     def checkNumbers(self):
         """
         Check if string contain only chars
@@ -646,7 +624,6 @@ class LIdentifier(str):
         if not self.isdigit():
             raise ParserError("Some of chars is not digit in %s" % (self))
         return self
-
 
     def checkCharAlpha(self, chars):
         """
@@ -658,7 +635,6 @@ class LIdentifier(str):
                                   "chars [%s] in %s" % (t, chars, self))
         return self
 
-
     def checkCharAlphaNum(self, chars):
         """
         Check if string contain only chars
@@ -668,7 +644,6 @@ class LIdentifier(str):
                 raise ParserError("Char %s is not alphanum or one of special"
                                   "chars [%s] in %s" % (t, chars, self))
         return self
-
 
     def checkCharNumeric(self, chars):
         """
@@ -796,7 +771,6 @@ class LOperators(Token):
     identifier = ""
     function = None
 
-
     def set_operands(self, name, value):
         # pylint: disable=W0201
         self.name = str(name)
@@ -809,10 +783,9 @@ class LSet(LOperators):
     __slots__ = []
     identifier = "="
 
-
     def apply_to_dict(self, d):
         """
-        @param d: Dictionary for apply value
+        :param d: Dictionary for apply value
         """
         if self.name not in _reserved_keys:
             d[self.name] = _subtitution(self.value, d)
@@ -821,7 +794,6 @@ class LSet(LOperators):
 class LAppend(LOperators):
     __slots__ = []
     identifier = "+="
-
 
     def apply_to_dict(self, d):
         if self.name not in _reserved_keys:
@@ -832,7 +804,6 @@ class LPrepend(LOperators):
     __slots__ = []
     identifier = "<="
 
-
     def apply_to_dict(self, d):
         if self.name not in _reserved_keys:
             d[self.name] = _subtitution(self.value, d) + d.get(self.name, "")
@@ -841,7 +812,6 @@ class LPrepend(LOperators):
 class LRegExpSet(LOperators):
     __slots__ = []
     identifier = "?="
-
 
     def apply_to_dict(self, d):
         exp = re.compile("%s$" % self.name)
@@ -855,7 +825,6 @@ class LRegExpAppend(LOperators):
     __slots__ = []
     identifier = "?+="
 
-
     def apply_to_dict(self, d):
         exp = re.compile("%s$" % self.name)
         value = _subtitution(self.value, d)
@@ -868,7 +837,6 @@ class LRegExpPrepend(LOperators):
     __slots__ = []
     identifier = "?<="
 
-
     def apply_to_dict(self, d):
         exp = re.compile("%s$" % self.name)
         value = _subtitution(self.value, d)
@@ -880,7 +848,6 @@ class LRegExpPrepend(LOperators):
 class LDel(LOperators):
     __slots__ = []
     identifier = "del"
-
 
     def apply_to_dict(self, d):
         exp = re.compile("%s$" % self.name)
@@ -906,10 +873,8 @@ class LApplyPreDict(LOperators):
     def apply_to_dict(self, d):
         d.update(self.value)
 
-
     def __str__(self):
         return "Apply_pre_dict: %s" % self.value
-
 
     def __repr__(self):
         return "Apply_pre_dict: %s" % self.value
@@ -947,6 +912,7 @@ _ops_exp = re.compile(r"|".join(tokens_oper_re))
 
 
 class Lexer(object):
+
     def __init__(self, reader):
         self.reader = reader
         self.filename = reader.filename
@@ -959,18 +925,14 @@ class Lexer(object):
         self.prev_indent = 0
         self.fast = False
 
-
     def set_prev_indent(self, prev_indent):
         self.prev_indent = prev_indent
-
 
     def set_fast(self):
         self.fast = True
 
-
     def set_strict(self):
         self.fast = False
-
 
     def match(self, line, pos):
         l0 = line[0]
@@ -1089,13 +1051,12 @@ class Lexer(object):
             chars = ""
         yield LEndL()
 
-
     def get_lexer(self):
         cr = self.reader
         indent = 0
         while True:
             (self.line, indent,
-                        self.linenum) = cr.get_next_line(self.prev_indent)
+             self.linenum) = cr.get_next_line(self.prev_indent)
 
             if not self.line:
                 yield LEndBlock(indent)
@@ -1104,7 +1065,6 @@ class Lexer(object):
             yield LIndent(indent)
             for token in self.match(self.line, 0):
                 yield token
-
 
     def get_until_gen(self, end_tokens=None):
         if end_tokens is None:
@@ -1115,12 +1075,10 @@ class Lexer(object):
             token = self.generator.next()
         yield token
 
-
     def get_until(self, end_tokens=None):
         if end_tokens is None:
             end_tokens = [LEndL]
         return [x for x in self.get_until_gen(end_tokens)]
-
 
     def flush_until(self, end_tokens=None):
         if end_tokens is None:
@@ -1128,15 +1086,14 @@ class Lexer(object):
         for _ in self.get_until_gen(end_tokens):
             pass
 
-
     def get_until_check(self, lType, end_tokens=None):
         """
         Read tokens from iterator until get end_tokens or type of token not
         match ltype
 
-        @param lType: List of allowed tokens
-        @param end_tokens: List of tokens for end reading
-        @return: List of readed tokens.
+        :param lType: List of allowed tokens
+        :param end_tokens: List of tokens for end reading
+        :return: List of readed tokens.
         """
         if end_tokens is None:
             end_tokens = [LEndL]
@@ -1147,21 +1104,19 @@ class Lexer(object):
                 tokens.append(token)
             else:
                 raise ParserError("Expected %s got %s" % (lType, type(token)),
-                                    self.line, self.filename, self.linenum)
+                                  self.line, self.filename, self.linenum)
         return tokens
-
 
     def get_until_no_white(self, end_tokens=None):
         """
         Read tokens from iterator until get one of end_tokens and strip LWhite
 
-        @param end_tokens:  List of tokens for end reading
-        @return: List of readed tokens.
+        :param end_tokens:  List of tokens for end reading
+        :return: List of readed tokens.
         """
         if end_tokens is None:
             end_tokens = [LEndL]
         return [x for x in self.get_until_gen(end_tokens) if type(x) != LWhite]
-
 
     def rest_line_gen(self):
         token = self.generator.next()
@@ -1169,14 +1124,11 @@ class Lexer(object):
             yield token
             token = self.generator.next()
 
-
     def rest_line(self):
         return [x for x in self.rest_line_gen()]
 
-
     def rest_line_no_white(self):
         return [x for x in self.rest_line_gen() if type(x) != LWhite]
-
 
     def rest_line_as_LString(self):
         self.rest_as_string = True
@@ -1184,17 +1136,15 @@ class Lexer(object):
         self.generator.next()
         return lstr
 
-
     def get_next_check(self, lType):
         token = self.generator.next()
         if type(token) in lType:
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']=[%s]" %
-                                                ([x.identifier for x in lType],
-                                                 token.identifier, token),
-                               self.line, self.filename, self.linenum)
-
+                             ([x.identifier for x in lType],
+                              token.identifier, token),
+                              self.line, self.filename, self.linenum)
 
     def get_next_check_nw(self, lType):
         token = self.generator.next()
@@ -1204,19 +1154,18 @@ class Lexer(object):
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                                                ([x.identifier for x in lType],
-                                                 token.identifier),
-                               self.line, self.filename, self.linenum)
-
+                             ([x.identifier for x in lType],
+                              token.identifier),
+                              self.line, self.filename, self.linenum)
 
     def check_token(self, token, lType):
         if type(token) in lType:
             return type(token), token
         else:
             raise ParserError("Expected %s got ['%s']" %
-                                               ([x.identifier for x in lType],
-                                                token.identifier),
-                               self.line, self.filename, self.linenum)
+                             ([x.identifier for x in lType],
+                              token.identifier),
+                              self.line, self.filename, self.linenum)
 
 
 def next_nw(gener):
@@ -1242,7 +1191,7 @@ def apply_predict(lexer, node, pre_dict):
 
 def parse_filter(lexer, tokens):
     """
-    @return: Parsed filter
+    :return: Parsed filter
     """
     or_filters = []
     tokens = iter(tokens + [LEndL()])
@@ -1305,12 +1254,12 @@ def parse_filter(lexer, tokens):
             while type(token) == LWhite:
                 token = tokens.next()
             typet, token = lexer.check_token(token, [LIdentifier,
-                                                       LComa, LDot,
-                                                       LLRBracket, LEndL])
+                                                     LComa, LDot,
+                                                     LLRBracket, LEndL])
             continue
         typet, token = lexer.check_token(tokens.next(), [LIdentifier, LComa,
-                                                        LDot, LLRBracket,
-                                                        LEndL, LWhite])
+                                                         LDot, LLRBracket,
+                                                         LEndL, LWhite])
     if and_filter:
         if con_filter:
             and_filter.append(con_filter)
@@ -1325,8 +1274,9 @@ def parse_filter(lexer, tokens):
 
 class Parser(object):
     # pylint: disable=W0102
+
     def __init__(self, filename=None, defaults=False, expand_defaults=[],
-                       debug=False):
+                 debug=False):
         self.node = Node()
         self.debug = debug
         self.defaults = defaults
@@ -1340,35 +1290,29 @@ class Parser(object):
         self.no_filters = []
         self.assignments = []
 
-
     def _debug(self, s, *args):
         if self.debug:
             logging.debug(s, *args)
 
-
     def _warn(self, s, *args):
         logging.warn(s, *args)
-
-
 
     def parse_file(self, filename):
         """
         Parse a file.
 
-        @param filename: Path of the configuration file.
+        :param filename: Path of the configuration file.
         """
         self.node = self._parse(Lexer(FileReader(filename)), self.node)
         self.filename = filename
-
 
     def parse_string(self, s):
         """
         Parse a string.
 
-        @param s: String to parse.
+        :param s: String to parse.
         """
         self.node = self._parse(Lexer(StrReader(s)), self.node)
-
 
     def only_filter(self, variant):
         """
@@ -1376,12 +1320,11 @@ class Parser(object):
 
         Equivalent to parse a "only variant" line.
 
-        @param variant: String with the variant name.
+        :param variant: String with the variant name.
         """
         string = "only %s" % variant
         self.only_filters.append(string)
         self.parse_string(string)
-
 
     def no_filter(self, variant):
         """
@@ -1389,12 +1332,11 @@ class Parser(object):
 
         Equivalent to parse a "no variant" line.
 
-        @param variant: String with the variant name.
+        :param variant: String with the variant name.
         """
         string = "no %s" % variant
         self.only_filters.append(string)
         self.parse_string(string)
-
 
     def assign(self, key, value):
         """
@@ -1402,12 +1344,11 @@ class Parser(object):
 
         Equivalent to parse a "key = value" line.
 
-        @param variant: String with the variant name.
+        :param variant: String with the variant name.
         """
         string = "%s = %s" % (key, value)
         self.assignments.append(string)
         self.parse_string(string)
-
 
     def _parse(self, lexer, node=None, prev_indent=-1):
         if not node:
@@ -1475,8 +1416,8 @@ class Parser(object):
                         else:
                             if pre_dict:
                                 # flush pre_dict to node content.
-                                #If block already contain xxx = yyyy
-                                #then operation xxx +=, <=, .... are safe.
+                                # If block already contain xxx = yyyy
+                                # then operation xxx +=, <=, .... are safe.
                                 if op.name in pre_dict and d_nin_val:
                                     op.apply_to_dict(pre_dict)
                                     lexer.get_next_check([LEndL])
@@ -1491,7 +1432,7 @@ class Parser(object):
                         lexer.get_next_check([LEndL])
 
                     elif type(identifier[-1]) == LColon:  # condition:
-                        #Parse:
+                        # Parse:
                         #    xxx.yyy.(aaa=bbb):
                         identifier = [token] + identifier[:-1]
                         cfilter = parse_filter(lexer, identifier + [LEndL()])
@@ -1539,8 +1480,8 @@ class Parser(object):
                         if typet == LIndent:
                             lexer.get_next_check_nw([LVariant])
                             typet, token = lexer.get_next_check_nw(
-                                                            [LIdentifier,
-                                                             LDefault])
+                                [LIdentifier,
+                                 LDefault])
 
                         if typet == LDefault:  # @
                             is_default = True
@@ -1549,8 +1490,8 @@ class Parser(object):
                         else:  # identificator
                             is_default = False
                             name = [token] + lexer.get_until_check(
-                                                          [LIdentifier, LDot],
-                                                          [LColon])
+                                [LIdentifier, LDot],
+                                [LColon])
 
                         if len(name) == 2:
                             name = [name[0]]
@@ -1558,7 +1499,7 @@ class Parser(object):
                         else:
                             raw_name = [x for x in name[:-1]]
                             name = [x for x in name[:-1]
-                                                    if type(x) == LIdentifier]
+                                    if type(x) == LIdentifier]
 
                         token = lexer.generator.next()
                         while type(token) == LWhite:
@@ -1570,7 +1511,6 @@ class Parser(object):
                         else:
                             deps = []
 
-
                         # Prepare data for dict generator.
                         node2 = Node()
                         node2.children = [node]
@@ -1578,7 +1518,7 @@ class Parser(object):
 
                         if var_name:
                             op = LSet().set_operands(var_name,
-                                           ".".join([str(n) for n in name]))
+                                                     ".".join([str(n) for n in name]))
                             node2.content += [(lexer.filename,
                                                lexer.linenum,
                                                op)]
@@ -1588,7 +1528,7 @@ class Parser(object):
                         if var_name:
                             node3.var_name = var_name
                             node3.name = [Label(var_name, str(n))
-                                                            for n in name]
+                                          for n in name]
                         else:
                             node3.name = [Label(str(n)) for n in name]
 
@@ -1601,7 +1541,7 @@ class Parser(object):
                                     meta["default"].remove(wd)
 
                         if (is_default and not already_default and
-                                    meta_in_expand_defautls):
+                           meta_in_expand_defautls):
                             node3.default = True
                             already_default = True
 
@@ -1690,7 +1630,7 @@ class Parser(object):
                     var_indent = indent
 
                 elif typet in [LNo, LOnly]:
-                    #Parse:
+                    # Parse:
                     #    only/no (filter=text)..aaa.bbb, xxxx
                     lfilter = parse_filter(lexer, lexer.rest_line())
 
@@ -1703,15 +1643,15 @@ class Parser(object):
                                           NoFilter(lfilter, lexer.line))]
 
                 elif typet == LInclude:
-                    #Parse:
+                    # Parse:
                     #    include relative file patch to working directory.
                     path = lexer.rest_line_as_LString()
                     filename = os.path.expanduser(path)
                     if (isinstance(lexer.reader, FileReader) and
-                                                  not os.path.isabs(filename)):
+                       not os.path.isabs(filename)):
                         filename = os.path.join(
-                                            os.path.dirname(lexer.filename),
-                                            filename)
+                            os.path.dirname(lexer.filename),
+                            filename)
                     if not os.path.isfile(filename):
                         raise MissingIncludeError(lexer.line, lexer.filename,
                                                   lexer.linenum)
@@ -1721,7 +1661,7 @@ class Parser(object):
                     lexer.set_prev_indent(prev_indent)
 
                 elif typet == LDel:
-                    #Parse:
+                    # Parse:
                     #    del operand
                     _, to_del = lexer.get_next_check_nw([LIdentifier])
                     lexer.get_next_check_nw([LEndL])
@@ -1732,11 +1672,11 @@ class Parser(object):
                                       token)]
 
                 elif typet == LNotCond:
-                    #Parse:
+                    # Parse:
                     #    !xxx.yyy.(aaa=bbb): vvv
                     lfilter = parse_filter(lexer,
                                            lexer.get_until_no_white(
-                                                        [LColon, LEndL])[:-1])
+                                               [LColon, LEndL])[:-1])
                     next_line = lexer.rest_line_as_LString()
                     if next_line != "":
                         lexer.reader.set_next_line(next_line, indent + 1,
@@ -1752,16 +1692,15 @@ class Parser(object):
                                       lexer.filename, lexer.linenum)
         except Exception:
             self._debug("%s  %s:  %s" % (lexer.filename, lexer.linenum,
-                                        lexer.line))
+                                         lexer.line))
             raise
-
 
     def get_dicts(self, node=None, ctx=[], content=[], shortname=[], dep=[]):
         """
         Generate dictionaries from the code parsed so far.  This should
         be called after parsing something.
 
-        @return: A dict generator.
+        :return: A dict generator.
         """
         def process_content(content, failed_filters):
             # 1. Check that the filters in content are OK with the current
@@ -1849,7 +1788,7 @@ class Parser(object):
                 node.failed_cases.pop()
 
         node = node or self.node
-        #if self.debug:    #Print dict on which is working now.
+        # if self.debug:    #Print dict on which is working now.
         #    node.dump(0)
         # Update dep
         for d in node.dep:
@@ -1880,7 +1819,7 @@ class Parser(object):
         new_external_filters = []
         new_internal_filters = []
         if (not process_content(node.content, new_internal_filters) or
-            not process_content(content, new_external_filters)):
+                not process_content(content, new_external_filters)):
             add_failed_case()
             self._debug("Failed_cases %s", node.failed_cases)
             return
@@ -1981,7 +1920,6 @@ if __name__ == "__main__":
     parser.add_option("-e", "--expand", dest="expand", type="string",
                       help="list of vartiant which should be expanded when"
                            " defaults is enabled.  \"name, name, name\"")
-
 
     options, args = parser.parse_args()
     if not args:

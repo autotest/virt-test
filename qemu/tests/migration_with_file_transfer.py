@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import utils, error
 from autotest.client import utils as client_utils
 from virttest import utils_misc
@@ -16,9 +17,9 @@ def run_migration_with_file_transfer(test, params, env):
     5) Transfer file from guest back to host.
     6) Repeatedly migrate VM and wait until transfer's finished.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -64,14 +65,14 @@ def run_migration_with_file_transfer(test, params, env):
         error.context("transferring file to guest while migrating",
                       logging.info)
         bg = utils.InterruptedThread(vm.copy_files_to, (host_path, guest_path),
-                                 dict(verbose=True, timeout=transfer_timeout))
+                                     dict(verbose=True, timeout=transfer_timeout))
         run_and_migrate(bg)
 
         error.context("transferring file back to host while migrating",
                       logging.info)
         bg = utils.InterruptedThread(vm.copy_files_from,
-                              (guest_path, host_path_returned),
-                              dict(verbose=True, timeout=transfer_timeout))
+                                    (guest_path, host_path_returned),
+                                     dict(verbose=True, timeout=transfer_timeout))
         run_and_migrate(bg)
 
         # Make sure the returned file is identical to the original one

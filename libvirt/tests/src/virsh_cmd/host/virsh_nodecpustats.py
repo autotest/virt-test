@@ -3,6 +3,7 @@ from autotest.client.shared import error
 from autotest.client import utils
 from virttest import virsh, utils_libvirtd
 
+
 def run_virsh_nodecpustats(test, params, env):
     """
     Test the command virsh nodecpustats
@@ -19,7 +20,6 @@ def run_virsh_nodecpustats(test, params, env):
     (5) Call the virsh nodecpustats command with libvirtd service stop
     """
 
-
     def virsh_check_nodecpustats_percpu(actual_stats):
         """
         Check the acual nodecpustats output value
@@ -27,15 +27,14 @@ def run_virsh_nodecpustats(test, params, env):
         """
 
         # Normalise to seconds from nano seconds
-        total = float((actual_stats['system'] + actual_stats['user'] + \
-                    actual_stats['idle'] + actual_stats['iowait'])/(10 ** 9))
+        total = float((actual_stats['system'] + actual_stats['user'] +
+                       actual_stats['idle'] + actual_stats['iowait']) / (10 ** 9))
         uptime = float(utils.get_uptime())
         if not total <= uptime:
             raise error.TestFail("Commands 'virsh nodecpustats' not succeeded"
                                  " as total time: %f is more"
                                  " than uptime: %f" % (total, uptime))
         return True
-
 
     def virsh_check_nodecpustats(actual_stats, cpu_count):
         """
@@ -44,9 +43,9 @@ def run_virsh_nodecpustats(test, params, env):
         """
 
         # Normalise to seconds from nano seconds and get for one cpu
-        total = float(((actual_stats['system'] + actual_stats['user'] + \
-                actual_stats['idle'] + actual_stats['iowait'])/(10 ** 9))/(
-                cpu_count))
+        total = float(((actual_stats['system'] + actual_stats['user'] +
+                        actual_stats['idle'] + actual_stats['iowait']) / (10 ** 9)) / (
+            cpu_count))
         uptime = float(utils.get_uptime())
         if not total <= uptime:
             raise error.TestFail("Commands 'virsh nodecpustats' not succeeded"
@@ -54,27 +53,25 @@ def run_virsh_nodecpustats(test, params, env):
                                  " than uptime: %f" % (total, uptime))
         return True
 
-
     def virsh_check_nodecpustats_percentage(actual_per):
         """
-        Check the actual nodecpustats percentage adds upto 100%
+        Check the actual nodecpustats percentage adds up to 100%
         """
 
-        total = int(round(actual_per['user'] + actual_per['system'] + \
+        total = int(round(actual_per['user'] + actual_per['system'] +
                     actual_per['idle'] + actual_per['iowait']))
 
         if not total == 100:
             raise error.TestFail("Commands 'virsh nodecpustats' not succeeded"
-                                  " as the total percentage value: %d"
-                                  " is not equal 100" % total)
-
+                                 " as the total percentage value: %d"
+                                 " is not equal 100" % total)
 
     def parse_output(output):
         """
         To get the output parsed into a dictionary
-        @param: virsh command output
+        :param virsh command output
 
-        @return: dict of user,system,idle,iowait times
+        :return: dict of user,system,idle,iowait times
         """
 
         # From the beginning of a line, group 1 is one or more word-characters,
@@ -96,13 +93,12 @@ def run_virsh_nodecpustats(test, params, env):
                 actual[name] = int(value)
         return actual
 
-
     def parse_percentage_output(output):
         """
         To get the output parsed into a dictionary
-        @param: virsh command output
+        :param virsh command output
 
-        @return: dict of user,system,idle,iowait times
+        :return: dict of user,system,idle,iowait times
         """
 
         # From the beginning of a line, group 1 is one or more word-characters,
@@ -124,7 +120,6 @@ def run_virsh_nodecpustats(test, params, env):
                 actual_percentage[name] = float(value)
         return actual_percentage
 
-
     # Initialize the variables
     itr = int(params.get("inner_test_iterations"))
     option = params.get("virsh_cpunodestats_options")
@@ -138,7 +133,8 @@ def run_virsh_nodecpustats(test, params, env):
     # Get the host cpu count
     host_cpu_count = utils.count_cpus()
 
-    # Run test case for 5 iterations default can be changed in subtests.cfg file
+    # Run test case for 5 iterations default can be changed in subtests.cfg
+    # file
     for i in range(itr):
 
         if status_error == "yes":
@@ -149,11 +145,11 @@ def run_virsh_nodecpustats(test, params, env):
                 if libvirtd == "off":
                     utils_libvirtd.libvirtd_start()
                     raise error.TestFail("Command 'virsh nodecpustats' "
-                                     "succeeded with libvirtd service "
-                                     "stopped, incorrect")
+                                         "succeeded with libvirtd service "
+                                         "stopped, incorrect")
                 else:
                     raise error.TestFail("Command 'virsh nodecpustats %s' "
-                                     "succeeded (incorrect command)" % option)
+                                         "succeeded (incorrect command)" % option)
 
         elif status_error == "no":
             # Run the testcase for each cpu to get the cpu stats
@@ -161,7 +157,6 @@ def run_virsh_nodecpustats(test, params, env):
                 option = "--cpu %d" % cpu
                 output = virsh.nodecpustats(ignore_status=True, option=option)
                 status = output.exit_status
-
 
                 if status == 0:
                     actual_value = parse_output(output)
@@ -195,7 +190,8 @@ def run_virsh_nodecpustats(test, params, env):
                 raise error.TestFail("Command 'virsh nodecpustats %s'"
                                      " not succeeded" % option)
 
-            # Run the test case for the total cpus to get the stats in percentage
+            # Run the test case for the total cpus to get the stats in
+            # percentage
             option = "--percent"
             output = virsh.nodecpustats(ignore_status=True, option=option)
             status = output.exit_status

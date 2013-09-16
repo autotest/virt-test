@@ -6,7 +6,9 @@ http://libvirt.org/formatcaps.html
 from virttest import virsh, xml_utils
 from virttest.libvirt_xml import base, accessors, xcepts
 
+
 class CapabilityXML(base.LibvirtXMLBase):
+
     """
     Handler of libvirt capabilities and nonspecific item operations.
 
@@ -16,7 +18,7 @@ class CapabilityXML(base.LibvirtXMLBase):
             get: dict map from os type names to dict map from arch names
     """
 
-    #TODO: Add more __slots__ and accessors to get some useful stats
+    # TODO: Add more __slots__ and accessors to get some useful stats
     # e.g. guest_count etc.
 
     __slots__ = base.LibvirtXMLBase.__slots__ + ('uuid',
@@ -37,7 +39,7 @@ class CapabilityXML(base.LibvirtXMLBase):
                                libvirtxml=self)
         # This will skip self.get_cpu_count() defined below
         accessors.AllForbidden(property_name="cpu_count",
-                                 libvirtxml=self)
+                               libvirtxml=self)
         # The set action is for test.
         accessors.XMLElementText(property_name="arch",
                                  libvirtxml=self,
@@ -56,17 +58,16 @@ class CapabilityXML(base.LibvirtXMLBase):
                                  tag_name='vendor')
         # This will skip self.get_feature_list() defined below
         accessors.AllForbidden(property_name="feature_list",
-                                 libvirtxml=self)
+                               libvirtxml=self)
         super(CapabilityXML, self).__init__(virsh_instance)
         # calls set_xml accessor method
         self['xml'] = self.dict_get('virsh').capabilities()
-
 
     def get_os_arch_machine_map(self):
         """
         Accessor method for os_arch_machine_map property (in __slots__)
         """
-        oamm = {} #Schema {<os_type>:{<arch name>:[<machine>, ...]}}
+        oamm = {}  # Schema {<os_type>:{<arch name>:[<machine>, ...]}}
         xmltreefile = self.dict_get('xml')
         for guest in xmltreefile.findall('guest'):
             os_type_name = guest.find('os_type').text
@@ -86,24 +87,22 @@ class CapabilityXML(base.LibvirtXMLBase):
             oamm[os_type_name] = amm
         return oamm
 
-
     def get_feature_list(self):
         """
         Accessor method for feature_list property (in __slots__)
         """
-        feature_list = [] # [<feature1>, <feature2>, ...]
+        feature_list = []  # [<feature1>, <feature2>, ...]
         xmltreefile = self.dict_get('xml')
         for feature_node in xmltreefile.findall('/host/cpu/feature'):
             feature_list.append(feature_node)
         return feature_list
 
-
     def get_feature_name(self, num):
         """
         Get assigned feature name
 
-        @param: num: Assigned feature number
-        @return: Assigned feature name
+        :param num: Assigned feature number
+        :return: Assigned feature name
         """
         count = len(self.feature_list)
         if num >= count:
@@ -111,7 +110,6 @@ class CapabilityXML(base.LibvirtXMLBase):
                                          % (num, count))
         feature_name = self.feature_list[num].get('name')
         return feature_name
-
 
     def get_cpu_count(self):
         """
@@ -124,12 +122,11 @@ class CapabilityXML(base.LibvirtXMLBase):
             cpu_count += int(cpu_num)
         return cpu_count
 
-
     def remove_feature(self, num):
         """
         Remove a assigned feature from xml
 
-        @param: num: Assigned feature number
+        :param num: Assigned feature number
         """
         xmltreefile = self.dict_get('xml')
         count = len(self.feature_list)
@@ -140,13 +137,12 @@ class CapabilityXML(base.LibvirtXMLBase):
         cpu_node = xmltreefile.find('/host/cpu')
         cpu_node.remove(feature_remove_node)
 
-
     def check_feature_name(self, name):
         """
         Check feature name valid or not.
 
-        @param: name: The checked feature name
-        @return: True if check pass
+        :param name: The checked feature name
+        :return: True if check pass
         """
         sys_feature = []
         cpu_xml_file = open('/proc/cpuinfo', 'r')
@@ -158,13 +154,12 @@ class CapabilityXML(base.LibvirtXMLBase):
         cpu_xml_file.close()
         return (name in sys_feature)
 
-
     def set_feature(self, num, value):
         """
         Set a assigned feature value to xml
 
-        @param: num: Assigned feature number
-        @param: value: The feature name modified to
+        :param num: Assigned feature number
+        :param value: The feature name modified to
         """
         count = len(self.feature_list)
         if num >= count:
@@ -173,12 +168,11 @@ class CapabilityXML(base.LibvirtXMLBase):
         feature_set_node = self.feature_list[num]
         feature_set_node.set('name', value)
 
-
     def add_feature(self, value):
         """
         Add a feature Element to xml
 
-        @param: value: The added feature name
+        :param value: The added feature name
         """
         xmltreefile = self.dict_get('xml')
         cpu_node = xmltreefile.find('/host/cpu')

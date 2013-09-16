@@ -1,4 +1,5 @@
-import logging, time
+import logging
+import time
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc
 
@@ -17,9 +18,9 @@ def run_change_media(test, params, env):
     8) Change cdrom without force.
     9) Change a non-removable media.
 
-    @param test: QEMU test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environmen.
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
     """
 
     def check_block_locked(block_name):
@@ -36,14 +37,12 @@ def run_change_media(test, params, env):
                     return True
         return False
 
-
     def change_block(cmd=None):
         try:
             output = monitor.send_args_cmd(cmd)
         except Exception, err:
             output = str(err)
         return output
-
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -87,7 +86,6 @@ def run_change_media(test, params, env):
 
     if not check_block_locked(device_name):
         raise error.TestFail("device is not locked after mount it in guest.")
-
 
     error.context("Change media of cdrom", logging.info)
     new_img_name = params.get("new_img_name")

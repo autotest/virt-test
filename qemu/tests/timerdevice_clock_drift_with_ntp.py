@@ -1,7 +1,9 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, utils_misc, aexpect
+
 
 @error.context_aware
 def run_timerdevice_clock_drift_with_ntp(test, params, env):
@@ -20,9 +22,9 @@ def run_timerdevice_clock_drift_with_ntp(test, params, env):
     10) Check the drift in /var/lib/ntp/drift file on guest after hours
         of running.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with test parameters.
-    @param env: Dictionary with the test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with test parameters.
+    :param env: Dictionary with the test environment.
     """
     def _drift_file_exist():
         try:

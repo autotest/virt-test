@@ -3,7 +3,9 @@
 @author Amos Kong <akong@redhat.com>
 
 """
-import os, sys, time
+import os
+import sys
+import time
 
 if len(sys.argv) < 4:
     print """ netperf agent usage:

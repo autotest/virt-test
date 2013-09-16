@@ -1,4 +1,6 @@
-import logging, re, time
+import logging
+import re
+import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_net, utils_misc, remote, aexpect
@@ -23,9 +25,9 @@ def run_ethtool(test, params, env):
     8) Repeat step 3 - 7.
     9) Restore original configuration.
 
-    @param test: QEMU test object.
-    @param params: Dictionary with the test parameters.
-    @param env: Dictionary with test environment.
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
+    :param env: Dictionary with test environment.
 
     @todo: Not all guests have ethtool installed, so
         find a way to get it installed using yum/apt-get/
@@ -48,17 +50,16 @@ def run_ethtool(test, params, env):
                 pass
         return output
 
-
     def ethtool_get(session, f_type):
         feature_pattern = {
-            'tx':  'tx.*checksumming',
-            'rx':  'rx.*checksumming',
-            'sg':  'scatter.*gather',
+            'tx': 'tx.*checksumming',
+            'rx': 'rx.*checksumming',
+            'sg': 'scatter.*gather',
             'tso': 'tcp.*segmentation.*offload',
             'gso': 'generic.*segmentation.*offload',
             'gro': 'generic.*receive.*offload',
             'lro': 'large.*receive.*offload',
-            }
+        }
         o = session.cmd("ethtool -k %s" % ethname)
         try:
             result = re.findall("%s: (.*)" % feature_pattern.get(f_type), o)[0]
@@ -67,13 +68,12 @@ def run_ethtool(test, params, env):
         except IndexError:
             logging.debug("(%s) %s: failed to get status", ethname, f_type)
 
-
     def ethtool_set(session, f_type, status):
         """
         Set ethernet device offload status
 
-        @param f_type: Offload type name
-        @param status: New status will be changed to
+        :param f_type: Offload type name
+        :param status: New status will be changed to
         """
         txt = "Set ethernet device offload status."
         txt += " (%s) %s: set status %s" % (ethname, f_type, status)
@@ -98,18 +98,15 @@ def run_ethtool(test, params, env):
         logging.error(err_msg)
         return True
 
-
     def ethtool_save_params(session):
         error.context("Saving ethtool configuration", logging.info)
         for i in supported_features:
             feature_status[i] = ethtool_get(session, i)
 
-
     def ethtool_restore_params(session):
         error.context("Restoring ethtool configuration", logging.info)
         for i in supported_features:
             ethtool_set(session, i, feature_status[i])
-
 
     def compare_md5sum(name):
         txt = "Comparing md5sum of the files on guest and host"
@@ -124,14 +121,13 @@ def run_ethtool(test, params, env):
         logging.debug("md5sum: guest(%s), host(%s)", guest_result, host_result)
         return guest_result == host_result
 
-
     def transfer_file(src):
         """
         Transfer file by scp, use tcpdump to capture packets, then check the
         return string.
 
-        @param src: Source host of transfer file
-        @return: Tuple (status, error msg/tcpdump result)
+        :param src: Source host of transfer file
+        :return: Tuple (status, error msg/tcpdump result)
         """
         sess = vm.wait_for_login(timeout=login_timeout)
         session.cmd_output("rm -rf %s" % filename)
@@ -141,7 +137,7 @@ def run_ethtool(test, params, env):
         txt = "Creating file in source host, cmd: %s" % dd_cmd
         error.context(txt, logging.info)
         ethname = utils_net.get_linux_ifname(session,
-                                                  vm.get_mac_address(0))
+                                             vm.get_mac_address(0))
         tcpdump_cmd = "tcpdump -lep -i %s -s 0 tcp -vv port ssh" % ethname
         if src == "guest":
             tcpdump_cmd += " and src %s" % guest_ip
@@ -160,7 +156,7 @@ def run_ethtool(test, params, env):
 
         # only capture the new tcp port after offload setup
         original_tcp_ports = re.findall("tcp.*:(\d+).*%s" % guest_ip,
-                                      utils.system_output("/bin/netstat -nap"))
+                                        utils.system_output("/bin/netstat -nap"))
 
         for i in original_tcp_ports:
             tcpdump_cmd += " and not port %s" % i
@@ -169,10 +165,10 @@ def run_ethtool(test, params, env):
         error.context(txt, logging.info)
         sess.sendline(tcpdump_cmd)
         if not utils_misc.wait_for(
-                          lambda:session.cmd_status("pgrep tcpdump") == 0, 30):
+                lambda: session.cmd_status("pgrep tcpdump") == 0, 30):
             return (False, "Tcpdump process wasn't launched")
 
-        txt = "Transfering file %s from %s" % (filename, src)
+        txt = "Transferring file %s from %s" % (filename, src)
         error.context(txt, logging.info)
         try:
             copy_files_func(filename, filename)
@@ -189,7 +185,6 @@ def run_ethtool(test, params, env):
             return (False, "Failure, md5sum mismatch")
         return (True, tcpdump_string)
 
-
     def tx_callback(status="on"):
         s, o = transfer_file("guest")
         if not s:
@@ -197,14 +192,12 @@ def run_ethtool(test, params, env):
             return False
         return True
 
-
     def rx_callback(status="on"):
         s, o = transfer_file("host")
         if not s:
             logging.error(o)
             return False
         return True
-
 
     def so_callback(status="on"):
         s, o = transfer_file("guest")
@@ -216,7 +209,6 @@ def run_ethtool(test, params, env):
         return (status == "on") ^ (len([i for i in re.findall(
                                    "length (\d*):", o) if int(i) > mtu]) == 0)
 
-
     def ro_callback(status="on"):
         s, o = transfer_file("host")
         if not s:
@@ -224,14 +216,14 @@ def run_ethtool(test, params, env):
             return False
         return True
 
-
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     error.context("Log into a guest.", logging.info)
     login_timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
 
-    # Let's just error the test if we identify that there's no ethtool installed
+    # Let's just error the test if we identify that there's no ethtool
+    # installed
     error.context("Check whether ethtool installed in guest.")
     session.cmd("ethtool -h")
     mtu = 1514
@@ -249,14 +241,14 @@ def run_ethtool(test, params, env):
 
     test_matrix = {
         # type:(callback,    (dependence), (exclude)
-        "tx":  (tx_callback, (), ()),
-        "rx":  (rx_callback, (), ()),
-        "sg":  (tx_callback, ("tx",), ()),
+        "tx": (tx_callback, (), ()),
+        "rx": (rx_callback, (), ()),
+        "sg": (tx_callback, ("tx",), ()),
         "tso": (so_callback, ("tx", "sg",), ("gso",)),
         "gso": (so_callback, (), ("tso",)),
         "gro": (ro_callback, ("rx",), ("lro",)),
         "lro": (rx_callback, (), ("gro",)),
-        }
+    }
     ethtool_save_params(session)
     failed_tests = []
     try:

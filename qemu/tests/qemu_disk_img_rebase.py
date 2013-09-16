@@ -1,8 +1,11 @@
-import re, copy, logging
+import re
+import copy
+import logging
 from autotest.client import utils
 from autotest.client.shared import error
 from qemu.tests import qemu_disk_img
 from virttest import storage
+
 
 class RebaseTest(qemu_disk_img.QemuImgTest):
 
@@ -51,9 +54,9 @@ def run_qemu_disk_img_rebase(test, params, env):
     """
     'qemu-img' rebase function test:
 
-    @param test: Qemu test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: Qemu test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     base_image = params.get("images", "image1").split()[0]
     params_bak = copy.deepcopy(params)
@@ -62,7 +65,7 @@ def run_qemu_disk_img_rebase(test, params, env):
          "image_format_%s" % base_image: params["image_format"]})
     image_chain = params.get("image_chain", "").split()
     for idx, tag in enumerate(image_chain):
-        params["image_chain"] = " ".join(image_chain[:idx +1])
+        params["image_chain"] = " ".join(image_chain[:idx + 1])
         rebase_test = RebaseTest(test, params, env, tag)
         n_params = rebase_test.create_snapshot()
         rebase_test.start_vm(n_params)
@@ -75,7 +78,7 @@ def run_qemu_disk_img_rebase(test, params, env):
     # rebase snapshot image
     rebase_chain = params.get("rebase_list", "").split(";")
     for images in rebase_chain:
-        images = map(lambda x:x.strip(), images.split(">"))
+        images = map(lambda x: x.strip(), images.split(">"))
         try:
             image = images[0]
             base = images[1]

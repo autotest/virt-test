@@ -1,4 +1,5 @@
-import logging, os
+import logging
+import os
 from autotest.client import utils
 from virttest import postprocess_iozone
 from virttest import utils_misc
@@ -12,9 +13,9 @@ def run_iozone_windows(test, params, env):
     3) Get results
     4) Postprocess it with the IOzone postprocessing module
 
-    @param test: kvm test object
-    @param params: Dictionary with the test parameters
-    @param env: Dictionary with test environment.
+    :param test: kvm test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
