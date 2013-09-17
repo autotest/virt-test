@@ -1,9 +1,19 @@
 import logging
-import time
+import threading
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import libvirt_vm, data_dir, utils_misc, virt_vm, aexpect
 from virttest.libvirt_xml import vm_xml
+
+ 
+# To get result in thread, using global parameters
+# Result of virsh migrate command
+global ret_migration
+# A lock for threads
+global ret_lock
+# True means command executed successfully
+ret_migration = True
+ret_lock = threading.RLock()
 
 
 def cleanup_dest(vm, srcuri, desturi):
@@ -123,16 +133,37 @@ class VMStress(object):
         return status == 0
 
 
-def do_migration(vms, dest_uri, load_vms, stress_type):
+def thread_func_migration(vm, desturi):
+    """
+    Thread for virsh migrate command.
+
+    :param vm: A libvirt vm instance(local or remote).
+    :param desturi: remote host uri.
+    """
+    # Judge result for main_func with a global variable.
+    global ret_migration
+    global ret_lock
+    # Migrate the domain.
+    try:
+        vm.migrate(desturi, ignore_status=False, debug=True)
+    except error.CmdError, detail:
+        logging.error("Migration to %s failed:\n%s", desturi, detail)
+        ret_lock.acquire()
+        ret_migration = False
+        ret_lock.release()
+
+
+def do_migration(vms, desturi, load_vms, stress_type, migration_type):
     """
     Migrate vms with stress.
 
     :param vms: migrated vms.
     :param load_vms: provided for stress.
     """
+    global ret_migration
     fail_info = []
     for vm in vms:
-        if stress_type == "vm_booting":
+        if stress_type == "load_vm_booting":
             if len(load_vms):
                 try:
                     if not load_vms[0].is_alive:
@@ -142,7 +173,7 @@ def do_migration(vms, dest_uri, load_vms, stress_type):
                     break
             else:
                 logging.warn("No load vm provided.")
-        elif stress_type == "vms_booting":
+        elif stress_type == "load_vms_booting":
             for load_vm in load_vms:
                 try:
                     if not load_vm.is_alive:
@@ -155,18 +186,28 @@ def do_migration(vms, dest_uri, load_vms, stress_type):
                 vs = VMStress(vm)
                 vs.load_stress()
             except StressError, detail:
-                fail_info.append("Launch stress for %s failed.")
+                fail_info.append("Launch stress for %s failed." % detail)
                 break
 
-        result = vm.migrate(dest_uri, ignore_status=True, debug=True)
-        if result.exit_status:
-            fail_info.append("Migrate %s failed.", vm.name)
+    if migration_type == "orderly":
+        for vm in vms:
+            migration_thread = threading.Thread(target=thread_func_migration,
+                                                args=(vm, desturi))
+            migration_thread.start()
+            migration_thread.join(60)
+            if migration_thread.isAlive():
+                logging.error("Migrate %s timeout.", migration_thread)
+                ret_lock.acquire()
+                ret_migration = False
+                ret_lock.release()
 
-        for load_vm in load_vms:
-            load_vm.destroy()
+    for load_vm in load_vms:
+        load_vm.destroy()
 
     if len(fail_info):
-        raise error.TestFail(str(fail_info))
+        logging.warning("Add stress for migration failed:%s", fail_info)
+    if not ret_migration:
+        raise error.TestFail()
 
 
 def run_virsh_migrate_stress(test, params, env):
@@ -174,8 +215,8 @@ def run_virsh_migrate_stress(test, params, env):
     Test migration under stress.
     """
     vm_names = params.get("migration_vms").split()
-    if not len(vm_names):
-        raise error.TestNAError("Provide your vms for migration first.")
+    if len(vm_names) < 2:
+        raise error.TestNAError("Provide enough vms for migration first.")
 
     # Migrated vms' instance
     vms = []
@@ -193,6 +234,7 @@ def run_virsh_migrate_stress(test, params, env):
     cpu = int(params.get("vm_cpu", 1))
     memory = int(params.get("vm_memory", 1048576))
     stress_type = params.get("migration_stress_type")
+    migration_type = params.get("migration_type")
     dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
 
     for vm in vms:
@@ -207,7 +249,7 @@ def run_virsh_migrate_stress(test, params, env):
             vm.wait_for_login()
             # TODO: recover vm if start failed?
         # TODO: set ssh-autologin automatically
-        do_migration(vms, dest_uri, load_vms, stress_type)
+        do_migration(vms, dest_uri, load_vms, stress_type, migration_type)
     finally:
         for vm in vms:
             cleanup_dest(vm, None, dest_uri)
