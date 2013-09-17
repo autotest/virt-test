@@ -34,12 +34,15 @@ def run_virsh_vcpuinfo(test, params, env):
 
         remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
         remote_pwd = params.get("remote_pwd", None)
-        # Verify vm.connect_uri was modified from the default for this test.
-        if not virsh.VirshConnectBack.kosher_args(remote_ip, vm.connect_uri):
+        # Used for connecting from remote to local
+        connect_uri = params.get("remote_connect_uri",
+                                 "qemu+ssh://LOCAL.EXAMPLE.COM/system")
+        # Verify connect_uri is useful for this test.
+        if not virsh.VirshConnectBack.kosher_args(remote_ip, connect_uri):
             raise error.TestNAError("The connect_uri parameter '%s' does "
                                     "not point at fully-qualified host "
                                     "from perspective of remote support "
-                                    "system at '%s'." % (vm.connect_uri,
+                                    "system at '%s'." % (connect_uri,
                                                          remote_ip))
 
         status = 0
@@ -48,7 +51,7 @@ def run_virsh_vcpuinfo(test, params, env):
         try:
             vcback = virsh.VirshConnectBack(remote_ip=remote_ip,
                                             remote_pwd=remote_pwd,
-                                            uri=vm.connect_uri,
+                                            uri=connect_uri,
                                             debug=True,
                                             ignore_status=True)
             cmdresult = vcback.vcpuinfo(vm_name)
