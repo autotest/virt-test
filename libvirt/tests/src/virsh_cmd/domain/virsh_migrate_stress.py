@@ -153,7 +153,7 @@ def thread_func_migration(vm, desturi):
         ret_lock.release()
 
 
-def do_migration(vms, desturi, load_vms, stress_type, migration_type):
+def do_migration(vms, srcuri, desturi, load_vms, stress_type, migration_type):
     """
     Migrate vms with stress.
 
@@ -200,7 +200,26 @@ def do_migration(vms, desturi, load_vms, stress_type, migration_type):
                 ret_lock.acquire()
                 ret_migration = False
                 ret_lock.release()
-
+    elif migration_type == "cross":
+        # Migrate a vm to remote first,
+        # then migrate another to remote with the first vm back
+        vm_remote = vms.pop()
+        for vm in vms:
+            thread1 = threading.Thread(target=thread_func_migration,
+                                       args=(vm_remote, srcuri))
+            thread2 = threading.Thread(target=thread_func_migration,
+                                       args=(vm, desturi))
+            thread1.start()
+            thread2.start()
+            thread1.join(60)
+            thread2.join(60)
+            vm_remote = vm
+            if thread1.isAlive() or thread1.isAlive():
+                logging.error("Cross migrate timeout.")
+                ret_lock.acquire()
+                ret_migration = False
+                ret_lock.release()
+ 
     for load_vm in load_vms:
         load_vm.destroy()
 
@@ -236,6 +255,7 @@ def run_virsh_migrate_stress(test, params, env):
     stress_type = params.get("migration_stress_type")
     migration_type = params.get("migration_type")
     dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
+    src_uri = params.get("migrate_src_uri", "qemu+ssh://EXAMPLE/system")
 
     for vm in vms:
         # Keep vm dead for edit
@@ -249,7 +269,8 @@ def run_virsh_migrate_stress(test, params, env):
             vm.wait_for_login()
             # TODO: recover vm if start failed?
         # TODO: set ssh-autologin automatically
-        do_migration(vms, dest_uri, load_vms, stress_type, migration_type)
+        do_migration(vms, src_uri, dest_uri, load_vms, stress_type,
+                     migration_type)
     finally:
         for vm in vms:
             cleanup_dest(vm, None, dest_uri)
