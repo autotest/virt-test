@@ -188,6 +188,12 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type, migration_type):
             except StressError, detail:
                 fail_info.append("Launch stress for %s failed." % detail)
                 break
+        elif stress_type == "migration_vms_booting":
+            try:
+                vm.start()
+            except virt_vm.VMStartError:
+                fail_info.append("Start migration vms failed.")
+                break
 
     if migration_type == "orderly":
         for vm in vms:
@@ -219,7 +225,25 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type, migration_type):
                 ret_lock.acquire()
                 ret_migration = False
                 ret_lock.release()
- 
+    elif migration_type == "simultaneous":
+        migration_threads = []
+        for vm in vms:
+            migration_threads.append(threading.Thread(
+                                               target=thread_func_migration,
+                                               args=(vm, desturi)))
+        # let all migration going first
+        for thread in migration_threads:
+            thread.start()
+
+        # listen threads until they end
+        for thread in migration_threads:
+            thread.join(60)
+            if thread.isAlive():
+                logging.error("Migrate %s timeout.", thread)
+                ret_lock.acquire()
+                ret_migration = False
+                ret_lock.release()
+
     for load_vm in load_vms:
         load_vm.destroy()
 
@@ -254,6 +278,7 @@ def run_virsh_migrate_stress(test, params, env):
     memory = int(params.get("vm_memory", 1048576))
     stress_type = params.get("migration_stress_type")
     migration_type = params.get("migration_type")
+    start_migration_vms = "yes" == params.get("start_migration_vms", "yes")
     dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
     src_uri = params.get("migrate_src_uri", "qemu+ssh://EXAMPLE/system")
 
@@ -264,10 +289,11 @@ def run_virsh_migrate_stress(test, params, env):
         set_cpu_memory(vm.name, cpu, memory)
 
     try:
-        for vm in vms:
-            vm.start()
-            vm.wait_for_login()
-            # TODO: recover vm if start failed?
+        if start_migration_vms:
+            for vm in vms:
+                vm.start()
+                vm.wait_for_login()
+                # TODO: recover vm if start failed?
         # TODO: set ssh-autologin automatically
         do_migration(vms, src_uri, dest_uri, load_vms, stress_type,
                      migration_type)
