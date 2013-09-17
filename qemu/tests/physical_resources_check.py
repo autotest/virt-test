@@ -188,7 +188,10 @@ def run_physical_resources_check(test, params, env):
     chk_timeout = int(params.get("chk_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     qtree = qemu_qtree.QtreeContainer()
-    qtree.parse_info_qtree(vm.monitor.info('qtree'))
+    try:
+        qtree.parse_info_qtree(vm.monitor.info('qtree'))
+    except AttributeError:  # monitor doesn't support info qtree
+        qtree = None
 
     logging.info("Starting physical resources check test")
     logging.info("Values assigned to VM are the values we expect "
@@ -252,18 +255,22 @@ def run_physical_resources_check(test, params, env):
     f_fail = chk_fmt_model("nics", "nic_model", "network", "model=(.*),")
     n_fail.extend(f_fail)
 
-    logging.info("Images params check")
-    logging.debug("Found devices: %s", params.objects('images'))
-    qdisks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
-    _ = sum(qdisks.parse_info_block(
-        vm.monitor.info_block()))
-    _ += qdisks.generate_params()
-    _ += qdisks.check_disk_params(params)
-    if _:
-        _ = ("Images check failed with %s errors, check the log for "
-             "details" % _)
-        logging.error(_)
-        n_fail.append(_)
+    if qtree is not None:
+        logging.info("Images params check")
+        logging.debug("Found devices: %s", params.objects('images'))
+        qdisks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
+        _ = sum(qdisks.parse_info_block(
+            vm.monitor.info_block()))
+        _ += qdisks.generate_params()
+        _ += qdisks.check_disk_params(params)
+        if _:
+            _ = ("Images check failed with %s errors, check the log for "
+                 "details" % _)
+            logging.error(_)
+            n_fail.append(_)
+    else:
+        logging.info("Images check param skipped (qemu monitor doesn't "
+                     "support 'info qtree')")
 
     logging.info("Network card MAC check")
     o = ""
