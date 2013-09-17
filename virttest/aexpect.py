@@ -193,7 +193,7 @@ if __name__ == "__main__":
                         data = os.read(shell_fd, 16384)
                     except OSError:
                         data = ""
-                    if not data:
+                    if data == "":
                         check_termination = True
                     # Remove carriage returns from the data -- they often cause
                     # trouble and are normally not needed
@@ -203,7 +203,7 @@ if __name__ == "__main__":
                     for i in range(len(readers)):
                         buffers[i] += data
                 # If os.read() raised an exception or there was nothing to read
-                if check_termination or shell_fd not in r:
+                if check_termination or (shell_fd not in r):
                     pid, status = os.waitpid(shell_pid, os.WNOHANG)
                     if pid:
                         status = os.WEXITSTATUS(status)
@@ -478,7 +478,7 @@ class Spawn(object):
             (reader, _get_reader_filename(BASE_DIR, self.a_id, reader))
             for reader in self.readers)
 
-        # Start the server (which runs the command)
+        # Server start blocks on reading all four parameters
         if command:
             sub = subprocess.Popen("%s %s" % (sys.executable, __file__),
                                    shell=True,
@@ -490,22 +490,48 @@ class Spawn(object):
             sub.stdin.write("%s\n" % echo)
             sub.stdin.write("%s\n" % ",".join(self.readers))
             sub.stdin.write("%s\n" % command)
+        else:
+            # Code must know not to touch this
+            sub = None
+            logging.warning("No command string provided to Aexpect")
 
         start = datetime.datetime.now()
-        starttimeout = datetime.timedelta(seconds=starttimeout)
+        timeout_at = start + datetime.timedelta(seconds=starttimeout)
+        timedout = False
+        fast_exit_status = None
         while not _locked(self.lock_server_running_filename):
-            delta = datetime.datetime.now() - start
-            if delta > starttimeout:
-                raise RuntimeError("Aexpect server did not start in timeout %s"
-                                   % str(starttimeout))
+            fast_exit_status = self.get_status()
+            if fast_exit_status is not None:
+                break # Missed lock/unlock while sleeping
+            if datetime.datetime.now() > timeout_at:
+                timedout = True
+                break
+            else:
+                time.sleep(0.01) # Don't busy-wait
 
-        # Open the reading pipes
-        self.reader_fds = {}
-        try:
+        # Unnecessary on timeout or fast exit
+        if not timedout and fast_exit_status is None:
+            # Open the reading pipes
+            self.reader_fds = {}
             for reader, filename in self.reader_filenames.items():
-                self.reader_fds[reader] = os.open(filename, os.O_RDONLY)
-        except Exception:
-            pass
+                try:
+                    self.reader_fds[reader] = os.open(filename, os.O_RDONLY)
+                except OSError:
+                    logging.warning("Aexpect server %s couldn't open reader"
+                                    " %s, skipping." % filename)
+                    pass
+        else:
+            if timedout:
+                logging.debug("Aexpect server %s startup timed out"
+                              % self.a_id)
+            if fast_exit_status:
+                logging.debug("Aexpect %s command exited on startup with "
+                              "code: %s" % (self.a_id, fast_exit_status))
+            if sub is not None:
+                # Can't block on reading stdout/err since they are closed
+                sub_exit = sub.wait()
+                logging.debug("Aexpect server %s exited on startup with code:"
+                              " %s" % (self.a_id,  sub_exit))
 
     # The following two functions are defined to make sure the state is set
     # exclusively by the constructor call as specified in __getinitargs__().
@@ -569,11 +595,13 @@ class Spawn(object):
         """
         Close all reader file descriptors.
         """
-        for fd in self.reader_fds.values():
-            try:
-                os.close(fd)
-            except OSError:
-                pass
+        # May not be any readers open
+        if hasattr(self, 'reader_fds'):
+            for fd in self.reader_fds.values():
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
 
     def get_id(self):
         """
@@ -602,13 +630,12 @@ class Spawn(object):
         Wait for the process to exit and return its exit status, or None
         if the exit status is not available.
         """
+        # Can wait a long time if server hangs :S
         _wait(self.lock_server_running_filename)
+        # Status file only created/written to just before server exit
         try:
-            fileobj = open(self.status_filename, "r")
-            status = int(fileobj.read())
-            fileobj.close()
-            return status
-        except Exception:
+            return int(open(self.status_filename, "r").read())
+        except IOError:
             return None
 
     def get_output(self):
@@ -627,7 +654,8 @@ class Spawn(object):
         """
         Return True if the process is running.
         """
-        return _locked(self.lock_server_running_filename)
+        # Status file only created/written to just before server exit
+        return self.get_status() is None
 
     def kill(self, sig=signal.SIGKILL):
         """

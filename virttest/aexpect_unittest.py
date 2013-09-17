@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import unittest, shutil, glob, os, signal, subprocess, sys, time, datetime
+import unittest, shutil, glob, os, signal
+import subprocess, sys, time, datetime, logging
 import common
 import utils_misc
 import aexpect
@@ -33,10 +34,10 @@ class AexpectTestBase(unittest.TestCase):
             pass
 
 
-
 class TestServer(AexpectTestBase):
 
     def test_binfalse(self):
+        logging.disable(logging.INFO)
         # Always use known id value
         a_id = '12345678'
         (shell_pid_filename,
@@ -77,15 +78,18 @@ class TestServer(AexpectTestBase):
 class TestSpawn(AexpectTestBase):
 
     def test_binfalse(self):
+        tenseconds = datetime.timedelta(seconds=10)
+        # Check server handles very short exit times
         start = datetime.datetime.now()
-        fivesec = datetime.timedelta(seconds=5)
         session = aexpect.Spawn('/bin/false')
-        while not session.is_alive():
-            delta = datetime.datetime.now() - start
-            self.assertTrue(delta < fivesec)
+        # Wait up to 10 seconds for status to be available
+        while session.get_status() is None:
+            time.sleep(0.01) # Don't busy wait
+            # Double default 5-second time to make sure enough time to Fail
+            self.assertTrue(datetime.datetime.now() - start < tenseconds)
         self.assertEqual(session.get_status(), 1)
-        session.close()
-
+        self.assertFalse(session.is_alive())
+        session.close() # Wait for exit
 
 if __name__ == "__main__":
     unittest.main()
