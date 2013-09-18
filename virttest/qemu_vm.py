@@ -50,7 +50,7 @@ class VMMigrateProtoUnsupportedError(virt_vm.VMMigrateProtoUnknownError):
 
     def __str__(self):
         return ("QEMU reports it doesn't know migration protocol '%s'. "
-                "QEMU output: %s" % self.protocol, self.output)
+                "QEMU output: %s" % (self.protocol, self.output))
 
 
 class KVMInternalError(virt_vm.VMError):
@@ -1973,7 +1973,7 @@ class VM(virt_vm.BaseVM):
             # Make sure the process was started successfully
             if not self.process.is_alive():
                 status = self.process.get_status()
-                output = self.process.get_output()
+                output = self.process.get_output().strip()
                 migration_in_course = migration_mode is not None
                 unknown_protocol = "unknown migration protocol" in output
                 if migration_in_course and unknown_protocol:
