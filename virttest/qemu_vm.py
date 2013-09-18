@@ -1897,8 +1897,8 @@ class VM(virt_vm.BaseVM):
             # Add migration parameters if required
             if migration_mode in ["tcp", "rdma", "x-rdma"]:
                 self.migration_port = utils_misc.find_free_port(5200, 6000)
-                qemu_command += " -incoming " + \
-                    migration_mode + ":0:%d" % self.migration_port
+                qemu_command += (" -incoming " + migration_mode +
+                                 ":0:%d" % self.migration_port)
             elif migration_mode == "unix":
                 self.migration_file = "/tmp/migration-unix-%s" % self.instance
                 qemu_command += " -incoming unix:%s" % self.migration_file
