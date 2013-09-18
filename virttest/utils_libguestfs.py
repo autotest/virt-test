@@ -87,7 +87,7 @@ class LibguestfsBase(propcan.PropCanBase):
     Base class of libguestfs tools.
     """
 
-    __slots__ = ('ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec')
+    __slots__ = ['ignore_status', 'debug', 'timeout', 'uri', 'lgf_exec']
 
     def __init__(self, lgf_exec="/bin/true", ignore_status=True,
                  debug=False, timeout=60, uri=None):
@@ -104,25 +104,25 @@ class LibguestfsBase(propcan.PropCanBase):
         Enforce setting ignore_status as a boolean.
         """
         if bool(ignore_status):
-            self.dict_set('ignore_status', True)
+            self.__dict_set__('ignore_status', True)
         else:
-            self.dict_set('ignore_status', False)
+            self.__dict_set__('ignore_status', False)
 
     def set_debug(self, debug):
         """
         Accessor method for 'debug' property that logs message on change
         """
         if not self.INITIALIZED:
-            self.dict_set('debug', debug)
+            self.__dict_set__('debug', debug)
         else:
-            current_setting = self.dict_get('debug')
+            current_setting = self.__dict_get__('debug')
             desired_setting = bool(debug)
             if not current_setting and desired_setting:
-                self.dict_set('debug', True)
+                self.__dict_set__('debug', True)
                 logging.debug("Libguestfs debugging enabled")
             # current and desired could both be True
             if current_setting and not desired_setting:
-                self.dict_set('debug', False)
+                self.__dict_set__('debug', False)
                 logging.debug("Libguestfs debugging disabled")
 
     def set_timeout(self, timeout):
@@ -130,11 +130,11 @@ class LibguestfsBase(propcan.PropCanBase):
         Accessor method for 'timeout' property, timeout should be digit
         """
         if type(timeout) is int:
-            self.dict_set('timeout', timeout)
+            self.__dict_set__('timeout', timeout)
         else:
             try:
                 timeout = int(str(timeout))
-                self.dict_set('timeout', timeout)
+                self.__dict_set__('timeout', timeout)
             except ValueError:
                 logging.debug("Set timeout failed.")
 
@@ -144,7 +144,7 @@ class LibguestfsBase(propcan.PropCanBase):
         """
         # self.get() would call get_uri() recursivly
         try:
-            return self.dict_get('uri')
+            return self.__dict_get__('uri')
         except KeyError:
             return None
 
@@ -159,7 +159,7 @@ class Guestfish(LibguestfsBase):
     Execute guestfish, using a new guestfish shell each time.
     """
 
-    __slots__ = LibguestfsBase.__slots__
+    __slots__ = []
 
     def __init__(self, disk_img=None, ro_mode=False,
                  libvirt_domain=None, inspector=False,
@@ -201,10 +201,10 @@ class Guestfish(LibguestfsBase):
         (Not a guestfish session).
         command: guestfish [--options] [commands]
         """
-        guestfs_exec = self.dict_get('lgf_exec')
-        ignore_status = self.dict_get('ignore_status')
-        debug = self.dict_get('debug')
-        timeout = self.dict_get('timeout')
+        guestfs_exec = self.__dict_get__('lgf_exec')
+        ignore_status = self.__dict_get__('ignore_status')
+        debug = self.__dict_get__('debug')
+        timeout = self.__dict_get__('timeout')
         if command:
             guestfs_exec += " %s" % command
             return lgf_command(guestfs_exec, ignore_status, debug, timeout)
@@ -277,7 +277,7 @@ class GuestfishPersistent(Guestfish):
     Execute operations using persistent guestfish session.
     """
 
-    __slots__ = Guestfish.__slots__ + ('session_id', )
+    __slots__ = ['session_id']
 
     # Help detect leftover sessions
     SESSION_COUNTER = 0
@@ -312,8 +312,8 @@ class GuestfishPersistent(Guestfish):
                 # It should jump to exception followed normally
             except aexpect.ShellProcessTerminatedError:
                 self.__class__.SESSION_COUNTER -= 1
-                self.dict_del('session_id')
-                return  # guestfish session was closed normally
+                self.__dict_del__('session_id')
+                return # guestfish session was closed normally
             # Close with 'quit' did not respond
             # So close with aexpect functions
             if existing.is_alive():
@@ -324,7 +324,7 @@ class GuestfishPersistent(Guestfish):
                     existing.close(sig=signal.SIGTERM)
                 # Keep count:
                 self.__class__.SESSION_COUNTER -= 1
-                self.dict_del('session_id')
+                self.__dict_del__('session_id')
         except LibguestfsCmdError:
             # Allow other exceptions to be raised
             pass  # session was closed already
@@ -334,27 +334,27 @@ class GuestfishPersistent(Guestfish):
         Open new session, closing any existing
         """
         # Accessors may call this method, avoid recursion
-        guestfs_exec = self.dict_get('lgf_exec')  # Must exist, can't be None
+        guestfs_exec = self.__dict_get__('lgf_exec')  # Must exist, can't be None
         self.close_session()
         # Always create new session
         new_session = GuestfishSession(guestfs_exec)
         # Keep count
         self.__class__.SESSION_COUNTER += 1
         session_id = new_session.get_id()
-        self.dict_set('session_id', session_id)
+        self.__dict_set__('session_id', session_id)
 
     def open_session(self):
         """
         Return session with session_id in this class.
         """
         try:
-            session_id = self.dict_get('session_id')
+            session_id = self.__dict_get__('session_id')
             if session_id:
                 try:
                     return GuestfishSession(a_id=session_id)
                 except aexpect.ShellStatusError:
                     # session was already closed
-                    self.dict_del('session_id')
+                    self.__dict_del__('session_id')
                     raise LibguestfsCmdError(
                         "Open session '%s' failed." % session_id)
         except KeyError:
@@ -369,7 +369,7 @@ class GuestfishPersistent(Guestfish):
         """
         session = self.open_session()
         # Allow to raise error by default.
-        ignore_status = self.dict_get('ignore_status')
+        ignore_status = self.__dict_get__('ignore_status')
         return session.cmd_result(command, ignore_status=ignore_status)
 
     def add_drive(self, filename):

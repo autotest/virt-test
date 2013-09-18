@@ -10,7 +10,7 @@ from virttest.libvirt_xml.devices import base
 
 class Address(base.TypedDeviceBase):
 
-    __slots__ = base.TypedDeviceBase.__slots__ + ('attributes',)
+    __slots__ = ('attributes',)
 
     def __init__(self, type_name, virsh_instance=base.base.virsh):
         super(Address, self).__init__(device_tag='address',

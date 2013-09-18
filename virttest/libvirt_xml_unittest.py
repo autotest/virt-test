@@ -129,6 +129,36 @@ class LibvirtXMLTestBase(unittest.TestCase):
         xml_file.close()
         return domain_xml
 
+
+    @staticmethod
+    def _nodedev_dumpxml(name, options="", to_file=None, **dargs):
+        # Must mirror virsh.nodedev_dumpxml() API but can't test this option
+        if options != "":
+            raise ValueError('Dummy virsh for testing does not support options'
+                             ' parameter')
+        if to_file is not None:
+            raise ValueError('Dummy virsh for testing does not support to_file'
+                             ' parameter')
+        if name is not 'pci_0000_00_00_0':
+            raise ValueError('Dummy virsh for testing only support '
+                             ' device name pci_0000_00_00_0')
+        xml =   ("<device>"
+                  "<name>pci_0000_00_00_0</name>"
+                  "<path>/sys/devices/pci0000:00/0000:00:00.0</path>"
+                  "<parent>computer</parent>"
+                  "<capability type='pci'>"
+                    "<domain>0</domain>"
+                    "<bus>0</bus>"
+                    "<slot>0</slot>"
+                    "<function>0</function>"
+                    "<product id='0x25c0'>5000X Chipset Memory Controller Hub</product>"
+                    "<vendor id='0x8086'>Intel Corporation</vendor>"
+                  "</capability>"
+                "</device>")
+        return utils.CmdResult('virsh nodedev-dumpxml pci_0000_00_00_0',
+                               xml, '', 0)
+
+
     def setUp(self):
         # cause any called virsh commands to fail testing unless a mock declared
         # necessary so virsh module doesn't complain about missing virsh command
@@ -144,12 +174,13 @@ class LibvirtXMLTestBase(unittest.TestCase):
                                                        'domains')
         if not os.path.isdir(LibvirtXMLTestBase.__doms_dir__):
             os.makedirs(LibvirtXMLTestBase.__doms_dir__)
+        # Normally not kosher to call __super_set__, but required here for testing
+        self.dummy_virsh.__super_set__('capabilities', self._capabilities)
+        self.dummy_virsh.__super_set__('dumpxml', self._dumpxml)
+        self.dummy_virsh.__super_set__('domuuid', self._domuuid)
+        self.dummy_virsh.__super_set__('define', self._define)
+        self.dummy_virsh.__super_set__('nodedev_dumpxml', self._nodedev_dumpxml)
 
-        # Normally not kosher to call super_set, but required here for testing
-        self.dummy_virsh.super_set('capabilities', self._capabilities)
-        self.dummy_virsh.super_set('dumpxml', self._dumpxml)
-        self.dummy_virsh.super_set('domuuid', self._domuuid)
-        self.dummy_virsh.super_set('define', self._define)
 
     def tearDown(self):
         librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)
@@ -201,11 +232,11 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_XMLElementInt(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('auto_test',
-                                                         'bin_test',
-                                                         'oct_test',
-                                                         'dec_test',
-                                                         'hex_test')
+            __slots__ = ('auto_test',
+                         'bin_test',
+                         'oct_test',
+                         'dec_test',
+                         'hex_test')
         lvx = FooBar(self.dummy_virsh)
         lvx.xml = ('<integer>'
                    ' <auto>00</auto>'
@@ -228,7 +259,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_AllForbidden(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            __slots__ = ('test',)
         lvx = FooBar(self.dummy_virsh)
         accessors.AllForbidden('test', lvx)
         self.assertRaises(xcepts.LibvirtXMLForbiddenError,
@@ -240,7 +271,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_not_enuf_dargs(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            __slots__ = ('test',)
         foobar = FooBar(self.dummy_virsh)
         self.assertRaises(ValueError,
                           accessors.XMLElementText, 'test',
@@ -252,7 +283,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_too_many_dargs(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
+            __slots__ = ('test',)
         foobar = FooBar(self.dummy_virsh)
         self.assertRaises(ValueError,
                           accessors.XMLElementText, 'test',
@@ -263,8 +294,7 @@ class AccessorsTest(LibvirtXMLTestBase):
 
     def test_create_by_xpath(self):
         class FooBar(base.LibvirtXMLBase):
-            __slots__ = base.LibvirtXMLBase.__slots__ + ('test',)
-
+            __slots__ = ('test',)
             def __init__(self, virsh_instance):
                 super(FooBar, self).__init__(virsh_instance)
                 accessors.XMLElementDict('test', self, None, 'foo/bar', 'baz')
@@ -337,8 +367,7 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertEqual(test_xtf.find('vcpu').text, '4')
 
     def test_new_from_dumpxml(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
-                                              virsh_instance=self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
         self.assertEqual(vmxml.vm_name, 'foobar')
         self.assertEqual(vmxml.uuid, self._domuuid(None))
         self.assertEqual(vmxml.hypervisor_type, 'kvm')
@@ -510,14 +539,12 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(serial1, serial2)
 
     def test_vm_get_by_class(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
-                                              virsh_instance=self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
         serial_devices = vmxml.get_devices(device_type='serial')
         self.assertEqual(len(serial_devices), 4)
 
     def test_vm_get_modify(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
-                                              virsh_instance=self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
         devices = vmxml['devices']
         serial1 = devices[0]
         serial2 = devices[1]
@@ -574,8 +601,7 @@ class testVMXMLDevices(LibvirtXMLTestBase):
 
     def test_channels(self):
         logging.disable(logging.WARNING)
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
-                                              virsh_instance=self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
         channels = vmxml.devices.by_device_tag('channel')
         self.assertEqual(len(channels), 2)
         self.assertTrue(isinstance(channels, vm_xml.VMXMLDevices))

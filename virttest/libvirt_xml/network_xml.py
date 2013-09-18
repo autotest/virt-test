@@ -52,8 +52,7 @@ class IPXML(base.LibvirtXMLBase):
         netmask: string IP's netmask
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('dhcp_ranges', 'address',
-                                                 'netmask')
+    __slots__ = ('dhcp_ranges', 'address','netmask')
 
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
@@ -73,7 +72,7 @@ class IPXML(base.LibvirtXMLBase):
         """
         Returns all XML described DHCP ranges as a RangeList object
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         newlist = []
         for element in xmltreefile.findall('/ip/dhcp/range'):
             start = element.get('start')  # attribute of range tag
@@ -92,7 +91,7 @@ class IPXML(base.LibvirtXMLBase):
         self.del_dhcp_ranges()
         if value is None:
             return  # ip element has no dhcp block
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         dhcp = xml_utils.ElementTree.Element('dhcp')
         ip_elem = xmltreefile.find('/ip')
         if ip_elem is None:
@@ -105,7 +104,7 @@ class IPXML(base.LibvirtXMLBase):
         """
         Removes all DHCP ranges from XML
         """
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         element = xmltreefile.find('/dhcp')
         if element is not None:
             xmltreefile.remove(element)
@@ -141,14 +140,12 @@ class NetworkXMLBase(base.LibvirtXMLBase):
             del: Same as defined property
     """
 
-    __slots__ = base.LibvirtXMLBase.__slots__ + ('name', 'uuid', 'bridge',
-                                                 'defined', 'active',
-                                                 'autostart', 'persistent',
-                                                 'fwd_mode', 'mac', 'ip')
+    __slots__ = ('name', 'uuid', 'bridge', 'defined', 'active',
+                 'autostart', 'persistent', 'fwd_mode', 'mac', 'ip')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
-        'defined', 'active',
-        'autostart', 'persistent')
+                                            'defined', 'active',
+                                            'autostart', 'persistent')
 
     __schema_name__ = "network"
 
@@ -177,7 +174,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
 
     def set_defined(self, value):
         """Accessor method for 'define' property, set True to define."""
-        if not self.super_get('INITIALIZED'):
+        if not self.__super_get__('INITIALIZED'):
             pass  # do nothing
         value = bool(value)
         if value:
@@ -199,7 +196,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
 
     def set_active(self, value):
         """Accessor method for 'active' property, sets network active"""
-        if not self.super_get('INITIALIZED'):
+        if not self.__super_get__('INITIALIZED'):
             pass  # do nothing
         self.__check_undefined__("Cannot activate undefined network")
         value = bool(value)
@@ -231,7 +228,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
 
     def set_autostart(self, value):
         """Accessor method for 'autostart' property, sets/unsets autostart"""
-        if not self.super_get('INITIALIZED'):
+        if not self.__super_get__('INITIALIZED'):
             pass  # do nothing
         self.__check_undefined__("Cannot set autostart for undefined network")
         value = bool(value)
@@ -262,19 +259,19 @@ class NetworkXMLBase(base.LibvirtXMLBase):
     del_persistent = del_defined
 
     def get_ip(self):
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         try:
             ip_root = xmltreefile.reroot('/ip')
         except KeyError, detail:
             raise xcepts.LibvirtXMLError(detail)
-        ipxml = IPXML(virsh_instance=self.dict_get('virsh'))
+        ipxml = IPXML(virsh_instance=self.__dict_get__('virsh'))
         ipxml.xmltreefile = ip_root
         return ipxml
 
     def set_ip(self, value):
         if not issubclass(type(value), IPXML):
             raise xcepts.LibvirtXMLError("value must be a IPXML or subclass")
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         # nuke any existing IP block
         self.del_ip()
         # IPXML root element is whole IP element tree
@@ -283,7 +280,7 @@ class NetworkXMLBase(base.LibvirtXMLBase):
         xmltreefile.write()
 
     def del_ip(self):
-        xmltreefile = self.dict_get('xml')
+        xmltreefile = self.__dict_get__('xml')
         element = xmltreefile.find('/ip')
         if element is not None:
             xmltreefile.remove(element)
