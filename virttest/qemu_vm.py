@@ -2685,7 +2685,7 @@ class VM(virt_vm.BaseVM):
         if self.monitor.protocol == 'qmp':
             self.monitor.send_args_cmd(nic_del_cmd)
         else:
-            self.monitor.send_args_cmd(nic_del_cmd, convert=False)
+            self.monitor.send_args_cmd(nic_del_cmd, convert=True)
 
         if wait:
             logging.info("waiting for the guest to finish the unplug")
@@ -2712,7 +2712,7 @@ class VM(virt_vm.BaseVM):
         if self.monitor.protocol == 'qmp':
             self.monitor.send_args_cmd(nic_del_cmd)
         else:
-            self.monitor.send_args_cmd(nic_del_cmd, convert=False)
+            self.monitor.send_args_cmd(nic_del_cmd, convert=True)
 
         network_info = self.monitor.info("network")
         if netdev_id in network_info:
