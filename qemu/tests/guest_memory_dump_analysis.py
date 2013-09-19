@@ -16,19 +16,20 @@ import os
 import gzip
 import threading
 
-REQ_GUEST_MEM    = 4096        # exact size of guest RAM required
-REQ_GUEST_ARCH   = "x86_64"    # the only supported guest arch
-REQ_GUEST_DF     = 6144        # minimum guest disk space required
+REQ_GUEST_MEM = 4096        # exact size of guest RAM required
+REQ_GUEST_ARCH = "x86_64"    # the only supported guest arch
+REQ_GUEST_DF = 6144        # minimum guest disk space required
                                #     after package installation
-LONG_TIMEOUT     = 10*60       # timeout for long operations
-VMCORE_BASE      = "vmcore"    # basename of the host-side file the
+LONG_TIMEOUT = 10 * 60       # timeout for long operations
+VMCORE_BASE = "vmcore"    # basename of the host-side file the
                                #     guest vmcore is written to, .gz
                                #     suffix will be appended. No
                                #     metacharacters or leading dashes
                                #     please.
-VMCORE_FD_NAME   = "vmcore_fd" # fd identifier used in the monitor
-CRASH_SCRIPT     = "crash.cmd" # guest-side filename of the minimal
+VMCORE_FD_NAME = "vmcore_fd"  # fd identifier used in the monitor
+CRASH_SCRIPT = "crash.cmd"  # guest-side filename of the minimal
                                # crash script
+
 
 def run_guest_memory_dump_analysis(test, params, env):
     """
@@ -259,7 +260,7 @@ def run_guest_memory_dump_analysis(test, params, env):
                              "%s" % (CRASH_SCRIPT, guest_plain))
         logging.debug("%s", output)
         if (string.find(output, "crash:") >= 0 or
-            string.find(output, "WARNING:") >= 0):
+                string.find(output, "WARNING:") >= 0):
             raise error.TestFail("vmcore corrupt")
 
     vm = env.get_vm(params["main_vm"])

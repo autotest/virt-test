@@ -610,6 +610,7 @@ class testVMXMLDevices(LibvirtXMLTestBase):
         # Check result
         self.assertEqual(vmxml.devices[-1].passwd, 'foobar')
 
+
 class testCAPXML(LibvirtXMLTestBase):
 
     def test_capxmlbase(self):

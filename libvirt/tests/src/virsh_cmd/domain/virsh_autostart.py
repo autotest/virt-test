@@ -1,6 +1,8 @@
-import logging, os
+import logging
+import os
 from autotest.client.shared import error
 from virttest import virsh, utils_libvirtd
+
 
 def run_virsh_autostart(test, params, env):
     """
@@ -49,14 +51,13 @@ def run_virsh_autostart(test, params, env):
             res = True
         return res
 
-
     # Run test
     try:
         # Make sure the VM is inactive(except transient VM)
         if vm.is_persistent() and vm.is_alive():
             vm.destroy()
         cmd_result = virsh.autostart(vm_name, options, ignore_status=True,
-            debug=True, readonly=ro_flag)
+                                     debug=True, readonly=ro_flag)
         err = cmd_result.stderr.strip()
         status = cmd_result.exit_status
         # Restart libvirtd and sleep 2

@@ -23,6 +23,7 @@ import remote
 import data_dir
 import utils_net
 import utils_disk
+from autotest.client import local_host
 
 
 try:
@@ -255,6 +256,96 @@ def process_command(test, params, env, command, command_timeout,
             raise
 
 
+class _CreateImages(threading.Thread):
+
+    """
+    Thread which creates images. In case of failure it stores the exception
+    in self.exc_info
+    """
+
+    def __init__(self, image_func, test, images, params, exit_event):
+        threading.Thread.__init__(self)
+        self.image_func = image_func
+        self.test = test
+        self.images = images
+        self.params = params
+        self.exit_event = exit_event
+        self.exc_info = None
+
+    def run(self):
+        try:
+            _process_images_serial(self.image_func, self.test, self.images,
+                                   self.params, self.exit_event)
+        except Exception:
+            self.exc_info = sys.exc_info()
+            self.exit_event.set()
+
+
+def process_images(image_func, test, params):
+    """
+    Wrapper which chooses the best way to process images.
+    :param image_func: Process function
+    :param test: An Autotest test object.
+    :param params: A dict containing all VM and image parameters.
+    """
+    images = params.objects("images")
+    if len(images) > 20:    # Lets do it in parallel
+        _process_images_parallel(image_func, test, params)
+    else:
+        _process_images_serial(image_func, test, images, params)
+
+
+def _process_images_serial(image_func, test, images, params, exit_event=None):
+    """
+    Original process_image function, which allows custom set of images
+    :param image_func: Process function
+    :param test: An Autotest test object.
+    :param images: List of images (usually params.objects("images"))
+    :param params: A dict containing all VM and image parameters.
+    :param exit_event: (optional) exit event which interrupts the processing
+    """
+    for image_name in images:
+        image_params = params.object_params(image_name)
+        image_func(test, image_params, image_name)
+        if exit_event and exit_event.is_set():
+            logging.error("Received exit_event, stop processing of images.")
+            break
+
+
+def _process_images_parallel(image_func, test, params):
+    """
+    The same as _process_images but in parallel.
+    :param image_func: Process function
+    :param test: An Autotest test object.
+    :param params: A dict containing all VM and image parameters.
+    """
+    images = params.objects("images")
+    no_threads = min(len(images) / 5,
+                     2 * local_host.LocalHost().get_num_cpu())
+    exit_event = threading.Event()
+    threads = []
+    for i in xrange(no_threads):
+        imgs = images[i::no_threads]
+        threads.append(_CreateImages(image_func, test, imgs, params,
+                                     exit_event))
+        threads[-1].start()
+    finished = False
+    while not finished:
+        finished = True
+        for thread in threads:
+            if thread.is_alive():
+                finished = False
+                time.sleep(0.5)
+                break
+    if exit_event.is_set():     # Failure in some thread
+        logging.error("Image processing failed:")
+        for thread in threads:
+            if thread.exc_info:     # Throw the first failure
+                raise thread.exc_info[1], None, thread.exc_info[2]
+    del exit_event
+    del threads[:]
+
+
 def process(test, params, env, image_func, vm_func, vm_first=False):
     """
     Pre- or post-process VMs and images according to the instructions in params.
@@ -285,24 +376,12 @@ def process(test, params, env, image_func, vm_func, vm_first=False):
                     vm.pause()
                     unpause_vm = True
                 try:
-                    err = ""
-                    for image_name in vm_params.objects("images"):
-                        image_params = vm_params.object_params(image_name)
-                        # Call image_func for each image
-                        try:
-                            image_func(test, image_params, image_name)
-                        except Exception, details:
-                            err += "\n%s: %s" % (image_name, details)
-                    if err:
-                        raise virt_vm.VMImageCheckError("Error(s) occurred "
-                                                        "while processing images: %s" % err)
+                    process_images(image_func, test, vm_params)
                 finally:
                     if unpause_vm:
                         vm.resume()
         else:
-            for image_name in params.objects("images"):
-                image_params = params.object_params(image_name)
-                image_func(test, image_params, image_name)
+            process_images(image_func, test, params)
 
     if not vm_first:
         _call_image_func()
