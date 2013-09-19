@@ -37,6 +37,9 @@ watchdog
 coreutils
 usbutils
 spice-xpi
+pulseaudio-libs-devel
+mesa-libGL-devel
+pygtk2-devel
 virt-viewer
 spice-vdagent
 usbredir
