@@ -23,8 +23,8 @@ def run_svirt_attach_disk(test, params, env):
     sec_model = params.get("svirt_attach_disk_vm_sec_model", "selinux")
     sec_label = params.get("svirt_attach_disk_vm_sec_label", None)
     sec_relabel = params.get("svirt_attach_disk_vm_sec_relabel", "yes")
-    sec_dict = {'type':sec_type, 'model':sec_model, 'label':sec_label,
-                'relabel':sec_relabel}
+    sec_dict = {'type': sec_type, 'model': sec_model, 'label': sec_label,
+                'relabel': sec_relabel}
     # Get variables about VM and get a VM object and VMXML instance.
     vm_name = params.get("main_vm")
     vm = env.get_vm(vm_name)

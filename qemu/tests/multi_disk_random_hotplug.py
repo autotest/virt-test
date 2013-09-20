@@ -260,8 +260,8 @@ def run_multi_disk_random_hotplug(test, params, env):
     out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
     if "unknown command" in str(out):
         verify_qtree = lambda _1, _2, _3: logging.warn("info qtree not "
-                                            "supported. Can't verify qtree"
-                                            "vs. guest disks.")
+                                                       "supported. Can't verify qtree"
+                                                       "vs. guest disks.")
 
     stg_image_name = params['stg_image_name']
     stg_image_num = int(params['stg_image_num'])
@@ -273,7 +273,7 @@ def run_multi_disk_random_hotplug(test, params, env):
             continue
         if stg_params[i][-1] == '\\':
             stg_params[i] = '%s %s' % (stg_params[i][:-1],
-                                          stg_params.pop(i + 1))
+                                       stg_params.pop(i + 1))
         i += 1
 
     param_matrix = {}

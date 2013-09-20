@@ -749,6 +749,7 @@ class QSparseBus(object):
 
     :note: When you insert a device, it's properties might be updated (addr,..)
     """
+
     def __init__(self, bus_item, addr_spec, busid, bus_type, aobject=None,
                  atype=None):
         """
@@ -876,7 +877,7 @@ class QSparseBus(object):
         else:
             bus_type = self.type
         return "Bus %s, type=%s\nSlots:\n%s\n%s" % (self.busid, bus_type,
-                    self._str_devices_long(), self._str_bad_devices_long())
+                                                    self._str_devices_long(), self._str_bad_devices_long())
 
     def _str_devices_long(self):
         """ long string representation of devices in the good bus """
@@ -2514,7 +2515,7 @@ class DevContainer(object):
                     bus = bus.busid
             if isinstance(bus, int):
                 for bus_name in self.list_missing_named_buses(
-                                            _hba, qtype, bus + 1):
+                        _hba, qtype, bus + 1):
                     _bus_name = bus_name.rsplit('.')[0]
                     if addr_spec:
                         dev = QDevice(params={'id': _bus_name,
@@ -2615,7 +2616,7 @@ class DevContainer(object):
             dev_parent = {'type': 'IDE', 'atype': 'ide'}
         elif fmt == "ahci":
             devs, bus, dev_parent = define_hbas('IDE', 'ahci', bus, unit, port,
-                                             QAHCIBus)
+                                                QAHCIBus)
             devices.extend(devs)
         elif fmt.startswith('scsi-'):
             if not scsi_hba:
@@ -2626,7 +2627,7 @@ class DevContainer(object):
             elif scsi_hba == 'virtio-scsi-pci':
                 addr_spec = [256, 16384]
             _, bus, dev_parent = define_hbas('SCSI', scsi_hba, bus, unit, port,
-                                              QSCSIBus, addr_spec)
+                                             QSCSIBus, addr_spec)
             devices.extend(_)
         elif fmt in ('usb1', 'usb2', 'usb3'):
             if bus:
