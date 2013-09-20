@@ -425,7 +425,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
     step += 1
     logging.info("%d - Verifying directories", step)
     shared_dir = os.path.dirname(data_dir.get_data_dir())
-    sub_dir_list = ["images", "isos", "steps_data"]
+    sub_dir_list = ["images", "isos", "steps_data", "gpg"]
     for sub_dir in sub_dir_list:
         sub_dir_path = os.path.join(base_dir, sub_dir)
         if not os.path.isdir(sub_dir_path):
