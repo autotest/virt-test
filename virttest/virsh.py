@@ -135,7 +135,7 @@ class VirshSession(aexpect.ShellSession):
         self.remote_pwd = remote_pwd
 
         # Special handling if setting up a remote session
-        if ssh_remote_auth: # remote to remote
+        if ssh_remote_auth:  # remote to remote
             if remote_pwd:
                 pref_auth = "-o PreferredAuthentications=password"
             else:
