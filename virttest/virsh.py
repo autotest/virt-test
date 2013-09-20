@@ -461,7 +461,7 @@ def command(cmd, **dargs):
         logging.debug("Running virsh command: %s", cmd)
 
     if session:
-        # Utilize persistant virsh session, not suit for readonly mode
+        # Utilize persistent virsh session, not suit for readonly mode
         if readonly:
             logging.debug("Ignore readonly flag for this virsh session")
         ret = session.cmd_result(cmd, ignore_status)

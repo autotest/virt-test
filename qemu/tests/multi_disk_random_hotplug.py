@@ -164,7 +164,7 @@ def run_multi_disk_random_hotplug(test, params, env):
             # 3) check qtree vs. qemu_devices PCI representation (+children)
             #    (use qtree vs devices, if key and value_qtree == value_devices
             #     match the device and remove it from comparison.
-            #     Also use blacklist to remove unnecessarily stuff (like
+            #     Also use blacklist to remove unnecessary stuff (like
             #     kvmclock, smbus-eeprom, ... from qtree and drive, ... from
             #     devices)
             # => then modify this to use qtree verification
