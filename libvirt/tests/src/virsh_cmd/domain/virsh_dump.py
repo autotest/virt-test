@@ -153,7 +153,7 @@ def run_virsh_dump(test, params, env):
                 return False
             logging.debug("Run file %s output: %s", dump_file, output)
             actual_format = output.split(" ")[1]
-            if actual_format != dump_image_format:
+            if actual_format.lower() != dump_image_format.lower():
                 logging.error("Compress dumped file to %s fail: %s" %
                               (dump_image_format, actual_format))
                 return False
