@@ -122,7 +122,7 @@ class GitRepoParamHelper(git.GitRepoHelper):
                     os.environ['GNUPGHOME'] = gnupg_home
                     utils.system('gpg --import %s' % self.key_file)
                     logging.debug('Verifying if tag is actually signed with '
-                                  'GPG key ID %s' % self.key_id)
+                                  'GPG key ID %s' % self.key_file)
                     utils.system('git tag -v %s' % self.tag)
                 except error.CmdError:
                     raise error.TestError("GPG signature check for git repo "
