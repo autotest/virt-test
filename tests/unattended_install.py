@@ -665,7 +665,7 @@ class UnattendedInstallConfig(object):
                 ks_param = 'ks=floppy'
                 kernel_params = self.kernel_params
                 if 'ks=' in kernel_params:
-                    # Reading ks from floppy driectly isn't works in some OS,
+                    # Reading ks from floppy directly doesn't work in some OS,
                     # options 'ks=hd:/dev/fd0' can reading ks from mounted
                     # floppy, so skip repace it;
                     if not re.search("fd\d+", kernel_params):

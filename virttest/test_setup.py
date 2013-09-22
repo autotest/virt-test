@@ -310,10 +310,10 @@ class HugePageConfig(object):
                 self.suggest_mem = int(available_mem / self.vms / 1024
                                        - self.qemu_overhead)
                 if self.suggest_mem < self.lowest_mem_per_vm:
-                    raise MemoryError("Sugguest memory %sM is too small for"
-                                      " guest to boot up. Please check your"
-                                      " host memory "
-                                      "status." % self.suggest_mem)
+                    raise MemoryError("This host doesn't have enough free "
+                                      "large memory pages for this test to "
+                                      "run (only %s MB memory available for "
+                                      "each guest)" % self.suggest_mem)
 
         return target_hugepages
 

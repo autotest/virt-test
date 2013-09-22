@@ -750,13 +750,21 @@ class QSparseBus(object):
     :note: When you insert a device, it's properties might be updated (addr,..)
     """
 
-    def __init__(self, bus_item, addr_spec, busid, bus_type, aobject=None):
+    def __init__(self, bus_item, addr_spec, busid, bus_type, aobject=None,
+                 atype=None):
         """
         :param bus_item: Name of the parameter which specifies bus (bus)
+        :type bus_item: str
         :param addr_spec: Bus address specification [names][lengths]
+        :type addr_spec: list of lists
         :param busid: id of the bus (pci.0)
+        :type busid: str
         :param bus_type: type of the bus (pci)
+        :type bus_type: dict
         :param aobject: Related autotest object (image1)
+        :type aobject: str
+        :param atype: Autotest bus type
+        :type atype: str
         """
         self.busid = busid
         self.type = bus_type
@@ -766,6 +774,7 @@ class QSparseBus(object):
         self.bus_item = bus_item            # bus param name
         self.addr_items = addr_spec[0]      # [names][lengths]
         self.addr_lengths = addr_spec[1]
+        self.atype = atype
 
     def __str__(self):
         """ default string representation """
@@ -834,7 +843,11 @@ class QSparseBus(object):
 
     def str_short(self):
         """ short string representation """
-        return "%s(%s): %s  %s" % (self.busid, self.type, self._str_devices(),
+        if self.atype:
+            bus_type = self.atype
+        else:
+            bus_type = self.type
+        return "%s(%s): %s  %s" % (self.busid, bus_type, self._str_devices(),
                                    self._str_bad_devices())
 
     def _str_devices(self):
@@ -859,7 +872,11 @@ class QSparseBus(object):
 
     def str_long(self):
         """ long string representation """
-        return "Bus %s, type=%s\nSlots:\n%s\n%s" % (self.busid, self.type,
+        if self.atype:
+            bus_type = self.atype
+        else:
+            bus_type = self.type
+        return "Bus %s, type=%s\nSlots:\n%s\n%s" % (self.busid, bus_type,
                                                     self._str_devices_long(), self._str_bad_devices_long())
 
     def _str_devices_long(self):
@@ -1161,6 +1178,25 @@ class QSparseBus(object):
         """ Get device in which this bus is present """
         return self.__device
 
+    def match_bus(self, bus_spec, atest=True):
+        """
+        Check if the bus matches the bus_specification.
+        :param bus_spec: Bus specification
+        :type bus_spec: dict
+        :param atest: Match qemu and atest params
+        :type atest: bool
+        :return: True when the bus matches the specification
+        :rtype: bool
+        """
+        for key, value in bus_spec.iteritems():
+            if self.__dict__.get(key, None) != value:
+                if key == 'atype' and atest is not True:
+                    # we want the qemu matching buses, ignore atest spec
+                    continue
+                else:
+                    return False
+        return True
+
 
 class QUSBBus(QSparseBus):
 
@@ -1246,15 +1282,7 @@ class QUSBBus(QSparseBus):
 
     def _update_device_props(self, device, addr):
         """ in case this is usb-hub update the child port_prefix """
-        if addr[0] or addr[0] is 0:
-            if self.__port_prefix:
-                addr = ['%s.%s' % (self.__port_prefix, addr[0])]
-        self.__hook_child_bus(device, addr)
-        device['bus'] = True    # Force bus item to be updated
-        if addr[0] == self.__length:
-            # Force port on the last device, otherwise qemu adds usb-hub
-            device['port'] = True
-        super(QUSBBus, self)._update_device_props(device, addr)
+        self._set_device_props(device, addr)
 
 
 class QDriveBus(QSparseBus):
@@ -1413,15 +1441,17 @@ class QSCSIBus(QSparseBus):
     SCSI bus representation (bus + 2 leves, don't iterate over lun by default)
     """
 
-    def __init__(self, busid, bus_type, addr_spec, aobject=None):
+    def __init__(self, busid, bus_type, addr_spec, aobject=None, atype=None):
         """
         :param busid: id of the bus (mybus.0)
         :param bus_type: type of the bus (virtio-scsi-pci, lsi53c895a, ...)
         :param addr_spec: Ranges of addr_spec [scsiid_range, lun_range]
         :param aobject: Related autotest object (image1)
+        :param atype: Autotest bus type
+        :type atype: str
         """
         super(QSCSIBus, self).__init__('bus', [['scsiid', 'lun'], addr_spec],
-                                       busid, bus_type, aobject)
+                                       busid, bus_type, aobject, atype)
 
     def _increment_addr(self, addr, last_addr=None):
         """
@@ -1437,17 +1467,23 @@ class QBusUnitBus(QDenseBus):
 
     """ Implementation of bus-unit bus (ahci, ide) """
 
-    def __init__(self, busid, bus_type, lengths, aobject=None):
+    def __init__(self, busid, bus_type, lengths, aobject=None, atype=None):
         """
         :param busid: id of the bus (mybus.0)
+        :type busid: str
         :param bus_type: type of the bus (ahci)
+        :type bus_type: str
         :param lenghts: lenghts of [buses, units]
+        :type lenghts: list of lists
         :param aobject: Related autotest object (image1)
+        :type aobject: str
+        :param atype: Autotest bus type
+        :type atype: str
         """
         if len(lengths) != 2:
             raise ValueError("len(lenghts) have to be 2 (%s)" % self)
         super(QBusUnitBus, self).__init__('bus', [['bus', 'unit'], lengths],
-                                          busid, bus_type, aobject)
+                                          busid, bus_type, aobject, atype)
 
     def _update_device_props(self, device, addr):
         """ This bus is compound of m-buses + n-units, update properties """
@@ -1497,22 +1533,26 @@ class QAHCIBus(QBusUnitBus):
     # TODO: Search for 'ide' and 'ahci' buses when strict_mode not specified
     # since qemu doesn't differentiate between those buses.
 
-    def __init__(self, busid, bus_type=None, aobject=None):
+    def __init__(self, busid, aobject=None):
         """ 6xbus, 2xunit """
-        if bus_type is None:
-            bus_type = 'ahci'
-        super(QAHCIBus, self).__init__(busid, bus_type, [6, 1], aobject)
+        super(QAHCIBus, self).__init__(busid, 'IDE', [6, 1], aobject, 'ahci')
+
+    def _update_device_props(self, device, addr):
+        """
+        Qemu has problems assigning the ahci disks to ahci bus. We have to
+        specify the full address to avoid errors.
+        :todo: REMOVE THIS WHEN QEMU STARTS WORKING PROPERLY WITH AHCI
+        """
+        super(QAHCIBus, self)._set_device_props(device, addr)
 
 
 class QIDEBus(QBusUnitBus):
 
     """ IDE bus (piix3-ide) """
 
-    def __init__(self, busid, bus_type=None, aobject=None):
+    def __init__(self, busid, aobject=None):
         """ 2xbus, 2xunit """
-        if bus_type is None:
-            bus_type = 'ide'
-        super(QIDEBus, self).__init__(busid, bus_type, [2, 2], aobject)
+        super(QIDEBus, self).__init__(busid, 'IDE', [2, 2], aobject, 'ide')
 
 
 class QFloppyBus(QDenseBus):
@@ -1911,17 +1951,18 @@ class DevContainer(object):
                                                     verbose=False).stdout)
         return self.__execute_qemu_out
 
-    def get_buses(self, bus_spec):
+    def get_buses(self, bus_spec, atype=True):
         """
         :param bus_spec: Bus specification (dictionary)
+        :type bus_spec: dict
+        :param atype: Match qemu and atype params
+        :type atype: bool
         :return: All matching buses
+        :rtype: List of QSparseBus
         """
         buses = []
         for bus in self.__buses:
-            for key, value in bus_spec.iteritems():
-                if not bus.__getattribute__(key) == value:
-                    break
-            else:
+            if bus.match_bus(bus_spec, atype):
                 buses.append(bus)
         return buses
 
@@ -1972,7 +2013,7 @@ class DevContainer(object):
             # type, aobject, busid
             if parent_bus is None:
                 continue
-            buses = self.get_buses(parent_bus)
+            buses = self.get_buses(parent_bus, False)
             if not buses:
                 err += "ParentBus(%s): No matching bus\n" % parent_bus
                 if force:
@@ -1981,8 +2022,18 @@ class DevContainer(object):
                     clean()
                     raise DeviceInsertError(device, err, self)
             bus_returns = []
+            strict_mode = self.strict_mode
             for bus in buses:   # 2
-                bus_returns.append(bus.insert(device, self.strict_mode, False))
+                if not bus.match_bus(parent_bus, True):
+                    # First available bus in qemu is not of the same type as
+                    # we in autotest require. Force strict mode to get this
+                    # device into the correct bus (ide-hd could go into ahci
+                    # and ide hba, qemu doesn't care, autotest does).
+                    if strict_mode != True:
+                        strict_mode = True
+                    bus_returns.append(-1)  # Don't use this bus
+                    continue
+                bus_returns.append(bus.insert(device, strict_mode, False))
                 if bus_returns[-1] is True:     # we are done
                     _used_buses.append(bus)
                     break
@@ -1992,17 +2043,18 @@ class DevContainer(object):
                 err += "ParentBus(%s): No free matching bus\n" % parent_bus
                 clean()
                 raise DeviceInsertError(device, err, self)
+            strict_mode = True
             if None in bus_returns:  # 3a
-                _err = buses[bus_returns.index(None)].insert(device, True,
-                                                             True)
-                if _err:
-                    err += "ParentBus(%s): %s\n" % (parent_bus, _err)
-                    continue
-            _err = buses[0].insert(device, True, True)
-            _used_buses.append(buses[0])
+                bus = buses[bus_returns.index(None)]
+            elif False in bus_returns:
+                bus = buses[bus_returns.index(False)]
+            else:
+                err += "ParentBus(%s): No matching bus\n" % parent_bus
+                continue
+            _err = bus.insert(device, True, True)
+            _used_buses.append(bus)
             if _err:
                 err += "ParentBus(%s): %s\n" % (parent_bus, _err)
-                continue
         # 4
         for bus in device.child_bus:
             self.__buses.insert(0, bus)
@@ -2157,8 +2209,7 @@ class DevContainer(object):
 
         for i in xrange(i / 7):     # Autocreated lsi hba
             _name = 'lsi53c895a%s' % i
-            bus = QSCSIBus("scsi.0", 'lsi53c895a',
-                           [8, 16384])
+            bus = QSCSIBus("scsi.0", 'SCSI', [8, 16384], atype='lsi53c895a')
             self.insert(QStringDevice('lsi53c895a%s' % i,
                                       parent_bus={'type': 'pci'},
                                       child_bus=bus))
@@ -2330,7 +2381,13 @@ class DevContainer(object):
                 new_usbs[-1].set_param('id', '%s.%d' % (usb_id, i))
                 new_usbs[-1].set_param('multifunction', 'on')
                 new_usbs[-1].set_param('masterbus', '%s.0' % usb_id)
-                new_usbs[-1].set_param('addr', '1d.%d' % i)
+                # current qemu_devices doesn't support x.y addr. Plug only
+                # the 0th one into this representation.
+                if i == 0:
+                    new_usbs[-1].parent_bus = {'type': 'pci'}
+                    new_usbs[-1].set_param('addr', '0x1d')
+                else:
+                    new_usbs[-1].set_param('addr', '1d.%d' % i)
                 new_usbs[-1].set_param('firstport', 2 * i)
         return new_usbs
 
@@ -2439,7 +2496,7 @@ class DevContainer(object):
         :param pci_addr: drive pci address ($int)
         :param scsi_hba: Custom scsi HBA
         """
-        def define_hbas(hba, bus, unit, port, qbus, addr_spec=None):
+        def define_hbas(qtype, atype, bus, unit, port, qbus, addr_spec=None):
             """
             Helper for creating HBAs of certain type.
             """
@@ -2447,10 +2504,10 @@ class DevContainer(object):
             if qbus == QAHCIBus:    # AHCI uses multiple ports, id is different
                 _hba = 'ahci%s'
             else:
-                _hba = hba.replace('-', '_') + '%s.0'  # HBA id
+                _hba = atype.replace('-', '_') + '%s.0'  # HBA id
             _bus = bus
             if bus is None:
-                bus = self.get_first_free_bus({'type': hba},
+                bus = self.get_first_free_bus({'type': qtype, 'atype': atype},
                                               [unit, port])
                 if bus is None:
                     bus = self.idx_of_next_named_bus(_hba)
@@ -2458,24 +2515,28 @@ class DevContainer(object):
                     bus = bus.busid
             if isinstance(bus, int):
                 for bus_name in self.list_missing_named_buses(
-                        _hba, hba, bus + 1):
+                        _hba, qtype, bus + 1):
                     _bus_name = bus_name.rsplit('.')[0]
                     if addr_spec:
-                        dev = QDevice(params={'id': _bus_name, 'driver': hba},
+                        dev = QDevice(params={'id': _bus_name,
+                                              'driver': atype},
                                       parent_bus={'type': 'pci'},
                                       child_bus=qbus(busid=bus_name,
-                                                     bus_type=hba,
-                                                     addr_spec=addr_spec))
+                                                     bus_type=qtype,
+                                                     addr_spec=addr_spec,
+                                                     atype=atype))
                     else:
-                        dev = QDevice(params={'id': _bus_name, 'driver': hba},
+                        dev = QDevice(params={'id': _bus_name,
+                                              'driver': atype},
                                       parent_bus={'type': 'pci'},
-                                      child_bus=qbus(busid=bus_name,
-                                                     bus_type=hba))
+                                      child_bus=qbus(busid=bus_name))
                     devices.append(dev)
                 bus = _hba % bus
             if qbus == QAHCIBus and unit is not None:
                 bus += ".%d" % unit
-            return devices, bus, {'type': hba}
+            elif _bus is None:    # If bus was not set, don't set it
+                bus = None
+            return devices, bus, {'type': qtype, 'atype': atype}
 
         #
         # Parse params
@@ -2543,32 +2604,29 @@ class DevContainer(object):
                     logging.warn("Using scsi interface without -device "
                                  "support; ignoring bus/unit/port. (%s)", name)
                     bus, unit, port = None, None, None
-                if (self.get_first_free_bus({'type': 'scsi'}, None)
-                   is None):
-                    bus = QSparseBus(None, [[None], [7]], None, 'scsi')
-                    devices.append(QStringDevice('scsi',
-                                                 parent_bus={'type': 'pci'},
-                                                 child_bus=bus))
-                    bus = None
+                # In case we hotplug, lsi wasn't added during the startup hook
+                _ = define_hbas('SCSI', 'lsi53c895a', None, None, None,
+                                QSCSIBus, [8, 16384])
+                devices.extend(_[0])
         elif fmt == "ide":
             if bus:
                 logging.warn('ide supports only 1 hba, use drive_unit to set'
                              'ide.* for disk %s', name)
             bus = unit
-            dev_parent = {'type': 'ide'}
+            dev_parent = {'type': 'IDE', 'atype': 'ide'}
         elif fmt == "ahci":
-            _, bus, dev_parent = define_hbas('ahci', bus, unit, port,
-                                             QAHCIBus)
-            devices.extend(_)
+            devs, bus, dev_parent = define_hbas('IDE', 'ahci', bus, unit, port,
+                                                QAHCIBus)
+            devices.extend(devs)
         elif fmt.startswith('scsi-'):
             if not scsi_hba:
                 scsi_hba = "virtio-scsi-pci"
             addr_spec = None
             if scsi_hba == 'lsi53c895a':
-                addr_spec = [['scsi-id', 'lun'], [8, 16384]]
+                addr_spec = [8, 16384]
             elif scsi_hba == 'virtio-scsi-pci':
-                addr_spec = [['scsi-id', 'lun'], [256, 16384]]
-            _, bus, dev_parent = define_hbas(scsi_hba, bus, unit, port,
+                addr_spec = [256, 16384]
+            _, bus, dev_parent = define_hbas('SCSI', scsi_hba, bus, unit, port,
                                              QSCSIBus, addr_spec)
             devices.extend(_)
         elif fmt in ('usb1', 'usb2', 'usb3'):
@@ -2627,13 +2685,19 @@ class DevContainer(object):
             if not fmt:     # When fmt unspecified qemu uses ide
                 fmt = 'ide'
             devices[-1].set_param('index', index)
-            if fmt in ('ide', 'scsi', 'floppy'):  # Don't handle sd, pflash...
-                devices[-1].parent_bus += ({'type': fmt},)
-            if fmt == 'virtio':
+            if fmt == 'ide':
+                devices[-1].parent_bus = ({'type': fmt.upper(), 'atype': fmt},)
+            elif fmt == 'scsi':
+                devices[-1].parent_bus = ({'atype': 'lsi53c895a',
+                                           'type': 'SCSI'},)
+            elif fmt == 'floppy':
+                devices[-1].parent_bus = ({'type': fmt},)
+            elif fmt == 'virtio':
                 devices[-1].set_param('addr', pci_addr)
-                devices[-1].parent_bus += ({'type': 'pci'},)
-            logging.warn("Using -drive fmt=xxx for %s is unsupported method, "
-                         "false errors might occur.", name)
+                devices[-1].parent_bus = ({'type': 'pci'},)
+            if not media == 'cdrom':
+                logging.warn("Using -drive fmt=xxx for %s is unsupported "
+                             "method, false errors might occur.", name)
             return devices
 
         #

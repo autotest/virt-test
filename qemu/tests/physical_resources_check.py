@@ -29,7 +29,7 @@ def run_physical_resources_check(test, params, env):
         try:
             o = vm.monitor.human_monitor_cmd("info %s " % info_cmd)
         except qemu_monitor.MonitorError, e:
-            fail_log = e + "\n"
+            fail_log = str(e) + "\n"
             fail_log += "info/query monitor command failed (%s)" % info_cmd
             f_fail.append(fail_log)
             logging.error(fail_log)
@@ -55,7 +55,7 @@ def run_physical_resources_check(test, params, env):
             try:
                 o = vm.monitor.human_monitor_cmd("info %s" % info_cmd)
             except qemu_monitor.MonitorError, e:
-                fail_log = e + "\n"
+                fail_log = str(e) + "\n"
                 fail_log += "info/query monitor command failed (%s)" % info_cmd
                 f_fail.append(fail_log)
                 logging.error(fail_log)
@@ -277,7 +277,7 @@ def run_physical_resources_check(test, params, env):
     try:
         o = vm.monitor.human_monitor_cmd("info network")
     except qemu_monitor.MonitorError, e:
-        fail_log = e + "\n"
+        fail_log = str(e) + "\n"
         fail_log += "info/query monitor command failed (network)"
         n_fail.append(fail_log)
         logging.error(fail_log)

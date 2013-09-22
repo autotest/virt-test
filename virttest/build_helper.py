@@ -115,14 +115,14 @@ class GitRepoParamHelper(git.GitRepoHelper):
             utils.system('git checkout %s' % self.tag)
             if self.key_file is not None:
                 try:
-                    gnupg_home = os.path.join(os.path.dirname(self.key_file),
+                    gnupg_home = os.path.join(data_dir.get_tmp_dir(),
                                               'gnupg')
                     if not os.path.isdir(gnupg_home):
                         os.makedirs(gnupg_home)
                     os.environ['GNUPGHOME'] = gnupg_home
                     utils.system('gpg --import %s' % self.key_file)
                     logging.debug('Verifying if tag is actually signed with '
-                                  'GPG key ID %s' % self.key_id)
+                                  'GPG key ID %s' % self.key_file)
                     utils.system('git tag -v %s' % self.tag)
                 except error.CmdError:
                     raise error.TestError("GPG signature check for git repo "
