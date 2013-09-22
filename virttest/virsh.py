@@ -2410,3 +2410,25 @@ def autostart(name, options, **dargs):
     CmdResult = command(cmd, **dargs)
 
     return CmdResult
+
+
+def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
+                 shm_merge_across_nodes=None, options=None, **dargs):
+    """
+    Get or set node memory parameters
+    :param options: options may be shm-pages-to-scan, shm-sleep-millisecs
+                    and shm-merge-across-nodes
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "node-memory-tune"
+    if shm_pages_to_scan:
+        cmd += " --shm-pages-to-scan %s" % shm_pages_to_scan
+    if shm_sleep_millisecs:
+        cmd += " --shm-sleep-millisecs %s" % shm_sleep_millisecs
+    if shm_merge_across_nodes:
+        cmd += " --shm-merge-across-nodes %s" % shm_merge_across_nodes
+    if options:
+        cmd += " --%s" % options
+
+    return command(cmd, **dargs)
