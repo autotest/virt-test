@@ -470,6 +470,10 @@ def run_cdrom(test, params, env):
             vm.create()
 
             self.session = vm.wait_for_login(timeout=login_timeout)
+            pre_cmd = params.get("pre_cmd")
+            if pre_cmd:
+                self.session.cmd(pre_cmd, timeout=120)
+                self.session = vm.reboot()
             iso_image = self.iso_image_orig
             error.context("Query cdrom devices in guest")
             tmp_output = self.session.cmd_output("ls /dev/cdrom*")
@@ -568,6 +572,9 @@ def run_cdrom(test, params, env):
                 if get_cdrom_file(vm, qemu_cdrom_device) != self.iso_image_orig:
                     raise error.TestFail("It wasn't possible to change"
                                          " cdrom %s" % iso_image)
+            post_cmd = params.get("post_cmd")
+            if post_cmd:
+                self.session.cmd(post_cmd)
 
         def clean(self):
             self.session.close()
