@@ -28,25 +28,32 @@ def run_stress_boot(test, params, env):
 
     # Boot the VMs
     try:
-        while num <= int(params.get("max_vms")):
-            # Clone vm according to the first one
-            error.base_context("booting guest #%d" % num, logging.info)
-            vm_name = "vm%d" % num
-            vm_params = vm.params.copy()
-            curr_vm = vm.clone(vm_name, vm_params)
-            env.register_vm(vm_name, curr_vm)
-            env_process.preprocess_vm(test, vm_params, env, vm_name)
-            params["vms"] += " " + vm_name
+        try:
+            while num <= int(params.get("max_vms")):
+                # Clone vm according to the first one
+                error.base_context("booting guest #%d" % num, logging.info)
+                vm_name = "vm%d" % num
+                vm_params = vm.params.copy()
+                curr_vm = vm.clone(vm_name, vm_params)
+                env.register_vm(vm_name, curr_vm)
+                env_process.preprocess_vm(test, vm_params, env, vm_name)
+                params["vms"] += " " + vm_name
 
-            sessions.append(curr_vm.wait_for_login(timeout=login_timeout))
-            logging.info("Guest #%d booted up successfully", num)
+                session = curr_vm.wait_for_login(timeout=login_timeout)
+                sessions.append(session)
+                logging.info("Guest #%d booted up successfully", num)
 
-            # Check whether all previous shell sessions are responsive
-            for i, se in enumerate(sessions):
-                error.context("checking responsiveness of guest #%d" % (i + 1),
-                              logging.debug)
-                se.cmd(params.get("alive_test_cmd"))
-            num += 1
+                # Check whether all previous shell sessions are responsive
+                for i, se in enumerate(sessions):
+                    error.context("checking responsiveness of guest"
+                                  " #%d" % (i + 1), logging.debug)
+                    se.cmd(params.get("alive_test_cmd"))
+                num += 1
+        except Exception, emsg:
+            raise error.TestFail("Expect to boot up %s guests."
+                                 "Failed to boot up #%d guest with "
+                                 "error: %s." % (params["max_vms"], num,
+                                                 emsg))
     finally:
         for se in sessions:
             se.close()
