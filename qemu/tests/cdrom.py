@@ -35,6 +35,7 @@ def run_cdrom(test, params, env):
     8) Copy file from cdrom and compare files.
     9) Umount and mount cdrom in guest for several times.
     10) Check if the cdrom lock works well when iso file is not inserted.
+    11) Reboot vm after vm resume from s3/s4.
         Note: This case requires a qemu cli without setting file property
         for -drive option, and will be separated to a different cfg item.
 
@@ -575,6 +576,8 @@ def run_cdrom(test, params, env):
             post_cmd = params.get("post_cmd")
             if post_cmd:
                 self.session.cmd(post_cmd)
+            if params.get("guest_suspend_type"):
+                self.session = vm.reboot()
 
         def clean(self):
             self.session.close()
