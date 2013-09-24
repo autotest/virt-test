@@ -604,6 +604,13 @@ class Spawn(object):
         except Exception:
             return ""
 
+    def get_stripped_output(self):
+        """
+        Return the STDOUT and STDERR output without the console codes escape
+        and sequences of the process so far.
+        """
+        return utils_misc.strip_console_codes(self.get_output())
+
     def is_alive(self):
         """
         Return True if the process is running.
