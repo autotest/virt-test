@@ -35,6 +35,7 @@ import threading
 import shelve
 import socket
 import glob
+import locale
 from Queue import Queue
 from autotest.client.shared import error
 from autotest.client import utils, os_dep
@@ -1336,22 +1337,7 @@ def get_time(session, time_command, time_filter_re, time_format):
             result of the regex filter.
     :return: A tuple containing the host time and guest time.
     """
-    if len(re.findall("ntpdate|w32tm", time_command)) == 0:
-        host_time = time.time()
-        s = session.cmd_output(time_command)
-
-        try:
-            s = re.findall(time_filter_re, s)[0]
-        except IndexError:
-            logging.debug("The time string from guest is:\n%s", s)
-            raise error.TestError("The time string from guest is unexpected.")
-        except Exception, e:
-            logging.debug("(time_filter_re, time_string): (%s, %s)",
-                          time_filter_re, s)
-            raise e
-
-        guest_time = time.mktime(time.strptime(s, time_format))
-    else:
+    if re.findall("ntpdate|w32tm", time_command):
         o = session.cmd(time_command)
         if re.match('ntpdate', time_command):
             offset = re.findall('offset (.*) sec', o)[0]
@@ -1371,6 +1357,70 @@ def get_time(session, time_command, time_filter_re, time_format):
                 guest_time = guest_time[:-3]
             guest_time = time.mktime(time.strptime(guest_time, time_format))
             host_time = guest_time + float(offset)
+    elif re.findall("hwclock", time_command):
+        loc = locale.getlocale(locale.LC_TIME)
+        # Get and parse host time
+        host_time_out = utils.run(time_command).stdout
+        host_time_out, diff = host_time_out.split("  ")
+        try:
+            locale.setlocale(locale.LC_TIME, "C")
+            host_time = time.mktime(time.strptime(host_time_out, time_format))
+            host_time += float(diff.split(" ")[0])
+        except Exception, e:
+            logging.debug("(time_format, time_string): (%s, %s)",
+                          time_format, host_time_out)
+            raise e
+        finally:
+            locale.setlocale(locale.LC_TIME, loc)
+
+        s = session.cmd_output(time_command)
+
+        # Get and parse guest time
+        try:
+            s = re.findall(time_filter_re, s)[0]
+            s, diff = s.split("  ")
+        except IndexError:
+            logging.debug("The time string from guest is:\n%s", s)
+            raise error.TestError("The time string from guest is unexpected.")
+        except Exception, e:
+            logging.debug("(time_filter_re, time_string): (%s, %s)",
+                          time_filter_re, s)
+            raise e
+
+        guest_time = None
+        try:
+            locale.setlocale(locale.LC_TIME, "C")
+            guest_time = time.mktime(time.strptime(s, time_format))
+            guest_time += float(diff.split(" ")[0])
+        except Exception, e:
+            logging.debug("(time_format, time_string): (%s, %s)",
+                          time_format, host_time_out)
+            raise e
+        finally:
+            locale.setlocale(locale.LC_TIME, loc)
+    else:
+        host_time = time.time()
+        s = session.cmd_output(time_command)
+        n = 0.0
+        reo = None
+
+        try:
+            reo = re.findall(time_filter_re, s)[0]
+            s = reo[0]
+            if len(reo) > 1:
+                n = float(reo[1])
+        except IndexError:
+            logging.debug("The time string from guest is:\n%s", s)
+            raise error.TestError("The time string from guest is unexpected.")
+        except ValueError, e:
+            logging.debug("Couldn't create float number from %s" % (reo[1]))
+        except Exception, e:
+            logging.debug("(time_filter_re, time_string): (%s, %s)",
+                          time_filter_re, s)
+            raise e
+
+        guest_time = time.mktime(time.strptime(s, time_format)) + n
+
 
     return (host_time, guest_time)
 
