@@ -2163,7 +2163,15 @@ class VM(virt_vm.BaseVM):
             # Try to destroy with shell command
             logging.debug("Shutting down VM %s (shell)", self.name)
             try:
-                session = self.login()
+                if len(self.virtnet) > 0:
+                    session = self.login()
+                else:
+                    session = self.serial_login()
+            except (virt_vm.VMInterfaceIndexError), e:
+                try:
+                    session = self.serial_login()
+                except (remote.LoginError, virt_vm.VMError), e:
+                    logging.debug(e)
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             else:
