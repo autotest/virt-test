@@ -49,9 +49,10 @@ def run_boot_order_check(test, params, env):
     pci_list.reverse()
     pci_info = " ".join(pci_list)
     for nic in vm.virtnet:
-        nic_addr = re.findall(nic_addr_filter % nic.device_id, pci_info)
-        bootindex = "0%x" % int(params['bootindex_%s' % nic.nic_name])
-        list_nic_addr.append((nic_addr, bootindex[-2]))
+        nic_addr = re.findall(nic_addr_filter % nic.device_id, pci_info)[0]
+        nic_addr = "0%s" % nic_addr
+        bootindex = int(params['bootindex_%s' % nic.nic_name])
+        list_nic_addr.append((nic_addr[-2:], bootindex))
 
     list_nic_addr.sort(cmp=lambda x, y: cmp(x[1], y[1]))
 
