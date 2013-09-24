@@ -1,3 +1,4 @@
+import re
 import logging
 import threading
 from autotest.client import utils
@@ -76,7 +77,8 @@ class VMStress(object):
     def install_stress_app(self):
         error.context("install stress app in guest")
         session = self.get_session()
-        installed = session.cmd_status(self.params.get("app_check_cmd")) == 0
+        _, output = session.cmd_status_output(self.params.get("app_check_cmd"))
+        installed = re.search("Usage:", output)
         if installed:
             logging.debug("Stress has been installed.")
             return
@@ -87,7 +89,7 @@ class VMStress(object):
         except Exception, detail:
             raise StressError(str(detail))
         self.vm.copy_files_to(pkg, self.tmp_dir)
-        s, o = session.cmd_status_output(self.install_cmd, timeout=120)
+        s, o = session.cmd_status_output(self.install_cmd, timeout=60)
         if s != 0:
             raise StressError("Fail to install stress app(%s)" % o)
 
@@ -104,7 +106,7 @@ class VMStress(object):
         error.context("launch stress app in guest", logging.info)
         session.sendline(self.start_cmd)
         logging.info("Command: %s" % self.start_cmd)
-        running = utils_misc.wait_for(self.app_running, first=0.5, timeout=120)
+        running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
         if not running:
             raise StressError("stress app isn't running")
 
@@ -122,14 +124,14 @@ class VMStress(object):
 
         error.context("stop stress app in guest", logging.info)
         utils_misc.wait_for(_unload_stress, first=2.0,
-                            text="wait stress app quit", step=1.0, timeout=120)
+                            text="wait stress app quit", step=1.0, timeout=60)
 
     def app_running(self):
         """
         check stress app really run in background;
         """
         session = self.get_session()
-        status = session.cmd_status(self.check_cmd, timeout=120)
+        status = session.cmd_status(self.check_cmd, timeout=60)
         return status == 0
 
 
@@ -153,7 +155,8 @@ def thread_func_migration(vm, desturi):
         ret_lock.release()
 
 
-def do_migration(vms, srcuri, desturi, load_vms, stress_type, migration_type):
+def do_migration(vms, srcuri, desturi, load_vms, stress_type,
+                 migration_type, thread_timeout=60):
     """
     Migrate vms with stress.
 
@@ -200,7 +203,7 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type, migration_type):
             migration_thread = threading.Thread(target=thread_func_migration,
                                                 args=(vm, desturi))
             migration_thread.start()
-            migration_thread.join(60)
+            migration_thread.join(thread_timeout)
             if migration_thread.isAlive():
                 logging.error("Migrate %s timeout.", migration_thread)
                 ret_lock.acquire()
@@ -217,8 +220,8 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type, migration_type):
                                        args=(vm, desturi))
             thread1.start()
             thread2.start()
-            thread1.join(60)
-            thread2.join(60)
+            thread1.join(thread_timeout)
+            thread2.join(thread_timeout)
             vm_remote = vm
             if thread1.isAlive() or thread1.isAlive():
                 logging.error("Cross migrate timeout.")
@@ -237,7 +240,7 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type, migration_type):
 
         # listen threads until they end
         for thread in migration_threads:
-            thread.join(60)
+            thread.join(thread_timeout)
             if thread.isAlive():
                 logging.error("Migrate %s timeout.", thread)
                 ret_lock.acquire()
@@ -281,6 +284,7 @@ def run_virsh_migrate_stress(test, params, env):
     start_migration_vms = "yes" == params.get("start_migration_vms", "yes")
     dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
     src_uri = params.get("migrate_src_uri", "qemu+ssh://EXAMPLE/system")
+    thread_timeout = int(params.get("thread_timeout", 120))
 
     for vm in vms:
         # Keep vm dead for edit
@@ -296,7 +300,7 @@ def run_virsh_migrate_stress(test, params, env):
                 # TODO: recover vm if start failed?
         # TODO: set ssh-autologin automatically
         do_migration(vms, src_uri, dest_uri, load_vms, stress_type,
-                     migration_type)
+                     migration_type, thread_timeout)
     finally:
         for vm in vms:
             cleanup_dest(vm, None, dest_uri)
