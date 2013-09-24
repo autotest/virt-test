@@ -681,9 +681,14 @@ def postprocess(test, params, env):
                 continue
             try:
                 # Test may be fast, guest could still be booting
-                session = vm.wait_for_login(timeout=vm.LOGIN_WAIT_TIMEOUT)
-                session.close()
-            except (remote.LoginError, virt_vm.VMError), e:
+                if len(vm.virtnet) > 0:
+                    session = vm.wait_for_login(timeout=vm.LOGIN_WAIT_TIMEOUT)
+                    session.close()
+                else:
+                    session = vm.wait_for_serial_login(
+                                                timeout=vm.LOGIN_WAIT_TIMEOUT)
+                    session.close()
+            except (remote.LoginError, virt_vm.VMError, IndexError), e:
                 logging.warn(e)
                 vm.destroy(gracefully=False)
 
