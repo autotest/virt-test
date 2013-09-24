@@ -15,6 +15,7 @@ recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',),
                                  ('qemu-io',)],
                         'libvirt': [('virsh',), ('virt-install',),
                                     ('fakeroot',)],
+                        'openvswitch': [],
                         'lvsb': [],
                         'libguestfs': [('perl',)]}
 
