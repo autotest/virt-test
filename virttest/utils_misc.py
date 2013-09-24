@@ -1119,6 +1119,51 @@ def string_to_bitlist(data):
     return result
 
 
+def strip_console_codes(output):
+    """
+    Remove the Linux console escape and control sequences from the console
+    output. Make the output readable and can be used for result check. Now
+    only remove some basic console codes using during boot up.
+
+    :param output: The output from Linux console
+    :type output: string
+    :return: the string wihout any special codes
+    :rtype: string
+    """
+    if "\x1b" not in output:
+        return output
+
+    old_word = ""
+    return_str = ""
+    index = 0
+    output = "\x1b[m%s" % output
+    console_codes = "%G|\[m|\[[\d;]+[HJnrm]"
+    while index < len(output):
+        tmp_index = 0
+        tmp_word = ""
+        while (len(re.findall("\x1b", tmp_word)) < 2
+               and index + tmp_index < len(output)):
+            tmp_word += output[index + tmp_index]
+            tmp_index += 1
+
+        tmp_word = re.sub("\x1b", "", tmp_word)
+        index += len(tmp_word) + 1
+        if tmp_word == old_word:
+            continue
+        try:
+            special_code = re.findall(console_codes, tmp_word)[0]
+        except IndexError:
+            if index + tmp_index < len(output):
+                raise ValueError("%s is not included in the known console "
+                                 "codes list %s" % (tmp_word, console_codes))
+            continue
+        if special_code == tmp_word:
+            continue
+        old_word = tmp_word
+        return_str += tmp_word[len(special_code):]
+    return return_str
+
+
 def get_module_params(sys_path, module_name):
     """
     Get the kvm module params
