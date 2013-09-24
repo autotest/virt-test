@@ -2029,7 +2029,7 @@ class DevContainer(object):
                     # we in autotest require. Force strict mode to get this
                     # device into the correct bus (ide-hd could go into ahci
                     # and ide hba, qemu doesn't care, autotest does).
-                    if strict_mode != True:
+                    if strict_mode is not True:
                         strict_mode = True
                     bus_returns.append(-1)  # Don't use this bus
                     continue
