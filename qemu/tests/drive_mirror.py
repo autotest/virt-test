@@ -1,7 +1,8 @@
+import os
 import logging
 import time
-from autotest.client.shared import error
-from virttest import utils_misc, storage
+from autotest.client.shared import error, utils
+from virttest import utils_misc, storage, qemu_storage, nfs
 from qemu.tests import block_copy
 
 
@@ -21,7 +22,8 @@ class DriveMirror(block_copy.BlockCopy):
         """
         params = super(DriveMirror, self).parser_test_args()
         params["create_mode"] = params.get("create_mode", "absolute-path")
-        params["target_format"] = params.get("target_format", "qcow2")
+        params["target_format"] = params.get("target_format",
+                                             params["image_format"])
         params["reopen_timeout"] = int(params.get("reopen_timeout", 60))
         params["full_copy"] = params.get("full_copy", "").lower()
         params["check_event"] = params.get("check_event", "no").lower()
@@ -34,7 +36,20 @@ class DriveMirror(block_copy.BlockCopy):
         t_params = {}
         t_params["image_name"] = params["target_image"]
         t_params["image_format"] = params["target_format"]
-        target_image = storage.get_image_filename(t_params, self.data_dir)
+        target_image = storage.get_image_filename(t_params,
+                                                  self.data_dir)
+        if params.get("target_image_type") == "nfs":
+            image = nfs.Nfs(params)
+            image.setup()
+            # sleep 30s to wait nfs ready, it's requried by some rhel6 host
+            time.sleep(30)
+        elif params.get("target_image_type") == "iscsi":
+            image = qemu_storage.Iscsidev(params, self.data_dir, "")
+            target_image = image.setup()
+        if (params["create_mode"] == "existing" and
+            not os.path.exists(target_image)):
+            image = qemu_storage.QemuImg(t_params, self.data_dir, "")
+            image.create(t_params)
         return target_image
 
     @error.context_aware
@@ -138,6 +153,18 @@ class DriveMirror(block_copy.BlockCopy):
         """
         return self.do_steps("after_reopen")
 
+    def clean(self):
+        params = self.parser_test_args()
+        if params.get("target_image_type") == "iscsi":
+            image = qemu_storage.Iscsidev(params, self.data_dir, "")
+            # cleanup iscsi disk to ensure it works for other test
+            utils.run("dd if=/dev/zero of=%s bs=1M count=512"
+                      % self.target_image)
+            image.cleanup()
+        elif params.get("target_image_type") == "nfs":
+            image = nfs.Nfs(params)
+            image.cleanup()
+        super(DriveMirror, self).clean()
 
 def run_drive_mirror(test, params, env):
     pass
