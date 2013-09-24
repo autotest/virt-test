@@ -45,11 +45,23 @@ def run_boot_order_check(test, params, env):
     # We need reverse the pci information to get the pci addr which is in the
     # front row.
     pci_info = vm.monitor.info("pci")
-    pci_list = str(pci_info).split("\n")
-    pci_list.reverse()
-    pci_info = " ".join(pci_list)
+    nic_slots = {}
+    if isinstance(pci_info, list):
+        pci_devices = pci_info[0]['devices']
+        for device in pci_devices:
+            if device['class_info']['desc'] == "Ethernet controller":
+                nic_slots[device['qdev_id']] = device['slot']
+    else:
+        pci_list = str(pci_info).split("\n")
+        pci_list.reverse()
+        pci_info = " ".join(pci_list)
+
     for nic in vm.virtnet:
-        nic_addr = re.findall(nic_addr_filter % nic.device_id, pci_info)[0]
+        if nic_slots:
+            nic_addr = nic_slots[nic.device_id]
+        else:
+            nic_addr = re.findall(nic_addr_filter % nic.device_id,
+                                  pci_info)[0]
         nic_addr = "0%s" % nic_addr
         bootindex = int(params['bootindex_%s' % nic.nic_name])
         list_nic_addr.append((nic_addr[-2:], bootindex))
