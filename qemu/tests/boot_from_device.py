@@ -77,7 +77,8 @@ def run_boot_from_device(test, params, env):
 
         logging.info("Wait for display and check boot info.")
         infos = boot_fail_info.split(';')
-        f = lambda: re.search(infos[0], vm.serial_console.get_output())
+        f = lambda: re.search(infos[0],
+                              vm.serial_console.get_stripped_output())
         utils_misc.wait_for(f, timeout, 1)
 
         logging.info("Try to boot from '%s'" % device_name)
@@ -91,7 +92,7 @@ def run_boot_from_device(test, params, env):
                 vm.destroy()
                 return
 
-            output = vm.serial_console.get_output()
+            output = vm.serial_console.get_stripped_output()
 
             for i in infos:
                 if not re.search(i, output):
@@ -124,7 +125,8 @@ def run_boot_from_device(test, params, env):
     boot_device = params.get("boot_device")
 
     if boot_device:
-        f = lambda: re.search(boot_menu_hint, vm.serial_console.get_output())
+        f = lambda: re.search(boot_menu_hint,
+                              vm.serial_console.get_stripped_output())
         if not utils_misc.wait_for(f, timeout, 1):
             cleanup(dev_name)
             raise error.TestFail("Could not get boot menu message. "
@@ -133,7 +135,7 @@ def run_boot_from_device(test, params, env):
         # Send boot menu key in monitor.
         vm.send_key(boot_menu_key)
 
-        output = vm.serial_console.get_output()
+        output = vm.serial_console.get_stripped_output()
         boot_list = re.findall("^\d+\. (.*)\s", output, re.M)
 
         if not boot_list:
