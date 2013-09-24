@@ -1,5 +1,4 @@
 import logging
-import re
 import time
 from autotest.client.shared import error
 from autotest.client import utils
@@ -92,18 +91,18 @@ def run_timedrift_no_net(test, params, env):
     date_time_command = params.get("date_time_command",
                                    "date -u +'TIME: %a %m/%d/%Y %H:%M:%S.%N'")
     date_time_filter_re = params.get("date_time_filter_re",
-                                     "(?:TIME: \w\w\w )(.{19})(.+)")
+                                     r"(?:TIME: \w\w\w )(.{19})(.+)")
     date_time_format = params.get("date_time_format",
                                   "%m/%d/%Y %H:%M:%S")
-    hwclock_time_command = params.get("hwclock_time_command",
-                                      "LC_TIME=C hwclock -u")
+    hwclock_time_command = params.get("hwclock_time_command")
     hwclock_time_filter_re = params.get("hwclock_time_filter_re",
-                                        "(.+)")
+                                        r"(.+)")
     hwclock_time_format = params.get("hwclock_time_format",
                                      "%a %b %d %H:%M:%S %Y")
     tolerance = float(params.get("time_diff_tolerance", "0.5"))
 
     sub_work = params["sub_work"]
+    test_type = params["timedrift_sub_work"]
 
     vm_name = params.get("vms")
     vm = env.get_vm(vm_name)
@@ -131,7 +130,8 @@ def run_timedrift_no_net(test, params, env):
                                       date_time_command,
                                       date_time_filter_re,
                                       date_time_format)
-    logging.debug(before_date)
+    logging.debug("date: host time=%ss guest time=%ss",
+                  *before_date)
 
     error.context("Get clock from host and guest VM using `hwclock`",
                   logging.info)
@@ -139,7 +139,8 @@ def run_timedrift_no_net(test, params, env):
                                          hwclock_time_command,
                                          hwclock_time_filter_re,
                                          hwclock_time_format)
-    logging.debug(before_hwclock)
+    logging.debug("hwclock: host time=%ss guest time=%ss",
+                  *before_hwclock)
 
     session.close()
 
@@ -156,7 +157,8 @@ def run_timedrift_no_net(test, params, env):
                                      date_time_command,
                                      date_time_filter_re,
                                      date_time_format)
-    logging.debug(after_date)
+    logging.debug("date: host time=%ss guest time=%ss",
+                  *after_date)
 
     error.context("Get clock from host and guest VM using `hwclock`",
                   logging.info)
@@ -164,19 +166,32 @@ def run_timedrift_no_net(test, params, env):
                                         hwclock_time_command,
                                         hwclock_time_filter_re,
                                         hwclock_time_format)
-    logging.debug(after_hwclock)
+    logging.debug("hwclock: host time=%ss guest time=%ss",
+                  *after_hwclock)
 
-    date_diff = time_diff(before_date, after_date)
-    hwclock_diff = time_diff(before_hwclock, after_hwclock)
-    if date_diff > tolerance and hwclock_diff > tolerance:
-        raise error.TestFail("hwclock %ss and date %ss difference is"
-                             " out of tolerance %ss" % (hwclock_diff,
-                                                        date_diff,
-                                                        tolerance))
-    elif date_diff > tolerance:
-        raise error.TestFail("date %ss difference is"
-                             " out of tolerance %ss" % (date_diff, tolerance))
-    elif hwclock_diff > tolerance:
-        raise error.TestFail("hwclock %ss difference is"
-                             " out of tolerance %ss" % (hwclock_diff,
-                                                        tolerance))
+    if test_type == 'guest_suspend':
+        date_diff = time_diff(before_date, after_date)
+        hwclock_diff = time_diff(before_hwclock, after_hwclock)
+        if date_diff > tolerance and hwclock_diff > tolerance:
+            raise error.TestFail("hwclock %ss and date %ss difference is "
+                                 "'guest_diff_time != host_diff_time'"
+                                 " out of tolerance %ss" % (hwclock_diff,
+                                                            date_diff,
+                                                            tolerance))
+        elif date_diff > tolerance:
+            raise error.TestFail("date %ss difference is "
+                                 "'guest_diff_time != host_diff_time'"
+                                 " out of tolerance %ss" % (date_diff,
+                                                            tolerance))
+        elif hwclock_diff > tolerance:
+            raise error.TestFail("hwclock %ss difference is "
+                                 "'guest_diff_time != host_diff_time'"
+                                 " out of tolerance %ss" % (hwclock_diff,
+                                                            tolerance))
+    elif test_type == "guest_pause_resume":
+        date_diff = time_diff(before_date, after_date)
+        if date_diff > tolerance:
+            raise error.TestFail("date %ss difference is"
+                                 "'guest_time_after-guest_time_before'"
+                                 " out of tolerance %ss" % (date_diff,
+                                                            tolerance))
