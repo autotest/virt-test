@@ -17,7 +17,7 @@ def wait_pid_active(pid, timeout=5):
     cmd = ("cat /proc/%d/stat | awk '{print $3}'" % pid)
     try:
         while (True):
-            timeout = timeout -1
+            timeout = timeout - 1
             if not timeout:
                 raise error.TestNAError("Time out for waiting pid!")
             pid_status = utils.run(cmd, ignore_status=False).stdout.strip()
@@ -28,6 +28,7 @@ def wait_pid_active(pid, timeout=5):
                 break
     except Exception, detail:
         raise error.TestFail(detail)
+
 
 def check_flag(file_flag):
     """
@@ -42,6 +43,7 @@ def check_flag(file_flag):
     else:
         logging.error("File flags doesn't include O_DIRECT")
         return False
+
 
 def check_bypass(dump_file):
     """
@@ -71,6 +73,7 @@ def check_bypass(dump_file):
                                      "fail when dumping")
         except (ValueError, IndexError), detail:
             raise error.TestFail(detail)
+
 
 def run_virsh_dump(test, params, env):
     """
@@ -187,7 +190,6 @@ def run_virsh_dump(test, params, env):
             # Wait for parent process over
             while True:
                 time.sleep(1)
-
 
     # Run virsh command
     cmd_result = virsh.dump(vm_name, dump_file, options,

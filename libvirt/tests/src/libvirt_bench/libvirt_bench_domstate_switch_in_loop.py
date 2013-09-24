@@ -47,20 +47,20 @@ def run_libvirt_bench_domstate_switch_in_loop(test, params, env):
     # Get operations from params.
     start_in_loop = ("yes" == params.get("LB_domstate_switch_start", "no"))
     start_post_state = params.get("LB_domstate_switch_start_post_state",
-                                                                    "running")
+                                  "running")
     shutdown_in_loop = ("yes" == params.get("LB_domstate_switch_shutdown",
-                                                                        "no"))
+                                            "no"))
     shutdown_post_state = params.get("LB_domstate_switch_shutdown_post_state",
-                                                                    "shutdown")
+                                     "shutdown")
     destroy_in_loop = ("yes" == params.get("LB_domstate_switch_destroy", "no"))
     destroy_post_state = params.get("LB_domstate_switch_destroy_post_state",
-                                                                    "shut off")
+                                    "shut off")
     suspend_in_loop = ("yes" == params.get("LB_domstate_switch_suspend", "no"))
     suspend_post_state = params.get("LB_domstate_switch_suspend_post_state",
-                                                                    "paused")
+                                    "paused")
     resume_in_loop = ("yes" == params.get("LB_domstate_switch_resume", "no"))
     resume_post_state = params.get("LB_domstate_switch_resume_post_state",
-                                                                    "running")
+                                   "running")
     # Get the loop_time.
     loop_time = int(params.get("LB_domstate_switch_loop_time", "600"))
     current_time = int(time.time())
