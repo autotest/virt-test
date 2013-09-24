@@ -2620,6 +2620,8 @@ class VM(virt_vm.BaseVM):
             pass
         elif nic.nettype == 'user':
             attach_cmd += " user,id=%s" % nic.device_id
+        elif nic.nettype == 'none':
+            attach_cmd += " none"
         else:  # unsupported nettype
             raise virt_vm.VMUnknownNetTypeError(self.name, nic_index_or_name,
                                                 nic.nettype)
