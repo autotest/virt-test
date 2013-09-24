@@ -1,9 +1,11 @@
 import re
 import logging
 import threading
+import time
 from autotest.client import utils
 from autotest.client.shared import error, utils_memory
-from virttest import libvirt_vm, data_dir, utils_misc, virt_vm, aexpect
+from virttest import libvirt_vm, data_dir, utils_misc, virt_vm
+from virttest import aexpect, remote
 from virttest.libvirt_xml import vm_xml
 
  
@@ -357,6 +359,30 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
         raise error.TestFail()
 
 
+def check_dest_vm_network(vm, remote_host, username, password,
+                          shell_prompt):
+    """
+    Ping migrated vms on remote host.
+    """
+    session = remote.remote_login("ssh", remote_host, 22, username,
+                                  password, shell_prompt)
+    # Timeout to wait vm's network
+    logging.debug("Getting vm's IP...")
+    timeout = 60
+    while timeout > 0:
+        try:
+            ping_cmd = "ping -c 4 %s" % vm.get_address()
+            break
+        except virt_vm.VMAddressError:
+            time.sleep(5)
+            timeout -= 5
+    if timeout <= 0:
+        raise error.TestFail("Can not get remote vm's IP.")
+    s, o = session.cmd_status_output(ping_cmd)
+    if s:
+        raise error.TestFail("Check %s IP failed:%s" % (vm.name, o))
+
+
 def run_virsh_migrate_stress(test, params, env):
     """
     Test migration under stress.
@@ -386,6 +412,10 @@ def run_virsh_migrate_stress(test, params, env):
     dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
     src_uri = params.get("migrate_src_uri", "qemu+ssh://EXAMPLE/system")
     thread_timeout = int(params.get("thread_timeout", 120))
+    remote_host = params.get("remote_host")
+    username = params.get("remote_username", "root")
+    password = params.get("remote_passwd")
+    prompt = params.get("shell_prompt", "[\#\$]")
 
     for vm in vms:
         # Keep vm dead for edit
@@ -402,6 +432,9 @@ def run_virsh_migrate_stress(test, params, env):
         # TODO: set ssh-autologin automatically
         do_migration(vms, src_uri, dest_uri, load_vms, stress_type,
                      migration_type, thread_timeout)
+        # Check network of vms on destination
+        for vm in vms:
+            check_dest_vm_network(vm, remote_host, username, password, prompt)
     finally:
         for vm in vms:
             cleanup_dest(vm, None, dest_uri)
