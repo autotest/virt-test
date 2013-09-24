@@ -584,6 +584,39 @@ def preprocess(test, params, env):
         logging.debug("Guest cmdline 'pci=nomsi' setting is: [ %s ]" %
                       disable_pci_msi)
 
+
+    kernel_extra_params = params.get("kernel_extra_params")
+    if kernel_extra_params:
+        image_filename = storage.get_image_filename(params,
+                                                    data_dir.get_data_dir())
+        grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
+        kernel_cfg_pos_reg = params.get("kernel_cfg_pos_reg",
+                                        r".*vmlinuz-\d+.*")
+
+        disk_obj = utils_disk.GuestFSModiDisk(image_filename)
+        kernel_config_ori = disk_obj.read_file(grub_file)
+        kernel_config = re.findall(kernel_cfg_pos_reg, kernel_config_ori)
+        if not kernel_config:
+            raise error.TestError("Cannot find the kernel config, reg is %s" %
+                                  kernel_cfg_pos_reg)
+        kernel_config_line = kernel_config[0]
+
+        kernel_need_modify = False
+        if not re.findall(kernel_extra_params, kernel_config_line):
+            kernel_config_set = kernel_config_line + kernel_extra_params
+            kernel_need_modify = True
+
+        if kernel_need_modify:
+            for vm in env.get_all_vms():
+                if vm:
+                    vm.destroy()
+                    env.unregister_vm(vm.name)
+            disk_obj.replace_image_file_content(grub_file, kernel_config_line,
+                                                kernel_config_set)
+        logging.debug("Guest cmdline extra_params setting is: [ %s ]" %
+                      kernel_extra_params)
+
+
     # Clone master image from vms.
     base_dir = data_dir.get_data_dir()
     if params.get("master_images_clone"):
