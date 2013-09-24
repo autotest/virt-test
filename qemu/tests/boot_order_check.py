@@ -63,14 +63,14 @@ def run_boot_order_check(test, params, env):
     error.context("Check the guest boot result", logging.info)
     if bootorder_type == "type2":
         session_serial = vm.wait_for_serial_login(timeout=timeout)
-        output = vm.serial_console.get_output()
+        output = vm.serial_console.get_stripped_output()
         session_serial.close()
     else:
         f = lambda: re.search("No bootable device.",
-                              vm.serial_console.get_output())
+                              vm.serial_console.get_stripped_output())
         utils_misc.wait_for(f, timeout, 1)
 
-        output = vm.serial_console.get_output()
+        output = vm.serial_console.get_stripped_output()
 
     # find and replace some ascii characters to non-ascii char,
     # like as: '\b' (backspace)
