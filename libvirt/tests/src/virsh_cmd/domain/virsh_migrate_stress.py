@@ -2,7 +2,7 @@ import re
 import logging
 import threading
 from autotest.client import utils
-from autotest.client.shared import error
+from autotest.client.shared import error, utils_memory
 from virttest import libvirt_vm, data_dir, utils_misc, virt_vm, aexpect
 from virttest.libvirt_xml import vm_xml
 
@@ -49,6 +49,94 @@ class StressError(Exception):
     pass
 
 
+class HostStress(object):
+
+    """class for stress tool on host"""
+
+    def __init__(self, params):
+        self.params = params
+        self.link = self.params.get("download_link")
+        self.md5sum = self.params.get("md5sum")
+        self.tmp_dir = data_dir.get_download_dir()
+        self.install_cmd = self.params.get("install_cmd") % self.tmp_dir
+        self.config_cmd = self.params.get("config_cmd")
+        self.vm_bytes = self.params.get("stress_vm_bytes", "128M")
+        # One vm's memory size
+        vm_memory = int(self.params.get("vm_memory", 1048576))
+        # Memory needs to be reserved for vms.
+        self.vm_reserved = len(self.params.get("vms").split()) * vm_memory
+        # Set consumed memory for host stress tool
+        self.count_vm_bytes()
+        self.start_cmd = self.params.get("start_cmd")
+        if re.search("--vm-bytes", self.start_cmd):
+            self.start_cmd = self.start_cmd % self.vm_bytes
+        self.stop_cmd = self.params.get("stop_cmd")
+        self.check_cmd = self.params.get("check_cmd")
+        self.app_check_cmd = self.params.get("app_check_cmd")
+
+    def count_vm_bytes(self):
+        mem_total = utils_memory.memtotal()
+        if self.vm_bytes == "half":
+            self.vm_bytes = (mem_total - self.vm_reserved) / 2
+        elif self.vm_bytes == "shortage":
+            self.vm_bytes = mem_total - self.vm_reserved + 524288
+
+    @error.context_aware
+    def install_stress_app(self):
+        error.context("install stress app on host")
+        output = utils.run(self.app_check_cmd, ignore_status=True).stdout
+        installed = re.search("Usage:", output)
+        if installed:
+            logging.debug("Stress has been installed.")
+            return
+
+        try:
+            pkg = utils.unmap_url_cache(self.tmp_dir, self.link, self.md5sum)
+        except Exception, detail:
+            raise StressError(str(detail))
+        result = utils.run(self.install_cmd, timeout=60, ignore_status=True)
+        if result.exit_status != 0:
+            raise StressError("Fail to install stress app(%s)" % result.stdout)
+
+    @error.context_aware
+    def load_stress(self):
+        """
+        load IO/CPU/Memory stress in guest;
+        """
+        self.install_stress_app()
+        if self.app_running():
+            logging.info("Stress app is already running.")
+            return
+        error.context("launch stress app on host", logging.info)
+        utils.run(self.start_cmd, ignore_status=True)
+        logging.info("Command: %s" % self.start_cmd)
+        running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
+        if not running:
+            raise StressError("stress app isn't running")
+
+    @error.context_aware
+    def unload_stress(self):
+        """
+        stop stress app
+        """
+        def _unload_stress():
+            utils.run(self.stop_cmd, ignore_status=True)
+            if not self.app_running():
+                return True
+            return False
+
+        error.context("stop stress app on host", logging.info)
+        utils_misc.wait_for(_unload_stress, first=2.0,
+                            text="wait stress app quit", step=1.0, timeout=60)
+
+    def app_running(self):
+        """
+        check stress app really run in background;
+        """
+        result = utils.run(self.check_cmd, timeout=60, ignore_status=True)
+        return result.exit_status == 0
+
+
 class VMStress(object):
 
     """class for stress tool in vm."""
@@ -61,7 +149,10 @@ class VMStress(object):
         self.tmp_dir = self.params.get("tmp_dir")
         self.install_cmd = self.params.get("install_cmd") % self.tmp_dir
         self.config_cmd = self.params.get("config_cmd")
+        self.vm_bytes = self.params.get("stress_vm_bytes", "128M")
         self.start_cmd = self.params.get("start_cmd")
+        if re.search("--vm-bytes", self.start_cmd):
+            self.start_cmd = self.start_cmd % self.vm_bytes
         self.stop_cmd = self.params.get("stop_cmd")
         self.check_cmd = self.params.get("check_cmd")
         self.app_check_cmd = self.params.get("app_check_cmd")
@@ -184,12 +275,19 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
                 except virt_vm.VMStartError:
                     fail_info.append("Start load vm %s failed." % vm.name)
                     break
-        elif stress_type == "stress_tool":
+        elif stress_type == "stress_in_vms":
             try:
                 vs = VMStress(vm)
                 vs.load_stress()
             except StressError, detail:
-                fail_info.append("Launch stress for %s failed." % detail)
+                fail_info.append("Launch stress failed:%s" % detail)
+                break
+        elif stress_type == "stress_on_host":
+            try:
+                hs = HostStress(vm.params)
+                hs.load_stress()
+            except StressError, detail:
+                fail_info.append("Launch stress failed:%s" % detail)
                 break
         elif stress_type == "migration_vms_booting":
             try:
@@ -247,8 +345,11 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
                 ret_migration = False
                 ret_lock.release()
 
+    # Clean up loads
     for load_vm in load_vms:
         load_vm.destroy()
+    if stress_type == "stress_on_host":
+        hs.unload_stress()
 
     if len(fail_info):
         logging.warning("Add stress for migration failed:%s", fail_info)
