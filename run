@@ -265,7 +265,7 @@ class VirtTestRunParser(optparse.OptionParser):
                               "Default: kvm"))
         qemu.add_option("--nettype", action="store", dest="nettype",
                         default="user",
-                        help=("QEMU network option (bridge or user). "
+                        help=("QEMU network option (bridge, user or none). "
                               "Default: %default"))
         qemu.add_option("--netdst", action="store", dest="netdst",
                         default="virbr0",
@@ -386,6 +386,8 @@ class VirtTestApp(object):
             self.cartesian_parser.assign("netdst", self.options.netdst)
         elif self.options.nettype == 'user':
             self.cartesian_parser.assign("nettype", "user")
+        elif self.options.nettype == 'none':
+            self.cartesian_parser.assign("nettype", "none")
 
     def _process_monitor(self):
         if self.options.monitor == 'qmp':

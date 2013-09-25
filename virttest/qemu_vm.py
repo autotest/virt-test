@@ -2163,7 +2163,15 @@ class VM(virt_vm.BaseVM):
             # Try to destroy with shell command
             logging.debug("Shutting down VM %s (shell)", self.name)
             try:
-                session = self.login()
+                if len(self.virtnet) > 0:
+                    session = self.login()
+                else:
+                    session = self.serial_login()
+            except (virt_vm.VMInterfaceIndexError), e:
+                try:
+                    session = self.serial_login()
+                except (remote.LoginError, virt_vm.VMError), e:
+                    logging.debug(e)
             except (remote.LoginError, virt_vm.VMError), e:
                 logging.debug(e)
             else:
@@ -2612,6 +2620,8 @@ class VM(virt_vm.BaseVM):
             pass
         elif nic.nettype == 'user':
             attach_cmd += " user,id=%s" % nic.device_id
+        elif nic.nettype == 'none':
+            attach_cmd += " none"
         else:  # unsupported nettype
             raise virt_vm.VMUnknownNetTypeError(self.name, nic_index_or_name,
                                                 nic.nettype)
