@@ -3,11 +3,12 @@ from autotest.client.shared import error
 from virttest import utils_misc
 
 
+@error.context_aware
 def run_kdump(test, params, env):
     """
     KVM reboot test:
     1) Log into a guest
-    2) Check and enable the kdump
+    2) Check, configure and enable the kdump
     3) Trigger a crash by 'sysrq-trigger' and check the vmcore for
        each vcpu, or only trigger one crash with nmi interrupt and
        check vmcore.
@@ -24,7 +25,7 @@ def run_kdump(test, params, env):
     def_kernel_param_cmd = ("grubby --update-kernel=`grubby --default-kernel`"
                             " --args=crashkernel=128M@16M")
     kernel_param_cmd = params.get("kernel_param_cmd", def_kernel_param_cmd)
-    def_kdump_enable_cmd = "chkconfig kdump on && service kdump start"
+    def_kdump_enable_cmd = "chkconfig kdump on && service kdump restart"
     kdump_enable_cmd = params.get("kdump_enable_cmd", def_kdump_enable_cmd)
     def_crash_kernel_prob_cmd = "grep -q 1 /sys/kernel/kexec_crash_loaded"
     crash_kernel_prob_cmd = params.get("crash_kernel_prob_cmd",
@@ -50,28 +51,41 @@ def run_kdump(test, params, env):
                                    1):
             raise error.TestFail("Could not trigger crash on vcpu %d" % vcpu)
 
-        logging.info("Waiting for kernel crash dump to complete")
+        error.context("Waiting for kernel crash dump to complete",
+                      logging.info)
         session = vm.wait_for_login(timeout=crash_timeout)
 
-        logging.info("Probing vmcore file...")
+        error.context("Probing vmcore file...", logging.info)
         session.cmd("ls -R /var/crash | grep vmcore")
         logging.info("Found vmcore.")
 
         session.cmd_output("rm -rf /var/crash/*")
 
     try:
-        logging.info("Checking the existence of crash kernel...")
+        error.context("Checking the existence of crash kernel...",
+                      logging.info)
         try:
             session.cmd(crash_kernel_prob_cmd)
         except Exception:
-            logging.info("Crash kernel is not loaded. Trying to load it")
+            error.context("Crash kernel is not loaded. Trying to load it",
+                          logging.info)
             session.cmd(kernel_param_cmd)
             session = vm.reboot(session, timeout=timeout)
 
-        logging.info("Enabling kdump service...")
+        if params.get("kdump_config"):
+            error.context("Configuring the Core Collector", logging.info)
+            config_file = "/etc/kdump.conf"
+            for config_line in params.get("kdump_config").split(";"):
+                config_cmd = "grep '^%s$' %s || echo -e '%s' >> %s "
+                config_con = config_line.strip()
+                session.cmd(config_cmd % ((config_con, config_file) * 2))
+
+        error.context("Enabling kdump service...", logging.info)
         # the initrd may be rebuilt here so we need to wait a little more
         session.cmd(kdump_enable_cmd, timeout=120)
 
+        error.context("Kdump Testing, force the Linux kernel to crash",
+                      logging.info)
         crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
         if crash_cmd == "nmi":
             crash_test(None)
