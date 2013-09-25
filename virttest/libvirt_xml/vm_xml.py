@@ -644,6 +644,20 @@ class VMXML(VMXMLBase):
         vmxml.undefine()
         vmxml.define()
 
+    def add_device(self, value):
+        """
+        Add a device into VMXML.
+
+        :param value: instalce of device in libvirt_xml/devices/
+        """
+        devices = self.get_devices()
+        for device in devices:
+            if device == value:
+                logging.debug("Device %s is already in VM %s.", value, self)
+                return
+        devices.append(value)
+        self.set_devices(devices)
+
 
 class VMCPUXML(VMXML):
 
