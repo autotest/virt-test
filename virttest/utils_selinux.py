@@ -5,12 +5,14 @@ selinux test utility functions.
 import logging, re, os.path
 from autotest.client import utils
 
+
 class SelinuxError(Exception):
 
     """
     Error selinux utility functions.
     """
     pass
+
 
 class SeCmdError(SelinuxError):
 
@@ -27,7 +29,9 @@ class SeCmdError(SelinuxError):
         return str("Execute command %s failed.\n"
                    "Detail: %s .\n" % (self.cmd, self.detail))
 
+
 class SemanageError(SelinuxError):
+
     """
     Error when semanage binary is not found
     """
@@ -35,7 +39,8 @@ class SemanageError(SelinuxError):
     def __str__(self):
         return ("The semanage command is not available, "
                 "please install policycoreutils "
-                "or equivilent for your platform.")
+                "or equivalent for your platform.")
+
 
 class RestoreconError(SelinuxError):
 
@@ -44,6 +49,7 @@ class RestoreconError(SelinuxError):
                 "does not match the expected format")
 
 STATUS_LIST = ['enforcing', 'permissive', 'disabled']
+
 
 def get_status():
     """
@@ -67,6 +73,7 @@ def get_status():
 
     raise SelinuxError("result of 'getenforce' (%s)is not expected."
                        % result.stdout)
+
 
 def set_status(status):
     """
@@ -105,6 +112,7 @@ def set_status(status):
 
     logging.debug("Set status of selinux to %s success.", status)
 
+
 def is_disabled():
     """
     Return True if the selinux is disabled.
@@ -115,16 +123,19 @@ def is_disabled():
     else:
         return False
 
+
 def is_not_disabled():
     """
     Return True if the selinux is not disabled.
     """
     return not is_disabled()
 
+
 def get_context_from_str(context):
     """
     Get the context in a context.
 
+    :param context: SELinux context string
     :raise SelinuxError: if there is no context in context.
     """
     context_pattern = (r"[a-z,_]*_u:[a-z,_]*_r:[a-z,_]*_t"
@@ -136,9 +147,13 @@ def get_context_from_str(context):
 
     raise SelinuxError("There is no context in %s." % context)
 
+
 def get_type_from_context(context):
     """
     Return just the type component of a full context string
+
+    :param context: SELinux context string
+    :return: Type component of SELinux context string
     """
     # Raise exception if not a context string
     get_context_from_str(context)
@@ -146,12 +161,14 @@ def get_type_from_context(context):
                     r"(?:\:[s,\-,0-9,:[c,\,,0-9]*]*)?")
     return re.search(type_pattern, context).group(1)
 
+
 def get_context_of_file(filename):
     """
     Get the context of file.
 
     :raise SeCmdError: if execute 'getfattr' failed.
     """
+    # More direct than scraping 'ls' output.
     cmd = "getfattr --name security.selinux %s" % filename
     result = utils.run(cmd, ignore_status=True)
     if result.exit_status:
@@ -159,6 +176,7 @@ def get_context_of_file(filename):
 
     output = result.stdout
     return get_context_from_str(output)
+
 
 def set_context_of_file(filename, context):
     """
@@ -170,6 +188,7 @@ def set_context_of_file(filename, context):
                         file is not setted to context.
     """
     context = context.strip()
+    # setfattr used for consistency with getfattr use above
     cmd = ("setfattr --name security.selinux --value \"%s\" %s"
            % (context, filename))
     result = utils.run(cmd, ignore_status=True)
@@ -184,6 +203,7 @@ def set_context_of_file(filename, context):
 
     logging.debug("Set context of %s success.", filename)
 
+
 def get_context_of_process(pid):
     """
     Get context of process.
@@ -196,10 +216,13 @@ def get_context_of_process(pid):
     return get_context_from_str(output)
 
 # Force uniform handling if semanage not found (used in unittests)
+
+
 def _no_semanage(cmdresult):
     if cmdresult.exit_status == 127:
         if cmdresult.stdout.lower().count('command not found'):
             raise SemanageError()
+
 
 def get_defcon(local=False):
     """
@@ -214,7 +237,7 @@ def get_defcon(local=False):
         result = utils.run("semanage fcontext --list", ignore_status=True)
     _no_semanage(result)
     if result.exit_status != 0:
-        raise SeCmdError(cmd, result.stderr)
+        raise SeCmdError('semanage', result.stderr)
     result_list = result.stdout.strip().split('\n')
     # Need to process top-down instead of bottom-up
     result_list.reverse()
@@ -227,7 +250,7 @@ def get_defcon(local=False):
     column_names[0] = column_names[0].replace("selinux_", "")
     fcontexts = []
     for line in result_list:
-        if len(line) < 1: # skip blank lines
+        if len(line) < 1:  # skip blank lines
             continue
         column_data = [name.strip()
                        for name in line.split('  ')
@@ -240,6 +263,7 @@ def get_defcon(local=False):
         fcontexts.append(fcontext)
     return fcontexts
 
+
 def find_defcon_idx(defcon, pathname):
     """
     Returns the index into defcon where pathname matches or None
@@ -250,6 +274,7 @@ def find_defcon_idx(defcon, pathname):
         if bool(re.search(default_context['fcontext'], pathname)):
             return defcon.index(default_context)
     return None
+
 
 def find_defcon(defcon, pathname):
     """
@@ -263,6 +288,7 @@ def find_defcon(defcon, pathname):
     else:
         return None
 
+
 def find_pathregex(defcon, pathname):
     """
     Returns the regular expression in defcon matching pathname
@@ -275,12 +301,8 @@ def find_pathregex(defcon, pathname):
     else:
         return None
 
-<<<<<<< HEAD
-def set_defcon(context, pathregex):
-=======
 
 def set_defcon(context_type, pathregex):
->>>>>>> 5590f6a... fixup! virt: Enhance utils_selinux
     """
     Set the default context of a file/path in local SELinux policy
 
@@ -312,6 +334,8 @@ def del_defcon(context_type, pathregex):
         raise SeCmdError(cmd, result.stderr)
 
 # Process pathname/dirdesc in uniform way for all defcon functions + unittests
+
+
 def _run_restorecon(pathname, dirdesc, readonly=True):
     cmd = 'restorecon -v'
     if dirdesc:
@@ -321,6 +345,7 @@ def _run_restorecon(pathname, dirdesc, readonly=True):
     cmd += ' "%s"' % pathname
     # Always returns 0, even if contexts wrong
     return utils.run(cmd).stdout.strip()
+
 
 def verify_defcon(pathname, dirdesc=False):
     """
@@ -338,11 +363,12 @@ def verify_defcon(pathname, dirdesc=False):
     else:
         return True
 
+
 # Provide uniform formatting for diff and apply functions
 
 def _format_changes(changes):
     result = []
-    if changes: # Empty string or None - return empty list
+    if changes:  # Empty string or None - return empty list
         # Could be many changes, need efficient line searching
         regex = re.compile('^restorecon reset (.+) context (.+)->(.+)')
         for change_line in changes.split('\n'):
@@ -352,8 +378,9 @@ def _format_changes(changes):
             pathname = mobj.group(1)
             from_con = mobj.group(2)
             to_con = mobj.group(3)
-            result.append( (pathname, from_con, to_con) )
+            result.append((pathname, from_con, to_con))
     return result
+
 
 def diff_defcon(pathname, dirdesc=False):
     """
@@ -364,6 +391,7 @@ def diff_defcon(pathname, dirdesc=False):
     :return: List of tuple(pathname, from context, to context)
     """
     return _format_changes(_run_restorecon(pathname, dirdesc))
+
 
 def apply_defcon(pathname, dirdesc=False):
     """
@@ -399,4 +427,3 @@ def transmogrify_sub_dirs(pathregex):
     if pathregex.endswith('/'):
         pathregex = pathregex[0:-1]
     return pathregex + r'(/.*)?'
-
