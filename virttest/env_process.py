@@ -584,7 +584,6 @@ def preprocess(test, params, env):
         logging.debug("Guest cmdline 'pci=nomsi' setting is: [ %s ]" %
                       disable_pci_msi)
 
-
     kernel_extra_params = params.get("kernel_extra_params")
     if kernel_extra_params:
         image_filename = storage.get_image_filename(params,
@@ -615,7 +614,6 @@ def preprocess(test, params, env):
                                                 kernel_config_set)
         logging.debug("Guest cmdline extra_params setting is: [ %s ]" %
                       kernel_extra_params)
-
 
     # Clone master image from vms.
     base_dir = data_dir.get_data_dir()
@@ -719,7 +717,7 @@ def postprocess(test, params, env):
                     session.close()
                 else:
                     session = vm.wait_for_serial_login(
-                                                timeout=vm.LOGIN_WAIT_TIMEOUT)
+                        timeout=vm.LOGIN_WAIT_TIMEOUT)
                     session.close()
             except (remote.LoginError, virt_vm.VMError, IndexError), e:
                 logging.warn(e)

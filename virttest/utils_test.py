@@ -1423,7 +1423,6 @@ def get_time(session, time_command, time_filter_re, time_format):
 
         guest_time = time.mktime(time.strptime(s, time_format)) + n
 
-
     return (host_time, guest_time)
 
 
