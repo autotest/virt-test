@@ -573,6 +573,52 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("list-devices")
 
+    def tar_out(self, directory, tarfile):
+        """
+        tar-out - pack directory into tarfile
+
+        This command packs the contents of "directory" and downloads it
+        to local file "tarfile".
+        """
+        return self.inner_cmd("tar-out %s %s" % (directory, tarfile))
+
+    def tar_in(self, tarfile, directory):
+        """
+        tar-in - unpack tarfile to directory
+
+        This command uploads and unpacks local file "tarfile"
+        (an *uncompressed* tar file) into "directory".
+        """
+        return self.inner_cmd("tar-in %s %s" % (tarfile, directory))
+
+    def copy_out(self, remote, localdir):
+        """
+        copy-out - copy remote files or directories out of an image
+
+        "copy-out" copies remote files or directories recursively out of the
+        disk image, placing them on the host disk in a local directory called
+        "localdir" (which must exist).
+        """
+        return self.inner_cmd("copy-out %s %s" % (remote, localdir))
+
+    def copy_in(self, local, remotedir):
+        """
+        copy-in - copy local files or directories into an image
+
+        "copy-in" copies local files or directories recursively into the disk
+        image, placing them in the directory called "/remotedir" (which must
+        exist).
+        """
+        return self.inner_cmd("copy-in %s /%s" % (local, remotedir))
+
+    def rm(self, path):
+        """
+        rm - remove a file
+
+        Remove the single file "path".
+        """
+        return self.inner_cmd("rm %s" % path)
+
 
 # libguestfs module functions follow #####
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
