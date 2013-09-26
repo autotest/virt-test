@@ -16,6 +16,7 @@ recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',),
                         'libvirt': [('virsh',), ('virt-install',),
                                     ('fakeroot',)],
                         'lvsb': [],
+                        'v2v': [],
                         'libguestfs': [('perl',)]}
 
 mandatory_programs = {'qemu': basic_program_requirements + ['gcc'],
