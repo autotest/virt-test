@@ -893,7 +893,7 @@ def run_virtio_console(test, params, env):
 
         # Start loopback
         error.context("Starting loopback", logging.info)
-        err = False
+        err = ""
         # TODO: Use normal LOOP_NONE when bz796048 is resolved.
         guest_worker.cmd("virt.loopback(['%s'], ['%s'], %s, virt.LOOP_"
                          "RECONNECT_NONE)"
@@ -1013,7 +1013,7 @@ def run_virtio_console(test, params, env):
                     raise error.TestFail('No data transferred after'
                                          'interruption.')
         except Exception, inst:
-            err = True
+            err = "main thread, "
             logging.error('interrupted_loopback failed with exception: %s',
                           inst)
 
@@ -1036,13 +1036,10 @@ def run_virtio_console(test, params, env):
             logging.info('%d data sent; %d data received and verified; %d '
                          'interruptions %ds each.', threads[0].idx,
                          threads[1].idx, no_repeats, test_time)
-        err = ""
         if threads[0].ret_code:
             err += "sender, "
         if threads[1].ret_code:
             err += "receiver, "
-        if err:
-            raise error.TestFail("Background thread(s) %s failed" % err[:-2])
 
         # Ports might change (in suspend S4)
         if is_serialport:
@@ -1066,6 +1063,9 @@ def run_virtio_console(test, params, env):
         del threads[:]
 
         cleanup(env.get_vm(params["main_vm"]), guest_worker)
+
+        if err:
+            raise error.TestFail("%s failed" % err[:-2])
 
     @error.context_aware
     def _process_stats(stats, scale=1.0):
