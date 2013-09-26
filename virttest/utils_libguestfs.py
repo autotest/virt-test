@@ -555,6 +555,78 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("inspect-os")
 
+    def inspect_get_roots(self):
+        """
+        inspect-get-roots - return list of operating systems found by
+        last inspection
+
+        This function is a convenient way to get the list of root devices
+        """
+        return self.inner_cmd("inspect-get-roots")
+
+    def inspect_get_arch(self, root):
+        """
+        inspect-get-arch - get architecture of inspected operating system
+
+        This returns the architecture of the inspected operating system.
+        """
+        return self.inner_cmd("inspect-get-arch %s" % root)
+
+    def inspect_get_distro(self, root):
+        """
+        inspect-get-distro - get distro of inspected operating system
+
+        This returns the distro (distribution) of the inspected
+        operating system.
+        """
+        return self.inner_cmd("inspect-get-distro %s" % root)
+
+    def inspect_get_filesystems(self, root):
+        """
+        inspect-get-filesystems - get filesystems associated with inspected
+        operating system
+
+        This returns a list of all the filesystems that we think are associated
+        with this operating system.
+        """
+        return self.inner_cmd("inspect-get-filesystems %s" % root)
+
+    def inspect_get_hostname(self, root):
+        """
+        inspect-get-hostname - get hostname of the operating system
+
+        This function returns the hostname of the operating system as found by
+        inspection of the guest's configuration files.
+        """
+        return self.inner_cmd("inspect-get-hostname %s" % root)
+
+    def inspect_get_major_version(self, root):
+        """
+        inspect-get-major-version - get major version of inspected operating
+        system
+
+        This returns the major version number of the inspected operating system.
+        """
+        return self.inner_cmd("inspect-get-major-version %s" % root)
+
+    def inspect_get_minor_version(self, root):
+        """
+        inspect-get-minor-version - get minor version of inspected operating
+        system
+
+        This returns the minor version number of the inspected operating system
+        """
+        return self.inner_cmd("inspect-get-minor-version %s" % root)
+
+    def inspect_get_mountpoints(self, root):
+        """
+        inspect-get-mountpoints - get mountpoints of inspected operating system
+
+        This returns a hash of where we think the filesystems associated with
+        this operating system should be mounted.
+        """
+        return self.inner_cmd("inspect-get-mountpoints %s" % root)
+
     def list_filesystems(self):
         """
         list-filesystems - list filesystems
