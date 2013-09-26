@@ -534,7 +534,7 @@ class GuestfishPersistent(Guestfish):
         This call creates a file called "path". The content of the file
         is the string "content" (which can contain any 8 bit data).
         """
-        return self.inner_cmd("write %s %s" % (path, content))
+        return self.inner_cmd("write '%s' '%s'" % (path, content))
 
     def write_append(self, path, content):
         """
@@ -543,7 +543,7 @@ class GuestfishPersistent(Guestfish):
         This call appends "content" to the end of file "path".
         If "path" does not exist, then a new file is created.
         """
-        return self.inner_cmd("write-append %s %s" % (path, content))
+        return self.inner_cmd("write-append '%s' '%s'" % (path, content))
 
     def inspect_os(self):
         """
