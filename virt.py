@@ -68,7 +68,11 @@ class virt(test.test):
         utils_misc.set_log_file_dir(self.debugdir)
 
         # Open the environment file
-        env_filename = os.path.join(self.bindir, params.get("vm_type"),
+        env_path = params.get("vm_type")
+        other_subtests_dirs = params.get("other_tests_dirs", "")
+        if other_subtests_dirs:
+            env_path = other_subtests_dirs
+        env_filename = os.path.join(self.bindir, env_path,
                                     params.get("env", "env"))
         env = utils_env.Env(env_filename, self.env_version)
 
@@ -81,7 +85,6 @@ class virt(test.test):
                     subtest_dirs = []
                     bin_dir = self.bindir
 
-                    other_subtests_dirs = params.get("other_tests_dirs", "")
                     for d in other_subtests_dirs.split():
                         # Replace split char.
                         d = os.path.join(*d.split("/"))
