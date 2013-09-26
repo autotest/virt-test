@@ -21,11 +21,11 @@ git_repo["spice-vd-agent"] = "git://git.freedesktop.org/git/spice/linux/vd_agent
 git_repo["xf86-video-qxl"] = "git://anongit.freedesktop.org/xorg/driver/xf86-video-qxl"
 
 # options to pass
-autogen_options[
-    "spice-gtk"] = "--with-gtk=2.0 --disable-gtk-doc --disable-introspection"
+autogen_options["spice-gtk"] = "--with-gtk=2.0 --disable-gtk-doc --disable-introspection"
+autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
 autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\""
 prefix_defaults["spice-protocol"] = "/usr/local"
-prefix_defaults["spice-vd-agent"] = "/usr/local"
+prefix_defaults["spice-vd-agent"] = "/usr"
 
 
 usageMsg = "\nUsage: %prog -p package-to-build [options]\n\n"
@@ -159,8 +159,8 @@ if pkgName in prefix_defaults.keys() and options.prefix is None:
 if prefix is None:
     env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:/usr/local/lib:"
 else:
-    env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:" % (prefix,
-                                                                                prefix)
+    env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:/usr/local/share/pkgconfig:" % (prefix,
+                                                                                                           prefix)
 
 
 # Running autogen.sh with prefix and any other options
@@ -177,7 +177,7 @@ if pkgName in autogen_options.keys():
 print "Running '%s %s'" % (env_vars, cmd)
 ret = os.system(env_vars + " " + cmd)
 if ret != 0:
-    print "Autogen.sh failed! Exiting!"
+    print "Return code: %s! Autogen.sh failed! Exiting!" % ret
     sys.exit(ret)
 
 
@@ -186,7 +186,7 @@ cmd = "make"
 print "Running '%s %s'" % (env_vars, cmd)
 ret = os.system("%s %s" % (env_vars, cmd))
 if ret != 0:
-    print "make failed! Exiting!"
+    print "Return code: %s! Autogen.sh failed! Exiting!" % ret
     sys.exit(ret)
 
 # Running 'make install' to install the built libraries/binaries
@@ -194,5 +194,5 @@ cmd = "make install"
 print "Running '%s %s'" % (env_vars, cmd)
 ret = os.system("%s %s" % (env_vars, cmd))
 if ret != 0:
-    print "make install failed! Exiting!"
+    print "Return code: %s! Autogen.sh failed! Exiting!" % ret
     sys.exit(ret)
