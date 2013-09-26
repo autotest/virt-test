@@ -688,6 +688,19 @@ class ThRecvCheck(Thread):
         # 2) manual write to this value (eg. before you reconnect guest port).
         #    RecvThread decreases this value whenever data loss/dup occurs.
         self.sendidx = -1
+        self.minsendidx = self.sendlen
+
+    def reload_loss_idx(self):
+        """
+        This function reloads the acceptable loss to the original value
+        (Reload the self.sendidx to self.sendlen)
+        :note: This function is automatically called during port reconnection.
+        """
+        if self.sendidx >= 0:
+            self.minsendidx = min(self.minsendidx, self.sendidx)
+            logging.debug("ThRecvCheck %s: Previous data loss was %d.",
+                          self.getName(), (self.sendlen - self.sendidx))
+        self.sendidx = self.sendlen
 
     def run(self):
         """ Pick the right mode and execute it """
@@ -718,7 +731,6 @@ class ThRecvCheck(Thread):
         _err_msg_reconnect = ('ThRecvCheck ' + str(self.getName()) + ': Port '
                               'reconnected, continuing.')
         attempt = 10
-        minsendidx = self.sendlen
         while not self.exitevent.isSet():
             try:
                 ret = select.select([self.port.sock], [], [], 1.0)
@@ -797,14 +809,7 @@ class ThRecvCheck(Thread):
                             raise error.TestFail(_err_msg_missing_migrate_ev)
                         logging.debug("ThRecvCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
-                        # TODO BUG: data from the socket on host can be lost
-                        if self.sendidx >= 0:
-                            minsendidx = min(minsendidx, self.sendidx)
-                            logging.debug("ThRecvCheck %s: Previous data "
-                                          "loss was %d.",
-                                          self.getName(),
-                                          (self.sendlen - self.sendidx))
-                        self.sendidx = self.sendlen
+                        self.reload_loss_idx()
                         # Wait until main thread sets the new self.port
                         while not (self.exitevent.isSet()
                                    or self.migrate_event.wait(1)):
@@ -817,12 +822,12 @@ class ThRecvCheck(Thread):
                         self.port.sock = False
                         self.port.open()
         if self.sendidx >= 0:
-            minsendidx = min(minsendidx, self.sendidx)
-        if (self.sendlen - minsendidx):
+            self.minsendidx = min(self.minsendidx, self.sendidx)
+        if (self.sendlen - self.minsendidx):
             logging.error("ThRecvCheck %s: Data loss occurred during socket"
                           "reconnection. Maximal loss was %d per one "
                           "migration.", self.getName(),
-                          (self.sendlen - minsendidx))
+                          (self.sendlen - self.minsendidx))
         logging.debug("ThRecvCheck %s: exit(%d)", self.getName(),
                       self.idx)
         self.ret_code = 0
@@ -839,7 +844,6 @@ class ThRecvCheck(Thread):
         """
         logging.debug("ThRecvCheck %s: run", self.getName())
         attempt = 10
-        minsendidx = self.sendlen
         max_loss = 0
         sum_loss = 0
         verif_buf = deque(maxlen=max(self.blocklen, self.sendlen))
@@ -947,14 +951,7 @@ class ThRecvCheck(Thread):
                                                  self.getName())
                         logging.debug("ThRecvCheck %s: Broken pipe "
                                       ", reconnecting. ", self.getName())
-                        # TODO BUG: data from the socket on host can be lost
-                        if self.sendidx >= 0:
-                            minsendidx = min(minsendidx, self.sendidx)
-                            logging.debug("ThRecvCheck %s: Previous data "
-                                          "loss was %d.",
-                                          self.getName(),
-                                          (self.sendlen - self.sendidx))
-                        self.sendidx = self.sendlen
+                        self.reload_loss_idx()
                         # Wait until main thread sets the new self.port
                         while not (self.exitevent.isSet()
                                    or self.migrate_event.wait(1)):
@@ -967,12 +964,12 @@ class ThRecvCheck(Thread):
                         self.port.sock = False
                         self.port.open()
         if self.sendidx >= 0:
-            minsendidx = min(minsendidx, self.sendidx)
-        if (self.sendlen - minsendidx):
+            self.minsendidx = min(self.minsendidx, self.sendidx)
+        if (self.sendlen - self.minsendidx):
             logging.debug("ThRecvCheck %s: Data loss occurred during socket"
                           "reconnection. Maximal loss was %d per one "
                           "migration.", self.getName(),
-                          (self.sendlen - minsendidx))
+                          (self.sendlen - self.minsendidx))
         if sum_loss > 0:
             logging.debug("ThRecvCheck %s: Data offset detected, cumulative "
                           "err: %d, max err: %d(%d)", self.getName(), sum_loss,
