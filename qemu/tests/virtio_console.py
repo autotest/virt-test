@@ -988,6 +988,7 @@ def run_virtio_console(test, params, env):
                                      'test_time', test_time)
                     else:
                         break
+                threads[1].reload_loss_idx()
                 if count == threads[1].idx or not threads[1].isAlive():
                     if not threads[1].isAlive():
                         logging.error('RecvCheck thread stopped unexpectedly.')
