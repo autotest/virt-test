@@ -95,13 +95,15 @@ class SCPTransferFailedError(SCPError):
                 (self.status, self.output))
 
 
-def handle_prompts(session, username, password, prompt, timeout=10, debug=False):
+def handle_prompts(session, username, password, prompt, timeout=10,
+                   debug=False):
     """
-    Log into a remote host (guest) using SSH or Telnet.  Wait for questions
-    and provide answers.  If timeout expires while waiting for output from the
-    child (e.g. a password prompt or a shell prompt) -- fail.
+    Connect to a remote host (guest) using SSH or Telnet or other else.
+    Wait for questions and provide answers.  If timeout expires while
+    waiting for output from the child (e.g. a password prompt or
+    a shell prompt) -- fail.
 
-    @brief: Log into a remote host (guest) using SSH or Telnet.
+    @brief: Connect to a remote host (guest) using SSH or Telnet or else.
 
     :param session: An Expect or ShellSession instance to operate on
     :param username: The username to send in reply to a login prompt
@@ -123,29 +125,30 @@ def handle_prompts(session, username, password, prompt, timeout=10, debug=False)
             match, text = session.read_until_last_line_matches(
                 [r"[Aa]re you sure", r"[Pp]assword:\s*", r"[Ll]ogin:\s*",
                  r"[Cc]onnection.*closed", r"[Cc]onnection.*refused",
-                 r"[Pp]lease wait", r"[Ww]arning", prompt],
+                 r"[Pp]lease wait", r"[Ww]arning", r"[Ee]nter.*username",
+                 r"[Ee]nter.*password", prompt],
                 timeout=timeout, internal_timeout=0.5)
             if match == 0:  # "Are you sure you want to continue connecting"
                 if debug:
                     logging.debug("Got 'Are you sure...', sending 'yes'")
                 session.sendline("yes")
                 continue
-            elif match == 1:  # "password:"
+            elif match == 1 or match == 8:  # "password:"
                 if password_prompt_count == 0:
                     if debug:
-                        logging.debug(
-                            "Got password prompt, sending '%s'", password)
+                        logging.debug("Got password prompt, sending '%s'",
+                                      password)
                     session.sendline(password)
                     password_prompt_count += 1
                     continue
                 else:
                     raise LoginAuthenticationError("Got password prompt twice",
                                                    text)
-            elif match == 2:  # "login:"
+            elif match == 2 or match == 7:  # "login:"
                 if login_prompt_count == 0 and password_prompt_count == 0:
                     if debug:
-                        logging.debug(
-                            "Got username prompt; sending '%s'", username)
+                        logging.debug("Got username prompt; sending '%s'",
+                                      username)
                     session.sendline(username)
                     login_prompt_count += 1
                     continue
@@ -168,7 +171,7 @@ def handle_prompts(session, username, password, prompt, timeout=10, debug=False)
                 if debug:
                     logging.debug("Got 'Warning added RSA to known host list")
                 continue
-            elif match == 7:  # prompt
+            elif match == 9:  # prompt
                 if debug:
                     logging.debug("Got shell prompt -- logged in")
                 break
