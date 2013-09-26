@@ -314,6 +314,7 @@ LIBVIRT_DEFAULT_SET = (
     "virsh_domname, "
     "remove_guest.without_disk")
 LVSB_DEFAULT_SET = ("lvsb_date")
+OVS_DEFAULT_SET = ("load_module, ovs_basic")
 
 
 class VirtTestApp(object):
@@ -551,6 +552,8 @@ class VirtTestApp(object):
                         self.cartesian_parser.only_filter(LIBVIRT_DEFAULT_SET)
                     elif self.options.type == 'lvsb':
                         self.cartesian_parser.only_filter(LVSB_DEFAULT_SET)
+                    elif self.options.type == 'openvswitch':
+                        self.cartesian_parser.only_filter(OVS_DEFAULT_SET)
         else:
             logging.info("Config provided, ignoring --tests option")
 
@@ -643,6 +646,8 @@ class VirtTestApp(object):
             self._process_qemu_specific_options()
         elif self.options.type == 'lvsb':
             self._process_lvsb_specific_options()
+        elif self.options.type == 'openvswitch':
+            self._process_qemu_specific_options()
         # List and tests have to be the last things to be processed
         self._process_list()
         self._process_tests()
