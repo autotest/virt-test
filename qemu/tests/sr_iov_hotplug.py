@@ -222,6 +222,15 @@ def run_sr_iov_hotplug(test, params, env):
                                                                    j + 1)
             error.context(msg, logging.info)
             add_device(pci_num)
+        sub_type = params.get("sub_type_after_plug")
+        if sub_type:
+            error.context("Running sub test '%s' after hotplug" % sub_type,
+                          logging.info)
+            utils_test.run_virt_sub_test(test, params, env, sub_type)
+        if "guest_suspend" in sub_type:
+            # Hotpluged device have been released after guest suspend, so need
+            # do not need unpluged step.
+            break
         for pci_num in xrange(pci_num_range):
             msg = "start hot-deleting %sth pci device repeat %d" % (pci_num + 1,
                                                                     j + 1)
