@@ -443,7 +443,7 @@ class VirtioGuestPosix(VirtioGuest):
                             # time.sleep(0.5)
                             sys.stdout.write("FD closed, readerr %s\n" % inst)
                             while self.in_names[i] not in virt.files:
-                                time.sleep(0.1)
+                                pass
                             self.in_files[i] = virt.files[self.in_names[i]]
                         else:
                             sys.stdout.write("Missing device, readerr %s\n"
@@ -465,7 +465,7 @@ class VirtioGuestPosix(VirtioGuest):
                                                      % name)
                                     break
                                 except OSError:
-                                    time.sleep(1)
+                                    pass
                             self.in_files[self.in_files.index(_desc)] = desc
                 if data != "":
                     for i in xrange(len(self.out_files)):
@@ -487,9 +487,9 @@ class VirtioGuestPosix(VirtioGuest):
                                     sys.stdout.write("FD closed, writeerr %s\n"
                                                      % inst)
                                     while self.out_names[i] not in virt.files:
-                                        time.sleep(0.1)
+                                        pass
                                     self.out_files[i] = virt.files[
-                                        self.out_names[i]]
+                                                          self.out_names[i]]
                                 else:
                                     sys.stdout.write("Missing device, writeerr"
                                                      " %s\n" % inst)
@@ -510,7 +510,7 @@ class VirtioGuestPosix(VirtioGuest):
                                                              "%s\n" % name)
                                             break
                                         except OSError:
-                                            time.sleep(1)
+                                            pass
                                     _desc = self.out_files.index(_desc)
                                     self.out_files[_desc] = desc
 
