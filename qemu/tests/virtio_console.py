@@ -869,7 +869,7 @@ def run_virtio_console(test, params, env):
             # threads[1].migrate_event.set()
 
         error.context("Preparing loopback")
-        test_time = max(float(params.get('virtio_console_test_time', 10)), 1)
+        test_time = float(params.get('virtio_console_test_time', 10))
         intr_time = float(params.get('virtio_console_intr_time', 0))
         no_repeats = int(params.get('virtio_console_no_repeats', 1))
         interruption = params['virtio_console_interruption']
@@ -917,23 +917,19 @@ def run_virtio_console(test, params, env):
                 interruption = _serialport_send_replug
             else:
                 interruption = _console_send_replug
-            acceptable_loss = buflen * 10
-            if buflen < 50:
-                acceptable_loss = 500
+            acceptable_loss = max(buflen * 10, 1000)
         elif interruption == 'replug_recv':
             if is_serialport:
                 interruption = _serialport_recv_replug
             else:
                 interruption = _console_recv_replug
-            acceptable_loss = buflen * 5
+            acceptable_loss = max(buflen * 5, 1000)
         elif interruption == 'replug_random':
             if is_serialport:
                 interruption = _serialport_random_replug
             else:
                 interruption = _console_random_replug
-            acceptable_loss = buflen * 10
-            if buflen < 50:
-                acceptable_loss = 500
+            acceptable_loss = max(buflen * 10, 1000)
         elif interruption == 's3':
             interruption = _s3
             acceptable_loss = 2000
@@ -980,7 +976,7 @@ def run_virtio_console(test, params, env):
                 count = threads[1].idx
                 logging.debug('Transfered data: %s', count)
                 # Be friendly to very short test_time values
-                for _ in xrange(3):
+                for _ in xrange(10):
                     time.sleep(test_time)
                     logging.debug('Transfered data2: %s', threads[1].idx)
                     if count == threads[1].idx and threads[1].isAlive():
