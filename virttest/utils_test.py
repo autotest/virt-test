@@ -1363,13 +1363,14 @@ def get_time(session, time_command, time_filter_re, time_format):
         host_time_out = utils.run(time_command).stdout
         host_time_out, diff = host_time_out.split("  ")
         try:
-            locale.setlocale(locale.LC_TIME, "C")
-            host_time = time.mktime(time.strptime(host_time_out, time_format))
-            host_time += float(diff.split(" ")[0])
-        except Exception, e:
-            logging.debug("(time_format, time_string): (%s, %s)",
-                          time_format, host_time_out)
-            raise e
+            try:
+                locale.setlocale(locale.LC_TIME, "C")
+                host_time = time.mktime(time.strptime(host_time_out, time_format))
+                host_time += float(diff.split(" ")[0])
+            except Exception, e:
+                logging.debug("(time_format, time_string): (%s, %s)",
+                              time_format, host_time_out)
+                raise e
         finally:
             locale.setlocale(locale.LC_TIME, loc)
 
@@ -1389,13 +1390,14 @@ def get_time(session, time_command, time_filter_re, time_format):
 
         guest_time = None
         try:
-            locale.setlocale(locale.LC_TIME, "C")
-            guest_time = time.mktime(time.strptime(s, time_format))
-            guest_time += float(diff.split(" ")[0])
-        except Exception, e:
-            logging.debug("(time_format, time_string): (%s, %s)",
-                          time_format, host_time_out)
-            raise e
+            try:
+                locale.setlocale(locale.LC_TIME, "C")
+                guest_time = time.mktime(time.strptime(s, time_format))
+                guest_time += float(diff.split(" ")[0])
+            except Exception, e:
+                logging.debug("(time_format, time_string): (%s, %s)",
+                              time_format, host_time_out)
+                raise e
         finally:
             locale.setlocale(locale.LC_TIME, loc)
     else:
