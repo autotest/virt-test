@@ -554,6 +554,8 @@ class ThSendCheck(Thread):
                 if self.port.sock is None:
                     logging.debug(_err_msg_disconnect)
                     while self.port.sock is None:
+                        if self.exitevent.isSet():
+                            break
                         time.sleep(0.1)
                     logging.debug(_err_msg_reconnect)
                 else:
@@ -739,6 +741,8 @@ class ThRecvCheck(Thread):
                 if self.port.sock is None:
                     logging.debug(_err_msg_disconnect)
                     while self.port.sock is None:
+                        if self.exitevent.isSet():
+                            break
                         time.sleep(0.1)
                     logging.debug(_err_msg_reconnect)
                 else:
@@ -752,6 +756,8 @@ class ThRecvCheck(Thread):
                     if self.port.sock is None:
                         logging.debug(_err_msg_disconnect)
                         while self.port.sock is None:
+                            if self.exitevent.isSet():
+                                break
                             time.sleep(0.1)
                         logging.debug(_err_msg_reconnect)
                     else:
