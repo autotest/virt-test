@@ -779,21 +779,29 @@ class VirtioGuestPosix(VirtioGuest):
                     return
         print "PASS: Close"
 
-    def open(self, in_file):
+    def open(self, in_file, attempts=1):
         """
         Direct open devices.
 
         :param in_file: Array of files.
         :return: Array of descriptors.
         """
-        name = self.ports[in_file]["path"]
-        try:
-            self.files[name] = os.open(name, os.O_RDWR)
-            if (self.ports[in_file]["is_console"] == "yes"):
-                print os.system("stty -F %s raw -echo" % (name))
-            print "PASS: All files opened correctly."
-        except Exception, inst:
-            print "%s\nFAIL: Failed open file %s" % (str(inst), name)
+        opened = False
+        for i in xrange(attempts):
+            try:
+                name = self.ports[in_file]["path"]
+                self.files[name] = os.open(name, os.O_RDWR)
+                if (self.ports[in_file]["is_console"] == "yes"):
+                    print os.system("stty -F %s raw -echo" % (name))
+                opened = True
+                break
+            except Exception, exc:
+                print str(exc)
+                time.sleep(0.1)
+        if opened:
+            print "PASS: All files opened correctly. (%d)" % i
+        else:
+            print "FAIL: Failed open file %s" %  name
 
     def loopback(self, in_files, out_files, cachesize=1024,
                  mode=0):
