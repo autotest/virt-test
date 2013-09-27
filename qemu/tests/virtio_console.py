@@ -987,6 +987,15 @@ def run_virtio_console(test, params, env):
             raise error.TestFail("Sender thread died before interruption.")
         if not threads[0].isAlive():
             raise error.TestFail("Receiver thread died before interruption.")
+
+        # 0s interruption without any measurements
+        if params.get('virtio_console_micro_repeats'):
+            error.context("Micro interruptions", logging.info)
+            threads[1].sendidx = acceptable_loss
+            for i in xrange(int(params.get('virtio_console_micro_repeats'))):
+                interruption()
+
+        error.context("Normal interruptions", logging.info)
         try:
             for i in xrange(no_repeats):
                 error.context("Interruption nr. %s" % i)
