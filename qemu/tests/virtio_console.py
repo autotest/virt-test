@@ -652,7 +652,8 @@ def run_virtio_console(test, params, env):
 
             for i in range(len(recv_pts)):
                 thread = qemu_virtio_port.ThRecvCheck(recv_pts[i], queues[i],
-                                                      EXIT_EVENT, buf_len[i + 1])
+                                                      EXIT_EVENT,
+                                                      buf_len[i + 1])
                 thread.start()
                 threads.append(thread)
 
@@ -688,7 +689,8 @@ def run_virtio_console(test, params, env):
             threads[0].join(5)
             if threads[0].isAlive():
                 logging.error('Send thread stuck, destroing the VM and '
-                              'stopping loopback test to prevent autotest freeze.')
+                              'stopping loopback test to prevent autotest '
+                              'freeze.')
                 vm.destroy()
                 break
             if threads[0].ret_code:
@@ -763,7 +765,9 @@ def run_virtio_console(test, params, env):
                 ports[i].open()
                 threads[i].migrate_event.set()
             for i in _guest:
-                guest_worker.cmd("virt.open('%s')" % (ports[i].name), 10)
+                # 50 attemps per 0.1s
+                guest_worker.cmd("virt.open('%s', attempts=50)"
+                                 % (ports[i].name), 10)
 
         def _port_replug(device, port_idx):
             """ Unplug and replug port with the same name """
@@ -895,27 +899,9 @@ def run_virtio_console(test, params, env):
             vm, guest_worker = get_vm_with_worker(no_consoles=2)
             (ports, _) = get_virtio_ports(vm)
 
-        send_pt = ports[0]
-        recv_pt = ports[1]
-
-        recv_pt.open()
-        send_pt.open()
-
-        threads = []
-        queues = [deque()]
-
-        # Start loopback
-        error.context("Starting loopback", logging.info)
-        err = ""
-        # TODO: Use normal LOOP_NONE when bz796048 is resolved.
-        guest_worker.cmd("virt.loopback(['%s'], ['%s'], %s, virt.LOOP_"
-                         "RECONNECT_NONE)"
-                         % (send_pt.name, recv_pt.name, buflen), 10)
-
+        # Set the interruption function and related variables
         send_resume_ev = None
         recv_resume_ev = None
-
-        # Set the interruption function and related variables
         acceptable_loss = 0
         if interruption == 'stop':
             interruption = _stop_cont
@@ -961,16 +947,35 @@ def run_virtio_console(test, params, env):
             raise error.TestNAError("virtio_console_interruption = '%s' "
                                     "is unknown." % interruption)
 
+        send_pt = ports[0]
+        recv_pt = ports[1]
+
+        recv_pt.open()
+        send_pt.open()
+
+        threads = []
+        queues = [deque()]
+
+        # Start loopback
+        error.context("Starting loopback", logging.info)
+        err = ""
+        # TODO: Use normal LOOP_NONE when bz796048 is resolved.
+        guest_worker.cmd("virt.loopback(['%s'], ['%s'], %s, virt.LOOP_"
+                         "RECONNECT_NONE)"
+                         % (send_pt.name, recv_pt.name, buflen), 10)
+
         funcatexit.register(env, params.get('type'), __set_exit_event)
 
         threads.append(
-            qemu_virtio_port.ThSendCheck(send_pt, exit_event, queues,
+            qemu_virtio_port.ThSendCheck(send_pt, EXIT_EVENT, queues,
                                          buflen, send_resume_ev))
         threads[-1].start()
+        _ = params.get('virtio_console_debug')
         threads.append(qemu_virtio_port.ThRecvCheck(recv_pt, queues[0],
-                                                    exit_event, buflen, acceptable_loss,
+                                                    EXIT_EVENT, buflen,
+                                                    acceptable_loss,
                                                     recv_resume_ev,
-                                                    debug=params.get('virtio_console_debug')))
+                                                    debug=_))
         threads[-1].start()
 
         logging.info('Starting the loop 2+%d*(%d+%d+intr_overhead)+2 >= %ss',
@@ -1173,7 +1178,8 @@ def run_virtio_console(test, params, env):
 
                 # Let the guest read-out all the remaining data
                 while not guest_worker._cmd("virt.poll('%s', %s)"
-                                            % (port.name, select.POLLIN), 10)[0]:
+                                            % (port.name, select.POLLIN),
+                                            10)[0]:
                     time.sleep(1)
 
                 guest_worker.safe_exit_loopback_threads([port], [])
@@ -1186,7 +1192,8 @@ def run_virtio_console(test, params, env):
                 stats = _process_stats(stats[1:], time_slice * 1048576)
                 logging.debug("Stats = %s", stats)
                 logging.info("Host -> Guest [MB/s] (min/med/max) = %.3f/%.3f/"
-                             "%.3f", stats[0], stats[len(stats) / 2], stats[-1])
+                             "%.3f", stats[0], stats[len(stats) / 2],
+                             stats[-1])
 
                 del thread
 
@@ -1216,15 +1223,15 @@ def run_virtio_console(test, params, env):
                                   thread)
                 # Deviation is higher than single time_slice
                 if (_time > time_slice):
-                    logging.error(
-                        "Test ran %fs longer which is more than one time slice",
-                        _time)
+                    logging.error("Test ran %fs longer which is more than one "
+                                  "time slice", _time)
                 else:
                     logging.debug("Test ran %fs longer", _time)
                 stats = _process_stats(stats[1:], time_slice * 1048576)
                 logging.debug("Stats = %s", stats)
                 logging.info("Guest -> Host [MB/s] (min/med/max) = %.3f/%.3f/"
-                             "%.3f", stats[0], stats[len(stats) / 2], stats[-1])
+                             "%.3f", stats[0], stats[len(stats) / 2],
+                             stats[-1])
             except Exception, inst:
                 logging.error("test_perf: Failed with %s, starting cleanup",
                               inst)
@@ -1308,10 +1315,11 @@ def run_virtio_console(test, params, env):
         threads.append(thread)
 
         for i in range(len(ports[1:])):
+            _ = threading.Event()
             thread = qemu_virtio_port.ThRecvCheck(ports[1:][i], queues[i],
                                                   EXIT_EVENT, blocklen,
                                                   sendlen=sendlen,
-                                                  migrate_event=threading.Event())
+                                                  migrate_event=_)
             thread.start()
             threads.append(thread)
 
@@ -1357,8 +1365,8 @@ def run_virtio_console(test, params, env):
                 time.sleep(2)
             if not threads[0].isAlive():
                 if EXIT_EVENT.isSet():
-                    raise error.TestFail("Exit event emitted, check the log for"
-                                         "send/recv thread failure.")
+                    raise error.TestFail("Exit event emitted, check the log "
+                                         "for send/recv thread failure.")
                 else:
                     EXIT_EVENT.set()
                     raise error.TestFail("Send thread died unexpectedly in "
