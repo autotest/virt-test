@@ -1,9 +1,10 @@
+import os
 import logging
 import re
 import tempfile
 
 from autotest.client.shared import error
-from virttest import virsh, qemu_storage
+from virttest import virsh, qemu_storage, data_dir
 
 
 def run_virsh_snapshot_disk(test, params, env):
@@ -23,29 +24,59 @@ def run_virsh_snapshot_disk(test, params, env):
     image_format = params.get("snapshot_image_format", "qcow2")
     status_error = ("yes" == params.get("status_error", "no"))
     snapshot_from_xml = ("yes" == params.get("snapshot_from_xml", "no"))
+    snapshot_current = ("yes" == params.get("snapshot_current", "no"))
+
+    # Some variable for xmlfile of snapshot.
+    snapshot_memory = params.get("snapshot_memory", "internal")
+    snapshot_disk = params.get("snapshot_disk", "internal")
 
     # Get a tmp_dir.
-    tmp_dir = test.tmpdir
+    tmp_dir = data_dir.get_tmp_dir()
     # Create a image.
     params['image_name'] = "snapshot_test"
     params['image_format'] = image_format
+    params['image_size'] = "1M"
     image = qemu_storage.QemuImg(params, tmp_dir, "snapshot_test")
     img_path, _ = image.create(params)
     # Do the attach action.
-    virsh.attach_disk(vm_name, source=img_path, target="vdf",
+    result = virsh.attach_disk(vm_name, source=img_path, target="vdf",
                       extra="--persistent --subdriver %s" % image_format)
+    if result.exit_status:
+        raise error.TestNAError("Failed to attach disk %s to VM."
+                                "Detail: %s." % (img_path, result.stderr))
 
     # Init snapshot_name
     snapshot_name = None
+    snapshot_external_disk = []
     try:
         # Create snapshot.
         if snapshot_from_xml:
             snapshot_name = "snapshot_test"
             lines = ["<domainsnapshot>\n",
                      "<name>%s</name>\n" % snapshot_name,
-                     "<description>Snapshot Test</description>\n",
-                     "<memory snapshot=\'internal\'/>\n",
-                     "</domainsnapshot>"]
+                     "<description>Snapshot Test</description>\n"]
+            if snapshot_memory == "external":
+                memory_external = os.path.join(tmp_dir, "snapshot_memory")
+                snapshot_external_disk.append(memory_external)
+                lines.append("<memory snapshot=\'%s\' file='%s'/>\n" %
+                             (snapshot_memory, memory_external))
+            else:
+                lines.append("<memory snapshot='%s'/>\n" % snapshot_memory)
+
+            # Add all disks into xml file.
+            disks = vm.get_disk_devices().values()
+            lines.append("<disks>\n")
+            for disk in disks:
+                lines.append("<disk name='%s' snapshot='%s'>\n" %
+                             (disk['source'], snapshot_disk))
+                if snapshot_disk == "external":
+                    disk_external = os.path.join(tmp_dir, os.path.basename(disk['source']))
+                    snapshot_external_disk.append(disk_external)
+                    lines.append("<source file='%s.snap'/>\n" % disk_external)
+                lines.append("</disk>\n")
+            lines.append("</disks>\n")
+            lines.append("</domainsnapshot>")
+
             snapshot_xml_path = "%s/snapshot_xml" % tmp_dir
             snapshot_xml_file = open(snapshot_xml_path, "w")
             snapshot_xml_file.writelines(lines)
@@ -59,7 +90,8 @@ def run_virsh_snapshot_disk(test, params, env):
                     raise error.TestFail("Failed to create snapshot. Error:%s."
                                          % snapshot_result.stderr.strip())
         else:
-            snapshot_result = virsh.snapshot_create(vm_name)
+            options = ""
+            snapshot_result = virsh.snapshot_create(vm_name, options)
             if snapshot_result.exit_status:
                 if status_error:
                     return
@@ -68,8 +100,29 @@ def run_virsh_snapshot_disk(test, params, env):
                                          % snapshot_result.stderr.strip())
             snapshot_name = re.search(
                 "\d+", snapshot_result.stdout.strip()).group(0)
+            if snapshot_current:
+                lines = ["<domainsnapshot>\n",
+                         "<description>Snapshot Test</description>\n",
+                         "<state>running</state>\n",
+                         "<creationTime>%s</creationTime>" % snapshot_name,
+                         "</domainsnapshot>"]
+                snapshot_xml_path = "%s/snapshot_xml" % tmp_dir
+                snapshot_xml_file = open(snapshot_xml_path, "w")
+                snapshot_xml_file.writelines(lines)
+                snapshot_xml_file.close()
+                options += "--redefine %s --current" % snapshot_xml_path
+                if snapshot_result.exit_status:
+                    raise error.TestFail("Failed to create snapshot --current."
+                                         "Error:%s." %
+                                         snapshot_result.stderr.strip())
+
+        if status_error:
+            raise error.TestFail("Success to create snapshot in negative case\n"
+                                 "Detail: %s" % snapshot_result)
 
         # Touch a file in VM.
+        if vm.is_dead():
+            vm.start()
         session = vm.wait_for_login()
 
         # Init a unique name for tmp_file.
@@ -108,4 +161,7 @@ def run_virsh_snapshot_disk(test, params, env):
         virsh.detach_disk(vm_name, target="vdf", extra="--persistent")
         image.remove()
         if snapshot_name:
-            virsh.snapshot_delete(vm_name, snapshot_name)
+            virsh.snapshot_delete(vm_name, snapshot_name, "--metadata")
+        for disk in snapshot_external_disk:
+            if os.path.exists(disk):
+                os.remove(disk)
