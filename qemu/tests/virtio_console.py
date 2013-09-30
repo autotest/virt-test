@@ -252,10 +252,6 @@ def run_virtio_console(test, params, env):
             if match != 1:  # Multiple open didn't fail:
                 raise error.TestFail("Unexpended pass of opening the"
                                      " serialport device for the 2nd time.")
-            elif ((not "[Errno 24]" in data) and
-                    (not "Access is denied" in data)):
-                raise error.TestFail("Multiple opening fail but with another"
-                                     " exception %s" % data)
         port.open()
         cleanup(vm, guest_worker)
 
