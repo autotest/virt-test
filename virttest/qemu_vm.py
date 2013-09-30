@@ -1811,11 +1811,19 @@ class VM(virt_vm.BaseVM):
             redir_names = params.objects("redirs")
             host_ports = utils_misc.find_free_ports(
                 5000, 6000, len(redir_names))
+
+            old_redirs = None
+            if self.redirs:
+                old_redirs = self.redirs
+
             self.redirs = {}
             for i in range(len(redir_names)):
                 redir_params = params.object_params(redir_names[i])
                 guest_port = int(redir_params.get("guest_port"))
                 self.redirs[guest_port] = host_ports[i]
+
+            if self.redirs != old_redirs:
+                self.devices = None
 
             # Generate basic parameter values for all NICs and create TAP fd
             for nic in self.virtnet:
