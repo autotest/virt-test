@@ -1424,6 +1424,7 @@ def run_virtio_console(test, params, env):
             raise error.TestFail(msg)
 
         # CLEANUP
+        guest_worker.reconnect(vm)
         guest_worker.safe_exit_loopback_threads([ports[0]], ports[1:])
 
         for thread in threads:
