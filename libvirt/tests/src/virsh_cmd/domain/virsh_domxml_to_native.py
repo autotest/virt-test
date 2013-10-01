@@ -1,5 +1,6 @@
 import re
 import os
+import logging
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import virsh, utils_libvirtd
@@ -20,6 +21,70 @@ def run_virsh_domxml_to_native(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
+    def buildcmd(arglist):
+        """
+        Return a list of arguments of qemu command.
+
+        Return a list based on the input string where each list element
+        is put together with care to pair up options with their argument
+        rather than being on separate lines.  Thus rather than having
+        "-option" "argument" in separate list elements, they will be in
+        one element "-option argument". Take care to note the argument to
+        an option may not be required. This will make it easier to determine
+        what is causing the failure when printing error messages.
+        """
+        # First separate everything by the first space into a list
+        elems = arglist.split('\x20')
+
+        # Peruse the list to build up a formatted output retlist
+        retlist = []
+        i = 0
+        skip = False
+        for e in elems:
+            # If 'skip' is True, then we've appended an option and argument
+            if skip:
+                skip = False
+                i = i + 1
+                continue
+
+            # Need a peek at the next element
+            enext = elems[i+1]
+
+            # If current and next element starts with "-", then the
+            # is not an argument to the current, thus we just append.
+            # Same for anything we find that doesn't start with a "-"
+            if (e[0] == '-' and enext[0] == '-') or e[0] != '-':
+                retlist.append(e)
+            else:
+                # Append this and the next and set our skip flag
+                retlist.append(e + " " + enext)
+                skip = True
+            i = i + 1
+
+        # Now build a list where the
+        return retlist
+
+    def filtlist(arglist):
+        """
+        Return a filtered list of arguments.
+
+        Walk through the supplied list to filter out things that will be
+        known to be different depending on the running environment.
+        """
+        retlist = []
+        for arg in arglist:
+            if re.search("mode=readline", arg):
+                continue
+            elif re.search("mac=", arg):
+                continue
+            elif re.search("127.0.0.1:", arg):
+                continue
+            elif re.search("tap", arg):
+                continue
+            retlist.append(arg)
+
+        return retlist
+
     def compare(conv_arg):
         """
         Compare converted information with vm's information.
@@ -30,36 +95,49 @@ def run_virsh_domxml_to_native(test, params, env):
         """
         pid = vm.get_pid()
         cmdline_tmp = utils.system_output("cat -v /proc/%d/cmdline" % pid)
-        cmdline = re.sub(r'\^@', ' ', cmdline_tmp)
+
+        # Output has a trailing '^@' which gets converted into an empty
+        # element when spliting by '\x20', so strip it on the end.
+        cmdline = re.sub(r'\^@', ' ', cmdline_tmp).strip(' ')
+
+        # Fedora 19 replaces the /usr/bin/qemu-kvm with the string
+        # "/usr/bin/qemu-system-x86_64 -machine accel=kvm", so let's
+        # do the same if we find "/usr/bin/qemu-kvm" in the incoming
+        # argument list and we find "qemu-system-x86_64 -machine accel=kvm"
+        # in the running guest's cmdline
+        if conv_arg.find("/usr/bin/qemu-kvm") != 1 and \
+            cmdline.find("/usr/bin/qemu-system-x86_64 -machine accel=kvm") != -1:
+            cmdline = re.sub(r"/usr/bin/qemu-system-x86_64 -machine accel=kvm",\
+                             "/usr/bin/qemu-kvm", cmdline)
+
+        # Now prepend the various environment variables that will be in
+        # the conv_arg, but not in the actual command
         tmp = re.search('LC_ALL.[^\s]\s', conv_arg).group(0) +\
             re.search('PATH.[^\s]+\s', conv_arg).group(0) +\
             re.search('QEMU_AUDIO_DRV.[^\s]+\s', conv_arg).group(0)
         qemu_arg = tmp + cmdline
-        conv_arg_lines = conv_arg.split('\x20')
-        qemu_arg_lines = qemu_arg.split('\x20')
 
-        i = 0
-        result = True
-        for arg in conv_arg_lines:
-            print arg
-            print qemu_arg_lines[i]
-            if re.search("mode=readline", arg):
-                i += 1
-                continue
-            elif re.search("mac=00:00:00:00:00:00", arg):
-                i += 1
-                continue
-            elif re.search("127.0.0.1:0", arg):
-                i += 1
-                continue
-            elif re.search("tap", arg):
-                i += 1
-                continue
+        conv_arg_lines = buildcmd(conv_arg)
+        qemu_arg_lines = buildcmd(qemu_arg)
 
-            if arg != qemu_arg_lines[i]:
-                result = False
-            i += 1
-        return result
+        diff1 = filtlist(tuple(x for x in conv_arg_lines \
+                               if x not in set(qemu_arg_lines)))
+        if diff1:
+            logging.debug("Found the following in conv_arg not in qemu_arg:")
+        for elem in diff1:
+            logging.debug("\t%s", elem)
+
+        diff2 = filtlist(tuple(x for x in qemu_arg_lines \
+                               if x not in set(conv_arg_lines)))
+        if diff2:
+            logging.debug("Found the following in qemu_arg not in conv_arg:")
+        for elem in diff2:
+            logging.debug("\t%s", elem)
+
+        if diff1 or diff2:
+            return False
+
+        return True
 
     # run test case
     dtn_format = params.get("dtn_format")
