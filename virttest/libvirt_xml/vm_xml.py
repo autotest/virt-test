@@ -360,7 +360,7 @@ class VMXML(VMXMLBase):
         :param vm_name: Name of defined vm to change vcpu elemnet data
         :param value: New data value, None to delete.
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         if value is not None:
             vmxml['vcpu'] = value  # call accessor method to change XML
         else:  # value is None
@@ -435,7 +435,7 @@ class VMXML(VMXMLBase):
         """
         Return VM's numa setting from XML definition
         """
-        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance)
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         return vmxml.numa
 
     def get_primary_serial(self):

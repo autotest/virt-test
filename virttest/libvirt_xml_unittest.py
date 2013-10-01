@@ -367,7 +367,8 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertEqual(test_xtf.find('vcpu').text, '4')
 
     def test_new_from_dumpxml(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         self.assertEqual(vmxml.vm_name, 'foobar')
         self.assertEqual(vmxml.uuid, self._domuuid(None))
         self.assertEqual(vmxml.hypervisor_type, 'kvm')
@@ -539,12 +540,14 @@ class testSerialXML(LibvirtXMLTestBase):
         self.assertEqual(serial1, serial2)
 
     def test_vm_get_by_class(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         serial_devices = vmxml.get_devices(device_type='serial')
         self.assertEqual(len(serial_devices), 4)
 
     def test_vm_get_modify(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         devices = vmxml['devices']
         serial1 = devices[0]
         serial2 = devices[1]
@@ -601,7 +604,8 @@ class testVMXMLDevices(LibvirtXMLTestBase):
 
     def test_channels(self):
         logging.disable(logging.WARNING)
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         channels = vmxml.devices.by_device_tag('channel')
         self.assertEqual(len(channels), 2)
         self.assertTrue(isinstance(channels, vm_xml.VMXMLDevices))
