@@ -2466,6 +2466,25 @@ def get_driver_hardware_id(driver_path, mount_point="/tmp/mnt-virtio",
         return ""
 
 
+def recovery_from_snapshot(vmxml, snap_name_list):
+    """
+    Do recovery after snapshot
+
+    :param vmxml: VMXML object with recovery xml in it
+    :param snap_name_list: The list of snapshot name you want to remove
+    """
+    vmxml.undefine("--snapshots-metadata")
+    vmxml.define()
+    logging.debug("xml is %s", vmxml.dict_get('xml'))
+
+    # Delete useless disk snapshot file
+    dom_xml = vmxml.dict_get('xml')
+    disk_path = dom_xml.find('devices/disk/source').get('file')
+    for name in snap_name_list:
+        snap_disk_path = disk_path.split(".")[0] + "." + name
+        os.system('rm -f %s' % snap_disk_path)
+
+
 class BackgroundTest(object):
 
     """
