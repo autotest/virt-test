@@ -21,7 +21,7 @@ def run_libvirt_bench_domstate_switch_in_loop(test, params, env):
     """
     def for_each_vm(vms, virsh_func, state=None):
         """
-        Excecute the virsh_func with each vm in vms.
+        Execute the virsh_func with each vm in vms.
 
         :Param vms: List of vm.
         :Param virsh_func: Function in virsh module.
