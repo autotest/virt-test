@@ -467,7 +467,7 @@ class VM(virt_vm.BaseVM):
             cmd += _add_option("iobase", "0x402")
             return cmd
 
-        def add_log_anaconda(devices):
+        def add_log_anaconda(devices, pci_bus='pci.0'):
             chardev_id = "anacondalog_chardev_%s" % self.instance
             vioser_id = "anacondalog_vioser_%s" % self.instance
             filename = "/tmp/anaconda-%s" % self.instance
@@ -479,7 +479,7 @@ class VM(virt_vm.BaseVM):
             dev.set_param("server", 'NO_EQUAL_STRING')
             dev.set_param("nowait", 'NO_EQUAL_STRING')
             devices.insert(dev)
-            dev = QDevice('virtio-serial-pci', parent_bus={'type': 'pci'})
+            dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
             dev.set_param("id", vioser_id)
             devices.insert(dev)
             dev = QDevice('virtserialport')
@@ -503,7 +503,7 @@ class VM(virt_vm.BaseVM):
 
         def add_nic(devices, vlan, model=None, mac=None, device_id=None,
                     netdev_id=None, nic_extra_params=None, pci_addr=None,
-                    bootindex=None, queues=1, vectors=None):
+                    bootindex=None, queues=1, vectors=None, pci_bus='pci.0'):
             if model == 'none':
                 return
             if devices.has_option("device"):
@@ -519,7 +519,7 @@ class VM(virt_vm.BaseVM):
                 # value by parsing the xml file, i.e. counting all the
                 # pci devices and store the number.
                 if model != 'spapr-vlan':
-                    dev.parent_bus = {'type': 'pci'}
+                    dev.parent_bus = pci_bus
                     dev.set_param('addr', pci_addr)
                 if nic_extra_params:
                     nic_extra_params = (_.split('=', 1) for _ in
@@ -646,20 +646,21 @@ class VM(virt_vm.BaseVM):
         def add_uuid(devices, uuid):
             return " -uuid '%s'" % uuid
 
-        def add_pcidevice(devices, host, params, device_driver="pci-assign"):
+        def add_pcidevice(devices, host, params, device_driver="pci-assign",
+                          pci_bus='pci.0'):
             if device_driver == "pci-assign":
                 if (devices.has_device("pci-assign") or
                    devices.has_device("kvm-pci-assign")):
-                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                    dev = QDevice(device_driver, parent_bus=pci_bus)
                 else:
                     dev = qemu_devices.QCustomDevice('pcidevice',
-                                                     parent_bus={'type': 'pci'})
+                                                     parent_bus=pci_bus)
             else:
                 if devices.has_device(device_driver):
-                    dev = QDevice(device_driver, parent_bus={'type': 'pci'})
+                    dev = QDevice(device_driver, parent_bus=pci_bus)
                 else:
                     dev = qemu_devices.QCustomDevice('pcidevice',
-                                                     parent_bus={'type': 'pci'})
+                                                     parent_bus=pci_bus)
             help_cmd = "%s -device pci-assign,\\? 2>&1" % qemu_binary
             pcidevice_help = utils.system_output(help_cmd)
             dev.set_param('host', host)
@@ -1004,6 +1005,7 @@ class VM(virt_vm.BaseVM):
         have_ahci = False
         have_virtio_scsi = False
         virtio_scsi_pcis = []
+        pci_bus = {'aobject': params.get('pci_bus', 'pci.0')}
 
         # init value by default.
         # PCI addr 0,1,2 are taken by PCI/ISA/IDE bridge and the GPU.
@@ -1091,7 +1093,7 @@ class VM(virt_vm.BaseVM):
             if vga != 'none':
                 devices.insert(StrDev('VGA-%s' % vga, {'addr': 2},
                                       cmdline=add_vga(vga),
-                                      parent_bus={'type': 'pci'}))
+                                      parent_bus=pci_bus))
             else:
                 devices.insert(StrDev('VGA-none', cmdline=add_vga(vga)))
 
@@ -1103,7 +1105,7 @@ class VM(virt_vm.BaseVM):
         elif params.get('defaults', 'no') != 'no':  # by default add cirrus
             devices.insert(StrDev('VGA-cirrus', {'addr': 2},
                                   cmdline=add_vga(vga),
-                                  parent_bus={'type': 'pci'}))
+                                  parent_bus=pci_bus))
 
         # When old scsi fmt is used, new device with lowest pci_addr is created
         devices.hook_fill_scsi_hbas(params)
@@ -1115,7 +1117,7 @@ class VM(virt_vm.BaseVM):
                 for sndcard in ('AC97', 'ES1370', 'intel-hda'):
                     # Add all dummy PCI devices and the actuall command below
                     devices.insert(StrDev("SND-%s" % sndcard,
-                                          parent_bus={'type': 'pci'}))
+                                          parent_bus=pci_bus))
                 devices.insert(StrDev('SoundHW',
                                       cmdline="-soundhw %s" % soundhw))
             else:
@@ -1123,14 +1125,14 @@ class VM(virt_vm.BaseVM):
                 for sound_device in soundhw.split(","):
                     if "hda" in sound_device:
                         devices.insert(QDevice('intel-hda',
-                                               parent_bus={'type': 'pci'}))
+                                               parent_bus=pci_bus))
                         devices.insert(QDevice('hda-duplex'))
                     elif sound_device in ["es1370", "ac97"]:
                         devices.insert(QDevice(sound_device.upper(),
-                                               parent_bus={'type': 'pci'}))
+                                               parent_bus=pci_bus))
                     else:
                         devices.insert(QDevice(sound_device,
-                                               parent_bus={'type': 'pci'}))
+                                               parent_bus=pci_bus))
 
         # Add monitors
         for monitor_name in params.objects("monitors"):
@@ -1173,7 +1175,7 @@ class VM(virt_vm.BaseVM):
                     bus = 0
             # Add virtio_serial_pcis
             for i in range(no_virtio_serial_pcis, bus + 1):
-                dev = QDevice('virtio-serial-pci', parent_bus={'type': 'pci'})
+                dev = QDevice('virtio-serial-pci', parent_bus=pci_bus)
                 dev.set_param('id', 'virtio_serial_pci%d' % i)
                 devices.insert(dev)
                 no_virtio_serial_pcis += 1
@@ -1193,7 +1195,7 @@ class VM(virt_vm.BaseVM):
         # Add logging
         devices.insert(StrDev('isa-log', cmdline=add_log_seabios(devices)))
         if params.get("anaconda_log", "no") == "yes":
-            add_log_anaconda(devices)
+            add_log_anaconda(devices, pci_bus)
 
         # Add USB controllers
         usbs = params.objects("usbs")
@@ -1307,7 +1309,7 @@ class VM(virt_vm.BaseVM):
                 add_nic(devices, vlan, nic_model, mac,
                         device_id, netdev_id, nic_extra,
                         nic_params.get("nic_pci_addr"),
-                        bootindex, queues, vectors)
+                        bootindex, queues, vectors, pci_bus)
 
                 # Handle the '-net tap' or '-net user' or '-netdev' part
                 cmd = add_net(devices, vlan, nettype, ifname, tftp,
@@ -1320,7 +1322,8 @@ class VM(virt_vm.BaseVM):
                 device_driver = nic_params.get("device_driver", "pci-assign")
                 pci_id = vm.pa_pci_ids[iov]
                 add_pcidevice(devices, pci_id, params=nic_params,
-                              device_driver=device_driver)
+                              device_driver=device_driver,
+                              pci_bus=pci_bus)
                 iov += 1
 
         mem = params.get("mem")
@@ -1619,7 +1622,7 @@ class VM(virt_vm.BaseVM):
 
             devices.insert(StrDev('fsdev', cmdline=cmd))
 
-            dev = QDevice('virtio-9p-pci', parent_bus={'type': 'pci'})
+            dev = QDevice('virtio-9p-pci', parent_bus=pci_bus)
             dev.set_param('fsdev', 'local1')
             dev.set_param('mount_tag', 'autotest_tag')
             devices.insert(dev)
