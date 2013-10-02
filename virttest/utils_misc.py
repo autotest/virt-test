@@ -824,7 +824,7 @@ def umount(src, mount_point, fstype):
 
     @src: mount source
     @mount_point: mount point
-    @type: file system type
+    :type: file system type
     """
     mount_string = "%s %s %s" % (src, mount_point, fstype)
     if is_mounted(src, mount_point, fstype):
