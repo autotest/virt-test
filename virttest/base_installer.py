@@ -12,9 +12,12 @@ from autotest.client import utils, os_dep
 from autotest.client.shared import error
 import build_helper
 import utils_misc
-import utils_koji
 import yumrepo
 import arch
+try:
+    from staging import utils_koji
+except ImportError:
+    from autotest.client.shared import utils_koji
 
 
 class NoModuleError(Exception):

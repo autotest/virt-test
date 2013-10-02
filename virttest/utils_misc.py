@@ -22,8 +22,12 @@ import getpass
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
-import utils_koji
 import data_dir
+try:
+    from staging import utils_koji
+except ImportError:
+    from autotest.client.shared import utils_koji
+
 
 import platform
 ARCH = platform.machine()
