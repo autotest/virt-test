@@ -1668,8 +1668,7 @@ class DevContainer(object):
             if cmds:    # If no mathes, return None
                 return cmds
 
-        self.__state = - \
-            1    # is representation sync with VM (0 = synchronized)
+        self.__state = -1    # -1 synchronized, 0 synchronized after hotplug
         self.__qemu_help = utils.system_output("%s -help" % qemu_binary,
                                                timeout=10, ignore_status=True)
         self.__device_help = utils.system_output("%s -device ? 2>&1"
@@ -2208,10 +2207,11 @@ class DevContainer(object):
                 i += 1
 
         for i in xrange(i / 7):     # Autocreated lsi hba
-            _name = 'lsi53c895a%s' % i
             bus = QSCSIBus("scsi.0", 'SCSI', [8, 16384], atype='lsi53c895a')
             self.insert(QStringDevice('lsi53c895a%s' % i,
-                                      parent_bus={'type': 'pci'},
+                                      parent_bus={'aobject':
+                                                  params.get('pci_bus',
+                                                             'pci.0')},
                                       child_bus=bus))
 
     # Machine related methods
@@ -2233,11 +2233,13 @@ class DevContainer(object):
                          'virt-test. False errors might occur.')
             devices = []
             devices.append(QStringDevice('machine', cmdline=cmd,
-                                         child_bus=QPCIBus('pcie.0', 'pci')))
+                                         child_bus=QPCIBus('pcie.0', 'PCIE',
+                                                           'pci.0'),
+                                         aobject="pci.0"))
             devices.append(QStringDevice('Q35', {'addr': 0},
-                                         parent_bus={'type': 'pci'}))
+                                         parent_bus={'aobject': 'pci.0'}))
             devices.append(QStringDevice('ICH9-ahci', {'addr': '0x1f'},
-                                         parent_bus={'type': 'pci'},
+                                         parent_bus={'aobject': 'pci.0'},
                                          child_bus=QAHCIBus('ide')))
             if self.has_option('device') and self.has_option("global"):
                 devices.append(QStringDevice('fdc',
@@ -2260,11 +2262,13 @@ class DevContainer(object):
             else:
                 pci_bus = "pci.0"
             devices.append(QStringDevice('machine', cmdline=cmd,
-                                         child_bus=QPCIBus(pci_bus, 'pci')))
+                                         child_bus=QPCIBus(pci_bus, 'PCI',
+                                                           'pci.0'),
+                                         aobject="pci.0"))
             devices.append(QStringDevice('i440FX', {'addr': 0},
-                                         parent_bus={'type': 'pci'}))
+                                         parent_bus={'aobject': 'pci.0'}))
             devices.append(QStringDevice('PIIX3', {'addr': 1},
-                                         parent_bus={'type': 'pci'}))
+                                         parent_bus={'aobject': 'pci.0'}))
             devices.append(QStringDevice('ide', child_bus=QIDEBus('ide')))
             if self.has_option('device') and self.has_option("global"):
                 devices.append(QStringDevice('fdc',
@@ -2333,7 +2337,7 @@ class DevContainer(object):
     # USB Controller related methods
     def usbc_by_variables(self, usb_id, usb_type, multifunction=False,
                           masterbus=None, firstport=None, freq=None,
-                          max_ports=6, pci_addr=None):
+                          max_ports=6, pci_addr=None, pci_bus='pci.0'):
         """
         Creates usb-controller devices by variables
         :param usb_id: Usb bus name
@@ -2359,7 +2363,7 @@ class DevContainer(object):
             raise error.TestNAError("usb controller %s not available"
                                     % usb_type)
 
-        usb = QDevice(usb_type, {}, usb_id, {'type': 'pci'},
+        usb = QDevice(usb_type, {}, usb_id, {'aobject': pci_bus},
                       QUSBBus(max_ports, '%s.0' % usb_id, usb_type, usb_id))
         new_usbs = [usb]    # each usb dev might compound of multiple devs
         # TODO: Add 'bus' property (it was not in the original version)
@@ -2384,7 +2388,7 @@ class DevContainer(object):
                 # current qemu_devices doesn't support x.y addr. Plug only
                 # the 0th one into this representation.
                 if i == 0:
-                    new_usbs[-1].parent_bus = {'type': 'pci'}
+                    new_usbs[-1].parent_bus = {'aobject': pci_bus}
                     new_usbs[-1].set_param('addr', '0x1d')
                 else:
                     new_usbs[-1].set_param('addr', '1d.%d' % i)
@@ -2405,7 +2409,8 @@ class DevContainer(object):
                                       params.get('firstport'),
                                       params.get('freq'),
                                       params.get('max_ports', 6),
-                                      params.get('pci_addr'))
+                                      params.get('pci_addr'),
+                                      params.get('pci_bus', 'pci.0'))
 
     # USB Device related methods
     def usb_by_variables(self, usb_name, usb_type, controller_type, bus=None,
@@ -2461,7 +2466,8 @@ class DevContainer(object):
                                    readonly=None, scsiid=None, lun=None, aio=None,
                                    strict_mode=None, media=None, imgfmt=None,
                                    pci_addr=None, scsi_hba=None, x_data_plane=None,
-                                   blk_extra_params=None, scsi=None):
+                                   blk_extra_params=None, scsi=None,
+                                   pci_bus='pci.0'):
         """
         Creates related devices by variables
         :note: To skip the argument use None, to disable it use False
@@ -2496,7 +2502,8 @@ class DevContainer(object):
         :param pci_addr: drive pci address ($int)
         :param scsi_hba: Custom scsi HBA
         """
-        def define_hbas(qtype, atype, bus, unit, port, qbus, addr_spec=None):
+        def define_hbas(qtype, atype, bus, unit, port, qbus, addr_spec=None,
+                        pci_bus='pci.0'):
             """
             Helper for creating HBAs of certain type.
             """
@@ -2520,7 +2527,7 @@ class DevContainer(object):
                     if addr_spec:
                         dev = QDevice(params={'id': _bus_name,
                                               'driver': atype},
-                                      parent_bus={'type': 'pci'},
+                                      parent_bus={'aobject': pci_bus},
                                       child_bus=qbus(busid=bus_name,
                                                      bus_type=qtype,
                                                      addr_spec=addr_spec,
@@ -2528,7 +2535,7 @@ class DevContainer(object):
                     else:
                         dev = QDevice(params={'id': _bus_name,
                                               'driver': atype},
-                                      parent_bus={'type': 'pci'},
+                                      parent_bus={'aobject': pci_bus},
                                       child_bus=qbus(busid=bus_name))
                     devices.append(dev)
                 bus = _hba % bus
@@ -2641,7 +2648,7 @@ class DevContainer(object):
             elif fmt == 'usb3':
                 dev_parent = {'type': 'xhci'}
         elif fmt == 'virtio':
-            dev_parent = {'type': 'pci'}
+            dev_parent = {'aobject': pci_bus}
         else:
             dev_parent = {'type': fmt}
 
@@ -2694,7 +2701,7 @@ class DevContainer(object):
                 devices[-1].parent_bus = ({'type': fmt},)
             elif fmt == 'virtio':
                 devices[-1].set_param('addr', pci_addr)
-                devices[-1].parent_bus = ({'type': 'pci'},)
+                devices[-1].parent_bus = ({'aobject': pci_bus},)
             if not media == 'cdrom':
                 logging.warn("Using -drive fmt=xxx for %s is unsupported "
                              "method, false errors might occur.", name)
@@ -2820,7 +2827,8 @@ class DevContainer(object):
                                                    "x-data-plane"),
                                                image_params.get(
                                                    "blk_extra_params"),
-                                               image_params.get("virtio-blk-pci_scsi"))
+                                               image_params.get("virtio-blk-pci_scsi"),
+                                               image_params.get('pci_bus', 'pci.0'))
 
     def cdroms_define_by_params(self, name, image_params, media=None,
                                 index=None, image_boot=None,
@@ -2887,4 +2895,5 @@ class DevContainer(object):
                                                    "x-data-plane"),
                                                image_params.get(
                                                    "blk_extra_params"),
-                                               image_params.get("virtio-blk-pci_scsi"))
+                                               image_params.get("virtio-blk-pci_scsi"),
+                                               image_params.get('pci_bus', 'pci.0'))

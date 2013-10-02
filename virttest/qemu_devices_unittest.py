@@ -761,24 +761,36 @@ class Container(unittest.TestCase):
         exp = r"""Devices of vm1:
 machine
   aid = __0
-  aobject = None
+  aobject = pci\.0
   parent_bus = \(\)
   child_bus = \[.*QPCIBus.*\]
   params:
 i440FX
   aid = __1
   aobject = None
-  parent_bus = \({'type': 'pci'},\)
+  parent_bus = \({'aobject': 'pci.0'},\)
   child_bus = \[\]
   params:
     addr = 0x0
 PIIX3
   aid = __2
   aobject = None
-  parent_bus = \({'type': 'pci'},\)
+  parent_bus = \({'aobject': 'pci.0'},\)
   child_bus = \[\]
   params:
-    addr = 0x1"""
+    addr = 0x1
+ide
+  aid = __3
+  aobject = None
+  parent_bus = \(\)
+  child_bus = \[.*QIDEBus.*\]
+  params:
+fdc
+  aid = __4
+  aobject = None
+  parent_bus = \(\)
+  child_bus = \[.*QFloppyBus.*\]
+  params:"""
         out = qdev.str_long()
         self.assertNotEqual(re.match(exp, out), None, 'Long representation is'
                             'corrupted:\n%s\n%s' % (out, exp))
@@ -786,7 +798,7 @@ PIIX3
         exp = ("Buses of vm1\n"
                "  floppy(floppy): [None,None]  {}\n"
                "  ide(ide): [None,None,None,None]  {}\n"
-               "  pci.0(pci): [t'i440FX',t'PIIX3'%s]  {}"
+               "  pci.0(PCI): [t'i440FX',t'PIIX3'%s]  {}"
                % (',None' * 30))
         out = qdev.str_bus_short()
         assert out == exp, "Bus representation is ocrrupted:\n%s\n%s" % (out,
@@ -799,7 +811,7 @@ PIIX3
         bus = qemu_devices.QSparseBus('bus', [['addr'], [6]], 'hba1.0', 'hba',
                                       'a_hba')
         dev = qdevice('HBA', {'id': 'hba1', 'addr': 10},
-                      parent_bus={'type': 'pci'}, child_bus=bus)
+                      parent_bus={'aobject': 'pci.0'}, child_bus=bus)
         out = qdev.insert(dev, False)
         self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
                          % (out, qdev.str_long()))
@@ -832,7 +844,7 @@ PIIX3
                "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
                "  floppy(floppy): [None,None]  {}\n"
                "  ide(ide): [None,None,None,None]  {}\n"
-               "  pci.0(pci): [t'i440FX',t'PIIX3',None,None,None,None,None,"
+               "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,None,"
                "None,None,None,hba1,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
                "None]  {}")
@@ -851,7 +863,7 @@ PIIX3
 
         # Force insert bad devices: Incorrect addr
         dev = qdevice('baddev', {'addr': 'bad_value'}, 'badaddr',
-                      {'type': 'pci'})
+                      {'aobject': 'pci.0'})
         self.assertRaises(qemu_devices.DeviceInsertError, qdev.insert, dev,
                           False)
         out = qdev.insert(dev, True)
@@ -878,7 +890,7 @@ PIIX3
                "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
                "  floppy(floppy): [None,None]  {}\n"
                "  ide(ide): [None,None,None,None]  {}\n"
-               "  pci.0(pci): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "  pci.0(PCI): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
                "None,None,None,None,hba1,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
                "None,None]  {}")
@@ -941,7 +953,7 @@ PIIX3
         exp = ("Buses of vm1\n"
                "  floppy(floppy): [None,None]  {}\n"
                "  ide(ide): [None,None,None,None]  {}\n"
-               "  pci.0(pci): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "  pci.0(PCI): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
                "None,None]  {}")
