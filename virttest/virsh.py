@@ -1633,6 +1633,7 @@ def vol_create_as(volume_name, pool_name, capacity,
         cmd += " %s" % (extra)
     return command(cmd, **dargs)
 
+
 def vol_create_from(pool_name, vol_file, input_vol, input_pool, extra="",
                     **dargs):
     """
