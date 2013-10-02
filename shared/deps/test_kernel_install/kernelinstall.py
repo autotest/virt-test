@@ -44,7 +44,10 @@ class kernelinstall(test.test):
                 self.sm.install(koji_package)
 
         sys.path.append(self.bindir)
-        import utils_koji
+        try:
+            from staging import utils_koji
+        except ImportError:
+            from autotest.client.shared import utils_koji
         # First, download packages via koji/brew
         c = utils_koji.KojiClient()
 

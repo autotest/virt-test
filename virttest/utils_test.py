@@ -1918,8 +1918,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                                            'kernelinstall')
         vm.copy_files_to(kernel_install_dir, kernel_install_dest)
         module_dir = os.path.dirname(virttest.__file__)
-        module_dir = os.path.join(module_dir, 'utils_koji.py')
-        vm.copy_files_to(module_dir, kernel_install_dest)
+        utils_koji_file = os.path.join(module_dir, 'staging', 'utils_koji.py')
+        vm.copy_files_to(utils_koji_file, kernel_install_dest)
 
     # Copy a non crippled boottool and make it executable
     boottool_path = os.path.join(virttest.data_dir.get_root_dir(),

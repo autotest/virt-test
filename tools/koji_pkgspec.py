@@ -11,7 +11,12 @@ will match the packages you intended to install.
 import sys
 import optparse
 import common
-from virttest import utils_koji, cartesian_config
+from virttest import cartesian_config
+
+try:
+    from virttest.staging import utils_koji
+except ImportError:
+    from autotest.client.shared import utils_koji
 
 
 class OptionParser(optparse.OptionParser):
