@@ -340,7 +340,7 @@ class BaseInstaller(object):
         loaded by the system stock modprobe tool, meaning that modules will be
         looked for in the system default module paths.
 
-        @type module_list: list
+        :type module_list: list
         :param module_list: list of kernel modules names to load
         '''
         if module_list is None:

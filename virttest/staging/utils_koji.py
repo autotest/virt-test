@@ -126,7 +126,7 @@ class KojiClient(object):
         Verifies whether the system has koji or brew installed, then loads
         the configuration file that will be used to download the files.
 
-        @type cmd: string
+        :type cmd: string
         :param cmd: Optional command name, either 'brew' or 'koji'. If not
                 set, get_default_command() is used and to look for
                 one of them.
@@ -201,7 +201,7 @@ class KojiClient(object):
 
         By default it checks if the koji configuration is valid
 
-        @type check_valid: boolean
+        :type check_valid: boolean
         :param check_valid: whether to include a check on the configuration
         :raise:: ValueError
         :return: None
@@ -312,7 +312,7 @@ class KojiClient(object):
         '''
         Returns information from Koji on the package
 
-        @type pkg: KojiPkgSpec
+        :type pkg: KojiPkgSpec
         :param pkg: information about the package, as a KojiPkgSpec instance
 
         :return: information from Koji about the specified package
@@ -365,7 +365,7 @@ class KojiClient(object):
         '''
         Checks if tag is valid on Koji
 
-        @type pkg: KojiPkgSpec
+        :type pkg: KojiPkgSpec
         :param pkg: a package specification
         '''
         if pkg.tag is not None:
@@ -378,9 +378,9 @@ class KojiClient(object):
         '''
         Returns a list of information on the RPM packages found on koji
 
-        @type pkg: KojiPkgSpec
+        :type pkg: KojiPkgSpec
         :param pkg: a package specification
-        @type arch: string
+        :type arch: string
         :param arch: packages built for this architecture, but also including
                 architecture independent (noarch) packages
         '''
@@ -399,9 +399,9 @@ class KojiClient(object):
         '''
         Gets the names for the RPM packages specified in pkg
 
-        @type pkg: KojiPkgSpec
+        :type pkg: KojiPkgSpec
         :param pkg: a package specification
-        @type arch: string
+        :type arch: string
         :param arch: packages built for this architecture, but also including
                 architecture independent (noarch) packages
         '''
@@ -414,9 +414,9 @@ class KojiClient(object):
         '''
         Gets the file names for the RPM packages specified in pkg
 
-        @type pkg: KojiPkgSpec
+        :type pkg: KojiPkgSpec
         :param pkg: a package specification
-        @type arch: string
+        :type arch: string
         :param arch: packages built for this architecture, but also including
                 architecture independent (noarch) packages
         '''
@@ -451,9 +451,9 @@ class KojiClient(object):
         '''
         Gets the urls for the packages specified in pkg
 
-        @type pkg: KojiPkgSpec
+        :type pkg: KojiPkgSpec
         :param pkg: a package specification
-        @type arch: string
+        :type arch: string
         :param arch: packages built for this architecture, but also including
                 architecture independent (noarch) packages
         '''
@@ -475,12 +475,12 @@ class KojiClient(object):
         '''
         Download the packages
 
-        @type pkg: KojiPkgSpec
+        :type pkg: KojiPkgSpec
         :param pkg: a package specification
-        @type dst_dir: string
+        :type dst_dir: string
         :param dst_dir: the destination directory, where the downloaded
                 packages will be saved on
-        @type arch: string
+        :type arch: string
         :param arch: packages built for this architecture, but also including
                 architecture independent (noarch) packages
         '''
@@ -493,9 +493,9 @@ class KojiClient(object):
         '''
         Gets the urls for the scratch packages specified in pkg
 
-        @type pkg: KojiScratchPkgSpec
+        :type pkg: KojiScratchPkgSpec
         :param pkg: a scratch package specification
-        @type arch: string
+        :type arch: string
         :param arch: packages built for this architecture, but also including
                 architecture independent (noarch) packages
         '''
@@ -530,12 +530,12 @@ class KojiClient(object):
         '''
         Download the packages from a scratch build
 
-        @type pkg: KojiScratchPkgSpec
+        :type pkg: KojiScratchPkgSpec
         :param pkg: a scratch package specification
-        @type dst_dir: string
+        :type dst_dir: string
         :param dst_dir: the destination directory, where the downloaded
                 packages will be saved on
-        @type arch: string
+        :type arch: string
         :param arch: packages built for this architecture, but also including
                 architecture independent (noarch) packages
         '''
@@ -625,19 +625,19 @@ class KojiPkgSpec(object):
         '''
         Instantiates a new KojiPkgSpec object
 
-        @type text: string
+        :type text: string
         :param text: a textual representation of a package on Koji that
                 will be parsed
-        @type tag: string
+        :type tag: string
         :param tag: a koji tag, example: Fedora-14-RELEASE
                 (see U{http://fedoraproject.org/wiki/Koji#Tags_and_Targets})
-        @type build: number
+        :type build: number
         :param build: a koji build, example: 1001
                 (see U{http://fedoraproject.org/wiki/Koji#Koji_Architecture})
-        @type package: string
+        :type package: string
         :param package: a koji package, example: python
                 (see U{http://fedoraproject.org/wiki/Koji#Koji_Architecture})
-        @type subpackages: list of strings
+        :type subpackages: list of strings
         :param subpackages: a list of package names, usually a subset of
                 the RPM packages generated by a given build
         '''
@@ -669,7 +669,7 @@ class KojiPkgSpec(object):
         '''
         Parses a textual representation of a package specification
 
-        @type text: string
+        :type text: string
         :param text: textual representation of a package in koji
         '''
         parts = text.count(self.SEP) + 1
@@ -869,12 +869,12 @@ class KojiScratchPkgSpec(object):
         '''
         Instantiates a new KojiScratchPkgSpec object
 
-        @type text: string
+        :type text: string
         :param text: a textual representation of a scratch build on Koji that
                 will be parsed
-        @type task: number
+        :type task: number
         :param task: a koji task id, example: 1001
-        @type subpackages: list of strings
+        :type subpackages: list of strings
         :param subpackages: a list of package names, usually a subset of
                 the RPM packages generated by a given build
         '''
@@ -895,7 +895,7 @@ class KojiScratchPkgSpec(object):
         '''
         Parses a textual representation of a package specification
 
-        @type text: string
+        :type text: string
         :param text: textual representation of a package in koji
         '''
         parts = text.count(self.SEP) + 1
