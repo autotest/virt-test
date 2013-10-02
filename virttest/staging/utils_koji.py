@@ -14,6 +14,19 @@ except ImportError:
 DEFAULT_KOJI_TAG = None
 
 
+class KojiDownloadError(IOError):
+
+    def __init__(self, url, timeout, last_error):
+        self.url = url
+        self.timeout = timeout
+        self.last_error = last_error
+
+    def __str__(self):
+        return ("Koji/Brew download of file %s failed. "
+                "Timeout: %s s "
+                "Last error: %s" % (url, timeout, last_error))
+
+
 class KojiDirIndexParser(HTMLParser.HTMLParser):
 
     '''
@@ -103,6 +116,11 @@ class KojiClient(object):
     CONFIG_MAP = {'/usr/bin/brew': '/etc/brewkoji.conf',
                   '/usr/bin/koji': '/etc/koji.conf'}
 
+    # Time to keep trying to download a package
+    RETRY_TIMEOUT = 30
+    # Time to wait until the next retry
+    RETRY_STEP = 3
+
     def __init__(self, cmd=None):
         """
         Verifies whether the system has koji or brew installed, then loads
@@ -142,6 +160,40 @@ class KojiClient(object):
         session_options = self.get_session_options()
         self.session = koji.ClientSession(server_url,
                                           session_options)
+
+    def _get(self, url, dst):
+        '''
+        Download a given file to a destination path.
+
+        This is a wrapper to utils.get_file(), that will keep trying to
+        download the file from the URL for the time defined in the
+        RETRY_TIMEOUT class attribute, in step intervals defined in the
+        RETRY_STEP class attribute.
+
+        :param url: Universal Resource Location of the source file
+        :param dst: Destination path
+        :raise: class `KojiDownloadError`
+        '''
+        success = False
+        last_error = ""
+        end_time = time.time() + self.RETRY_TIMEOUT
+
+        while time.time() < end_time:
+            try:
+                utils.get_file(url, dst)
+                success = True
+                break
+            except Exception, e:
+                last_error = str(e)
+                logging.error("Download failed: %s", last_error)
+                logging.error("Retrying after %s seconds...",
+                              self.RETRY_STEP)
+                if os.path.isfile(dst):
+                    os.unlink(dst)
+                time.sleep(self.RETRY_STEP)
+
+        if not success:
+            raise KojiDownloadError(url, self.RETRY_TIMEOUT, last_error)
 
     def read_config(self, check_is_valid=True):
         '''
@@ -434,8 +486,8 @@ class KojiClient(object):
         '''
         rpm_urls = self.get_pkg_urls(pkg, arch)
         for url in rpm_urls:
-            utils.get_file(url,
-                           os.path.join(dst_dir, os.path.basename(url)))
+            dst = os.path.join(dst_dir, os.path.basename(url))
+            self._get(url, dst)
 
     def get_scratch_pkg_urls(self, pkg, arch=None):
         '''
@@ -489,8 +541,8 @@ class KojiClient(object):
         '''
         rpm_urls = self.get_scratch_pkg_urls(pkg, arch)
         for url in rpm_urls:
-            utils.get_file(url,
-                           os.path.join(dst_dir, os.path.basename(url)))
+            dst = os.path.join(dst_dir, os.path.basename(url))
+            self._get(url, dst)
 
 
 def set_default_koji_tag(tag):
