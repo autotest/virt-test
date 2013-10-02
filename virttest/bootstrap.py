@@ -110,6 +110,10 @@ def write_subtests_files(config_file_list, output_file_object, test_type=None):
     Optionally, for tests that we know their type, write the 'virt_test_type'
     configuration automatically.
     '''
+    if test_type is not None:
+        output_file_object.write("    - @type_specific:\n")
+        output_file_object.write("        variants subtest:\n")
+
     for config_path in config_file_list:
         config_file = open(config_path, 'r')
 
@@ -119,14 +123,16 @@ def write_subtests_files(config_file_list, output_file_object, test_type=None):
             # special virt_test_type line output
             if test_type is not None:
                 if write_test_type_line:
-                    type_line = "        virt_test_type = %s\n" % test_type
+                    type_line = ("                virt_test_type = %s\n" %
+                                                                     test_type)
                     output_file_object.write(type_line)
                     write_test_type_line = False
                 elif line.startswith('- '):
                     write_test_type_line = True
-
-            # regular line output
-            output_file_object.write("    %s" % line)
+                output_file_object.write("            %s" % line)
+            else:
+                # regular line output
+                output_file_object.write("    %s" % line)
 
         config_file.close()
 
@@ -313,7 +319,7 @@ def create_subtests_cfg(t_type):
     subtests_file = open(subtests_cfg, 'w')
     subtests_file.write(
         "# Do not edit, auto generated file from subtests config\n")
-    subtests_file.write("variants:\n")
+    subtests_file.write("variants subtest:\n")
     write_subtests_files(first_subtest_file, subtests_file)
     write_subtests_files(specific_file_list, subtests_file, t_type)
     write_subtests_files(shared_file_list, subtests_file)
