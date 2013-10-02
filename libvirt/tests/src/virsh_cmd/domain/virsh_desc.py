@@ -20,7 +20,7 @@ def run_virsh_desc(test, params, env):
         """
         Run virsh desc command
 
-        @return: cmd output
+        :return: cmd output
         """
         cmd_result = virsh.desc(name, options, desc_str, ignore_status=True,
                                 debug=True)

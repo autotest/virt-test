@@ -653,9 +653,9 @@ def maxvcpus(option='', **dargs):
     """
     Return the connection vcpu maximum number.
 
-    @param: option: additional option string to pass
-    @param: dargs: standardized virsh function API keywords
-    @return: CmdResult object
+    :param: option: additional option string to pass
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
     cmd = "maxvcpus %s" % option
     CmdResult = command(cmd, **dargs)
@@ -2210,10 +2210,10 @@ def domiflist(name, options='', extra='', **dargs):
     """
     Get the domain network devices
 
-    @param name: name of domain
-    @param options: options of domiflist
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: name of domain
+    :param options: options of domiflist
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
 
     return command('domiflist %s %s %s' % (name, options, extra), **dargs)

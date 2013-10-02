@@ -11,8 +11,8 @@ def wait_pid_active(pid, timeout=5):
     """
     Wait for pid in running status
 
-    @param: pid: Desired pid
-    @param: timeout: Max time we can wait
+    :param: pid: Desired pid
+    :param: timeout: Max time we can wait
     """
     cmd = ("cat /proc/%d/stat | awk '{print $3}'" % pid)
     try:
