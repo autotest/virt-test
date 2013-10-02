@@ -12,7 +12,7 @@ import random
 import select
 import socket
 import time
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 import utils_test
 import data_dir
 
@@ -183,7 +183,8 @@ class GuestWorker(object):
         if "on" in out:
             self.os_linux = True
             guest_script_path = "/tmp/%s" % guest_script_py
-            cmd_already_compiled_chck = "ls %so" % guest_script_path
+            cmd_guest_size = ("du -b %s | cut -f1"
+                              % guest_script_path)
             cmd_compile = ("python -OO %s -c "
                            "&& echo -n 'PASS: Compile virtio_guest finished' "
                            "|| echo -n 'FAIL: Compile virtio_guest failed'"
@@ -195,7 +196,8 @@ class GuestWorker(object):
         else:
             self.os_linux = False
             guest_script_path = "C:\\%s" % guest_script_py
-            cmd_already_compiled_chck = "dir %so" % guest_script_path
+            cmd_guest_size = ("for %%I in (%s) do @echo %%~zI"
+                              % guest_script_path)
             cmd_compile = ("%s -c "
                            "&& echo PASS: Compile virtio_guest finished "
                            "|| echo FAIL: Compile virtio_guest failed"
@@ -207,7 +209,13 @@ class GuestWorker(object):
 
         # Copy, compile and run the worker
         timeout = 10
-        if self.session.cmd_status(cmd_already_compiled_chck):
+        base_path = os.path.dirname(data_dir.get_data_dir())
+        guest_script_src = os.path.join(base_path, 'scripts',
+                                        'virtio_console_guest.py')
+        script_size = utils.system_output("du -b %s | cut -f1"
+                                          % guest_script_src).strip()
+        script_size_guest = self.session.cmd_output(cmd_guest_size).strip()
+        if script_size != script_size_guest:
             if self.os_linux:
                 # Disable serial-getty@hvc0.service on systemd-like hosts
                 self.session.cmd_status('systemctl mask '
@@ -215,11 +223,7 @@ class GuestWorker(object):
                 self.session.cmd_status('systemctl stop '
                                         'serial-getty@hvc0.service')
             # Copy virtio_console_guest.py into guests
-            base_path = os.path.dirname(data_dir.get_data_dir())
-            vksmd_src = os.path.join(base_path, 'scripts',
-                                                'virtio_console_guest.py')
-
-            self.vm.copy_files_to(vksmd_src, guest_script_path)
+            self.vm.copy_files_to(guest_script_src, guest_script_path)
 
             # set echo off (self.cmd() musn't contain C:)
             self.session.sendline("echo off")
