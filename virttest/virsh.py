@@ -1466,6 +1466,22 @@ def pool_destroy(name, **dargs):
         return False
 
 
+def pool_create(xml_file, **dargs):
+    """
+    Create a pool from an xml file
+
+    :param: xml_file: file containing an XML pool description
+    """
+    cmd = "pool-create %s" % xml_file
+    dargs['ignore_status'] = False
+    try:
+        command(cmd, **dargs)
+        return True
+    except error.CmdError, detail:
+        logging.error("Failed to create pool: %s.", detail)
+        return False
+
+
 def pool_create_as(name, pool_type, target, extra="", **dargs):
     """
     Create a pool from a set of args.
@@ -1612,6 +1628,24 @@ def vol_create_as(volume_name, pool_name, capacity,
         cmd += " --allocation %s" % (allocation)
     if frmt:
         cmd += " --format %s" % (frmt)
+    if extra:
+        cmd += " %s" % (extra)
+    return command(cmd, **dargs)
+
+def vol_create_from(pool_name, vol_file, input_vol, input_pool, extra="",
+                    **dargs):
+    """
+    Create a vol, using another volume as input
+
+    :param: pool_name: Name of the pool to create the volume in
+    :param: vol_file: XML <file> with the volume definition
+    :param: input_vol: Name of the source volume
+    :param: input_pool: Name of the pool the source volume is in
+    :param: extra: Free-form string of options
+    :return: True if volume create successfully
+    """
+    cmd = ("vol-create-from --pool %s --file %s --vol %s --inputpool %s" %
+           (pool_name, vol_file, input_vol, input_pool))
     if extra:
         cmd += " %s" % (extra)
     return command(cmd, **dargs)
