@@ -93,9 +93,9 @@ def run_virt_edit(test, params, env):
         utils_libvirtd.libvirtd_stop()
 
     # Run test
-    virsh_dargs = {'ignore_status': True, 'debug': True, 'uri': uri}
     result = lgf.virt_edit_cmd(vm_ref, file_ref, options,
-                               options_suffix, expr, **virsh_dargs)
+                               options_suffix, expr, ignore_status=True,
+                               debug=True)
     status = result.exit_status
 
     # Recover libvirtd.
