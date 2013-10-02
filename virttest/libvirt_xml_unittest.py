@@ -129,7 +129,6 @@ class LibvirtXMLTestBase(unittest.TestCase):
         xml_file.close()
         return domain_xml
 
-
     @staticmethod
     def _nodedev_dumpxml(name, options="", to_file=None, **dargs):
         # Must mirror virsh.nodedev_dumpxml() API but can't test this option
@@ -142,22 +141,21 @@ class LibvirtXMLTestBase(unittest.TestCase):
         if name is not 'pci_0000_00_00_0':
             raise ValueError('Dummy virsh for testing only support '
                              ' device name pci_0000_00_00_0')
-        xml =   ("<device>"
-                  "<name>pci_0000_00_00_0</name>"
-                  "<path>/sys/devices/pci0000:00/0000:00:00.0</path>"
-                  "<parent>computer</parent>"
-                  "<capability type='pci'>"
-                    "<domain>0</domain>"
-                    "<bus>0</bus>"
-                    "<slot>0</slot>"
-                    "<function>0</function>"
-                    "<product id='0x25c0'>5000X Chipset Memory Controller Hub</product>"
-                    "<vendor id='0x8086'>Intel Corporation</vendor>"
-                  "</capability>"
-                "</device>")
+        xml = ("<device>"
+               "<name>pci_0000_00_00_0</name>"
+               "<path>/sys/devices/pci0000:00/0000:00:00.0</path>"
+               "<parent>computer</parent>"
+               "<capability type='pci'>"
+               "<domain>0</domain>"
+               "<bus>0</bus>"
+               "<slot>0</slot>"
+               "<function>0</function>"
+               "<product id='0x25c0'>5000X Chipset Memory Controller Hub</product>"
+               "<vendor id='0x8086'>Intel Corporation</vendor>"
+               "</capability>"
+               "</device>")
         return utils.CmdResult('virsh nodedev-dumpxml pci_0000_00_00_0',
                                xml, '', 0)
-
 
     def setUp(self):
         # cause any called virsh commands to fail testing unless a mock declared
@@ -180,7 +178,6 @@ class LibvirtXMLTestBase(unittest.TestCase):
         self.dummy_virsh.__super_set__('domuuid', self._domuuid)
         self.dummy_virsh.__super_set__('define', self._define)
         self.dummy_virsh.__super_set__('nodedev_dumpxml', self._nodedev_dumpxml)
-
 
     def tearDown(self):
         librarian.DEVICE_TYPES = list(ORIGINAL_DEVICE_TYPES)
@@ -295,6 +292,7 @@ class AccessorsTest(LibvirtXMLTestBase):
     def test_create_by_xpath(self):
         class FooBar(base.LibvirtXMLBase):
             __slots__ = ('test',)
+
             def __init__(self, virsh_instance):
                 super(FooBar, self).__init__(virsh_instance)
                 accessors.XMLElementDict('test', self, None, 'foo/bar', 'baz')

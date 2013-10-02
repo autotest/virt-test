@@ -52,7 +52,7 @@ class IPXML(base.LibvirtXMLBase):
         netmask: string IP's netmask
     """
 
-    __slots__ = ('dhcp_ranges', 'address','netmask')
+    __slots__ = ('dhcp_ranges', 'address', 'netmask')
 
     def __init__(self, address='192.168.122.1', netmask='255.255.255.0',
                  virsh_instance=base.virsh):
@@ -144,8 +144,8 @@ class NetworkXMLBase(base.LibvirtXMLBase):
                  'autostart', 'persistent', 'fwd_mode', 'mac', 'ip')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__ + (
-                                            'defined', 'active',
-                                            'autostart', 'persistent')
+        'defined', 'active',
+        'autostart', 'persistent')
 
     __schema_name__ = "network"
 

@@ -125,7 +125,6 @@ class PropCanBase(dict, PropCanInternal):
     # cache the value on first call
     __all_slots__ = None
 
-
     def __new__(cls, *args, **dargs):
         if not hasattr(cls, '__slots__'):
             raise NotImplementedError("Class '%s' must define __slots__ "
@@ -156,7 +155,6 @@ class PropCanBase(dict, PropCanInternal):
                 self[key] = value
         # Let accessor methods know initialization is complete
         self.__super_set__('INITIALIZED', True)
-
 
     def __getitem__(self, key):
         try:
@@ -259,8 +257,7 @@ class PropCan(PropCanBase):
     def keys(self):
         # special None/False value handling
         return [key for key in self.__super_get__('__all_slots__')
-                                         if self.__contains__(key)]
-
+                if self.__contains__(key)]
 
     def values(self):
         # special None/False value handling

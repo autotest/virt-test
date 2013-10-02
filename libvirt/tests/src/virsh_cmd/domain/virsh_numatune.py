@@ -248,7 +248,7 @@ def run_virsh_numatune(test, params, env):
             utils_libvirtd.libvirtd_restart()
         # Recover previous running guest
         if (cgconfig == "off" and libvirtd == "restart"
-            and not vm.is_alive() and start_vm == "yes"):
+                and not vm.is_alive() and start_vm == "yes"):
             vm.start()
         if status_error == "yes":
             if change_parameters == "no":

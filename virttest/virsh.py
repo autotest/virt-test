@@ -340,7 +340,7 @@ class VirshPersistent(Virsh):
                         self.counter_decrease()
                 except aexpect.ShellStatusError:
                     # session was already closed
-                    pass # don't check is_alive or update counter
+                    pass  # don't check is_alive or update counter
                 self.__dict_del__("session_id")
         except KeyError:
             # Allow other exceptions to be raised
@@ -417,7 +417,6 @@ class VirshConnectBack(VirshPersistent):
                                    ssh_remote_auth=True)
         session_id = new_session.get_id()
         self.__dict_set__('session_id', session_id)
-
 
     @staticmethod
     def kosher_args(remote_ip, uri):

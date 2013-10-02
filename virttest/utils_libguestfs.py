@@ -313,7 +313,7 @@ class GuestfishPersistent(Guestfish):
             except aexpect.ShellProcessTerminatedError:
                 self.__class__.SESSION_COUNTER -= 1
                 self.__dict_del__('session_id')
-                return # guestfish session was closed normally
+                return  # guestfish session was closed normally
             # Close with 'quit' did not respond
             # So close with aexpect functions
             if existing.is_alive():

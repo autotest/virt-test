@@ -87,12 +87,11 @@ class LibvirtXMLBase(propcan.PropCanBase):
         else:
             try:
                 if self.__dict_get__('xml') is not None:
-                    del self['xml'] # clean up old temporary files
+                    del self['xml']  # clean up old temporary files
             except KeyError:
                 pass  # Allow other exceptions through
             # value could be filename or a string full of XML
             self.__dict_set__('xml', xml_utils.XMLTreeFile(value))
-
 
     def get_xml(self):
         """
@@ -141,8 +140,8 @@ class LibvirtXMLBase(propcan.PropCanBase):
             # Create fresh/new XMLTreeFile along with tmp files from XML content
             # content
             the_copy.__dict_set__('xml', xml_utils.XMLTreeFile(xmlstr))
-        except xcepts.LibvirtXMLError: # Allow other exceptions through
-            pass # no XML was loaded yet
+        except xcepts.LibvirtXMLError:  # Allow other exceptions through
+            pass  # no XML was loaded yet
         return the_copy
 
     def get_validates(self):

@@ -42,7 +42,7 @@ class SystemXML(CAPXML):
     """
     __slots__ = ('product', 'hdware_vendor',
                  'hdware_serial', 'hdware_uuid',
-                 'firmware_vendor','firmversion'
+                 'firmware_vendor', 'firmversion'
                  'firm_release_date')
 
     __sysfs_sub_path__ = 'dmi/id/'
