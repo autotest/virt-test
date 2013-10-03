@@ -557,7 +557,9 @@ class HumanMonitor(Monitor):
             s += data
             try:
                 lines = s.splitlines()
-                if lines[-1].split()[-1] == "(qemu)":
+                # Sometimes the qemu monitor lacks a line break before the
+                # qemu prompt, so we have to be less exigent:
+                if lines[-1].split()[-1].endswith("(qemu)"):
                     self._log_lines("\n".join(lines[1:]))
                     return True, "\n".join(lines[:-1])
             except IndexError:
