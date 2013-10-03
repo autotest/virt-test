@@ -127,55 +127,55 @@ class Buses(unittest.TestCase):
         params = {'addr1': '0', 'addr2': '0', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('dev1', params, parent_bus={'type': 'bus_type'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'addr2': '0', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('dev2', params, parent_bus={'type': 'bus_type'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'addr2': '1', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('dev3', params, parent_bus={'type': 'bus_type'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'addr2': '1', 'addr3': '1', 'bus': 'my_bus'}
         dev = qdevice('dev4', params, parent_bus={'type': 'bus_type'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'bus': 'my_bus'}
         dev = qdevice('dev5', params, parent_bus={'type': 'bus_type'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'bus': 'my_bus'}
         dev = qdevice('dev6', params, parent_bus={'type': 'bus_type'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {}
-        dev = qdevice('dev7', params, parent_bus={'type': 'bus_type'})
+        dev2 = qdevice('dev7', params, parent_bus={'type': 'bus_type'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev2, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
-                         % (out, exp, dev.str_long(), bus.str_long()))
+                         % (out, exp, dev2.str_long(), bus.str_long()))
 
         # Compare short repr
         exp = ("my_bus(bus_type): {0-0-0:a'dev1',0-0-1:a'dev6',0-0-2:a'dev7',"
-               "1-0-0:a'dev2',1-0-1:a'dev5',1-1-0:a'dev3',1-1-1:a'dev4'}  {}")
+               "1-0-0:a'dev2',1-0-1:a'dev5',1-1-0:a'dev3',1-1-1:a'dev4'}")
         out = str(bus.str_short())
         self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
@@ -184,63 +184,30 @@ class Buses(unittest.TestCase):
         # Used address
         params = {'addr1': '0', 'addr2': '0', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('devI1', params, parent_bus={'type': 'bus_type'})
-        exp = None
-        out = bus.insert(dev, False, False)
+        exp = "UsedSlot"
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Added bad device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         # Out of range address
         params = {'addr1': '0', 'addr2': '6', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('devI2', params, parent_bus={'type': 'bus_type'})
-        exp = False
-        out = bus.insert(dev, False, False)
+        exp = "BadAddr(False)"
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Added bad device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         # Incorrect bus name
         params = {'bus': 'other_bus'}
         dev = qdevice('devI3', params, parent_bus={'type': 'bus_type'})
-        exp = False
-        out = bus.insert(dev, False, False)
+        exp = "BusId"
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Added bad device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         # Compare short repr
         exp = ("my_bus(bus_type): {0-0-0:a'dev1',0-0-1:a'dev6',0-0-2:a'dev7',"
-               "1-0-0:a'dev2',1-0-1:a'dev5',1-1-0:a'dev3',1-1-1:a'dev4'}  {}")
-        out = str(bus.str_short())
-        self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
-                         "\n\n%s" % (out, exp, bus.str_long()))
-
-        # Forced records
-        # Used address
-        params = {'addr1': '0', 'addr2': '0', 'addr3': '0', 'bus': 'my_bus'}
-        dev = qdevice('devB1', params, parent_bus={'type': 'bus_type'})
-        exp = "(errors: UsedSlot)"
-        out = bus.insert(dev, False, True)
-        self.assertEqual(exp in out, True, "%s not in %s\n%s\n\n%s"
-                         % (exp, out, dev.str_long(), bus.str_long()))
-
-        # Out of range address
-        params = {'addr1': '0', 'addr2': '6', 'addr3': '0', 'bus': 'my_bus'}
-        dev = qdevice('devB2', params, parent_bus={'type': 'bus_type'})
-        exp = "(errors: BadAddr([0, 6, 0]))"
-        out = bus.insert(dev, False, True)
-        self.assertEqual(exp in out, True, "%s not in %s\n%s\n\n%s"
-                         % (exp, out, dev.str_long(), bus.str_long()))
-
-        # Incorrect bus name
-        params = {'bus': 'other_bus'}
-        dev = qdevice('devB3', params, parent_bus={'type': 'bus_type'})
-        exp = "(errors: BusId)"
-        out = bus.insert(dev, False, True)
-        self.assertEqual(exp in out, True, "%s not in %s\n%s\n\n%s"
-                         % (exp, out, dev.str_long(), bus.str_long()))
-
-        # Compare short repr
-        exp = ("my_bus(bus_type): {0-0-0:a'dev1',0-0-1:a'dev6',0-0-2:a'dev7',"
-               "0-0-3:a'devB3',1-0-0:a'dev2',1-0-1:a'dev5',1-1-0:a'dev3',"
-               "1-1-1:a'dev4'}  {0-0-0(2x):a'devB1',o0-6-0:a'devB2'}")
+               "1-0-0:a'dev2',1-0-1:a'dev5',1-1-0:a'dev3',1-1-1:a'dev4'}")
         out = str(bus.str_short())
         self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
@@ -315,15 +282,6 @@ Slots:
       addr3 = 0
       addr1 = 0
       driver = dev1
----------------< 0-0-3 >---------------
-  device
-    aid = None
-    aobject = None
-    parent_bus = {'type': 'bus_type'}
-    child_bus = []
-    params:
-      bus = my_bus
-      driver = devB3
 ---------------< 0-0-2 >---------------
   device
     aid = None
@@ -332,31 +290,6 @@ Slots:
     child_bus = []
     params:
       driver = dev7
-
----------------< o0-6-0 >---------------
-  device
-    aid = None
-    aobject = None
-    parent_bus = {'type': 'bus_type'}
-    child_bus = []
-    params:
-      bus = my_bus
-      addr2 = 6
-      addr3 = 0
-      addr1 = 0
-      driver = devB2
----------------< 0-0-0(2x) >---------------
-  device
-    aid = None
-    aobject = None
-    parent_bus = {'type': 'bus_type'}
-    child_bus = []
-    params:
-      bus = my_bus
-      addr2 = 0
-      addr3 = 0
-      addr1 = 0
-      driver = devB1
 """
         out = str(bus.str_long())
         self.assertEqual(out, exp, "Long representation corrupted:\n%s\n%s"
@@ -364,13 +297,13 @@ Slots:
 
         # Low level functions
         # Get device by object
-        exp = dev
-        out = bus.get(dev)
+        exp = dev2
+        out = bus.get(dev2)
         self.assertEqual(out, exp, "Failed to get device from bus:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
 
-        dev.aid = 'bad_device3'
-        exp = dev
+        dev2.aid = 'bad_device3'
+        exp = dev2
         out = bus.get('bad_device3')
         self.assertEqual(out, exp, "Failed to get device from bus:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
@@ -385,7 +318,7 @@ Slots:
         for dev in devs:
             bus.remove(dev)
 
-        exp = 'Bus my_bus, type=bus_type\nSlots:\n\n'
+        exp = 'Bus my_bus, type=bus_type\nSlots:\n'
         out = str(bus.str_long())
         self.assertEqual(out, exp, "Long representation corrupted:\n%s\n%s"
                          % (out, exp))
@@ -399,21 +332,21 @@ Slots:
         params = {'addr': '0'}
         dev = qdevice('dev1', params, parent_bus={'type': 'pci'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr': 10, 'bus': 'pci.0'}
         dev = qdevice('dev2', params, parent_bus={'type': 'pci'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr': '0x1f'}
         dev = qdevice('dev3', params, parent_bus={'type': 'pci'})
         exp = True
-        out = bus.insert(dev, False, False)
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
@@ -421,7 +354,7 @@ Slots:
         exp = ("pci.0(pci): [a'dev1',None,None,None,None,None,None,None,None,"
                "None,a'dev2',None,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,"
-               "a'dev3']  {}")
+               "a'dev3']")
         out = str(bus.str_short())
         self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
@@ -430,16 +363,16 @@ Slots:
         # Used address
         params = {'addr': 0}
         dev = qdevice('devI1', params, parent_bus={'type': 'pci'})
-        exp = None
-        out = bus.insert(dev, False, False)
+        exp = "UsedSlot"
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Added bad device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         # Out of range address
         params = {'addr': '0xffff'}
         dev = qdevice('devI2', params, parent_bus={'type': 'pci'})
-        exp = False
-        out = bus.insert(dev, False, False)
+        exp = "BadAddr(False)"
+        out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Added bad device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
@@ -447,41 +380,7 @@ Slots:
         exp = ("pci.0(pci): [a'dev1',None,None,None,None,None,None,None,None,"
                "None,a'dev2',None,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,"
-               "a'dev3']  {}")
-        out = str(bus.str_short())
-        self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
-                         "\n\n%s" % (out, exp, bus.str_long()))
-
-        # Forced records
-        # Used address
-        params = {'addr': '0x0'}
-        dev = qdevice('devB1', params, parent_bus={'type': 'pci'})
-        exp = "(errors: UsedSlot)"
-        out = bus.insert(dev, False, True)
-        self.assertEqual(exp in out, True, "%s not in %s\n%s\n\n%s"
-                         % (exp, out, dev.str_long(), bus.str_long()))
-
-        # Out of range address
-        params = {'addr': '0xffff'}
-        dev = qdevice('devB2', params, parent_bus={'type': 'pci'})
-        exp = "(errors: BadAddr([65535]))"
-        out = bus.insert(dev, False, True)
-        self.assertEqual(exp in out, True, "%s not in %s\n%s\n\n%s"
-                         % (exp, out, dev.str_long(), bus.str_long()))
-
-        # Incorrect bus name
-        params = {'bus': 'other_bus'}
-        dev = qdevice('devB3', params, parent_bus={'type': 'pci'})
-        exp = "(errors: BusId)"
-        out = bus.insert(dev, False, True)
-        self.assertEqual(exp in out, True, "%s not in %s\n%s\n\n%s"
-                         % (exp, out, dev.str_long(), bus.str_long()))
-
-        # Compare short repr
-        exp = ("pci.0(pci): [a'dev1',a'devB3',None,None,None,None,None,None,"
-               "None,None,a'dev2',None,None,None,None,None,None,None,None,"
-               "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "a'dev3']  {0x0(2x):a'devB1',o0xffff:a'devB2'}")
+               "a'dev3']")
         out = str(bus.str_short())
         self.assertEqual(out, exp, "Short representation corrupted:\n%s\n%s"
                          "\n\n%s" % (out, exp, bus.str_long()))
@@ -617,7 +516,6 @@ Slots:
       addr = 0x1f
       driver = dev1
       bus = pci.0
-
 """
         out = str(bus.str_long())
         self.assertEqual(out, exp, "Long representation corrupted:\n%s\n%s"
@@ -659,39 +557,34 @@ Slots:
                                                          parent_bus={'type': 'uhci'})))
 
         # Try to insert device into specific port which belongs to inferior bus
-        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                                          {'port': '2.4.3.3'},
-                                                          parent_bus={'type': 'uhci'})))
+        out = hub2.insert(qemu_devices.QDevice('usb-kbd',
+                                                {'port': '2.4.3.3'},
+                                                parent_bus={'type': 'uhci'}))
+        assert out == "BusId"
 
         # Try to insert device into specific port which belongs to superior bus
-        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                                          {'port': '2.4'},
-                                                          parent_bus={'type': 'uhci'})))
+        out = hub2.insert(qemu_devices.QDevice('usb-kbd', {'port': '2.4'},
+                                               parent_bus={'type': 'uhci'}))
+        assert out == "BusId"
 
         # Try to insert device into specific port which belongs to same level
         # but different port
-        self.assertFalse(hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                                          {'port': '2.3.4'},
-                                                          parent_bus={'type': 'uhci'})))
+        out = hub2.insert(qemu_devices.QDevice('usb-kbd', {'port': '2.3.4'},
+                                               parent_bus={'type': 'uhci'}))
+        assert out == "BusId"
 
         # Force insert device with port which belongs to other hub
         dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3.4'},
                                    parent_bus={'type': 'uhci'})
-        out = hub2.insert(dev, force=True)
-        res = bool("BusId" in out and "BasicAddress" in out)
-        self.assertTrue(res, "Incorrect output of force insert:\n%s\nOutput"
-                        "have to contain BusId and BasicAddress (err)" % (out))
-        # verify that port is updated correctly
-        self.assertEqual("2.4.1", dev.get_param("port"))
 
         # Check the overall buses correctness
-        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-hub'}  {}",
+        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-hub'}",
                          usbc1.str_short())
-        self.assertEqual("usb1.0(uhci): {4:a'usb-hub'}  {}",
+        self.assertEqual("usb1.0(uhci): {4:a'usb-hub'}",
                          hub1.str_short())
-        self.assertEqual("usb1.0(uhci): {1:a'usb-hub',3:a'usb-hub'}  {}",
+        self.assertEqual("usb1.0(uhci): {3:a'usb-hub'}",
                          hub2.str_short())
-        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-kbd'}  {}",
+        self.assertEqual("usb1.0(uhci): {1:a'usb-kbd',2:a'usb-kbd'}",
                          hub3.str_short())
 
 
@@ -754,7 +647,7 @@ class Container(unittest.TestCase):
 
         # Add basic 'pc' devices
         for dev in qdev.machine_by_params({'machine_type': 'pc'}):
-            out = qdev.insert(dev, False)
+            out = qdev.insert(dev)
             self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
                              % (out, qdev.str_long()))
 
@@ -796,9 +689,9 @@ fdc
                             'corrupted:\n%s\n%s' % (out, exp))
 
         exp = ("Buses of vm1\n"
-               "  floppy(floppy): [None,None]  {}\n"
-               "  ide(ide): [None,None,None,None]  {}\n"
-               "  pci.0(PCI): [t'i440FX',t'PIIX3'%s]  {}"
+               "  floppy(floppy): [None,None]\n"
+               "  ide(ide): [None,None,None,None]\n"
+               "  pci.0(PCI): [t'i440FX',t'PIIX3'%s]"
                % (',None' * 30))
         out = qdev.str_bus_short()
         assert out == exp, "Bus representation is ocrrupted:\n%s\n%s" % (out,
@@ -812,25 +705,25 @@ fdc
                                       'a_hba')
         dev = qdevice('HBA', {'id': 'hba1', 'addr': 10},
                       parent_bus={'aobject': 'pci.0'}, child_bus=bus)
-        out = qdev.insert(dev, False)
+        out = qdev.insert(dev)
         self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
                          % (out, qdev.str_long()))
 
         # Device inside a child bus by type (most common)
         dev = qdevice('dev', {}, parent_bus={'type': 'hba'})
-        out = qdev.insert(dev, False)
+        out = qdev.insert(dev)
         self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
                          % (out, qdev.str_long()))
 
         # Device inside a child bus by autotest_id
         dev = qdevice('dev', {}, 'autotest_remove', {'aobject': 'a_hba'})
-        out = qdev.insert(dev, False)
+        out = qdev.insert(dev)
         self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
                          % (out, qdev.str_long()))
 
         # Device inside a child bus by busid
         dev = qdevice('dev', {}, 'autoremove', {'busid': 'hba1.0'})
-        out = qdev.insert(dev, False)
+        out = qdev.insert(dev)
         self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
                          % (out, qdev.str_long()))
 
@@ -841,59 +734,31 @@ fdc
         self.assertEqual(out, exp, "Short representation is corrupted:\n%s\n%s"
                          % (out, exp))
         exp = ("Buses of vm1\n"
-               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
-               "  floppy(floppy): [None,None]  {}\n"
-               "  ide(ide): [None,None,None,None]  {}\n"
+               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}\n"
+               "  floppy(floppy): [None,None]\n"
+               "  ide(ide): [None,None,None,None]\n"
                "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,None,"
                "None,None,None,hba1,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "None]  {}")
+               "None]")
         out = qdev.str_bus_short()
         assert out == exp, 'Bus representation iscorrupted:\n%s\n%s' % (out,
                                                                         exp)
 
-        # Force insert bad devices: No matching bus
-        dev = qdevice('baddev', {}, 'badbus', {'type': 'missing_bus'})
-        self.assertRaises(qemu_devices.DeviceInsertError, qdev.insert, dev,
-                          False)
-        out = qdev.insert(dev, True)
-        self.assertEqual("No matching bus" in out, True, "Incorrect output of "
-                         "force insertion of the bad dev, ret=%s\n%s"
-                         % (out, qdev.str_long()))
-
-        # Force insert bad devices: Incorrect addr
-        dev = qdevice('baddev', {'addr': 'bad_value'}, 'badaddr',
-                      {'aobject': 'pci.0'})
-        self.assertRaises(qemu_devices.DeviceInsertError, qdev.insert, dev,
-                          False)
-        out = qdev.insert(dev, True)
-        self.assertEqual("errors: BasicAddress" in out, True, "Incorrect "
-                         "output of force insertion of the bad dev, ret=%s\n%s"
-                         % (out, qdev.str_long()))
-
-        # Force insert bad devices: Duplicite qid
-        dev = qdevice('baddev', {'id': 'hba1'}, 'badid')
-        self.assertRaises(qemu_devices.DeviceInsertError, qdev.insert, dev,
-                          False)
-        out = qdev.insert(dev, True)
-        self.assertEqual("Devices qid hba1 already used in VM" in out, True,
-                         "Incorrect output of force insertion of the bad dev, "
-                         "ret=%s\n%s" % (out, qdev.str_long()))
-
         # Check the representation
         exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
-               "hba1,a'dev',a'dev',a'dev',a'baddev',a'baddev',hba1__0]")
+               "hba1,a'dev',a'dev',a'dev']")
         out = qdev.str_short()
         assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
                                                                            exp)
         exp = ("Buses of vm1\n"
-               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}  {}\n"
-               "  floppy(floppy): [None,None]  {}\n"
-               "  ide(ide): [None,None,None,None]  {}\n"
-               "  pci.0(PCI): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}\n"
+               "  floppy(floppy): [None,None]\n"
+               "  ide(ide): [None,None,None,None]\n"
+               "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,"
                "None,None,None,None,hba1,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "None,None]  {}")
+               "None,None]")
         out = qdev.str_bus_short()
         assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
                                                                          exp)
@@ -901,7 +766,7 @@ fdc
         # Now representation contains some devices, play with it a bit
         # length
         out = len(qdev)
-        assert out == 12, "Length of qdev is incorrect: %s != %s" % (out, 10)
+        assert out == 9, "Length of qdev is incorrect: %s != %s" % (out, 9)
 
         # compare
         qdev2 = self.create_qdev('vm1')
@@ -918,20 +783,19 @@ fdc
 
         # cmdline
         exp = ("-M pc -device HBA,id=hba1,addr=0xa -device dev -device dev "
-               "-device dev -device baddev -device baddev,addr=0x2,bus=pci.0 "
-               "-device baddev,id=hba1")
+               "-device dev")
         out = qdev.cmdline()
         self.assertEqual(out, exp, 'Corrupted qdev.cmdline() output:\n%s\n%s'
                          % (out, exp))
 
         # get_by_qid (currently we have 2 devices of the same qid)
         out = qdev.get_by_qid('hba1')
-        self.assertEqual(len(out), 2, 'Incorrect number of devices by qid '
-                         '"hba1": %s != 2\n%s' % (len(out), qdev.str_long()))
+        self.assertEqual(len(out), 1, 'Incorrect number of devices by qid '
+                         '"hba1": %s != 1\n%s' % (len(out), qdev.str_long()))
 
         # Remove some devices
         # Remove based on aid
-        out = qdev.remove('hba1__0')
+        out = qdev.remove('__5')
         self.assertEqual(out, None, 'Failed to remove device:\n%s\nRepr:\n%s'
                          % ('hba1__0', qdev.str_long()))
 
@@ -945,18 +809,17 @@ fdc
                          % ('hba1', qdev.str_long()))
 
         # Check the representation
-        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
-               "a'baddev',a'baddev']")
+        exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc']")
         out = qdev.str_short()
         assert out == exp, "Short representation is corrupted:\n%s\n%s" % (out,
                                                                            exp)
         exp = ("Buses of vm1\n"
-               "  floppy(floppy): [None,None]  {}\n"
-               "  ide(ide): [None,None,None,None]  {}\n"
-               "  pci.0(PCI): [t'i440FX',t'PIIX3',a'baddev',None,None,None,"
+               "  floppy(floppy): [None,None]\n"
+               "  ide(ide): [None,None,None,None]\n"
+               "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
-               "None,None]  {}")
+               "None,None]")
         out = qdev.str_bus_short()
         assert out == exp, 'Bus representation is corrupted:\n%s\n%s' % (out,
                                                                          exp)
@@ -1090,24 +953,6 @@ fdc
         qdev.insert(dev)
         out = dev.get_aid()
         self.assertEqual(out, 'qid', "incorrect aid %s != %s" % (out, 'qid'))
-
-        dev = qemu_devices.QDevice(None, {'id': 'qid'})
-        qdev.insert(dev, True)
-        out = dev.get_aid()
-        self.assertEqual(out, 'qid__0', "incorrect aid %s != %s"
-                         % (out, 'qid__0'))
-
-        dev = qemu_devices.QDevice(None, {'id': 'qid__1'})
-        qdev.insert(dev, True)
-        out = dev.get_aid()
-        self.assertEqual(out, 'qid__1', "incorrect aid %s != %s"
-                         % (out, 'qid__1'))
-
-        dev = qemu_devices.QDevice(None, {'id': 'qid'})
-        qdev.insert(dev, True)
-        out = dev.get_aid()
-        self.assertEqual(out, 'qid__2', "incorrect aid %s != %s"
-                         % (out, 'qid__2'))
 
         # has_option
         out = qdev.has_option('device')
