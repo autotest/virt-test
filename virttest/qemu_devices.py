@@ -800,11 +800,11 @@ class QSparseBus(object):
         self.type = bus_type
         self.aobject = aobject
         self.bus = {}                       # Normal bus records
-        self.badbus = {}                    # Bad bus records
         self.bus_item = bus_item            # bus param name
         self.addr_items = addr_spec[0]      # [names][lengths]
         self.addr_lengths = addr_spec[1]
         self.atype = atype
+        self.__device = None
 
     def __str__(self):
         """ default string representation """
@@ -819,13 +819,8 @@ class QSparseBus(object):
         if isinstance(item, QBaseDevice):
             if item in self.bus.itervalues():
                 return item
-            elif item in self.badbus.itervalues():
-                return item
-        elif item:
+        else:
             for device in self.bus.itervalues():
-                if device.get_aid() == item:
-                    return device
-            for device in self.badbus.itervalues():
                 if device.get_aid() == item:
                     return device
         raise KeyError("Device %s is not in %s" % (item, self))
@@ -848,7 +843,7 @@ class QSparseBus(object):
 
     def __len__(self):
         """ :return: Number of devices in this bus """
-        return len(self.bus) + len(self.badbus)
+        return len(self.bus)
 
     def __contains__(self, item):
         """
@@ -857,10 +852,9 @@ class QSparseBus(object):
         :return: True - yes, False - no
         """
         if isinstance(item, QBaseDevice):
-            if (item in self.bus.itervalues() or
-               item in self.badbus.itervalues()):
+            if item in self.bus.itervalues():
                 return True
-        elif item:
+        else:
             for device in self:
                 if device.get_aid() == item:
                     return True
@@ -868,8 +862,7 @@ class QSparseBus(object):
 
     def __iter__(self):
         """ Iterate over all defined devices. """
-        return itertools.chain(self.bus.itervalues(),
-                               self.badbus.itervalues())
+        return self.bus.itervalues()
 
     def str_short(self):
         """ short string representation """
@@ -877,25 +870,13 @@ class QSparseBus(object):
             bus_type = self.atype
         else:
             bus_type = self.type
-        return "%s(%s): %s  %s" % (self.busid, bus_type, self._str_devices(),
-                                   self._str_bad_devices())
+        return "%s(%s): %s" % (self.busid, bus_type, self._str_devices())
 
     def _str_devices(self):
         """ short string representation of the good bus """
         out = '{'
         for addr in sorted(self.bus.keys()):
-            out += "%s:" % addr
-            out += "%s," % self.bus[addr]
-        if out[-1] == ',':
-            out = out[:-1]
-        return out + '}'
-
-    def _str_bad_devices(self):
-        """ short string representation of the bad bus """
-        out = '{'
-        for addr in sorted(self.badbus.keys()):
-            out += "%s:" % addr
-            out += "%s," % self.badbus[addr]
+            out += "%s:%s," % (addr, self.bus[addr])
         if out[-1] == ',':
             out = out[:-1]
         return out + '}'
@@ -906,27 +887,13 @@ class QSparseBus(object):
             bus_type = self.atype
         else:
             bus_type = self.type
-        return "Bus %s, type=%s\nSlots:\n%s\n%s" % (self.busid, bus_type,
-                                                    self._str_devices_long(), self._str_bad_devices_long())
+        return "Bus %s, type=%s\nSlots:\n%s" % (self.busid, bus_type,
+                                                    self._str_devices_long())
 
     def _str_devices_long(self):
         """ long string representation of devices in the good bus """
         out = ""
         for addr, dev in self.bus.iteritems():
-            out += '%s< %4s >%s\n  ' % ('-' * 15, addr,
-                                        '-' * 15)
-            if isinstance(dev, str):
-                out += '"%s"\n  ' % dev
-            else:
-                out += dev.str_long().replace('\n', '\n  ')
-                out = out[:-3]
-            out += '\n'
-        return out
-
-    def _str_bad_devices_long(self):
-        """ long string representation of devices in the bad bus """
-        out = ""
-        for addr, dev in self.badbus.iteritems():
             out += '%s< %4s >%s\n  ' % ('-' * 15, addr,
                                         '-' * 15)
             if isinstance(dev, str):
@@ -1063,112 +1030,48 @@ class QSparseBus(object):
             if device.get_param(self.addr_items[i]) is not None:
                 device.set_param(self.addr_items[i], addr[i])
 
-    def insert(self, device, strict_mode=False, force=False):
+    def insert(self, device, strict_mode=False):
         """
         Insert device into this bus representation.
         :param device: QBaseDevice device
         :param strict_mode: Use strict mode (set optional params)
-        :param force: Force insert the device even when errs occurs
-        :return: True on success,
-                 False when an incorrect addr/busid is set,
-                 None when there is no free slot,
-                 error string when force added device with errors.
+        :return: list of added devices on success,
+                 string indicating the failure on failure.
         """
-        err = ""
         if not self._check_bus(device):
-            if force:
-                err += "BusId, "
-                device.set_param(self.bus_item, self.busid)
-            else:
-                return False
+            return "BusId"
         try:
             addr_pattern = self._dev2addr(device)
         except (ValueError, LookupError):
-            if force:
-                err += "BasicAddress, "
-                addr_pattern = [None] * len(self.addr_items)
-            else:
-                return False
+            return "BasicAddress"
         addr = self.get_free_slot(addr_pattern)
         if addr is None:
-            if force:
-                if None in addr_pattern:
-                    err += "NoFreeSlot, "
-                    # Use last valid address for inserting the device
-                    addr = [(_ - 1) for _ in self.addr_lengths]
-                    self._insert_used(device, self._addr2stor(addr))
-                else:   # used slot
-                    err += "UsedSlot, "
-                    addr = addr_pattern  # It's fully specified addr
-                    self._insert_used(device, self._addr2stor(addr))
+            if None in addr_pattern:
+                return "NoFreeSlot"
             else:
-                return None
+                return "UsedSlot"
         elif addr is False:
-            if force:
-                addr = addr_pattern
-                err += "BadAddr(%s), " % addr
-                self._insert_oor(device, self._addr2stor(addr))
-            else:
-                return False
+            return "BadAddr(%s)" % addr
         else:
-            self._insert_good(device, self._addr2stor(addr))
+            self._insert(device, self._addr2stor(addr))
         if strict_mode:     # Set full address in strict_mode
             self._set_device_props(device, addr)
         else:
             self._update_device_props(device, addr)
-        if err:
-            # Device was force added with errors
-            err = ("Force adding device %s into %s (errors: %s)"
-                   % (device, self, err[:-2]))
-            return err
         return True
 
-    def _insert_good(self, device, addr):
+    def _insert(self, device, addr):
         """
         Insert device into good bus
         :param device: QBaseDevice device
         :param addr: internal address  [addr1, addr2, ...]
+        :return: List of additional devices
         """
         self.bus[addr] = device
-
-    def _insert_oor(self, device, addr):
-        """
-        Insert device into bad bus as out-of-range (o)
-        :param device: QBaseDevice device
-        :param addr: storable address "addr1-addr2-..."
-        """
-        addr = "o" + addr
-        if addr in self.badbus:
-            i = 2
-            while "%s(%dx)" % (addr, i) in self.badbus:
-                i += 1
-            addr = "%s(%dx)" % (addr, i)
-        self.badbus[addr] = device
-
-    def _insert_used(self, device, addr):
-        """
-        Insert device into bad bus because address is already used
-        :param device: QBaseDevice device
-        :param addr: storable address "addr1-addr2-..."
-        """
-        i = 2
-        while "%s(%dx)" % (addr, i) in self.badbus:
-            i += 1
-        self.badbus["%s(%dx)" % (addr, i)] = device
 
     def remove(self, device):
         """
         Remove device from this bus
-        :param device: QBaseDevice device
-        :return: True when removed, False when the device wasn't found
-        """
-        if not self._remove_good(device):
-            return self._remove_bad(device)
-        return True
-
-    def _remove_good(self, device):
-        """
-        Remove device from the good bus
         :param device: QBaseDevice device
         :return: True when removed, False when the device wasn't found
         """
@@ -1178,25 +1081,8 @@ class QSparseBus(object):
                 if item is device:
                     remove = key
                     break
-            if remove:
+            if remove is not None:
                 del(self.bus[remove])
-                return True
-        return False
-
-    def _remove_bad(self, device):
-        """
-        Remove device from the bad bus
-        :param device: QBaseDevice device
-        :return: True when removed, False when the device wasn't found
-        """
-        if device in self.badbus.itervalues():
-            remove = None
-            for key, item in self.badbus.iteritems():
-                if item is device:
-                    remove = key
-                    break
-            if remove:
-                del(self.badbus[remove])
                 return True
         return False
 
@@ -1379,20 +1265,6 @@ class QDenseBus(QSparseBus):
             addr = self._increment_addr(addr_pattern, addr)
         return out
 
-    def _str_bad_devices_long(self):
-        """ Show all addresses even when they are unused """
-        out = ""
-        for addr, dev in self.badbus.iteritems():
-            out += '%s< %4s >%s\n  ' % ('-' * 15, addr,
-                                        '-' * 15)
-            if isinstance(dev, str):
-                out += '"%s"\n  ' % dev
-            else:
-                out += dev.str_long().replace('\n', '\n  ')
-                out = out[:-3]
-            out += '\n'
-        return out
-
     def _str_devices(self):
         """ Show all addresses even when they are unused, don't print addr """
         out = '['
@@ -1404,16 +1276,6 @@ class QDenseBus(QSparseBus):
         if out[-1] == ',':
             out = out[:-1]
         return out + ']'
-
-    def _str_bad_devices(self):
-        """ Show all addresses even when they are unused """
-        out = '{'
-        for addr in sorted(self.badbus.keys()):
-            out += "%s:" % addr
-            out += "%s," % self.badbus[addr]
-        if out[-1] == ',':
-            out = out[:-1]
-        return out + '}'
 
 
 class QPCIBus(QDenseBus):
@@ -2008,21 +1870,16 @@ class DevContainer(object):
             if _ is not None and _ is not False:
                 return bus
 
-    def insert(self, device, force=False):
+    def insert(self, device):
         """
         Inserts device into this VM representation
         :param device: QBaseDevice device
-        :param force: Force insert the device even when errs occurs
-        :return: None on success,
-                 error string when force added device with errors.
         :raise DeviceInsertError: On failure in case force is not set
 
         1) get list of matching parent buses
-        2) try to find matching bus+address gently
-        3) if it fails and force is specified, try to insert it into full
-           buses. If none is found use non-matching bus.
-        4) insert(0, child bus) (this way we always start with the latest bus)
-        5) append into self.devices
+        2) try to find matching bus+address
+        3) add child buses
+        4) append into self.devices
         """
         def clean():
             """ Remove all inserted devices on failure """
@@ -2030,10 +1887,8 @@ class DevContainer(object):
                 bus.remove(device)
             for bus in _added_buses:
                 self.__buses.remove(bus)
-        err = ""
         _used_buses = []
         _added_buses = []
-        # 1
         if device.parent_bus is not None and not isinstance(device.parent_bus,
                                                             (list, tuple)):
             # it have to be list of parent buses
@@ -2042,14 +1897,12 @@ class DevContainer(object):
             # type, aobject, busid
             if parent_bus is None:
                 continue
+            # 1
             buses = self.get_buses(parent_bus, False)
             if not buses:
-                err += "ParentBus(%s): No matching bus\n" % parent_bus
-                if force:
-                    continue
-                else:
-                    clean()
-                    raise DeviceInsertError(device, err, self)
+                err = "ParentBus(%s): No matching bus\n" % parent_bus
+                clean()
+                raise DeviceInsertError(device, err, self)
             bus_returns = []
             strict_mode = self.strict_mode
             for bus in buses:   # 2
@@ -2058,47 +1911,29 @@ class DevContainer(object):
                     # we in autotest require. Force strict mode to get this
                     # device into the correct bus (ide-hd could go into ahci
                     # and ide hba, qemu doesn't care, autotest does).
-                    if strict_mode is not True:
-                        strict_mode = True
+                    strict_mode = True
                     bus_returns.append(-1)  # Don't use this bus
                     continue
-                bus_returns.append(bus.insert(device, strict_mode, False))
+                bus_returns.append(bus.insert(device, strict_mode))
                 if bus_returns[-1] is True:     # we are done
                     _used_buses.append(bus)
                     break
             if bus_returns[-1] is True:
                 continue
-            elif not force:
-                err += "ParentBus(%s): No free matching bus\n" % parent_bus
-                clean()
-                raise DeviceInsertError(device, err, self)
-            strict_mode = True
-            if None in bus_returns:  # 3a
-                bus = buses[bus_returns.index(None)]
-            elif False in bus_returns:
-                bus = buses[bus_returns.index(False)]
-            else:
-                err += "ParentBus(%s): No matching bus\n" % parent_bus
-                continue
-            _err = bus.insert(device, True, True)
-            _used_buses.append(bus)
-            if _err:
-                err += "ParentBus(%s): %s\n" % (parent_bus, _err)
-        # 4
+            err = "ParentBus(%s): No free matching bus\n" % parent_bus
+            clean()
+            raise DeviceInsertError(device, err, self)
+        # 3
         for bus in device.child_bus:
             self.__buses.insert(0, bus)
             _added_buses.append(bus)
-        # 5
+        # 4
         if device.get_qid() and self.get_by_qid(device.get_qid()):
-            err += "Devices qid %s already used in VM\n" % device.get_qid()
-            if not force:
-                clean()
-                raise DeviceInsertError(device, err, self)
+            err = "Devices qid %s already used in VM\n" % device.get_qid()
+            clean()
+            raise DeviceInsertError(device, err, self)
         device.set_aid(self.__create_unique_aid(device.get_qid()))
         self.__devices.append(device)
-        if err:
-            return ("Errors occurred while adding device %s into %s:\n%s"
-                    % (device, self, err))
 
     def simple_hotplug(self, device, monitor, force=False):
         """
@@ -2138,6 +1973,7 @@ class DevContainer(object):
             self.set_clean()  # qdev remains consistent
             raise DeviceHotplugError(device, 'According to qemu_device: %s'
                                      % exc, self)
+        out = device.hotplug(monitor)
 
         return out, ver_out
 
@@ -2152,8 +1988,6 @@ class DevContainer(object):
         :type device: string, QDevice.
         :param monitor: Monitor from vm.
         :type monitor: qemu_monitor.Monitor
-        :param verify_fn: call-back to special verify function.
-        :type verify_fn: callable object(device object, out, monitor object)
         :return: tuple(monitor.cmd(), verify_unplug output)
         """
         device = self[device]
