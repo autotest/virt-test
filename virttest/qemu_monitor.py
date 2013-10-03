@@ -458,18 +458,22 @@ class Monitor:
                                    "autotest." % option)
                             raise NotImplementedError(err)
             else:
-                option, line = line.split(':', 1)
-                option, line = option.strip(), line.strip()
-                if option == "Backing file":
-                    line = line.rsplit(' (chain depth: ')
-                    blocks[name]['backing_file'] = line[0]
-                    blocks[name]['backing_file_depth'] = int(line[1][:-1])
-                elif option == "Removable device":
-                    blocks[name]['removable'] = 1
-                    if 'not locked' not in line:
-                        blocks[name]['locked'] = 1
-                    if 'try open' in line:
-                        blocks[name]['try-open'] = 1
+                try:
+                    option, line = line.split(':', 1)
+                    option, line = option.strip(), line.strip()
+                    if option == "Backing file":
+                        line = line.rsplit(' (chain depth: ')
+                        blocks[name]['backing_file'] = line[0]
+                        blocks[name]['backing_file_depth'] = int(line[1][:-1])
+                    elif option == "Removable device":
+                        blocks[name]['removable'] = 1
+                        if 'not locked' not in line:
+                            blocks[name]['locked'] = 1
+                        if 'try open' in line:
+                            blocks[name]['try-open'] = 1
+                except ValueError:
+                    continue
+
         return blocks
 
     @staticmethod
