@@ -145,9 +145,16 @@ def run_virsh_update_device(test, params, env):
         if status != 0:
             raise error.TestFail("Run failed with right command")
         else:
-            if flag == "--persistent" or flag == "--config":
+            if flag == "--live":
+                if not re.search(tmp_iso, output):
+                    raise error.TestFail("virsh update-device function invalid "
+                                         "didn't see 'attached device' in XML")
+                if re.search(tmp_iso, output_shut):
+                    raise error.TestFail("virsh update-device function invalid "
+                                         "can see 'attached device' in XML")
+            if flag == "--config":
                 if not re.search(tmp_iso, output_shut):
-                    raise error.TestFail("virsh update-device function invalid"
+                    raise error.TestFail("virsh update-device function invalid "
                                          "didn't see 'attached device' in XML")
             else:
                 if params.has_key("updatedevice_diff_file"):
@@ -157,12 +164,13 @@ def run_virsh_update_device(test, params, env):
                                                            context_after)
                     if not re.search(tmp_iso, "\n".join(list(output_diff))):
                         raise error.TestFail("virsh update-device function "
-                                             "invalid; can't see 'attached device'in before/after")
+                                             "invalid; can't see 'attached "
+                                             "device'in before/after")
                 else:
                     if re.search(tmp_iso, output_shut):
                         raise error.TestFail("virsh attach-device without "
-                                             "--persistent/--config function invalid;can see "
-                                             "'attached device'in XML")
+                                             "--live/--config function invalid "
+                                             "can see 'attached device'in XML")
             if diff_iso == "yes":
                 check_attach(tmp2_iso, output)
             if vm_ref == "name":
