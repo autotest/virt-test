@@ -1153,7 +1153,7 @@ class VirtIface(propcan.PropCan):
     def __getstate__(self):
         state = {}
         for key in self.__class__.__slots__:
-            if self.has_key(key):
+            if key in self:
                 state[key] = self[key]
         return state
 
@@ -1586,7 +1586,8 @@ class DbNet(VMNet):
                 for propertea in proplist:
                     # only set properties in db but not in self
                     if propertea in db_nic:
-                        self[nic_name].set_if_none(propertea, db_nic[propertea])
+                        self[nic_name].set_if_none(
+                            propertea, db_nic[propertea])
         if entry:
             VMNet.__init__(self, self.container_class, entry)
         # Assume self.update_db() called elsewhere

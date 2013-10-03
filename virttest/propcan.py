@@ -111,6 +111,17 @@ class PropCanInternal(object):
         object.__delattr__(self, key)
 
 
+class classproperty(property):
+    def __get__(self, obj, type_):
+        data = self.fget.__get__(None, type_)()
+        return data
+
+    def __set__(self, obj, value):
+        cls = type(obj)
+        return self.fset.__get__(None, cls)(value)
+
+
+
 class PropCanBase(dict, PropCanInternal):
 
     """
@@ -123,19 +134,25 @@ class PropCanBase(dict, PropCanInternal):
 
     # Help debugging by making all slot values available in all subclasses
     # cache the value on first call
-    __all_slots__ = None
+    ___all_slots__ = None
 
+    @classproperty
+    @classmethod
+    def __all_slots__(cls):
+        if not cls.___all_slots__:
+            all_slots = []
+            for cls_slots in [getattr(_cls, '__slots__', [])
+                              for _cls in cls.__mro__]:
+                all_slots += cls_slots
+            cls.___all_slots__ = tuple(all_slots)
+        return cls.___all_slots__
 
     def __new__(cls, *args, **dargs):
         if not hasattr(cls, '__slots__'):
             raise NotImplementedError("Class '%s' must define __slots__ "
                                       "property" % str(cls))
         newone = super(PropCanBase, cls).__new__(cls, *args, **dargs)
-        all_slots = []
-        for cls_slots in [getattr(_cls, '__slots__', [])
-                          for _cls in cls.__mro__]:
-            all_slots += cls_slots
-        newone.__super_set__('__all_slots__', tuple(all_slots))
+        cls.___all_slots__ = tuple()
         return newone
 
     def __init__(self, *args, **dargs):
@@ -149,7 +166,7 @@ class PropCanBase(dict, PropCanInternal):
         super(PropCanBase, self).__init__()
         # No need to re-invent dict argument processing
         values = dict(*args, **dargs)
-        for key in self.__super_get__("__all_slots__"):
+        for key in self.__all_slots__:
             value = values.get(key, "@!@!@!SENTINEL!@!@!@")
             if value is not "@!@!@!SENTINEL!@!@!@":
                 # Call accessor methods if present
@@ -183,6 +200,23 @@ class PropCanBase(dict, PropCanInternal):
             return super(PropCanBase, self).__delitem__(key)
         return accessor()
 
+    def __get__(self, key):
+        try:
+            # Attempt to call accessor methods first whenever possible
+            self.__canhaz__(key, KeyError)
+            return self.__getitem__(key)
+        except KeyError:
+            # Allow subclasses to define attributes if required
+            return super(PropCanBase, self).__getattribute__(key)
+
+    def __set__(self, key, value):
+        self.__canhaz__(key)
+        try:
+            return self.__setitem__(key, value)
+        except KeyError, detail:
+            # Prevent subclass instances from defining normal attributes
+            raise AttributeError(str(detail))
+
     def __getattr__(self, key):
         try:
             # Attempt to call accessor methods first whenever possible
@@ -212,7 +246,7 @@ class PropCanBase(dict, PropCanInternal):
         """
         Quickly determine if an accessor or instance attribute name is defined.
         """
-        slots = self.__super_get__('__all_slots__')
+        slots = self.__all_slots__
         keys = slots + ('get_%s' % key, 'set_%s' % key, 'del_%s' % key)
         if key not in keys:
             raise excpt("Key '%s' not found in super class attributes or in %s"
@@ -233,7 +267,7 @@ class PropCan(PropCanBase):
 
     def __len__(self):
         length = 0
-        for key in self.__super_get__('__all_slots__'):
+        for key in self.__all_slots__:
             # special None/False value handling
             if self.__contains__(key):
                 length += 1
@@ -258,7 +292,7 @@ class PropCan(PropCanBase):
 
     def keys(self):
         # special None/False value handling
-        return [key for key in self.__super_get__('__all_slots__')
+        return [key for key in self.__all_slots__
                                          if self.__contains__(key)]
 
 
