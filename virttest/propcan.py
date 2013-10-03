@@ -137,6 +137,17 @@ class PropCanBase(dict, PropCanInternal):
         newone.__super_set__('__all_slots__', tuple(all_slots))
         return newone
 
+    def __getstate__(self):
+        super(PropCanBase, self).__getstate__()
+
+    def __setstate__(self, state):
+        all_slots = []
+        for cls_slots in [getattr(_cls, '__slots__', [])
+                          for _cls in self.__class__.__mro__]:
+            all_slots += cls_slots
+        self.__super_set__('__all_slots__', tuple(all_slots))
+
+
     def __init__(self, *args, **dargs):
         """
         Initialize contents directly or by way of accessors

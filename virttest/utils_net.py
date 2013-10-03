@@ -1087,6 +1087,7 @@ class VirtIface(propcan.PropCan):
         return state
 
     def __setstate__(self, state):
+        super(VirtIface, self).__setstate__(state)
         self.__init__(state)
 
     @classmethod
