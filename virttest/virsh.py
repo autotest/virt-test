@@ -2166,7 +2166,7 @@ def snapshot_revert(name, snapshot, **dargs):
     return command("snapshot-revert %s %s" % (name, snapshot), **dargs)
 
 
-def snapshot_delete(name, snapshot, **dargs):
+def snapshot_delete(name, snapshot, options='', **dargs):
     """
     Remove domain snapshot
 
@@ -2175,7 +2175,8 @@ def snapshot_delete(name, snapshot, **dargs):
     :param snapshot: snapshot to delete
     :return: CmdResult instance
     """
-    return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
+    cmd = "snapshot-delete %s %s %s" % (name, snapshot, options)
+    return command(cmd, **dargs)
 
 
 def domblkinfo(name, device, **dargs):
