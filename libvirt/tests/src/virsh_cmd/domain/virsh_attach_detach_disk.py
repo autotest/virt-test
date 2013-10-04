@@ -74,9 +74,14 @@ def run_virsh_attach_detach_disk(test, params, env):
         try:
             if os_type == "linux":
                 session = vm.wait_for_login()
+                s_rpm, o_rpm = session.cmd_status_output(
+                    "rpm --version")
+                if o_rpm:
+                    session.close()
+                    return True
                 s_vd, o_vd = session.cmd_status_output(
                     "rpm -qa | grep redhat-release")
-                if s_vd != 0:
+                if s_vd != 0 and o_vd != "":
                     session.close()
                     return False
                 if o_vd.find("5Server") != -1:
