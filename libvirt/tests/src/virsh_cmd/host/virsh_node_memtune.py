@@ -1,4 +1,5 @@
-import os, commands, logging
+import os
+import logging
 from autotest.client.shared import error
 from virttest import virsh
 
@@ -58,13 +59,13 @@ def check_node_memtune(params, ksm_dicts):
     if change_parameters == "no":
         for k in params.keys():
             if params[k] != ksm_dicts[k]:
-                logging.error("To expect %s value is %s", (k, ksm_dicts[k]))
+                logging.error("To expect %s value is %s", k, ksm_dicts[k])
                 return False
     else:
         for k in change_list:
             key = "shm_" + k
             if params.get(key) and params[key] != ksm_dicts[key]:
-                logging.error("To expect %s value is %s", (key, ksm_dicts[key]))
+                logging.error("To expect %s value is %s", key, ksm_dicts[key])
                 return False
 
     return True
@@ -96,13 +97,13 @@ def get_node_memtune_parameter(params):
             logging.info("It's an expected error: %s", result.stderr)
         else:
             raise error.TestFail("%d not a expected command "
-                                 "return value", status)
+                                 "return value" % status)
     elif status_error == "no":
         if status:
             raise error.TestFail(result.stderr)
         else:
             if check_node_memtune(_params, ksm_dicts):
-                logging.info(result.stdout)
+                logging.info(result)
             else:
                 raise error.TestFail("The memory parameters "
                                      "mismatch with result")
@@ -138,13 +139,13 @@ def set_node_memtune_parameter(params):
             logging.info("It's an expected error: %s", result.stderr)
         else:
             raise error.TestFail("%d not a expected command "
-                                 "return value", status)
+                                 "return value" % status)
     elif status_error == "no":
         if status:
             raise error.TestFail(result.stderr)
         else:
             if check_node_memtune(params, ksm_dicts):
-                logging.info(result.stdout)
+                logging.info(result)
             else:
                 raise error.TestFail("The memory parameters "
                                      "mismatch with result")
