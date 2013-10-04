@@ -213,6 +213,11 @@ def run_virsh_attach_detach_disk(test, params, env):
             status = virsh.detach_disk(vm_ref, device_target2, dt_options,
                                        debug=True).exit_status
 
+    # Resume guest after command. On newer libvirt this is fixed as it has
+    # been a bug. The change in xml file is done after the guest is resumed.
+    if pre_vm_state == "paused":
+        vm.resume()
+
     # Check disk count after command.
     check_count_after_cmd = True
     disk_count_after_cmd = vm_xml.VMXML.get_disk_count(vm_name)
@@ -224,9 +229,7 @@ def run_virsh_attach_detach_disk(test, params, env):
             check_count_after_cmd = False
 
     # Recover VM state.
-    if pre_vm_state == "paused":
-        vm.resume()
-    elif pre_vm_state == "shut off":
+    if pre_vm_state == "shut off":
         vm.start()
 
     # Check in VM after command.
