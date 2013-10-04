@@ -123,15 +123,15 @@ def run_virsh_attach_detach_disk(test, params, env):
         device_source = device_source_name
     virsh.dumpxml(vm_name, extra="", to_file=vm_xml_file)
 
-    vm.start()
-    vm.wait_for_login()
-
     # Create virtual device file.
     create_device_file(device_source)
 
     # Add acpiphp module before testing if VM's os type is rhle5.*
     if not acpiphp_module_modprobe(vm, os_type):
         raise error.TestError("Add acpiphp module failed before test.")
+
+    if vm.is_alive():
+        vm.destroy(gracefully=False)
 
     # If we are testing cdrom device, we need to detach hdc in VM first.
     if device == "cdrom":
@@ -140,18 +140,16 @@ def run_virsh_attach_detach_disk(test, params, env):
         s_detach = virsh.detach_disk(vm_name, device_target, "--config")
         if not s_detach:
             logging.error("Detach hdc failed before test.")
-        vm.start()
 
     # If we are testing detach-disk, we need to attach certain device first.
     if test_cmd == "detach-disk" and no_attach != "yes":
-        if bus_type == "ide" and vm.is_alive():
-            vm.destroy(gracefully=False)
         s_attach = virsh.attach_disk(vm_name, device_source, device_target,
                                      "--driver qemu --config").exit_status
         if s_attach != 0:
             logging.error("Attaching device failed before testing detach-disk")
-        if vm.is_dead():
-            vm.start()
+
+    vm.start()
+    vm.wait_for_login()
 
     # Turn VM into certain state.
     if pre_vm_state == "paused":
