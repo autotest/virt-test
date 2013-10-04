@@ -320,7 +320,7 @@ DEFAULT_GUEST_OS = "JeOS.19"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
 LIBVIRT_DEFAULT_SET = (
     "unattended_install.import.import.default_install.aio_native, "
-    "virsh_domname, "
+    "virsh.domname, "
     "remove_guest.without_disk")
 LVSB_DEFAULT_SET = ("lvsb_date")
 OVS_DEFAULT_SET = ("load_module, ovs_basic")
