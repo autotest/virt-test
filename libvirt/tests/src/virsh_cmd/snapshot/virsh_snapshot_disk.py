@@ -70,9 +70,10 @@ def run_virsh_snapshot_disk(test, params, env):
                 lines.append("<disk name='%s' snapshot='%s'>\n" %
                              (disk['source'], snapshot_disk))
                 if snapshot_disk == "external":
-                    disk_external = os.path.join(tmp_dir, os.path.basename(disk['source']))
+                    disk_external = os.path.join(tmp_dir,
+                                "%s.snap" % os.path.basename(disk['source']))
                     snapshot_external_disk.append(disk_external)
-                    lines.append("<source file='%s.snap'/>\n" % disk_external)
+                    lines.append("<source file='%s'/>\n" % disk_external)
                 lines.append("</disk>\n")
             lines.append("</disks>\n")
             lines.append("</domainsnapshot>")
