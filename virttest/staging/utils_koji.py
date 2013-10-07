@@ -1,6 +1,7 @@
 import HTMLParser
 import ConfigParser
 import os
+import time
 import logging
 import urllib
 from autotest.client import os_dep, utils
@@ -24,7 +25,7 @@ class KojiDownloadError(IOError):
     def __str__(self):
         return ("Koji/Brew download of file %s failed. "
                 "Timeout: %s s "
-                "Last error: %s" % (url, timeout, last_error))
+                "Last error: %s" % (self.url, self.timeout, self.last_error))
 
 
 class KojiDirIndexParser(HTMLParser.HTMLParser):
