@@ -486,6 +486,16 @@ class QHPDrive(QDrive):
                 return True
         return False
 
+    def verify_unplug(self, out, monitor):
+        out = monitor.info("qtree", debug=False)
+        if "unknown command" in out:       # Old qemu don't have info qtree
+            return True
+        dev_id_name = 'id "%s"' % self.aid
+        if dev_id_name in out:
+            return False
+        else:
+            return True
+
     def get_children(self):
         """ Device bus should be removed too """
         for bus in self.child_bus:
@@ -662,6 +672,28 @@ class QDevice(QCustomDevice):
             return "device_del", self.get_qid()
         else:
             raise DeviceError("Device has no qemu_id.")
+
+
+    def verify_unplug(self, out, monitor):
+        out = monitor.info("qtree", debug=False)
+        if "unknown command" in out:       # Old qemu don't have info qtree
+            return out
+        dev_id_name = 'id "%s"' % self.aid
+        if dev_id_name in out:
+            return False
+        else:
+            return True
+
+
+    def verify_hotplug(self, out, monitor):
+        out = monitor.info("qtree", debug=False)
+        if "unknown command" in out:       # Old qemu don't have info qtree
+            return out
+        dev_id_name = 'id "%s"' % self.aobject
+        if dev_id_name in out:
+            return True
+        else:
+            return False
 
 
 class QGlobal(QBaseDevice):
@@ -2071,57 +2103,87 @@ class DevContainer(object):
             return ("Errors occurred while adding device %s into %s:\n%s"
                     % (device, self, err))
 
-    def hotplug(self, device, monitor, verify=True, force=False):
+    def simple_hotplug(self, device, monitor, force=False):
         """
-        :return: output of the monitor.cmd() or True/False if device
-                 supports automatic verification and verify=True
+        Function hotplug device to devices representation. If verification is
+        supported by hodplugged device and result of verification is True
+        then it calls set_clean. Otherwise it don't call set_clean because
+        devices representatio don't know if device is added correctly.
+
+        :param device: Device which should be unplugged.
+        :type device: string, QDevice.
+        :param monitor: Monitor from vm.
+        :type monitor: qemu_monitor.Monitor
+        :param force: if True force insert to VM device representation
+        :type force: bool
+        :type monitor: qemu_monitor.Monitor
+        :return: tuple(monitor.cmd(), verify_hotplug output)
         """
         self.set_dirty()
+
+        out = device.hotplug(monitor)
+        ver_out = device.verify_hotplug(out, monitor)
+
+        if ver_out is False:
+            self.set_clean()
+            return out, ver_out
+
+        qdev_out = None
         try:
-            out = self.insert(device, force)
-            if out is not None:
+            qdev_out = self.insert(device, force)
+            if qdev_out is not None:
                 logging.error('According to qemu_devices hotplug of %s'
-                              'is impossible (%s).\n Forcing', device, out)
+                              'is impossible (%s).\n Forcing',
+                              device, qdev_out)
+            elif ver_out is True:
+                self.set_clean()
         except DeviceError, exc:
             self.set_clean()  # qdev remains consistent
             raise DeviceHotplugError(device, 'According to qemu_device: %s'
                                      % exc, self)
-        out = device.hotplug(monitor)
 
-        if verify:
-            out = device.verify_hotplug(out, monitor)
-            if out is True:
-                self.set_clean()
+        return out, ver_out
 
-        return out
-
-    def unplug(self, device, monitor, verify=True):
+    def simple_unplug(self, device, monitor):
         """
-        :return: output of the monitor.cmd() or True/False if device
-                 supports automatic verification and verify=True
-                 In case you use step_by_step it returns list of returns.
+        Function unplug device to devices representation. If verification is
+        supported by unplugged device and result of verification is True
+        then it calls set_clean. Otherwise it don't call set_clean because
+        devices representatio don't know if device is added correctly.
+
+        :param device: Device which should be unplugged.
+        :type device: string, QDevice.
+        :param monitor: Monitor from vm.
+        :type monitor: qemu_monitor.Monitor
+        :param verify_fn: call-back to special verify function.
+        :type verify_fn: callable object(device object, out, monitor object)
+        :return: tuple(monitor.cmd(), verify_unplug output)
         """
         device = self[device]
         self.set_dirty()
-        device.unplug_hook()
         # Remove all devices, which are removed together with this dev
-        try:
-            self.remove(device, True)
-        except KeyError, exc:
-            device.unplug_unhook()
-            raise DeviceUnplugError(device, exc, self)
-        except DeviceError, exc:
-            device.unplug_unhook()
-            raise DeviceUnplugError(device, exc, self)
-
         out = device.unplug(monitor)
 
-        if verify:
-            out = device.verify_unplug(out, monitor)
-            if out is True:
-                self.set_clean()
+        ver_out = device.verify_unplug(out, monitor)
 
-        return out
+        if ver_out is False:
+            self.set_clean()
+            return out, ver_out
+
+        try:
+            device.unplug_hook()
+            self.remove(device, True)
+            if ver_out is True:
+                self.set_clean()
+            elif out is False:
+                raise DeviceUnplugError(device, "Device wasn't unplugged in "
+                                        "qemu, but it was unplugged in device "
+                                        "representation.", self)
+        except (DeviceError, KeyError), exc:
+            device.unplug_unhook()
+            raise DeviceUnplugError(device, exc, self)
+
+        return out, ver_out
 
     def hotplug_verified(self):
         """
