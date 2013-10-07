@@ -8,19 +8,11 @@ def run_module_probe(test, params, env):
     """
     load/unload kernel modules several times.
 
-    The test can run in two modes:
-
-    - based on previous 'build' test: in case kernel modules were installed by a
-      'build' test, we used the modules installed by the previous test.
-
-    - based on own params: if no previous 'build' test was run,
-      we assume pre-installed kernel modules.
+    This tests the kernel pre-installed kernel modules
     """
-    installer_object = env.previous_installer()
-    if installer_object is None:
-        installer_object = base_installer.NoopInstaller('noop',
-                                                        'module_probe',
-                                                        test, params)
+    installer_object = base_installer.NoopInstaller('noop',
+                                                    'module_probe',
+                                                    test, params)
     logging.debug('installer object: %r', installer_object)
 
     # unload the modules before starting:
