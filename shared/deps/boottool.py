@@ -136,11 +136,11 @@ class EfiVar(object):
         '''
         Instantiates a new EfiVar
 
-        @type name: string
+        :type name: string
         :param name: the name of the variable that will be created
-        @type data: string
+        :type data: string
         :param data: user data that will populate the variable
-        @type guid: tuple
+        :type guid: tuple
         :param guid: content for the guid value that composes the full variable
                      name
         :param attributes: integer
@@ -221,11 +221,11 @@ class EfiToolSys(object):
         '''
         Creates a new EFI variable
 
-        @type name: string
+        :type name: string
         :param name: the name of the variable that will be created
-        @type data: string
+        :type data: string
         :param data: user data that will populate the variable
-        @type guid: tuple
+        :type guid: tuple
         :param guid: content for the guid value that composes the full variable
                      name
         :param attributes: integer
@@ -244,11 +244,11 @@ class EfiToolSys(object):
         '''
         Delets an existing EFI variable
 
-        @type name: string
+        :type name: string
         :param name: the name of the variable that will be deleted
-        @type data: string
+        :type data: string
         :param data: user data that will populate the variable
-        @type guid: tuple
+        :type guid: tuple
         :param guid: content for the guid value that composes the full variable
                      name
         :param attributes: integer
@@ -299,7 +299,7 @@ class EliloConf(object):
         '''
         Instantiates a new EliloConf
 
-        @type path: string
+        :type path: string
         :param path: path to elilo.conf
         '''
         self.path = path
@@ -325,9 +325,9 @@ class EliloConf(object):
         '''
         Adds a global option to the updated elilo configuration file
 
-        @type key: string
+        :type key: string
         :param key: option name
-        @type val: string or None
+        :type val: string or None
         :param key: option value or None for options with no values
         :return: None
         '''
@@ -337,9 +337,9 @@ class EliloConf(object):
         '''
         Removes a global option to the updated elilo configuration file
 
-        @type key: string
+        :type key: string
         :param key: option name
-        @type val: string or None
+        :type val: string or None
         :param key: option value or None for options with no values
         :return: None
         '''
@@ -349,7 +349,7 @@ class EliloConf(object):
         '''
         Transforms a text line from the configuration file into a tuple
 
-        @type line: string
+        :type line: string
         :param line: line of text from the configuration file
         :return: a tuple with key and value
         '''
@@ -365,7 +365,7 @@ class EliloConf(object):
         '''
         Transforms a tuple into a text line suitable for the config file
 
-        @type keyval: tuple
+        :type keyval: tuple
         :param keyval: a tuple containing key and value
         :return: a text line suitable for the config file
         '''
@@ -379,7 +379,7 @@ class EliloConf(object):
         '''
         Utility method to check if option is to be removed
 
-        @type line: string
+        :type line: string
         :param line: line of text from the configuration file
         :return: True or False
         '''
@@ -393,7 +393,7 @@ class EliloConf(object):
         '''
         Utility method to check if option is to be added
 
-        @type line: string
+        :type line: string
         :param line: line of text from the configuration file
         :return: True or False
         '''
@@ -438,7 +438,7 @@ def find_executable(executable, favorite_path=None):
     '''
     Returns whether the system has a given executable
 
-    @type executable: string
+    :type executable: string
     :param executable: the name of a file that can be read and executed
     '''
     if os.path.isabs(executable):
@@ -912,9 +912,9 @@ class Grubby(object):
 
         This code assume the first (or only) entry is the main directory
 
-        @type tarball: string
+        :type tarball: string
         :param tarball: tarball file path
-        @type directory: string
+        :type directory: string
         :param directory: directory path
         :return: path of toplevel directory as extracted from tarball
         '''
@@ -931,7 +931,7 @@ class Grubby(object):
         '''
         Returns the indexes found in a get_info() output
 
-        @type info: list of lines
+        :type info: list of lines
         :param info: result of utility method get_info()
         :return: maximum index number
         '''
@@ -949,7 +949,7 @@ class Grubby(object):
         '''
         Returns the index of an entry based on the title of the entry
 
-        @type title: string
+        :type title: string
         :param title: the title of the entry
         :return: the index of the given entry or None
         '''
@@ -974,11 +974,11 @@ class Grubby(object):
         '''
         Filters info, looking for keys, optionally set with a given value
 
-        @type info: list of lines
+        :type info: list of lines
         :param info: result of utility method get_info()
-        @type key: string
+        :type key: string
         :param key: filter based on this key
-        @type value: string
+        :type value: string
         :param value: filter based on this value
         :return: value or None
         '''
@@ -996,7 +996,7 @@ class Grubby(object):
         '''
         Returns the kernel path for an entry based on its title
 
-        @type title: string
+        :type title: string
         :param title: the title of the entry
         :return: the kernel path of None
         '''
@@ -1216,7 +1216,7 @@ class Grubby(object):
         The information is returned as a set of lines, that match the output
         of 'grubby --info=<entry>'
 
-        @type entry: string
+        :type entry: string
         :param entry: entry description, usually an index starting from 0
         :return: set of lines
         '''
@@ -1344,7 +1344,7 @@ class Grubby(object):
         The information is returned as a set of lines, that match the output
         of 'grubby --info=<entry>'
 
-        @type entry: string
+        :type entry: string
         :param entry: entry description, usually an index starting from 0
         :return: set of lines
         '''
@@ -1399,7 +1399,7 @@ class Grubby(object):
         '''
         Backs up the current grubby binary to make room the one we'll build
 
-        @type path: string
+        :type path: string
         :param path: path to the binary that should be backed up
         '''
         backup_path = '%s.boottool.bkp' % path
@@ -2110,7 +2110,7 @@ class BoottoolApp(object):
         '''
         Adds a new boot entry based on the values of other command line options
 
-        @type opts: object
+        :type opts: object
         :param opts: parsed command line options
         :return:
         '''
