@@ -305,6 +305,15 @@ class VirtTestRunParser(optparse.OptionParser):
                               "Default: %default"))
         self.add_option_group(qemu)
 
+        libvirt = optparse.OptionGroup(self, 'Options specific to the libvirt test')
+        libvirt.add_option("--install", action="store_true", dest="install_guest",
+                          help=("Install the guest using import method before "
+                                "the tests are run."))
+        libvirt.add_option("--remove", action="store_true", dest="remove_guest",
+                          help=("Remove the guest from libvirt. This will not"
+                                "delete the guest's disk file."))
+        self.add_option_group(libvirt)
+
 
 DEFAULT_MACHINE_TYPE = "i440fx"
 DEFAULT_GUEST_OS = "JeOS.19"
@@ -315,6 +324,8 @@ LIBVIRT_DEFAULT_SET = (
     "remove_guest.without_disk")
 LVSB_DEFAULT_SET = ("lvsb_date")
 OVS_DEFAULT_SET = ("load_module, ovs_basic")
+LIBVIRT_INSTALL = "unattended_install.import.import.default_install.aio_native"
+LIBVIRT_REMOVE = "remove_guest.without_disk"
 
 
 class VirtTestApp(object):
@@ -544,6 +555,11 @@ class VirtTestApp(object):
             if self.options.type:
                 if self.options.tests:
                     tests = self.options.tests.split(" ")
+                    if self.options.type == 'libvirt':
+                        if self.options.install_guest:
+                            tests.insert(0, LIBVIRT_INSTALL)
+                        if self.options.remove_guest:
+                            tests.append(LIBVIRT_REMOVE)
                     self.cartesian_parser.only_filter(", ".join(tests))
                 else:
                     if self.options.type == 'qemu':
