@@ -18,7 +18,7 @@ def driver_readlink(device_name):
     return driver
 
 
-def do_nodedev_detach_reattach(device_name):
+def do_nodedev_detach_reattach(device_name, options=""):
     """
     do the detach and reattach.
 
@@ -28,8 +28,8 @@ def do_nodedev_detach_reattach(device_name):
     (4).check the result of reattach
     """
     # do the detach
-    logging.debug('Node device name is %s.' % device_name)
-    CmdResult = virsh.nodedev_detach(device_name)
+    logging.debug('Node device name is %s.', device_name)
+    CmdResult = virsh.nodedev_detach(device_name, options)
     # check the exit_status.
     if CmdResult.exit_status:
         raise error.TestFail("Failed to detach %s.\n"
@@ -37,15 +37,15 @@ def do_nodedev_detach_reattach(device_name):
                              % (device_name, CmdResult.stderr))
     # check the driver.
     driver = driver_readlink(device_name)
-    logging.debug('Driver after detach is %s.' % driver)
+    logging.debug('Driver after detach is %s.', driver)
     if (driver is None) or (not driver.endswith('pci-stub')):
         raise error.TestFail("Driver for %s is not pci-stub "
                              "after nodedev-detach" % (device_name))
     else:
         pass
-    logging.debug('Nodedev-detach %s successed.' % device_name)
+    logging.debug('Nodedev-detach %s successed.', device_name)
     # do the reattach.
-    CmdResult = virsh.nodedev_reattach(device_name)
+    CmdResult = virsh.nodedev_reattach(device_name, options)
     # check the exit_status.
     if CmdResult.exit_status:
         raise error.TestFail("Failed to reattach %s.\n"
@@ -58,7 +58,7 @@ def do_nodedev_detach_reattach(device_name):
     else:
         raise error.TestFail("Driver for %s is not be reset after "
                              "nodedev-reattach" % (device_name))
-    logging.debug('Nodedev-reattach %s successed.' % device_name)
+    logging.debug('Nodedev-reattach %s successed.', device_name)
 
 
 def run_virsh_nodedev_detach_reattach(test, params, env):
@@ -71,13 +71,14 @@ def run_virsh_nodedev_detach_reattach(test, params, env):
     """
     # Init variables
     device_name = params.get('nodedev_device_name', 'ENTER.YOUR.PCI.DEVICE')
+    device_opt = params.get('nodedev_device_opt', '')
     status_error = ('yes' == params.get('status_error', 'no'))
     # check variables.
     if device_name.count('ENTER'):
         raise error.TestNAError('Param device_name is not configured.')
     # do nodedev_detach_reattach
     try:
-        do_nodedev_detach_reattach(device_name)
+        do_nodedev_detach_reattach(device_name, device_opt)
     except error.TestFail, e:
         # Do nodedev detach and reattach failed.
         if status_error:
