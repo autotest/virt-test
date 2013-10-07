@@ -25,6 +25,8 @@ def run_virsh_snapshot_disk(test, params, env):
     status_error = ("yes" == params.get("status_error", "no"))
     snapshot_from_xml = ("yes" == params.get("snapshot_from_xml", "no"))
     snapshot_current = ("yes" == params.get("snapshot_current", "no"))
+    snapshot_revert_paused = ("yes" == params.get("snapshot_revert_paused",
+                                                  "no"))
 
     # Some variable for xmlfile of snapshot.
     snapshot_memory = params.get("snapshot_memory", "internal")
@@ -141,13 +143,24 @@ def run_virsh_snapshot_disk(test, params, env):
         # Destroy vm for snapshot revert.
         virsh.destroy(vm_name)
         # Revert snapshot.
-        revert_result = virsh.snapshot_revert(vm_name, snapshot_name)
+        revert_options = ""
+        if snapshot_revert_paused:
+            revert_options += " --paused"
+        revert_result = virsh.snapshot_revert(vm_name, snapshot_name,
+                                              revert_options)
         if revert_result.exit_status:
             raise error.TestFail(
                 "Revert snapshot failed. %s" % revert_result.stderr.strip())
 
-        if not vm.is_alive():
+        if vm.is_dead():
             raise error.TestFail("Revert snapshot failed.")
+
+        if snapshot_revert_paused:
+            if vm.is_paused():
+                vm.resume()
+            else:
+                raise error.TestFail("Revert command successed, but VM is not "
+                                     "paused after reverting with --paused option.")
         # login vm.
         session = vm.wait_for_login()
         # Check the result of revert.

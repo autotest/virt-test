@@ -2154,7 +2154,7 @@ def snapshot_info(name, snapshot, **dargs):
     return ret
 
 
-def snapshot_revert(name, snapshot, **dargs):
+def snapshot_revert(name, snapshot, options="", **dargs):
     """
     Revert domain state to saved snapshot.
 
@@ -2163,7 +2163,8 @@ def snapshot_revert(name, snapshot, **dargs):
     :param snapshot: snapshot to revert to
     :return: CmdResult instance
     """
-    return command("snapshot-revert %s %s" % (name, snapshot), **dargs)
+    cmd = "snapshot-revert %s %s %s" % (name, snapshot, options)
+    return command(cmd, **dargs)
 
 
 def snapshot_delete(name, snapshot, options='', **dargs):
