@@ -128,6 +128,9 @@ class GitRepoParamHelper(git.GitRepoHelper):
                     raise error.TestError("GPG signature check for git repo "
                                           "%s failed" % self.name)
 
+        # Log the top commit message, good for quick reference
+        utils.system('git log -1')
+
         os.chdir(cwd)
 
 
