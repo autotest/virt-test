@@ -48,7 +48,7 @@ def run_virsh_vol_create_from(test, params, env):
         _iscsi.export_target()
         _iscsi.login()
         iscsi_device = _iscsi.get_device_name()
-        logging.debug("iscsi device:", iscsi_device)
+        logging.debug("iscsi device: %s", iscsi_device)
         utils.run("setenforce 1")
         return iscsi_device
 
@@ -279,7 +279,7 @@ def run_virsh_vol_create_from(test, params, env):
         src_vol_name = "src_vol"
         pre_vol(src_vol_name, src_vol_format, vol_size, src_pool_name)
     else:
-        src_vols = get_vol_list(src_pool_name):
+        src_vols = get_vol_list(src_pool_name)
         if src_vols:
             src_vol_name = src_vols[0]
         else:
@@ -337,4 +337,4 @@ def run_virsh_vol_create_from(test, params, env):
             cleanup_pool(dest_pool_name, dest_pool_type, dest_pool_target)
         if src_pool_type or dest_pool_type in ["disk", "logical", "fs", "iscsi",
                                                "scsi"]:
-        cleanup_iscsi()
+            cleanup_iscsi()
