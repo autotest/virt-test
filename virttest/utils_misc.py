@@ -22,8 +22,12 @@ import getpass
 from autotest.client import utils, os_dep
 from autotest.client.shared import error, logging_config
 from autotest.client.shared import git
-import utils_koji
 import data_dir
+try:
+    from staging import utils_koji
+except ImportError:
+    from autotest.client.shared import utils_koji
+
 
 import platform
 ARCH = platform.machine()
@@ -820,7 +824,7 @@ def umount(src, mount_point, fstype):
 
     @src: mount source
     @mount_point: mount point
-    @type: file system type
+    :type: file system type
     """
     mount_string = "%s %s %s" % (src, mount_point, fstype)
     if is_mounted(src, mount_point, fstype):

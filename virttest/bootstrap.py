@@ -17,6 +17,7 @@ recommended_programs = {'qemu': [('qemu-kvm', 'kvm'), ('qemu-img',),
                                     ('fakeroot',)],
                         'openvswitch': [],
                         'lvsb': [],
+                        'v2v': [],
                         'libguestfs': [('perl',)]}
 
 mandatory_programs = {'qemu': basic_program_requirements + ['gcc'],
@@ -449,7 +450,7 @@ def bootstrap(test_name, test_dir, base_dir, default_userspace_paths,
         step += 2
         logging.info("%s - Verifying (and possibly downloading) guest image",
                      step)
-        asset.download_asset('jeos-17-64', interactive=interactive,
+        asset.download_asset('jeos-19-64', interactive=interactive,
                              restore_image=restore_image)
 
     if check_modules:

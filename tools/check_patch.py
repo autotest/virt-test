@@ -376,8 +376,11 @@ class GitBackend(object):
 
 
 def run_codespell(path):
-    cmd = CODESPELL_PATH + " -w " + path
-    utils.system(CODESPELL_PATH, ignore_status=True)
+    cmd = CODESPELL_PATH
+    cmd += " --skip='tools/codespell/*,*.pyc,*.pyo,*.png,*.gz,*.bmp,*.exe,'"
+    cmd += " --write-changes --quiet-level=3 "
+    cmd += path
+    utils.system(cmd, ignore_status=True)
 
 
 class FileChecker(object):

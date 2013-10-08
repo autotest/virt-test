@@ -3,9 +3,9 @@ import time
 from autotest.client.shared import error
 
 try:
-    from autotest.client.shared import utils_memory
-except ImportError:
     from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client.shared import utils_memory
 
 
 @error.context_aware

@@ -7,9 +7,9 @@ from autotest.client.shared import error
 from virttest import utils_test
 
 try:
-    from autotest.client.shared import utils_memory
-except ImportError:
     from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client.shared import utils_memory
 
 
 def run_trans_hugepage_relocated(test, params, env):

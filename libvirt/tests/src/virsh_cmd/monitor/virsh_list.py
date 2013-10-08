@@ -101,9 +101,12 @@ def run_virsh_list(test, params, env):
 
     remote_ref = params.get("remote_ref", "local")
     if remote_ref == "remote":
-        remote_ip = params.get("remote_ip", "none")
-        remote_passwd = params.get("remote_passwd", "none")
-        local_ip = params.get("local_ip", "none")
+        remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
+        remote_passwd = params.get("remote_passwd", None)
+        local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
+        if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
+            raise error.TestNAError(
+                "Remote test parameters unchanged from default")
         logging.info("Execute virsh command on remote host %s.", remote_ip)
         status, output = list_local_domains_on_remote(
             options_ref, remote_ip, remote_passwd, local_ip)

@@ -458,18 +458,22 @@ class Monitor:
                                    "autotest." % option)
                             raise NotImplementedError(err)
             else:
-                option, line = line.split(':', 1)
-                option, line = option.strip(), line.strip()
-                if option == "Backing file":
-                    line = line.rsplit(' (chain depth: ')
-                    blocks[name]['backing_file'] = line[0]
-                    blocks[name]['backing_file_depth'] = int(line[1][:-1])
-                elif option == "Removable device":
-                    blocks[name]['removable'] = 1
-                    if 'not locked' not in line:
-                        blocks[name]['locked'] = 1
-                    if 'try open' in line:
-                        blocks[name]['try-open'] = 1
+                try:
+                    option, line = line.split(':', 1)
+                    option, line = option.strip(), line.strip()
+                    if option == "Backing file":
+                        line = line.rsplit(' (chain depth: ')
+                        blocks[name]['backing_file'] = line[0]
+                        blocks[name]['backing_file_depth'] = int(line[1][:-1])
+                    elif option == "Removable device":
+                        blocks[name]['removable'] = 1
+                        if 'not locked' not in line:
+                            blocks[name]['locked'] = 1
+                        if 'try open' in line:
+                            blocks[name]['try-open'] = 1
+                except ValueError:
+                    continue
+
         return blocks
 
     @staticmethod
@@ -557,7 +561,9 @@ class HumanMonitor(Monitor):
             s += data
             try:
                 lines = s.splitlines()
-                if lines[-1].split()[-1] == "(qemu)":
+                # Sometimes the qemu monitor lacks a line break before the
+                # qemu prompt, so we have to be less exigent:
+                if lines[-1].split()[-1].endswith("(qemu)"):
                     self._log_lines("\n".join(lines[1:]))
                     return True, "\n".join(lines[:-1])
             except IndexError:
@@ -1574,7 +1580,11 @@ class QMPMonitor(Monitor):
 
                     cmdargs = " ".join(cmdline.split()[1:]).split(",")
                     for arg in cmdargs:
-                        command += " " + arg.split("=")[-1]
+                        value = "=".join(arg.split("=")[1:])
+                        if arg.split("=")[0] == "cert-subject":
+                            value = value.replace('/',',')
+
+                        command += " " + value
                 else:
                     command = cmdline
                 cmd_output.append(self.human_monitor_cmd(command))
@@ -1583,17 +1593,20 @@ class QMPMonitor(Monitor):
                 args = {}
                 for arg in cmdargs:
                     opt = arg.split('=')
+                    value = "=".join(opt[1:])
                     try:
-                        if re.match("^[0-9]+$", opt[1]):
-                            value = int(opt[1])
-                        elif re.match("^[0-9]+\.[0-9]*$", opt[1]):
-                            value = float(opt[1])
-                        elif "True" in opt[1] or "true" in opt[1]:
+                        if re.match("^[0-9]+$", value):
+                            value = int(value)
+                        elif re.match("^[0-9]+\.[0-9]*$", value):
+                            value = float(value)
+                        elif re.findall("true", value, re.I):
                             value = True
-                        elif "false" in opt[1] or "False" in opt[1]:
+                        elif re.findall("false", value, re.I):
                             value = False
                         else:
-                            value = opt[1].strip()
+                            value = value.strip()
+                        if opt[0] == "cert-subject":
+                            value = value.replace('/',',')
                         args[opt[0].strip()] = value
                     except:
                         logging.debug("Fail to create args, please check cmd")

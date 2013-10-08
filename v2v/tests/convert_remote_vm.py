@@ -157,26 +157,37 @@ def run_convert_remote_vm(test, params, env):
     # Result check about
     ignore_virtio = "yes" == params.get("ignore_virtio", "no")
 
+    # Create autologin to remote host
+    esx_netrc = params.get("esx_netrc") % (remote_hostname, username, password)
+    params['netrc'] = esx_netrc
+    if remote_hypervisor == "esx":
+        utils_v2v.build_esx_no_verify(params)
+    else:
+        ssh_key.setup_ssh_key(remote_hostname, user=username, port=22,
+                              password=password)
+
     # Create remote uri for remote host
     # Remote virt-v2v uri's instance
     ruri = utils_v2v.Uri(remote_hypervisor)
     remote_uri = ruri.get_uri(remote_hostname)
 
-    ssh_key.setup_ssh_key(remote_hostname, user=username, port=22,
-                          password=password)
-
     # Check remote vms
-    remote_vm = libvirt_vm.VM(vm_name, params, test.bindir,
-                              env.get("address_cache"))
-    remote_vm.connect_uri = remote_uri
-    if not remote_vm.exists():
+    rvirsh_dargs = {'uri':remote_uri, 'remote_ip':remote_hostname,
+                    'remote_user':username, 'remote_pwd':password}
+    rvirsh = virsh.VirshPersistent(**rvirsh_dargs)
+    if not rvirsh.domain_exists(vm_name):
         raise error.TestFail("Couldn't find vm '%s' to be converted "
                              "on remote uri '%s'." % (vm_name, remote_uri))
+    rvirsh.close_session()
 
-    # Remote storage pool's instance
-    rsp = libvirt_storage.StoragePool(remote_uri)
-    # Put remote vm's disk into a directory storage pool
-    prepare_remote_sp(rsp, remote_vm, pool_name)
+    if remote_hypervisor != "esx":
+        remote_vm = libvirt_vm.VM(vm_name, params, test.bindir,
+                                  env.get("address_cache"))
+        remote_vm.connect_uri = remote_uri
+        # Remote storage pool's instance
+        rsp = libvirt_storage.StoragePool(remote_uri)
+        # Put remote vm's disk into a directory storage pool
+        prepare_remote_sp(rsp, remote_vm, pool_name)
 
     # Local storage pool's instance
     lsp = libvirt_storage.StoragePool()
@@ -201,7 +212,7 @@ def run_convert_remote_vm(test, params, env):
         v2v_params = {"hostname": remote_hostname, "username": username,
                       "password": password, "hypervisor": remote_hypervisor,
                       "storage": pool_name, "network": network,
-                      "target": "libvirt", "vms": vm_name,
+                      "target": "libvirt", "vms": vm_name, "netrc": esx_netrc,
                       "input": input, "files": files}
         try:
             result = utils_v2v.v2v_cmd(v2v_params)
@@ -229,4 +240,5 @@ def run_convert_remote_vm(test, params, env):
     finally:
         cleanup_vm(vm_name)
         lsp.delete_pool(pool_name)
-        rsp.delete_pool(pool_name)
+        if remote_hypervisor != "esx":
+            rsp.delete_pool(pool_name)

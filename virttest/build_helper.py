@@ -493,13 +493,13 @@ class GnuSourceBuildHelper(object):
     def __init__(self, source, build_dir, prefix,
                  configure_options=[]):
         '''
-        @type source: string
+        :type source: string
         :param source: source directory or tarball
-        @type prefix: string
+        :type prefix: string
         :param prefix: installation prefix
-        @type build_dir: string
+        :type build_dir: string
         :param build_dir: temporary directory used for building the source code
-        @type configure_options: list
+        :type configure_options: list
         :param configure_options: options to pass to configure
         @throws: GnuSourceBuildInvalidSource
         '''
@@ -680,11 +680,11 @@ class LinuxKernelBuildHelper(object):
 
     def __init__(self, params, prefix, source):
         '''
-        @type params: dict
+        :type params: dict
         :param params: dictionary containing the test parameters
-        @type source: string
+        :type source: string
         :param source: source directory or tarball
-        @type prefix: string
+        :type prefix: string
         :param prefix: installation prefix
         '''
         self.params = params

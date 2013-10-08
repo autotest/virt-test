@@ -54,7 +54,7 @@ def run_lvsb_date(test, params, env):
     # Number of sandboxes for each aggregate type
     agg_count = [agg.count for agg in sb_agg_list]
     # Run all sandboxes until timeout or finished w/ output
-    # store list of stdout's for each sandbox in each agregate type
+    # store list of stdout's for each sandbox in each aggregate type
     result_list = [agg.results() for agg in sb_agg_list]
     # Timeouts throw SandboxException, if normal exit, record ending time
     stop_time = datetime.datetime.now()

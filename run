@@ -305,15 +305,27 @@ class VirtTestRunParser(optparse.OptionParser):
                               "Default: %default"))
         self.add_option_group(qemu)
 
+        libvirt = optparse.OptionGroup(self, 'Options specific to the libvirt test')
+        libvirt.add_option("--install", action="store_true", dest="install_guest",
+                          help=("Install the guest using import method before "
+                                "the tests are run."))
+        libvirt.add_option("--remove", action="store_true", dest="remove_guest",
+                          help=("Remove the guest from libvirt. This will not "
+                                "delete the guest's disk file."))
+        self.add_option_group(libvirt)
+
 
 DEFAULT_MACHINE_TYPE = "i440fx"
-DEFAULT_GUEST_OS = "JeOS"
+DEFAULT_GUEST_OS = "JeOS.19"
 QEMU_DEFAULT_SET = "migrate..tcp, migrate..unix, migrate..exec, migrate..fd"
 LIBVIRT_DEFAULT_SET = (
     "unattended_install.import.import.default_install.aio_native, "
     "virsh_domname, "
     "remove_guest.without_disk")
 LVSB_DEFAULT_SET = ("lvsb_date")
+OVS_DEFAULT_SET = ("load_module, ovs_basic")
+LIBVIRT_INSTALL = "unattended_install.import.import.default_install.aio_native"
+LIBVIRT_REMOVE = "remove_guest.without_disk"
 
 
 class VirtTestApp(object):
@@ -543,6 +555,11 @@ class VirtTestApp(object):
             if self.options.type:
                 if self.options.tests:
                     tests = self.options.tests.split(" ")
+                    if self.options.type == 'libvirt':
+                        if self.options.install_guest:
+                            tests.insert(0, LIBVIRT_INSTALL)
+                        if self.options.remove_guest:
+                            tests.append(LIBVIRT_REMOVE)
                     self.cartesian_parser.only_filter(", ".join(tests))
                 else:
                     if self.options.type == 'qemu':
@@ -551,6 +568,8 @@ class VirtTestApp(object):
                         self.cartesian_parser.only_filter(LIBVIRT_DEFAULT_SET)
                     elif self.options.type == 'lvsb':
                         self.cartesian_parser.only_filter(LVSB_DEFAULT_SET)
+                    elif self.options.type == 'openvswitch':
+                        self.cartesian_parser.only_filter(OVS_DEFAULT_SET)
         else:
             logging.info("Config provided, ignoring --tests option")
 
@@ -643,6 +662,8 @@ class VirtTestApp(object):
             self._process_qemu_specific_options()
         elif self.options.type == 'lvsb':
             self._process_lvsb_specific_options()
+        elif self.options.type == 'openvswitch':
+            self._process_qemu_specific_options()
         # List and tests have to be the last things to be processed
         self._process_list()
         self._process_tests()

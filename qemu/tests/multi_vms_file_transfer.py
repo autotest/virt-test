@@ -96,7 +96,7 @@ def run_multi_vms_file_transfer(test, params, env):
                                            s_name=username, d_name=username,
                                            s_path=guest_path, d_path=guest_path,
                                            timeout=transfer_timeout,
-                                           log_filename=log_vm1)
+                                           log_filename=log_vm2)
             t_end = time.time()
             throughput = filesize / (t_end - t_begin)
             logging.info("File transfer VM1 -> VM2 succeed, "

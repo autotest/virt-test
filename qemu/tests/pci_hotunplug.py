@@ -5,11 +5,11 @@ from virttest import utils_misc, utils_test
 
 
 @error.context_aware
-def run_sr_iov_hotunplug(test, params, env):
+def run_pci_hotunplug(test, params, env):
     """
-    Test hot unplug of sr-iov PCI devices.
+    Test hot unplug of PCI devices.
 
-    1) Set up sr-iov test environment in host if test sr-iov.
+    1) Set up test environment in host if test sr-iov.
     2) Start VM.
     3) Get the device id that want to unplug.
     4) Delete the device, verify whether could remove the PCI device.
@@ -19,7 +19,7 @@ def run_sr_iov_hotunplug(test, params, env):
     :param env:    Dictionary with test environment.
     """
 
-    def find_pci(device_model):
+    def find_pci():
         output = vm.monitor.info("qtree")
         devices = re.findall(match_string, output)
         return devices
@@ -75,7 +75,7 @@ def run_sr_iov_hotunplug(test, params, env):
 
     cmd_type = utils_test.find_substring(str(cmd_o), "device_del")
 
-    devices = find_pci(pci_model)
+    devices = find_pci()
     if devices:
         for device in devices[:pci_num]:
             # (lmr) I think here is the place where pci_info should go

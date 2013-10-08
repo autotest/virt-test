@@ -42,9 +42,12 @@ def run_virsh_shutdown(test, params, env):
     if vm_ref != "remote":
         status = virsh.shutdown(vm_ref, ignore_status=True).exit_status
     else:
-        remote_ip = params.get("remote_ip", None)
+        remote_ip = params.get("remote_ip", "REMOTE.EXAMPLE.COM")
         remote_pwd = params.get("remote_pwd", None)
-        local_ip = params.get("local_ip", None)
+        local_ip = params.get("local_ip", "LOCAL.EXAMPLE.COM")
+        if remote_ip.count("EXAMPLE.COM") or local_ip.count("EXAMPLE.COM"):
+            raise error.TestNAError(
+                "Remote test parameters unchanged from default")
         status = 0
         try:
             remote_uri = libvirt_vm.complete_uri(local_ip)

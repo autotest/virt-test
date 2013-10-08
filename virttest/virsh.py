@@ -649,6 +649,20 @@ def version(option='', **dargs):
     return command("version %s" % option, **dargs).stdout.strip()
 
 
+def maxvcpus(option='', **dargs):
+    """
+    Return the connection vcpu maximum number.
+
+    :param: option: additional option string to pass
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "maxvcpus %s" % option
+    CmdResult = command(cmd, **dargs)
+
+    return CmdResult
+
+
 def dom_list(options="", **dargs):
     """
     Return the list of domains.
@@ -1467,6 +1481,22 @@ def pool_destroy(name, **dargs):
         return False
 
 
+def pool_create(xml_file, **dargs):
+    """
+    Create a pool from an xml file
+
+    :param: xml_file: file containing an XML pool description
+    """
+    cmd = "pool-create %s" % xml_file
+    dargs['ignore_status'] = False
+    try:
+        command(cmd, **dargs)
+        return True
+    except error.CmdError, detail:
+        logging.error("Failed to create pool: %s.", detail)
+        return False
+
+
 def pool_create_as(name, pool_type, target, extra="", **dargs):
     """
     Create a pool from a set of args.
@@ -1613,6 +1643,25 @@ def vol_create_as(volume_name, pool_name, capacity,
         cmd += " --allocation %s" % (allocation)
     if frmt:
         cmd += " --format %s" % (frmt)
+    if extra:
+        cmd += " %s" % (extra)
+    return command(cmd, **dargs)
+
+
+def vol_create_from(pool_name, vol_file, input_vol, input_pool, extra="",
+                    **dargs):
+    """
+    Create a vol, using another volume as input
+
+    :param: pool_name: Name of the pool to create the volume in
+    :param: vol_file: XML <file> with the volume definition
+    :param: input_vol: Name of the source volume
+    :param: input_pool: Name of the pool the source volume is in
+    :param: extra: Free-form string of options
+    :return: True if volume create successfully
+    """
+    cmd = ("vol-create-from --pool %s --file %s --vol %s --inputpool %s" %
+           (pool_name, vol_file, input_vol, input_pool))
     if extra:
         cmd += " %s" % (extra)
     return command(cmd, **dargs)
@@ -2105,7 +2154,7 @@ def snapshot_info(name, snapshot, **dargs):
     return ret
 
 
-def snapshot_revert(name, snapshot, **dargs):
+def snapshot_revert(name, snapshot, options="", **dargs):
     """
     Revert domain state to saved snapshot.
 
@@ -2114,10 +2163,11 @@ def snapshot_revert(name, snapshot, **dargs):
     :param snapshot: snapshot to revert to
     :return: CmdResult instance
     """
-    return command("snapshot-revert %s %s" % (name, snapshot), **dargs)
+    cmd = "snapshot-revert %s %s %s" % (name, snapshot, options)
+    return command(cmd, **dargs)
 
 
-def snapshot_delete(name, snapshot, **dargs):
+def snapshot_delete(name, snapshot, options='', **dargs):
     """
     Remove domain snapshot
 
@@ -2126,7 +2176,8 @@ def snapshot_delete(name, snapshot, **dargs):
     :param snapshot: snapshot to delete
     :return: CmdResult instance
     """
-    return command("snapshot-delete %s %s" % (name, snapshot), **dargs)
+    cmd = "snapshot-delete %s %s %s" % (name, snapshot, options)
+    return command(cmd, **dargs)
 
 
 def domblkinfo(name, device, **dargs):
@@ -2161,10 +2212,10 @@ def domiflist(name, options='', extra='', **dargs):
     """
     Get the domain network devices
 
-    @param name: name of domain
-    @param options: options of domiflist
-    @param dargs: standardized virsh function API keywords
-    @return: CmdResult instance
+    :param name: name of domain
+    :param options: options of domiflist
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
     """
 
     return command('domiflist %s %s %s' % (name, options, extra), **dargs)
@@ -2397,6 +2448,20 @@ def domiftune(name, interface, options=None, inbound=None,
     if options:
         cmd += " --%s" % options
 
+
+def desc(name, options, desc_str, **dargs):
+    """
+    Show or modify description or title of a domain.
+
+    :param name: name of domain,
+    :param options: options for desc command.
+    :param desc_str: new desc message
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object.
+    """
+    if desc_str:
+        options = options + " \"%s\"" % desc_str
+    cmd = "desc %s %s" % (name, options)
     return command(cmd, **dargs)
 
 
@@ -2410,3 +2475,25 @@ def autostart(name, options, **dargs):
     CmdResult = command(cmd, **dargs)
 
     return CmdResult
+
+
+def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
+                 shm_merge_across_nodes=None, options=None, **dargs):
+    """
+    Get or set node memory parameters
+    :param options: options may be shm-pages-to-scan, shm-sleep-millisecs
+                    and shm-merge-across-nodes
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "node-memory-tune"
+    if shm_pages_to_scan:
+        cmd += " --shm-pages-to-scan %s" % shm_pages_to_scan
+    if shm_sleep_millisecs:
+        cmd += " --shm-sleep-millisecs %s" % shm_sleep_millisecs
+    if shm_merge_across_nodes:
+        cmd += " --shm-merge-across-nodes %s" % shm_merge_across_nodes
+    if options:
+        cmd += " --%s" % options
+
+    return command(cmd, **dargs)

@@ -59,6 +59,7 @@ def run_virsh_snapshot(test, params, env):
     vm_name = params.get("main_vm")
     offline = (params.get("snapshot_shutdown", "no") == "yes")
     vm = env.get_vm(vm_name)
+    snapshot_halt = ("yes" == params.get("snapshot_halt", "no"))
 
     logging.info("Verify that no snapshot exist for %s", vm_name)
 
@@ -81,6 +82,9 @@ def run_virsh_snapshot(test, params, env):
                       "Children": "0", "Descendants": "0", "to_create": None,
                       "to_delete": "/root/sn1"}]
     last_snapshot = None
+    options = ""
+    if snapshot_halt:
+        options += " --halt"
     for sni in snapshot_info:
         sni["Parent"] = last_snapshot
         session = vm.wait_for_login()
@@ -94,10 +98,15 @@ def run_virsh_snapshot(test, params, env):
         elif sni["State"] == normalize_state("paused"):
             vm.pause()
 
-        snapshot_result = virsh.snapshot_create(vm_name)
+        snapshot_result = virsh.snapshot_create(vm_name, options)
         if snapshot_result.exit_status:
             raise error.TestFail("Failed to create snapshot. Error:%s."
                                  % snapshot_result.stderr.strip())
+        if ((snapshot_halt) and (not vm.is_dead())):
+            raise error.TestFail("VM is not dead after virsh.snapshot_create"
+                                 "with '--halt'")
+        if snapshot_halt:
+            vm.start()
         last_snapshot = re.search(
             "\d+", snapshot_result.stdout.strip()).group(0)
         sni["Name"] = last_snapshot

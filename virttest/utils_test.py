@@ -50,15 +50,15 @@ import env_process
 import virttest
 
 try:
-    from autotest.client.shared import utils_cgroup
+    from virttest.staging import utils_cgroup
 except ImportError:
     # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from virttest.staging import utils_cgroup
+    from autotest.client.shared import utils_cgroup
 
 try:
-    from autotest.client.shared import utils_memory
-except ImportError:
     from virttest.staging import utils_memory
+except ImportError:
+    from autotest.client.shared import utils_memory
 
 # Handle transition from autotest global_config (0.14.x series) to
 # settings (0.15.x onwards)
@@ -1918,8 +1918,8 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
                                            'kernelinstall')
         vm.copy_files_to(kernel_install_dir, kernel_install_dest)
         module_dir = os.path.dirname(virttest.__file__)
-        module_dir = os.path.join(module_dir, 'utils_koji.py')
-        vm.copy_files_to(module_dir, kernel_install_dest)
+        utils_koji_file = os.path.join(module_dir, 'staging', 'utils_koji.py')
+        vm.copy_files_to(utils_koji_file, kernel_install_dest)
 
     # Copy a non crippled boottool and make it executable
     boottool_path = os.path.join(virttest.data_dir.get_root_dir(),
