@@ -29,7 +29,7 @@ def run_shutdown(test, params, env):
         session = vm.wait_for_login(timeout=timeout)
         error.base_context("shutting down the VM %s/%s" % (i + 1,
                                                            shutdown_count),
-                                                           logging.info)
+                           logging.info)
         if shutdown_method == "shell":
             # Send a shutdown command to the guest's shell
             session.sendline(shutdown_command)
