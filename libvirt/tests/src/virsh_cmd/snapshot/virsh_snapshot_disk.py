@@ -42,7 +42,7 @@ def run_virsh_snapshot_disk(test, params, env):
     img_path, _ = image.create(params)
     # Do the attach action.
     result = virsh.attach_disk(vm_name, source=img_path, target="vdf",
-                      extra="--persistent --subdriver %s" % image_format)
+                               extra="--persistent --subdriver %s" % image_format)
     if result.exit_status:
         raise error.TestNAError("Failed to attach disk %s to VM."
                                 "Detail: %s." % (img_path, result.stderr))
@@ -73,7 +73,7 @@ def run_virsh_snapshot_disk(test, params, env):
                              (disk['source'], snapshot_disk))
                 if snapshot_disk == "external":
                     disk_external = os.path.join(tmp_dir,
-                                "%s.snap" % os.path.basename(disk['source']))
+                                                 "%s.snap" % os.path.basename(disk['source']))
                     snapshot_external_disk.append(disk_external)
                     lines.append("<source file='%s'/>\n" % disk_external)
                 lines.append("</disk>\n")
