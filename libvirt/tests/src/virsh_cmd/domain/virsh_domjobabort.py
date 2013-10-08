@@ -53,7 +53,12 @@ def run_virsh_domjobabort(test, params, env):
     status_error = params.get("status_error", "no")
     job = params.get("jobabort_job", "yes")
     tmp_file = os.path.join(test.tmpdir, "domjobabort.tmp")
+    tmp_pipe = os.path.join(test.tmpdir, "domjobabort.fifo")
     vm_ref = params.get("jobabort_vm_ref")
+    saved_data = None
+
+    if action == "managedsave":
+        tmp_pipe = '/var/lib/libvirt/qemu/save/%s.save' % vm.name
 
     if action == "restore":
         virsh.save(vm_name, tmp_file, ignore_status=True)
@@ -73,11 +78,36 @@ def run_virsh_domjobabort(test, params, env):
     # The command's effect is to abort the currently running domain job.
     # So before do "domjobabort" action, we must create a job on the domain.
     process = None
-    if job == "yes" and start_vm == "yes":
-        process = get_subprocess(action, vm_name, tmp_file)
+    if job == "yes" and start_vm == "yes" and status_error == "no":
+        if os.path.exists(tmp_pipe):
+            os.unlink(tmp_pipe)
+        os.mkfifo(tmp_pipe)
+
+        process = get_subprocess(action, vm_name, tmp_pipe)
+
+        saved_data = None
+        if action == "restore":
+            saved_data = file(tmp_file, 'r').read(10*1024*1024)
+            f = open(tmp_pipe, 'w')
+            f.write(saved_data[:1024*1024])
+        else:
+            f = open(tmp_pipe, 'r')
+            dummy = f.read(1024*1024)
 
     ret = virsh.domjobabort(vm_ref, ignore_status=True)
     status = ret.exit_status
+
+    if process:
+        if saved_data:
+            f.write(saved_data[1024*1024:])
+        else:
+            dummy = f.read()
+        f.close()
+
+        if os.path.exists(tmp_pipe):
+            os.unlink(tmp_pipe)
+        if os.path.exists(tmp_file):
+            os.unlink(tmp_file)
 
     # Recover the environment.
     if pre_vm_state == "suspend":
