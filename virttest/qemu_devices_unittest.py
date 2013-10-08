@@ -40,7 +40,6 @@ class MockHMPMonitor(qemu_monitor.HumanMonitor):
 
     def __init__(self):     # pylint: disable=W0231
         self.debug_log = False
-        pass
 
     def __del__(self):
         pass
@@ -127,49 +126,49 @@ class Buses(unittest.TestCase):
         # Correct records
         params = {'addr1': '0', 'addr2': '0', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('dev1', params, parent_bus={'type': 'bus_type'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'addr2': '0', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('dev2', params, parent_bus={'type': 'bus_type'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'addr2': '1', 'addr3': '0', 'bus': 'my_bus'}
         dev = qdevice('dev3', params, parent_bus={'type': 'bus_type'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'addr2': '1', 'addr3': '1', 'bus': 'my_bus'}
         dev = qdevice('dev4', params, parent_bus={'type': 'bus_type'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr1': '1', 'bus': 'my_bus'}
         dev = qdevice('dev5', params, parent_bus={'type': 'bus_type'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'bus': 'my_bus'}
         dev = qdevice('dev6', params, parent_bus={'type': 'bus_type'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {}
         dev2 = qdevice('dev7', params, parent_bus={'type': 'bus_type'})
-        exp = True
+        exp = []
         out = bus.insert(dev2, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev2.str_long(), bus.str_long()))
@@ -332,21 +331,21 @@ Slots:
         # Good devices
         params = {'addr': '0'}
         dev = qdevice('dev1', params, parent_bus={'type': 'pci'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr': 10, 'bus': 'pci.0'}
         dev = qdevice('dev2', params, parent_bus={'type': 'pci'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
 
         params = {'addr': '0x1f'}
         dev = qdevice('dev3', params, parent_bus={'type': 'pci'})
-        exp = True
+        exp = []
         out = bus.insert(dev, False)
         self.assertEqual(out, exp, "Failed to add device; %s != %s\n%s\n\n%s"
                          % (out, exp, dev.str_long(), bus.str_long()))
@@ -527,35 +526,35 @@ Slots:
         usbc1 = qemu_devices.QUSBBus(2, 'usb1.0', 'uhci')
 
         # Insert device into usb controller, default port
-        self.assertTrue(usbc1.insert(qemu_devices.QDevice('usb-kbd',
-                                                          parent_bus={'type': 'uhci'})))
+        dev = qemu_devices.QDevice('usb-kbd', parent_bus={'type': 'uhci'})
+        assert usbc1.insert(dev) == []
 
         # Insert usb-hub into usb controller, default port
         dev = qemu_devices.QDevice('usb-hub', parent_bus={'type': 'uhci'})
-        self.assertTrue(usbc1.insert(dev))
+        assert usbc1.insert(dev) == []
         hub1 = dev.child_bus[-1]
 
         # Insert usb-hub into usb-hub, exact port
         dev = qemu_devices.QDevice('usb-hub', {'port': '2.4'},
                                    parent_bus={'type': 'uhci'})
-        self.assertTrue(hub1.insert(dev))
+        assert hub1.insert(dev) == []
         hub2 = dev.child_bus[-1]
 
         # Insert usb-hub into usb-hub in usb-hub, exact port
         dev = qemu_devices.QDevice('usb-hub', {'port': '2.4.3'},
                                    parent_bus={'type': 'uhci'})
-        self.assertTrue(hub2.insert(dev))
+        assert hub2.insert(dev) == []
         hub3 = dev.child_bus[-1]
         # verify that port is updated correctly
         self.assertEqual("2.4.3", dev.get_param("port"))
 
         # Insert usb-device into usb-hub in usb-hub in usb-hub, exact port
-        self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
-                                                         {'port': '2.4.3.1'},
-                                                         parent_bus={'type': 'uhci'})))
+        dev = qemu_devices.QDevice('usb-kbd', {'port': '2.4.3.1'},
+                                   parent_bus={'type': 'uhci'})
+        assert hub3.insert(dev) == []
         # Insert usb-device into usb-hub in usb-hub in usb-hub, default port
-        self.assertTrue(hub3.insert(qemu_devices.QDevice('usb-kbd',
-                                                         parent_bus={'type': 'uhci'})))
+        dev = qemu_devices.QDevice('usb-kbd', parent_bus={'type': 'uhci'})
+        assert hub3.insert(dev) == []
 
         # Try to insert device into specific port which belongs to inferior bus
         out = hub2.insert(qemu_devices.QDevice('usb-kbd',
@@ -647,10 +646,9 @@ class Container(unittest.TestCase):
         qdev = self.create_qdev('vm1')
 
         # Add basic 'pc' devices
-        for dev in qdev.machine_by_params({'machine_type': 'pc'}):
-            out = qdev.insert(dev)
-            self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
-                             % (out, qdev.str_long()))
+        out = qdev.insert(qdev.machine_by_params({'machine_type': 'pc'}))
+        assert isinstance(out, list)
+        assert len(out) == 5, len(out)
 
         exp = r"""Devices of vm1:
 machine
@@ -707,26 +705,26 @@ fdc
         dev = qdevice('HBA', {'id': 'hba1', 'addr': 10},
                       parent_bus={'aobject': 'pci.0'}, child_bus=bus)
         out = qdev.insert(dev)
-        self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
-                         % (out, qdev.str_long()))
+        assert isinstance(out, list), out
+        assert len(out) == 1, len(out)
 
         # Device inside a child bus by type (most common)
         dev = qdevice('dev', {}, parent_bus={'type': 'hba'})
         out = qdev.insert(dev)
-        self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
-                         % (out, qdev.str_long()))
+        assert isinstance(out, list), out
+        assert len(out) == 1, len(out)
 
         # Device inside a child bus by autotest_id
         dev = qdevice('dev', {}, 'autotest_remove', {'aobject': 'a_hba'})
         out = qdev.insert(dev)
-        self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
-                         % (out, qdev.str_long()))
+        assert isinstance(out, list), out
+        assert len(out) == 1, len(out)
 
         # Device inside a child bus by busid
         dev = qdevice('dev', {}, 'autoremove', {'busid': 'hba1.0'})
         out = qdev.insert(dev)
-        self.assertEqual(out, None, "Failed to insert device, ret=%s\n%s"
-                         % (out, qdev.str_long()))
+        assert isinstance(out, list), out
+        assert len(out) == 1, len(out)
 
         # Check the representation
         exp = ("Devices of vm1: [t'machine',t'i440FX',t'PIIX3',t'ide',t'fdc',"
@@ -850,7 +848,7 @@ fdc
         # hotplug of drive will return "  OK" (pass)
         dev1.hotplug = lambda _monitor: "OK"
         dev1.verify_hotplug = lambda _out, _monitor: True
-        out, ver_out = qdev.simple_hotplug(dev1, monitor, True)
+        out, ver_out = qdev.simple_hotplug(dev1, monitor)
         assert out == "OK", "Return value of hotplug is not OK (%s)" % out
         assert ver_out is True, ("Return value of hotplug"
                                  " is not True (%s)" % ver_out)
@@ -864,15 +862,12 @@ fdc
                             % (exp, out))
         dev2.hotplug = lambda _monitor: ""
         dev2.verify_hotplug = lambda _out, _monitor: ""
-        out, ver_out = qdev.simple_hotplug(dev2, monitor, True)
+        out, ver_out = qdev.simple_hotplug(dev2, monitor)
         # automatic verification is not supported, hotplug returns the original
         # monitor message ("")
         assert ver_out == "", ("Return value of hotplug is"
                                " not "" (%s)" % ver_out)
         assert out == "", 'Return value of hotplug is not "" (%s)' % out
-        out = qdev.get_state()
-        assert out == 1, ("Status after verified hotplug is not 1 (%s)" % out)
-        qdev.hotplug_verified()
         out = qdev.get_state()
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
 
@@ -884,18 +879,23 @@ fdc
         dev3.hotplug = lambda _monitor: ("could not open disk image /tmp/qqq: "
                                          "No such file or directory")
 
-        out, ver_out = qdev.simple_hotplug(dev3, monitor, True)
+        out, ver_out = qdev.simple_hotplug(dev3, monitor)
         exp = "could not open disk image /tmp/qqq: No such file or directory"
         assert out, "Return value of hotplug is incorrect:\n%s\n%s" % (out,
                                                                        exp)
+        out = qdev.get_state()
+        assert out == 1, ("Status after failed hotplug is not 1 (%s)" % out)
+        # device is still in qdev, but is not in qemu, we should remove it
         qdev.remove(dev3, recursive=False)
         out = qdev.get_state()
         assert out == 1, ("Status after verified hotplug is not 1 (%s)" % out)
         qdev.hotplug_verified()
+        out = qdev.get_state()
+        assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
 
         # Hotplug is expected to fail, qdev should stay unaffected
         self.assertRaises(qemu_devices.DeviceHotplugError, qdev.simple_hotplug,
-                          dev2, True)
+                          dev2)
         out = qdev.get_state()
         assert out == 0, "Status after impossible hotplug is not 0 (%s)" % out
 
@@ -914,7 +914,7 @@ fdc
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
         out = len(qdev)
         assert out == 6, "Number of devices of this VM is not 6 (%s)" % out
-        # Removal of drive shoould also set drive of the disk device to None
+        # Removal of drive should also set drive of the disk device to None
         out = dev2.get_param('drive')
         assert out is None, "Drive was not removed from disk device"
 
@@ -1076,7 +1076,7 @@ fdc
         dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
         dev.hotplug = lambda _monitor: ""   # override the hotplug method
         dev.verify_hotplug = lambda _out, _monitor: True
-        qdev3.simple_hotplug(dev, monitor, False)
+        qdev3.simple_hotplug(dev, monitor)
         assert qdev1 == qdev3, ("Similar hotplugged qdevs are not alike\n%s\n"
                                 "%s" % (qdev1.str_long(), qdev3.str_long()))
 

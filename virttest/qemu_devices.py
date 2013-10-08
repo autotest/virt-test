@@ -1038,6 +1038,7 @@ class QSparseBus(object):
         :return: list of added devices on success,
                  string indicating the failure on failure.
         """
+        additional_devices = []
         if not self._check_bus(device):
             return "BusId"
         try:
@@ -1053,12 +1054,13 @@ class QSparseBus(object):
         elif addr is False:
             return "BadAddr(%s)" % addr
         else:
-            self._insert(device, self._addr2stor(addr))
+            additional_devices.extend(self._insert(device,
+                                                   self._addr2stor(addr)))
         if strict_mode:     # Set full address in strict_mode
             self._set_device_props(device, addr)
         else:
             self._update_device_props(device, addr)
-        return True
+        return additional_devices
 
     def _insert(self, device, addr):
         """
@@ -1068,6 +1070,7 @@ class QSparseBus(object):
         :return: List of additional devices
         """
         self.bus[addr] = device
+        return []
 
     def remove(self, device):
         """
@@ -1638,6 +1641,27 @@ class DevContainer(object):
                 self.__buses.remove(bus)
             self.__devices.remove(device)   # Remove from list of devices
 
+    def wash_the_device_out(self, device):
+        """
+        Removes any traces of the device from representation.
+        :param device: QBaseDevice device
+        """
+        # remove device from parent buses
+        for bus in self.__buses:
+            if device in bus:
+                bus.remove(device)
+        # remove child devices
+        for bus in device.child_bus:
+            for dev in device.get_children():
+                if dev in self:
+                    self.remove(dev, True)
+            # remove child_buses from self.__buses
+            if bus in self.__buses:
+                self.__buses.remove(bus)
+        # remove device from self.__devices
+        if device in self.__devices:
+            self.__devices.remove(device)
+
     def __len__(self):
         """ :return: Number of inserted devices """
         return len(self.__devices)
@@ -1870,25 +1894,50 @@ class DevContainer(object):
             if _ is not None and _ is not False:
                 return bus
 
-    def insert(self, device):
+    def insert(self, devices):
+        """
+        Inserts devices into this VM representation
+        :param devices: List of QBaseDevice devices
+        :raise DeviceError: On failure. The representation remains unchanged.
+        """
+        def cleanup():
+            """ Remove all added devices (on failure) """
+            for device in added:
+                self.wash_the_device_out(device)
+
+        if not isinstance(devices, list):
+            devices = [devices]
+
+        added = []
+        for device in devices:
+            try:
+                added.extend(self._insert(device))
+            except DeviceError, details:
+                cleanup()
+                raise DeviceError("%s\nError occured while inserting device %s"
+                                  " (%s). Please check the log for details."
+                                  % (details, device, devices))
+        return added
+
+    def _insert(self, device):
         """
         Inserts device into this VM representation
         :param device: QBaseDevice device
-        :raise DeviceInsertError: On failure in case force is not set
+        :raise DeviceError: On failure. The representation remains unchanged.
 
-        1) get list of matching parent buses
-        2) try to find matching bus+address
-        3) add child buses
-        4) append into self.devices
+        1)  get list of matching parent buses
+        2)  try to find matching bus+address
+        2b) add bus required additional devices prior to adding this device
+        3)  add child buses
+        4)  append into self.devices
         """
-        def clean():
-            """ Remove all inserted devices on failure """
-            for bus in _used_buses:
-                bus.remove(device)
-            for bus in _added_buses:
-                self.__buses.remove(bus)
-        _used_buses = []
-        _added_buses = []
+        def clean(device, added_devices):
+            """ Remove all inserted devices (on failure) """
+            self.wash_the_device_out(device)
+            for device in added_devices:
+                self.wash_the_device_out(device)
+
+        added_devices = []
         if device.parent_bus is not None and not isinstance(device.parent_bus,
                                                             (list, tuple)):
             # it have to be list of parent buses
@@ -1901,7 +1950,7 @@ class DevContainer(object):
             buses = self.get_buses(parent_bus, False)
             if not buses:
                 err = "ParentBus(%s): No matching bus\n" % parent_bus
-                clean()
+                clean(device, added_devices)
                 raise DeviceInsertError(device, err, self)
             bus_returns = []
             strict_mode = self.strict_mode
@@ -1915,27 +1964,36 @@ class DevContainer(object):
                     bus_returns.append(-1)  # Don't use this bus
                     continue
                 bus_returns.append(bus.insert(device, strict_mode))
-                if bus_returns[-1] is True:     # we are done
-                    _used_buses.append(bus)
+                if isinstance(bus_returns[-1], list):   # we are done
+                    # The bus might require additional devices plugged first
+                    try:
+                        added_devices.extend(self.insert(bus_returns[-1]))
+                    except DeviceError, details:
+                        err = ("Can't insert device %s because additional "
+                               "device required by bus %s failed to be "
+                               "inserted with:\n%s" % (device, bus, details))
+                        clean(device, added_devices)
+                        raise DeviceError(err)
                     break
-            if bus_returns[-1] is True:
+            if isinstance(bus_returns[-1], list):   # we are done
                 continue
             err = "ParentBus(%s): No free matching bus\n" % parent_bus
-            clean()
+            clean(device, added_devices)
             raise DeviceInsertError(device, err, self)
         # 3
         for bus in device.child_bus:
             self.__buses.insert(0, bus)
-            _added_buses.append(bus)
         # 4
         if device.get_qid() and self.get_by_qid(device.get_qid()):
             err = "Devices qid %s already used in VM\n" % device.get_qid()
-            clean()
+            clean(device, added_devices)
             raise DeviceInsertError(device, err, self)
         device.set_aid(self.__create_unique_aid(device.get_qid()))
         self.__devices.append(device)
+        added_devices.append(device)
+        return added_devices
 
-    def simple_hotplug(self, device, monitor, force=False):
+    def simple_hotplug(self, device, monitor):
         """
         Function hotplug device to devices representation. If verification is
         supported by hodplugged device and result of verification is True
@@ -1946,8 +2004,6 @@ class DevContainer(object):
         :type device: string, QDevice.
         :param monitor: Monitor from vm.
         :type monitor: qemu_monitor.Monitor
-        :param force: if True force insert to VM device representation
-        :type force: bool
         :type monitor: qemu_monitor.Monitor
         :return: tuple(monitor.cmd(), verify_hotplug output)
         """
@@ -1962,13 +2018,12 @@ class DevContainer(object):
 
         qdev_out = None
         try:
-            qdev_out = self.insert(device, force)
-            if qdev_out is not None:
-                logging.error('According to qemu_devices hotplug of %s'
-                              'is impossible (%s).\n Forcing',
-                              device, qdev_out)
-            elif ver_out is True:
-                self.set_clean()
+            qdev_out = self.insert(device)
+            if not isinstance(qdev_out, list) or len(qdev_out) != 1:
+                raise NotImplementedError("This device %s require to hotplug "
+                                          "multiple devices %s, which is not "
+                                          "supported." % (device, out))
+            self.set_clean()
         except DeviceError, exc:
             self.set_clean()  # qdev remains consistent
             raise DeviceHotplugError(device, 'According to qemu_device: %s'
