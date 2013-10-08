@@ -307,11 +307,11 @@ class VirtTestRunParser(optparse.OptionParser):
 
         libvirt = optparse.OptionGroup(self, 'Options specific to the libvirt test')
         libvirt.add_option("--install", action="store_true", dest="install_guest",
-                          help=("Install the guest using import method before "
-                                "the tests are run."))
+                           help=("Install the guest using import method before "
+                                 "the tests are run."))
         libvirt.add_option("--remove", action="store_true", dest="remove_guest",
-                          help=("Remove the guest from libvirt. This will not "
-                                "delete the guest's disk file."))
+                           help=("Remove the guest from libvirt. This will not "
+                                 "delete the guest's disk file."))
         self.add_option_group(libvirt)
 
 
