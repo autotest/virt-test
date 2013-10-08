@@ -489,7 +489,7 @@ class VirtioGuestPosix(VirtioGuest):
                                     while self.out_names[i] not in virt.files:
                                         pass
                                     self.out_files[i] = virt.files[
-                                                          self.out_names[i]]
+                                        self.out_names[i]]
                                 else:
                                     sys.stdout.write("Missing device, writeerr"
                                                      " %s\n" % inst)
@@ -801,7 +801,7 @@ class VirtioGuestPosix(VirtioGuest):
         if opened:
             print "PASS: All files opened correctly. (%d)" % i
         else:
-            print "FAIL: Failed open file %s" %  name
+            print "FAIL: Failed open file %s" % name
 
     def loopback(self, in_files, out_files, cachesize=1024,
                  mode=0):
