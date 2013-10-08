@@ -1,6 +1,7 @@
 import logging
 from autotest.client.shared import error
-from virttest import env_process, utils_misc, utils_test
+from virttest import env_process, utils_misc
+from virttest.utils_test import qemu
 
 try:
     from virttest.staging import utils_memory
@@ -41,8 +42,8 @@ def run_numa_basic(test, params, env):
 
         error.context("Check the memory use status of qemu process",
                       logging.info)
-        memory_status, _ = utils_test.get_qemu_numa_status(host_numa_node,
-                                                           vm.get_pid())
+        memory_status, _ = qemu.get_qemu_numa_status(host_numa_node,
+                                                     vm.get_pid())
         node_used_most = 0
         memory_sz_used_most = 0
         for index in range(len(node_list)):

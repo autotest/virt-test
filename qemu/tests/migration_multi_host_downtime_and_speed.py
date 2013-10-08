@@ -1,9 +1,9 @@
 import logging
 import os
 import time
-from autotest.client.shared import error
-from virttest import utils_test, remote, virt_vm, utils_misc
-from autotest.client.shared import utils
+from autotest.client.shared import error, utils
+from virttest import remote, virt_vm, utils_misc
+from virttest.utils_test import qemu
 
 
 def run_migration_multi_host_downtime_and_speed(test, params, env):
@@ -18,11 +18,11 @@ def run_migration_multi_host_downtime_and_speed(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = qemu.MultihostMigrationExec
 
     class TestMultihostMigration(base_class):
 

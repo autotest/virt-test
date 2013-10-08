@@ -1,8 +1,9 @@
 import logging
 import time
 from autotest.client.shared import error, utils
-from virttest import utils_test
 from autotest.client.shared.syncdata import SyncData
+from virttest.utils_test import qemu
+from virttest import utils_test
 
 
 @error.context_aware
@@ -18,11 +19,11 @@ def run_migration_multi_host_timedrift(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = qemu.MultihostMigrationExec
 
     class TestMultihostMigration(base_class):
 

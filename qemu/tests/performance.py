@@ -1,7 +1,5 @@
 import os
 import re
-import commands
-import glob
 import shutil
 from autotest.client.shared import error
 from autotest.client import utils

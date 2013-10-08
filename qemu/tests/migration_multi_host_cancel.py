@@ -1,12 +1,8 @@
 import logging
-import socket
-import time
-import errno
 import os
-import fcntl
-from virttest import utils_test, utils_misc, remote, virt_vm
 from autotest.client.shared import error
-from autotest.client.shared.syncdata import SyncData
+from virttest import utils_misc, remote, virt_vm
+from virttest.utils_test import qemu
 
 
 @error.context_aware
@@ -23,11 +19,11 @@ def run_migration_multi_host_cancel(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = qemu.MultihostMigrationExec
 
     class TestMultihostMigrationCancel(base_class):
 

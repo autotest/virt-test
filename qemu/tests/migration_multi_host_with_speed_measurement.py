@@ -6,7 +6,8 @@ import socket
 from autotest.client.shared import error, utils
 from autotest.client.shared.barrier import listen_server
 from autotest.client.shared.syncdata import SyncData
-from virttest import utils_test, utils_misc
+from virttest import utils_misc
+from virttest.utils_test import qemu
 
 
 def run_migration_multi_host_with_speed_measurement(test, params, env):
@@ -30,11 +31,11 @@ def run_migration_multi_host_with_speed_measurement(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = qemu.MultihostMigrationExec
 
     install_path = params.get("cpuflags_install_path", "/tmp")
 

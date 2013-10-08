@@ -15,7 +15,9 @@ from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client.shared.syncdata import SyncData
 from virttest import utils_misc, aexpect, qemu_monitor
-from virttest import env_process, data_dir, utils_test
+from virttest import env_process, data_dir
+from virttest.utils_test import qemu
+from virttest import utils_test
 
 
 @error.context_aware
@@ -589,11 +591,11 @@ def run_cdrom(test, params, env):
         def test(self):
             error.context("Preparing migration env and cdroms.")
             mig_protocol = params.get("mig_protocol", "tcp")
-            self.mig_type = utils_test.MultihostMigration
+            self.mig_type = qemu.MultihostMigration
             if mig_protocol == "fd":
-                self.mig_type = utils_test.MultihostMigrationFd
+                self.mig_type = qemu.MultihostMigrationFd
             if mig_protocol == "exec":
-                self.mig_type = utils_test.MultihostMigrationExec
+                self.mig_type = qemu.MultihostMigrationExec
 
             self.vms = params.get("vms").split(" ")
             self.srchost = params.get("hosts")[0]

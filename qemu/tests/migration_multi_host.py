@@ -1,7 +1,7 @@
 import logging
-import os
 from autotest.client.shared import error
-from virttest import utils_test, remote, virt_vm, utils_misc
+from virttest.utils_test import qemu
+from virttest import utils_test
 
 
 @error.context_aware
@@ -28,11 +28,11 @@ def run_migration_multi_host(test, params, env):
     login_before_pre_tests = params.get("login_before_pre_tests", "no")
 
     mig_protocol = params.get("mig_protocol", "tcp")
-    mig_type = utils_test.MultihostMigration
+    mig_type = qemu.MultihostMigration
     if mig_protocol == "fd":
-        mig_type = utils_test.MultihostMigrationFd
+        mig_type = qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        mig_type = utils_test.MultihostMigrationExec
+        mig_type = qemu.MultihostMigrationExec
 
     vms = params.get("vms").split(" ")
     srchost = params["hosts"][0]

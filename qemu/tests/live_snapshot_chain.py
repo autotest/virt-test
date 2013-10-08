@@ -1,9 +1,9 @@
-from virttest import utils_misc, utils_test, storage
-from virttest import qemu_storage, data_dir
-from autotest.client.shared import error
 import re
 import logging
 import time
+from virttest import utils_misc, storage
+from virttest import qemu_storage, data_dir
+from autotest.client.shared import error
 
 
 @error.context_aware

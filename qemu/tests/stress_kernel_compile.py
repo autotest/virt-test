@@ -1,7 +1,7 @@
 import logging
 import os
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc, env_process
+from virttest import utils_test, env_process
 
 try:
     from virttest.staging import utils_memory
