@@ -1,8 +1,6 @@
 """
 Utility classes and functions to handle connection to a libvirt host system
 
-Suggested usage: import autotest.client.virt.virsh
-
 The entire contents of callables in this module (minus the names defined in
 NOCLOSE below), will become methods of the Virsh and VirshPersistent classes.
 A Closure class is used to wrap the module functions, lambda does not
