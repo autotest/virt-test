@@ -1348,7 +1348,7 @@ class VM(virt_vm.BaseVM):
         """
         error.base_context("rebooting '%s'" % self.name, logging.info)
         error.context("before reboot")
-        session = session or self.login()
+        session = session or self.login(timeout=timeout)
         error.context()
 
         if method == "shell":
