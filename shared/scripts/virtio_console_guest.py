@@ -443,7 +443,7 @@ class VirtioGuestPosix(VirtioGuest):
                             # time.sleep(0.5)
                             sys.stdout.write("FD closed, readerr %s\n" % inst)
                             while self.in_names[i] not in virt.files:
-                                time.sleep(0.1)
+                                pass
                             self.in_files[i] = virt.files[self.in_names[i]]
                         else:
                             sys.stdout.write("Missing device, readerr %s\n"
@@ -465,7 +465,7 @@ class VirtioGuestPosix(VirtioGuest):
                                                      % name)
                                     break
                                 except OSError:
-                                    time.sleep(1)
+                                    pass
                             self.in_files[self.in_files.index(_desc)] = desc
                 if data != "":
                     for i in xrange(len(self.out_files)):
@@ -487,9 +487,9 @@ class VirtioGuestPosix(VirtioGuest):
                                     sys.stdout.write("FD closed, writeerr %s\n"
                                                      % inst)
                                     while self.out_names[i] not in virt.files:
-                                        time.sleep(0.1)
+                                        pass
                                     self.out_files[i] = virt.files[
-                                        self.out_names[i]]
+                                                          self.out_names[i]]
                                 else:
                                     sys.stdout.write("Missing device, writeerr"
                                                      " %s\n" % inst)
@@ -510,7 +510,7 @@ class VirtioGuestPosix(VirtioGuest):
                                                              "%s\n" % name)
                                             break
                                         except OSError:
-                                            time.sleep(1)
+                                            pass
                                     _desc = self.out_files.index(_desc)
                                     self.out_files[_desc] = desc
 
@@ -779,21 +779,29 @@ class VirtioGuestPosix(VirtioGuest):
                     return
         print "PASS: Close"
 
-    def open(self, in_file):
+    def open(self, in_file, attempts=1):
         """
         Direct open devices.
 
         :param in_file: Array of files.
         :return: Array of descriptors.
         """
-        name = self.ports[in_file]["path"]
-        try:
-            self.files[name] = os.open(name, os.O_RDWR)
-            if (self.ports[in_file]["is_console"] == "yes"):
-                print os.system("stty -F %s raw -echo" % (name))
-            print "PASS: All files opened correctly."
-        except Exception, inst:
-            print "%s\nFAIL: Failed open file %s" % (str(inst), name)
+        opened = False
+        for i in xrange(attempts):
+            try:
+                name = self.ports[in_file]["path"]
+                self.files[name] = os.open(name, os.O_RDWR)
+                if (self.ports[in_file]["is_console"] == "yes"):
+                    print os.system("stty -F %s raw -echo" % (name))
+                opened = True
+                break
+            except Exception, exc:
+                print str(exc)
+                time.sleep(0.1)
+        if opened:
+            print "PASS: All files opened correctly. (%d)" % i
+        else:
+            print "FAIL: Failed open file %s" %  name
 
     def loopback(self, in_files, out_files, cachesize=1024,
                  mode=0):
