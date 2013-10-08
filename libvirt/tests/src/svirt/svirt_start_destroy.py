@@ -86,8 +86,6 @@ def run_svirt_start_destroy(test, params, env):
                                      "shuting down.\n"
                                      "Detail: img_label_after=%s, "
                                      "img_label_before=%s.\n"
-                                     # pylint: disable=C0301
-                                     "Reference: https://bugzilla.redhat.com/show_bug.cgi?id=547546"
                                      % (img_label_after, img_label))
         except virt_vm.VMStartError, e:
             # Starting VM failed.
