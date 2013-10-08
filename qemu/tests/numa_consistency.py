@@ -1,7 +1,8 @@
 import logging
 from autotest.client.shared import error
 
-from virttest import env_process, utils_misc, utils_test
+from virttest import env_process, utils_misc
+from virttest.utils_test import qemu
 
 try:
     from virttest.staging import utils_memory
@@ -69,8 +70,8 @@ def run_numa_consistency(test, params, env):
     drop = 0
     for cpuid in range(len(vcpu_threads)):
         error.context("Get vcpu %s used numa node." % cpuid, logging.info)
-        memory_status, _ = utils_test.get_qemu_numa_status(host_numa_node,
-                                                           qemu_pid)
+        memory_status, _ = qemu.get_qemu_numa_status(host_numa_node,
+                                                     qemu_pid)
         node_used_host = get_vcpu_used_node(host_numa_node,
                                             vcpu_threads[cpuid])
         memory_used_before = memory_status[node_used_host]
@@ -87,8 +88,8 @@ def run_numa_consistency(test, params, env):
                          " results in this round.")
             drop += 1
             continue
-        memory_status, _ = utils_test.get_qemu_numa_status(host_numa_node,
-                                                           qemu_pid)
+        memory_status, _ = qemu.get_qemu_numa_status(host_numa_node,
+                                                     qemu_pid)
         memory_used_after = memory_status[node_used_host]
 
         memory_allocated = (memory_used_after - memory_used_before) * 4 / 1024

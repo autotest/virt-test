@@ -6,7 +6,8 @@ import re
 from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client.shared.syncdata import SyncData
-from virttest import data_dir, env_process, utils_test, aexpect
+from virttest import data_dir, env_process, aexpect
+from virttest.utils_test import qemu
 
 
 @error.context_aware
@@ -175,11 +176,11 @@ def run_floppy(test, params, env):
         def test(self):
             error.context("Preparing migration env and floppies.")
             mig_protocol = params.get("mig_protocol", "tcp")
-            self.mig_type = utils_test.MultihostMigration
+            self.mig_type = qemu.MultihostMigration
             if mig_protocol == "fd":
-                self.mig_type = utils_test.MultihostMigrationFd
+                self.mig_type = qemu.MultihostMigrationFd
             if mig_protocol == "exec":
-                self.mig_type = utils_test.MultihostMigrationExec
+                self.mig_type = qemu.MultihostMigrationExec
 
             self.vms = params.get("vms").split(" ")
             self.srchost = params["hosts"][0]

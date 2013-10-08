@@ -3,7 +3,8 @@ import os
 import time
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, remote, virt_vm, utils_misc, qemu_monitor
+from virttest import virt_vm, utils_misc, qemu_monitor
+from virttest.utils_test import qemu
 
 
 @error.context_aware
@@ -18,11 +19,11 @@ def run_migration_multi_host_firewall_block(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = qemu.MultihostMigrationExec
 
     sub_type = params["sub_type"]
 
@@ -135,7 +136,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             """
             for vm in mig_data.vms:
                 vm.resume()
-                if not utils_test.guest_active(vm):
+                if not qemu.guest_active(vm):
                     raise error.TestFail("Guest not active after migration")
 
             logging.info("Migrated guest appears to be running")
@@ -157,7 +158,7 @@ def run_migration_multi_host_firewall_block(test, params, env):
             for vm in mig_data.vms:
                 try:
                     vm.resume()
-                    if utils_test.guest_active(vm):
+                    if qemu.guest_active(vm):
                         raise error.TestFail("Guest can't be active after"
                                              " interrupted migration.")
                 except (qemu_monitor.MonitorProtocolError,

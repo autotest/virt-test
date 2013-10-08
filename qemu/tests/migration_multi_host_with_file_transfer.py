@@ -3,8 +3,8 @@ import threading
 from autotest.client import utils as client_utils
 from autotest.client.shared import utils, error
 from autotest.client.shared.syncdata import SyncData
-from virttest import env_process, utils_test, remote
-from virttest import utils_misc
+from virttest import env_process, utils_misc, remote
+from virttest.utils_test import qemu
 
 
 @error.context_aware
@@ -47,11 +47,11 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
         guest_path: Path where file is stored on guest.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.MultihostMigration
+    base_class = qemu.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.MultihostMigrationFd
+        base_class = qemu.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.MultihostMigrationExec
+        base_class = qemu.MultihostMigrationExec
 
     guest_root = params.get("guest_root", "root")
     guest_pass = params.get("password", "123456")
@@ -97,7 +97,7 @@ def run_migration_multi_host_with_file_transfer(test, params, env):
             """
             for vm in mig_data.vms:
                 vm.resume()
-                if not utils_test.guest_active(vm):
+                if not qemu.guest_active(vm):
                     raise error.TestFail("Guest not active after migration")
 
             logging.info("Migrated guest appears to be running")

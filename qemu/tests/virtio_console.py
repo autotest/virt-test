@@ -18,7 +18,8 @@ import time
 from subprocess import Popen
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import qemu_virtio_port, env_process, utils_test, utils_misc
+from virttest import qemu_virtio_port, env_process, utils_misc
+from virttest.utils_test import qemu
 
 
 @error.context_aware
@@ -1318,8 +1319,7 @@ def run_virtio_console(test, params, env):
         for j in range(no_migrations):
             error.context("Performing migration number %s/%s"
                           % (j, no_migrations))
-            vm = utils_test.migrate(vm, env, 3600, "exec", 0,
-                                    offline)
+            vm = qemu.migrate(vm, env, 3600, "exec", 0, offline)
             if not vm:
                 raise error.TestFail("Migration failed")
 

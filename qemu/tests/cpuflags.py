@@ -8,9 +8,10 @@ import sys
 import traceback
 from xml.parsers import expat
 from autotest.client.shared import error, utils
-from virttest import qemu_vm, virt_vm
-from virttest import utils_misc, utils_test, aexpect
 from autotest.client.shared.syncdata import SyncData
+from virttest import qemu_vm, virt_vm
+from virttest import utils_misc, aexpect
+from virttest.utils_test import qemu
 
 
 def run_cpuflags(test, params, env):
@@ -916,11 +917,10 @@ def run_cpuflags(test, params, env):
 
             install_path = "/tmp"
 
-            class testMultihostMigration(utils_test.MultihostMigration):
+            class testMultihostMigration(qemu.MultihostMigration):
 
                 def __init__(self, test, params, env):
-                    utils_test.MultihostMigration.__init__(self, test, params,
-                                                           env)
+                    qemu.MultihostMigration.__init__(self, test, params, env)
 
                 def migration_scenario(self):
                     srchost = self.params.get("hosts")[0]
@@ -1018,11 +1018,10 @@ def run_cpuflags(test, params, env):
 
             install_path = "/tmp"
 
-            class testMultihostMigration(utils_test.MultihostMigration):
+            class testMultihostMigration(qemu.MultihostMigration):
 
                 def __init__(self, test, params, env):
-                    utils_test.MultihostMigration.__init__(self, test, params,
-                                                           env)
+                    qemu.MultihostMigration.__init__(self, test, params, env)
                     self.srchost = self.params.get("hosts")[0]
                     self.dsthost = self.params.get("hosts")[1]
                     self.id = {'src': self.srchost,
