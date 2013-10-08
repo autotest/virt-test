@@ -542,6 +542,20 @@ class TestVMXML(LibvirtXMLTestBase):
         self.assertEqual(vmxml.uuid, self._domuuid(None))
         self.assertEqual(vmxml.hypervisor_type, 'kvm')
 
+
+    def test_restore(self):
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
+        vmxml.vm_name = 'test name'
+        vmxml.uuid = 'test uuid'
+        vmxml.hypervisor_type = 'atari'
+        # Changes verified in test_new_from_dumpxml() above
+        vmxml.restore()
+        self.assertEqual(vmxml.vm_name, 'foobar')
+        self.assertEqual(vmxml.uuid, self._domuuid(None))
+        self.assertEqual(vmxml.hypervisor_type, 'kvm')
+
+
     def test_seclabel(self):
         vmxml = self._from_scratch()
 
@@ -776,7 +790,8 @@ class testDiskXML(LibvirtXMLTestBase):
 
 
     def test_vm_get(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         for device in vmxml.devices:
             if device.device_tag is 'disk':
                 self._check_disk(device)
@@ -785,7 +800,8 @@ class testDiskXML(LibvirtXMLTestBase):
 
 
     def test_vm_get_by_class(self):
-        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar', self.dummy_virsh)
+        vmxml = vm_xml.VMXML.new_from_dumpxml('foobar',
+                                              virsh_instance=self.dummy_virsh)
         disk_devices = vmxml.get_devices(device_type='disk')
         self.assertEqual(len(disk_devices), 1)
         self._check_disk(disk_devices[0])
@@ -849,7 +865,6 @@ class testVMXMLDevices(LibvirtXMLTestBase):
         del devices
         # Check result
         self.assertEqual(vmxml.devices[-1].passwd, 'foobar')
-
 
 class testCAPXML(LibvirtXMLTestBase):
 
