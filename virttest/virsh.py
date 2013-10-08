@@ -765,6 +765,9 @@ def screenshot(name, filename, **dargs):
     :param dargs: standardized virsh function API keywords
     :return: filename
     """
+    # Don't take screenshots of shut-off domains
+    if is_dead(name, **dargs):
+        return None
     global SCREENSHOT_ERROR_COUNT
     dargs['ignore_status'] = False
     try:
