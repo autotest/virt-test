@@ -1492,29 +1492,31 @@ class VM(virt_vm.BaseVM):
         """
         Override BaseVM save_to_file method
         """
-        state = self.state()
-        if state not in ('paused',):
-            raise virt_vm.VMStatusError("Cannot save a VM that is %s" % state)
+        if self.is_dead():
+            raise virt_vm.VMStatusError("Cannot save a VM that is %s" % self.state())
         logging.debug("Saving VM %s to %s" % (self.name, path))
-        virsh.save(self.name, path, uri=self.connect_uri)
-        state = self.state()
-        if state not in ('shut off',):
+        result = virsh.save(self.name, path, uri=self.connect_uri)
+        if result.exit_status:
+            raise virt_vm.VMError("Save VM to %s failed.\n"
+                                  "Detail: %s." % (path, result.stderr))
+        if self.is_alive():
             raise virt_vm.VMStatusError("VM not shut off after save")
 
     def restore_from_file(self, path):
         """
         Override BaseVM restore_from_file method
         """
-        state = self.state()
-        if state not in ('shut off',):
+        if self.is_alive():
             raise virt_vm.VMStatusError(
-                "Can not restore VM that is %s" % state)
+                "Can not restore VM that is %s" % self.state())
         logging.debug("Restoring VM from %s" % path)
-        virsh.restore(path, uri=self.connect_uri)
-        state = self.state()
-        if state not in ('paused', 'running'):
+        result = virsh.restore(path, uri=self.connect_uri)
+        if result.exit_status:
+            raise virt_vm.VMError("Restore VM from %s failed.\n"
+                                  "Detail: %s." % (path, result.stderr))
+        if self.is_dead():
             raise virt_vm.VMStatusError(
-                "VM not paused after restore, it is %s." % state)
+                "VM should not be %s after restore." % self.state())
 
     def vcpupin(self, vcpu, cpu):
         """
