@@ -2447,6 +2447,7 @@ def domiftune(name, interface, options=None, inbound=None,
         cmd += "  --outbound %s" % outbound
     if options:
         cmd += " --%s" % options
+    return command(cmd, **dargs)
 
 
 def desc(name, options, desc_str, **dargs):
