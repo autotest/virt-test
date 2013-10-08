@@ -1764,7 +1764,7 @@ def run_virtio_console(test, params, env):
         cleanup(vm, guest_worker)
 
     @error.context_aware
-    def test_max_serials_and_conosles():
+    def test_max_serials_and_consoles():
         """
         Try to start and initialize machine with maximum supported number of
         virtio ports with 15 virtconsoles and 15 virtserialports.
