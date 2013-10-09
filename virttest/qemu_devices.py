@@ -166,10 +166,20 @@ class QBaseDevice(object):
                 self.set_param(key, value)
 
     def add_child_bus(self, bus):
+        """
+        Add child bus
+        :param bus: Bus, which this device contains
+        :type bus: QSparseBus-like
+        """
         self.child_bus.append(bus)
         bus.set_device(self)
 
     def rm_child_bus(self, bus):
+        """
+        removes child bus
+        :param bus: Bus, which this device contains
+        :type bus: QSparseBus-like
+        """
         self.child_bus.remove(bus)
         bus.set_device(None)
 
@@ -689,10 +699,6 @@ class QGlobal(QBaseDevice):
         return "-global %s.%s=%s" % (self['driver'], self['property'],
                                      self['value'])
 
-    def readconfig(self):
-        return ('[global]\n  driver = "%s"\n  property = "%s"\n  value = "%s"'
-                '\n' % (self['driver'], self['property'], self['value']))
-
 
 class QFloppy(QGlobal):
 
@@ -859,7 +865,7 @@ class QSparseBus(object):
         else:
             bus_type = self.type
         return "Bus %s, type=%s\nSlots:\n%s" % (self.busid, bus_type,
-                                                    self._str_devices_long())
+                                                self._str_devices_long())
 
     def _str_devices_long(self):
         """ long string representation of devices in the good bus """
@@ -1105,7 +1111,7 @@ class QStrictCustomBus(QSparseBus):
     def __init__(self, bus_item, addr_spec, busid, bus_type=None, aobject=None,
                  atype=None, first_port=0):
         super(QStrictCustomBus, self).__init__(bus_item, addr_spec, busid,
-                                              bus_type, aobject, atype)
+                                               bus_type, aobject, atype)
         self.first_port = first_port
 
     def _update_device_props(self, device, addr):
@@ -2009,7 +2015,7 @@ class DevContainer(object):
         added_devices.append(device)
         return added_devices
 
-    def hotplug(self, device, monitor, verify=True, force=False):
+    def hotplug(self, device, monitor, verify=True):
         """
         :return: output of the monitor.cmd() or True/False if device
                  supports automatic verification and verify=True
@@ -2266,6 +2272,7 @@ class DevContainer(object):
                 raise error.TestNAError("Unsupported machine type %s." %
                                         (machine_type))
         else:
+            devices = None
             for _ in self.__machine_types.splitlines()[1:]:
                 if 'default' in _:
                     if 'q35' in machine_type:   # Q35 + ICH9
@@ -2277,7 +2284,7 @@ class DevContainer(object):
                                      'supported byautotest, false errors '
                                      'might occur.')
                         devices = machine_other(False)
-            else:
+            if not devices:
                 logging.warn("Unable to find the default machine type, using"
                              "i440FX.")
                 devices = machine_i440FX(False)

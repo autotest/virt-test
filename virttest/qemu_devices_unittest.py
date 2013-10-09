@@ -558,8 +558,8 @@ Slots:
 
         # Try to insert device into specific port which belongs to inferior bus
         out = hub2.insert(qemu_devices.QDevice('usb-kbd',
-                                                {'port': '2.4.3.3'},
-                                                parent_bus={'type': 'uhci'}))
+                                               {'port': '2.4.3.3'},
+                                               parent_bus={'type': 'uhci'}))
         assert out == "BusId"
 
         # Try to insert device into specific port which belongs to superior bus
@@ -857,7 +857,7 @@ fdc
 
         # hotplug of drive will return "  OK" (pass)
         dev1.hotplug = lambda _monitor: "OK"
-        out = qdev.hotplug(dev1, monitor, True, False)
+        out = qdev.hotplug(dev1, monitor, True)
         assert out, "Return value of hotplug is not True (%s)" % out
         out = qdev.get_state()
         assert out == 0, ("Status after verified hotplug is not 0 (%s)" % out)
@@ -868,7 +868,7 @@ fdc
         assert out == exp, ("Hotplug command of device is incorrect:\n%s\n%s"
                             % (exp, out))
         dev2.hotplug = lambda _monitor: ""
-        out = qdev.hotplug(dev2, monitor, True, False)
+        out = qdev.hotplug(dev2, monitor, True)
         # automatic verification is not supported, hotplug returns the original
         # monitor message ("")
         assert out == "", 'Return value of hotplug is not "" (%s)' % out
@@ -886,7 +886,7 @@ fdc
         dev3 = qemu_devices.QDrive('a_dev1')
         dev3.hotplug = lambda _monitor: ("could not open disk image /tmp/qqq: "
                                          "No such file or directory")
-        out = qdev.hotplug(dev3, monitor, True, False)
+        out = qdev.hotplug(dev3, monitor, True)
         exp = "could not open disk image /tmp/qqq: No such file or directory"
         assert out, "Return value of hotplug is incorrect:\n%s\n%s" % (out,
                                                                        exp)
@@ -903,7 +903,7 @@ fdc
         dev3 = qemu_devices.QDevice("nasty-device",
                                     parent_bus={'type': 'nonexisting_bus'})
         self.assertRaises(qemu_devices.DeviceHotplugError, qdev.hotplug, dev3,
-                          True, False)
+                          True)
         out = qdev.get_state()
         assert out == 0, "Status after impossible hotplug is not 0 (%s)" % out
 
@@ -1082,7 +1082,7 @@ fdc
         # Hotplug similar device to qdev3
         dev = qemu_devices.QDevice('dev1', {'id': 'dev1'})
         dev.hotplug = lambda _monitor: ""   # override the hotplug method
-        qdev3.hotplug(dev, monitor, False, False)
+        qdev3.hotplug(dev, monitor, False)
         assert qdev1 != qdev3, ("Similar hotplugged qdevs match even thought "
                                 "qdev3 has different state\n%s\n%s"
                                 % (qdev1.str_long(), qdev2.str_long()))
