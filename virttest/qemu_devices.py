@@ -780,7 +780,7 @@ class QSparseBus(object):
     :note: When you insert a device, it's properties might be updated (addr,..)
     """
 
-    def __init__(self, bus_item, addr_spec, busid, bus_type, aobject=None,
+    def __init__(self, bus_item, addr_spec, busid, bus_type=None, aobject=None,
                  atype=None):
         """
         :param bus_item: Name of the parameter which specifies bus (bus)
@@ -805,6 +805,7 @@ class QSparseBus(object):
         self.addr_lengths = addr_spec[1]
         self.atype = atype
         self.__device = None
+        self.first_port = 0
 
     def __str__(self):
         """ default string representation """
@@ -969,7 +970,7 @@ class QSparseBus(object):
             use_reserved = False    # Use only free address
             for i in xrange(len(last_addr)):
                 if last_addr[i] is None:
-                    last_addr[i] = 0
+                    last_addr[i] = self.first_port
         return last_addr, use_reserved
 
     def get_free_slot(self, addr_pattern):
@@ -984,7 +985,8 @@ class QSparseBus(object):
         last_addr, use_reserved = self._set_first_addr(addr_pattern)
         # Check the addr_pattern ranges
         for i in xrange(len(self.addr_lengths)):
-            if last_addr[i] < 0 or last_addr[i] >= self.addr_lengths[i]:
+            if (last_addr[i] < self.first_port or
+                    last_addr[i] >= self.addr_lengths[i]):
                 return False
         # Increment addr until free match is found
         while last_addr is not False:
@@ -1014,7 +1016,8 @@ class QSparseBus(object):
         :param device: QBaseDevice device
         :param addr: internal address  [addr1, addr2, ...]
         """
-        device.set_param(self.bus_item, self.busid)
+        if self.bus_item:
+            device.set_param(self.bus_item, self.busid)
         for i in xrange(len(self.addr_items)):
             device.set_param(self.addr_items[i], addr[i])
 
@@ -1147,20 +1150,7 @@ class QUSBBus(QSparseBus):
                                       bus_type, aobject)
         self.__port_prefix = port_prefix
         self.__length = length
-
-    def _set_first_addr(self, addr_pattern):
-        """ First addr is not 0 but 1 """
-        use_reserved = True
-        if addr_pattern is None:
-            addr_pattern = [None] * len(self.addr_lengths)
-        # set first usable addr
-        last_addr = addr_pattern[:]
-        if None in last_addr:  # Address is not fully specified
-            use_reserved = False    # Use only free address
-            for i in xrange(len(last_addr)):
-                if last_addr[i] is None:
-                    last_addr[i] = 1
-        return last_addr, use_reserved
+        self.first_port = 1
 
     def _check_bus(self, device):
         """ Check port prefix in order to match addresses in usb-hubs """
@@ -1295,10 +1285,11 @@ class QPCIBus(QDenseBus):
     PCI Bus representation (bus&addr, uses hex digits)
     """
 
-    def __init__(self, busid, bus_type, aobject=None):
+    def __init__(self, busid, bus_type, aobject=None, length=32, first_port=0):
         """ bus&addr, 32 slots """
-        super(QPCIBus, self).__init__('bus', [['addr'], [32]], busid, bus_type,
-                                      aobject)
+        super(QPCIBus, self).__init__('bus', [['addr'], [length]], busid,
+                                      bus_type, aobject)
+        self.first_port = first_port
 
     @staticmethod
     def _addr2stor(addr):
