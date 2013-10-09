@@ -27,7 +27,7 @@ str = """
 """
 
 parser = cartesian_config.Parser()
-parser.parse_file(os.path.join(virt_test_dir, "qemu", "cfg", "build.cfg"))
+parser.parse_file(os.path.join(virt_test_dir, "tests", "cfg", "build.cfg"))
 parser.parse_string(str)
 if not utils_misc.run_tests(parser, job):
     logging.error("QEMU (KVM) build step failed, exiting.")
