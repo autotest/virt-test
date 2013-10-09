@@ -2,7 +2,7 @@ import os
 import logging
 import re
 from autotest.client import lv_utils
-from autotest.client.shared import ssh_key, error, utils
+from autotest.client.shared import ssh_key, error
 from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh, remote
 
 
@@ -32,6 +32,32 @@ def create_dir_pool(spool, pool_name, target_path):
 
 def create_partition_pool(spool, pool_name, block_device,
                           target_path="/dev/v2v_test"):
+    """
+    Create a persistent partition pool.
+    """
+    # Check pool before creating
+    if spool.pool_exists(pool_name):
+        logging.debug("Pool '%s' exists on uri '%s'", pool_name,
+                      spool.connect_uri)
+        return False
+
+    if not spool.define_fs_pool(pool_name, block_device,
+                                target_path=target_path):
+        return False
+
+    if not spool.build_pool(pool_name):
+        return False
+
+    if not spool.start_pool(pool_name):
+        return False
+
+    if not spool.set_pool_autostart(pool_name):
+        return False
+    return True
+
+
+def create_disk_pool(spool, pool_name, block_device,
+                     target_path="/dev/"):
     """
     Create a persistent partition pool.
     """
@@ -158,9 +184,12 @@ def run_convert_local_image(test, params, env):
 
     # Local pool parameters
     pool_type = params.get("pool_type", "dir")
+    block_device = params.get("block_device", "/dev/BLOCK/EXAMPLE")
+    if pool_type in ['disk', 'partition', 'lvm'] and \
+        re.search("EXAMPLE", block_device):
+        raise error.TestNAError("Please set correct block device.")
     pool_name = params.get("pool_name", "v2v_test")
     target_path = params.get("target_path", "pool_path")
-    block_device = params.get("block_device")
     vg_name = params.get("volume_group_name", "vg_v2v")
     local_tmp_path = params.get("local_tmp_path", test.tmpdir)
     # If target_path is not an abs path, join it to test.tmpdir
@@ -216,7 +245,11 @@ def run_convert_local_image(test, params, env):
         elif pool_type == "lvm":
             if not create_lvm_pool(lsp, pool_name, block_device, vg_name,
                                    target_path):
-                raise error.TestFail("Preapre lvm storage pool for "
+                raise error.TestFail("Prepare lvm storage pool for "
+                                     "virt-v2v failed.")
+        elif pool_type == "disk":
+            if not create_disk_pool(lsp, pool_name, block_device, target_path):
+                raise error.TestFail("Prepare disk storage pool for "
                                      "virt-v2v failed.")
 
         # Maintain a single params for v2v to avoid duplicate parameters
