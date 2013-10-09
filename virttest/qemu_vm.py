@@ -763,7 +763,7 @@ class VM(virt_vm.BaseVM):
                 host_ip = utils_net.get_host_ip_address(self.params)
                 self.spice_options['listening_addr'] = "ipv4"
                 spice_opts.append("addr=%s" % host_ip)
-                #set_value("addr=%s", "listening_addr", )
+                # set_value("addr=%s", "listening_addr", )
             elif optget("listening_addr") == "ipv6":
                 host_ip = utils_net.get_host_ip_address(self.params)
                 host_ip_ipv6 = utils_misc.convert_ipv4_to_ipv6(host_ip)
@@ -1091,9 +1091,9 @@ class VM(virt_vm.BaseVM):
         vga = params.get("vga")
         if vga:
             if vga != 'none':
-                devices.insert(StrDev('VGA-%s' % vga, {'addr': 2},
+                devices.insert(StrDev('VGA-%s' % vga,
                                       cmdline=add_vga(vga),
-                                      parent_bus=pci_bus))
+                                      parent_bus={'aobject': 'pci.0'}))
             else:
                 devices.insert(StrDev('VGA-none', cmdline=add_vga(vga)))
 
@@ -1103,12 +1103,17 @@ class VM(virt_vm.BaseVM):
                 devices.insert(StrDev('qxl',
                                       cmdline=add_qxl(qxl_dev_nr, qxl_dev_memory)))
         elif params.get('defaults', 'no') != 'no':  # by default add cirrus
-            devices.insert(StrDev('VGA-cirrus', {'addr': 2},
+            devices.insert(StrDev('VGA-cirrus',
                                   cmdline=add_vga(vga),
-                                  parent_bus=pci_bus))
+                                  parent_bus={'aobject': 'pci.0'}))
 
         # When old scsi fmt is used, new device with lowest pci_addr is created
         devices.hook_fill_scsi_hbas(params)
+
+        # Additional PCI RC/switch/bridges
+        for pcic in params.objects("pci_controllers"):
+            devs = devices.pcic_by_params(pcic, params.object_params(pcic))
+            devices.insert(devs)
 
         # -soundhw addresses are always the lowest after scsi
         soundhw = params.get("soundcards")
