@@ -624,3 +624,102 @@ def virt_edit_cmd(disk_or_domain, file_path, options=None,
         cmd += " -e '%s'" % expr
 
     return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_filesystems(disk_or_domain, **dargs):
+    """
+    virt-filesystems - List filesystems, partitions, block devices,
+    LVM in a virtual machine or disk image
+
+    @param disk_or_domain: a disk or a domain to be mounted
+           If you need to mount a disk, set is_disk to True in dargs
+    """
+    def get_display_type(cmd, options):
+        all = options.get("all", False)
+        filesystems = options.get("filesystems", False)
+        extra = options.get("extra", False)
+        partitions = options.get("partitions", False)
+        block_devices = options.get("block_devices", False)
+        logical_volumes = options.get("logical_volumes", False)
+        volume_groups = options.get("volume_groups", False)
+        physical_volumes = options.get("physical_volumes", False)
+        long_format = options.get("long_format", False)
+        human_readable = options.get("human_readable", False)
+        if all is True:
+            cmd += " --all"
+        if filesystems is True:
+            cmd += " --filesystems"
+        if extra is True:
+            cmd += " --extra"
+        if partitions is True:
+            cmd += " --partitions"
+        if block_devices is True:
+            cmd += " --block_devices"
+        if logical_volumes is True:
+            cmd += " --logical_volumes"
+        if volume_groups is True:
+            cmd += " --volume_groups"
+        if physical_volumes is True:
+            cmd += " --physical_volumes"
+        if long_format is True:
+            cmd += " --long"
+        if human_readable is True:
+            cmd += " -h"
+        return cmd
+
+    cmd = "virt-filesystems"
+    # If you need to mount a disk, set is_disk to True
+    is_disk = dargs.get("is_disk", False)
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    cmd = get_display_type(cmd, dargs)
+    return lgf_command(cmd, **dargs)
+
+
+def virt_list_partitions(disk_or_domain, long=False, total=False,
+                         human_readable=False, ignore_status=True,
+                         debug=False, timeout=60):
+    """
+    "virt-list-partitions" is a command line tool to list the partitions
+    that are contained in a virtual machine or disk image.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+    """
+    cmd = "virt-list-partitions %s" % disk_or_domain
+    if long is True:
+        cmd += " --long"
+    if total is True:
+        cmd += " --total"
+    if human_readable is True:
+        cmd += " --human-readable"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_list_filesystems(disk_or_domain, format=None, long=False,
+                          all=False, ignore_status=True, debug=False,
+                          timeout=60):
+    """
+    "virt-list-filesystems" is a command line tool to list the filesystems
+    that are contained in a virtual machine or disk image.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+    """
+    cmd = "virt-list-filesystems %s" % disk_or_domain
+    if format is not None:
+        cmd += " --format %s" % format
+    if long is True:
+        cmd += " --long"
+    if all is True:
+        cmd += " --all"
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_df(disk_or_domain, ignore_status=True, debug=False, timeout=60):
+    """
+    "virt-df" is a command line tool to display free space on
+    virtual machine filesystems.
+    """
+    cmd = "virt-df %s" % disk_or_domain
+    return lgf_command(cmd, ignore_status, debug, timeout)
