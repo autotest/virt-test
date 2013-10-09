@@ -664,6 +664,7 @@ i440FX
   child_bus = \[\]
   params:
     addr = 0x0
+    bus = pci.0
 PIIX3
   aid = __2
   aobject = None
@@ -671,6 +672,7 @@ PIIX3
   child_bus = \[\]
   params:
     addr = 0x1
+    bus = pci.0
 ide
   aid = __3
   aobject = None
@@ -781,8 +783,8 @@ fdc
                             % (qdev, qdev2))
 
         # cmdline
-        exp = ("-M pc -device HBA,id=hba1,addr=0xa -device dev -device dev "
-               "-device dev")
+        exp = ("-M pc -device HBA,id=hba1,addr=0xa,bus=pci.0 -device dev "
+               "-device dev -device dev")
         out = qdev.cmdline()
         self.assertEqual(out, exp, 'Corrupted qdev.cmdline() output:\n%s\n%s'
                          % (out, exp))

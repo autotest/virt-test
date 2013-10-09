@@ -1324,9 +1324,8 @@ class QPCIBus(QDenseBus):
         super(QPCIBus, self)._set_device_props(device, addr)
 
     def _update_device_props(self, device, addr):
-        """ Convert addr to hex """
-        addr = [hex(_) for _ in addr]
-        super(QPCIBus, self)._update_device_props(device, addr)
+        """ Always set properties """
+        self._set_device_props(device, addr)
 
 
 class QSCSIBus(QSparseBus):
