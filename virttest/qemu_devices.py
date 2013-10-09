@@ -1128,6 +1128,21 @@ class QSparseBus(object):
         return True
 
 
+class QStrictCustomBus(QSparseBus):
+    """
+    Similar to QSparseBus. The address starts with 1 and addr is always set
+    """
+    def __init__(self, bus_item, addr_spec, busid, bus_type=None, aobject=None,
+                 atype=None, first_port=0):
+        super(QStrictCustomBus, self).__init__(bus_item, addr_spec, busid,
+                                              bus_type, aobject, atype)
+        self.first_port = first_port
+
+    def _update_device_props(self, device, addr):
+        """ in case this is usb-hub update the child port_prefix """
+        self._set_device_props(device, addr)
+
+
 class QUSBBus(QSparseBus):
 
     """
@@ -1326,6 +1341,39 @@ class QPCIBus(QDenseBus):
     def _update_device_props(self, device, addr):
         """ Always set properties """
         self._set_device_props(device, addr)
+
+
+class QPCISwitchBus(QPCIBus):
+    """
+    PCI Switch bus representation (creates downstream device while inserting
+    a device).
+    """
+    def __init__(self, busid, bus_type, downstream_type, aobject=None):
+        super(QPCISwitchBus, self).__init__(busid, bus_type, aobject)
+        self.__downstream_ports = []
+        self.__downstream_type = downstream_type
+
+    def _insert(self, device, addr):
+        added_devices = []
+        if addr not in self.__downstream_ports:
+            add_port = True
+        else:
+            add_port = False
+        added_devices.extend(super(QPCISwitchBus, self)._insert(device, addr))
+        if add_port:
+            self.__downstream_ports.append('addr')
+            added_devices.append(QDevice(self.__downstream_type,
+                                         {'id': "%s.%s" % (self.busid,
+                                                           int(addr, 16)),
+                                          'bus': self.busid,
+                                          'addr': addr},
+                                         aobject=self.aobject,
+                                         parent_bus={'busid': '_PCI_CHASSIS'}))
+        return added_devices
+
+    def _set_device_props(self, device, addr):
+        device[self.bus_item] = "%s.%s" % (self.busid, int(addr[0]))
+        device['addr'] = '0x0'
 
 
 class QSCSIBus(QSparseBus):
@@ -2190,11 +2238,15 @@ class DevContainer(object):
             logging.warn('Using Q35 machine which is not yet fullytested on '
                          'virt-test. False errors might occur.')
             devices = []
+            bus = (QPCIBus('pcie.0', 'PCIE', 'pci.0'),
+                   QStrictCustomBus(None, [['chassis'], [256]], '_PCI_CHASSIS',
+                                    first_port=1),
+                   QStrictCustomBus(None, [['chassis_nr'], [256]],
+                                    '_PCI_CHASSIS_NR', first_port=1))
             devices.append(QStringDevice('machine', cmdline=cmd,
-                                         child_bus=QPCIBus('pcie.0', 'PCIE',
-                                                           'pci.0'),
+                                         child_bus=bus,
                                          aobject="pci.0"))
-            devices.append(QStringDevice('Q35', {'addr': 0},
+            devices.append(QStringDevice('mch', {'addr': 0},
                                          parent_bus={'aobject': 'pci.0'}))
             devices.append(QStringDevice('ICH9-ahci', {'addr': '0x1f'},
                                          parent_bus={'aobject': 'pci.0'},
@@ -2219,9 +2271,13 @@ class DevContainer(object):
                 pci_bus = "pci"
             else:
                 pci_bus = "pci.0"
+            bus = (QPCIBus(pci_bus, 'PCI', 'pci.0'),
+                   QStrictCustomBus(None, [['chassis'], [256]], '_PCI_CHASSIS',
+                                    first_port=1),
+                   QStrictCustomBus(None, [['chassis_nr'], [256]],
+                                    '_PCI_CHASSIS_NR', first_port=1))
             devices.append(QStringDevice('machine', cmdline=cmd,
-                                         child_bus=QPCIBus(pci_bus, 'PCI',
-                                                           'pci.0'),
+                                         child_bus=bus,
                                          aobject="pci.0"))
             devices.append(QStringDevice('i440FX', {'addr': 0},
                                          parent_bus={'aobject': 'pci.0'}))
@@ -2559,8 +2615,7 @@ class DevContainer(object):
         #
         # HBA
         # fmt: ide, scsi, virtio, scsi-hd, ahci, usb1,2,3 + hba
-        # device: ide-drive, usb-storage, scsi-hd, spapr-vscsi,
-        #         scsi-cd, virtio-blk-pci
+        # device: ide-drive, usb-storage, scsi-hd, scsi-cd, virtio-blk-pci
         # bus: ahci, virtio-scsi-pci, USB
         #
         if not use_device:
@@ -2866,3 +2921,38 @@ class DevContainer(object):
                                                    "blk_extra_params"),
                                                image_params.get("virtio-blk-pci_scsi"),
                                                image_params.get('pci_bus', 'pci.0'))
+
+    def pcic_by_params(self, name, params):
+        """
+        Creates pci controller/switch/... based on params
+        :param name: Autotest name
+        :param params: PCI controller params
+        :note: x3130 creates x3130-upstream bus + xio3130-downstream port for
+               each inserted device.
+        :warning: x3130-upstream device creates only x3130-upstream device
+                  and you are responsible for creating the downstream ports.
+        """
+        driver = params.get('type', 'ioh3420')
+        if driver in ('ioh3420', 'x3130-upstream', 'x3130'):
+            bus_type = 'PCIE'
+        else:
+            bus_type = 'PCI'
+        parent_bus = [{'aobject': params.get('pci_bus', 'pci.0')}]
+        if driver == 'x3130':
+            bus = QPCISwitchBus(name, bus_type, 'xio3130-downstream', name)
+            driver = 'x3130-upstream'
+        else:
+            if driver == 'pci-bridge':  # addr 1-19, chasis_nr
+                parent_bus.append({'busid': '_PCI_CHASSIS_NR'})
+                bus_length = 20
+                bus_first_port = 1
+            elif driver == 'i82801b11-bridge':  # addr 1-19
+                bus_length = 20
+                bus_first_port = 1
+            else:   # addr = 0-31
+                bus_length = 32
+                bus_first_port = 0
+            bus = QPCIBus(name, bus_type, name, bus_length, bus_first_port)
+        return QDevice(driver, {'id': name}, aobject=name,
+                       parent_bus=parent_bus,
+                       child_bus=bus)

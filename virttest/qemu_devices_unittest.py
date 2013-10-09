@@ -692,6 +692,8 @@ fdc
         exp = ("Buses of vm1\n"
                "  floppy(floppy): [None,None]\n"
                "  ide(ide): [None,None,None,None]\n"
+               "  _PCI_CHASSIS_NR(None): {}\n"
+               "  _PCI_CHASSIS(None): {}\n"
                "  pci.0(PCI): [t'i440FX',t'PIIX3'%s]"
                % (',None' * 30))
         out = qdev.str_bus_short()
@@ -738,6 +740,8 @@ fdc
                "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}\n"
                "  floppy(floppy): [None,None]\n"
                "  ide(ide): [None,None,None,None]\n"
+               "  _PCI_CHASSIS_NR(None): {}\n"
+               "  _PCI_CHASSIS(None): {}\n"
                "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,None,"
                "None,None,None,hba1,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
@@ -756,6 +760,8 @@ fdc
                "  hba1.0(hba): {0:a'dev',1:a'dev',2:a'dev'}\n"
                "  floppy(floppy): [None,None]\n"
                "  ide(ide): [None,None,None,None]\n"
+               "  _PCI_CHASSIS_NR(None): {}\n"
+               "  _PCI_CHASSIS(None): {}\n"
                "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,"
                "None,None,None,None,hba1,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
@@ -817,6 +823,8 @@ fdc
         exp = ("Buses of vm1\n"
                "  floppy(floppy): [None,None]\n"
                "  ide(ide): [None,None,None,None]\n"
+               "  _PCI_CHASSIS_NR(None): {}\n"
+               "  _PCI_CHASSIS(None): {}\n"
                "  pci.0(PCI): [t'i440FX',t'PIIX3',None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
                "None,None,None,None,None,None,None,None,None,None,None,None,"
@@ -1091,6 +1099,63 @@ fdc
         assert qdev1 == qdev2, ("qdevs of different qemu versions match:\n%s\n"
                                 "%s" % (qdev1.str_long(), qdev2.str_long()))
 
+    def test_pci(self):
+        qdev = self.create_qdev('vm1')
+        devs = qdev.machine_by_params({'machine_type': 'pc'})
+        for dev in devs:
+            qdev.insert(dev)
+        # machine creates main pci (pci.0)
+        # buses root.1 pci_switch pci_bridge
+        # root.1: ioh3420(pci.0)
+        # pci_switch: x3130(root.1)
+        # pci_bridge: pci-bridge(root.1)
+        devs = qdev.pcic_by_params('root.1', {'pci_bus': 'pci.0',
+                                              'type': 'ioh3420'})
+        qdev.insert(devs)
+        devs = qdev.pcic_by_params('pci_switch', {'pci_bus': 'root.1',
+                                                  'type': 'x3130'})
+
+        qdev.insert(devs)
+        devs = qdev.pcic_by_params('pci_bridge', {'pci_bus': 'root.1',
+                                                  'type': 'pci-bridge'})
+        qdev.insert(devs)
+
+        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_bridge'},
+                                         parent_bus={'type': ('PCI', 'PCIE'),
+                                                     'aobject': 'pci_bridge'}))
+
+        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_switch1'},
+                                         parent_bus={'type': ('PCI', 'PCIE'),
+                                                     'aobject': 'pci_switch'}))
+        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_switch2'},
+                                         parent_bus={'type': ('PCI', 'PCIE'),
+                                                     'aobject': 'pci_switch'}))
+        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_switch3'},
+                                         parent_bus={'type': ('PCI', 'PCIE'),
+                                                     'aobject': 'pci_switch'}))
+
+        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_root1'},
+                                         parent_bus={'type': ('PCI', 'PCIE'),
+                                                     'aobject': 'root.1'}))
+
+        qdev.insert(qemu_devices.QDevice("ahci", {'id': 'in_pci.0'},
+                                         parent_bus={'type': ('PCI', 'PCIE'),
+                                                     'aobject': 'pci.0'}))
+
+        exp = ("-M pc -device ioh3420,id=root.1,bus=pci.0,addr=0x2 "
+               "-device x3130-upstream,id=pci_switch,bus=root.1,addr=0x0 "
+               "-device pci-bridge,id=pci_bridge,bus=root.1,addr=0x1,"
+               "chassis_nr=1 -device ahci,id=in_bridge,bus=pci_bridge,addr=0x1"
+               " -device xio3130-downstream,bus=pci_switch,id=pci_switch.0,"
+               "chassis=1 -device ahci,id=in_switch1,bus=pci_switch.0 "
+               "-device xio3130-downstream,bus=pci_switch,id=pci_switch.1,"
+               "chassis=2 -device ahci,id=in_switch2,bus=pci_switch.1 "
+               "-device xio3130-downstream,bus=pci_switch,id=pci_switch.2,"
+               "chassis=3 -device ahci,id=in_switch3,bus=pci_switch.2 "
+               "-device ahci,id=in_root1,bus=root.1,addr=0x2 "
+               "-device ahci,id=in_pci.0,bus=pci.0,addr=0x3")
+        out = qdev.cmdline()
+        assert out == exp, (out, exp)
 
 if __name__ == "__main__":
     unittest.main()
