@@ -354,6 +354,10 @@ class VM(virt_vm.BaseVM):
         def add_name(devices, name):
             return " -name '%s'" % name
 
+        def add_sandbox(devices):
+            if devices.has_option("sandbox"):
+                return " -sandbox on "
+
         def add_human_monitor(devices, monitor_name, filename):
             if not devices.has_option("chardev"):
                 return " -monitor unix:'%s',server,nowait" % filename
@@ -1058,6 +1062,9 @@ class VM(virt_vm.BaseVM):
         devices.insert(StrDev('-S', cmdline="-S"))
         # Add the VM's name
         devices.insert(StrDev('vmname', cmdline=add_name(devices, name)))
+
+        if params.get("sandbox", "off") == "on":
+            devices.insert(StrDev('sandbox', cmdline=add_sandbox(devices)))
 
         devs = devices.machine_by_params(params)
         for dev in devs:
