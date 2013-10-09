@@ -1097,23 +1097,31 @@ class QSparseBus(object):
         """ Get device in which this bus is present """
         return self.__device
 
-    def match_bus(self, bus_spec, atest=True):
+    def match_bus(self, bus_spec, type_test=True):
         """
         Check if the bus matches the bus_specification.
         :param bus_spec: Bus specification
         :type bus_spec: dict
-        :param atest: Match qemu and atest params
-        :type atest: bool
+        :param type_test: Match only type
+        :type type_test: bool
         :return: True when the bus matches the specification
         :rtype: bool
         """
+        if type_test and bus_spec.get('type'):
+            if isinstance(bus_spec['type'], (tuple, list)):
+                for bus_type in bus_spec['type']:
+                    if bus_type == self.type:
+                        return True
+                return False
         for key, value in bus_spec.iteritems():
-            if self.__dict__.get(key, None) != value:
-                if key == 'atype' and atest is not True:
-                    # we want the qemu matching buses, ignore atest spec
-                    continue
+            if isinstance(value, (tuple, list)):
+                for val in value:
+                    if self.__dict__.get(key, None) == val:
+                        break
                 else:
                     return False
+            elif self.__dict__.get(key, None) != value:
+                return False
         return True
 
 
@@ -1866,7 +1874,7 @@ class DevContainer(object):
                                                     verbose=False).stdout)
         return self.__execute_qemu_out
 
-    def get_buses(self, bus_spec, atype=True):
+    def get_buses(self, bus_spec, type_test=False):
         """
         :param bus_spec: Bus specification (dictionary)
         :type bus_spec: dict
@@ -1877,7 +1885,7 @@ class DevContainer(object):
         """
         buses = []
         for bus in self.__buses:
-            if bus.match_bus(bus_spec, atype):
+            if bus.match_bus(bus_spec, type_test):
                 buses.append(bus)
         return buses
 
@@ -1947,7 +1955,7 @@ class DevContainer(object):
             if parent_bus is None:
                 continue
             # 1
-            buses = self.get_buses(parent_bus, False)
+            buses = self.get_buses(parent_bus, True)
             if not buses:
                 err = "ParentBus(%s): No matching bus\n" % parent_bus
                 clean(device, added_devices)
@@ -1955,7 +1963,7 @@ class DevContainer(object):
             bus_returns = []
             strict_mode = self.strict_mode
             for bus in buses:   # 2
-                if not bus.match_bus(parent_bus, True):
+                if not bus.match_bus(parent_bus, False):
                     # First available bus in qemu is not of the same type as
                     # we in autotest require. Force strict mode to get this
                     # device into the correct bus (ide-hd could go into ahci
