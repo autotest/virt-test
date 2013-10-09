@@ -688,6 +688,55 @@ def copy_files_from(address, client, username, password, port, remote_path,
         c.close()
 
 
+class Remote_Package(object):
+    def __init__(self, address, client, username, password, port, remote_path):
+        """
+        Initialization of Remote Package class.
+
+        :param address: Address of remote host(guest)
+        :param client: The client to use ('ssh', 'telnet' or 'nc')
+        :param username: Username (if required)
+        :param password: Password (if requried)
+        :param port: Port to connect to
+        :param remote_path: Rmote package path
+        """
+        self.address = address
+        self.client = client
+        self.port = port
+        self.username = username
+        self.password = password
+        self.remote_path = remote_path
+
+        if self.client == "nc":
+            self.cp_client = "rss"
+            self.cp_port = 10023
+        elif self.client == "ssh":
+            self.cp_client = "scp"
+            self.cp_port = 22
+        else:
+            raise LoginBadClientError(client)
+
+    def pull_file(self, local_path, timeout=600):
+        """
+        Copy file from remote to local.
+        """
+        logging.debug("Pull remote: '%s' to local: '%s'." % (self.remote_path,
+                                                             local_path))
+        copy_files_from(self.address, self.cp_client, self.username,
+                        self.password, self.cp_port, self.remote_path,
+                        local_path, timeout=timeout)
+
+    def push_file(self, local_path, timeout=600):
+        """
+        Copy file from local to remote.
+        """
+        logging.debug("Push local: '%s' to remote: '%s'." % (local_path,
+                                                             self.remote_path))
+        copy_files_to(self.address, self.cp_client, self.username,
+                          self.password, self.cp_port, local_path,
+                          self.remote_path, timeout=timeout)
+
+
 class RemoteFile(object):
 
     """
