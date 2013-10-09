@@ -87,19 +87,19 @@ def run_virsh_domjobabort(test, params, env):
 
         saved_data = None
         if action == "restore":
-            saved_data = file(tmp_file, 'r').read(10*1024*1024)
+            saved_data = file(tmp_file, 'r').read(10 * 1024 * 1024)
             f = open(tmp_pipe, 'w')
-            f.write(saved_data[:1024*1024])
+            f.write(saved_data[:1024 * 1024])
         else:
             f = open(tmp_pipe, 'r')
-            dummy = f.read(1024*1024)
+            dummy = f.read(1024 * 1024)
 
     ret = virsh.domjobabort(vm_ref, ignore_status=True)
     status = ret.exit_status
 
     if process:
         if saved_data:
-            f.write(saved_data[1024*1024:])
+            f.write(saved_data[1024 * 1024:])
         else:
             dummy = f.read()
         f.close()
