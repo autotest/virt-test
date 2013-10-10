@@ -75,6 +75,21 @@ Note: If you execute the runner before the bootstrap, things will work,
 but then you won't get prompted and the runner will download the JeOS
 automatically.
 
+Writing your first test
+-----------------------
+
+https://github.com/autotest/virt-test/wiki/WritingSimpleTests
+
+Is your tutorial to write your first test. Alternatively, you
+can copy the simple template test we have under the samples
+directory to the appropriate test directory, and start hacking
+from there. Example: You want to create a qemu specific test
+for the jelly functionality. You have to do:
+
+cp samples/template.py qemu/tests/jelly.py
+
+And then edit the template file accordingly.
+
 [1] If you want to use it without the packaged rpm, you need to have a clone
 of the autotest code (git://github.com/autotest/autotest.git) and set the
 env variable AUTOTEST_PATH pointing to the path of the clone. We do have
