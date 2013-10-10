@@ -40,7 +40,9 @@ Debian based (needs to enable repo, see [3]):
 # apt-get install autotest
 
 Some tests might need some other dependencies, such as the migrate
-using file descriptors, that requires a working toolchain and python-devel.
+using file descriptors, that requires a working toolchain and python-devel,
+and generating VM videos, that requires python-gstreamer.
+
 For such cases, it is best that you refer to the more complete documentation:
 
 https://github.com/autotest/virt-test/wiki/InstallPrerequesitePackages
