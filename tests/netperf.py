@@ -3,9 +3,7 @@ import os
 import commands
 import threading
 import re
-import glob
 import time
-import shutil
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_test, utils_misc, remote, data_dir
@@ -56,20 +54,15 @@ def netperf_record(results, filter_list, header=False, base="12", fbase="2"):
     return record, key_list
 
 
-def start_netserver_win(session, start_cmd, pattern):
-    """
-    Start netserver in Windows guest through a cygwin session.
-
-    :param session: remote session for cygwin
-    :param start_cmd: command to start netserver
-    :param pattern: pattern to judge the status of netserver
-    """
-    output = session.cmd_output(start_cmd)
-    try:
-        re.findall(pattern, output)[0]
-    except IndexError:
-        logging.debug("Can not start netserver: %s" % output)
-    return bool(re.findall(pattern, output))
+def start_netserver_win(session, start_cmd):
+    check_reg = re.compile(r"NETSERVER.*EXE", re.I)
+    if not check_reg.findall(session.cmd_output("tasklist")):
+        session.sendline(start_cmd)
+        if not utils_misc.wait_for(lambda: check_reg.findall(
+                                   session.cmd_output("tasklist")),
+                                   30, 5, 1, "Wait netserver start"):
+            msg = "Can not start netserver with command %s" % start_cmd
+            raise error.TestError(msg)
 
 
 @error.context_aware
@@ -88,18 +81,20 @@ def run_netperf(test, params, env):
     """
     def env_setup(session, ip, user, port, password):
         error.context("Setup env for %s" % ip)
+        ssh_cmd(session, "iptables -F; true")
         ssh_cmd(session, "service iptables stop; true")
         ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
-        netperf_dir = os.path.join(data_dir.get_root_dir(), "shared/deps")
-        for i in params.get("netperf_files").split():
-            remote.scp_to_remote(ip, shell_port, username, password,
-                                 "%s/%s" % (netperf_dir, i), "/tmp/")
+        download_link = params.get("netperf_download_link")
+        download_dir = data_dir.get_download_dir()
+        md5sum = params.get("pkg_md5sum")
+        pkg = utils.unmap_url_cache(download_dir, download_link, md5sum)
+        remote.scp_to_remote(ip, shell_port, username, password, pkg, "/tmp")
         ssh_cmd(session, params.get("setup_cmd"))
 
         agent_path = os.path.join(test.virtdir, "scripts/netperf_agent.py")
         remote.scp_to_remote(ip, shell_port, username, password,
-                             agent_path, "/tmp/")
+                             agent_path, "/tmp")
 
     def _pin_vm_threads(vm, node):
         if node:
@@ -135,7 +130,7 @@ def run_netperf(test, params, env):
     server_ctl_ip = server_ip
     if (params.get("os_type") == "windows"
             and params.get("use_cygwin") == "yes"):
-        cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")
+        cygwin_prompt = params.get("cygwin_prompt", r"\$\s+$")
         cygwin_start = params.get("cygwin_start")
         server_cyg = vm.wait_for_login(timeout=login_timeout)
         server_cyg.set_prompt(cygwin_prompt)
@@ -144,8 +139,8 @@ def run_netperf(test, params, env):
         server_cyg = None
 
     if len(params.get("nics", "").split()) > 1:
-        server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
-        server_ctl_ip = vm.get_address(1)
+        vm.wait_for_login(nic_index=1, timeout=login_timeout)
+        server_ip = vm.get_address(1)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
@@ -280,7 +275,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     fbase = params.get("format_fbase", "2")
 
     output = ssh_cmd(host, "mpstat 1 1 |grep CPU")
-    mpstat_head = re.findall("CPU\s+.*", output)[0].split()
+    mpstat_head = re.findall(r"CPU\s+.*", output)[0].split()
     mpstat_key = params.get("mpstat_key", "%idle")
     if mpstat_key in mpstat_head:
         mpstat_index = mpstat_head.index(mpstat_key) + 1
@@ -306,15 +301,14 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
         for i in sizes_test:
             for j in sessions_test:
                 if protocol in ("TCP_RR", "TCP_CRR"):
-                    ret = launch_client(
-                        j, server, server_ctl, host, clients, l,
-                        "-t %s -v 1 -- -r %s,%s" % (protocol, i, i),
-                        netserver_port, params, server_cyg)
+                    nf_args = "-t %s -v 1 -- -r %s,%s" % (protocol, i, i)
+                elif (protocol == "TCP_MAERTS"):
+                    nf_args = "-C -c -t %s -- -m ,%s" % (protocol, i)
                 else:
-                    ret = launch_client(
-                        j, server, server_ctl, host, clients, l,
-                        "-C -c -t %s -- -m %s" % (protocol, i),
-                        netserver_port, params, server_cyg)
+                    nf_args = "-C -c -t %s -- -m %s" % (protocol, i)
+
+                ret = launch_client(j, server, server_ctl, host, clients, l,
+                                    nf_args, netserver_port, params, server_cyg)
 
                 thu = float(ret['thu'])
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
@@ -375,50 +369,55 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                   port, params, server_cyg):
     """ Launch netperf clients """
 
-    client_path = "/tmp/netperf-2.6.0/src/netperf"
-    server_path = "/tmp/netperf-2.6.0/src/netserver"
+    netperf_version = params.get("netperf_version", "2.6.0")
+    client_path = "/tmp/netperf-%s/src/netperf" % netperf_version
+    server_path = "/tmp/netperf-%s/src/netserver" % netperf_version
     # Start netserver
     error.context("Start Netserver on guest", logging.info)
     if params.get("os_type") == "windows":
         timeout = float(params.get("timeout", "240"))
-        cdrom_drv = utils_test.get_windows_disk_drive(server_ctl, "netserver")
-        netserv_start_cmd = params.get("netserv_start_cmd") % cdrom_drv
-
-        logging.info("Netserver start cmd is '%s'" % netserv_start_cmd)
-        if params.get("use_cygwin") == "yes":
-            netperf_src = params.get("netperf_src")
-            cygwin_root = params.get("cygwin_root")
-            netserv_pattern = params.get("netserv_pattern")
-            netperf_install_cmd = params.get("netperf_install_cmd")
-            if "netserver" not in server_ctl.cmd_output("tasklist"):
-                if not start_netserver_win(server_cyg, netserv_start_cmd,
-                                           netserv_pattern):
-                    logging.info("Install netserver in Windows guest")
-                    output = server_ctl.cmd("dir %s" % cygwin_root)
-                    if "netperf" not in output:
-                        cmd = "xcopy %s %s /S /I" % (netperf_src, cygwin_root)
-                        server_ctl.cmd(cmd)
-                    server_cyg.cmd_output(netperf_install_cmd,
-                                          timeout=timeout)
-                    if not start_netserver_win(server_cyg, netserv_start_cmd,
-                                               netserv_pattern):
-                        msg = "Can not start netserver in Windows guest"
-                        raise error.TestError(msg)
-        else:
-            if "NETSERVER.EXE" not in server_ctl.cmd_output("tasklist"):
-                server_ctl.cmd_output(netserv_start_cmd)
-                o_tasklist = server_ctl.cmd_output("tasklist")
-                if "NETSERVER.EXE" not in o_tasklist.upper():
-                    msg = "Can not start netserver in Windows guest"
-                    raise error.TestError(msg)
-
+        cdrom_drv = utils_misc.get_winutils_vol(server_ctl)
         get_status_flag = False
+        if params.get("use_cygwin") == "yes":
+            netserv_start_cmd = params.get("netserv_start_cmd")
+            netperf_src = params.get("netperf_src") % cdrom_drv
+            cygwin_root = params.get("cygwin_root")
+            netserver_path = params.get("netserver_path")
+            netperf_install_cmd = params.get("netperf_install_cmd")
+            start_session = server_cyg
+            logging.info("Start netserver with cygwin, cmd is: %s" %
+                         netserv_start_cmd)
+            if "netserver" not in server_ctl.cmd_output("tasklist"):
+                netperf_pack = "netperf-%s" % params.get("netperf_version")
+                s_check_cmd = "dir %s" % netserver_path
+                p_check_cmd = "dir %s" % cygwin_root
+                if not ("netserver.exe" in server_ctl.cmd(s_check_cmd) and
+                        netperf_pack in server_ctl.cmd(p_check_cmd)):
+                    error.context("Install netserver in Windows guest cygwin",
+                                  logging.info)
+                    cmd = "xcopy %s %s /S /I /Y" % (netperf_src, cygwin_root)
+                    server_ctl.cmd(cmd)
+                    server_cyg.cmd_output(netperf_install_cmd, timeout=timeout)
+                    if "netserver.exe" not in server_ctl.cmd(s_check_cmd):
+                        err_msg = "Install netserver cygwin failed"
+                        raise error.TestNAError(err_msg)
+                    logging.info("Install netserver in cygwin successfully")
+
+        else:
+            start_session = server_ctl
+            netserv_start_cmd = params.get("netserv_start_cmd") % cdrom_drv
+            logging.info("Start netserver without cygwin, cmd is: %s" %
+                         netserv_start_cmd)
+
+        error.context("Start netserver on windows guest", logging.info)
+        start_netserver_win(start_session, netserv_start_cmd)
+
     else:
         logging.info("Netserver start cmd is '%s'" % server_path)
         ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
         get_status_flag = True
         ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
-        ncpu = re.findall("\d+", ncpu)[0]
+        ncpu = re.findall(r"\d+", ncpu)[0]
 
     logging.info("Netserver start successfully")
 
@@ -436,7 +435,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     def get_state():
         for i in ssh_cmd(server_ctl, "ifconfig").split("\n\n"):
             if server in i:
-                ifname = re.findall("(\w+\d+)[:\s]", i)[0]
+                ifname = re.findall(r"(\w+\d+)[:\s]", i)[0]
 
         path = "find /sys/devices|grep net/%s/statistics" % ifname
         cmd = "%s/rx_packets|xargs cat;%s/tx_packets|xargs cat;" \
@@ -474,20 +473,29 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         state_list.append(irq_inj)
         return state_list
 
-    def netperf_thread(i, numa_enable, client_s):
+    def netperf_thread(i, numa_enable, client_s, timeout):
         cmd = ""
         fname = "/tmp/netperf.%s.nf" % pid
         if numa_enable:
             output = ssh_cmd(client_s, "numactl --hardware")
-            n = int(re.findall("available: (\d+) nodes", output)[0]) - 1
+            n = int(re.findall(r"available: (\d+) nodes", output)[0]) - 1
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
         cmd += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (i,
                client_path, server, int(l) * 1.5, nf_args)
         cmd += " >> %s" % fname
         logging.info("Start netperf thread by cmd '%s'" % cmd)
-        ssh_cmd(client_s, cmd)
-
+        ssh_cmd(client_s, cmd, timeout)
         logging.info("Netperf thread completed successfully")
+
+    def all_clients_up():
+        try:
+            content = ssh_cmd(clients[-1], "cat %s" % fname)
+        except:
+            content = ""
+            return False
+        if int(sessions) == len(re.findall("MIGRATE", content)):
+            return True
+        return False
 
     def parse_demo_result(fname, sessions):
         """
@@ -513,7 +521,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         result = 0.0
         for this in lines[-sessions * niteration:]:
             if "Interim" in this:
-                result += float(re.findall("Interim result: *(\S+)", this)[0])
+                result += float(re.findall(r"Interim result: *(\S+)", this)[0])
         result = result / niteration
         logging.debug("niteration: %s" % niteration)
         return result
@@ -523,23 +531,22 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     fname = "/tmp/netperf.%s.nf" % pid
     ssh_cmd(clients[-1], "rm -f %s" % fname)
     numa_enable = params.get("netperf_with_numa", "yes") == "yes"
+    timeout_netperf_start = float(params.get("netperf_start_timeout", 360))
     client_thread = threading.Thread(target=netperf_thread,
                                      kwargs={"i": int(sessions),
                                              "numa_enable": numa_enable,
-                                             "client_s": clients[0]})
+                                             "client_s": clients[0],
+                                             "timeout": timeout_netperf_start})
     client_thread.start()
 
     ret = {}
     ret['pid'] = pid
 
-    while True:
-        try:
-            content = ssh_cmd(clients[-1], "cat %s" % fname)
-        except:
-            content = ""
-        if int(sessions) == len(re.findall("MIGRATE", content)):
-            logging.debug("All netperf clients start to work.")
-            break
+    if utils_misc.wait_for(all_clients_up, timeout_netperf_start, 30, 5,
+                           "Wait until all netperf clients start to work"):
+        logging.debug("All netperf clients start to work.")
+    else:
+        raise error.TestNAError("Error, not all netperf clients at work")
 
     # real & effective test starts
     if get_status_flag:

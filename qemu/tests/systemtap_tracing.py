@@ -2,8 +2,9 @@ import logging
 import re
 import os
 import time
+from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_misc, env_process
+from virttest import utils_misc, env_process, data_dir
 
 
 @error.context_aware
@@ -21,8 +22,8 @@ def run_systemtap_tracing(test, params, env):
 
     def create_patterns_reg(trace_key):
         """
-            create a regular exp using the tracing key, the purpose is checking
-            the systemtap output is accord with expected.
+        Create a regular exp using the tracing key, the purpose is checking
+        the systemtap output is accord with expected.
         """
         pattern_reg = ""
         for tracing_key in trace_key.split():
@@ -41,8 +42,19 @@ def run_systemtap_tracing(test, params, env):
     if params.get("extra_params"):
         params["extra_params"] = params.get("extra_params")
 
-    env_process.preprocess_vm(test, params, env, params.get("main_vm"))
+    if params.get("boot_with_cdrom") == 'yes':
+        iso_path = "%s/test.iso" % data_dir.get_tmp_dir()
+        create_cmd = "dd if=/dev/zero of=%s bs=1M count=10" % iso_path
+        if utils.system(create_cmd, ignore_status=True) != 0:
+            raise error.TestNAError("Create test iso failed")
+        params["cdrom_cd1"] = iso_path
+
+    if params.get("start_vm", "yes") == "no":
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params.get("main_vm"))
+
     vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
 
     if params.get("cmds_exec"):
         for cmd in params.get("cmds_exec").split(","):
