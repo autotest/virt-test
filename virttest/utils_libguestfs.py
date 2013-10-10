@@ -626,6 +626,42 @@ def virt_edit_cmd(disk_or_domain, file_path, options=None,
     return lgf_command(cmd, ignore_status, debug, timeout)
 
 
+def guestmount(disk_or_domain, mountpoint, inspector=False,
+               readonly=False, **dargs):
+    """
+    guestmount - Mount a guest filesystem on the host using FUSE and libguestfs.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+           If you need to mount a disk, set is_disk to True in dargs
+    @param mountpoint: the mountpoint of filesystems
+    @param inspector: mount all filesystems automatically
+    @param readonly: if mount filesystem with readonly option
+    """
+    def get_special_mountpoint(cmd, options):
+        special_mountpoints = options.get("special_mountpoints", [])
+        for mountpoint in special_mountpoints:
+            cmd += " -m %s" % mountpoint
+        return cmd
+
+    cmd = "guestmount"
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+    # If you need to mount a disk, set is_disk to True
+    is_disk = dargs.get("is_disk", False)
+    if is_disk is True:
+        cmd += " -a %s" % disk_or_domain
+    else:
+        cmd += " -d %s" % disk_or_domain
+    if inspector is True:
+        cmd += " -i"
+    if readonly is True:
+        cmd += " --ro"
+    cmd = get_special_mountpoint(cmd, dargs)
+    cmd += " %s" % mountpoint
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
 def virt_filesystems(disk_or_domain, **dargs):
     """
     virt-filesystems - List filesystems, partitions, block devices,
