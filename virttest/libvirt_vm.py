@@ -242,7 +242,7 @@ class VM(virt_vm.BaseVM):
         """
         return virsh.dumpxml(self.name, uri=self.connect_uri)
 
-    def backup_xml(self, tmpdir=None):
+    def backup_to_xml(self, tmpdir=None):
         """
         Backup the guest's xmlfile.
 

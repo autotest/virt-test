@@ -75,7 +75,7 @@ def run_virsh_migrate(test, params, env):
     vm.verify_alive()
 
     # For safety reasons, we'd better back up  xmlfile.
-    vm_xmlfile_bak = vm.backup_xml()
+    vm_xmlfile_bak = vm.backup_to_xml()
     if not vm_xmlfile_bak:
         logging.error("Backing up xmlfile failed.")
 

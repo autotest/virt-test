@@ -19,7 +19,7 @@ def run_virsh_autostart(test, params, env):
     status_error = "yes" == params.get("status_error", "no")
 
     # Prepare transient/persistent vm
-    original_xml = vm.backup_xml()
+    original_xml = vm.backup_to_xml()
     if not persistent_vm and vm.is_persistent():
         vm.undefine()
     elif persistent_vm and not vm.is_persistent():

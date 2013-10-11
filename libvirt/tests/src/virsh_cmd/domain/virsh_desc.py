@@ -80,7 +80,7 @@ def run_virsh_desc(test, params, env):
         desc_check(vm_name, desc_str, state_switch)
 
     # Prepare transient/persistent vm
-    original_xml = vm.backup_xml()
+    original_xml = vm.backup_to_xml()
     if persistent_vm == "no" and vm.is_persistent():
         vm.undefine()
     elif persistent_vm == "yes" and not vm.is_persistent():
