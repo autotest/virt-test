@@ -268,7 +268,7 @@ def find_defcon_idx(defcon, pathname):
     """
     Returns the index into defcon where pathname matches or None
     """
-    # Default context path regexes only work on cannonical paths
+    # Default context path regexes only work on canonical paths
     pathname = os.path.realpath(pathname)
     for default_context in defcon:
         if bool(re.search(default_context['fcontext'], pathname)):
@@ -280,7 +280,7 @@ def find_defcon(defcon, pathname):
     """
     Returns the context type of first match to pathname or None
     """
-    # Default context path regexes only work on cannonical paths
+    # Default context path regexes only work on canonical paths
     pathname = os.path.realpath(pathname)
     idx = find_defcon_idx(defcon, pathname)
     if idx is not None:
@@ -293,7 +293,7 @@ def find_pathregex(defcon, pathname):
     """
     Returns the regular expression in defcon matching pathname
     """
-    # Default context path regexes only work on cannonical paths
+    # Default context path regexes only work on canonical paths
     pathname = os.path.realpath(pathname)
     idx = find_defcon_idx(defcon, pathname)
     if idx is not None:
@@ -356,7 +356,7 @@ def verify_defcon(pathname, dirdesc=False):
     :return: True if all components match default contexts
     :note: By default DOES NOT follow symlinks
     """
-    # Default context path regexes only work on cannonical paths
+    # Default context path regexes only work on canonical paths
     changes = _run_restorecon(pathname, dirdesc)
     if changes.count('restorecon reset'):
         return False
