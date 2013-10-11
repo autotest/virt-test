@@ -740,7 +740,10 @@ class HumanMonitor(Monitor):
                 command = cmdline.split()[0]
                 cmdargs = " ".join(cmdline.split()[1:]).split(",")
                 for arg in cmdargs:
-                    command += " " + arg.split("=")[-1]
+                    value = "=".join(arg.split("=")[1:])
+                    if arg.split("=")[0] == "cert-subject":
+                        value = value.replace('/',',')
+                    command += " " + value
             else:
                 command = cmdline
             cmd_output.append(self.cmd(command, timeout))
