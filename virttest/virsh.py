@@ -1,8 +1,6 @@
 """
 Utility classes and functions to handle connection to a libvirt host system
 
-Suggested usage: import autotest.client.virt.virsh
-
 The entire contents of callables in this module (minus the names defined in
 NOCLOSE below), will become methods of the Virsh and VirshPersistent classes.
 A Closure class is used to wrap the module functions, lambda does not
@@ -2447,6 +2445,7 @@ def domiftune(name, interface, options=None, inbound=None,
         cmd += "  --outbound %s" % outbound
     if options:
         cmd += " --%s" % options
+    return command(cmd, **dargs)
 
 
 def desc(name, options, desc_str, **dargs):

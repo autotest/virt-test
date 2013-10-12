@@ -2535,7 +2535,7 @@ class VM(virt_vm.BaseVM):
         """
         Remove netdev info. from nic on VM, does not deactivate.
 
-        :param netdev_id: ID set/returned from activate_netdev()
+        :param: nic_index_or_name: name or index number for existing NIC
         """
         nic = self.virtnet[nic_index_or_name]
         error.context("removing netdev info from nic %s from vm %s" % (
@@ -2577,6 +2577,7 @@ class VM(virt_vm.BaseVM):
         :raise:: IOError if TAP device node cannot be opened
         :raise:: VMAddNetDevError: if operation failed
         """
+        tapfds = []
         nic = self.virtnet[nic_index_or_name]
         error.context("Activating netdev for %s based on %s" %
                       (self.name, nic))
@@ -2587,20 +2588,29 @@ class VM(virt_vm.BaseVM):
         if nic.nettype == 'bridge':  # implies tap
             error.context("Opening tap device node for %s " % nic.ifname,
                           logging.debug)
-            nic.set_if_none('tapfds', utils_net.open_tap("/dev/net/tun",
-                                                         nic.ifname,
-                                                         queues=nic.queues,
-                                                         vnet_hdr=False))
+            python_tapfds = utils_net.open_tap("/dev/net/tun",
+                                               nic.ifname,
+                                               queues=nic.queues,
+                                               vnet_hdr=False)
             for i in range(int(nic.queues)):
-                error.context("Assigning tap id %s for FD %s" %
-                              (nic.tapfd_ids[i], nic.tapfds.split(':')[i]),
-                              logging.debug)
-                self.monitor.getfd(int(nic.tapfds.split(':')[i]),
+                error.context("Assigning tap %s to qemu by fd" %
+                              nic.tapfd_ids[i], logging.info)
+                lsof_cmd = "lsof -a -p %s -Ff -- /dev/net/tun" % self.get_pid()
+                openfd_list = utils.system_output(lsof_cmd).splitlines()
+                self.monitor.getfd(int(python_tapfds.split(':')[i]),
                                    nic.tapfd_ids[i])
+                n_openfd_list = utils.system_output(lsof_cmd).splitlines()
+                new_qemu_fd = list(set(n_openfd_list) - set(openfd_list))
+                if not new_qemu_fd:
+                    err_msg = "Can't get the tap fd in qemu process!"
+                    raise virt_vm.VMAddNetDevError(err_msg)
+                tapfds.append(new_qemu_fd[0].lstrip("f"))
+
+            nic.set_if_none("tapfds", ":".join(tapfds))
 
             if not self.devices:
-                raise virt_vm.VMAddNetDevError("Can't add nic for VM which is"
-                                               " not running.")
+                err_msg = "Can't add nic for VM which is not running."
+                raise virt_vm.VMAddNetDevError(err_msg)
             if ((int(nic.queues)) > 1 and
                ',fds=' in self.devices.get_help_text()):
                 attach_cmd += " type=tap,id=%s,fds=%s" % (nic.device_id,
@@ -2639,7 +2649,7 @@ class VM(virt_vm.BaseVM):
             # Don't leave resources dangling
             self.deactivate_netdev(nic_index_or_name)
             raise virt_vm.VMAddNetDevError(("Failed to add netdev: %s for " %
-                                            nic.netdev_id) + msg_sfx +
+                                            nic.device_id) + msg_sfx +
                                            attach_cmd)
 
     @error.context_aware
@@ -2650,7 +2660,7 @@ class VM(virt_vm.BaseVM):
         :param nic_index_or_name: name or index number for existing NIC
         """
         error.context("Retrieving info for NIC %s on VM %s" % (
-            nic_index_or_name, self.name))
+                      nic_index_or_name, self.name))
         nic = self.virtnet[nic_index_or_name]
         device_add_cmd = "device_add"
         if nic.has_key('nic_model'):
@@ -2708,13 +2718,14 @@ class VM(virt_vm.BaseVM):
                                             "guest")
 
     @error.context_aware
-    def deactivate_netdev(self, netdev_id):
+    def deactivate_netdev(self, nic_index_or_name):
         """
         Reverses what activate_netdev() did
 
-        :param netdev_id: ID set/returned from activate_netdev()
+        :param: nic_index_or_name: name or index number for existing NIC
         """
         # FIXME: Need to down interface & remove from bridge????
+        netdev_id = self.virtnet[nic_index_or_name].device_id
         error.context("removing netdev id %s from vm %s" %
                       (netdev_id, self.name))
         nic_del_cmd = "netdev_del id=%s" % netdev_id

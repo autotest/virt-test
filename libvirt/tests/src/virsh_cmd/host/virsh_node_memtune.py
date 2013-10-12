@@ -19,23 +19,24 @@ def recovery_ksm_files_contents(ksm_params, change_list):
         if os.system(cmd):
             logging.error("Failed to execute %s", cmd)
 
+
 def get_ksm_values_and_change_list():
     """
     Get ksm relevant files contents and list are changed
     """
     ksm_params = {}
     # Currently, can be changed node memory parameters by libvirt
-    change_list = [ 'pages_to_scan', 'sleep_millisecs',
-                    'merge_across_nodes' ]
+    change_list = ['pages_to_scan', 'sleep_millisecs',
+                   'merge_across_nodes']
 
-    ksm_files = { 'shm_pages_to_scan'      : 'pages_to_scan',
-                  'shm_sleep_millisecs'    : 'sleep_millisecs',
-                  'shm_pages_shared'       : 'pages_shared',
-                  'shm_pages_sharing'      : 'pages_sharing',
-                  'shm_pages_unshared'     : 'pages_unshared',
-                  'shm_pages_volatile'     : 'pages_volatile',
-                  'shm_full_scans'         : 'full_scans',
-                  'shm_merge_across_nodes' : 'merge_across_nodes' }
+    ksm_files = {'shm_pages_to_scan': 'pages_to_scan',
+                 'shm_sleep_millisecs': 'sleep_millisecs',
+                 'shm_pages_shared': 'pages_shared',
+                 'shm_pages_sharing': 'pages_sharing',
+                 'shm_pages_unshared': 'pages_unshared',
+                 'shm_pages_volatile': 'pages_volatile',
+                 'shm_full_scans': 'full_scans',
+                 'shm_merge_across_nodes': 'merge_across_nodes'}
 
     for k, v in ksm_files.items():
         sharing_file = os.path.join(_SYSFS_MEMORY_KSM_PATH, v)
@@ -47,6 +48,7 @@ def get_ksm_values_and_change_list():
                 change_list.remove(v)
 
     return (ksm_params, change_list)
+
 
 def check_node_memtune(params, ksm_dicts):
     """
@@ -70,6 +72,7 @@ def check_node_memtune(params, ksm_dicts):
 
     return True
 
+
 def get_node_memtune_parameter(params):
     """
     Get the node memory parameters
@@ -82,7 +85,7 @@ def get_node_memtune_parameter(params):
     _params = {}
 
     for i in result.stdout.strip().split('\n\t')[1:]:
-        _params[i.split(' ')[0]]=i.split(' ')[-1]
+        _params[i.split(' ')[0]] = i.split(' ')[-1]
 
     logging.debug(_params)
 
@@ -108,6 +111,7 @@ def get_node_memtune_parameter(params):
                 raise error.TestFail("The memory parameters "
                                      "mismatch with result")
 
+
 def set_node_memtune_parameter(params):
     """
     Set the node memory parameters
@@ -131,7 +135,7 @@ def set_node_memtune_parameter(params):
 
     # the 'merge_across_nodes' is supported by specific kernel
     if shm_merge_across_nodes and not \
-        os.access("%s/merge_across_nodes" % _SYSFS_MEMORY_KSM_PATH, os.R_OK):
+            os.access("%s/merge_across_nodes" % _SYSFS_MEMORY_KSM_PATH, os.R_OK):
         status_error = "yes"
 
     if status_error == "yes":
@@ -149,6 +153,7 @@ def set_node_memtune_parameter(params):
             else:
                 raise error.TestFail("The memory parameters "
                                      "mismatch with result")
+
 
 def run_virsh_node_memtune(test, params, env):
     """
@@ -173,7 +178,7 @@ def run_virsh_node_memtune(test, params, env):
     # Backup ksm relevant files contents
     ksm_backup = dict(ksm_params)
 
-    ########## positive and negative testing #########
+    # positive and negative testing #########
 
     if status_error == "no":
         if change_parameters == "no":

@@ -168,19 +168,3 @@ class Env(UserDict.IterableUserDict):
         :param port: Sync Server port.
         """
         return self.data.get("sync__%s" % port)
-
-    def register_installer(self, installer):
-        """
-        Register a installer that was just run
-
-        The installer will be available for other tests, so that
-        information about the installed KVM modules and qemu-kvm can be used by
-        them.
-        """
-        self.data['last_installer'] = installer
-
-    def previous_installer(self):
-        """
-        Return the last installer that was registered
-        """
-        return self.data.get('last_installer')

@@ -1582,7 +1582,7 @@ class QMPMonitor(Monitor):
                     for arg in cmdargs:
                         value = "=".join(arg.split("=")[1:])
                         if arg.split("=")[0] == "cert-subject":
-                            value = value.replace('/',',')
+                            value = value.replace('/', ',')
 
                         command += " " + value
                 else:
@@ -1606,7 +1606,7 @@ class QMPMonitor(Monitor):
                         else:
                             value = value.strip()
                         if opt[0] == "cert-subject":
-                            value = value.replace('/',',')
+                            value = value.replace('/', ',')
                         args[opt[0].strip()] = value
                     except:
                         logging.debug("Fail to create args, please check cmd")

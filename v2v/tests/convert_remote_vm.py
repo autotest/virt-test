@@ -172,8 +172,8 @@ def run_convert_remote_vm(test, params, env):
     remote_uri = ruri.get_uri(remote_hostname)
 
     # Check remote vms
-    rvirsh_dargs = {'uri':remote_uri, 'remote_ip':remote_hostname,
-                    'remote_user':username, 'remote_pwd':password}
+    rvirsh_dargs = {'uri': remote_uri, 'remote_ip': remote_hostname,
+                    'remote_user': username, 'remote_pwd': password}
     rvirsh = virsh.VirshPersistent(**rvirsh_dargs)
     if not rvirsh.domain_exists(vm_name):
         raise error.TestFail("Couldn't find vm '%s' to be converted "
