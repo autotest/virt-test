@@ -2496,3 +2496,33 @@ def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
         cmd += " --%s" % options
 
     return command(cmd, **dargs)
+
+
+def iface_begin(**dargs):
+    """
+    Create a snapshot of current interfaces settings
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-begin", **dargs)
+
+
+def iface_commit(**dargs):
+    """
+    Commit changes made since iface-begin and free restore point
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-commit", **dargs)
+
+
+def iface_rollback(**dargs):
+    """
+    Rollback to previous saved configuration created via iface-begin
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-rollback",**dargs)
