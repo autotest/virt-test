@@ -42,6 +42,10 @@ def run_smartcard_setup(test, params, env):
         timeout=int(params.get("login_timeout", 360)),
         username="root", password="123456")
 
+    for vm in params.get("vms").split():
+        utils_spice.clear_interface(env.get_vm(vm),
+                                   int(params.get("login_timeout", "360")))
+
     # generate a random string, used to create a random key for the certs
     randomstring = utils_misc.generate_random_string(2048)
     cmd = "echo '" + randomstring + "' > /tmp/randomtext.txt"
