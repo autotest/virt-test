@@ -452,3 +452,50 @@ class NetworkXML(NetworkXMLBase):
         except xcepts.LibvirtXMLError, detail:
             # network already gone
             logging.warning(detail)
+
+    def exists(self):
+        """
+        Return True if network already exists.
+        """
+        cmd_result = self.virsh.net_uuid(self.name)
+        return (cmd_result.exit_status == 0)
+
+    def undefine(self):
+        """
+        Undefine network witch name is self.name.
+        """
+        self.virsh.net_destroy(self.name)
+        cmd_result = self.virsh.net_undefine(self.name)
+        if cmd_result.exit_status:
+            raise xcepts.LibvirtXMLError("Failed to undefine network %s.\n"
+                                         "Detail: %s" %
+                                         (self.name, cmd_result.stderr))
+
+    def define(self):
+        """
+        Define network from self.xml.
+        """
+        cmd_result = self.virsh.net_define(self.xml)
+        if cmd_result.exit_status:
+            raise xcepts.LibvirtXMLError("Failed to define network %s.\n"
+                                         "Detail: %s" %
+                                         (self.name, cmd_result.stderr))
+
+    def start(self):
+        """
+        Start network with self.virsh.
+        """
+        cmd_result = self.virsh.net_start(self.name)
+        if cmd_result.exit_status:
+            raise xcepts.LibvirtXMLError("Failed to start network %s.\n"
+                                         "Detail: %s" %
+                                         (self.name, cmd_result.stderr))
+
+    def sync(self):
+        """
+        Make the change of "self" take effect on network.
+        """
+        if self.exists():
+            self.undefine()
+        self.define()
+        self.start()
