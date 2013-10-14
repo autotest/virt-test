@@ -7,7 +7,7 @@ the same setup will result in them having the same resolution.
 
 """
 import logging
-from virttest import utils_spice, aexpect
+from virttest import utils_spice
 
 
 def run_fullscreen_setup(test, params, env):
@@ -25,12 +25,20 @@ def run_fullscreen_setup(test, params, env):
     # Get necessary params
     test_timeout = float(params.get("test_timeout", 600))
 
+    utils_spice.wait_timeout(20)
+
+    for vm in params.get("vms").split():
+        utils_spice.clear_interface(env.get_vm(vm),
+                                    int(params.get("login_timeout", "360")))
+
+    utils_spice.wait_timeout(20)
+
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
-
-    utils_spice.wait_timeout(10)
+            timeout=int(params.get("login_timeout", 360)))
+    guest_root_session = guest_vm.wait_for_login(username="root",
+                                                 password="123456")
 
     logging.debug("Exporting guest display")
     guest_session.cmd("export DISPLAY=:0.0")
@@ -62,7 +70,7 @@ def run_fullscreen_setup(test, params, env):
                  current + " to: " + resolution)
 
     # Start vdagent daemon
-    utils_spice.start_vdagent(guest_session, test_timeout)
+    utils_spice.start_vdagent(guest_root_session, test_timeout)
 
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
