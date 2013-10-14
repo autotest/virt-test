@@ -3,6 +3,7 @@ import time
 import glob
 import os
 import re
+from autotest.client import utils
 from autotest.client.shared import error
 import utils_misc
 import utils_net
@@ -214,6 +215,16 @@ class VMIPAddressMissingError(VMAddressError):
 
     def __str__(self):
         return "No DHCP lease for MAC %s" % self.mac
+
+
+class VMIPV6AddressMissingError(VMAddressError):
+
+    def __init__(self, mac):
+        VMAddressError.__init__(self, mac)
+        self.mac = mac
+
+    def __str__(self):
+        return "No DHCPV6 lease for MAC %s" % self.mac
 
 
 class VMUnknownNetTypeError(VMError):
@@ -488,6 +499,7 @@ class BaseVM(object):
     def __init__(self, name, params):
         self.name = name
         self.params = params
+        self.ip_version = self.params.get("ip_version", "IPV4")
         #
         # Assuming all low-level hypervisors will have a serial (like) console
         # connection to the guest. libvirt also supports serial (like) consoles
@@ -626,31 +638,59 @@ class BaseVM(object):
         # else TODO: Look up mac from existing qemu-kvm process
         if not nic.has_key('mac'):
             raise VMMACAddressMissingError(index)
+        if self.ip_version == "IPV4":
+            # Get the IP address from arp cache, try upper and lower case
+            arp_ip = self.address_cache.get(nic.mac.upper())
+            if not arp_ip:
+                arp_ip = self.address_cache.get(nic.mac.lower())
 
-        # Get the IP address from arp cache, try upper and lower case
-        arp_ip = self.address_cache.get(nic.mac.upper())
-        if not arp_ip:
-            arp_ip = self.address_cache.get(nic.mac.lower())
+            if not arp_ip and os.geteuid() != 0:
+                # For non-root, tcpdump won't work for finding IP address,
+                #try arp
+                ip_map = utils_net.parse_arp()
+                arp_ip = ip_map.get(nic.mac.lower())
+                if arp_ip:
+                    self.address_cache[nic.mac.lower()] = arp_ip
 
-        if not arp_ip and os.geteuid() != 0:
-            # For non-root, tcpdump won't work for finding IP address, try arp
-            ip_map = utils_net.parse_arp()
-            arp_ip = ip_map.get(nic.mac.lower())
-            if arp_ip:
-                self.address_cache[nic.mac.lower()] = arp_ip
+            if not arp_ip:
+                raise VMIPAddressMissingError(nic.mac)
 
-        if not arp_ip:
-            raise VMIPAddressMissingError(nic.mac)
+            # Make sure the IP address is assigned to one or more macs
+            # for this guest
+            macs = self.virtnet.mac_list()
 
-        # Make sure the IP address is assigned to one or more macs
-        # for this guest
-        macs = self.virtnet.mac_list()
+            if not utils_net.verify_ip_address_ownership(arp_ip, macs):
+                raise VMAddressVerificationError(nic.mac, arp_ip)
+            logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
+                arp_ip, self.name, str(index)))
+            return arp_ip
 
-        if not utils_net.verify_ip_address_ownership(arp_ip, macs):
-            raise VMAddressVerificationError(nic.mac, arp_ip)
-        logging.debug('Found/Verified IP %s for VM %s NIC %s' % (
-            arp_ip, self.name, str(index)))
-        return arp_ip
+        elif self.ip_version == "IPV6":
+            #Try to get and return IPV6 global address, if it not configuried,
+            #return it's linklocal address
+
+            #Get global ipv6_address from address_cache
+            mac_key = "%s_6" % nic.mac
+            global_address = self.address_cache.get(mac_key.lower())
+            if not global_address:
+                session = self.wait_for_serial_login()
+                global_address = utils_net.get_ipv6_global_address_safe(session,
+                                                                        nic.mac)
+            if global_address:
+                self.address_cache[mac_key] = global_address
+                return global_address
+            if self.params.get('using_linklocal') == "yes":
+                logging.warn("Not have ipv6 global address, using linklocal")
+                linklocal_address = utils_net.ipv6_from_mac_addr(nic.mac)
+                if not utils_misc.wait_for(lambda: utils_net.neigh_reachable(
+                                           linklocal_address, nic.netdst),
+                                           60, 0, 10, "Wait get the neigh"):
+                    raise VMAddressVerificationError(nic.mac,
+                                                     linklocal_address)
+                return linklocal_address
+            else:
+                raise VMIPV6AddressMissingError(nic.mac)
+
 
     def fill_addrs(self, addrs):
         """
@@ -699,7 +739,8 @@ class BaseVM(object):
         self.virtnet.free_mac_address(nic_index_or_name)
 
     @error.context_aware
-    def wait_for_get_address(self, nic_index_or_name, timeout=30, internal_timeout=1):
+    def wait_for_get_address(self, nic_index_or_name, timeout=30,
+                             internal_timeout=1):
         """
         Wait for a nic to acquire an IP address, then return it.
         """
@@ -845,12 +886,16 @@ class BaseVM(object):
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         client = self.params.get("shell_client")
         address = self.get_address(nic_index)
+        neigh_attach_if = ""
+        if address.lower().startswith("fe80"):
+            neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("shell_port")))
         log_filename = ("session-%s-%s.log" %
                         (self.name, utils_misc.generate_random_string(4)))
         session = remote.remote_login(client, address, port, username,
                                       password, prompt, linesep,
-                                      log_filename, timeout)
+                                      log_filename, timeout,
+                                      interface=neigh_attach_if)
         session.set_status_test_command(self.params.get("status_test_command",
                                                         ""))
         self.remote_sessions.append(session)
@@ -925,13 +970,16 @@ class BaseVM(object):
             password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
         address = self.get_address(nic_index)
+        neigh_attach_if = ""
+        if address.lower().startswith("fe80"):
+            neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-to-%s-%s.log" %
                         (self.name, address,
                          utils_misc.generate_random_string(4)))
         remote.copy_files_to(address, client, username, password, port,
                              host_path, guest_path, limit, log_filename,
-                             verbose, timeout)
+                             verbose, timeout, interface=neigh_attach_if)
         utils_misc.close_log_file(log_filename)
 
     @error.context_aware
@@ -956,13 +1004,16 @@ class BaseVM(object):
             password = self.params.get("password", "")
         client = self.params.get("file_transfer_client")
         address = self.get_address(nic_index)
+        neigh_attach_if = ""
+        if address.lower().startswith("fe80"):
+            neigh_attach_if = utils_net.get_neigh_attch_interface(address)
         port = self.get_port(int(self.params.get("file_transfer_port")))
         log_filename = ("transfer-%s-from-%s-%s.log" %
                         (self.name, address,
                          utils_misc.generate_random_string(4)))
         remote.copy_files_from(address, client, username, password, port,
                                guest_path, host_path, limit, log_filename,
-                               verbose, timeout)
+                               verbose, timeout, interface=neigh_attach_if)
         utils_misc.close_log_file(log_filename)
 
     @error.context_aware

@@ -441,7 +441,8 @@ def preprocess(test, params, env):
         env["tcpdump"].close()
         del env["tcpdump"]
     if "tcpdump" not in env and params.get("run_tcpdump", "yes") == "yes":
-        cmd = "%s -npvi any 'port 68'" % utils_misc.find_command("tcpdump")
+        cmd_template = "%s -npvi any 'port 68 or port 546'"
+        cmd = cmd_template % utils_misc.find_command("tcpdump")
         if params.get("remote_preprocess") == "yes":
             login_cmd = ("ssh -o UserKnownHostsFile=/dev/null -o \
                          PreferredAuthentications=password -p %s %s@%s" %
@@ -868,6 +869,25 @@ def _update_address_cache(address_cache, line):
             address_cache[mac_address] = ip_address
             address_cache["time_%s" % mac_address] = time.time()
             del address_cache["last_seen_mac"]
+
+    #ipv6 address cache:
+    mac_ipv6_reg = r"client-ID.*?([0-9a-fA-F]{12})\).*IA_ADDR (.*) pltime"
+    if re.search("dhcp6 (request|renew|confirm)", line, re.IGNORECASE):
+        matches = re.search(mac_ipv6_reg, line, re.I)
+        if matches:
+            ipinfo = matches.groups()
+            mac_address = ":".join(re.findall("..", ipinfo[0])).lower()
+            request_ip = ipinfo[1].lower()
+            address_cache["%s_6" % mac_address] = request_ip
+
+    if re.search("dhcp6 (reply|advertise)", line, re.IGNORECASE):
+        ipv6_mac_reg = "IA_ADDR (.*) pltime.*client-ID.*?([0-9a-fA-F]{12})\)"
+        matches = re.search(ipv6_mac_reg, line, re.I)
+        if matches:
+            ipinfo = matches.groups()
+            mac_address = ":".join(re.findall("..", ipinfo[1])).lower()
+            allocate_ip = ipinfo[0].lower()
+            address_cache["%s_6" % mac_address] = allocate_ip
 
 
 def _tcpdump_handler(address_cache, filename, line):
