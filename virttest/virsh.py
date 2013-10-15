@@ -926,10 +926,12 @@ def is_dead(name, **dargs):
         state = domstate(name, **dargs).stdout.strip()
     except error.CmdError:
         return True
-    if state in ('running', 'idle', 'no state', 'paused'):
-        return False
-    else:
+    if state not in ('running', 'idle', 'paused', 'in shutdown', 'shut off',
+                     'crashed', 'pmsuspended', 'no state'):
+        logging.debug("State '%s' not known", state)
+    if state in ('shut off', 'crashed', 'no state'):
         return True
+    return False
 
 
 def suspend(name, **dargs):
