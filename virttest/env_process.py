@@ -23,6 +23,7 @@ import remote
 import data_dir
 import utils_net
 import utils_disk
+import nfs
 from autotest.client import local_host
 
 
@@ -442,6 +443,19 @@ def preprocess(test, params, env):
         params["image_name"] = iscsidev.setup()
         params["image_raw_device"] = "yes"
 
+    if params.get("storage_type") == "nfs":
+        image_nfs = nfs.Nfs(params)
+        image_nfs.setup()
+        image_name_only = os.path.basename(params["image_name"])
+        params['image_name'] = os.path.join(image_nfs.mount_dir,
+                                            image_name_only)
+        for image_name in params.objects("images"):
+            name_tag = "image_name_%s" % image_name
+            if params.get(name_tag):
+                image_name_only = os.path.basename(params[name_tag])
+                params[name_tag] = os.path.join(image_nfs.mount_dir,
+                                                image_name_only)
+
     # Start tcpdump if it isn't already running
     if "address_cache" not in env:
         env["address_cache"] = {}
@@ -806,6 +820,12 @@ def postprocess(test, params, env):
         except Exception, details:
             err += "\niscsi cleanup: %s" % str(details).replace('\\n', '\n  ')
             logging.error(details)
+    if params.get("storage_type") == "nfs":
+        try:
+            image_nfs = nfs.Nfs(params)
+            image_nfs.cleanup()
+        except Exception, details:
+            err += "\nnfs cleanup: %s" % str(details).replace ('\\n', '\n  ')
 
     setup_pb = False
     for nic in params.get('nics', "").split():
