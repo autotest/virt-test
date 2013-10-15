@@ -1436,6 +1436,21 @@ class ShellSession(Expect):
             else:
                 raise
 
+    def send_cmd_safe(self, cmd, timeout=60):
+        logging.debug("Sending command: %s", cmd)
+        self.sendline(cmd)
+        output = ""
+        start_time = time.time()
+        # Wait for shell prompt until timeout.
+        while (time.time() - start_time) < timeout:
+            self.sendline()
+            try:
+                output += self.read_up_to_prompt(0.5)
+                break
+            except ExpectTimeoutError:
+                pass
+        return output
+
     def get_command_output(self, cmd, timeout=60, internal_timeout=None,
                            print_func=None):
         """
