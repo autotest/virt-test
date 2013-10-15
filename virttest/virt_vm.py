@@ -147,10 +147,11 @@ class VMDeadKernelCrashError(VMError):
 
     def __init__(self, kernel_crash):
         VMError.__init__(self, kernel_crash)
-        self.kernel_crash = kernel_crash
+        logging.debug(kernel_crash)
 
     def __str__(self):
-        return ("VM is dead due to a kernel crash:\n%s" % self.kernel_crash)
+        return ("VM is dead due to a kernel crash, "
+                "please check the debug log.")
 
 
 class VMInvalidInstructionCode(VMError):
