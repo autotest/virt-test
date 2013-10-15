@@ -1,7 +1,7 @@
 import logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import remote, utils_misc
+from virttest import remote, utils_misc, utils_test
 
 
 @error.context_aware
@@ -10,11 +10,8 @@ def run_virtual_nic_send_buffer(test, params, env):
     Test Steps:
 
     1. boot up guest with this option sndbuf=1048576,...
-    2. Transfer file from host to guest.
-    3. boot up four guest in the same host, transfer files between
-       them via udp.
-    4. verify that it could not block other guests on the same host.
-    5. Repeat 1-4, test with the sndbuf=0, and default value in 6.2.
+    2. Transfer file between host and guest (by tcp,udp or both).
+    3. Run netperf_udp with burst, check the guest works well.
 
     Params:
         :param test: QEMU test object.
@@ -59,8 +56,8 @@ def run_virtual_nic_send_buffer(test, params, env):
     vms = []
 
     error.context("Init boot the vms")
-    for vm in params.get("vms", "vm1 vm2 vm3 vm4").split():
-        vms.append(env.get_vm(vm))
+    for vm_name in params.get("vms", "vm1 vm2 vm3 vm4").split():
+        vms.append(env.get_vm(vm_name))
     for vm in vms:
         vm.verify_alive()
         sessions.append(vm.wait_for_login(timeout=timeout))
@@ -69,41 +66,73 @@ def run_virtual_nic_send_buffer(test, params, env):
     logging.info("Creating %dMb file on host", filesize)
     cmd = dd_cmd % (host_file, filesize)
     utils.run(cmd)
+    orig_md5 = utils.hash_file(host_file, method="md5")
 
     try:
-        error.context("Transfer data from host to each guest")
-        for vm in vms:
-            error.context("Transferring data from host to guest %s " % vm.name,
-                          logging.info)
-            vm.copy_files_to(host_file, src_file, timeout=transfer_timeout)
-
-        error.context("Transfer data from guest to host")
-        for vm in vms:
-            error.context("Transfer date from guest %s to host" % vm.name,
-                          logging.info)
-            vm.copy_files_from(src_file, host_file, timeout=transfer_timeout)
-
-        # transfer data between guest
-        error.context("Transfer data between every guest")
-        if params.get("os_type") == "linux":
+        if "tcp" in params.get("copy_protocol", ""):
+            error.context("Transfer data from host to each guest")
+            for vm in vms:
+                error.context("Transfer data from host to guest %s via tcp" %
+                              vm.name, logging.info)
+                vm.copy_files_to(host_file, src_file, timeout=transfer_timeout)
             for session in sessions:
-                env_setup(session)
+                output = session.cmd_output("md5sum %s" % src_file)
+                if "such file" in output:
+                    remote_hash = "0"
+                elif output:
+                    remote_hash = output.split()[0]
+                else:
+                    warn_msg = "MD5 check for remote path %s did not return."
+                    logging.warning(warn_msg % src_file)
+                    remote_hash = "0"
+                if remote_hash != orig_md5:
+                    raise error.TestError("Md5sum mismatch, ori:cur - %s:%s" %
+                                          (orig_md5, remote_hash))
 
-        for vm_src in addresses:
-            for vm_dst in addresses:
-                if vm_src != vm_dst:
-                    error.context("Transferring data %s to %s" %
-                                  (vm_src, vm_dst), logging.info)
-                    remote.udp_copy_between_remotes(vm_src, vm_dst,
-                                                    shell_port,
-                                                    password, password,
-                                                    username, username,
-                                                    src_file, dst_file,
-                                                    client, prompt,
-                                                    data_port, timeout=1200)
+            error.context("Transfer data from guest to host by tcp")
+            for vm in vms:
+                error.context("Transfer date from guest %s to host" % vm.name,
+                              logging.info)
+                vm.copy_files_from(src_file, host_file,
+                                   timeout=transfer_timeout)
+
+                current_md5 = utils.hash_file(host_file, method="md5")
+                if current_md5 != orig_md5:
+                    raise error.TestError("Md5sum mismatch, ori:cur - %s:%s" %
+                                          (orig_md5, remote_hash))
+
+        if "udp" in params.get("copy_protocol", ""):
+            # transfer data between guest
+            error.context("Transfer data between every guest by udp protocol")
+            if params.get("os_type") == "linux":
+                for session in sessions:
+                    env_setup(session)
+
+            for vm_src in addresses:
+                for vm_dst in addresses:
+                    if vm_src != vm_dst:
+                        error.context("Transferring data %s to %s" %
+                                      (vm_src, vm_dst), logging.info)
+                        remote.udp_copy_between_remotes(vm_src, vm_dst,
+                                                        shell_port,
+                                                        password, password,
+                                                        username, username,
+                                                        src_file, dst_file,
+                                                        client, prompt,
+                                                        data_port,
+                                                        timeout=1200)
+        # do netperf test:
+        sub_test = params.get("sub_test_name", 'netperf_udp')
+        for vm in vms:
+            params["main_vm"] = vm.name
+            error.context("Run subtest %s " % sub_test, logging.info)
+            utils_test.run_virt_sub_test(test, params, env, sub_type=sub_test)
+            vm.wait_for_login(timeout=timeout)
+
     finally:
-        utils.run("rm -rf %s " % host_file)
+        utils.system("rm -rf %s " % host_file, ignore_status=True)
         for session in sessions:
             if session:
-                session.cmd("%s %s %s" % (clean_cmd, src_file, dst_file))
+                session.cmd("%s %s %s" % (clean_cmd, src_file, dst_file),
+                            ignore_all_errors=True)
                 session.close()
