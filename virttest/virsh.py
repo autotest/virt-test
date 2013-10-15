@@ -2526,3 +2526,21 @@ def iface_rollback(**dargs):
     :return: CmdResult instance
     """
     return command("iface-rollback",**dargs)
+
+
+def emulatorpin(name, cpulist=None, options=None, **dargs):
+    """
+    Control or query domain emulator affinity
+    :param name: name of domain
+    :param cpulist: a list of physical CPU numbers
+    :param options: options may be live, config and current
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "emulatorpin %s" % name
+    if options:
+        cmd += " --%s" % options
+    if cpulist:
+        cmd += " --cpulist %s" % cpulist
+
+    return command(cmd, **dargs)
