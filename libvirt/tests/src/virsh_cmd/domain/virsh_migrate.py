@@ -100,7 +100,6 @@ def run_virsh_migrate(test, params, env):
     status_error = params.get("status_error", 'no')
     libvirtd_state = params.get("virsh_migrate_libvirtd_state", 'on')
     src_state = params.get("virsh_migrate_src_state", "running")
-    new_nic_mac = "ff:ff:ff:ff:ff:ff"
     dest_xmlfile = ""
 
     exception = False
@@ -120,11 +119,14 @@ def run_virsh_migrate(test, params, env):
             dest_xmlfile = params.get("virsh_migrate_xml", "")
             if dest_xmlfile:
                 ret_attach = vm.attach_interface("--type bridge --source "
-                                                 "virbr0 --mac %s" % new_nic_mac, True, True)
+                                                 "virbr0 --target tmp-vnet",
+                                                 True, True)
                 if not ret_attach:
                     exception = True
-                    raise error.TestError(
-                        "Attaching nic to %s failed." % vm.name)
+                    raise error.TestError("Attaching nic to %s failed."
+                                          % vm.name)
+                ifaces = vm_xml.VMXML.get_net_dev(vm.name)
+                new_nic_mac = vm.get_virsh_mac_address(ifaces.index("tmp-vnet"))
                 vm_xml_new = vm.get_xml()
                 logging.debug("Xml file on source: %s" % vm_xml_new)
                 f = codecs.open(dest_xmlfile, 'wb', encoding='utf-8')
