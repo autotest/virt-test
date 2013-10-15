@@ -136,13 +136,8 @@ def run_enospc(test, params, env):
     logical_volume = "/dev/%s/%s" % (vgtest_name, lvtest_name)
 
     drive_format = params["drive_format"]
-    if drive_format == "virtio":
-        devname = "/dev/vdb"
-    elif drive_format == "ide":
-        output = session_serial.cmd_output("dir /dev")
-        devname = "/dev/" + re.findall("([sh]db)\s", output)[0]
-    elif drive_format == "scsi":
-        devname = "/dev/sdb"
+    output = session_serial.cmd_output("dir /dev")
+    devname = "/dev/" + re.findall("([shv]db)\s", output)[0]
     cmd = params["background_cmd"]
     cmd %= devname
 
