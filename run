@@ -303,7 +303,7 @@ class VirtTestRunParser(optparse.OptionParser):
                               " ".join(SUPPORTED_DISK_BUSES) +
                               ". If -c is provided, this will be ignored. "
                               "Default: %default"))
-        qemu.add_option("--qemu_sandbox", action="store", dest="sandbox",
+        qemu.add_option("--qemu_sandbox", action="store", dest="qemu_sandbox",
                         default="off",
                         help=("Enable qemu sandboxing "
                               "(on/off). Default: %default"))
