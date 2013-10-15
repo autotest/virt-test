@@ -170,6 +170,24 @@ class BRIpError(NetError):
                 " impossible to start dnsmasq for this bridge." %
                (self.brname))
 
+class VMIPV6NeighNotFoundError(NetError):
+
+    def __init__(self, ipv6_address):
+        NetError.__init__(self, ipv6_address)
+        self.ipv6_address = ipv6_address
+
+    def __str__(self):
+        return "No ipv6 neighbours with address %s" % self.ipv6_address
+
+
+class VMIPV6AdressError(NetError):
+
+    def __init__(self, error_info):
+        NetError.__init__(self, error_info)
+        self.error_info = error_info
+
+    def __str__(self):
+        return "%s, check your test env support ipv6" % self.error_info
 
 class HwAddrSetError(NetError):
 
@@ -832,7 +850,101 @@ def ipv6_from_mac_addr(mac_addr):
     """
     mp = mac_addr.split(":")
     mp[0] = ("%x") % (int(mp[0], 16) ^ 0x2)
-    return "fe80::%s%s:%sff:fe%s:%s%s" % tuple(mp)
+    mac_address = "fe80::%s%s:%sff:fe%s:%s%s" % tuple(mp)
+    return ":".join(map(lambda x:x.lstrip("0"), mac_address.split(":")))
+
+
+def get_ipv6_global_address(session, interface="eth0"):
+    """
+    Return guest/host ipv6 global address. return [] if not have.
+    """
+    ipv6_address =  get_net_if_addrs(interface, session.cmd_output)["ipv6"]
+    if not ipv6_address:
+        return []
+    return [ x for x in ipv6_address if not x.lower().startswith("fe80")]
+
+
+def get_ipv6_global_address_safe(session, mac):
+    """
+    return first Ipv6 global address"
+    """
+    interface = get_linux_ifname(session, mac)
+    global_address = get_ipv6_global_address(session, interface)
+    if not global_address:
+        cmd = "pidof dhclient && killall dhclient; dhclient -6 %s &"
+        session.send_cmd_safe(cmd % interface)
+        global_address = utils_misc.wait_for((lambda: get_ipv6_global_address(
+                                                      session, interface)),
+                                              120, 5, 10)
+    if not global_address:
+        return ""
+    return global_address[0]
+
+
+def refresh_neigh_table(interface_name=None):
+    """
+    Refresh host neighbours table, if interface_name is assigned only refresh
+    neighbours of this interface, else refresh the all the neighbours.
+    """
+    refresh_cmd = "ping6 -c 2 -I %s ff02::1 > /dev/null"
+    if isinstance(interface_name, list):
+        interfaces = interface_name
+    elif isinstance(interface_name, str):
+        interfaces = interface_name.split()
+    else:
+        interfaces = filter(lambda x : "-" not in x, get_net_if())
+        interfaces.remove("lo")
+    for interface in interfaces:
+        utils.system(refresh_cmd % interface, ignore_status=True)
+
+
+def get_neighbours_info(neigh_address="", interface_name=None):
+    """
+    Get the neighbours infomation
+    """
+    refresh_neigh_table(interface_name)
+    cmd = "ip -6 neigh show nud reachable"
+    if neigh_address:
+        cmd += " %s" % neigh_address
+    output = utils.system_output(cmd)
+    if not output:
+        raise VMIPV6NeighNotFoundError(neigh_address)
+    all_neigh = {}
+    neigh_info = {}
+    for line in output.splitlines():
+        neigh_address = line.split()[0]
+        neigh_info["address"] = neigh_address
+        neigh_info["attach_if"] = line.split()[2]
+        neigh_mac = line.split()[4]
+        neigh_info["mac"] = neigh_mac
+        all_neigh[neigh_mac] = neigh_info
+        all_neigh[neigh_address] = neigh_info
+    return all_neigh
+
+
+def neigh_reachable(neigh_address, attach_if=None):
+    """
+    Check the neighbour is reachable
+    """
+    try:
+        get_neighbours_info(neigh_address, attach_if)
+    except VMIPV6NeighNotFoundError:
+        return False
+    return True
+
+
+def get_neigh_attch_interface(neigh_address):
+    """
+    Get the interface wihch can reach the neigh_address
+    """
+    return  get_neighbours_info(neigh_address)[neigh_address]["attach_if"]
+
+
+def get_neigh_mac(neigh_address):
+    """
+    Get neighbour mac by his address
+    """
+    return  get_neighbours_info(neigh_address)[neigh_address]["mac"]
 
 
 def check_add_dnsmasq_to_br(br_name, tmpdir):

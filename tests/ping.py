@@ -1,7 +1,7 @@
 import logging
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test
+from virttest import utils_test, utils_net
 
 
 @error.context_aware
@@ -58,6 +58,10 @@ def run_ping(test, params, env):
 
     for i, nic in enumerate(vm.virtnet):
         ip = vm.get_address(i)
+        if ip.upper().startswith("FE80"):
+            interface = utils_net.get_neigh_attch_interface(ip)
+        else:
+            interface = None
         nic_name = nic.get("nic_name")
         if not ip:
             logging.error("Could not get the ip of nic index %d: %s",
@@ -69,7 +73,7 @@ def run_ping(test, params, env):
         for size in packet_sizes:
             error.context("Ping with packet size %s" % size, logging.info)
             status, output = utils_test.ping(ip, 10, packetsize=size,
-                                             timeout=20)
+                                             interface=interface, timeout=20)
             _get_loss_ratio(output)
 
             if status != 0:
@@ -78,11 +82,11 @@ def run_ping(test, params, env):
 
         error.context("Flood ping test", logging.info)
         utils_test.ping(ip, None, flood=True, output_func=None,
-                        timeout=flood_minutes * 60)
+                        interface=interface, timeout=flood_minutes * 60)
 
         error.context("Ping test after flood ping, Check if the network is"
                       " still alive", logging.info)
-        status, output = utils_test.ping(ip, counts,
+        status, output = utils_test.ping(ip, counts, interface=interface,
                                          timeout=float(counts) * 1.5)
         _get_loss_ratio(output)
 
