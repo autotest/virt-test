@@ -38,7 +38,7 @@ def run_virsh_change_media(test, params, env):
 
         :param session: guest session
         :param target_file: the expected files
-        @action: action: test case action
+        :param action: test case action
         """
         if action != "--eject ":
             error.context("Checking guest cdrom files")
