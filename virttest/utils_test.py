@@ -1792,7 +1792,9 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         results_dir = "%s/results/default" % base_results_dir
         results_tarball = "/tmp/results.tgz"
         compress_cmd = "cd %s && " % results_dir
-        compress_cmd += "tar cjvf %s ./* --exclude=*core*" % results_tarball
+        compress_cmd += "tar cjvf %s ./*" % results_tarball
+        compress_cmd += " --exclude=*core*"
+        compress_cmd += " --exclude=*crash*"
         session.cmd(compress_cmd, timeout=600)
         vm.copy_files_from(results_tarball, guest_results_dir)
         # cleanup autotest subprocess which not terminated, change PWD to
@@ -1868,8 +1870,6 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     # tar the contents of bindir/autotest
     cmd = ("cd %s; tar cvjf %s %s/*" %
            (autotest_parentdir, compressed_autotest_path, autotest_basename))
-    # Until we have nested virtualization, we don't need the virt test :)
-    cmd += " --exclude=%s/tests/virt" % autotest_basename
     cmd += " --exclude=%s/results*" % autotest_basename
     cmd += " --exclude=%s/tmp" % autotest_basename
     cmd += " --exclude=%s/control*" % autotest_basename
