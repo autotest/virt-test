@@ -303,8 +303,8 @@ class VirtTestRunParser(optparse.OptionParser):
                               " ".join(SUPPORTED_DISK_BUSES) +
                               ". If -c is provided, this will be ignored. "
                               "Default: %default"))
-        qemu.add_option("--qemu_sandbox", action="store", dest="sandbox",
-                        default="off",
+        qemu.add_option("--qemu_sandbox", action="store", dest="qemu_sandbox",
+                        default="on",
                         help=("Enable qemu sandboxing "
                               "(on/off). Default: %default"))
         self.add_option_group(qemu)
@@ -490,10 +490,10 @@ class VirtTestApp(object):
 
     def _process_qemu_sandbox(self):
         if not self.options.config:
-            if self.options.qemu_sandbox == "on":
-                self.cartesian_parser.assign("qemu_sandbox","on")
+            if self.options.qemu_sandbox == "off":
+                self.cartesian_parser.assign("qemu_sandbox","off")
         else:
-            logging.info("Config provided, ignoring \"--sandbox on\" option")
+            logging.info("Config provided, ignoring \"--sandbox <on|off>\" option")
 
     def _process_malloc_perturb(self):
         self.cartesian_parser.assign("malloc_perturb",
