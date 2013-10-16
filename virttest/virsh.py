@@ -926,10 +926,12 @@ def is_dead(name, **dargs):
         state = domstate(name, **dargs).stdout.strip()
     except error.CmdError:
         return True
-    if state in ('running', 'idle', 'no state', 'paused'):
-        return False
-    else:
+    if state not in ('running', 'idle', 'paused', 'in shutdown', 'shut off', \
+                     'crashed', 'pmsuspended', 'no state'):
+        logging.debug("State '%s' not known", state)
+    if state in ('shut off', 'crashed', 'no state'):
         return True
+    return False
 
 
 def suspend(name, **dargs):
@@ -2496,3 +2498,33 @@ def node_memtune(shm_pages_to_scan=None, shm_sleep_millisecs=None,
         cmd += " --%s" % options
 
     return command(cmd, **dargs)
+
+
+def iface_begin(**dargs):
+    """
+    Create a snapshot of current interfaces settings
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-begin", **dargs)
+
+
+def iface_commit(**dargs):
+    """
+    Commit changes made since iface-begin and free restore point
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-commit", **dargs)
+
+
+def iface_rollback(**dargs):
+    """
+    Rollback to previous saved configuration created via iface-begin
+
+    :param: dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    return command("iface-rollback",**dargs)
