@@ -534,7 +534,7 @@ class GuestfishPersistent(Guestfish):
         This call creates a file called "path". The content of the file
         is the string "content" (which can contain any 8 bit data).
         """
-        return self.inner_cmd("write %s %s" % (path, content))
+        return self.inner_cmd("write '%s' '%s'" % (path, content))
 
     def write_append(self, path, content):
         """
@@ -543,7 +543,7 @@ class GuestfishPersistent(Guestfish):
         This call appends "content" to the end of file "path".
         If "path" does not exist, then a new file is created.
         """
-        return self.inner_cmd("write-append %s %s" % (path, content))
+        return self.inner_cmd("write-append '%s' '%s'" % (path, content))
 
     def inspect_os(self):
         """
@@ -554,6 +554,78 @@ class GuestfishPersistent(Guestfish):
         looking for operating systems.
         """
         return self.inner_cmd("inspect-os")
+
+    def inspect_get_roots(self):
+        """
+        inspect-get-roots - return list of operating systems found by
+        last inspection
+
+        This function is a convenient way to get the list of root devices
+        """
+        return self.inner_cmd("inspect-get-roots")
+
+    def inspect_get_arch(self, root):
+        """
+        inspect-get-arch - get architecture of inspected operating system
+
+        This returns the architecture of the inspected operating system.
+        """
+        return self.inner_cmd("inspect-get-arch %s" % root)
+
+    def inspect_get_distro(self, root):
+        """
+        inspect-get-distro - get distro of inspected operating system
+
+        This returns the distro (distribution) of the inspected
+        operating system.
+        """
+        return self.inner_cmd("inspect-get-distro %s" % root)
+
+    def inspect_get_filesystems(self, root):
+        """
+        inspect-get-filesystems - get filesystems associated with inspected
+        operating system
+
+        This returns a list of all the filesystems that we think are associated
+        with this operating system.
+        """
+        return self.inner_cmd("inspect-get-filesystems %s" % root)
+
+    def inspect_get_hostname(self, root):
+        """
+        inspect-get-hostname - get hostname of the operating system
+
+        This function returns the hostname of the operating system as found by
+        inspection of the guest's configuration files.
+        """
+        return self.inner_cmd("inspect-get-hostname %s" % root)
+
+    def inspect_get_major_version(self, root):
+        """
+        inspect-get-major-version - get major version of inspected operating
+        system
+
+        This returns the major version number of the inspected operating system.
+        """
+        return self.inner_cmd("inspect-get-major-version %s" % root)
+
+    def inspect_get_minor_version(self, root):
+        """
+        inspect-get-minor-version - get minor version of inspected operating
+        system
+
+        This returns the minor version number of the inspected operating system
+        """
+        return self.inner_cmd("inspect-get-minor-version %s" % root)
+
+    def inspect_get_mountpoints(self, root):
+        """
+        inspect-get-mountpoints - get mountpoints of inspected operating system
+
+        This returns a hash of where we think the filesystems associated with
+        this operating system should be mounted.
+        """
+        return self.inner_cmd("inspect-get-mountpoints %s" % root)
 
     def list_filesystems(self):
         """
@@ -572,6 +644,52 @@ class GuestfishPersistent(Guestfish):
         List all the block devices.
         """
         return self.inner_cmd("list-devices")
+
+    def tar_out(self, directory, tarfile):
+        """
+        tar-out - pack directory into tarfile
+
+        This command packs the contents of "directory" and downloads it
+        to local file "tarfile".
+        """
+        return self.inner_cmd("tar-out %s %s" % (directory, tarfile))
+
+    def tar_in(self, tarfile, directory):
+        """
+        tar-in - unpack tarfile to directory
+
+        This command uploads and unpacks local file "tarfile"
+        (an *uncompressed* tar file) into "directory".
+        """
+        return self.inner_cmd("tar-in %s %s" % (tarfile, directory))
+
+    def copy_out(self, remote, localdir):
+        """
+        copy-out - copy remote files or directories out of an image
+
+        "copy-out" copies remote files or directories recursively out of the
+        disk image, placing them on the host disk in a local directory called
+        "localdir" (which must exist).
+        """
+        return self.inner_cmd("copy-out %s %s" % (remote, localdir))
+
+    def copy_in(self, local, remotedir):
+        """
+        copy-in - copy local files or directories into an image
+
+        "copy-in" copies local files or directories recursively into the disk
+        image, placing them in the directory called "/remotedir" (which must
+        exist).
+        """
+        return self.inner_cmd("copy-in %s /%s" % (local, remotedir))
+
+    def rm(self, path):
+        """
+        rm - remove a file
+
+        Remove the single file "path".
+        """
+        return self.inner_cmd("rm %s" % path)
 
 
 # libguestfs module functions follow #####

@@ -132,7 +132,8 @@ def preprocess_vm(test, params, env, name):
     else:       # VM is alive and we don't care
         if params.get("kill_vm_before_test") == "yes":
             # Destroy the VM if kill_vm_before_test = "yes".
-            vm.destroy(gracefully=True, free_mac_addresses=False)
+            vm.destroy(gracefully=params.get("kill_vm_gracefully") == "yes",
+                       free_mac_addresses=False)
 
     pause_vm = False
 
