@@ -101,10 +101,10 @@ if __name__ == "__main__":
             fd_cmd = open(tmp_file, "w")
             fd_cmd.write(command)
             fd_cmd.close()
-            os.execv("/bin/sh", ["/bin/sh", "-c", "source %s" % tmp_file])
+            os.execv("/bin/bash", ["/bin/bash", "-c", "source %s" % tmp_file])
             os.remove(tmp_file)
         else:
-            os.execv("/bin/sh", ["/bin/sh", "-c", command])
+            os.execv("/bin/bash", ["/bin/bash", "-c", command])
     else:
         # Parent process
         lock_server_running = _lock(lock_server_running_filename)
