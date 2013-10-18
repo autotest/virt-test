@@ -239,7 +239,7 @@ class VM(virt_vm.BaseVM):
         """
         Return VM's xml file.
         """
-        return virsh.dumpxml(self.name, uri=self.connect_uri)
+        return virsh.dumpxml(self.name, uri=self.connect_uri).stdout.strip()
 
     def backup_xml(self):
         """
@@ -1267,7 +1267,11 @@ class VM(virt_vm.BaseVM):
         :raise VMMACAddressMissingError: If no MAC address is defined for the
                 requested NIC
         """
-        thexml = virsh.dumpxml(self.name, uri=self.connect_uri)
+        cmd_result = virsh.dumpxml(self.name, uri=self.connect_uri)
+        if cmd_result.exit_status:
+            raise error.TestFail("dumpxml %s failed.\n"
+                                 "Detail: %s.\n" % (self.name, cmd_result))
+        thexml = cmd_result.stdout.strip()
         xtf = xml_utils.XMLTreeFile(thexml)
         interfaces = xtf.find('devices').findall('interface')
         # Range check
