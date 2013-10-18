@@ -804,19 +804,15 @@ def dumpxml(name, extra="", to_file="", **dargs):
     :param name: VM name
     :param to_file: optional file to write XML output to
     :param dargs: standardized virsh function API keywords
-    :return: standard output from command
+    :return: CmdResult object.
     """
-    dargs['ignore_status'] = True
     cmd = "dumpxml %s %s" % (name, extra)
     result = command(cmd, **dargs)
     if to_file:
         result_file = open(to_file, 'w')
         result_file.write(result.stdout.strip())
         result_file.close()
-    if result.exit_status:
-        raise error.CmdError(cmd, result,
-                             "Virsh dumpxml returned non-zero exit status")
-    return result.stdout.strip()
+    return result
 
 
 def domifstat(name, interface, **dargs):
