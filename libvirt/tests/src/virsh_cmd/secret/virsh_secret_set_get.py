@@ -32,7 +32,7 @@ def check_secret(params):
 
     if secret_string and secret_string != secret_decoded_string:
         logging.error("To expect %s value is %s",
-                      (secret_string, secret_decoded_string))
+                      secret_string, secret_decoded_string)
         return False
 
     return True
@@ -164,7 +164,7 @@ def cleanup(params):
     uuid = params.get("secret_uuid")
     usage_volume = params.get("secret_usage_volume")
     cleanup_volume = params.get("cleanup_volume", "no")
-    undefine_secret = params.get("undefine_secret", "no")
+    undefine_secret = params.get("secret_undefine", "no")
 
     if usage_volume and cleanup_volume == "yes":
         os.unlink(usage_volume)
@@ -195,8 +195,8 @@ def run_virsh_secret_set_get(test, params, env):
     no_specified_uuid = False
 
     usage_volume = params.get("secret_usage_volume")
-    define_secret = params.get("define_secret", "no")
-    change_parameters = params.get("change_parameters", "no")
+    define_secret = params.get("secret_define", "no")
+    change_parameters = params.get("secret_change_parameters", "no")
 
     # If storage volume doesn't exist then create it
     if usage_volume and not os.path.isfile(usage_volume):
@@ -231,17 +231,19 @@ def run_virsh_secret_set_get(test, params, env):
     if define_secret == "no":
         if change_parameters == "no":
             try:
-                get_secret_value(params)
-            except error.TestFail, detail:
-                raise error.TestFail("Failed to get secret value.\n"
-                                     "Detail: %s." % detail)
+                try:
+                    get_secret_value(params)
+                except error.TestFail, detail:
+                    raise error.TestFail("Failed to get secret value.\n"
+                                         "Detail: %s." % detail)
             finally:
                 cleanup(params)
         else:
             try:
-                set_secret_value(params)
-            except error.TestFail, detail:
-                raise error.TestFail("Failed to set secret value.\n"
-                                     "Detail: %s." % detail)
+                try:
+                    set_secret_value(params)
+                except error.TestFail, detail:
+                    raise error.TestFail("Failed to set secret value.\n"
+                                         "Detail: %s." % detail)
             finally:
                 cleanup(params)
