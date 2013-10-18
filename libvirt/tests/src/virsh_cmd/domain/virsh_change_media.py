@@ -163,7 +163,14 @@ def run_virsh_change_media(test, params, env):
         if start_vm == "no" and vm.is_dead():
             try:
                 vm.start()
-            except Exception, detail:
+            except error.CmdError, detail:
+                result.exit_status = 1
+                result.stderr = str(detail)
+        if start_vm == "yes" and vm.is_alive():
+            try:
+                vm.destroy(gracefully=False)
+                vm.start()
+            except error.CmdError, detail:
                 result.exit_status = 1
                 result.stderr = str(detail)
 
