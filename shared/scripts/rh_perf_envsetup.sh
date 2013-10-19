@@ -12,6 +12,8 @@ fi
 guest=$1
 reboot=$2
 
+all_services='abrtd acpid anacron atd auditd autofs avahi-daemon bluetooth collectd cpuspeed crond cups haldaemon hidd ip6tables isdn kdump koan kudzu libvirt-guests lvm2-monitor mcstrans mdmonitor messagebus netfs ntpdate openibd opensmd portreserve postfix qpidd restorecond rhnsd rhsmcertd rpcgssd rpcidmapd sendmail setroubleshoot smartd tuned xfs yum-updatesd'
+
 ########################
 echo "Setup env for performance testing, reboot isn't needed"
 ####
@@ -35,32 +37,10 @@ if [[ $guest = "host" ]];then
     # RHEL5
     service tuned start
 fi
-service auditd stop
-service avahi-daemon stop
-service anacron stop
-service qpidd stop
-service smartd stop
-service crond stop
-service haldaemon stop
-service opensmd stop
-service openibd stop
-service yum-updatesd stop
-service collectd stop
-service bluetooth stop
-service cups stop
-service cpuspeed stop
-service hidd stop
-service isdn stop
-service kudzu stop
-service lvm2-monitor stop
-service mcstrans stop
-service mdmonitor stop
-service messagebus stop
-service restorecond stop
-service rhnsd stop
-service rpcgssd stop
-service setroubleshoot stop
-service smartd stop
+
+for i in $all_services;do
+    service $i stop
+done
 ########################
 
 if [[ $reboot = "rebooted" ]];then
@@ -84,32 +64,10 @@ fi
 echo "Off services when host starts up"
 
 echo "SELINUX=disabled" >> /etc/selinux/config
-chkconfig  auditd off
-chkconfig  autofs off
-chkconfig  avahi-daemon off
-chkconfig  crond off
-chkconfig  cups off
-chkconfig  ip6tables off
-chkconfig  sendmail off
-chkconfig  smartd off
-chkconfig  xfs off
-chkconfig  acpid off
-chkconfig  atd off
-chkconfig  haldaemon off
-chkconfig  mdmonitor off
-chkconfig  netfs off
-chkconfig  rhnsd off
-chkconfig  rpcgssd off
-chkconfig  rpcidmapd off
-chkconfig  abrtd off
-chkconfig  kdump off
-chkconfig  koan off
-chkconfig  libvirt-guests off
-chkconfig  ntpdate off
-chkconfig  portreserve off
-chkconfig  postfix off
-chkconfig  rhsmcertd off
-chkconfig  tuned off
+
+for i in $all_services;do
+    chkconfig $i off
+done
 
 ########################
 echo "Environment setup finished"
