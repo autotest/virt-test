@@ -2525,4 +2525,127 @@ def iface_rollback(**dargs):
     :param: dargs: standardized virsh function API keywords
     :return: CmdResult instance
     """
-    return command("iface-rollback",**dargs)
+    return command("iface-rollback", **dargs)
+
+
+def emulatorpin(name, cpulist=None, options=None, **dargs):
+    """
+    Control or query domain emulator affinity
+    :param name: name of domain
+    :param cpulist: a list of physical CPU numbers
+    :param options: options may be live, config and current
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult instance
+    """
+    cmd = "emulatorpin %s" % name
+    if options:
+        cmd += " --%s" % options
+    if cpulist:
+        cmd += " --cpulist %s" % cpulist
+
+
+def secret_list(options="", **dargs):
+    """
+    Get list of secret.
+
+    :param options: the option may be '--ephemeral'
+    :param dargs: standardized virsh function API keywords
+    :return: list of secret
+    """
+    # CmdResult is handled here, force ignore_status
+    dargs['ignore_status'] = True
+    cmd = "secret-list %s" % options
+    if options:
+        cmd += " %s" % options
+
+    result = command(cmd, **dargs)
+    if result.exit_status != 0:
+        raise error.CmdError(cmd, result, "Failed to get list of secret")
+
+    return result
+
+
+def secret_define(xml_file, options=None, **dargs):
+    """
+    Return True on successful secret define.
+
+    :param xml_file: secret XML file
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "secret-define --file %s" % xml_file
+    if options is not None:
+        cmd += " %s" % options
+    logging.debug("Define secret from %s", xml_file)
+    return command(cmd, **dargs)
+
+
+def secret_undefine(uuid, options=None, **dargs):
+    """
+    Return cmd result of secret undefine.
+
+    :param uuid: secret UUID
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "secret-undefine %s" % uuid
+    if options is not None:
+        cmd += " %s" % options
+
+    logging.debug("Undefine secret %s", uuid)
+    return command(cmd, **dargs)
+
+
+def secret_dumpxml(uuid, to_file="", options=None, **dargs):
+    """
+    Return the secret information as an XML dump.
+
+    :param uuid: secret UUID
+    :param to_file: optional file to write XML output to
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    dargs['ignore_status'] = True
+    cmd = "secret-dumpxml %s" % uuid
+    if options is not None:
+        cmd += " %s" % options
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                             "Virsh secret-dumpxml returned \
+                             non-zero exit status")
+    return result
+
+
+def secret_get_value(uuid, options=None, **dargs):
+    """
+    Get a secret value
+
+    :param uuid: secret UUID
+    :return: CmdResult object.
+    """
+    cmd = "secret-get-value --secret %s" % uuid
+    if options:
+        cmd += " --%s" % options
+
+    return command(cmd, **dargs)
+
+
+def secret_set_value(uuid, base64, options=None, **dargs):
+    """
+    Set a secret value
+
+    :param uuid: secret UUID
+    :param base64: base64-encoded secret value
+    :return: CmdResult object.
+    """
+    cmd = "secret-set-value --secret %s" % uuid
+    if base64:
+        cmd += " --base64 %s" % base64
+    if options:
+        cmd += " --%s" % options
+    return command(cmd, **dargs)

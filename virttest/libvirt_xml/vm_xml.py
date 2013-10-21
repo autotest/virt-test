@@ -81,13 +81,19 @@ class VMXMLBase(base.LibvirtXMLBase):
             get: returns VMXMLDevices instance for all devices
             set: Define all devices from VMXMLDevices instance
             del: remove all devices
+        emulatorpin: string, cpuset value (see man virsh: cpulist)
+            get: return text value of cputune/emulatorpin attributes
+            set: set cputune/emulatorpin attributes from string
+            del: remove cputune/emulatorpin tag
     """
 
     # Additional names of attributes and dictionary-keys instances may contain
     __slots__ = base.LibvirtXMLBase.__slots__ + ('hypervisor_type', 'vm_name',
                                                  'uuid', 'vcpu', 'max_mem',
                                                  'current_mem', 'numa',
-                                                 'devices', 'seclabel')
+                                                 'devices', 'seclabel',
+                                                 'cputune', 'emulatorpin',
+                                                 'cpuset', 'placement')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -115,6 +121,12 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='vcpu')
+        accessors.XMLAttribute(property_name="placement",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/',
+                               tag_name='vcpu',
+                               attribute='placement')
         accessors.XMLElementInt(property_name="max_mem",
                                 libvirtxml=self,
                                 forbidden=None,
@@ -130,6 +142,17 @@ class VMXMLBase(base.LibvirtXMLBase):
                                  forbidden=None,
                                  parent_xpath='numatune',
                                  tag_name='memory')
+        accessors.XMLElementText(property_name="cputune",
+                                 libvirtxml=self,
+                                 forbidden=None,
+                                 parent_xpath='/',
+                                 tag_name='cputune')
+        accessors.XMLAttribute(property_name="emulatorpin",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/cputune',
+                               tag_name='emulatorpin',
+                               attribute='cpuset')
         super(VMXMLBase, self).__init__(virsh_instance=virsh_instance)
 
     def get_devices(self, device_type=None):

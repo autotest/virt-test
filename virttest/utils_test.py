@@ -1792,7 +1792,9 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
         results_dir = "%s/results/default" % base_results_dir
         results_tarball = "/tmp/results.tgz"
         compress_cmd = "cd %s && " % results_dir
-        compress_cmd += "tar cjvf %s ./* --exclude=*core*" % results_tarball
+        compress_cmd += "tar cjvf %s ./*" % results_tarball
+        compress_cmd += " --exclude=*core*"
+        compress_cmd += " --exclude=*crash*"
         session.cmd(compress_cmd, timeout=600)
         vm.copy_files_from(results_tarball, guest_results_dir)
         # cleanup autotest subprocess which not terminated, change PWD to
@@ -1868,8 +1870,6 @@ def run_autotest(vm, session, control_path, timeout, outputdir, params):
     # tar the contents of bindir/autotest
     cmd = ("cd %s; tar cvjf %s %s/*" %
            (autotest_parentdir, compressed_autotest_path, autotest_basename))
-    # Until we have nested virtualization, we don't need the virt test :)
-    cmd += " --exclude=%s/tests/virt" % autotest_basename
     cmd += " --exclude=%s/results*" % autotest_basename
     cmd += " --exclude=%s/tmp" % autotest_basename
     cmd += " --exclude=%s/control*" % autotest_basename
@@ -2690,3 +2690,52 @@ class GuestSuspend(object):
     def action_after_suspend(self, **args):
         error.context("Actions after suspend")
         pass
+
+
+def cpus_parser(cpulist):
+    """
+    Parse a list of cpu list, its syntax is a comma separated list,
+    with '-' for ranges and '^' denotes exclusive.
+    :param cpulist: a list of physical CPU numbers
+    """
+    hyphens = []
+    carets = []
+    commas = []
+    others = []
+
+    if cpulist is None:
+        return None
+
+    else:
+        if "," in cpulist:
+            cpulist_list = re.split(",", cpulist)
+            for cpulist in cpulist_list:
+                if "-" in cpulist:
+                    tmp = re.split("-", cpulist)
+                    hyphens = hyphens + range(int(tmp[0]), int(tmp[-1]) + 1)
+                elif "^" in cpulist:
+                    tmp = re.split("\^", cpulist)[-1]
+                    carets.append(int(tmp))
+                else:
+                    try:
+                        commas.append(int(cpulist))
+                    except ValueError:
+                        logging.error("The cpulist has to be an "
+                                      "integer. (%s)", cpulist)
+        elif "-" in cpulist:
+            tmp = re.split("-", cpulist)
+            hyphens = range(int(tmp[0]), int(tmp[-1]) + 1)
+        elif "^" in cpulist:
+            tmp = re.split("^", cpulist)[-1]
+            carets.append(int(tmp))
+        else:
+            try:
+                others.append(int(cpulist))
+                return others
+            except ValueError:
+                logging.error("The cpulist has to be an "
+                              "integer. (%s)", cpulist)
+
+        cpus_set = set(hyphens).union(set(commas)).difference(set(carets))
+
+        return sorted(list(cpus_set))

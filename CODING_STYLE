@@ -198,3 +198,13 @@ to the mailing list. How to do that is covered on github's documentation:
 
 https://help.github.com/articles/using-pull-requests
 
+
+Catching Exceptions
+
+Older python cannot support the full exception syntax.  The accepted formats
+for exception catching are:
+
+     try...except...
+     try...finally...
+     try...except...else...
+     try...finally...else...
