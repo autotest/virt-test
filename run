@@ -576,6 +576,7 @@ class VirtTestApp(object):
                 else:
                     if self.options.type == 'qemu':
                         self.cartesian_parser.only_filter(QEMU_DEFAULT_SET)
+                        self.cartesian_parser.no_filter("with_reboot")
                     elif self.options.type == 'libvirt':
                         self.cartesian_parser.only_filter(LIBVIRT_DEFAULT_SET)
                     elif self.options.type == 'lvsb':
