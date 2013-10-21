@@ -1,5 +1,6 @@
 import os
 import logging
+import re
 from autotest.client import lv_utils
 from autotest.client.shared import ssh_key, error
 from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh, data_dir
@@ -145,8 +146,14 @@ def run_convert_remote_vm(test, params, env):
     pool_type = params.get("pool_type", "dir")
     pool_name = params.get("pool_name", "v2v_test")
     target_path = params.get("target_path", "pool_path")
-    block_device = params.get("block_device")
+    block_device = params.get("block_device", "/dev/BLOCK/EXAMPLE")
     vg_name = params.get("volume_group_name", "vg_v2v")
+
+    # Confirm parameters have been set correctly.
+    if pool_type in ['partition', 'lvm'] and \
+        re.search("EXAMPLE", block_device):
+        raise error.TestNAError("Please set correct block device.")
+
     # If target_path is not an abs path, join it to data_dir.tmpdir
     if os.path.dirname(target_path) is "":
         target_path = os.path.join(data_dir.get_tmp_dir(), target_path)
