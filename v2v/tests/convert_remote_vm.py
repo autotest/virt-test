@@ -1,9 +1,8 @@
 import os
 import logging
-import re
 from autotest.client import lv_utils
-from autotest.client.shared import ssh_key, error, utils
-from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh
+from autotest.client.shared import ssh_key, error
+from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh, data_dir
 
 
 def create_dir_pool(spool, pool_name, target_path):
@@ -57,7 +56,7 @@ def create_partition_pool(spool, pool_name, block_device,
 
 
 def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
-                    target_path="/dev/v2v_test"):
+                    target_path="/dev/vg_v2v"):
     """
     Create a persistent lvm pool.
     """
@@ -73,6 +72,14 @@ def create_lvm_pool(spool, pool_name, block_device, vg_name="vg_v2v",
 
     vgroups = lv_utils.vg_list()
     if vg_name not in vgroups.keys() and not spool.build_pool(pool_name):
+        return False
+
+    # To verify if volume group has been set.
+    try:
+        lv_utils.lv_create(vg_name, "v2v_sample", "10M", True)
+        lv_utils.lv_remove(vg_name, "v2v_sample")
+    except (error.TestError, error.CmdError), detail:
+        logging.error("Check volume group failed:\n%s", str(detail))
         return False
 
     if not spool.start_pool(pool_name):
@@ -140,9 +147,9 @@ def run_convert_remote_vm(test, params, env):
     target_path = params.get("target_path", "pool_path")
     block_device = params.get("block_device")
     vg_name = params.get("volume_group_name", "vg_v2v")
-    # If target_path is not an abs path, join it to test.tmpdir
+    # If target_path is not an abs path, join it to data_dir.tmpdir
     if os.path.dirname(target_path) is "":
-        target_path = os.path.join(test.tmpdir, target_path)
+        target_path = os.path.join(data_dir.get_tmp_dir(), target_path)
 
     # dir pool need an exist path
     if pool_type == "dir":
@@ -216,8 +223,9 @@ def run_convert_remote_vm(test, params, env):
                       "input": input, "files": files}
         try:
             result = utils_v2v.v2v_cmd(v2v_params)
-        except error.CmdError:
-            raise error.TestFail("Virt v2v failed.")
+            logging.debug(result)
+        except error.CmdError, detail:
+            raise error.TestFail("Virt v2v failed:\n%s" % str(detail))
 
         # v2v may be successful, but devices' driver may be not virtio
         error_info = []
