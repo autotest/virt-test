@@ -1479,20 +1479,16 @@ def pool_destroy(name, **dargs):
         return False
 
 
-def pool_create(xml_file, **dargs):
+def pool_create(xml_file, extra="", **dargs):
     """
     Create a pool from an xml file
 
-    :param: xml_file: file containing an XML pool description
+    :param xml_file: file containing an XML pool description
+    :param extra extra parameters to pass to command
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
     """
-    cmd = "pool-create %s" % xml_file
-    dargs['ignore_status'] = False
-    try:
-        command(cmd, **dargs)
-        return True
-    except error.CmdError, detail:
-        logging.error("Failed to create pool: %s.", detail)
-        return False
+    return command("pool-create %s %s" % (extra, xml_file), **dargs)
 
 
 def pool_create_as(name, pool_type, target, extra="", **dargs):
@@ -1617,6 +1613,40 @@ def pool_build(name, options="", **dargs):
     :param options: options for pool-build
     """
     return command("pool-build %s %s" % (name, options), **dargs)
+
+
+def pool_dumpxml(name, extra="", to_file="", **dargs):
+    """
+    Return the pool information as an XML dump.
+
+    :param name: pool_name name
+    :param to_file: optional file to write XML output to
+    :param dargs: standardized virsh function API keywords
+    :return: standard output from command
+    """
+    dargs['ignore_status'] = True
+    cmd = "pool-dumpxml %s %s" % (name, extra)
+    result = command(cmd, **dargs)
+    if to_file:
+        result_file = open(to_file, 'w')
+        result_file.write(result.stdout.strip())
+        result_file.close()
+    if result.exit_status:
+        raise error.CmdError(cmd, result,
+                             "Virsh dumpxml returned non-zero exit status")
+    return result.stdout.strip()
+
+
+def pool_define(xml_path, **dargs):
+    """
+    Return True on successful pool define.
+
+    :param xml_path: XML file path
+    :param dargs: standardized virsh function API keywords
+    :return: CmdResult object
+    """
+    cmd = "pool-define --file %s" % xml_path
+    return command(cmd, **dargs)
 
 
 def vol_create_as(volume_name, pool_name, capacity,
