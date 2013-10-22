@@ -381,6 +381,25 @@ class Interface(object):
         else:
             return False
 
+    def avail_net_scr(self):
+        """
+        Is  any network configuration files(ifcfg-) for interface is available
+        with the entry DEVICE=<interface name>. Like in rhel /etc/syconfig/net
+        wrok-scripts/ifcfg-eth0
+        """
+        PATH_OF_IFUP=utils.run("which ifup",verbose=False).stdout.strip()
+        for n,line in enumerate(open(PATH_OF_IFUP)):
+             match=re.search(r'^cd',line)
+             if match:
+                 PATH_OF_NET_SCRS=line.split()[1]
+                 break
+        ifcfg=PATH_OF_NET_SCRS+"/ifcfg-*"
+        cmd="grep -r \'^DEVICE=%s\' %s"%(self.name,ifcfg)
+        rc=utils.run(cmd,ignore_status=True,verbose=False)
+        if rc.exit_status == 0:
+            return True
+
+
 
 class Macvtap(Interface):
     """
