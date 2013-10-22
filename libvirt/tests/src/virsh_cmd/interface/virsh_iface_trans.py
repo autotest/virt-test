@@ -7,6 +7,7 @@ from virttest import virsh
 from virttest import utils_libvirtd
 from autotest.client.shared import error
 
+
 def netcf_trans_control(command="status"):
     """
     Control current network configuration
@@ -22,6 +23,7 @@ def netcf_trans_control(command="status"):
 
     return commands.getoutput(output + " " + command)
 
+
 def write_iface_cfg(iface_cfg):
     """
     Create a temporary network configuration file
@@ -34,6 +36,7 @@ def write_iface_cfg(iface_cfg):
         fp.close()
     except IOError:
         raise error.TestFail("Failed to write %s to %s!", (content, iface_cfg))
+
 
 def cleanup(iface_cfg, exist_trans="no"):
     """
@@ -48,6 +51,7 @@ def cleanup(iface_cfg, exist_trans="no"):
     if exist_trans == "yes":
         logging.debug("Cleanup an open network transaction")
         netcf_trans_control('restart')
+
 
 def iface_trans_begin(params):
     """
@@ -76,13 +80,14 @@ def iface_trans_begin(params):
             logging.debug("%s", netcf_status)
 
             if not re.search("an open", netcf_status) or \
-                not os.access(netcf_snap_dir, os.R_OK):
+                    not os.access(netcf_snap_dir, os.R_OK):
                 raise error.TestFail("Failed to create snapshot for interface")
 
             logging.info("Succeed to create snapshot of current network")
     else:
         raise error.TestFail("The 'status_error' must be 'yes' or 'no': %s"
-                              % status_error)
+                             % status_error)
+
 
 def iface_trans_commit(params):
     """
@@ -94,7 +99,7 @@ def iface_trans_commit(params):
 
     # Check status_error
     status_error = params.get("status_error", "no")
-    iface_cfg  = params.get("iface_cfg")
+    iface_cfg = params.get("iface_cfg")
 
     if status_error == "yes":
         if status:
@@ -110,13 +115,14 @@ def iface_trans_commit(params):
             logging.debug("%s", netcf_status)
 
             if not re.search("No open", netcf_status) or \
-                not os.access(iface_cfg, os.R_OK):
+                    not os.access(iface_cfg, os.R_OK):
                 raise error.TestFail("Failed to commit snapshot")
 
             logging.info("Succeed to commit snapshot of current network")
     else:
         raise error.TestFail("The 'status_error' must be 'yes' or 'no': %s"
-                              % status_error)
+                             % status_error)
+
 
 def iface_trans_rollback(params):
     """
@@ -128,7 +134,7 @@ def iface_trans_rollback(params):
 
     # Check status_error
     status_error = params.get("status_error", "no")
-    iface_cfg  = params.get("iface_cfg")
+    iface_cfg = params.get("iface_cfg")
     netcf_snap_dir = params.get("netcf_snap_dir",
                                 "/var/lib/netcf/network-snapshot")
 
@@ -158,7 +164,8 @@ def iface_trans_rollback(params):
             logging.info("Succeed to rollback network to last snapshot")
     else:
         raise error.TestFail("The 'status_error' must be 'yes' or 'no': %s"
-                              % status_error)
+                             % status_error)
+
 
 def run_virsh_iface_trans(test, params, env):
     """
@@ -189,7 +196,7 @@ def run_virsh_iface_trans(test, params, env):
     params['iface_cfg'] = iface_cfg
     params['netcf_snap_dir'] = netcf_snap_dir
 
-    ########## positive and negative testing #########
+    # positive and negative testing #########
 
     if status_error == "no":
         # Do begin-commit testing

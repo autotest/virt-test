@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_net, env_process
 
+
 @error.context_aware
 def run_invalid_para_mq(test, params, env):
     """
@@ -15,8 +16,7 @@ def run_invalid_para_mq(test, params, env):
     @param env: Dictionary with test environment.
     """
     params["start_vm"] = "yes"
-    error.context("Boot the vm using queues %s'" % params.get("queues")
-                  , logging.info)
+    error.context("Boot the vm using queues %s'" % params.get("queues"), logging.info)
     try:
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         env.get_vm(params["main_vm"])

@@ -1075,7 +1075,6 @@ class VM(virt_vm.BaseVM):
         elif params.get("sandbox", "off") == "off":
             devices.insert(StrDev('qemu_sandbox', cmdline=process_sandbox(devices, "rem")))
 
-
         devs = devices.machine_by_params(params)
         for dev in devs:
             devices.insert(dev)
@@ -1292,8 +1291,8 @@ class VM(virt_vm.BaseVM):
                     vhostfds = None
                 ifname = nic.get('ifname')
                 queues = nic.get("queues", 1)
-                #specify the number of MSI-X vectors that the card should have;
-                #this option currently only affects virtio cards
+                # specify the number of MSI-X vectors that the card should have;
+                # this option currently only affects virtio cards
                 if nic_params.get("enable_msix_vectors") == "yes":
                     if nic.has_key("vectors"):
                         vectors = nic.vectors

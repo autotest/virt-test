@@ -42,7 +42,7 @@ class SecretXMLBase(base.LibvirtXMLBase):
         accessors.XMLAttribute('usage', self, parent_xpath='/',
                                tag_name='usage', attribute='type')
         accessors.XMLElementText('volume', self, parent_xpath='/usage',
-                                tag_name='volume')
+                                 tag_name='volume')
         super(SecretXMLBase, self).__init__(virsh_instance=virsh_instance)
 
 

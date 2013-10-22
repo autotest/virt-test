@@ -12,6 +12,7 @@ except ImportError:
     # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
     from autotest.client.shared import utils_cgroup
 
+
 def get_emulatorpin_from_cgroup(params):
     """
     Get a list of domain-specific per block stats from cgroup blkio controller.
@@ -37,6 +38,7 @@ def get_emulatorpin_from_cgroup(params):
     except IOError:
         raise error.TestError("Failed to get emulatorpin "
                               "params from %s" % cpuset_file)
+
 
 def check_emulatorpin(params):
     """
@@ -68,10 +70,10 @@ def check_emulatorpin(params):
     # with 'inactive' option to get guest XML changes.
     if options == "config" and vm and not vm.is_alive():
         emulatorpin_from_xml = \
-        vm_xml.VMXML().new_from_dumpxml(vm_name, "--inactive").emulatorpin
+            vm_xml.VMXML().new_from_dumpxml(vm_name, "--inactive").emulatorpin
     else:
         emulatorpin_from_xml = \
-        vm_xml.VMXML().new_from_dumpxml(vm_name).emulatorpin
+            vm_xml.VMXML().new_from_dumpxml(vm_name).emulatorpin
 
     # To get guest corresponding emulator/cpuset.cpus value
     # from cpuset controller of the cgroup.
@@ -85,7 +87,7 @@ def check_emulatorpin(params):
     if cpu_list:
         if vm and vm.is_alive() and options != "config":
             if (cpu_list != cpus_parser(emulator_from_cmd)) or \
-            (cpu_list != cpus_parser(emulatorpin_from_cgroup)):
+                    (cpu_list != cpus_parser(emulatorpin_from_cgroup)):
                 logging.error("To expect emulatorpin %s: %s",
                               cpu_list, emulator_from_cmd)
                 return False
@@ -96,6 +98,7 @@ def check_emulatorpin(params):
                 return False
 
         return True
+
 
 def get_emulatorpin_parameter(params):
     """
@@ -127,6 +130,7 @@ def get_emulatorpin_parameter(params):
             raise error.TestFail(result.stderr)
         else:
             logging.info(result.stdout)
+
 
 def set_emulatorpin_parameter(params):
     """
@@ -172,6 +176,7 @@ def set_emulatorpin_parameter(params):
                                      " different from emulator/cpuset.cpus"
                                      " value from cgroup cpuset controller")
 
+
 def run_virsh_emulatorpin(test, params, env):
     """
     Test emulatorpin tuning
@@ -209,7 +214,7 @@ def run_virsh_emulatorpin(test, params, env):
     if cpu_list and max(cpu_list) > host_cpus - 1:
         test_dicts["status_error"] = "yes"
 
-    ########## positive and negative testing #########
+    # positive and negative testing #########
 
     if status_error == "no":
         if change_parameters == "no":

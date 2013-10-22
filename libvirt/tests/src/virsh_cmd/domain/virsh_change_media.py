@@ -116,7 +116,7 @@ def run_virsh_change_media(test, params, env):
     device_type = params.get("change_media_device_type", "cdrom")
     target_device = params.get("change_media_target_device", "hdc")
     source_name = params.get("change_media_source")
-    status_error =  params.get("status_error", "no")
+    status_error = params.get("status_error", "no")
     check_file = params.get("change_media_check_file")
     update_iso_xml_name = params.get("change_media_update_iso_xml")
     init_iso_name = params.get("change_media_init_iso")
@@ -133,7 +133,7 @@ def run_virsh_change_media(test, params, env):
     update_iso_xml = os.path.join(iso_dir, update_iso_xml_name)
     if not os.path.exists(iso_dir):
         os.mkdir(iso_dir)
-    if not init_iso_name :
+    if not init_iso_name:
         init_iso = ""
     else:
         init_iso = os.path.join(iso_dir, init_iso_name)
@@ -143,9 +143,9 @@ def run_virsh_change_media(test, params, env):
 
     env_pre(old_iso, new_iso)
     # Check domain's disk device
-    disk_blk =  vm_xml.VMXML.get_disk_blk(vm_name)
+    disk_blk = vm_xml.VMXML.get_disk_blk(vm_name)
     logging.info("disk_blk %s" % disk_blk)
-    if target_device not in  disk_blk:
+    if target_device not in disk_blk:
         logging.info("Adding device")
         add_device(vm_name)
 
@@ -194,7 +194,7 @@ def run_virsh_change_media(test, params, env):
         if vm.is_dead():
             vm.start()
         session = vm.wait_for_login()
-        #pdb.set_trace()
+        # pdb.set_trace()
         check_media(session, check_file, action)
         session.close()
 

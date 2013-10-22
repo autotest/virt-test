@@ -12,6 +12,7 @@ from virttest.libvirt_xml.secret_xml import SecretXML
 
 _VIRT_SECRETS_PATH = "/etc/libvirt/secrets"
 
+
 def check_secret(params):
     """
     Check specified secret value with decoded secret from
@@ -36,6 +37,7 @@ def check_secret(params):
         return False
 
     return True
+
 
 def create_secret_volume(params):
     """
@@ -74,6 +76,7 @@ def create_secret_volume(params):
 
     if status:
         raise error.TestFail(result.stderr)
+
 
 def get_secret_value(params):
     """
@@ -121,6 +124,7 @@ def get_secret_value(params):
                 raise error.TestFail("The secret value "
                                      "mismatch with result")
 
+
 def set_secret_value(params):
     """
     Set the secet value
@@ -156,6 +160,7 @@ def set_secret_value(params):
                 raise error.TestFail("The secret value "
                                      "mismatch with result")
 
+
 def cleanup(params):
     """
     Cleanup secret and volume
@@ -174,6 +179,7 @@ def cleanup(params):
         status = result.exit_status
         if status:
             raise error.TestFail(result.stderr)
+
 
 def run_virsh_secret_set_get(test, params, env):
     """
@@ -226,7 +232,7 @@ def run_virsh_secret_set_get(test, params, env):
 
     # If only define secret then don't need to run the following cases
 
-    ########## positive and negative testing #########
+    # positive and negative testing #########
 
     if define_secret == "no":
         if change_parameters == "no":

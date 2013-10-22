@@ -1,7 +1,11 @@
-import logging, re, os, time
+import logging
+import re
+import os
+import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_net, data_dir, utils_misc
+
 
 @error.context_aware
 def run_multi_queues_test(test, params, env):
@@ -26,14 +30,13 @@ def run_multi_queues_test(test, params, env):
             cmd += "taskset -c %s " % " ".join(taskset_cpu)
         cmd += "/home/netperf_agent.py %d " % n_instance
         cmd += "%s -D 1 -H %s -l %s %s" % (client_path, host_ip,
-                                           int(test_time)*1.5, ext_args)
+                                           int(test_time) * 1.5, ext_args)
         cmd += " > /home/netperf_log &"
         session.cmd(cmd, timeout=120)
 
-
     def netperf_env_setup(session, host_path):
         tmp_dir = params.get("tmp_dir")
-        agent_path =  os.path.join(test.virtdir, "scripts/netperf_agent.py")
+        agent_path = os.path.join(test.virtdir, "scripts/netperf_agent.py")
         guest_root_path = params.get("tmp_dir", "/home")
         vm.copy_files_to(agent_path, guest_root_path)
         vm.copy_files_to(host_path, guest_root_path, timeout=transfer_timeout)
@@ -42,14 +45,12 @@ def run_multi_queues_test(test, params, env):
         session.cmd("iptables -F; true")
         session.cmd(setup_cmd % tmp_dir)
 
-
     def get_virtio_queues_irq(session):
         """
         Return multi queues input irq list
         """
         guest_irq_info = session.cmd_output("cat /proc/interrupts")
         return re.findall(r"(\d+):.*virtio\d+-input.\d", guest_irq_info)
-
 
     def get_cpu_affinity_hint(session, irq_number):
         """
@@ -58,17 +59,15 @@ def run_multi_queues_test(test, params, env):
         cmd_get_cpu_affinity = r"cat /proc/irq/%s/affinity_hint" % irq_number
         return session.cmd_output(cmd_get_cpu_affinity).strip()
 
-
     def get_cpu_index(cpu_id):
         """
         Transfer cpu_id to cpu index
         """
         cpu_used_index = []
         for cpu_index in range(int(vm.cpuinfo.smp)):
-            if int(cpu_id) & (0b1 << cpu_index ) != 0:
+            if int(cpu_id) & (0b1 << cpu_index) != 0:
                 cpu_used_index.append(cpu_index)
         return cpu_used_index
-
 
     def set_cpu_affinity(session):
         """
@@ -80,8 +79,7 @@ def run_multi_queues_test(test, params, env):
         for irq in irq_list:
             session.cmd(cmd_set_cpu_affinity % (irq, irq))
 
-
-    def get_cpu_irq_statistics(session, irq_number, cpu_id = None):
+    def get_cpu_irq_statistics(session, irq_number, cpu_id=None):
         """
         Get guest interrupts statistics
         """
@@ -94,7 +92,6 @@ def run_multi_queues_test(test, params, env):
             if not cpu_id:
                 return irq_statics_list
         return []
-
 
     login_timeout = int(params.get("login_timeout", 360))
     transfer_timeout = int(params.get("transfer_timeout", 360))
@@ -117,7 +114,7 @@ def run_multi_queues_test(test, params, env):
                 o = session.cmd_output("ethtool -l %s" % ifname)
                 if len(re.findall(r"Combined:\s+%d\s" % queues, o)) != 2:
                     raise error.TestError("Fail to enable MQ feature of (%s)"
-                                           % nic.nic_name)
+                                          % nic.nic_name)
                 logging.info("MQ feature of (%s) is enabled" % nic.nic_name)
 
         # Run netperf under ground
@@ -185,7 +182,7 @@ def run_multi_queues_test(test, params, env):
             time.sleep(10)
 
             top_cmd = r"top -n 1 -p %s -b" % ",".join(map(str, vhost_threads))
-            top_info =  utils.system_output(top_cmd)
+            top_info = utils.system_output(top_cmd)
             logging.info("%s", top_info)
             vhost_re = re.compile(r"S(\s+0.0+){2}.*vhost-\d+[\d|+]")
             sleep_vhost_thread = len(vhost_re.findall(top_info, re.I))
@@ -196,7 +193,7 @@ def run_multi_queues_test(test, params, env):
                 err_msg = "Run %s netperf session, but %s queues works"
                 raise error.TestError(err_msg % (n_instance, running_threads))
 
-        #check cpu affinity
+        # check cpu affinity
         error.context("Check cpu affinity", logging.info)
         if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
             vectors = params.get("vectors", None)
