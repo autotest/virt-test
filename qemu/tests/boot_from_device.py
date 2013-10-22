@@ -2,7 +2,7 @@ import logging
 import re
 import os
 from autotest.client import utils
-from virttest import utils_misc, data_dir
+from virttest import utils_misc, data_dir, env_process
 from autotest.client.shared import error, iscsi
 
 
@@ -103,12 +103,16 @@ def run_boot_from_device(test, params, env):
     dev_name = params.get("dev_name")
     if dev_name == "scsi-cd":
         create_cdroms()
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         vm = env.get_vm(params["main_vm"])
-        vm.create()
+        vm.verify_alive()
     elif dev_name == "iscsi-dev":
         preprocess_remote_storage()
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         vm = env.get_vm(params["main_vm"])
-        vm.create()
+        vm.verify_alive()
     else:
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
