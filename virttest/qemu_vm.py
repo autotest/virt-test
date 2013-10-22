@@ -354,9 +354,13 @@ class VM(virt_vm.BaseVM):
         def add_name(devices, name):
             return " -name '%s'" % name
 
-        def add_sandbox(devices):
-            if devices.has_option("sandbox"):
-                return " -sandbox on "
+        def process_sandbox(devices, action):
+            if action == "add":
+                if devices.has_option("sandbox"):
+                    return " -sandbox on "
+            elif action == "rem":
+                if devices.has_option("sandbox"):
+                    return " -sandbox off "
 
         def add_human_monitor(devices, monitor_name, filename):
             if not devices.has_option("chardev"):
@@ -1066,8 +1070,11 @@ class VM(virt_vm.BaseVM):
         # Add the VM's name
         devices.insert(StrDev('vmname', cmdline=add_name(devices, name)))
 
-        if params.get("sandbox", "off") == "on":
-            devices.insert(StrDev('sandbox', cmdline=add_sandbox(devices)))
+        if params.get("qemu_sandbox", "on") == "on":
+            devices.insert(StrDev('sandbox', cmdline=process_sandbox(devices, "add")))
+        elif params.get("sandbox", "off") == "off":
+            devices.insert(StrDev('qemu_sandbox', cmdline=process_sandbox(devices, "rem")))
+
 
         devs = devices.machine_by_params(params)
         for dev in devs:
