@@ -2208,11 +2208,17 @@ class DevContainer(object):
                 i += 1
 
         for i in xrange(i / 7):     # Autocreated lsi hba
-            _name = 'lsi53c895a%s' % i
-            bus = QSCSIBus("scsi.0", 'SCSI', [8, 16384], atype='lsi53c895a')
-            self.insert(QStringDevice('lsi53c895a%s' % i,
-                                      parent_bus={'type': 'pci'},
-                                      child_bus=bus))
+            if arch.ARCH == 'ppc64':
+                _name = 'spapr-vscsi%s' % i
+                bus = QSCSIBus("scsi.0", 'SCSI', [8, 16384],
+                               atype='spapr-vscsi')
+                self.insert(QStringDevice(_name, parent_bus={'type': 'pci'},
+                            child_bus=bus))
+            else:
+                _name = 'lsi53c895a%s' % i
+                bus = QSCSIBus("scsi.0", 'SCSI', [8, 16384], atype='lsi53c895a')
+                self.insert(QStringDevice(_name, parent_bus={'type': 'pci'},
+                                          child_bus=bus))
 
     # Machine related methods
     def machine_by_params(self, params=None):
@@ -2594,19 +2600,25 @@ class DevContainer(object):
         #
         # HBA
         # fmt: ide, scsi, virtio, scsi-hd, ahci, usb1,2,3 + hba
-        # device: ide-drive, usb-storage, scsi-hd, scsi-cd, virtio-blk-pci
+        # device: ide-drive, usb-storage, scsi-hd, spapr-vscsi,
+        #         scsi-cd, virtio-blk-pci
         # bus: ahci, virtio-scsi-pci, USB
         #
         if not use_device:
             if fmt and (fmt == "scsi" or (fmt.startswith('scsi') and
-                                          scsi_hba == 'lsi53c895a')):
+                                         (scsi_hba == 'lsi53c895a' or
+                                          scsi_hba == 'spapr-vscsi'))):
                 if not (bus is None and unit is None and port is None):
                     logging.warn("Using scsi interface without -device "
                                  "support; ignoring bus/unit/port. (%s)", name)
                     bus, unit, port = None, None, None
                 # In case we hotplug, lsi wasn't added during the startup hook
-                _ = define_hbas('SCSI', 'lsi53c895a', None, None, None,
-                                QSCSIBus, [8, 16384])
+                if arch.ARCH == 'ppc64':
+                    _ = define_hbas('SCSI', 'spapr-vscsi', None, None, None,
+                                    QSCSIBus, [8, 16384])
+                else:
+                    _ = define_hbas('SCSI', 'lsi53c895a', None, None, None,
+                                    QSCSIBus, [8, 16384])
                 devices.extend(_[0])
         elif fmt == "ide":
             if bus:
@@ -2622,7 +2634,7 @@ class DevContainer(object):
             if not scsi_hba:
                 scsi_hba = "virtio-scsi-pci"
             addr_spec = None
-            if scsi_hba == 'lsi53c895a':
+            if scsi_hba == 'lsi53c895a' or scsi_hba == 'spapr-vscsi':
                 addr_spec = [8, 16384]
             elif scsi_hba == 'virtio-scsi-pci':
                 addr_spec = [256, 16384]
@@ -2675,8 +2687,9 @@ class DevContainer(object):
         else:
             devices[-1].set_param('file', filename)
         if not use_device:
-            if fmt and fmt.startswith('scsi-') and scsi_hba == 'lsi53c895a':
-                fmt = 'scsi'  # Compatibility with the new scsi
+            if fmt and fmt.startswith('scsi-'):
+                if scsi_hba == 'lsi53c895a' or scsi_hba == 'spapr-vscsi':
+                    fmt = 'scsi'  # Compatibility with the new scsi
             if fmt and fmt not in ('ide', 'scsi', 'sd', 'mtd', 'floppy',
                                    'pflash', 'virtio'):
                 raise virt_vm.VMDeviceNotSupportedError(self.vmname,
@@ -2688,8 +2701,12 @@ class DevContainer(object):
             if fmt == 'ide':
                 devices[-1].parent_bus = ({'type': fmt.upper(), 'atype': fmt},)
             elif fmt == 'scsi':
-                devices[-1].parent_bus = ({'atype': 'lsi53c895a',
-                                           'type': 'SCSI'},)
+                if arch.ARCH == 'ppc64':
+                    devices[-1].parent_bus = ({'atype': 'spapr-vscsi',
+                                               'type': 'SCSI'},)
+                else:
+                    devices[-1].parent_bus = ({'atype': 'lsi53c895a',
+                                               'type': 'SCSI'},)
             elif fmt == 'floppy':
                 devices[-1].parent_bus = ({'type': fmt},)
             elif fmt == 'virtio':
