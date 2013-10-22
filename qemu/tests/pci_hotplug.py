@@ -2,7 +2,7 @@ import re
 import logging
 import string
 from autotest.client.shared import error
-from virttest import utils_misc, aexpect, storage, utils_test, data_dir
+from virttest import utils_misc, aexpect, storage, utils_test, data_dir, arch
 
 
 @error.context_aware
@@ -104,7 +104,10 @@ def run_pci_hotplug(test, params, env):
 
         if pci_model == "scsi":
             pci_model = "scsi-disk"
-            controller_model = "lsi53c895a"
+            if arch.ARCH == 'ppc64':
+                controller_model = "spapr-vscsi"
+            else:
+                controller_model = "lsi53c895a"
             verify_supported_device(controller_model)
             controller_id = "controller-" + device_id
             controller_add_cmd = ("device_add %s,id=%s" %
