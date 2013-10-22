@@ -18,12 +18,13 @@ def run_qemu_iotests(test, params, env):
     :param env:    Dictionary with test environment.
     """
     # First, let's get qemu-io
-    std = "git://git.kernel.org/pub/scm/linux/kernel/git/hch/qemu-iotests.git"
+    std = "http://git.kernel.org/pub/scm/virt/kvm/qemu-kvm.git"
     uri = params.get("qemu_io_uri", std)
     branch = params.get("qemu_io_branch", 'master')
     lbranch = params.get("qemu_io_lbranch", 'master')
     commit = params.get("qemu_io_commit", None)
     base_uri = params.get("qemu_io_base_uri", None)
+    iotests_dir = params.get("qemu_iotests_dir", "tests/qemu_io_tests")
     destination_dir = os.path.join(test.srcdir, "qemu_io_tests")
     git.get_repo(uri=uri, branch=branch, lbranch=lbranch, commit=commit,
                  destination_dir=destination_dir, base_uri=base_uri)
@@ -33,7 +34,8 @@ def run_qemu_iotests(test, params, env):
     os.environ["QEMU_IMG_PROG"] = utils_misc.get_qemu_img_binary(params)
     os.environ["QEMU_IO_PROG"] = utils_misc.get_qemu_io_binary(params)
 
-    os.chdir(destination_dir)
+    # qemu-iotests has merged into tests/qemu_iotests folder
+    os.chdir(os.path.join(destination_dir, iotests_dir))
     image_format = params["qemu_io_image_format"]
     extra_options = params.get("qemu_io_extra_options", "")
 
