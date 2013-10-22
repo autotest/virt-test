@@ -8,15 +8,15 @@ from virttest import libvirt_vm, data_dir, utils_misc, virt_vm
 from virttest import aexpect, remote
 from virttest.libvirt_xml import vm_xml
 
- 
+
 # To get result in thread, using global parameters
 # Result of virsh migrate command
-global ret_migration
+global RET_MIGRATION
 # A lock for threads
-global ret_lock
+global RET_LOCK
 # True means command executed successfully
-ret_migration = True
-ret_lock = threading.RLock()
+RET_MIGRATION = True
+RET_LOCK = threading.RLock()
 
 
 def cleanup_dest(vm, srcuri, desturi):
@@ -111,7 +111,7 @@ class HostStress(object):
             return
         error.context("launch stress app on host", logging.info)
         utils.run(self.start_cmd, ignore_status=True)
-        logging.info("Command: %s" % self.start_cmd)
+        logging.info("Command: %s", self.start_cmd)
         running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
         if not running:
             raise StressError("stress app isn't running")
@@ -146,18 +146,18 @@ class VMStress(object):
     def __init__(self, vm):
         self.vm = vm
         self.params = vm.params
-        self.link = self.params.get("download_link")
-        self.md5sum = self.params.get("md5sum")
-        self.tmp_dir = self.params.get("tmp_dir")
-        self.install_cmd = self.params.get("install_cmd") % self.tmp_dir
-        self.config_cmd = self.params.get("config_cmd")
+        self.link = self.params.get("stress_download_link")
+        self.md5sum = self.params.get("stress_md5sum")
+        self.tmp_dir = self.params.get("stress_tmp_dir")
+        self.install_cmd = self.params.get("stress_install_cmd") % self.tmp_dir
+        self.config_cmd = self.params.get("stress_config_cmd")
         self.vm_bytes = self.params.get("stress_vm_bytes", "128M")
-        self.start_cmd = self.params.get("start_cmd")
+        self.start_cmd = self.params.get("stress_start_cmd")
         if re.search("--vm-bytes", self.start_cmd):
             self.start_cmd = self.start_cmd % self.vm_bytes
-        self.stop_cmd = self.params.get("stop_cmd")
-        self.check_cmd = self.params.get("check_cmd")
-        self.app_check_cmd = self.params.get("app_check_cmd")
+        self.stop_cmd = self.params.get("stress_stop_cmd")
+        self.check_cmd = self.params.get("stress_check_cmd")
+        self.app_check_cmd = self.params.get("stress_app_check_cmd")
 
     def get_session(self):
         try:
@@ -170,7 +170,7 @@ class VMStress(object):
     def install_stress_app(self):
         error.context("install stress app in guest")
         session = self.get_session()
-        _, output = session.cmd_status_output(self.params.get("app_check_cmd"))
+        _, output = session.cmd_status_output(self.app_check_cmd)
         installed = re.search("Usage:", output)
         if installed:
             logging.debug("Stress has been installed.")
@@ -182,9 +182,10 @@ class VMStress(object):
         except Exception, detail:
             raise StressError(str(detail))
         self.vm.copy_files_to(pkg, self.tmp_dir)
-        s, o = session.cmd_status_output(self.install_cmd, timeout=60)
-        if s != 0:
-            raise StressError("Fail to install stress app(%s)" % o)
+        status, output = session.cmd_status_output(self.install_cmd,
+                                                   timeout=60)
+        if status:
+            raise StressError("Fail to install stress app(%s)" % output)
 
     @error.context_aware
     def load_stress(self):
@@ -198,7 +199,7 @@ class VMStress(object):
         session = self.get_session()
         error.context("launch stress app in guest", logging.info)
         session.sendline(self.start_cmd)
-        logging.info("Command: %s" % self.start_cmd)
+        logging.info("Command: %s", self.start_cmd)
         running = utils_misc.wait_for(self.app_running, first=0.5, timeout=60)
         if not running:
             raise StressError("stress app isn't running")
@@ -236,16 +237,16 @@ def thread_func_migration(vm, desturi):
     :param desturi: remote host uri.
     """
     # Judge result for main_func with a global variable.
-    global ret_migration
-    global ret_lock
+    global RET_MIGRATION
+    global RET_LOCK
     # Migrate the domain.
     try:
         vm.migrate(desturi, ignore_status=False, debug=True)
     except error.CmdError, detail:
         logging.error("Migration to %s failed:\n%s", desturi, detail)
-        ret_lock.acquire()
-        ret_migration = False
-        ret_lock.release()
+        RET_LOCK.acquire()
+        RET_MIGRATION = False
+        RET_LOCK.release()
 
 
 def do_migration(vms, srcuri, desturi, load_vms, stress_type,
@@ -256,7 +257,7 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
     :param vms: migrated vms.
     :param load_vms: provided for stress.
     """
-    global ret_migration
+    global RET_MIGRATION
     fail_info = []
     for vm in vms:
         if stress_type == "load_vm_booting":
@@ -279,15 +280,15 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
                     break
         elif stress_type == "stress_in_vms":
             try:
-                vs = VMStress(vm)
-                vs.load_stress()
+                vstress = VMStress(vm)
+                vstress.load_stress()
             except StressError, detail:
                 fail_info.append("Launch stress failed:%s" % detail)
                 break
         elif stress_type == "stress_on_host":
             try:
-                hs = HostStress(vm.params)
-                hs.load_stress()
+                hstress = HostStress(vm.params)
+                hstress.load_stress()
             except StressError, detail:
                 fail_info.append("Launch stress failed:%s" % detail)
                 break
@@ -306,9 +307,9 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
             migration_thread.join(thread_timeout)
             if migration_thread.isAlive():
                 logging.error("Migrate %s timeout.", migration_thread)
-                ret_lock.acquire()
-                ret_migration = False
-                ret_lock.release()
+                RET_LOCK.acquire()
+                RET_MIGRATION = False
+                RET_LOCK.release()
     elif migration_type == "cross":
         # Migrate a vm to remote first,
         # then migrate another to remote with the first vm back
@@ -325,9 +326,9 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
             vm_remote = vm
             if thread1.isAlive() or thread1.isAlive():
                 logging.error("Cross migrate timeout.")
-                ret_lock.acquire()
-                ret_migration = False
-                ret_lock.release()
+                RET_LOCK.acquire()
+                RET_MIGRATION = False
+                RET_LOCK.release()
     elif migration_type == "simultaneous":
         migration_threads = []
         for vm in vms:
@@ -343,19 +344,19 @@ def do_migration(vms, srcuri, desturi, load_vms, stress_type,
             thread.join(thread_timeout)
             if thread.isAlive():
                 logging.error("Migrate %s timeout.", thread)
-                ret_lock.acquire()
-                ret_migration = False
-                ret_lock.release()
+                RET_LOCK.acquire()
+                RET_MIGRATION = False
+                RET_LOCK.release()
 
     # Clean up loads
     for load_vm in load_vms:
         load_vm.destroy()
     if stress_type == "stress_on_host":
-        hs.unload_stress()
+        hstress.unload_stress()
 
     if len(fail_info):
         logging.warning("Add stress for migration failed:%s", fail_info)
-    if not ret_migration:
+    if not RET_MIGRATION:
         raise error.TestFail()
 
 
@@ -378,9 +379,9 @@ def check_dest_vm_network(vm, remote_host, username, password,
             timeout -= 5
     if timeout <= 0:
         raise error.TestFail("Can not get remote vm's IP.")
-    s, o = session.cmd_status_output(ping_cmd)
-    if s:
-        raise error.TestFail("Check %s IP failed:%s" % (vm.name, o))
+    status, output = session.cmd_status_output(ping_cmd)
+    if status:
+        raise error.TestFail("Check %s IP failed:%s" % (vm.name, output))
 
 
 def run_virsh_migrate_stress(test, params, env):
@@ -404,18 +405,18 @@ def run_virsh_migrate_stress(test, params, env):
         load_vms.append(libvirt_vm.VM(vm_name, params, test.bindir,
                         env.get("address_cache")))
 
-    cpu = int(params.get("vm_cpu", 1))
-    memory = int(params.get("vm_memory", 1048576))
+    cpu = int(params.get("smp", 1))
+    memory = int(params.get("mem")) * 1024
     stress_type = params.get("migration_stress_type")
     migration_type = params.get("migration_type")
     start_migration_vms = "yes" == params.get("start_migration_vms", "yes")
     dest_uri = params.get("migrate_dest_uri", "qemu+ssh://EXAMPLE/system")
     src_uri = params.get("migrate_src_uri", "qemu+ssh://EXAMPLE/system")
     thread_timeout = int(params.get("thread_timeout", 120))
-    remote_host = params.get("remote_host")
-    username = params.get("remote_username", "root")
-    password = params.get("remote_passwd")
-    prompt = params.get("shell_prompt", "[\#\$]")
+    remote_host = params.get("remote_ip")
+    username = params.get("remote_user", "root")
+    password = params.get("remote_pwd")
+    prompt = params.get("shell_prompt", r"[\#\$]")
 
     for vm in vms:
         # Keep vm dead for edit
