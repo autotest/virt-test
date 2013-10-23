@@ -445,7 +445,7 @@ class UnattendedInstallConfig(object):
             values = [self.virtio_storage_path, self.virtio_network_path]
             for path, value in zip(paths, values):
                 path_text = path.childNodes[0]
-                assert key_text.nodeType == doc.TEXT_NODE
+                assert path_text.nodeType == doc.TEXT_NODE
                 path_text.data = value
         else:
             settings = doc.getElementsByTagName("settings")
