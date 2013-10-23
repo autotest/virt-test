@@ -27,7 +27,7 @@ def run_virsh_schedinfo_qemu_posix(test, params, env):
     """
     def get_parameter_in_cgroup(domname, controller="cpu",
                                 parameter="cpu.shares",
-                                libvirt_cgroup_path="/libvirt/qemu/"):
+                                libvirt_cgroup_path="libvirt/qemu/"):
         """
         Get vm's cgroup value.
 
