@@ -93,7 +93,8 @@ class VMXMLBase(base.LibvirtXMLBase):
                                                  'current_mem', 'numa',
                                                  'devices', 'seclabel',
                                                  'cputune', 'emulatorpin',
-                                                 'cpuset', 'placement')
+                                                 'cpuset', 'placement',
+                                                 'current_vcpu')
 
     __uncompareable__ = base.LibvirtXMLBase.__uncompareable__
 
@@ -121,6 +122,12 @@ class VMXMLBase(base.LibvirtXMLBase):
                                 forbidden=None,
                                 parent_xpath='/',
                                 tag_name='vcpu')
+        accessors.XMLAttribute(property_name="current_vcpu",
+                               libvirtxml=self,
+                               forbidden=None,
+                               parent_xpath='/',
+                               tag_name='vcpu',
+                               attribute='current')
         accessors.XMLAttribute(property_name="placement",
                                libvirtxml=self,
                                forbidden=None,
@@ -377,16 +384,25 @@ class VMXML(VMXMLBase):
         return vm
 
     @staticmethod
-    def set_vm_vcpus(vm_name, value, virsh_instance=base.virsh):
+    def set_vm_vcpus(vm_name, value, current=None, virsh_instance=base.virsh):
         """
-        Convenience method for updating 'vcpu' property of a defined VM
+        Convenience method for updating 'vcpu' and 'current' attribute property
+        of a defined VM
 
         :param vm_name: Name of defined vm to change vcpu elemnet data
         :param value: New data value, None to delete.
+        :param current: New current value, None will not change current value
         """
         vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
         if value is not None:
-            vmxml['vcpu'] = value  # call accessor method to change XML
+            if current is not None:
+                if current > value:
+                    raise xcepts.LibvirtXMLError(
+                        "The cpu current value %s is larger than max number %s"
+                        % (current, value))
+                else:
+                    vmxml['vcpu'] = value  # call accessor method to change XML
+                    vmxml['current_vcpu'] = current
         else:  # value is None
             del vmxml.vcpu
         vmxml.undefine()
