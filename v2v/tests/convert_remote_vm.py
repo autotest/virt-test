@@ -3,7 +3,8 @@ import logging
 import re
 from autotest.client import lv_utils
 from autotest.client.shared import ssh_key, error
-from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh, data_dir
+from virttest import utils_v2v, libvirt_storage, libvirt_vm, virsh
+from virttest import virt_vm, remote, data_dir
 
 
 def create_dir_pool(spool, pool_name, target_path):
@@ -238,10 +239,15 @@ def run_convert_remote_vm(test, params, env):
         params['vms'] = vm_name
         params['target'] = "libvirt"
         vm_check = utils_v2v.LinuxVMCheck(test, params, env)
-        if not vm_check.is_disk_virtio():
-            error_info.append("Error:disk type was not converted to virtio.")
-        if not vm_check.is_net_virtio():
-            error_info.append("Error:nic type was not converted to virtio.")
+        try:
+            if not vm_check.is_disk_virtio():
+                error_info.append("Error:disk type was not converted to "
+                                  "virtio.")
+            if not vm_check.is_net_virtio():
+                error_info.append("Error:nic type was not converted to "
+                                  "virtio.")
+        except (remote.LoginError, virt_vm.VMError), detail:
+            error_info.append(str(detail))
 
         # Close vm for cleanup
         if vm_check.vm is not None and vm_check.vm.is_alive():
