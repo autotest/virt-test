@@ -271,6 +271,17 @@ class VM(virt_vm.BaseVM):
             return "/tmp/serial-%s-%s" % (name, self.instance)
         return "/tmp/serial-%s" % self.instance
 
+
+    def get_serial_log_filename(self, name=None):
+        """
+        Return the log file name of serial console.
+
+        :param name: The serial port name.
+        """
+        if name:
+            return "serial-%s-%s" % (name, self.instance)
+        return "serial-%s" % self.instance
+
     def get_serial_console_filenames(self):
         """
         Return a list of all serial console filenames
@@ -2089,8 +2100,7 @@ class VM(virt_vm.BaseVM):
                 "nc -U %s" % self.get_serial_console_filename(tmp_serial),
                 auto_close=False,
                 output_func=utils_misc.log_line,
-                output_params=("serial-%s-%s.log" % (tmp_serial,
-                                                     self.instance),),
+                output_params=self.get_serial_log_filename(tmp_serial),
                 prompt=self.params.get("shell_prompt", "[\#\$]"))
             del tmp_serial
 
