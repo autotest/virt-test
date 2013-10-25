@@ -2089,12 +2089,13 @@ class VM(virt_vm.BaseVM):
                 "nc -U %s" % self.get_serial_console_filename(tmp_serial),
                 auto_close=False,
                 output_func=utils_misc.log_line,
-                output_params=("serial-%s-%s.log" % (tmp_serial, name),),
+                output_params=("serial-%s-%s.log" % (tmp_serial,
+                                                     self.instance),),
                 prompt=self.params.get("shell_prompt", "[\#\$]"))
             del tmp_serial
 
             for key, value in self.logs.items():
-                outfile = "%s-%s.log" % (key, name)
+                outfile = "%s-%s.log" % (key, self.instance)
                 self.logsessions[key] = aexpect.Tail(
                     "nc -U %s" % value,
                     auto_close=False,
