@@ -594,6 +594,21 @@ class VMXML(VMXMLBase):
         return None
 
     @staticmethod
+    def get_first_mac_by_name(vm_name, virsh_instance=base.virsh):
+        """
+        Convenience method for getting first mac of a defined VM
+
+        :param: vm_name: Name of defined vm to get mac
+        """
+        vmxml = VMXML.new_from_dumpxml(vm_name, virsh_instance=virsh_instance)
+        xmltreefile = vmxml.dict_get('xml')
+        try:
+            iface = xmltreefile.find('devices').find('interface')
+            return iface.find('mac').get('address')
+        except AttributeError:
+            return None
+
+    @staticmethod
     def get_iftune_params(vm_name, options="", virsh_instance=base.virsh):
         """
         Return VM's interface tuning setting from XML definition
