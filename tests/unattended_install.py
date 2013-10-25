@@ -1058,8 +1058,8 @@ def run_unattended_install(test, params, env):
         serial_name = "libvirt"
 
     log_file = utils_misc.get_path(test.debugdir,
-                                   "serial-%s-%s.log" % (serial_name,
-                                                         vm.name))
+                                   vm.get_serial_log_filename(serial_name))
+    del serial_name
     serial_log_msg = ""
     serial_log_file = None
 
