@@ -203,9 +203,9 @@ class QBaseDevice(object):
         elif value is None and option in self.params:
             del(self.params[option])
 
-    def get_param(self, option):
+    def get_param(self, option, default=None):
         """ :return: object param """
-        return self.params.get(option)
+        return self.params.get(option, default)
 
     def __getitem__(self, option):
         """ :return: object param """
