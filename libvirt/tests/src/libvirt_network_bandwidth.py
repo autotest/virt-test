@@ -38,6 +38,10 @@ def run_libvirt_network_bandwidth(test, params, env):
 
     file_size = params.get("LNB_verify_file_size", "10")
 
+    nic1_params = params.object_params('nic1')
+    nettype = params.get('nettype')
+    netdst = params.get('netdst')
+
     vm_xml = VMXML.new_from_dumpxml(vm_name)
     vm_xml_backup = vm_xml.copy()
 
@@ -48,7 +52,7 @@ def run_libvirt_network_bandwidth(test, params, env):
     # interface which is using default network.
     default_interface = None
     for interface in interfaces:
-        if interface.source == {'network': "default"}:
+        if interface.source == {nettype: netdst}:
             default_interface = interface
             break
     if not default_interface:
