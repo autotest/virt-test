@@ -2191,7 +2191,7 @@ class VM(virt_vm.BaseVM):
                     session = self.login()
                 else:
                     session = self.serial_login()
-            except (virt_vm.VMInterfaceIndexError), e:
+            except (IndexError), e:
                 try:
                     session = self.serial_login()
                 except (remote.LoginError, virt_vm.VMError), e:
