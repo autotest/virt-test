@@ -691,6 +691,51 @@ class GuestfishPersistent(Guestfish):
         """
         return self.inner_cmd("rm %s" % path)
 
+    def is_file(self, path):
+        """
+        is-file - test if a regular file
+
+        This returns "true" if and only if there is a regular file with the
+        given "path" name.
+        """
+        return self.inner_cmd("is-file %s" % path)
+
+    def cp(self, src, dest):
+        """
+        cp - copy a file
+
+        This copies a file from "src" to "dest" where "dest" is either a
+        destination filename or destination directory.
+        """
+        return self.inner_cmd("cp %s %s" % (src, dest))
+
+    def checksum(self, csumtype, path):
+        """
+        checksum - compute MD5, SHAx or CRC checksum of file
+
+        This call computes the MD5, SHAx or CRC checksum of the file named
+        "path".
+        """
+        return self.inner_cmd("checksum %s %s" % (csumtype, path))
+
+    def is_ready(self):
+        """
+        is-ready - is ready to accept commands
+
+        This returns true if this handle is ready to accept commands
+        (in the "READY" state).
+        """
+        return self.inner_cmd("is-ready")
+
+    def part_list(self, device):
+        """
+        part-list - list partitions on a device
+
+        This command parses the partition table on "device" and
+        returns the list of partitions found.
+        """
+        return self.inner_cmd("part-list %s" % device)
+
 
 # libguestfs module functions follow #####
 def libguest_test_tool_cmd(qemuarg=None, qemudirarg=None,
@@ -741,4 +786,123 @@ def virt_edit_cmd(disk_or_domain, file_path, options=None,
     if expr is not None:
         cmd += " -e '%s'" % expr
 
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_clone_cmd(original, newname=None, autoclone=False, **dargs):
+    """
+    Clone existing virtual machine images.
+
+    @param original: Name of the original guest to be cloned.
+    @param newname: Name of the new guest virtual machine instance.
+    @param autoclone: Generate a new guest name, and paths for new storage.
+    @param dargs: Standardized function API keywords. There are many
+                  options not listed, they can be passed in dargs.
+    """
+    def storage_config(cmd, options):
+        """Configure options for storage"""
+        # files should be a list
+        files = options.get("files", [])
+        if len(files):
+            for file in files:
+                cmd += " --file '%s'" % file
+        if options.get("nonsparse") is not None:
+            cmd += " --nonsparse"
+        return cmd
+
+    def network_config(cmd, options):
+        """Configure options for network"""
+        mac = options.get("mac")
+        if mac is not None:
+            cmd += " --mac '%s'" % mac
+        return cmd
+
+    cmd = "virt-clone --original '%s'" % original
+    if newname is not None:
+        cmd += " --name '%s'" % newname
+    if autoclone is True:
+        cmd += " --auto-clone"
+    # Many more options can be added if necessary.
+    cmd = storage_config(cmd, dargs)
+    cmd = network_config(cmd, dargs)
+
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_sparsify_cmd(indisk, outdisk, compress=False, convert=None,
+                      format=None, ignore_status=True, debug=False,
+                      timeout=60):
+    """
+    Make a virtual machine disk sparse.
+
+    @param indisk: The source disk to be sparsified.
+    @param outdisk: The destination disk.
+    """
+    cmd = "virt-sparsify"
+    if compress is True:
+        cmd += " --compress"
+    if format is not None:
+        cmd += " --format '%s'" % format
+    cmd += " '%s'" % indisk
+
+    if convert is not None:
+        cmd += " --convert '%s'" % convert
+    cmd += " '%s'" % outdisk
+    # More options can be added if necessary.
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_resize_cmd(indisk, outdisk, **dargs):
+    """
+    Resize a virtual machine disk.
+
+    @param indisk: The source disk to be resized
+    @param outdisk: The destination disk.
+    """
+    cmd = "virt-resize"
+    ignore_status = dargs.get("ignore_status", True)
+    debug = dargs.get("debug", False)
+    timeout = dargs.get("timeout", 60)
+    resize = dargs.get("resize")
+    resized_size = dargs.get("resized_size", "0")
+    expand = dargs.get("expand")
+    shrink = dargs.get("shrink")
+    ignore = dargs.get("ignore")
+    delete = dargs.get("delete")
+    if resize is not None:
+        cmd += " --resize %s=%s" % (resize, resized_size)
+    if expand is not None:
+        cmd += " --expand %s" % expand
+    if shrink is not None:
+        cmd += " --shrink %s" % shrink
+    if ignore is not None:
+        cmd += " --ignore %s" % ignore
+    if delete is not None:
+        cmd += " --delete %s" % delete
+    cmd += " %s %s" % (indisk, outdisk)
+
+    return lgf_command(cmd, ignore_status, debug, timeout)
+
+
+def virt_list_partitions_cmd(disk_or_domain, long=False, total=False,
+                             human_readable=False, ignore_status=True,
+                             debug=False, timeout=60):
+    """
+    "virt-list-partitions" is a command line tool to list the partitions
+    that are contained in a virtual machine or disk image.
+
+    @param disk_or_domain: a disk or a domain to be mounted
+    """
+    cmd = "virt-list-partitions %s" % disk_or_domain
+    if long is True:
+        cmd += " --long"
+    if total is True:
+        cmd += " --total"
+    if human_readable is True:
+        cmd += " --human-readable"
     return lgf_command(cmd, ignore_status, debug, timeout)
