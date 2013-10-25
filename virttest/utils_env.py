@@ -1,8 +1,11 @@
-import cPickle
-import UserDict
 import os
 import logging
 import virt_vm
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 ENV_VERSION = 1
 
@@ -15,7 +18,7 @@ class EnvSaveError(Exception):
     pass
 
 
-class Env(UserDict.IterableUserDict):
+class Env(dict):
 
     """
     A dict-like object containing global objects used by tests.
@@ -32,7 +35,7 @@ class Env(UserDict.IterableUserDict):
         :param filename: Path to an env file.
         :param version: Required env version (int).
         """
-        UserDict.IterableUserDict.__init__(self)
+        super(Env, self).__init__()
         empty = {"version": version}
         self._filename = filename
         if filename:
